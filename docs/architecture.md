@@ -171,7 +171,7 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 **加一个屏幕** → `XxxUiState` + `XxxViewModel`（带 `factory(container)`）+ `XxxRoute`（有状态）
 + `XxxScreen`（无状态、可 Preview）。
 
-**加一个接口调用** → 优先找 JSON 端点（README 有清单），没有才抓 HTML。
+**加一个接口调用** → 优先找 JSON 端点（本地笔记 `docs/private/api-notes.md`），没有才抓 HTML。
 选择器进 `Selectors.kt`，配 fixture 测试。
 
 **站点改版导致解析失败** → 只改 `Selectors.kt`，跑 `./gradlew :app:testDebugUnitTest`。

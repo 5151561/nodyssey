@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# 本地笔记：接口清单与抓取策略，不对外发布
+docs/private/

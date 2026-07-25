@@ -68,24 +68,13 @@ Requires JDK 21 and the Android SDK (compileSdk 36, minSdk 26).
 ./gradlew :app:assembleDebug
 ```
 
-## 已知的 JSON 接口
+## 数据来源
 
-浏览相关的内容没有接口，只能抓 HTML；以下是实测可用的 JSON 端点：
+NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口，其余（帖子列表、帖子详情）只能解析
+服务端渲染的 HTML；站点整体在 Cloudflare 后面，请求需要携带浏览器特征和来自 WebView 的 Cookie。
 
-| 接口 | 说明 | 是否需要登录 |
-|---|---|---|
-| `GET /api/content/list-categories` | 版块列表（含描述、图标、是否显示在导航） | 否 |
-| `GET /api/account/getInfo/{uid}` | 用户资料 | — |
-| `GET /api/notification/unread-count` | 未读数 | 是（未登录返回 500） |
-| `GET /api/statistics/list-collection?page=` | 收藏列表 | 是（未登录返回 500） |
-| `GET /api/content/list-comments?uid=&page=` | 某用户的评论 | — |
-| `GET /api/content/list-discussions?uid=&page=` | 某用户的主题 | — |
-| `POST /api/attendance?random=` | 签到 | 是 |
-| `GET /api/attendance/board?page=` | 签到榜 | — |
-| `POST /api/block-list/add` | 屏蔽用户 | 是 |
-| `GET /api/statistics/{like,dislike,collection,upvote}` | 点赞 / 踩 / 收藏 / 鸡腿 | 是 |
-
-列表页支持 `?sortBy=` 参数（按发帖时间 / 回复时间排序）。`/categories/inside`（内版）在未登录时返回 **HTTP 400**。
+具体调用了哪些地址，看 `core/net/` 和 `core/html/Selectors.kt` 就是全部——本仓库不额外整理和发布
+接口清单或抓取指南。请求频率保持克制。
 
 ## Roadmap
 
