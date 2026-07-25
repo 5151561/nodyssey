@@ -1,0 +1,17 @@
+# Editor settings shared with IDEs.
+#
+# ktlint's *rule* configuration is NOT here: Spotless's ktlint step does not read this file, so
+# putting rules here looks like it works while the build silently formats to ktlint's own defaults.
+# The rules live in `ktlintRules` in the root build.gradle.kts.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{yml,yaml,json}]
+indent_size = 2

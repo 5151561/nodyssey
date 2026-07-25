@@ -58,6 +58,7 @@ object RichContentParser {
     /** Returns null when the element is inline and should be folded into the surrounding paragraph. */
     private fun parseBlockElement(element: Element): RichNode? = when (element.tagName()) {
         "p" -> paragraphOrImage(element)
+
         "h1", "h2", "h3", "h4", "h5", "h6" ->
             RichNode.Heading(
                 level = element.tagName().substring(1).toIntOrNull() ?: 3,
@@ -65,11 +66,17 @@ object RichContentParser {
             )
 
         "pre" -> codeBlock(element)
+
         "blockquote" -> RichNode.Quote(parseBlocks(element.childNodes()))
+
         "ul" -> listBlock(element, ordered = false)
+
         "ol" -> listBlock(element, ordered = true)
+
         "hr" -> RichNode.Divider
+
         "table" -> table(element)
+
         "div" ->
             if (element.hasClass("quote")) {
                 RichNode.Quote(parseBlocks(element.childNodes()))
@@ -78,6 +85,7 @@ object RichContentParser {
             }
 
         "img" -> if (isSticker(element)) null else blockImage(element)
+
         else -> null
     }
 
@@ -91,9 +99,11 @@ object RichContentParser {
         if (!hasText && images.size == 1) return blockImage(images.first())
         if (!hasText && images.size > 1) {
             // Multiple bare images: keep the first as the block and let the rest follow as inlines.
-            return RichNode.Paragraph(images.mapNotNull { img ->
-                NodeSeekSite.absoluteUrl(img.attr("src"))?.let { InlineNode.Sticker(it, img.attr("alt")) }
-            })
+            return RichNode.Paragraph(
+                images.mapNotNull { img ->
+                    NodeSeekSite.absoluteUrl(img.attr("src"))?.let { InlineNode.Sticker(it, img.attr("alt")) }
+                },
+            )
         }
         return RichNode.Paragraph(trimInlines(parseInlines(element.childNodes())))
     }
@@ -142,13 +152,18 @@ object RichContentParser {
 
                 is Element -> when (node.tagName()) {
                     "br" -> result += InlineNode.LineBreak
+
                     "strong", "b" -> result += parseInlines(node.childNodes(), style.copy(bold = true))
+
                     "em", "i" -> result += parseInlines(node.childNodes(), style.copy(italic = true))
+
                     "del", "s", "strike" ->
                         result += parseInlines(node.childNodes(), style.copy(strikethrough = true))
 
                     "code" -> result += InlineNode.Text(node.wholeText(), style.copy(code = true))
+
                     "a" -> result += link(node, style)
+
                     "img" -> NodeSeekSite.absoluteUrl(node.attr("src"))?.let {
                         result += InlineNode.Sticker(it, node.attr("alt").ifBlank { null })
                     }
@@ -185,5 +200,5 @@ object RichContentParser {
     }
 
     private fun isBlank(node: InlineNode): Boolean =
-        node is InlineNode.Text && node.text.isBlank() || node is InlineNode.LineBreak
+        (node is InlineNode.Text && node.text.isBlank()) || node is InlineNode.LineBreak
 }

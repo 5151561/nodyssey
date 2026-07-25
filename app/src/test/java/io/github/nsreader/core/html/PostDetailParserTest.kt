@@ -12,27 +12,30 @@ class PostDetailParserTest {
     private val detail =
         PostDetailParser.parse(Fixtures.load("post-703863-1.html"), postId = 703863L, page = 1)
 
+    /** Page 1 always carries the opening post; a null here is itself a parser failure. */
+    private val body = requireNotNull(detail.body)
+
     @Test
     fun `parses the post header`() {
         assertEquals("绿云抢鸡竞赛又要开始了，一波传家宝又要来袭", detail.title)
-        assertEquals("ipv4", detail.body.authorName)
-        assertEquals(34378L, detail.body.authorUid)
-        assertEquals("#0", detail.body.floor)
-        assertEquals("日常", detail.body.categoryTitle)
-        assertEquals("2026-04-27 15:57:00", detail.body.createdAtTitle)
-        assertTrue(detail.body.isOriginalPoster)
+        assertEquals("ipv4", body.authorName)
+        assertEquals(34378L, body.authorUid)
+        assertEquals("#0", body.floor)
+        assertEquals("日常", body.categoryTitle)
+        assertEquals("2026-04-27 15:57:00", body.createdAtTitle)
+        assertTrue(body.isOriginalPoster)
     }
 
     @Test
     fun `separates the attachment image from the inline stickers`() {
-        val blockImages = detail.body.nodes.filterIsInstance<RichNode.BlockImage>()
+        val blockImages = body.nodes.filterIsInstance<RichNode.BlockImage>()
         assertEquals(1, blockImages.size)
         assertEquals(
             "https://cdn.nodeimage.com/i/FBICDKhbCSRbkZ5Kx5qyiyit927K3vCg.webp",
             blockImages.first().url,
         )
 
-        val stickers = detail.body.nodes
+        val stickers = body.nodes
             .filterIsInstance<RichNode.Paragraph>()
             .flatMap { it.inlines }
             .filterIsInstance<InlineNode.Sticker>()
@@ -42,7 +45,7 @@ class PostDetailParserTest {
 
     @Test
     fun `keeps the text that follows inline stickers`() {
-        val text = detail.body.nodes
+        val text = body.nodes
             .filterIsInstance<RichNode.Paragraph>()
             .flatMap { it.inlines }
             .filterIsInstance<InlineNode.Text>()
@@ -84,7 +87,7 @@ class PostDetailParserTest {
         val long =
             PostDetailParser.parse(Fixtures.load("post-705039-1.html"), postId = 705039L, page = 1)
         assertTrue(long.title.isNotBlank())
-        assertTrue(long.body.nodes.isNotEmpty())
+        assertTrue(requireNotNull(long.body).nodes.isNotEmpty())
         assertTrue(long.comments.isNotEmpty())
         long.comments.forEach { comment ->
             assertTrue("comment without author", comment.authorName.isNotBlank())

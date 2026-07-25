@@ -12,8 +12,9 @@ import coil3.request.crossfade
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.di.DefaultAppContainer
 
-class NodeSeekApp : Application(), SingletonImageLoader.Factory {
-
+class NodeSeekApp :
+    Application(),
+    SingletonImageLoader.Factory {
     /** The one place the dependency graph is built. Everything else receives it. */
     lateinit var container: AppContainer
         private set
@@ -28,7 +29,8 @@ class NodeSeekApp : Application(), SingletonImageLoader.Factory {
      * browser headers as page requests — Cloudflare rejects them otherwise.
      */
     override fun newImageLoader(context: PlatformContext): ImageLoader =
-        ImageLoader.Builder(context)
+        ImageLoader
+            .Builder(context)
             .components {
                 add(OkHttpNetworkFetcherFactory(callFactory = { container.okHttpClient }))
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -36,7 +38,6 @@ class NodeSeekApp : Application(), SingletonImageLoader.Factory {
                 } else {
                     add(GifDecoder.Factory())
                 }
-            }
-            .crossfade(true)
+            }.crossfade(true)
             .build()
 }

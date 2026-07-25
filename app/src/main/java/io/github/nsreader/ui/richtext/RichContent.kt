@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.Placeholder
@@ -32,14 +33,15 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import io.github.nsreader.R
 import io.github.nsreader.model.InlineNode
 import io.github.nsreader.model.InlineStyle
 import io.github.nsreader.model.RichNode
@@ -255,7 +257,10 @@ private fun InlineText(
         ) {
             AsyncImage(
                 model = sticker.url,
-                contentDescription = sticker.alt,
+                // NodeSeek's sticker markup often has no alt text, and an image with no content
+                // description is silent to a screen reader. "表情" at least says what it is.
+                contentDescription = sticker.alt
+                    ?: stringResource(R.string.image_description_sticker),
                 modifier = Modifier.fillMaxWidth(),
             )
         }

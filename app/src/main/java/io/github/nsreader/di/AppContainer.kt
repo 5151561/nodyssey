@@ -4,17 +4,20 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import io.github.nsreader.core.AppClock
 import io.github.nsreader.core.AppDispatchers
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.NodeSeekClient
 import io.github.nsreader.core.net.NodeSeekJsonClient
 import io.github.nsreader.core.net.WebViewCookieJar
 import io.github.nsreader.data.CategoryRepository
-import io.github.nsreader.data.NetworkPostRepository
+import io.github.nsreader.data.NetworkPostDataSource
+import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.PostRepository
+import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.settings.SettingsRepository
-import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 /**
  * The application's dependency graph.
@@ -28,6 +31,7 @@ import okhttp3.OkHttpClient
  */
 interface AppContainer {
     val dispatchers: AppDispatchers
+    val clock: AppClock
     val cookieJar: WebViewCookieJar
     val postRepository: PostRepository
     val categoryRepository: CategoryRepository
@@ -42,14 +46,15 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 class DefaultAppContainer(
     context: Context,
     override val dispatchers: AppDispatchers = AppDispatchers(),
+    override val clock: AppClock = AppClock.System,
 ) : AppContainer {
-
     private val appContext = context.applicationContext
 
     override val cookieJar: WebViewCookieJar by lazy { WebViewCookieJar() }
 
     override val okHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
+        OkHttpClient
+            .Builder()
             .cookieJar(cookieJar)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
@@ -64,19 +69,25 @@ class DefaultAppContainer(
                     builder.header("Referer", "${NodeSeekSite.BASE_URL}/")
                 }
                 chain.proceed(builder.build())
-            }
-            .build()
+            }.build()
     }
 
     private val htmlClient by lazy { NodeSeekClient(okHttpClient, dispatchers) }
 
     private val jsonClient by lazy { NodeSeekJsonClient(okHttpClient, dispatchers) }
 
+    /** The offline-first SSOT. Everything below reads from it; only the data sources write to it. */
+    private val database by lazy { NodeSeekDatabase.create(appContext) }
+
+    private val remotePosts by lazy { NetworkPostDataSource(htmlClient, dispatchers) }
+
     override val postRepository: PostRepository by lazy {
-        NetworkPostRepository(htmlClient, dispatchers)
+        OfflineFirstPostRepository(database, remotePosts, clock)
     }
 
-    override val categoryRepository: CategoryRepository by lazy { CategoryRepository(jsonClient) }
+    override val categoryRepository: CategoryRepository by lazy {
+        CategoryRepository(jsonClient, database.boardDao(), clock)
+    }
 
     override val settingsRepository: SettingsRepository by lazy {
         SettingsRepository(appContext.settingsDataStore)

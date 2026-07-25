@@ -1,0 +1,84 @@
+name: CI
+
+# Every push to main and every pull request. The point of phase three is that a regression fails here
+# rather than on someone's phone, so all four gates below are required — none of them is advisory.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # A new push supersedes the run in flight for the same ref; only main is allowed to finish, because
+  # its result is what tells us the default branch is green.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          # Matches the jvmToolchain(21) in app/build.gradle.kts. A mismatch here means CI compiles
+          # against a different JDK than everyone's machine does.
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # Only main writes the shared cache, so a pull request cannot poison it for everyone else.
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # There is deliberately no separate "check the lockfile" step. Dependency locking is in STRICT
+      # mode, so every step below that resolves a locked classpath — unit tests, lint, assemble —
+      # already fails on a dependency missing from `app/gradle.lockfile`:
+      #
+      #   > Resolved 'com.google.code.gson:gson:2.11.0' which is not part of the dependency lock state
+      #
+      # A `./gradlew :app:dependencies` step was tried here first and is worse than useless: it prints
+      # the offending modules as FAILED and then exits 0, because `dependencies` is a report task.
+      - name: Check formatting
+        run: ./gradlew spotlessCheck
+
+      # Includes the Room, Paging and Compose tests: they run on Robolectric, so no emulator is needed.
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
+      # warningsAsErrors is on, so a new lint warning fails the build here.
+      - name: Android lint
+        run: ./gradlew :app:lintDebug
+
+      - name: Assemble
+        run: ./gradlew :app:assembleDebug
+
+      # A Room schema is checked in per version. If codegen produced a different one, the entity change
+      # needs either a version bump and a migration, or a deliberate re-export — not a silent diff.
+      - name: Check the Room schema is committed
+        run: |
+          if ! git diff --exit-code -- app/schemas; then
+            echo "::error::The generated Room schema differs from the committed one." >&2
+            echo "Bump the database version and export the new schema, or commit the regenerated file." >&2
+            exit 1
+          fi
+
+      - name: Upload test and lint reports
+        # Reports matter most when something failed, so this runs regardless of the outcome.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          retention-days: 14
+          if-no-files-found: ignore

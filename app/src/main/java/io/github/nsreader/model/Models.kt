@@ -1,5 +1,8 @@
 package io.github.nsreader.model
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
 /** One row in a topic list. */
 data class PostSummary(
     val postId: Long,
@@ -23,18 +26,52 @@ data class PostListPage(
     val hasNextPage: Boolean,
 )
 
-/** The opening post plus the comments on the requested page. */
+/**
+ * The comments on one page of a thread, plus the opening post if that page carried it.
+ *
+ * [body] is null on page 2 and later, because NodeSeek renders the opening post only on page 1.
+ * That distinction is not cosmetic: the cache has to tell "this page did not include the body" apart
+ * from "the body is empty", or appending page 2 would overwrite the stored body with nothing.
+ */
 data class PostDetail(
     val postId: Long,
     val title: String,
-    val body: PostContent,
+    val body: PostContent?,
     val comments: List<PostContent>,
     val page: Int,
     val totalPages: Int,
     val hasNextPage: Boolean,
 )
 
-/** A post body or a single comment — both use the same markup on NodeSeek. */
+/**
+ * A thread as currently held in the database — what the detail screen renders, online or not.
+ *
+ * Unlike [PostDetail] this is not one fetch: [comments] accumulates every page read so far, which is
+ * how the thread reads as one scroll on a phone.
+ */
+data class ThreadSnapshot(
+    val postId: Long,
+    val title: String,
+    val body: PostContent?,
+    val comments: List<PostContent>,
+    val loadedPages: Int,
+    val totalPages: Int,
+    val cachedAtMillis: Long,
+) {
+    val hasNextPage: Boolean get() = loadedPages < totalPages
+}
+
+/**
+ * A post body or a single comment — both use the same markup on NodeSeek.
+ *
+ * Rich content is stored in the database as a JSON blob rather than as normalised tables: nothing
+ * queries *into* a post body, so columns per node type would be cost without benefit.
+ *
+ * Every [Serializable] type below therefore carries an explicit, short [SerialName]. The discriminator
+ * ends up inside rows that outlive the install, so it must not be a Kotlin class name that a refactor
+ * could silently change and make old rows unreadable.
+ */
+@Serializable
 data class PostContent(
     val commentId: Long?,
     val floor: String?,
@@ -50,39 +87,93 @@ data class PostContent(
 )
 
 /** Block-level pieces of rendered post markup. */
+@Serializable
 sealed interface RichNode {
-    data class Paragraph(val inlines: List<InlineNode>) : RichNode
+    @Serializable
+    @SerialName("p")
+    data class Paragraph(
+        val inlines: List<InlineNode>,
+    ) : RichNode
 
-    data class Heading(val level: Int, val inlines: List<InlineNode>) : RichNode
+    @Serializable
+    @SerialName("h")
+    data class Heading(
+        val level: Int,
+        val inlines: List<InlineNode>,
+    ) : RichNode
 
     /** An image on its own line, rendered full width rather than inline with text. */
-    data class BlockImage(val url: String, val alt: String?) : RichNode
+    @Serializable
+    @SerialName("img")
+    data class BlockImage(
+        val url: String,
+        val alt: String?,
+    ) : RichNode
 
-    data class CodeBlock(val code: String, val language: String?) : RichNode
+    @Serializable
+    @SerialName("code")
+    data class CodeBlock(
+        val code: String,
+        val language: String?,
+    ) : RichNode
 
-    data class Quote(val children: List<RichNode>) : RichNode
+    @Serializable
+    @SerialName("quote")
+    data class Quote(
+        val children: List<RichNode>,
+    ) : RichNode
 
-    data class ListBlock(val ordered: Boolean, val items: List<List<RichNode>>) : RichNode
+    @Serializable
+    @SerialName("list")
+    data class ListBlock(
+        val ordered: Boolean,
+        val items: List<List<RichNode>>,
+    ) : RichNode
 
     /** Tables are rare and messy; we keep the cells so the UI can lay out a simple grid. */
-    data class Table(val rows: List<List<String>>) : RichNode
+    @Serializable
+    @SerialName("table")
+    data class Table(
+        val rows: List<List<String>>,
+    ) : RichNode
 
+    @Serializable
+    @SerialName("hr")
     data object Divider : RichNode
 }
 
 /** Inline pieces inside a paragraph. */
+@Serializable
 sealed interface InlineNode {
-    data class Text(val text: String, val style: InlineStyle = InlineStyle()) : InlineNode
+    @Serializable
+    @SerialName("t")
+    data class Text(
+        val text: String,
+        val style: InlineStyle = InlineStyle(),
+    ) : InlineNode
 
-    data class Link(val text: String, val url: String, val style: InlineStyle = InlineStyle()) :
-        InlineNode
+    @Serializable
+    @SerialName("a")
+    data class Link(
+        val text: String,
+        val url: String,
+        val style: InlineStyle = InlineStyle(),
+    ) : InlineNode
 
     /** Emoji-sized image that must flow with the surrounding text (NodeSeek stickers). */
-    data class Sticker(val url: String, val alt: String?) : InlineNode
+    @Serializable
+    @SerialName("sticker")
+    data class Sticker(
+        val url: String,
+        val alt: String?,
+    ) : InlineNode
 
+    @Serializable
+    @SerialName("br")
     data object LineBreak : InlineNode
 }
 
+@Serializable
 data class InlineStyle(
     val bold: Boolean = false,
     val italic: Boolean = false,

@@ -11,6 +11,7 @@
 
     <!-- Post list -->
     <string name="post_reply_count">%1$d 回复</string>
+    <string name="post_new_reply_count">%1$d 条新回复</string>
     <string name="post_view_count">%1$d 浏览</string>
     <string name="post_badge_original_poster">楼主</string>
 

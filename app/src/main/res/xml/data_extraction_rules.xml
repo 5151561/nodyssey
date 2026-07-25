@@ -1,19 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup rules for API 31 and above.
+
+    The WebView data directory holds the session cookie created when the user signs in. Letting it into
+    a cloud backup would copy a credential off the device it was issued to and onto every device the
+    backup is later restored to. Excluding it costs the user one sign-in after a restore.
+
+    `app_webview` is where the WebView keeps its cookie store; `webview` covers the variant some
+    versions use. Everything else — settings, the Room cache — is safe and useful to restore.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="database" path="webview.db" />
+        <exclude domain="file" path="app_webview" />
+        <exclude domain="file" path="webview" />
     </cloud-backup>
     <!--
-    <device-transfer>
-        <include .../>
-        <exclude .../>
-    </device-transfer>
+        A device transfer is direct rather than via the cloud, but the cookie still belongs to the old
+        device's session, so it is excluded there too.
     -->
+    <device-transfer>
+        <exclude domain="database" path="webview.db" />
+        <exclude domain="file" path="app_webview" />
+        <exclude domain="file" path="webview" />
+    </device-transfer>
 </data-extraction-rules>
