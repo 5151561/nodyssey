@@ -97,10 +97,19 @@ Requires JDK 21 and the Android SDK (compileSdk 36, minSdk 26).
 - [ ] Room 离线缓存 + 已读标记
 - [ ] 图片全屏预览与保存
 
+## 设计
+
+视觉重做的需求文档在 [docs/design-brief.md](docs/design-brief.md)（M3 Expressive 方向）。
+当前实现截图在 [docs/screenshots/](docs/screenshots/)。
+
 ## 致谢
 
-站点结构的逆向来自 [tyrad/nodeseek](https://github.com/tyrad/nodeseek)（iOS 客户端，MIT）——测试用
-的 HTML fixture 也取自该仓库。本项目独立实现，不共享代码。
+- [tyrad/nodeseek](https://github.com/tyrad/nodeseek)（iOS 客户端，MIT）——站点结构的逆向参考，
+  测试用的 HTML fixture 也取自该仓库
+- [mrzhiin/seekmate](https://github.com/mrzhiin/seekmate)（React Native 客户端，MIT）——
+  `/api/content/list-categories`、`/api/account/getInfo/{uid}` 等 JSON 端点由该项目发现
+
+本项目独立实现，不共享代码。
 
 ## 说明
 
