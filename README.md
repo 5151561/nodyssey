@@ -97,6 +97,19 @@ Requires JDK 21 and the Android SDK (compileSdk 36, minSdk 26).
 - [ ] Room 离线缓存 + 已读标记
 - [ ] 图片全屏预览与保存
 
+## 架构
+
+约定与 MAD 现代化评估见 [docs/architecture.md](docs/architecture.md)。四条不可协商的规则：
+
+1. **SSOT**：一份数据一个所有者，其他人只观察，不持有副本
+2. **UDF**：`Repository → ViewModel → 不可变 UiState → Compose`，反向只走事件
+3. **依赖显式**：构造器注入 + `AppContainer`，没有全局单例
+4. **数据层不产生用户文案**：`NodeSeekError` 密封接口 + `strings.xml`
+
+```bash
+./gradlew :app:testDebugUnitTest
+```
+
 ## 设计
 
 视觉重做的需求文档在 [docs/design-brief.md](docs/design-brief.md)（M3 Expressive 方向）。

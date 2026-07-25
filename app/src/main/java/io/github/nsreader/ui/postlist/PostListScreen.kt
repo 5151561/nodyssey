@@ -17,46 +17,77 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nsreader.R
 import io.github.nsreader.core.NodeSeekSite
+import io.github.nsreader.data.Board
 import io.github.nsreader.model.PostSummary
 import io.github.nsreader.ui.common.ErrorState
-import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.common.LoadingState
+import io.github.nsreader.ui.common.UserAvatar
+import io.github.nsreader.ui.theme.NodeSeekTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Stateful entry point. It only wires the ViewModel to the stateless [PostListScreen] below, which
+ * is what keeps the screen previewable and testable without a running app.
+ */
 @Composable
-fun PostListScreen(
+fun PostListRoute(
     viewModel: PostListViewModel,
     onPostClick: (Long) -> Unit,
     onOpenBrowser: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    PostListScreen(
+        state = state,
+        onPostClick = onPostClick,
+        onBoardClick = viewModel::selectCategory,
+        onRefresh = viewModel::refresh,
+        onLoadMore = viewModel::loadNextPage,
+        onSignInClick = { onOpenBrowser(NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH) },
+        onRecoverInBrowser = { onOpenBrowser(viewModel.challengeUrl()) },
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PostListScreen(
+    state: PostListUiState,
+    onPostClick: (Long) -> Unit,
+    onBoardClick: (String?) -> Unit,
+    onRefresh: () -> Unit,
+    onLoadMore: () -> Unit,
+    onSignInClick: () -> Unit,
+    onRecoverInBrowser: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val listState = rememberLazyListState()
-    val selectedIndex = state.boards.indexOfFirst { it.slug == state.categorySlug }.coerceAtLeast(0)
 
     // Prefetch one page ahead of the viewport so scrolling never stalls at the seam.
     val shouldLoadMore by remember {
@@ -66,35 +97,34 @@ fun PostListScreen(
         }
     }
     LaunchedEffect(shouldLoadMore, state.posts.size) {
-        if (shouldLoadMore) viewModel.loadNextPage()
+        if (shouldLoadMore) onLoadMore()
     }
-    LaunchedEffect(state.categorySlug) {
-        listState.scrollToItem(0)
-    }
+    LaunchedEffect(state.categorySlug) { listState.scrollToItem(0) }
 
     Scaffold(
         modifier = modifier,
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("NodeSeek", fontWeight = FontWeight.Bold) },
+                    title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },
                     actions = {
-                        // Until there is an account screen, this is the only way in: several
-                        // boards 400 without a session, and the JSON endpoints 500.
-                        IconButton(onClick = { onOpenBrowser(NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH) }) {
-                            Icon(Icons.Default.AccountCircle, contentDescription = "登录")
+                        IconButton(onClick = onSignInClick) {
+                            Icon(
+                                Icons.Default.AccountCircle,
+                                contentDescription = stringResource(R.string.action_sign_in),
+                            )
                         }
                     },
                 )
                 PrimaryScrollableTabRow(
-                    selectedTabIndex = selectedIndex,
+                    selectedTabIndex = state.selectedBoardIndex,
                     edgePadding = 12.dp,
                     divider = {},
                 ) {
                     state.boards.forEachIndexed { index, board ->
                         Tab(
-                            selected = index == selectedIndex,
-                            onClick = { viewModel.selectCategory(board.slug) },
+                            selected = index == state.selectedBoardIndex,
+                            onClick = { onBoardClick(board.slug) },
                             text = {
                                 Text(
                                     text = board.title,
@@ -110,20 +140,17 @@ fun PostListScreen(
         },
     ) { padding ->
         Box(Modifier.padding(padding)) {
+            val error = state.error
             when {
                 state.posts.isEmpty() && state.isLoading -> LoadingState()
 
-                state.posts.isEmpty() && state.error != null -> ErrorState(
-                    message = state.error!!,
-                    challenge = state.challenge,
-                    onRetry = viewModel::refresh,
-                    onOpenBrowser = { onOpenBrowser(viewModel.challengeUrl()) },
+                state.posts.isEmpty() && error != null -> ErrorState(
+                    error = error,
+                    onRetry = onRefresh,
+                    onOpenBrowser = onRecoverInBrowser,
                 )
 
-                else -> PullToRefreshBox(
-                    isRefreshing = state.isLoading,
-                    onRefresh = viewModel::refresh,
-                ) {
+                else -> PullToRefreshBox(isRefreshing = state.isLoading, onRefresh = onRefresh) {
                     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                         items(state.posts, key = { it.postId }) { post ->
                             PostRow(post = post, onClick = { onPostClick(post.postId) })
@@ -171,8 +198,8 @@ private fun PostRow(post: PostSummary, onClick: () -> Unit) {
             ) {
                 post.categoryTitle?.let { CategoryChip(it) }
                 MetaText(post.authorName)
-                post.commentCount?.let { MetaText("$it 回复") }
-                post.viewCount?.let { MetaText("$it 浏览") }
+                post.commentCount?.let { MetaText(stringResource(R.string.post_reply_count, it)) }
+                post.viewCount?.let { MetaText(stringResource(R.string.post_view_count, it)) }
                 post.lastActiveText?.let { MetaText(it) }
             }
         }
@@ -201,4 +228,86 @@ private fun MetaText(text: String) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
+}
+
+private val previewState = PostListUiState(
+    boards = listOf(
+        Board(null, "综合", null),
+        Board("daily", "日常", null),
+        Board("tech", "技术", null),
+        Board("trade", "交易", null),
+    ),
+    posts = listOf(
+        PostSummary(
+            postId = 1,
+            title = "iLatency公测，一个新的社区内Ping站，邀你共建",
+            authorName = "酒神",
+            authorUid = 1,
+            avatarUrl = null,
+            categoryTitle = "Dev",
+            categorySlug = "dev",
+            viewCount = 30594,
+            commentCount = 340,
+            lastActiveText = "28分钟前",
+            lastActiveTitle = null,
+        ),
+        PostSummary(
+            postId = 2,
+            title = "移动说回馈老用户，十一年宽带合约，一次性交3年宽带费，后续8年不缴费，还送一部手机",
+            authorName = "宝宝困困",
+            authorUid = 2,
+            avatarUrl = null,
+            categoryTitle = "日常",
+            categorySlug = "daily",
+            viewCount = 1551,
+            commentCount = 53,
+            lastActiveText = "11秒前",
+            lastActiveTitle = null,
+        ),
+        PostSummary(
+            postId = 3,
+            title = "收北京腾讯云无忧235",
+            authorName = "jswcph",
+            authorUid = 3,
+            avatarUrl = null,
+            categoryTitle = "交易",
+            categorySlug = "trade",
+            viewCount = 2,
+            commentCount = 0,
+            lastActiveText = "3秒前",
+            lastActiveTitle = null,
+        ),
+    ),
+)
+
+@Preview(showBackground = true, name = "Post list")
+@Composable
+private fun PostListScreenPreview() {
+    NodeSeekTheme {
+        PostListScreen(
+            state = previewState,
+            onPostClick = {},
+            onBoardClick = {},
+            onRefresh = {},
+            onLoadMore = {},
+            onSignInClick = {},
+            onRecoverInBrowser = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Post list · dark")
+@Composable
+private fun PostListScreenDarkPreview() {
+    NodeSeekTheme(darkTheme = true) {
+        PostListScreen(
+            state = previewState,
+            onPostClick = {},
+            onBoardClick = {},
+            onRefresh = {},
+            onLoadMore = {},
+            onSignInClick = {},
+            onRecoverInBrowser = {},
+        )
+    }
 }

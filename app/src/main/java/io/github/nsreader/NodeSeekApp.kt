@@ -9,9 +9,19 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
-import io.github.nsreader.di.ServiceLocator
+import io.github.nsreader.di.AppContainer
+import io.github.nsreader.di.DefaultAppContainer
 
 class NodeSeekApp : Application(), SingletonImageLoader.Factory {
+
+    /** The one place the dependency graph is built. Everything else receives it. */
+    lateinit var container: AppContainer
+        private set
+
+    override fun onCreate() {
+        super.onCreate()
+        container = DefaultAppContainer(this)
+    }
 
     /**
      * Images share the app's OkHttp client so avatars and attachments carry the same cookies and
@@ -20,7 +30,7 @@ class NodeSeekApp : Application(), SingletonImageLoader.Factory {
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
             .components {
-                add(OkHttpNetworkFetcherFactory(callFactory = { ServiceLocator.okHttpClient }))
+                add(OkHttpNetworkFetcherFactory(callFactory = { container.okHttpClient }))
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     add(AnimatedImageDecoder.Factory())
                 } else {

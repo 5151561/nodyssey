@@ -16,7 +16,7 @@ class ChallengeDetectorTest {
     @Test
     fun `a cloudflare interstitial is detected`() {
         assertEquals(
-            ChallengeDetector.Challenge.Cloudflare,
+            NodeSeekError.Cloudflare,
             ChallengeDetector.detect(Fixtures.load("cloudflare-challenge.html"), 403, emptyMap()),
         )
     }
@@ -24,7 +24,7 @@ class ChallengeDetectorTest {
     @Test
     fun `the cf-mitigated header alone is enough`() {
         assertEquals(
-            ChallengeDetector.Challenge.Cloudflare,
+            NodeSeekError.Cloudflare,
             ChallengeDetector.detect("<html></html>", 200, mapOf("CF-Mitigated" to "challenge")),
         )
     }
@@ -43,7 +43,7 @@ class ChallengeDetectorTest {
     @Test
     fun `a login wall is reported separately so the UI can offer sign-in`() {
         assertEquals(
-            ChallengeDetector.Challenge.LoginRequired,
+            NodeSeekError.LoginRequired,
             ChallengeDetector.detect(Fixtures.load("post-login-required.html"), 200, emptyMap()),
         )
     }
@@ -51,7 +51,7 @@ class ChallengeDetectorTest {
     @Test
     fun `an unexpected status is reported as blocked`() {
         assertEquals(
-            ChallengeDetector.Challenge.Blocked(500),
+            NodeSeekError.Http(500),
             ChallengeDetector.detect("<html>oops</html>", 500, emptyMap()),
         )
     }

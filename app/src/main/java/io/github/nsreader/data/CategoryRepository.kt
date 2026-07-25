@@ -1,38 +1,61 @@
 package io.github.nsreader.data
 
 import io.github.nsreader.core.NodeSeekSite
+import io.github.nsreader.core.runCatchingExceptCancellation
+import io.github.nsreader.core.net.JsonSource
 import io.github.nsreader.core.net.NodeSeekJsonClient
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * Boards come from `/api/content/list-categories` — one of the few endpoints NodeSeek actually
- * serves as JSON. It is authoritative: the hardcoded list in [NodeSeekSite] had already drifted
+ * Single source of truth for the board list.
+ *
+ * Boards come from `/api/content/list-categories` — one of the few endpoints NodeSeek serves as
+ * JSON. It is authoritative: the hardcoded list in [NodeSeekSite] had already drifted
  * (`meaningless` no longer exists), so the API wins and the static list is only an offline fallback.
+ *
+ * Consumers **observe** [boards] rather than calling a getter and keeping a copy, so a later
+ * refresh reaches every screen without anyone synchronising anything by hand.
  */
 class CategoryRepository(
-    private val client: NodeSeekJsonClient,
+    private val client: JsonSource,
 ) {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private var cached: List<Board>? = null
+    private val _boards = MutableStateFlow(listOf(FRONT_PAGE))
+    val boards: StateFlow<List<Board>> = _boards.asStateFlow()
 
-    suspend fun loadBoards(): List<Board> {
-        cached?.let { return it }
-        val boards = runCatching {
-            val body = client.getJson(NodeSeekJsonClient.PATH_CATEGORIES)
-            json.decodeFromString<CategoriesResponse>(body)
-                .takeIf { it.success }
-                ?.data
-                ?.map { it.toBoard() }
-                .orEmpty()
-        }.getOrElse { emptyList() }
+    private val refreshMutex = Mutex()
+    private var loadedFromNetwork = false
 
-        val result = listOf(FRONT_PAGE) + boards.ifEmpty { fallbackBoards() }
-        cached = result
-        return result
+    /** Idempotent: concurrent callers collapse into one request, and a success is not re-fetched. */
+    suspend fun refreshIfNeeded() {
+        if (loadedFromNetwork) return
+        refreshMutex.withLock {
+            if (loadedFromNetwork) return
+            val remote = runCatchingExceptCancellation {
+                val body = client.getJson(NodeSeekJsonClient.PATH_CATEGORIES)
+                json.decodeFromString<CategoriesResponse>(body)
+                    .takeIf { it.success }
+                    ?.data
+                    ?.map { it.toBoard() }
+                    .orEmpty()
+            }.getOrElse { emptyList() }
+
+            if (remote.isNotEmpty()) {
+                _boards.value = listOf(FRONT_PAGE) + remote
+                loadedFromNetwork = true
+            } else {
+                _boards.value = listOf(FRONT_PAGE) + fallbackBoards()
+            }
+        }
     }
 
     private fun fallbackBoards(): List<Board> =
@@ -42,7 +65,7 @@ class CategoryRepository(
 
     companion object {
         /** The mixed front page is not a board, so the API never returns it. */
-        val FRONT_PAGE = Board(slug = null, title = "综合", description = "全站最新")
+        val FRONT_PAGE = Board(slug = null, title = "综合", description = null)
     }
 }
 

@@ -1,22 +1,30 @@
 package io.github.nsreader.core.net
 
+import io.github.nsreader.core.AppDispatchers
 import io.github.nsreader.core.NodeSeekSite
-import kotlinx.coroutines.Dispatchers
+import java.io.IOException
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
  * The handful of real JSON endpoints NodeSeek exposes. They do not cover browsing — lists and post
- * pages are still HTML — but they are authoritative for things like the board list, so prefer them
- * over scraping wherever one exists.
+ * pages are still HTML — but they are authoritative where one exists, so prefer them over scraping.
+ *
+ * Endpoints under `/api/notification` and `/api/statistics` answer **500 when unauthenticated**
+ * rather than 401, so callers must treat any failure as possibly meaning "sign in first".
  */
+interface JsonSource {
+    suspend fun getJson(path: String, referer: String = NodeSeekSite.BASE_URL + "/"): String
+}
+
 class NodeSeekJsonClient(
     private val okHttpClient: OkHttpClient,
-) {
+    private val dispatchers: AppDispatchers,
+) : JsonSource {
 
-    suspend fun getJson(path: String, referer: String = "${NodeSeekSite.BASE_URL}/"): String =
-        withContext(Dispatchers.IO) {
+    override suspend fun getJson(path: String, referer: String): String =
+        withContext(dispatchers.io) {
             val url = NodeSeekSite.absoluteUrl(path) ?: error("Invalid path: $path")
             val request = Request.Builder()
                 .url(url)
@@ -30,14 +38,18 @@ class NodeSeekJsonClient(
                 .header("Sec-Fetch-Site", "same-origin")
                 .build()
 
-            okHttpClient.newCall(request).execute().use { response ->
-                val body = response.body?.string().orEmpty()
-                if (!response.isSuccessful) {
-                    throw NodeSeekException.of(ChallengeDetector.Challenge.Blocked(response.code))
-                }
+            val response = try {
+                okHttpClient.newCall(request).execute()
+            } catch (e: IOException) {
+                throw NodeSeekException(NodeSeekError.Network, e)
+            }
+
+            response.use {
+                val body = it.body?.string().orEmpty()
+                if (!it.isSuccessful) throw NodeSeekException(NodeSeekError.Http(it.code))
                 // An HTML body on a JSON endpoint means Cloudflare intercepted the call.
                 if (body.trimStart().startsWith("<")) {
-                    throw NodeSeekException.of(ChallengeDetector.Challenge.Cloudflare)
+                    throw NodeSeekException(NodeSeekError.Cloudflare)
                 }
                 body
             }

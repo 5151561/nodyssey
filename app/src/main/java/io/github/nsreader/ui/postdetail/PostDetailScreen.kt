@@ -33,19 +33,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nsreader.R
 import io.github.nsreader.model.PostContent
 import io.github.nsreader.ui.common.ErrorState
 import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.common.LoadingState
 import io.github.nsreader.ui.richtext.RichContent
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PostDetailScreen(
+fun PostDetailRoute(
     viewModel: PostDetailViewModel,
     onBack: () -> Unit,
     onOpenBrowser: (String) -> Unit,
@@ -53,6 +54,30 @@ fun PostDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    PostDetailScreen(
+        state = state,
+        onBack = onBack,
+        onOpenBrowser = onOpenBrowser,
+        onImageClick = onImageClick,
+        onRetry = viewModel::refresh,
+        onLoadMore = viewModel::loadNextPage,
+        onOpenPostInBrowser = { onOpenBrowser(viewModel.postUrl()) },
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PostDetailScreen(
+    state: PostDetailUiState,
+    onBack: () -> Unit,
+    onOpenBrowser: (String) -> Unit,
+    onImageClick: (String) -> Unit,
+    onRetry: () -> Unit,
+    onLoadMore: () -> Unit,
+    onOpenPostInBrowser: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val listState = rememberLazyListState()
 
     val shouldLoadMore by remember {
@@ -62,7 +87,7 @@ fun PostDetailScreen(
         }
     }
     LaunchedEffect(shouldLoadMore, state.comments.size) {
-        if (shouldLoadMore) viewModel.loadNextPage()
+        if (shouldLoadMore) onLoadMore()
     }
 
     Scaffold(
@@ -79,26 +104,32 @@ fun PostDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onOpenBrowser(viewModel.postUrl()) }) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "在网页中打开")
+                    IconButton(onClick = onOpenPostInBrowser) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = stringResource(R.string.action_open_in_browser),
+                        )
                     }
                 },
             )
         },
     ) { padding ->
         Box(Modifier.padding(padding)) {
+            val error = state.error
             when {
                 state.body == null && state.isLoading -> LoadingState()
 
-                state.body == null && state.error != null -> ErrorState(
-                    message = state.error!!,
-                    challenge = state.challenge,
-                    onRetry = viewModel::refresh,
-                    onOpenBrowser = { onOpenBrowser(viewModel.postUrl()) },
+                state.body == null && error != null -> ErrorState(
+                    error = error,
+                    onRetry = onRetry,
+                    onOpenBrowser = onOpenPostInBrowser,
                 )
 
                 else -> LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -166,7 +197,7 @@ private fun ContentBlock(
             )
             if (content.isOriginalPoster) {
                 Text(
-                    text = "楼主",
+                    text = stringResource(R.string.post_badge_original_poster),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier

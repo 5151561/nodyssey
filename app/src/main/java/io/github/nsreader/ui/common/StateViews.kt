@@ -13,9 +13,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nsreader.core.net.ChallengeDetector
+import io.github.nsreader.R
+import io.github.nsreader.core.net.NodeSeekError
+import io.github.nsreader.core.net.isRecoverableInBrowser
+import io.github.nsreader.ui.theme.NodeSeekTheme
 
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
@@ -30,15 +35,11 @@ fun LoadingState(modifier: Modifier = Modifier) {
  */
 @Composable
 fun ErrorState(
-    message: String,
-    challenge: ChallengeDetector.Challenge?,
+    error: NodeSeekError,
     onRetry: () -> Unit,
     onOpenBrowser: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val recoverable = challenge == ChallengeDetector.Challenge.Cloudflare ||
-        challenge == ChallengeDetector.Challenge.LoginRequired
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -47,23 +48,53 @@ fun ErrorState(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = message,
+            text = error.message(),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        if (recoverable) {
+        if (error.isRecoverableInBrowser) {
             Button(onClick = onOpenBrowser) {
                 Text(
-                    when (challenge) {
-                        ChallengeDetector.Challenge.LoginRequired -> "登录"
-                        else -> "在浏览器中验证"
-                    },
+                    stringResource(
+                        if (error is NodeSeekError.LoginRequired) {
+                            R.string.action_sign_in
+                        } else {
+                            R.string.action_verify_in_browser
+                        },
+                    ),
                 )
             }
-            OutlinedButton(onClick = onRetry) { Text("重试") }
+            OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
         } else {
-            Button(onClick = onRetry) { Text("重试") }
+            Button(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
         }
+    }
+}
+
+/** The one place that turns a data-layer error into words. */
+@Composable
+fun NodeSeekError.message(): String = when (this) {
+    NodeSeekError.Cloudflare -> stringResource(R.string.error_cloudflare)
+    NodeSeekError.LoginRequired -> stringResource(R.string.error_login_required)
+    is NodeSeekError.Http -> stringResource(R.string.error_http, statusCode)
+    NodeSeekError.Unparsable -> stringResource(R.string.error_unparsable)
+    NodeSeekError.Network -> stringResource(R.string.error_network)
+    NodeSeekError.Unknown -> stringResource(R.string.error_unknown)
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ErrorStateCloudflarePreview() {
+    NodeSeekTheme {
+        ErrorState(error = NodeSeekError.Cloudflare, onRetry = {}, onOpenBrowser = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ErrorStateNetworkPreview() {
+    NodeSeekTheme {
+        ErrorState(error = NodeSeekError.Network, onRetry = {}, onOpenBrowser = {})
     }
 }

@@ -91,6 +91,9 @@ dependencies {
   implementation(libs.jsoup)
   implementation(libs.kotlinx.serialization.json)
 
+  // Settings SSOT
+  implementation(libs.androidx.datastore.preferences)
+
   // Images: avatars, inline stickers and post attachments.
   implementation(libs.coil.compose)
   implementation(libs.coil.gif)

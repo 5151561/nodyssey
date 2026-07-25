@@ -1,11 +1,16 @@
 package io.github.nsreader.ui.postdetail
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nsreader.core.NodeSeekSite
-import io.github.nsreader.core.net.ChallengeDetector
-import io.github.nsreader.core.net.NodeSeekException
+import io.github.nsreader.core.runCatchingExceptCancellation
+import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.data.PostRepository
+import io.github.nsreader.di.AppContainer
+import io.github.nsreader.ui.postlist.toNodeSeekError
 import io.github.nsreader.model.PostContent
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,10 +48,10 @@ class PostDetailViewModel(
     private fun load(page: Int, append: Boolean) {
         loadJob?.cancel()
         _uiState.update {
-            it.copy(isLoading = !append, isAppending = append, error = null, challenge = null)
+            it.copy(isLoading = !append, isAppending = append, error = null)
         }
         loadJob = viewModelScope.launch {
-            runCatching { repository.loadDetail(postId, page) }
+            runCatchingExceptCancellation { repository.loadDetail(postId, page) }
                 .onSuccess { detail ->
                     _uiState.update { state ->
                         state.copy(
@@ -66,8 +71,7 @@ class PostDetailViewModel(
                         state.copy(
                             isLoading = false,
                             isAppending = false,
-                            error = throwable.message ?: "加载失败",
-                            challenge = (throwable as? NodeSeekException)?.challenge,
+                            error = throwable.toNodeSeekError(),
                         )
                     }
                 }
@@ -75,6 +79,13 @@ class PostDetailViewModel(
     }
 
     fun postUrl(): String = NodeSeekSite.BASE_URL + NodeSeekSite.postPath(postId, _uiState.value.page)
+
+    companion object {
+        fun factory(container: AppContainer, postId: Long): ViewModelProvider.Factory =
+            viewModelFactory {
+                initializer { PostDetailViewModel(postId, container.postRepository) }
+            }
+    }
 }
 
 data class PostDetailUiState(
@@ -86,6 +97,5 @@ data class PostDetailUiState(
     val hasNextPage: Boolean = false,
     val isLoading: Boolean = false,
     val isAppending: Boolean = false,
-    val error: String? = null,
-    val challenge: ChallengeDetector.Challenge? = null,
+    val error: NodeSeekError? = null,
 )
