@@ -14,7 +14,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.model.PostSummary
 import io.github.nsreader.ui.common.ErrorState
 import io.github.nsreader.ui.common.UserAvatar
@@ -71,7 +76,16 @@ fun PostListScreen(
         modifier = modifier,
         topBar = {
             Column {
-                TopAppBar(title = { Text("NodeSeek", fontWeight = FontWeight.Bold) })
+                TopAppBar(
+                    title = { Text("NodeSeek", fontWeight = FontWeight.Bold) },
+                    actions = {
+                        // Until there is an account screen, this is the only way in: several
+                        // boards 400 without a session, and the JSON endpoints 500.
+                        IconButton(onClick = { onOpenBrowser(NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH) }) {
+                            Icon(Icons.Default.AccountCircle, contentDescription = "登录")
+                        }
+                    },
+                )
                 PrimaryScrollableTabRow(
                     selectedTabIndex = selectedIndex,
                     edgePadding = 12.dp,
