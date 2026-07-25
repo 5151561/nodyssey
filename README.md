@@ -14,7 +14,7 @@ theme.
 
 **v1 开发中：只读 + 登录浏览。** 目前已经可用的功能：
 
-- 15 个版块的帖子列表，无限滚动 + 下拉刷新
+- 版块列表来自 `/api/content/list-categories`（实时，不写死），无限滚动 + 下拉刷新
 - 帖子详情：正文、评论分页（自动续接为一条长列表）
 - **原生正文渲染**：段落、图片、表情、代码块、引用、列表、表格、行内链接
 - 头像加载失败时回退到首字母色块
@@ -43,6 +43,7 @@ app/src/main/java/io/github/nsreader/
 │       ├── NodeSeekClient.kt     OkHttp + browser headers
 │       ├── WebViewCookieJar.kt   one cookie store for OkHttp and the WebView
 │       └── ChallengeDetector.kt  Cloudflare / login-wall detection
+│       └── NodeSeekJsonClient.kt  the few real JSON endpoints
 ├── model/       parsed domain types (no Android dependencies)
 ├── data/        repository
 └── ui/          Compose screens + the native rich-text renderer
@@ -66,6 +67,25 @@ Requires JDK 21 and the Android SDK (compileSdk 36, minSdk 26).
 ```bash
 ./gradlew :app:assembleDebug
 ```
+
+## 已知的 JSON 接口
+
+浏览相关的内容没有接口，只能抓 HTML；以下是实测可用的 JSON 端点：
+
+| 接口 | 说明 | 是否需要登录 |
+|---|---|---|
+| `GET /api/content/list-categories` | 版块列表（含描述、图标、是否显示在导航） | 否 |
+| `GET /api/account/getInfo/{uid}` | 用户资料 | — |
+| `GET /api/notification/unread-count` | 未读数 | 是（未登录返回 500） |
+| `GET /api/statistics/list-collection?page=` | 收藏列表 | 是（未登录返回 500） |
+| `GET /api/content/list-comments?uid=&page=` | 某用户的评论 | — |
+| `GET /api/content/list-discussions?uid=&page=` | 某用户的主题 | — |
+| `POST /api/attendance?random=` | 签到 | 是 |
+| `GET /api/attendance/board?page=` | 签到榜 | — |
+| `POST /api/block-list/add` | 屏蔽用户 | 是 |
+| `GET /api/statistics/{like,dislike,collection,upvote}` | 点赞 / 踩 / 收藏 / 鸡腿 | 是 |
+
+列表页支持 `?sortBy=` 参数（按发帖时间 / 回复时间排序）。`/categories/inside`（内版）在未登录时返回 **HTTP 400**。
 
 ## Roadmap
 

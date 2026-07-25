@@ -36,7 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.model.PostSummary
 import io.github.nsreader.ui.common.ErrorState
 import io.github.nsreader.ui.common.UserAvatar
@@ -52,8 +51,7 @@ fun PostListScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
-    val selectedIndex = NodeSeekSite.categories.indexOfFirst { it.slug == state.categorySlug }
-        .coerceAtLeast(0)
+    val selectedIndex = state.boards.indexOfFirst { it.slug == state.categorySlug }.coerceAtLeast(0)
 
     // Prefetch one page ahead of the viewport so scrolling never stalls at the seam.
     val shouldLoadMore by remember {
@@ -79,13 +77,13 @@ fun PostListScreen(
                     edgePadding = 12.dp,
                     divider = {},
                 ) {
-                    NodeSeekSite.categories.forEachIndexed { index, category ->
+                    state.boards.forEachIndexed { index, board ->
                         Tab(
                             selected = index == selectedIndex,
-                            onClick = { viewModel.selectCategory(category.slug) },
+                            onClick = { viewModel.selectCategory(board.slug) },
                             text = {
                                 Text(
-                                    text = category.title,
+                                    text = board.title,
                                     style = MaterialTheme.typography.titleSmall,
                                     maxLines = 1,
                                 )

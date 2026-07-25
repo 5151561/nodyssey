@@ -89,6 +89,7 @@ dependencies {
 
   // NodeSeek has no public API for lists/details, so pages are scraped.
   implementation(libs.jsoup)
+  implementation(libs.kotlinx.serialization.json)
 
   // Images: avatars, inline stickers and post attachments.
   implementation(libs.coil.compose)

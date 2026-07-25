@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.ChallengeDetector
 import io.github.nsreader.core.net.NodeSeekException
+import io.github.nsreader.data.Board
+import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.model.PostSummary
 import kotlinx.coroutines.Job
@@ -16,6 +18,7 @@ import kotlinx.coroutines.launch
 
 class PostListViewModel(
     private val repository: PostRepository,
+    private val categoryRepository: CategoryRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PostListUiState())
@@ -25,6 +28,10 @@ class PostListViewModel(
 
     init {
         refresh()
+        viewModelScope.launch {
+            val boards = categoryRepository.loadBoards()
+            _uiState.update { it.copy(boards = boards) }
+        }
     }
 
     fun selectCategory(slug: String?) {
@@ -88,6 +95,7 @@ class PostListViewModel(
 }
 
 data class PostListUiState(
+    val boards: List<Board> = listOf(CategoryRepository.FRONT_PAGE),
     val categorySlug: String? = null,
     val posts: List<PostSummary> = emptyList(),
     val page: Int = 1,

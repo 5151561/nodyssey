@@ -2,7 +2,9 @@ package io.github.nsreader.di
 
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.NodeSeekClient
+import io.github.nsreader.core.net.NodeSeekJsonClient
 import io.github.nsreader.core.net.WebViewCookieJar
+import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.NetworkPostRepository
 import io.github.nsreader.data.PostRepository
 import java.util.concurrent.TimeUnit
@@ -38,5 +40,9 @@ object ServiceLocator {
 
     val nodeSeekClient: NodeSeekClient by lazy { NodeSeekClient(okHttpClient) }
 
+    val jsonClient: NodeSeekJsonClient by lazy { NodeSeekJsonClient(okHttpClient) }
+
     val postRepository: PostRepository by lazy { NetworkPostRepository(nodeSeekClient) }
+
+    val categoryRepository: CategoryRepository by lazy { CategoryRepository(jsonClient) }
 }

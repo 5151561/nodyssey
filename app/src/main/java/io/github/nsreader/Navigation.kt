@@ -22,7 +22,12 @@ fun MainNavigation() {
         entryProvider = entryProvider {
             entry<PostListKey> {
                 val viewModel: PostListViewModel =
-                    viewModel { PostListViewModel(ServiceLocator.postRepository) }
+                    viewModel {
+                        PostListViewModel(
+                            ServiceLocator.postRepository,
+                            ServiceLocator.categoryRepository,
+                        )
+                    }
                 PostListScreen(
                     viewModel = viewModel,
                     onPostClick = { backStack.add(PostDetailKey(it)) },

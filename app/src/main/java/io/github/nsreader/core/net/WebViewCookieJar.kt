@@ -39,6 +39,13 @@ class WebViewCookieJar(
         return SESSION_COOKIE_NAMES.any { header.contains("$it=") }
     }
 
+    /** Cookie *names* only — used for diagnostics; values are never logged. */
+    fun cookieNames(): List<String> =
+        cookieManager.getCookie(io.github.nsreader.core.NodeSeekSite.BASE_URL)
+            .orEmpty()
+            .split(';')
+            .mapNotNull { it.substringBefore('=').trim().ifBlank { null } }
+
     fun clearSession() {
         cookieManager.removeAllCookies(null)
         cookieManager.flush()
