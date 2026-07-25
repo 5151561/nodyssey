@@ -8,12 +8,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -73,6 +73,7 @@ import io.github.nsreader.ui.theme.PostTitle
 import io.github.nsreader.ui.theme.Sizes
 import io.github.nsreader.ui.theme.Spacing
 import io.github.nsreader.ui.theme.TABULAR_FIGURES
+import io.github.nsreader.ui.theme.readableWidth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -267,7 +268,12 @@ private fun ThreadList(
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
 ) {
-    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier
+            .fillMaxHeight()
+            .readableWidth(),
+    ) {
         item(key = "title") {
             ThreadHeader(title = state.title, body = state.body)
         }
@@ -341,7 +347,6 @@ private fun ThreadHeader(
             text = title,
             style = PostTitle,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.widthIn(max = Sizes.readableContentWidth),
         )
         FlowRow(
             modifier = Modifier.padding(top = 10.dp),
@@ -410,9 +415,7 @@ private fun OriginalPost(
                 onImageClick = onImageClick,
                 onQuoteRefClick = { onJumpToFloor(it.floor) },
                 textStyle = PostBody,
-                modifier = Modifier
-                    .padding(top = Spacing.md)
-                    .widthIn(max = Sizes.readableContentWidth),
+                modifier = Modifier.padding(top = Spacing.md),
             )
         }
     }
@@ -509,9 +512,7 @@ private fun CommentRow(
             onImageClick = onImageClick,
             onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
             textStyle = CommentBody,
-            modifier = Modifier
-                .padding(start = 36.dp, top = Spacing.sm)
-                .widthIn(max = Sizes.readableContentWidth),
+            modifier = Modifier.padding(start = 36.dp, top = Spacing.sm),
         )
     }
 }
@@ -659,7 +660,7 @@ private fun previewContent(
     ),
 )
 
-private val previewState =
+internal val previewState =
     PostDetailUiState(
         title = "为啥nodequality复制格式非常慢，是电脑问题还是怎么回事",
         body =

@@ -3,6 +3,8 @@ package io.github.nsreader.ui.postlist
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -315,6 +317,37 @@ class PostListScreenTest {
         composeRule.onNodeWithText("按发帖时间").performClick()
 
         assertEquals(FeedSort.POST_TIME, chosen)
+    }
+
+    /**
+     * The tick marking the active order is decoration, so it carries no description; without
+     * `selected` on the item itself the two orders were indistinguishable to a screen reader.
+     */
+    @Test
+    fun `the sort menu marks the active order as selected`() {
+        setScreen(
+            listOf(feedPost(1, "post")),
+            state = PostListUiState(boards = boards, sort = FeedSort.LAST_REPLY),
+        )
+
+        composeRule.onNodeWithContentDescription("排序方式").performClick()
+
+        composeRule.onNodeWithText("按回复时间").assertIsSelected()
+        composeRule.onNodeWithText("按发帖时间").assertIsNotSelected()
+    }
+
+    /** The lock is the only thing saying the board is restricted, so it has to be described. */
+    @Test
+    fun `an admin-only board describes its lock`() {
+        setScreen(
+            posts = listOf(feedPost(1, "post")),
+            state =
+            PostListUiState(
+                boards = boards + Board("inside", "内版", null, adminOnly = true),
+            ),
+        )
+
+        composeRule.onNodeWithContentDescription("仅管理员可见").assertIsDisplayed()
     }
 
     /** The needs-login screen has to name the board, or it reads like the whole app is locked. */

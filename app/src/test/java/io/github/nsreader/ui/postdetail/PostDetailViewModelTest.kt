@@ -185,6 +185,47 @@ class PostDetailViewModelTest {
             assertEquals(5, vm.uiState.value.comments.size)
         }
 
+    @Test
+    fun `removing session data clears a still alive detail entry`() =
+        runTest(dispatcher) {
+            repository.refreshThread(postId = 42, page = 1)
+            val vm = viewModel()
+            advanceUntilIdle()
+            assertNotNull(vm.uiState.value.body)
+
+            repository.clearSessionData()
+            advanceUntilIdle()
+
+            assertNull(vm.uiState.value.body)
+            assertTrue(vm.uiState.value.comments.isEmpty())
+            assertEquals(1, vm.uiState.value.page)
+        }
+
+    @Test
+    fun `refresh after page three resumes from page two without a gap`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 1, totalPages = 5)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+            vm.loadNextPage()
+            advanceUntilIdle()
+            vm.loadNextPage()
+            advanceUntilIdle()
+            assertEquals(3, vm.uiState.value.page)
+
+            vm.refresh()
+            advanceUntilIdle()
+            assertEquals(1, vm.uiState.value.page)
+
+            vm.loadNextPage()
+            advanceUntilIdle()
+
+            assertEquals(2, remote.detailRequests.last().second)
+            assertEquals(2, vm.uiState.value.page)
+        }
+
     /** A flaky connection must not throw away content the user is already reading. */
     @Test
     fun `a failed refresh keeps the cached thread on screen`() =

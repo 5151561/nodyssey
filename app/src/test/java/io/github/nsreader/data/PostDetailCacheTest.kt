@@ -1,6 +1,7 @@
 package io.github.nsreader.data
 
 import io.github.nsreader.data.local.NodeSeekDatabase
+import io.github.nsreader.data.local.toEntity
 import io.github.nsreader.data.local.toSnapshot
 import io.github.nsreader.model.RichNode
 import kotlinx.coroutines.flow.first
@@ -127,9 +128,9 @@ class PostDetailCacheTest {
             assertEquals(1, requireNotNull(repository.thread(42).first()).comments.size)
         }
 
-    /** Re-reading page 1 must not make the app forget it already holds later pages. */
+    /** Re-reading page 1 deletes later rows, so the contiguous-page cursor resets with them. */
     @Test
-    fun `loaded page count only moves forward`() =
+    fun `re-reading page one resets the contiguous loaded page count`() =
         runTest {
             remote.detailResult = { postId, page ->
                 FakePostRemoteDataSource.detail(postId, page, commentCount = 1, totalPages = 5)
@@ -140,7 +141,60 @@ class PostDetailCacheTest {
             repository.refreshThread(postId = 42, page = 3)
             repository.refreshThread(postId = 42, page = 1)
 
-            assertEquals(3, requireNotNull(repository.thread(42).first()).loadedPages)
+            val thread = requireNotNull(repository.thread(42).first())
+            assertEquals(1, thread.loadedPages)
+            assertEquals(1, thread.comments.size)
+            assertTrue(thread.hasNextPage)
+        }
+
+    @Test
+    fun `clearing session data removes feeds threads and read marks but keeps boards`() =
+        runTest {
+            database.boardDao().replaceAll(listOf(Board("inside", "内版", null).toEntity(0)))
+            repository.refreshThread(postId = 42, page = 1)
+            repository.markThreadRead(42)
+
+            repository.clearSessionData()
+
+            assertNull(repository.thread(42).first())
+            assertNull(database.readMarkDao().find(42))
+            assertEquals(1, database.boardDao().count())
+        }
+
+    @Test
+    fun `a signed out cold start clears cache previously marked authenticated`() =
+        runTest {
+            repository.refreshThread(postId = 42, page = 1)
+            repository.reconcileSession(isSignedIn = true, fingerprint = 7)
+
+            val cleared = repository.reconcileSession(isSignedIn = false, fingerprint = 0)
+
+            assertTrue(cleared)
+            assertNull(repository.thread(42).first())
+        }
+
+    @Test
+    fun `a signed out cold start keeps cache created while signed out`() =
+        runTest {
+            repository.refreshThread(postId = 42, page = 1)
+            repository.reconcileSession(isSignedIn = false, fingerprint = 0)
+
+            val cleared = repository.reconcileSession(isSignedIn = false, fingerprint = 0)
+
+            assertFalse(cleared)
+            assertNotNull(repository.thread(42).first())
+        }
+
+    @Test
+    fun `a different authenticated cookie jar cannot inherit the previous cache`() =
+        runTest {
+            repository.refreshThread(postId = 42, page = 1)
+            repository.reconcileSession(isSignedIn = true, fingerprint = 7)
+
+            val cleared = repository.reconcileSession(isSignedIn = true, fingerprint = 8)
+
+            assertTrue(cleared)
+            assertNull(repository.thread(42).first())
         }
 
     @Test

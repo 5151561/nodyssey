@@ -11,15 +11,10 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavKey
@@ -57,44 +52,47 @@ enum class TopLevelDestination(
     }
 }
 
+/**
+ * The four items, described once for whichever form the window calls for.
+ *
+ * `NavigationSuiteScaffold` picks the bar, the rail or the drawer from the actual window size, so
+ * this deliberately does not build a `NavigationBar` itself — on a tablet or an unfolded foldable a
+ * bar pinned to the bottom edge is both wrong and, under targetSdk 36, unavoidable to end up in.
+ *
+ * Icons carry no `contentDescription` on purpose: the item merges its label into one semantics node
+ * and the label is already the accessible name, so describing the icon as well makes TalkBack say
+ * everything twice.
+ */
 @Composable
-fun NodeSeekNavigationBar(
+fun NodeSeekNavigationItems(
     current: TopLevelDestination?,
     onSelect: (TopLevelDestination) -> Unit,
-    modifier: Modifier = Modifier,
     // v1 does not read notifications yet, so this is always zero — the slot exists so that turning
     // them on later is a data change rather than a layout change.
     unreadCount: Int = 0,
 ) {
-    NavigationBar(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        TopLevelDestination.entries.forEach { destination ->
-            val selected = destination == current
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onSelect(destination) },
-                icon = {
-                    val icon = if (selected) destination.selectedIcon else destination.icon
-                    if (destination == TopLevelDestination.NOTIFICATIONS && unreadCount > 0) {
-                        BadgedBox(badge = { Badge { Text(unreadCount.coerceAtMost(99).toString()) } }) {
-                            Icon(icon, contentDescription = null)
-                        }
-                    } else {
-                        Icon(icon, contentDescription = null)
-                    }
-                },
-                label = { Text(stringResource(destination.label)) },
-                colors =
-                NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            )
-        }
+    TopLevelDestination.entries.forEach { destination ->
+        val selected = destination == current
+        NavigationSuiteItem(
+            selected = selected,
+            onClick = { onSelect(destination) },
+            icon = {
+                Icon(
+                    imageVector = if (selected) destination.selectedIcon else destination.icon,
+                    contentDescription = null,
+                )
+            },
+            label = { Text(stringResource(destination.label)) },
+            badge =
+            if (destination == TopLevelDestination.NOTIFICATIONS && unreadCount > 0) {
+                { Badge { Text(unreadCount.coerceAtMost(99).toString()) } }
+            } else {
+                null
+            },
+            // Colours are left at the Material defaults deliberately. The previous hand-written set
+            // spelled out secondaryContainer / onSecondaryContainer / onSurfaceVariant — which is
+            // exactly what the defaults already resolve to off this app's own colour scheme. Saying
+            // it twice only created a second place for the rail and the bar to disagree.
+        )
     }
 }

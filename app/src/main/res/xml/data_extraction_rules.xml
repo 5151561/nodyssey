@@ -7,21 +7,22 @@
     backup is later restored to. Excluding it costs the user one sign-in after a restore.
 
     `app_webview` is where the WebView keeps its cookie store; `webview` covers the variant some
-    versions use. Everything else — settings, the Room cache — is safe and useful to restore.
+    versions use. Room is a re-downloadable cache and may include signed-in-only boards, so the whole
+    database domain is excluded. Settings remain safe and useful to restore.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="database" path="webview.db" />
-        <exclude domain="file" path="app_webview" />
-        <exclude domain="file" path="webview" />
+        <exclude domain="database" path="." />
+        <exclude domain="root" path="app_webview" />
+        <exclude domain="root" path="webview" />
     </cloud-backup>
     <!--
         A device transfer is direct rather than via the cloud, but the cookie still belongs to the old
         device's session, so it is excluded there too.
     -->
     <device-transfer>
-        <exclude domain="database" path="webview.db" />
-        <exclude domain="file" path="app_webview" />
-        <exclude domain="file" path="webview" />
+        <exclude domain="database" path="." />
+        <exclude domain="root" path="app_webview" />
+        <exclude domain="root" path="webview" />
     </device-transfer>
 </data-extraction-rules>

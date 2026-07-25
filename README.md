@@ -21,7 +21,7 @@ theme.
 - 深色模式
 - WebView 登录 / Cloudflare 验证，Cookie 与 OkHttp 共享
 
-尚未实现（见 [Roadmap](#roadmap)）：回复、点赞、收藏、签到、通知、搜索、离线缓存。
+尚未实现（见 [Roadmap](#roadmap)）：回复、点赞、收藏、签到、通知、搜索。
 
 ## Architecture
 
@@ -83,7 +83,7 @@ NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口，其�
 - [ ] 消息通知与未读数（`/api/notification/*`）
 - [ ] 每日签到（`/api/attendance`）
 - [ ] 搜索、用户主页
-- [ ] Room 离线缓存 + 已读标记
+- [x] Room 离线缓存 + 已读标记
 - [ ] 图片全屏预览与保存
 
 ## 架构
@@ -103,6 +103,12 @@ NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口，其�
 
 需求文档在 [docs/design-brief.md](docs/design-brief.md)，视觉稿据此产出，已落地的部分：
 
+> 关于「Expressive」的口径：落地的是 M3 Expressive 的 **token 与版式方向**——配色、字阶、形状、
+> tonal 色块、选中态换填充图标。**没有**用到 `MaterialExpressiveTheme` / `MotionScheme` 那套
+> 动效 API：它们在 material3 1.4.0（当前 BOM 解析到的版本）里是 `internal`，1.5.0 才转正式 API，
+> 而 1.5.0 目前还是 alpha。为一套动效把整个应用挪到 alpha 版 Material 不划算，等它转 stable 再说，
+> 触发条件写在 `ui/theme/Theme.kt` 里。
+
 - **Token**：`ui/theme/` 下的 light / dark 全量 M3 配色（品牌色「石墨青」`#35606E`，
   深色 surface `#121318` 而非纯黑，保证分割线可见）、字阶、形状与间距。不跟随壁纸取色。
 - **首页**：分割线密集列表（一屏 9 条）、tonal 版块标签按四类分组、已读态降对比度、
@@ -110,7 +116,8 @@ NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口，其�
 - **详情**：标题区 + 楼主区 + 6dp tonal 断层 + 评论流；`@某人 #3` 折叠成可点 chip 并滚动到对应楼层。
   正文排版规范见 `RichContent.kt` 里的 `RichContentSpec` preview。
 - **状态合集**：`ui/common/StatusViews.kt`，一套 tonal 有机形 + 图标 + 说明 + 动作。
-- **底部导航**：4 tab；搜索 / 通知的设计稿未定，暂为占位屏。
+- **底部导航**：4 tab；搜索 / 通知的设计稿未定，暂为占位屏。窗口够宽时由
+  `NavigationSuiteScaffold` 自动换成侧边 rail，每个 tab 各留一条返回栈。
 
 当前实现截图在 [docs/screenshots/](docs/screenshots/)。
 

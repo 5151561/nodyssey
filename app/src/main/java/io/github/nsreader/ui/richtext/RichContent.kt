@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -301,6 +302,10 @@ private fun CodeBlock(node: RichNode.CodeBlock) {
                 Modifier
                     .clip(MaterialTheme.shapes.small)
                     .clickable { copy("code", node.code, confirmation) }
+                    // A hand-rolled Row gets none of the padding a Material component applies for
+                    // it, and a 15dp glyph with 4dp above and below is a 23dp target — half of
+                    // what `Sizes.minTouchTarget` calls the brief's hard requirement.
+                    .defaultMinSize(minHeight = Sizes.minTouchTarget)
                     .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),

@@ -22,8 +22,9 @@ import androidx.room.TypeConverters
         PostDetailEntity::class,
         CommentEntity::class,
         ReadMarkEntity::class,
+        CacheSessionEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -35,6 +36,8 @@ abstract class NodeSeekDatabase : RoomDatabase() {
     abstract fun postDetailDao(): PostDetailDao
 
     abstract fun readMarkDao(): ReadMarkDao
+
+    abstract fun cacheSessionDao(): CacheSessionDao
 
     companion object {
         fun create(context: Context): NodeSeekDatabase =

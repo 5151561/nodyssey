@@ -32,6 +32,19 @@ fun NodeSeekTheme(
     CompositionLocalProvider(
         LocalNodeSeekExtraColors provides if (darkTheme) DarkExtraColors else LightExtraColors,
     ) {
+        /*
+         * Plain `MaterialTheme`, and not for lack of trying.
+         *
+         * `MaterialExpressiveTheme` — with the motion scheme that gives components springs instead
+         * of tweens — is compiled into material3 1.4.0 but declared `internal`; so are
+         * `MotionScheme` and `MaterialTheme.motionScheme`. It first becomes public API in 1.5.0,
+         * which is still alpha. Moving the whole app onto an alpha Material release to gain a
+         * motion scheme is not a trade worth making, so what this file provides is the M3 *token*
+         * system — colour, type, shape — and the "Expressive" in the branch name refers to that.
+         *
+         * Revisit when material3 1.5.0 ships stable in the Compose BOM: switch this call and drop
+         * the hand-rolled animation specs at the two call sites that have them.
+         */
         MaterialTheme(
             colorScheme = colorScheme,
             typography = NodeSeekTypography,

@@ -14,6 +14,7 @@ import io.github.nsreader.data.session.SessionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -21,6 +22,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -189,6 +192,28 @@ class PostListViewModelTest {
                 "expected a new request, still at $requestsBefore",
                 remote.listRequests.size > requestsBefore,
             )
+        }
+
+    @Test
+    fun `signing out removes content fetched by the authenticated session`() =
+        runTest(dispatcher) {
+            val repository = OfflineFirstPostRepository(database, remote, clock)
+            repository.refreshThread(postId = 42, page = 1)
+            session.value = SessionState(isSignedIn = true, fingerprint = 7)
+            val vm =
+                PostListViewModel(
+                    repository = repository,
+                    categoryRepository = CategoryRepository(failingJson, database.boardDao(), clock),
+                    session = session,
+                )
+            advanceUntilIdle()
+            assertNotNull(repository.thread(42).first())
+
+            session.value = SessionState(isSignedIn = false, fingerprint = 0, generation = 1)
+            advanceUntilIdle()
+
+            assertNull(repository.thread(42).first())
+            assertEquals(0, vm.uiState.value.selectedBoardIndex)
         }
 
     /** A cold start reads cookies that were already on disk; that is not a session *change*. */

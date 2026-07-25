@@ -23,7 +23,7 @@ data class PostDetailKey(
 ) : NavKey
 
 /**
- * Opens the in-app browser for login, Cloudflare challenges and outbound links.
+ * Opens the restricted in-app browser for login and Cloudflare challenges.
  *
  * [goal] is what turns it from a browser into a step in a flow: it names the cookie the screen is
  * waiting for, so the screen can close itself once that cookie arrives instead of leaving the user to
@@ -33,5 +33,5 @@ data class PostDetailKey(
 data class WebKey(
     val url: String,
     val title: String,
-    val goal: WebViewGoal = WebViewGoal.BROWSE,
+    val goal: WebViewGoal,
 ) : NavKey

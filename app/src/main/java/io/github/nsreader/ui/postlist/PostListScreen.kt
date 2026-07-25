@@ -2,6 +2,8 @@ package io.github.nsreader.ui.postlist
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -52,6 +55,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -78,6 +83,7 @@ import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.Sizes
 import io.github.nsreader.ui.theme.Spacing
 import io.github.nsreader.ui.theme.TABULAR_FIGURES
+import io.github.nsreader.ui.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -183,7 +189,12 @@ fun PostListScreen(
                             isRefreshing = refreshState is LoadState.Loading,
                             onRefresh = posts::refresh,
                         ) {
-                            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .readableWidth(),
+                            ) {
                                 items(
                                     count = posts.itemCount,
                                     key = { index -> posts.peek(index)?.summary?.postId ?: index },
@@ -273,11 +284,16 @@ private fun SortMenuItem(
     current: FeedSort,
     onClick: (FeedSort) -> Unit,
 ) {
+    val isCurrent = value == current
     DropdownMenuItem(
         text = { Text(stringResource(labelRes)) },
         onClick = { onClick(value) },
+        // Which order is in force was carried entirely by the tick, and a decorative tick is not
+        // information: TalkBack read the two items identically. `selected` is what puts "已选中"
+        // into the announcement, so the icon can stay decoration.
+        modifier = Modifier.semantics { selected = isCurrent },
         trailingIcon = {
-            if (value == current) {
+            if (isCurrent) {
                 Icon(
                     Icons.Default.Check,
                     contentDescription = null,
@@ -304,7 +320,15 @@ private fun BoardStrip(
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
 
-    Column(Modifier.animateContentSize()) {
+    // A spring rather than the default tween: this genuinely moves — the strip grows a second row
+    // and pushes the list down — and a spring is the difference between the rows arriving and the
+    // rows merely appearing. Spelled out here because `MaterialTheme.motionScheme`, which would
+    // own this value, is internal until material3 1.5.0. See `NodeSeekTheme`.
+    Column(
+        Modifier.animateContentSize(
+            spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium),
+        ),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -392,12 +416,14 @@ private fun BoardPill(
             )
         },
         // Boards the site refuses to anyone signed out are worth flagging before the tap, not after.
+        // Described rather than decorative: the warning is the whole point of the icon, and it is
+        // nowhere else in the chip, so leaving it null hides the restriction from TalkBack.
         trailingIcon =
         if (board.adminOnly) {
             {
                 Icon(
                     Icons.Default.Lock,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.board_admin_only),
                     modifier = Modifier.size(14.dp),
                 )
             }
@@ -620,7 +646,7 @@ private fun SkeletonBar(
 // survive a 40-character Chinese title next to a two-character one, and made-up copy never proves it.
 // -------------------------------------------------------------------------------------------------
 
-private val previewState =
+internal val previewState =
     PostListUiState(
         boards =
         listOf(
@@ -662,7 +688,7 @@ private fun summary(
     isLocked = locked,
 )
 
-private fun previewFeed(): Flow<PagingData<FeedPost>> =
+internal fun previewFeed(): Flow<PagingData<FeedPost>> =
     flowOf(
         PagingData.from(
             listOf(

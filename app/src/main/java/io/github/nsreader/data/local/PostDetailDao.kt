@@ -55,8 +55,9 @@ interface PostDetailDao {
      * - **Page 1 replaces every comment; later pages replace only themselves.** Page 1 arriving means
      *   "this is a fresh read", and threads shrink when a comment is deleted. Appending page 4 must
      *   not disturb pages 1-3 already on screen.
-     * - **[PostDetailEntity.loadedPages] only moves forward.** Re-reading page 1 must not make the app
-     *   forget it already holds pages 2 and 3.
+     * - **[PostDetailEntity.loadedPages] describes a contiguous prefix.** Re-reading page 1 deletes
+     *   later pages, so the cursor must reset to 1 as well. Keeping the old cursor after deleting the
+     *   rows would make the next append skip straight from page 1 to page 4.
      */
     @Transaction
     suspend fun saveThreadPage(
@@ -75,7 +76,7 @@ interface PostDetailDao {
                 title = title.ifBlank { existing?.title.orEmpty() },
                 body = body ?: existing?.body,
                 totalPages = totalPages,
-                loadedPages = maxOf(existing?.loadedPages ?: 0, page),
+                loadedPages = if (page == 1) 1 else maxOf(existing?.loadedPages ?: 0, page),
                 cachedAtMillis = nowMillis,
             ),
         )
@@ -101,6 +102,9 @@ interface PostDetailDao {
     /** Withdraws the freshness claim on every cached thread, keeping the content readable meanwhile. */
     @Query("UPDATE post_details SET cachedAtMillis = 0")
     suspend fun expireAllThreads()
+
+    @Query("DELETE FROM post_details")
+    suspend fun clearAllThreads()
 
     /** Keeps the [keep] most recently read threads and drops the rest, so the cache stays bounded. */
     @Query(

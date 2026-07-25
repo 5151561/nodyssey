@@ -21,6 +21,9 @@
     <string name="sort_by_reply_time">按回复时间</string>
     <string name="sort_by_post_time">按发帖时间</string>
 
+    <!-- Screen-reader description for the lock on a board only admins can open -->
+    <string name="board_admin_only">仅管理员可见</string>
+
     <!-- Post list -->
     <string name="post_reply_count">%1$d 回复</string>
     <string name="post_new_reply_count">%1$d 条新回复</string>
@@ -39,7 +42,7 @@
     <string name="post_image_view_full">点击查看全图</string>
     <string name="post_quote_reply">@%1$s %2$s</string>
 
-    <!-- Bottom navigation -->
+    <!-- Top-level navigation: a bar on a phone, a rail once the window is wide enough -->
     <string name="tab_home">首页</string>
     <string name="tab_search">搜索</string>
     <string name="tab_notifications">通知</string>

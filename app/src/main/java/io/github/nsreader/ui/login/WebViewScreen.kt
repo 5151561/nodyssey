@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -35,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.nsreader.R
+import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.UserAgent
 import io.github.nsreader.core.net.resolveUserAgent
 import io.github.nsreader.data.session.SessionRepository
@@ -42,9 +44,6 @@ import kotlinx.coroutines.delay
 
 /** Why the WebView was opened, which is also the condition for closing it again. */
 enum class WebViewGoal {
-    /** An outbound link, an image, a post page. Nothing to wait for; the user closes it. */
-    BROWSE,
-
     /** Close once NodeSeek has issued a session cookie. */
     SIGN_IN,
 
@@ -66,9 +65,20 @@ fun WebViewRoute(
     goal: WebViewGoal,
     session: SessionRepository,
     userAgent: UserAgent,
+    onOpenExternal: (String) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (!NodeSeekSite.isTrustedWebViewUrl(url)) {
+        // A restored or malformed navigation key must fail closed. Authentication WebViews are never
+        // allowed to become a general browser merely because a string reached the back stack.
+        LaunchedEffect(url) {
+            onOpenExternal(url)
+            onClose()
+        }
+        return
+    }
+
     val baseline = remember { session.peek() }
 
     DisposableEffect(Unit) {
@@ -82,12 +92,11 @@ fun WebViewRoute(
         url = url,
         title = title,
         userAgent = userAgent,
+        onOpenExternal = onOpenExternal,
         onClose = onClose,
         // `peek` rather than `sync`: this runs twice a second, and it must observe without announcing.
         onCheckGoal =
         when (goal) {
-            WebViewGoal.BROWSE -> null
-
             WebViewGoal.SIGN_IN -> {
                 {
                     val state = session.peek()
@@ -114,10 +123,11 @@ fun WebViewRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun WebViewScreen(
+private fun WebViewScreen(
     url: String,
     title: String,
     onClose: () -> Unit,
+    onOpenExternal: (String) -> Unit,
     modifier: Modifier = Modifier,
     /**
      * Left alone when it is already the WebView's own — see [resolveUserAgent]. Overriding the UA
@@ -127,7 +137,7 @@ fun WebViewScreen(
     userAgent: UserAgent? = null,
     /**
      * Polled while the page is open; true once the cookie this screen was opened for has arrived, at
-     * which point the screen closes itself. Null for plain browsing, which has nothing to wait for.
+     * which point the screen closes itself.
      *
      * Polling rather than a callback because there is nothing to hook: NodeSeek signs in over an XHR,
      * so no navigation happens, `onPageFinished` never fires, and [CookieManager] has no listener.
@@ -143,6 +153,7 @@ fun WebViewScreen(
     val autoReturn = onCheckGoal != null
     val checkGoal by rememberUpdatedState(onCheckGoal)
     val close by rememberUpdatedState(onClose)
+    val openExternal by rememberUpdatedState(onOpenExternal)
 
     LaunchedEffect(autoReturn) {
         if (!autoReturn) return@LaunchedEffect
@@ -189,6 +200,10 @@ fun WebViewScreen(
                     WebView(context).apply {
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
+                        settings.allowFileAccess = false
+                        settings.allowContentAccess = false
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                        settings.safeBrowsingEnabled = true
                         if (userAgent != null && !userAgent.isWebViewDefault) {
                             settings.userAgentString = userAgent.value
                         }
@@ -204,7 +219,17 @@ fun WebViewScreen(
                             override fun shouldOverrideUrlLoading(
                                 view: WebView?,
                                 request: WebResourceRequest?,
-                            ): Boolean = false
+                            ): Boolean {
+                                val target = request?.url?.toString() ?: return true
+                                if (!request.isForMainFrame || NodeSeekSite.isTrustedWebViewUrl(target)) {
+                                    return false
+                                }
+                                // User-controlled links and redirects leave the authenticated
+                                // WebView. It retains JavaScript and third-party cookies solely for
+                                // NodeSeek login and Cloudflare challenge pages.
+                                view?.post { openExternal(target) }
+                                return true
+                            }
 
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 loading = false

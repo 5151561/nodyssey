@@ -210,3 +210,21 @@ data class ReadMarkEntity(
     val lastReadAtMillis: Long,
     val lastSeenCommentCount: Int,
 )
+
+/**
+ * Whether the current post cache may contain content fetched with an authenticated cookie jar.
+ *
+ * This survives process death. If the cookie expires while the app is stopped, the next reader can
+ * clear the authenticated cache before exposing any Room-backed rows to a signed-out UI.
+ */
+@Entity(tableName = "cache_session")
+data class CacheSessionEntity(
+    @PrimaryKey val id: Int = SINGLETON_ID,
+    val authenticated: Boolean,
+    /** Opaque cookie fingerprint; used only to prevent one account inheriting another's cache. */
+    val fingerprint: Int,
+) {
+    companion object {
+        const val SINGLETON_ID = 0
+    }
+}

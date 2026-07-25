@@ -25,7 +25,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -58,7 +59,9 @@ class PostListViewModel(
      * pager must not be rebuilt until the invalidation has committed, or the mediator answers
      * `SKIP_INITIAL_REFRESH` and the user who just signed in keeps reading the signed-out list.
      */
-    private val feedGeneration = MutableStateFlow(0)
+    // Negative until the persisted cache provenance has been reconciled with the current cookie jar.
+    // This prevents a signed-out cold start from briefly exposing rows fetched while signed in.
+    private val feedGeneration = MutableStateFlow(-1)
 
     /**
      * `cachedIn` keeps the loaded pages alive across configuration changes and across navigating into
@@ -71,6 +74,7 @@ class PostListViewModel(
             uiState.map { it.categorySlug to it.sort },
             feedGeneration,
         ) { (slug, sort), generation -> FeedKey(slug, sort, generation) }
+            .filter { it.sessionGeneration >= 0 }
             .distinctUntilChanged()
             .flatMapLatest { key -> repository.feed(key.categorySlug, key.sort) }
             .cachedIn(viewModelScope)
@@ -82,15 +86,27 @@ class PostListViewModel(
             .onEach { boards -> _uiState.update { it.copy(boards = boards) } }
             .launchIn(viewModelScope)
 
-        // Signing in, or clearing a challenge, changes what the site will hand us. `drop(1)` skips the
-        // cookies we started the process with — a cold start is not a session change.
+        // Reconcile the first cookie snapshot before opening a Pager. Later generations either
+        // invalidate authenticated data or clear it when the user becomes signed out.
         session
-            .map { it.generation }
-            .distinctUntilChanged()
-            .drop(1)
-            .onEach {
-                repository.invalidateCaches()
-                feedGeneration.update { generation -> generation + 1 }
+            .distinctUntilChangedBy { it.generation }
+            .onEach { sessionState ->
+                val isInitial = feedGeneration.value < 0
+                val cleared =
+                    repository.reconcileSession(
+                        isSignedIn = sessionState.isSignedIn,
+                        fingerprint = sessionState.fingerprint,
+                    )
+                if (!isInitial && sessionState.isSignedIn && !cleared) {
+                    repository.invalidateCaches()
+                }
+                feedGeneration.update { generation ->
+                    when {
+                        generation < 0 -> 0
+                        cleared || !isInitial -> generation + 1
+                        else -> generation
+                    }
+                }
             }.launchIn(viewModelScope)
 
         viewModelScope.launch { categoryRepository.refreshIfNeeded() }

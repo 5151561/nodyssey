@@ -84,6 +84,15 @@ interface FeedDao {
     @Query("UPDATE feed_remote_keys SET refreshedAtMillis = 0")
     suspend fun expireAllFeeds()
 
+    @Query("DELETE FROM feed_positions")
+    suspend fun clearAllFeedPositions()
+
+    @Query("DELETE FROM feed_remote_keys")
+    suspend fun clearAllRemoteKeys()
+
+    @Query("DELETE FROM posts")
+    suspend fun clearAllPosts()
+
     /**
      * Drops posts that no feed points at any more and that nobody has read.
      *

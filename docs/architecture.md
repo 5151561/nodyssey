@@ -4,7 +4,7 @@
 
 这份文档记录**架构约定**和**为什么这么定**。改架构前先读这里；新增代码违反这里的约定，要么改代码，要么先改这份文档。
 
-当前状态：阶段一至三已完成。96 个 JVM 测试、CI 五道门禁、离线优先已在模拟器实测。
+当前状态：阶段一至三已完成。139 个 JVM 测试、CI 五道门禁、离线优先已在模拟器实测。
 下一步是阶段四（视觉与写操作）。
 
 ---
@@ -136,6 +136,27 @@ core/        无 Android 依赖的纯逻辑（parser、错误类型、URL 词表
   由 `PostListViewModelTest.signing in refetches the feed instead of serving the signed-out cache` 覆盖。
 - **判断"是否登录"靠 cookie 名，是全项目唯一一处猜测。** 因此 `fingerprint`（决定是否刷新的信号）
   刻意不依赖名字：名字猜错只会让"我的"页面的文案不对，内容照样会重新加载。
+- **认证缓存带持久化会话标记。** `cache_session` 记录缓存是否可能来自登录态以及 Cookie
+  fingerprint；列表或详情从 Room 读取前必须先 `reconcileSession`。退出、Cookie 过期或切换账号时，
+  帖子列表、详情和已读标记在一个事务中清除，版块与设置保留。这样进程恢复也不会先闪出旧账号内容。
+- **内置 WebView 不是通用浏览器。** 只允许 HTTPS 的 `nodeseek.com` / `www.nodeseek.com` 主页面；
+  帖子外链、图片和跨域跳转交给系统 URI handler。WebView 显式关闭 file/content 访问和混合内容。
+
+**导航约定**：
+- **`NavDisplay` 必须显式传 `entryDecorators`。** 它的默认值是
+  `listOf(rememberSaveableStateHolderNavEntryDecorator())`——只有这一个。少了
+  `rememberViewModelStoreNavEntryDecorator()`，`entry {}` 里的 `viewModel()` 就落到 Activity 的
+  ViewModelStore 上：返回不清除、`onCleared()` 永不触发，看过的每个帖子都留下一个还攥着整棵评论树的
+  `PostDetailViewModel`，读一晚上论坛就是几十份。注意**写了这个参数就覆盖默认值**，
+  SaveableStateHolder 那个必须一起列出来，否则丢的是滚动位置。
+- **每个 tab 一条返回栈。** 之前切 tab 用 `backStack.clear()`，entry 被移除 →
+  SaveableStateHolder 丢掉它的状态 → 列表滚动位置归零。四条栈各自 `rememberNavBackStack`，
+  切换只换当前指向哪条。
+- **二级 tab 在根部按返回回首页，而不是退出应用。** `NavDisplay` 只在当前栈还有东西可弹时接管返回，
+  所以这条要自己挂 `BackHandler`。
+- **顶层导航不要写死 `NavigationBar`。** 用 `NavigationSuiteScaffold`，窗口宽了自己变 rail。
+  targetSdk 36 之后大屏不能再拒绝缩放，手机形状的单列布局是会真的被用户看到的。
+  隐藏导航用 `NavigationSuiteType.None`——那是「不为导航留空间」，不是画一条空栏。
 
 **取消约定**：
 - **禁止用 `runCatching` 包裹挂起函数。** 用 `runCatchingExceptCancellation`。
@@ -162,10 +183,10 @@ core/        无 Android 依赖的纯逻辑（parser、错误类型、URL 词表
 | 4 | 数据、同步、后台任务 | 适用 | **3**（1） | 高 | Room + Paging 3 离线优先；仍无 WorkManager 后台同步 |
 | 5 | UI、Compose、导航、设计系统 | 适用 | **2** | 高 | Compose + M3 + Nav3；视觉体系待设计稿（见 design-brief.md） |
 | 6 | 自适应、无障碍、本地化 | 适用 | **1** | 中 | 字符串已外置、表情补了 contentDescription；未验证字号缩放/TalkBack/大屏 |
-| 7 | 测试、静态质量、CI | 适用 | **4**（2） | 高 | 96 个 JVM 测试（含 Room、Paging、Compose）；CI + spotless + lint 门禁齐全 |
+| 7 | 测试、静态质量、CI | 适用 | **4**（2） | 高 | 139 个 JVM 测试（含 Room、Paging、Compose）；CI + spotless + lint 门禁齐全 |
 | 8 | 性能、可靠性、可观测性 | 适用 | **1** | 中 | 无 baseline profile、无 benchmark、无崩溃上报 |
 | 9 | 工具链、构建、依赖治理 | 适用 | **3**（2） | 高 | version catalog + `gradle.lockfile` 锁定传递依赖 + CI 复现构建 |
-| 10 | 安全、隐私、发布完整性 | 适用 | **3**（2） | 中 | 不存储凭据；备份已排除 WebView cookie |
+| 10 | 安全、隐私、发布完整性 | 适用 | **3**（2） | 中 | 会话缓存隔离；认证 WebView 域白名单；Cookie/Room 缓存不进入备份 |
 
 ### 已修复的问题
 
@@ -174,10 +195,13 @@ core/        无 Android 依赖的纯逻辑（parser、错误类型、URL 词表
 | **P1** | `runCatching` 吞掉 `CancellationException`，下拉刷新打断分页时会闪出假错误 | `runCatchingExceptCancellation` + 回归测试 |
 | **P1** | `ServiceLocator` 全局单例导致 ViewModel 完全无法测试 | `AppContainer` 接口 + 构造器注入 |
 | **P1** | 零持久化：离线全白，返回列表必重新请求且丢失位置 | Room 为 SSOT + Paging 3 `RemoteMediator`（阶段二） |
+| **P1** | 退出或 Cookie 失效后，Room 仍可能向未登录 UI 暴露登录态缓存 | `cache_session` 会话标记 + 读取前对齐 + 事务清理 |
+| **P1** | 刷新详情第 1 页时删除后续评论，却保留旧 `loadedPages`，下一次追加会跳页 | 第 1 页替换时把连续页游标重置为 1 + 回归测试 |
+| **P1** | 帖子作者控制的外链进入启用 JavaScript/Cookie 的认证 WebView | WebView 精确域白名单；普通外链/图片改走系统浏览器 |
 | **P2** | 数据层生产中文 UI 文案 | `NodeSeekError` 密封接口 + strings.xml |
 | **P2** | `CategoryRepository` 用非线程安全的 `var` 手工缓存 | 先 `StateFlow` + `Mutex`，阶段二改为 `boards` 表 |
 | **P2** | jsoup 解析跑在 IO 线程池 | 解析移到 `dispatchers.default` |
-| **P2** | `allowBackup=true`，WebView 的会话 cookie 会进入云备份 | 备份规则排除 `app_webview` / `webview.db`（两个文件都改，minSdk 26 下旧规则仍生效） |
+| **P2** | WebView 目录误写为 backup `file` 域，实际 Cookie 位于数据根目录 | 两套规则都排除 `root/app_webview`；Room 缓存排除整个 `database` 域 |
 | **P2** | 无 CI、无格式化门禁 | GitHub Actions：锁文件 + spotless + 单测 + lint + assemble + schema 一致性 |
 | **P3** | 切换版块时旧响应可能污染新列表 | 先 `requestedSlug` 守卫，阶段二改为 `flatMapLatest` 换流（守卫随之删除） |
 | **P3** | 登录页 WebView 硬编码中文 "关闭" | 改用 `R.string.action_close`（由 lint `UnusedResources` 暴露） |
@@ -218,8 +242,8 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 
 ### 阶段二 ✅ 已完成 — 离线优先
 
-- Room 7 张表：`boards` / `posts` / `feed_positions` / `feed_remote_keys` / `post_details` /
-  `post_comments` / `post_read_marks`。schema 随代码入库（`app/schemas/`），CI 校验一致性。
+- Room 8 张表：`boards` / `posts` / `feed_positions` / `feed_remote_keys` / `post_details` /
+  `post_comments` / `post_read_marks` / `cache_session`。schema 随代码入库（`app/schemas/`），CI 校验一致性。
 - 列表改 Paging 3 + `FeedRemoteMediator`。mediator 只往 Room 写，Room 失效 PagingSource，UI 自己更新。
 - 已读标记 + "N 条新回复"角标；已读帖子标题变灰。
 - **原先写的阻塞条件（等 KSP）已不存在**：KSP 改用独立版本号，`2.3.10` 就是针对 Kotlin 2.3.20 的。

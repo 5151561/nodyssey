@@ -1,6 +1,7 @@
 package io.github.nsreader.core
 
 import io.github.nsreader.model.FeedSort
+import java.net.URI
 
 /**
  * Everything we know about the shape of nodeseek.com lives here.
@@ -83,8 +84,32 @@ object NodeSeekSite {
         }
     }
 
+    /** Only these URLs may execute JavaScript inside the authenticated WebView. */
+    fun isTrustedWebViewUrl(url: String): Boolean =
+        parseWebUri(url)?.let { uri ->
+            uri.scheme.equals("https", ignoreCase = true) &&
+                uri.host?.lowercase() in TRUSTED_WEBVIEW_HOSTS &&
+                (uri.port == -1 || uri.port == 443)
+        } == true
+
+    /** Ordinary links leave the app and are accepted only when they are normal web URLs. */
+    fun isExternalWebUrl(url: String): Boolean =
+        parseWebUri(url)?.let { uri ->
+            uri.host != null &&
+                (
+                    uri.scheme.equals("https", ignoreCase = true) ||
+                        uri.scheme.equals("http", ignoreCase = true)
+                    )
+        } == true
+
+    private fun parseWebUri(url: String): URI? =
+        runCatching { URI(url.trim()) }
+            .getOrNull()
+            ?.takeIf { it.isAbsolute && it.userInfo == null }
+
     private val POST_PATH = Regex("""/post-(\d+)(?:-(\d+))?""")
     private val SPACE_PATH = Regex("""/space/(\d+)""")
+    private val TRUSTED_WEBVIEW_HOSTS = setOf("www.nodeseek.com", "nodeseek.com")
 
     /** Extracts the post id (and page, when present) from `/post-703863-2`. */
     fun parsePostRoute(href: String?): PostRoute? {

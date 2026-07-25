@@ -169,6 +169,9 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    // NavigationSuiteScaffold: the bar becomes a rail once the window is wide enough, which
+    // targetSdk 36 makes unavoidable — large screens can no longer be told to stay phone-shaped.
+    implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
     implementation(libs.androidx.compose.material.icons.core)
     // Tooling
     debugImplementation(libs.androidx.compose.ui.tooling)

@@ -1,5 +1,10 @@
 package io.github.nsreader.ui.theme
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
@@ -32,3 +37,20 @@ object Sizes {
     /** Tall screenshots are common on this forum and would otherwise fill several screens. */
     val maxInlineImageHeight = 520.dp
 }
+
+/**
+ * Caps the content at [Sizes.readableContentWidth] and centres what is left over.
+ *
+ * Applied to the scrolling column itself rather than to each block of text inside it. Capping the
+ * text alone still let the rows, dividers and row backgrounds run the full width of a tablet, so a
+ * 1000dp window got a 640dp paragraph pinned to the left of a 1000dp divider.
+ *
+ * The three-step order is load-bearing: `fillMaxWidth` claims the window, `wrapContentWidth`
+ * releases the minimum-width constraint that would otherwise force the child to fill it, and only
+ * then can `widthIn` actually bind. Reversed, the cap is silently ignored.
+ */
+fun Modifier.readableWidth(): Modifier =
+    this
+        .fillMaxWidth()
+        .wrapContentWidth(Alignment.CenterHorizontally)
+        .widthIn(max = Sizes.readableContentWidth)
