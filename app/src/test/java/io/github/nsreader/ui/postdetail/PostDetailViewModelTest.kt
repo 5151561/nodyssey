@@ -7,9 +7,11 @@ import io.github.nsreader.data.MutableClock
 import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.inMemoryDatabase
 import io.github.nsreader.data.local.NodeSeekDatabase
+import io.github.nsreader.data.session.SessionState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -49,7 +51,44 @@ class PostDetailViewModelTest {
         database.close()
     }
 
-    private fun viewModel(postId: Long = 42) = PostDetailViewModel(postId, repository)
+    private val session = MutableStateFlow(SessionState())
+
+    private fun viewModel(postId: Long = 42) = PostDetailViewModel(postId, repository, session)
+
+    /**
+     * A thread that answered "登录后查看" a second ago has content now. The freshness window would
+     * otherwise suppress the one request that matters.
+     */
+    @Test
+    fun `signing in refetches the thread even inside the cache window`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            val requestsBefore = remote.detailRequests.size
+            assertTrue("expected an initial fetch", requestsBefore > 0)
+
+            session.value = SessionState(isSignedIn = true, fingerprint = 1, generation = 1)
+            advanceUntilIdle()
+
+            assertTrue(
+                "expected a refetch, still at $requestsBefore",
+                remote.detailRequests.size > requestsBefore,
+            )
+        }
+
+    @Test
+    fun `an unchanged session does not refetch the thread`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            val requestsBefore = remote.detailRequests.size
+
+            session.value = SessionState()
+            advanceUntilIdle()
+
+            assertEquals(requestsBefore, remote.detailRequests.size)
+            assertNull(vm.uiState.value.error)
+        }
 
     @Test
     fun `loads a thread that is not cached yet`() =

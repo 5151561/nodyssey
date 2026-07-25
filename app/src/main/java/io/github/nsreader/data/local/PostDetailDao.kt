@@ -98,6 +98,10 @@ interface PostDetailDao {
         page: Int,
     )
 
+    /** Withdraws the freshness claim on every cached thread, keeping the content readable meanwhile. */
+    @Query("UPDATE post_details SET cachedAtMillis = 0")
+    suspend fun expireAllThreads()
+
     /** Keeps the [keep] most recently read threads and drops the rest, so the cache stays bounded. */
     @Query(
         """

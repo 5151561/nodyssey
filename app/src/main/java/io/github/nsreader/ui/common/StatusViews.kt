@@ -355,6 +355,29 @@ fun SignedOutState(
     )
 }
 
+/**
+ * Signed in, with the rest of the profile still to come.
+ *
+ * Deliberately not a celebration: the useful thing this screen can say today is that the session is
+ * real and reversible. Claiming "登录后解锁完整体验" while already signed in was the bug.
+ */
+@Composable
+fun SignedInState(
+    onSignOut: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    StatusView(
+        icon = Icons.Default.CheckCircle,
+        shape = StatusShapes.Welcome,
+        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+        iconColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        title = stringResource(R.string.status_signed_in_title),
+        description = stringResource(R.string.status_signed_in_body),
+        secondaryAction = StatusAction(stringResource(R.string.action_sign_out), onSignOut),
+        modifier = modifier,
+    )
+}
+
 /** Honest placeholder for the tabs whose screens are not designed yet. */
 @Composable
 fun ComingSoonState(
@@ -420,6 +443,12 @@ private fun NoResultsStatePreview() {
 @Composable
 private fun SignedOutStatePreview() {
     NodeSeekTheme { SignedOutState(onSignIn = {}) }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Signed in")
+@Composable
+private fun SignedInStatePreview() {
+    NodeSeekTheme { SignedInState(onSignOut = {}) }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Deleted")

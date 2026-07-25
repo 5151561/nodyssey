@@ -6,6 +6,7 @@
     <string name="action_close">关闭</string>
     <string name="action_retry">重试</string>
     <string name="action_sign_in">登录</string>
+    <string name="action_sign_out">退出登录</string>
     <string name="action_verify">去验证</string>
     <string name="action_open_in_browser">在网页中打开</string>
     <string name="action_copy">复制</string>
@@ -58,7 +59,7 @@
 
     <string name="status_sign_in_title">需要登录后查看</string>
     <string name="status_sign_in_title_board">「%1$s」需要登录后查看</string>
-    <string name="status_sign_in_body">登录 NodeSeek 账号后即可浏览本版块的内容。</string>
+    <string name="status_sign_in_body">登录 NodeSeek 账号后即可浏览本版块的内容。登录成功会自动返回并重新加载。</string>
     <string name="status_sign_in_secondary">先逛逛别的版块</string>
 
     <string name="status_deleted_title">内容已被删除</string>
@@ -71,6 +72,9 @@
 
     <string name="status_signed_out_title">登录后解锁完整体验</string>
     <string name="status_signed_out_body">收藏、通知、签到都在登录之后。</string>
+
+    <string name="status_signed_in_title">已登录 NodeSeek</string>
+    <string name="status_signed_in_body">应用现在会带着你的登录状态请求内容，内版这类版块可以直接看了。收藏、通知和签到还在做。</string>
 
     <string name="status_unparsable_title">这个页面读不出来</string>
     <string name="status_unparsable_body">页面结构和预期不一致，多半是站点改版了。先去网页里看看。</string>

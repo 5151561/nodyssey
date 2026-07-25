@@ -89,7 +89,8 @@ import kotlinx.coroutines.flow.flowOf
 fun PostListRoute(
     viewModel: PostListViewModel,
     onPostClick: (Long) -> Unit,
-    onOpenBrowser: (String) -> Unit,
+    onSignIn: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -99,8 +100,10 @@ fun PostListRoute(
         onPostClick = onPostClick,
         onBoardClick = viewModel::selectCategory,
         onSortChange = viewModel::selectSort,
-        onSignInClick = { onOpenBrowser(NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH) },
-        onRecoverInBrowser = { onOpenBrowser(viewModel.challengeUrl()) },
+        onSignInClick = onSignIn,
+        // The challenge is cleared on the URL that failed, so the WebView loads the same list page the
+        // request did — a different page can be served without a challenge and prove nothing.
+        onRecoverInBrowser = { onVerify(viewModel.challengeUrl()) },
         modifier = modifier,
     )
 }

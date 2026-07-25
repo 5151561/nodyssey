@@ -9,6 +9,7 @@ import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.PostRepository
+import io.github.nsreader.data.session.SessionState
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.model.PostContent
 import io.github.nsreader.ui.postlist.toNodeSeekError
@@ -16,7 +17,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -35,6 +39,7 @@ import kotlinx.coroutines.launch
 class PostDetailViewModel(
     private val postId: Long,
     private val repository: PostRepository,
+    session: StateFlow<SessionState> = MutableStateFlow(SessionState()),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostDetailUiState())
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
@@ -67,6 +72,18 @@ class PostDetailViewModel(
                 // uncached post offline shows nothing but an error, and the thread still ended up
                 // dimmed in the list as though it had been read.
                 repository.markThreadRead(postId)
+            }.launchIn(viewModelScope)
+
+        // Coming back from the WebView signed in, or with a challenge cleared, is the one case where a
+        // thread that was "fresh" a second ago is worth re-fetching: a locked thread has content now.
+        // `drop(1)` skips the cookies we started with — a cold start is not a session change.
+        session
+            .map { it.generation }
+            .distinctUntilChanged()
+            .drop(1)
+            .onEach {
+                repository.invalidateCaches()
+                refresh()
             }.launchIn(viewModelScope)
 
         viewModelScope.launch {
@@ -122,7 +139,13 @@ class PostDetailViewModel(
             postId: Long,
         ): ViewModelProvider.Factory =
             viewModelFactory {
-                initializer { PostDetailViewModel(postId, container.postRepository) }
+                initializer {
+                    PostDetailViewModel(
+                        postId,
+                        container.postRepository,
+                        container.sessionRepository.state,
+                    )
+                }
             }
     }
 }

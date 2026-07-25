@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.R
+import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.model.InlineNode
 import io.github.nsreader.model.PostContent
 import io.github.nsreader.model.RichNode
@@ -79,15 +80,20 @@ fun PostDetailRoute(
     viewModel: PostDetailViewModel,
     onBack: () -> Unit,
     onOpenBrowser: (String) -> Unit,
+    onSignIn: () -> Unit,
+    onVerify: (String) -> Unit,
     onImageClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val postUrl = viewModel.postUrl()
     PostDetailScreen(
         state = state,
-        postUrl = viewModel.postUrl(),
+        postUrl = postUrl,
         onBack = onBack,
         onOpenBrowser = onOpenBrowser,
+        onSignIn = onSignIn,
+        onVerify = { onVerify(postUrl) },
         onImageClick = onImageClick,
         onRetry = viewModel::refresh,
         onLoadMore = viewModel::loadNextPage,
@@ -106,6 +112,10 @@ fun PostDetailScreen(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Opens the sign-in page. Separate from [onOpenBrowser] because "登录" is not "看看网页版". */
+    onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
+    /** Clears a Cloudflare challenge on this thread's own URL. */
+    onVerify: () -> Unit = { onOpenBrowser(postUrl) },
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -140,7 +150,14 @@ fun PostDetailScreen(
                     NodeSeekErrorState(
                         error = error,
                         onRetry = onRetry,
-                        onOpenBrowser = { onOpenBrowser(postUrl) },
+                        // A locked thread is fixed by signing in, not by loading it again in a
+                        // browser; a challenge is fixed on this thread's own URL.
+                        onOpenBrowser =
+                        when (error) {
+                            NodeSeekError.LoginRequired -> onSignIn
+                            NodeSeekError.Cloudflare -> onVerify
+                            else -> ({ onOpenBrowser(postUrl) })
+                        },
                     )
 
                 else ->

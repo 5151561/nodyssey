@@ -218,7 +218,9 @@ class PostListScreenTest {
             refresh = LoadState.Error(NodeSeekException(NodeSeekError.LoginRequired)),
         )
 
-        composeRule.onNodeWithText("登录 NodeSeek 账号后即可浏览本版块的内容。").assertIsDisplayed()
+        composeRule
+            .onNodeWithText("登录 NodeSeek 账号后即可浏览本版块的内容。登录成功会自动返回并重新加载。")
+            .assertIsDisplayed()
         composeRule.onNodeWithText("登录").assertIsDisplayed()
     }
 

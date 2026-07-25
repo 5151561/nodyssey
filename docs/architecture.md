@@ -94,6 +94,7 @@ data/        Repository。隐藏数据源，暴露领域模型
   ├ PostRemoteDataSource    只抓取和解析（原来的 NetworkPostRepository）
   ├ CategoryRepository      JSON 接口 → boards 表
   ├ local/                  Room：实体、DAO、TypeConverter
+  ├ session/                共享 cookie store 的读模型（登录态 + 人机验证态）
   └ settings/               DataStore，SSOT
 
 core/        无 Android 依赖的纯逻辑（parser、错误类型、URL 词表、时钟）
@@ -110,6 +111,31 @@ core/        无 Android 依赖的纯逻辑（parser、错误类型、URL 词表
 - **不许直接读 `System.currentTimeMillis()`。** 注入 `AppClock`。
   缓存新鲜度决定"打开这个屏幕要不要发请求"，那是真逻辑，必须能测；
   而需要真的 sleep 才能测的过期逻辑，等于没人会测。
+
+**会话约定**：
+- **不许硬编码 User-Agent。** 用 `resolveUserAgent()` 从 WebView 读，WebView 那边则**一行都不设**。
+  Cloudflare 的 managed challenge 会拿 `User-Agent` header 去和 JS 环境（`navigator.userAgentData`、
+  `Sec-CH-UA`）交叉核对，而后者是 WebView 按真实 Chromium 版本上报的，`setUserAgentString` 改不动它。
+  header 和 JS 自相矛盾 → 再发一次挑战 → 无限勾选。这个 bug 真实存在过，
+  `UserAgentTest` 锁住"UA 来自 WebView"和"WebView 不被覆盖"两条。
+  注意 `setUserAgentString` 会把 UA 标记为已覆盖并改变客户端提示的上报方式，
+  **所以把它设成它本来就有的值不是 no-op。**
+- **cookie 就是会话。** WebView 和 OkHttp 共用 `CookieManager`，没有第二份拷贝，也没有 token 存储。
+- `CookieManager` 没有变更通知，所以 `SessionRepository` 的读取是显式调用的，
+  **且只有 WebView 那个屏幕会调**。这是刻意的：`generation` 只在用户真的走过一次 WebView 后才变，
+  数据层可以安全地拿它当"重新加载"的信号；如果它每次 Cloudflare 轮换 cookie 都变，
+  列表就会在用户滚动时自己刷掉。
+- **`peek()` 只读不发布，`sync()` 才发布，这个区分是承重的。** WebView 每 500ms 轮询用 `peek()`，
+  `sync()` 只在 `onDispose` 调一次。发布会顶 `generation` → 清缓存 → 开始请求；
+  在用户还在勾 Cloudflare 勾选框时这么做，等于朝一个进行中的挑战打一串非浏览器流量，
+  能把一个本来能过的挑战变成过不去的。同理，`cf_chl_*` 这类挑战中间态 cookie
+  必须排除在 fingerprint 之外（`isCloudflareNoise`，`cf_clearance` 例外）。
+- **会话变化后必须先 `PostRepository.invalidateCaches()` 再重建 Pager。** 顺序反了，
+  `FeedRemoteMediator.initialize()` 会返回 `SKIP_INITIAL_REFRESH`，
+  刚登录的用户会继续读未登录时抓的那份列表——这个 bug 真实存在过，
+  由 `PostListViewModelTest.signing in refetches the feed instead of serving the signed-out cache` 覆盖。
+- **判断"是否登录"靠 cookie 名，是全项目唯一一处猜测。** 因此 `fingerprint`（决定是否刷新的信号）
+  刻意不依赖名字：名字猜错只会让"我的"页面的文案不对，内容照样会重新加载。
 
 **取消约定**：
 - **禁止用 `runCatching` 包裹挂起函数。** 用 `runCatchingExceptCancellation`。

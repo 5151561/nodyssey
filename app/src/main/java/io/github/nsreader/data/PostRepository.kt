@@ -44,6 +44,15 @@ interface PostRepository {
         sort: FeedSort,
     ): Flow<PagingData<FeedPost>>
 
+    /**
+     * Marks every cached feed and thread stale.
+     *
+     * Called when the session changes. NodeSeek serves different content to a signed-in reader — whole
+     * boards appear — so what is stored answered a different question and its freshness window is a
+     * lie. The content stays readable until the refresh lands; only the timestamp is withdrawn.
+     */
+    suspend fun invalidateCaches()
+
     /** The cached thread, emitting null until page 1 has ever been fetched. */
     fun thread(postId: Long): Flow<ThreadSnapshot?>
 
@@ -96,6 +105,11 @@ class OfflineFirstPostRepository(
             ),
             pagingSourceFactory = { database.feedDao().pagingSource(feedKey) },
         ).flow.map { pagingData -> pagingData.map(FeedPostRow::toFeedPost) }
+    }
+
+    override suspend fun invalidateCaches() {
+        database.feedDao().expireAllFeeds()
+        database.postDetailDao().expireAllThreads()
     }
 
     override fun thread(postId: Long): Flow<ThreadSnapshot?> = database.postDetailDao().observeThread(postId).map { it?.toSnapshot() }

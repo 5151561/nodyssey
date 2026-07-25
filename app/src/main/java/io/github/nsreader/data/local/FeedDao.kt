@@ -75,6 +75,16 @@ interface FeedDao {
     suspend fun upsertRemoteKey(key: FeedRemoteKeyEntity)
 
     /**
+     * Makes every stored feed count as stale without deleting a row.
+     *
+     * Rows are kept on purpose: the stale list still paints on the first frame while the refresh runs,
+     * which is the offline-first behaviour. Only the *freshness* claim is withdrawn, so the mediator
+     * stops answering `SKIP_INITIAL_REFRESH`.
+     */
+    @Query("UPDATE feed_remote_keys SET refreshedAtMillis = 0")
+    suspend fun expireAllFeeds()
+
+    /**
      * Drops posts that no feed points at any more and that nobody has read.
      *
      * Without this the `posts` table only ever grows: refreshing a feed clears its positions but

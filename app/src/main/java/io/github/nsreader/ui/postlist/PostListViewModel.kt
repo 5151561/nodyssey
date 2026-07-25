@@ -14,6 +14,8 @@ import io.github.nsreader.data.Board
 import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.FeedPost
 import io.github.nsreader.data.PostRepository
+import io.github.nsreader.data.session.SessionRepository
+import io.github.nsreader.data.session.SessionState
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.model.FeedSort
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,7 +23,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -42,9 +46,19 @@ import kotlinx.coroutines.launch
 class PostListViewModel(
     private val repository: PostRepository,
     private val categoryRepository: CategoryRepository,
+    session: StateFlow<SessionState> = MutableStateFlow(SessionState()),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostListUiState())
     val uiState: StateFlow<PostListUiState> = _uiState.asStateFlow()
+
+    /**
+     * Bumped once the caches have been marked stale after a session change.
+     *
+     * It is a separate flow from [SessionRepository.state] precisely so the ordering is visible: the
+     * pager must not be rebuilt until the invalidation has committed, or the mediator answers
+     * `SKIP_INITIAL_REFRESH` and the user who just signed in keeps reading the signed-out list.
+     */
+    private val feedGeneration = MutableStateFlow(0)
 
     /**
      * `cachedIn` keeps the loaded pages alive across configuration changes and across navigating into
@@ -53,10 +67,12 @@ class PostListViewModel(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val feed: Flow<PagingData<FeedPost>> =
-        uiState
-            .map { it.categorySlug to it.sort }
+        combine(
+            uiState.map { it.categorySlug to it.sort },
+            feedGeneration,
+        ) { (slug, sort), generation -> FeedKey(slug, sort, generation) }
             .distinctUntilChanged()
-            .flatMapLatest { (slug, sort) -> repository.feed(slug, sort) }
+            .flatMapLatest { key -> repository.feed(key.categorySlug, key.sort) }
             .cachedIn(viewModelScope)
 
     init {
@@ -65,6 +81,17 @@ class PostListViewModel(
         categoryRepository.boards
             .onEach { boards -> _uiState.update { it.copy(boards = boards) } }
             .launchIn(viewModelScope)
+
+        // Signing in, or clearing a challenge, changes what the site will hand us. `drop(1)` skips the
+        // cookies we started the process with — a cold start is not a session change.
+        session
+            .map { it.generation }
+            .distinctUntilChanged()
+            .drop(1)
+            .onEach {
+                repository.invalidateCaches()
+                feedGeneration.update { generation -> generation + 1 }
+            }.launchIn(viewModelScope)
 
         viewModelScope.launch { categoryRepository.refreshIfNeeded() }
     }
@@ -96,11 +123,27 @@ class PostListViewModel(
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
-                    PostListViewModel(container.postRepository, container.categoryRepository)
+                    PostListViewModel(
+                        container.postRepository,
+                        container.categoryRepository,
+                        container.sessionRepository.state,
+                    )
                 }
             }
     }
 }
+
+/**
+ * Everything that decides *which* pager the screen is showing.
+ *
+ * A data class rather than a `Triple` so `distinctUntilChanged` compares fields that have names, and
+ * so adding a fourth reason to rebuild cannot silently reorder the destructuring.
+ */
+private data class FeedKey(
+    val categorySlug: String?,
+    val sort: FeedSort,
+    val sessionGeneration: Int,
+)
 
 /**
  * Everything about the list that is *not* the list.

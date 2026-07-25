@@ -13,8 +13,15 @@ object NodeSeekSite {
 
     const val BASE_URL = "https://www.nodeseek.com"
 
-    /** The site sits behind Cloudflare, so requests must look like a real mobile browser. */
-    const val USER_AGENT =
+    /**
+     * Last resort only. The real UA is read off the WebView — see `resolveUserAgent`.
+     *
+     * Hardcoding this as *the* UA is what caused the infinite Cloudflare challenge: it contradicted
+     * the UA client hints the WebView keeps sending from its actual Chromium version, and a managed
+     * challenge answers a contradiction with another challenge. It survives here for the one case
+     * where the WebView cannot be asked at all.
+     */
+    const val FALLBACK_USER_AGENT =
         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) " +
             "Chrome/126.0.6478.71 Mobile Safari/537.36"
 

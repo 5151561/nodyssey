@@ -12,15 +12,17 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.di.AppContainer
-import io.github.nsreader.ui.login.WebViewScreen
+import io.github.nsreader.ui.login.WebViewGoal
+import io.github.nsreader.ui.login.WebViewRoute
 import io.github.nsreader.ui.navigation.ComingSoonScreen
 import io.github.nsreader.ui.navigation.NodeSeekNavigationBar
-import io.github.nsreader.ui.navigation.ProfileScreen
 import io.github.nsreader.ui.navigation.TopLevelDestination
 import io.github.nsreader.ui.postdetail.PostDetailRoute
 import io.github.nsreader.ui.postdetail.PostDetailViewModel
 import io.github.nsreader.ui.postlist.PostListRoute
 import io.github.nsreader.ui.postlist.PostListViewModel
+import io.github.nsreader.ui.profile.ProfileRoute
+import io.github.nsreader.ui.profile.ProfileViewModel
 
 @Composable
 fun MainNavigation(container: AppContainer) {
@@ -62,7 +64,8 @@ fun MainNavigation(container: AppContainer) {
                     PostListRoute(
                         viewModel = viewModel,
                         onPostClick = { backStack.add(PostDetailKey(it)) },
-                        onOpenBrowser = { backStack.add(WebKey(it, "NodeSeek")) },
+                        onSignIn = { backStack.add(WebKey(signInUrl, "NodeSeek", WebViewGoal.SIGN_IN)) },
+                        onVerify = { backStack.add(WebKey(it, "NodeSeek", WebViewGoal.CHALLENGE)) },
                     )
                 }
 
@@ -75,8 +78,11 @@ fun MainNavigation(container: AppContainer) {
                 }
 
                 entry<ProfileKey> {
-                    ProfileScreen(
-                        onSignIn = { backStack.add(WebKey(signInUrl, "NodeSeek")) },
+                    val viewModel: ProfileViewModel =
+                        viewModel(factory = ProfileViewModel.factory(container))
+                    ProfileRoute(
+                        viewModel = viewModel,
+                        onSignIn = { backStack.add(WebKey(signInUrl, "NodeSeek", WebViewGoal.SIGN_IN)) },
                     )
                 }
 
@@ -91,14 +97,19 @@ fun MainNavigation(container: AppContainer) {
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
                         onOpenBrowser = { backStack.add(WebKey(it, "NodeSeek")) },
+                        onSignIn = { backStack.add(WebKey(signInUrl, "NodeSeek", WebViewGoal.SIGN_IN)) },
+                        onVerify = { backStack.add(WebKey(it, "NodeSeek", WebViewGoal.CHALLENGE)) },
                         onImageClick = { backStack.add(WebKey(it, "图片")) },
                     )
                 }
 
                 entry<WebKey> { key ->
-                    WebViewScreen(
+                    WebViewRoute(
                         url = key.url,
                         title = key.title,
+                        goal = key.goal,
+                        session = container.sessionRepository,
+                        userAgent = container.userAgent,
                         onClose = { backStack.removeLastOrNull() },
                     )
                 }
