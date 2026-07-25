@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.github.nsreader.core.AppClock
 import io.github.nsreader.data.local.NodeSeekDatabase
+import io.github.nsreader.model.FeedSort
 import io.github.nsreader.model.PostContent
 import io.github.nsreader.model.PostDetail
 import io.github.nsreader.model.PostListPage
@@ -75,13 +76,16 @@ internal class FakePostRemoteDataSource : PostRemoteDataSource {
     var gate: CompletableDeferred<Unit>? = null
 
     val listRequests = mutableListOf<Pair<String?, Int>>()
+    val sortRequests = mutableListOf<FeedSort>()
     val detailRequests = mutableListOf<Pair<Long, Int>>()
 
     override suspend fun loadList(
         categorySlug: String?,
         page: Int,
+        sort: FeedSort,
     ): PostListPage {
         listRequests += categorySlug to page
+        sortRequests += sort
         gate?.await()
         listError?.let { throw it }
         return listResult(categorySlug, page)

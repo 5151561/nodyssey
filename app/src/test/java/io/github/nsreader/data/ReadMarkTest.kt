@@ -7,6 +7,7 @@ import io.github.nsreader.data.local.FeedPostRow
 import io.github.nsreader.data.local.FeedRemoteKeyEntity
 import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.local.toEntity
+import io.github.nsreader.model.FeedSort
 import io.github.nsreader.model.PostSummary
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -90,7 +91,7 @@ class ReadMarkTest {
         return (result as PagingSource.LoadResult.Page).data.first { it.post.postId == postId }
     }
 
-    private suspend fun feedRows(): List<FeedPost> = repository.feed(null).asSnapshot()
+    private suspend fun feedRows(): List<FeedPost> = repository.feed(null, FeedSort.LAST_REPLY).asSnapshot()
 
     @Test
     fun `an unopened post has no read state`() =

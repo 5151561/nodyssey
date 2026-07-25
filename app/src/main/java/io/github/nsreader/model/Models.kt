@@ -168,6 +168,20 @@ sealed interface InlineNode {
         val alt: String?,
     ) : InlineNode
 
+    /**
+     * A reply pointing at another floor, which NodeSeek writes as `@name` followed by `#3`.
+     *
+     * The site emits two ordinary anchors; folding them into one node is what lets the renderer draw
+     * a tonal chip that jumps to the floor, instead of two blue links that leave the app.
+     */
+    @Serializable
+    @SerialName("qref")
+    data class QuoteRef(
+        val name: String,
+        val floor: String,
+        val url: String,
+    ) : InlineNode
+
     @Serializable
     @SerialName("br")
     data object LineBreak : InlineNode

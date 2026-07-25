@@ -1,5 +1,7 @@
 package io.github.nsreader.core
 
+import io.github.nsreader.model.FeedSort
+
 /**
  * Everything we know about the shape of nodeseek.com lives here.
  *
@@ -40,10 +42,20 @@ object NodeSeekSite {
     data class Category(val slug: String?, val title: String)
 
     /** `null` slug means the mixed front page, which pages as `/page-2` rather than `/categories/…`. */
-    fun listPath(categorySlug: String?, page: Int): String {
+    fun listPath(
+        categorySlug: String?,
+        page: Int,
+        sort: FeedSort = FeedSort.LAST_REPLY,
+    ): String {
         val safePage = page.coerceAtLeast(1)
         val base = if (categorySlug == null) "" else "/categories/$categorySlug"
-        return if (safePage == 1) base.ifEmpty { "/" } else "$base/page-$safePage"
+        val path = if (safePage == 1) base.ifEmpty { "/" } else "$base/page-$safePage"
+        // The site's default order carries no parameter, so the URL stays byte-identical to what it
+        // was before sorting existed — which is what keeps every cached feed key valid.
+        return when (sort) {
+            FeedSort.LAST_REPLY -> path
+            FeedSort.POST_TIME -> "$path?sortBy=postTime"
+        }
     }
 
     fun postPath(postId: Long, page: Int = 1): String = "/post-$postId-${page.coerceAtLeast(1)}"

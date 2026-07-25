@@ -16,11 +16,15 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /** Screen-level tests for the thread view, including the offline-first error behaviour. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+// The design targets a 360×800dp compact phone; Robolectric's default window is far
+// shorter than any real device and would fail screens that fit fine in the hand.
+@Config(qualifiers = "w360dp-h800dp")
 class PostDetailScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -52,12 +56,12 @@ class PostDetailScreenTest {
             NodeSeekTheme {
                 PostDetailScreen(
                     state = state,
+                    postUrl = "https://www.nodeseek.com/post-1-1",
                     onBack = onBack,
                     onOpenBrowser = onOpenBrowser,
                     onImageClick = {},
                     onRetry = onRetry,
                     onLoadMore = {},
-                    onOpenPostInBrowser = {},
                 )
             }
         }
@@ -97,8 +101,8 @@ class PostDetailScreenTest {
     fun `an error with nothing cached takes over the screen`() {
         setScreen(PostDetailUiState(body = null, error = NodeSeekError.Cloudflare))
 
-        composeRule.onNodeWithText("需要在浏览器里完成一次人机验证，之后就能正常浏览了").assertIsDisplayed()
-        composeRule.onNodeWithText("在浏览器中验证").assertIsDisplayed()
+        composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
+        composeRule.onNodeWithText("去验证").assertIsDisplayed()
     }
 
     @Test
@@ -131,7 +135,7 @@ class PostDetailScreenTest {
 
         composeRule.onNodeWithText("cached body").assertIsDisplayed()
         composeRule.onNodeWithText("cached reply").assertIsDisplayed()
-        composeRule.onNodeWithText("连不上 NodeSeek，检查一下网络").assertDoesNotExist()
+        composeRule.onNodeWithText("网络开小差了").assertDoesNotExist()
     }
 
     @Test

@@ -3,8 +3,18 @@ package io.github.nsreader
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
+/** The four bottom-navigation destinations. */
 @Serializable
 data object PostListKey : NavKey
+
+@Serializable
+data object SearchKey : NavKey
+
+@Serializable
+data object NotificationsKey : NavKey
+
+@Serializable
+data object ProfileKey : NavKey
 
 @Serializable
 data class PostDetailKey(

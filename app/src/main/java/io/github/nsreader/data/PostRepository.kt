@@ -11,6 +11,7 @@ import io.github.nsreader.data.local.FeedPostRow
 import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.local.toSnapshot
 import io.github.nsreader.data.local.toSummary
+import io.github.nsreader.model.FeedSort
 import io.github.nsreader.model.PostSummary
 import io.github.nsreader.model.ThreadSnapshot
 import kotlinx.coroutines.flow.Flow
@@ -38,7 +39,10 @@ data class FeedPost(
  */
 interface PostRepository {
     /** A pager backed by the database, refilled from the network by [FeedRemoteMediator]. */
-    fun feed(categorySlug: String?): Flow<PagingData<FeedPost>>
+    fun feed(
+        categorySlug: String?,
+        sort: FeedSort,
+    ): Flow<PagingData<FeedPost>>
 
     /** The cached thread, emitting null until page 1 has ever been fetched. */
     fun thread(postId: Long): Flow<ThreadSnapshot?>
@@ -67,8 +71,11 @@ class OfflineFirstPostRepository(
     private val remote: PostRemoteDataSource,
     private val clock: AppClock,
 ) : PostRepository {
-    override fun feed(categorySlug: String?): Flow<PagingData<FeedPost>> {
-        val feedKey = feedKeyFor(categorySlug)
+    override fun feed(
+        categorySlug: String?,
+        sort: FeedSort,
+    ): Flow<PagingData<FeedPost>> {
+        val feedKey = feedKeyFor(categorySlug, sort)
         return Pager(
             config =
             PagingConfig(
@@ -82,6 +89,7 @@ class OfflineFirstPostRepository(
             FeedRemoteMediator(
                 feedKey = feedKey,
                 categorySlug = categorySlug,
+                sort = sort,
                 database = database,
                 remote = remote,
                 clock = clock,

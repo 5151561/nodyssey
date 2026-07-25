@@ -29,7 +29,7 @@ object RichContentParser {
         val looseInlines = mutableListOf<InlineNode>()
 
         fun flushLoose() {
-            val trimmed = trimInlines(looseInlines)
+            val trimmed = finishInlines(looseInlines)
             if (trimmed.isNotEmpty()) blocks += RichNode.Paragraph(trimmed)
             looseInlines.clear()
         }
@@ -62,7 +62,7 @@ object RichContentParser {
         "h1", "h2", "h3", "h4", "h5", "h6" ->
             RichNode.Heading(
                 level = element.tagName().substring(1).toIntOrNull() ?: 3,
-                inlines = trimInlines(parseInlines(element.childNodes())),
+                inlines = finishInlines(parseInlines(element.childNodes())),
             )
 
         "pre" -> codeBlock(element)
@@ -81,7 +81,7 @@ object RichContentParser {
             if (element.hasClass("quote")) {
                 RichNode.Quote(parseBlocks(element.childNodes()))
             } else {
-                RichNode.Paragraph(trimInlines(parseInlines(element.childNodes())))
+                RichNode.Paragraph(finishInlines(parseInlines(element.childNodes())))
             }
 
         "img" -> if (isSticker(element)) null else blockImage(element)
@@ -105,7 +105,7 @@ object RichContentParser {
                 },
             )
         }
-        return RichNode.Paragraph(trimInlines(parseInlines(element.childNodes())))
+        return RichNode.Paragraph(finishInlines(parseInlines(element.childNodes())))
     }
 
     private fun blockImage(element: Element): RichNode {
@@ -189,6 +189,48 @@ object RichContentParser {
 
     private fun isSticker(element: Element): Boolean =
         element.hasClass(STICKER_CLASS) || element.attr("src").contains("/static/image/sticker/")
+
+    /** Everything a finished run of inline content needs: trimmed, with quote references folded. */
+    private fun finishInlines(inlines: List<InlineNode>): List<InlineNode> = foldQuoteRefs(trimInlines(inlines))
+
+    private val FLOOR_LABEL = Regex("""^#\d+$""")
+
+    /**
+     * Folds NodeSeek's two-anchor quote reference (`<a>@name</a> <a>#3</a>`) into one node.
+     *
+     * Left alone it renders as two consecutive blue links, which is both ugly at the head of almost
+     * every reply and wrong — tapping either one would leave for the web view rather than scrolling
+     * to the floor being answered.
+     */
+    private fun foldQuoteRefs(inlines: List<InlineNode>): List<InlineNode> {
+        if (inlines.size < 2) return inlines
+
+        val result = mutableListOf<InlineNode>()
+        var index = 0
+        while (index < inlines.size) {
+            val mention = inlines[index] as? InlineNode.Link
+            if (mention != null && mention.text.startsWith("@")) {
+                // The site puts a single space between the two anchors; anything else is not a pair.
+                var next = index + 1
+                if ((inlines.getOrNull(next) as? InlineNode.Text)?.text?.isBlank() == true) next++
+
+                val floor = inlines.getOrNull(next) as? InlineNode.Link
+                if (floor != null && FLOOR_LABEL.matches(floor.text.trim())) {
+                    result +=
+                        InlineNode.QuoteRef(
+                            name = mention.text.removePrefix("@"),
+                            floor = floor.text.trim(),
+                            url = floor.url,
+                        )
+                    index = next + 1
+                    continue
+                }
+            }
+            result += inlines[index]
+            index++
+        }
+        return result
+    }
 
     /** Drops leading/trailing whitespace-only text so paragraphs do not start with a blank line. */
     private fun trimInlines(inlines: List<InlineNode>): List<InlineNode> {

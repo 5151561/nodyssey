@@ -9,6 +9,7 @@ import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.data.local.FeedPostRow
 import io.github.nsreader.data.local.NodeSeekDatabase
+import io.github.nsreader.model.FeedSort
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -46,6 +47,7 @@ class FeedRemoteMediatorTest {
         FeedRemoteMediator(
             feedKey = feedKeyFor(slug),
             categorySlug = slug,
+            sort = FeedSort.LAST_REPLY,
             database = database,
             remote = remote,
             clock = clock,

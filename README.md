@@ -101,7 +101,17 @@ NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口，其�
 
 ## 设计
 
-视觉重做的需求文档在 [docs/design-brief.md](docs/design-brief.md)（M3 Expressive 方向）。
+需求文档在 [docs/design-brief.md](docs/design-brief.md)，视觉稿据此产出，已落地的部分：
+
+- **Token**：`ui/theme/` 下的 light / dark 全量 M3 配色（品牌色「石墨青」`#35606E`，
+  深色 surface `#121318` 而非纯黑，保证分割线可见）、字阶、形状与间距。不跟随壁纸取色。
+- **首页**：分割线密集列表（一屏 9 条）、tonal 版块标签按四类分组、已读态降对比度、
+  置顶 / 锁帖标识、骨架屏、人机验证态、需登录态、排序切换。
+- **详情**：标题区 + 楼主区 + 6dp tonal 断层 + 评论流；`@某人 #3` 折叠成可点 chip 并滚动到对应楼层。
+  正文排版规范见 `RichContent.kt` 里的 `RichContentSpec` preview。
+- **状态合集**：`ui/common/StatusViews.kt`，一套 tonal 有机形 + 图标 + 说明 + 动作。
+- **底部导航**：4 tab；搜索 / 通知的设计稿未定，暂为占位屏。
+
 当前实现截图在 [docs/screenshots/](docs/screenshots/)。
 
 ## 致谢

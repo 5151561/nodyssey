@@ -1,8 +1,11 @@
 package io.github.nsreader.ui.postlist
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.paging.LoadState
@@ -13,6 +16,7 @@ import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.data.Board
 import io.github.nsreader.data.FeedPost
+import io.github.nsreader.model.FeedSort
 import io.github.nsreader.model.PostSummary
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import kotlinx.coroutines.flow.flowOf
@@ -21,6 +25,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
@@ -31,6 +36,9 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+// The design targets a 360×800dp compact phone; Robolectric's default window is far
+// shorter than any real device and would fail screens that fit fine in the hand.
+@Config(qualifiers = "w360dp-h800dp")
 class PostListScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -48,6 +56,9 @@ class PostListScreenTest {
         isRead: Boolean = false,
         newCommentCount: Int = 0,
         commentCount: Int? = 12,
+        isPinned: Boolean = false,
+        isLocked: Boolean = false,
+        categoryTitle: String? = "日常",
     ) = FeedPost(
         summary =
         PostSummary(
@@ -56,12 +67,14 @@ class PostListScreenTest {
             authorName = "tester",
             authorUid = 1,
             avatarUrl = null,
-            categoryTitle = "日常",
+            categoryTitle = categoryTitle,
             categorySlug = "daily",
             viewCount = 100,
             commentCount = commentCount,
             lastActiveText = "1分钟前",
             lastActiveTitle = null,
+            isPinned = isPinned,
+            isLocked = isLocked,
         ),
         isRead = isRead,
         newCommentCount = newCommentCount,
@@ -75,6 +88,7 @@ class PostListScreenTest {
         state: PostListUiState = PostListUiState(boards = boards),
         onPostClick: (Long) -> Unit = {},
         onBoardClick: (String?) -> Unit = {},
+        onSortChange: (FeedSort) -> Unit = {},
         onRecoverInBrowser: () -> Unit = {},
     ) {
         composeRule.setContent {
@@ -86,6 +100,7 @@ class PostListScreenTest {
                     state = state,
                     onPostClick = onPostClick,
                     onBoardClick = onBoardClick,
+                    onSortChange = onSortChange,
                     onRecoverInBrowser = onRecoverInBrowser,
                 )
             }
@@ -100,6 +115,7 @@ class PostListScreenTest {
         state: PostListUiState,
         onPostClick: (Long) -> Unit,
         onBoardClick: (String?) -> Unit,
+        onSortChange: (FeedSort) -> Unit,
         onRecoverInBrowser: () -> Unit,
     ) {
         val pagingData =
@@ -117,6 +133,7 @@ class PostListScreenTest {
             posts = flowOf(pagingData).collectAsLazyPagingItems(),
             onPostClick = onPostClick,
             onBoardClick = onBoardClick,
+            onSortChange = onSortChange,
             onSignInClick = {},
             onRecoverInBrowser = onRecoverInBrowser,
         )
@@ -189,8 +206,8 @@ class PostListScreenTest {
             refresh = LoadState.Error(NodeSeekException(NodeSeekError.Cloudflare)),
         )
 
-        composeRule.onNodeWithText("需要在浏览器里完成一次人机验证，之后就能正常浏览了").assertIsDisplayed()
-        composeRule.onNodeWithText("在浏览器中验证").assertIsDisplayed()
+        composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
+        composeRule.onNodeWithText("去验证").assertIsDisplayed()
         composeRule.onNodeWithText("重试").assertIsDisplayed()
     }
 
@@ -201,7 +218,7 @@ class PostListScreenTest {
             refresh = LoadState.Error(NodeSeekException(NodeSeekError.LoginRequired)),
         )
 
-        composeRule.onNodeWithText("这个版块的内容需要登录后才能查看").assertIsDisplayed()
+        composeRule.onNodeWithText("登录 NodeSeek 账号后即可浏览本版块的内容。").assertIsDisplayed()
         composeRule.onNodeWithText("登录").assertIsDisplayed()
     }
 
@@ -221,7 +238,7 @@ class PostListScreenTest {
             onRecoverInBrowser = { opened = true },
         )
 
-        composeRule.onNodeWithText("在浏览器中验证").performClick()
+        composeRule.onNodeWithText("去验证").performClick()
 
         assert(opened)
     }
@@ -238,6 +255,75 @@ class PostListScreenTest {
         )
 
         composeRule.onNodeWithText("cached post").assertIsDisplayed()
-        composeRule.onNodeWithText("连不上 NodeSeek，检查一下网络").assertDoesNotExist()
+        composeRule.onNodeWithText("网络开小差了").assertDoesNotExist()
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Row anatomy: the design's answers to "what does a row have to survive"
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    fun `a pinned row is announced rather than only tinted`() {
+        setScreen(listOf(feedPost(1, "公告", isPinned = true, commentCount = null)))
+
+        // Twice by design: the pin badge replacing the avatar, and the word in the meta line.
+        composeRule.onAllNodesWithText("置顶").assertCountEquals(1)
+        composeRule.onNodeWithContentDescription("置顶").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a locked row carries the lock affordance`() {
+        setScreen(listOf(feedPost(1, "锁了的帖子", isLocked = true)))
+
+        composeRule.onNodeWithContentDescription("已锁帖").assertIsDisplayed()
+    }
+
+    /** A board that the scrape failed to return must drop the tag, not the row. */
+    @Test
+    fun `a row with no board still renders`() {
+        setScreen(listOf(feedPost(1, "没有版块的帖子", categoryTitle = null)))
+
+        composeRule.onNodeWithText("没有版块的帖子").assertIsDisplayed()
+        // Only the board strip's pill, never a tag on the row itself.
+        composeRule.onAllNodesWithText("日常").assertCountEquals(1)
+    }
+
+    @Test
+    fun `an empty feed that finished loading offers a way out`() {
+        setScreen(
+            posts = emptyList(),
+            refresh = LoadState.NotLoading(true),
+            state = PostListUiState(boards = boards, categorySlug = "tech"),
+        )
+
+        composeRule.onNodeWithText("这里还没有帖子").assertIsDisplayed()
+        composeRule.onNodeWithText("换个版块").assertIsDisplayed()
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Sort
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    fun `the sort menu reports the chosen order`() {
+        var chosen: FeedSort? = null
+        setScreen(listOf(feedPost(1, "post")), onSortChange = { chosen = it })
+
+        composeRule.onNodeWithContentDescription("排序方式").performClick()
+        composeRule.onNodeWithText("按发帖时间").performClick()
+
+        assertEquals(FeedSort.POST_TIME, chosen)
+    }
+
+    /** The needs-login screen has to name the board, or it reads like the whole app is locked. */
+    @Test
+    fun `a locked board names itself in the sign-in state`() {
+        setScreen(
+            posts = emptyList(),
+            refresh = LoadState.Error(NodeSeekException(NodeSeekError.LoginRequired)),
+            state = PostListUiState(boards = boards, categorySlug = "tech"),
+        )
+
+        composeRule.onNodeWithText("「技术」需要登录后查看").assertIsDisplayed()
     }
 }

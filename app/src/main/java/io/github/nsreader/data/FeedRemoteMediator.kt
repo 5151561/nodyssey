@@ -11,6 +11,7 @@ import io.github.nsreader.data.local.FeedPostRow
 import io.github.nsreader.data.local.FeedRemoteKeyEntity
 import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.local.toEntity
+import io.github.nsreader.model.FeedSort
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -28,6 +29,7 @@ import kotlinx.coroutines.CancellationException
 class FeedRemoteMediator(
     private val feedKey: String,
     private val categorySlug: String?,
+    private val sort: FeedSort,
     private val database: NodeSeekDatabase,
     private val remote: PostRemoteDataSource,
     private val clock: AppClock,
@@ -76,7 +78,7 @@ class FeedRemoteMediator(
             }
 
         return try {
-            val result = remote.loadList(categorySlug, page)
+            val result = remote.loadList(categorySlug, page, sort)
             val now = clock.nowMillis()
 
             database.withTransaction {
@@ -138,8 +140,23 @@ class FeedRemoteMediator(
     }
 }
 
-/** The key under which a board's feed order is stored. The mixed front page has no slug. */
-internal fun feedKeyFor(categorySlug: String?): String = categorySlug ?: FRONT_PAGE_FEED_KEY
+/**
+ * The key under which a board's feed order is stored. The mixed front page has no slug.
+ *
+ * Sort order is part of the key because the two orders are genuinely different lists — sharing a key
+ * would make switching sort append one ordering onto the other. The default order contributes no
+ * suffix, so keys written before sorting existed still resolve.
+ */
+internal fun feedKeyFor(
+    categorySlug: String?,
+    sort: FeedSort = FeedSort.LAST_REPLY,
+): String {
+    val base = categorySlug ?: FRONT_PAGE_FEED_KEY
+    return when (sort) {
+        FeedSort.LAST_REPLY -> base
+        FeedSort.POST_TIME -> "$base|postTime"
+    }
+}
 
 /** Empty string is safe as a key because NodeSeek slugs are never blank. */
 internal const val FRONT_PAGE_FEED_KEY = ""
