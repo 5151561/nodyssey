@@ -13,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
@@ -25,15 +26,20 @@ import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.ui.login.WebViewGoal
 import io.github.nsreader.ui.login.WebViewRoute
-import io.github.nsreader.ui.navigation.ComingSoonScreen
 import io.github.nsreader.ui.navigation.NodeSeekNavigationItems
 import io.github.nsreader.ui.navigation.TopLevelDestination
+import io.github.nsreader.ui.notifications.NotificationsRoute
+import io.github.nsreader.ui.notifications.NotificationsViewModel
 import io.github.nsreader.ui.postdetail.PostDetailRoute
 import io.github.nsreader.ui.postdetail.PostDetailViewModel
 import io.github.nsreader.ui.postlist.PostListRoute
 import io.github.nsreader.ui.postlist.PostListViewModel
 import io.github.nsreader.ui.profile.ProfileRoute
 import io.github.nsreader.ui.profile.ProfileViewModel
+import io.github.nsreader.ui.search.SearchRoute
+import io.github.nsreader.ui.search.SearchViewModel
+import io.github.nsreader.ui.settings.SettingsRoute
+import io.github.nsreader.ui.settings.SettingsViewModel
 
 @Composable
 fun MainNavigation(container: AppContainer) {
@@ -49,6 +55,9 @@ fun MainNavigation(container: AppContainer) {
             }
         }
     }
+    val notificationsViewModel: NotificationsViewModel =
+        viewModel(factory = NotificationsViewModel.factory(container))
+    val notificationsState by notificationsViewModel.uiState.collectAsStateWithLifecycle()
 
     /*
      * One back stack per tab, rather than one shared stack that gets cleared on every switch.
@@ -97,6 +106,7 @@ fun MainNavigation(container: AppContainer) {
             NodeSeekNavigationItems(
                 current = currentTab,
                 onSelect = { destination -> currentTab = destination },
+                unreadCount = notificationsState.counts.all,
             )
         },
         /*
@@ -143,11 +153,29 @@ fun MainNavigation(container: AppContainer) {
                 }
 
                 entry<SearchKey> {
-                    ComingSoonScreen(title = stringResource(R.string.tab_search))
+                    val viewModel: SearchViewModel =
+                        viewModel(factory = SearchViewModel.factory(container))
+                    SearchRoute(
+                        viewModel = viewModel,
+                        onPostClick = { backStack.add(PostDetailKey(it)) },
+                    )
                 }
 
                 entry<NotificationsKey> {
-                    ComingSoonScreen(title = stringResource(R.string.tab_notifications))
+                    NotificationsRoute(
+                        viewModel = notificationsViewModel,
+                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                        onVerify = {
+                            backStack.add(
+                                WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
+                            )
+                        },
+                        onNotificationClick = { notification ->
+                            notification.postId?.let {
+                                backStack.add(PostDetailKey(it, notification.floor))
+                            }
+                        },
+                    )
                 }
 
                 entry<ProfileKey> {
@@ -156,6 +184,17 @@ fun MainNavigation(container: AppContainer) {
                     ProfileRoute(
                         viewModel = viewModel,
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                        onSettings = { backStack.add(SettingsKey) },
+                        onOpenWebsite = { openExternalUrl(NodeSeekSite.BASE_URL) },
+                    )
+                }
+
+                entry<SettingsKey> {
+                    val viewModel: SettingsViewModel =
+                        viewModel(factory = SettingsViewModel.factory(container))
+                    SettingsRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
                     )
                 }
 
@@ -168,6 +207,7 @@ fun MainNavigation(container: AppContainer) {
                         )
                     PostDetailRoute(
                         viewModel = viewModel,
+                        initialFloor = key.floor,
                         onBack = { backStack.removeLastOrNull() },
                         onOpenBrowser = openExternalUrl,
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },

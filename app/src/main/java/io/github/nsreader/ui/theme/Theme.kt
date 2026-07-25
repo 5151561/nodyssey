@@ -15,6 +15,7 @@ fun NodeSeekTheme(
     // The brand palette is the default and the point: the app should be recognisable from a
     // screenshot posted back to the forum. Wallpaper colors stay available, but opt-in.
     dynamicColor: Boolean = false,
+    fontScale: Float = 1f,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -47,7 +48,7 @@ fun NodeSeekTheme(
          */
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = NodeSeekTypography,
+            typography = nodeSeekTypography(fontScale),
             shapes = NodeSeekShapes,
             content = content,
         )

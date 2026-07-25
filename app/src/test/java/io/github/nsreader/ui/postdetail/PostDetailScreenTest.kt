@@ -77,8 +77,8 @@ class PostDetailScreenTest {
             ),
         )
 
-        // Twice by design: truncated in the app bar, and in full as the list header.
-        composeRule.onAllNodesWithText("a thread title").assertCountEquals(2)
+        // The app bar stays quiet until the full title has scrolled away.
+        composeRule.onAllNodesWithText("a thread title").assertCountEquals(1)
         composeRule.onNodeWithText("the opening post").assertIsDisplayed()
         composeRule.onNodeWithText("first reply").assertIsDisplayed()
         composeRule.onNodeWithText("second reply").assertIsDisplayed()
@@ -95,6 +95,18 @@ class PostDetailScreenTest {
         composeRule.onNodeWithContentDescription("返回").performClick()
 
         assert(backed)
+    }
+
+    @Test
+    fun `feeding chicken opens the confirmation dialog`() {
+        setScreen(PostDetailUiState(title = "t", body = content("body", author = "op")))
+
+        composeRule.onNodeWithContentDescription("投喂鸡腿").performClick()
+
+        composeRule.onNodeWithText("投喂鸡腿？").assertIsDisplayed()
+        composeRule.onNodeWithText("是否向 op 投喂鸡腿？这将消耗你一个鸡腿。").assertIsDisplayed()
+        composeRule.onNodeWithText("取消").performClick()
+        composeRule.onNodeWithText("投喂鸡腿？").assertDoesNotExist()
     }
 
     @Test

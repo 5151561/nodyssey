@@ -457,7 +457,7 @@ private fun BoardPill(
  * every one of them.
  */
 @Composable
-private fun PostRow(
+internal fun PostRow(
     post: FeedPost,
     onClick: () -> Unit,
 ) {

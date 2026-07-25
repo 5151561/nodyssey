@@ -53,6 +53,17 @@ val NodeSeekTypography =
         labelSmall = TextStyle(fontSize = 12.sp, lineHeight = 16.sp),
     )
 
+/** Applies the in-app reading-size preference on top of Android's system font scale. */
+fun nodeSeekTypography(fontScale: Float): Typography {
+    val scale = fontScale.coerceIn(0.85f, 1.5f)
+    fun TextStyle.scaled() = copy(fontSize = fontSize * scale, lineHeight = lineHeight * scale)
+    return NodeSeekTypography.copy(
+        bodyLarge = NodeSeekTypography.bodyLarge.scaled(),
+        bodyMedium = NodeSeekTypography.bodyMedium.scaled(),
+        bodySmall = NodeSeekTypography.bodySmall.scaled(),
+    )
+}
+
 /**
  * Long-form reading style: 16sp on a 27sp line (1.69) with a hair of tracking.
  *

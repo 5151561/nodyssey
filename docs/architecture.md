@@ -4,8 +4,8 @@
 
 这份文档记录**架构约定**和**为什么这么定**。改架构前先读这里；新增代码违反这里的约定，要么改代码，要么先改这份文档。
 
-当前状态：阶段一至三已完成。139 个 JVM 测试、CI 五道门禁、离线优先已在模拟器实测。
-下一步是阶段四（视觉与写操作）。
+当前状态：阶段一至三已完成，阶段四视觉切片进行中。145 个 JVM 测试、CI 五道门禁、离线优先已在模拟器实测。
+下一步是阶段四的写操作与剩余远程数据接入。
 
 ---
 
@@ -18,6 +18,7 @@
 | 数据 | 所有者 | 消费方式 |
 |---|---|---|
 | 用户设置 | `SettingsRepository`（DataStore） | `collectAsState(settings)` |
+| 最近搜索 | `SettingsRepository`（DataStore） | `SearchViewModel` 组合进 UiState |
 | 版块列表 | `boards` 表 → `CategoryRepository.boards`（Flow） | ViewModel `onEach` 镜像进 UiState |
 | 帖子列表 | `posts` + `feed_positions` 表 → `PostRepository.feed()` | `collectAsLazyPagingItems()` |
 | 帖子详情 | `post_details` + `post_comments` 表 → `PostRepository.thread()` | ViewModel `onEach` 镜像进 UiState |
@@ -181,9 +182,9 @@ core/        无 Android 依赖的纯逻辑（parser、错误类型、URL 词表
 | 2 | 模块化与依赖边界 | 部分适用 | **2** | 高 | 单模块。包边界清晰，但没有编译期约束防止 ui→core/net 直连 |
 | 3 | Kotlin、协程、生命周期、DI | 适用 | **3** | 高 | 构造器注入、dispatcher 与时钟均可替换、取消语义正确 |
 | 4 | 数据、同步、后台任务 | 适用 | **3**（1） | 高 | Room + Paging 3 离线优先；仍无 WorkManager 后台同步 |
-| 5 | UI、Compose、导航、设计系统 | 适用 | **2** | 高 | Compose + M3 + Nav3；视觉体系待设计稿（见 design-brief.md） |
+| 5 | UI、Compose、导航、设计系统 | 适用 | **3** | 高 | Compose + M3 + Nav3；首页、详情、搜索、通知、我的、设置已落地 |
 | 6 | 自适应、无障碍、本地化 | 适用 | **1** | 中 | 字符串已外置、表情补了 contentDescription；未验证字号缩放/TalkBack/大屏 |
-| 7 | 测试、静态质量、CI | 适用 | **4**（2） | 高 | 139 个 JVM 测试（含 Room、Paging、Compose）；CI + spotless + lint 门禁齐全 |
+| 7 | 测试、静态质量、CI | 适用 | **4**（2） | 高 | 145 个 JVM 测试（含 Room、Paging、Compose）；CI + spotless + lint 门禁齐全 |
 | 8 | 性能、可靠性、可观测性 | 适用 | **1** | 中 | 无 baseline profile、无 benchmark、无崩溃上报 |
 | 9 | 工具链、构建、依赖治理 | 适用 | **3**（2） | 高 | version catalog + `gradle.lockfile` 锁定传递依赖 + CI 复现构建 |
 | 10 | 安全、隐私、发布完整性 | 适用 | **3**（2） | 中 | 会话缓存隔离；认证 WebView 域白名单；Cookie/Room 缓存不进入备份 |
@@ -293,7 +294,9 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 
 ### 阶段四 — 视觉与写操作
 
-按 `design-brief.md` 落地 M3 Expressive；之后接回复、点赞、收藏、签到（写操作要先补一次性事件通道）。
+按 `design-brief.md` 落地 M3 Expressive。首页、详情、搜索、通知、我的、设置的首个垂直切片已完成；
+搜索先覆盖 Room 中已有的帖子，通知接已知 JSON 端点，接口拿不到的个人资料不会用假数据填充。
+之后接回复、点赞、收藏、签到（写操作要先补一次性事件通道）。
 无障碍验证（字号 200%、TalkBack）随这一阶段一起做。
 
 ---

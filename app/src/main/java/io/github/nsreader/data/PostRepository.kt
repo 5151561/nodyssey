@@ -46,6 +46,9 @@ interface PostRepository {
         sort: FeedSort,
     ): Flow<PagingData<FeedPost>>
 
+    /** Searches the local feed cache by title or author. */
+    fun search(query: String): Flow<List<FeedPost>>
+
     /**
      * Marks every cached feed and thread stale.
      *
@@ -63,6 +66,12 @@ interface PostRepository {
      * settings are not session-scoped and are deliberately retained.
      */
     suspend fun clearSessionData()
+
+    /** Clears downloaded post content while preserving the current session provenance marker. */
+    suspend fun clearCache(
+        isSignedIn: Boolean,
+        fingerprint: Int,
+    )
 
     /**
      * Reconciles persisted cache provenance with the cookie jar before cached rows are exposed.
@@ -128,6 +137,12 @@ class OfflineFirstPostRepository(
         ).flow.map { pagingData -> pagingData.map(FeedPostRow::toFeedPost) }
     }
 
+    override fun search(query: String): Flow<List<FeedPost>> {
+        val escaped = query.trim().escapeLikePattern()
+        if (escaped.isEmpty()) return kotlinx.coroutines.flow.flowOf(emptyList())
+        return database.feedDao().search(escaped).map { rows -> rows.map(FeedPostRow::toFeedPost) }
+    }
+
     override suspend fun invalidateCaches() {
         database.feedDao().expireAllFeeds()
         database.postDetailDao().expireAllThreads()
@@ -138,6 +153,21 @@ class OfflineFirstPostRepository(
             clearPostData()
             database.cacheSessionDao().upsert(
                 CacheSessionEntity(authenticated = false, fingerprint = 0),
+            )
+        }
+    }
+
+    override suspend fun clearCache(
+        isSignedIn: Boolean,
+        fingerprint: Int,
+    ) {
+        database.withTransaction {
+            clearPostData()
+            database.cacheSessionDao().upsert(
+                CacheSessionEntity(
+                    authenticated = isSignedIn,
+                    fingerprint = if (isSignedIn) fingerprint else 0,
+                ),
             )
         }
     }
@@ -238,3 +268,8 @@ private fun FeedPostRow.toFeedPost(): FeedPost {
         newCommentCount = if (seen == null) 0 else ((post.commentCount ?: 0) - seen).coerceAtLeast(0),
     )
 }
+
+private fun String.escapeLikePattern(): String =
+    replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")

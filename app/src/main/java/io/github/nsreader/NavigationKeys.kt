@@ -18,8 +18,12 @@ data object NotificationsKey : NavKey
 data object ProfileKey : NavKey
 
 @Serializable
+data object SettingsKey : NavKey
+
+@Serializable
 data class PostDetailKey(
     val postId: Long,
+    val floor: String? = null,
 ) : NavKey
 
 /**

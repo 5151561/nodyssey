@@ -34,7 +34,11 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
 
-            NodeSeekTheme(darkTheme = darkTheme, dynamicColor = settings.dynamicColor) {
+            NodeSeekTheme(
+                darkTheme = darkTheme,
+                dynamicColor = settings.dynamicColor,
+                fontScale = settings.fontScale,
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,

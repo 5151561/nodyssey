@@ -13,6 +13,7 @@
     <string name="action_copy_link">复制链接</string>
     <string name="action_share">分享</string>
     <string name="action_more">更多</string>
+    <string name="action_cancel">取消</string>
     <string name="action_sort">排序方式</string>
     <string name="action_show_all_boards">全部版块</string>
     <string name="action_hide_all_boards">收起版块</string>
@@ -41,12 +42,66 @@
     <string name="post_code_copied">代码已复制</string>
     <string name="post_image_view_full">点击查看全图</string>
     <string name="post_quote_reply">@%1$s %2$s</string>
+    <string name="post_auto_paging">自动续页</string>
+    <string name="post_reply_hint">回复这个帖子…</string>
+    <string name="post_reaction_like">点赞</string>
+    <string name="post_reaction_chicken">投喂鸡腿</string>
+    <string name="post_reaction_dislike">点踩</string>
+    <string name="chicken_dialog_title">投喂鸡腿？</string>
+    <string name="chicken_dialog_body">是否向 %1$s 投喂鸡腿？这将消耗你一个鸡腿。</string>
+    <string name="chicken_dialog_confirm">投喂</string>
 
     <!-- Top-level navigation: a bar on a phone, a rail once the window is wide enough -->
     <string name="tab_home">首页</string>
     <string name="tab_search">搜索</string>
     <string name="tab_notifications">通知</string>
     <string name="tab_profile">我的</string>
+
+    <!-- Search: results are the posts already owned by the offline Room cache -->
+    <string name="search_hint">搜索帖子、用户</string>
+    <string name="search_clear_query">清空关键词</string>
+    <string name="search_recent">最近搜索</string>
+    <string name="search_clear_all">全部清除</string>
+    <string name="search_remove_recent">删除最近搜索：%1$s</string>
+    <string name="search_local_results">本地缓存中找到 %1$d 条结果</string>
+
+    <!-- Notifications -->
+    <string name="notifications_mark_all_read">全部已读</string>
+    <string name="notifications_replies">回复我的</string>
+    <string name="notifications_mentions">@我的</string>
+    <string name="notifications_messages">私信</string>
+    <string name="notifications_system">系统</string>
+    <string name="notifications_empty">这里暂时没有通知</string>
+
+    <!-- Profile -->
+    <string name="profile_session_active">NodeSeek 登录会话有效</string>
+    <string name="profile_chicken">鸡腿</string>
+    <string name="profile_coins">硬币</string>
+    <string name="profile_streak">连续签到</string>
+    <string name="profile_attendance">今日签到 · 领鸡腿</string>
+    <string name="profile_topics">我的主题</string>
+    <string name="profile_comments">我的评论</string>
+    <string name="profile_bookmarks">我的收藏</string>
+    <string name="profile_open_web">在网页中打开个人主页</string>
+
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+    <string name="settings_appearance">外观</string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_body_size">正文字号</string>
+    <string name="settings_body_size_value">%1$dsp</string>
+    <string name="settings_text_preview">预览：中文长文的阅读体验。</string>
+    <string name="settings_content">内容</string>
+    <string name="settings_wifi_images">仅 Wi-Fi 下加载图片</string>
+    <string name="settings_wifi_images_hint">移动网络显示占位图</string>
+    <string name="settings_clear_cache">清除缓存</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_about_app">关于 NSReader</string>
+    <string name="settings_version">v1.0.0</string>
+    <string name="settings_licenses">开源许可</string>
 
     <!-- Status and empty states: say what happened, then offer something to press -->
     <string name="status_empty_feed_title">这里还没有帖子</string>

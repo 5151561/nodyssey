@@ -24,16 +24,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -48,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,12 +67,11 @@ import io.github.nsreader.model.RichNode
 import io.github.nsreader.ui.common.BoardTag
 import io.github.nsreader.ui.common.LoadingState
 import io.github.nsreader.ui.common.NodeSeekErrorState
+import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.common.rememberClipboardCopy
 import io.github.nsreader.ui.richtext.RichContent
-import io.github.nsreader.ui.theme.CommentBody
 import io.github.nsreader.ui.theme.NodeSeekTheme
-import io.github.nsreader.ui.theme.PostBody
 import io.github.nsreader.ui.theme.PostTitle
 import io.github.nsreader.ui.theme.Sizes
 import io.github.nsreader.ui.theme.Spacing
@@ -85,11 +88,13 @@ fun PostDetailRoute(
     onVerify: (String) -> Unit,
     onImageClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    initialFloor: String? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val postUrl = viewModel.postUrl()
     PostDetailScreen(
         state = state,
+        initialFloor = initialFloor,
         postUrl = postUrl,
         onBack = onBack,
         onOpenBrowser = onOpenBrowser,
@@ -113,6 +118,7 @@ fun PostDetailScreen(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
+    initialFloor: String? = null,
     /** Opens the sign-in page. Separate from [onOpenBrowser] because "登录" is not "看看网页版". */
     onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
     /** Clears a Cloudflare challenge on this thread's own URL. */
@@ -120,6 +126,15 @@ fun PostDetailScreen(
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    var chickenTarget by remember { mutableStateOf<PostContent?>(null) }
+    var hasJumpedToInitialFloor by remember(initialFloor) { mutableStateOf(false) }
+    val collapsedTitleThreshold = with(LocalDensity.current) { 72.dp.roundToPx() }
+    val showCollapsedTitle by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 ||
+                listState.firstVisibleItemScrollOffset > collapsedTitleThreshold
+        }
+    }
 
     val shouldLoadMore by remember {
         derivedStateOf {
@@ -130,16 +145,29 @@ fun PostDetailScreen(
     LaunchedEffect(shouldLoadMore, state.comments.size) {
         if (shouldLoadMore) onLoadMore()
     }
+    LaunchedEffect(initialFloor, state.comments.size) {
+        if (hasJumpedToInitialFloor) return@LaunchedEffect
+        val floor = initialFloor ?: return@LaunchedEffect
+        val index = state.indexOfFloor(floor) ?: return@LaunchedEffect
+        listState.scrollToItem(index)
+        hasJumpedToInitialFloor = true
+    }
 
     Scaffold(
         modifier = modifier,
         topBar = {
             DetailTopBar(
                 title = state.title,
+                showTitle = showCollapsedTitle,
                 postUrl = postUrl,
                 onBack = onBack,
                 onOpenInBrowser = { onOpenBrowser(postUrl) },
             )
+        },
+        bottomBar = {
+            if (state.body != null) {
+                ReplyBar()
+            }
         },
     ) { padding ->
         Box(Modifier.padding(padding)) {
@@ -171,9 +199,18 @@ fun PostDetailScreen(
                             val index = state.indexOfFloor(floor)
                             if (index != null) scope.launch { listState.animateScrollToItem(index) }
                         },
+                        onChickenClick = { chickenTarget = it },
                     )
             }
         }
+    }
+
+    chickenTarget?.let { target ->
+        FeedChickenDialog(
+            onDismiss = { chickenTarget = null },
+            onConfirm = { chickenTarget = null },
+            authorName = target.authorName,
+        )
     }
 }
 
@@ -181,6 +218,7 @@ fun PostDetailScreen(
 @Composable
 private fun DetailTopBar(
     title: String,
+    showTitle: Boolean,
     postUrl: String,
     onBack: () -> Unit,
     onOpenInBrowser: () -> Unit,
@@ -194,7 +232,7 @@ private fun DetailTopBar(
     TopAppBar(
         title = {
             Text(
-                text = title,
+                text = if (showTitle) title else "",
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -267,6 +305,7 @@ private fun ThreadList(
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
+    onChickenClick: (PostContent) -> Unit,
 ) {
     LazyColumn(
         state = listState,
@@ -285,14 +324,7 @@ private fun ThreadList(
                     onOpenBrowser = onOpenBrowser,
                     onImageClick = onImageClick,
                     onJumpToFloor = onJumpToFloor,
-                )
-                // A 6dp tonal band, not a hairline: the break between the post and the replies is
-                // the one place in this screen that needs to be unmissable while scrolling past.
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .background(MaterialTheme.colorScheme.surfaceContainer),
+                    onChickenClick = { onChickenClick(body) },
                 )
             }
         }
@@ -310,8 +342,8 @@ private fun ThreadList(
                 onOpenBrowser = onOpenBrowser,
                 onImageClick = onImageClick,
                 onJumpToFloor = onJumpToFloor,
+                onChickenClick = { onChickenClick(comment) },
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
 
         if (state.isAppending) {
@@ -366,57 +398,61 @@ private fun OriginalPost(
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
+    onChickenClick: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier.padding(
-            start = Spacing.lg,
-            end = Spacing.lg,
-            bottom = Spacing.lg,
-        ),
+    Surface(
+        modifier = Modifier.padding(horizontal = Spacing.lg),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(24.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        Column(
+            modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.lg, bottom = 12.dp),
         ) {
-            UserAvatar(
-                url = body.avatarUrl,
-                name = body.authorName,
-                size = Sizes.avatarOriginalPost,
-            )
-            Column(Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = body.authorName,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (body.isOriginalPoster) OriginalPosterBadge()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                UserAvatar(
+                    url = body.avatarUrl,
+                    name = body.authorName,
+                    size = Sizes.avatarOriginalPost,
+                )
+                Column(Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = body.authorName,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (body.isOriginalPoster) OriginalPosterBadge()
+                    }
+                    body.createdAtText?.let { MetaText(it) }
                 }
-                body.createdAtText?.let { MetaText(it) }
+                body.floor?.let { FloorLabel(it) }
             }
-            body.floor?.let { FloorLabel(it) }
-        }
 
-        if (body.nodes.isEmpty()) {
-            Text(
-                text = stringResource(R.string.post_body_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = Spacing.md),
-            )
-        } else {
-            RichContent(
-                nodes = body.nodes,
-                onLinkClick = onOpenBrowser,
-                onImageClick = onImageClick,
-                onQuoteRefClick = { onJumpToFloor(it.floor) },
-                textStyle = PostBody,
-                modifier = Modifier.padding(top = Spacing.md),
-            )
+            if (body.nodes.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.post_body_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = Spacing.md),
+                )
+            } else {
+                RichContent(
+                    nodes = body.nodes,
+                    onLinkClick = onOpenBrowser,
+                    onImageClick = onImageClick,
+                    onQuoteRefClick = { onJumpToFloor(it.floor) },
+                    textStyle = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(top = Spacing.md),
+                )
+            }
+            ReactionRow(onChickenClick = onChickenClick)
         }
     }
 }
@@ -436,6 +472,11 @@ private fun CommentsHeader(count: Int) {
                 fontFeatureSettings = TABULAR_FIGURES,
             ),
             modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = stringResource(R.string.post_auto_paging),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
     if (count == 0) {
@@ -473,13 +514,14 @@ private fun CommentRow(
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
+    onChickenClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(
             start = Spacing.lg,
             end = Spacing.lg,
-            top = 10.dp,
-            bottom = Spacing.md,
+            top = Spacing.lg,
+            bottom = Spacing.lg,
         ),
     ) {
         Row(
@@ -511,10 +553,103 @@ private fun CommentRow(
             onLinkClick = onOpenBrowser,
             onImageClick = onImageClick,
             onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
-            textStyle = CommentBody,
+            textStyle = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(start = 36.dp, top = Spacing.sm),
         )
+        ReactionRow(onChickenClick = onChickenClick)
     }
+}
+
+@Composable
+private fun ReactionRow(
+    onChickenClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth().padding(top = Spacing.sm),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        QuietReaction(Icons.Default.ThumbUp, R.string.post_reaction_like, "0")
+        QuietReaction(
+            icon = NodeSeekIcons.ChickenLeg,
+            label = R.string.post_reaction_chicken,
+            count = "0",
+            onClick = onChickenClick,
+        )
+        QuietReaction(NodeSeekIcons.ThumbDown, R.string.post_reaction_dislike, "0")
+    }
+}
+
+@Composable
+private fun QuietReaction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: Int,
+    count: String,
+    onClick: (() -> Unit)? = null,
+) {
+    TextButton(onClick = onClick ?: {}, enabled = onClick != null) {
+        Icon(icon, contentDescription = stringResource(label), modifier = Modifier.size(18.dp))
+        Text(
+            text = count,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(start = Spacing.xs),
+        )
+    }
+}
+
+@Composable
+private fun ReplyBar() {
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(26.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+            ) {
+                Text(
+                    text = stringResource(R.string.post_reply_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedChickenDialog(
+    authorName: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                NodeSeekIcons.ChickenLeg,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        title = { Text(stringResource(R.string.chicken_dialog_title)) },
+        text = {
+            Text(stringResource(R.string.chicken_dialog_body, authorName))
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.chicken_dialog_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+        shape = RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    )
 }
 
 @Composable

@@ -28,11 +28,20 @@ class ProfileViewModel(
     private var signOutJob: Job? = null
     val uiState: StateFlow<ProfileUiState> =
         session.state
-            .map { ProfileUiState(isSignedIn = it.isSignedIn) }
+            .map {
+                ProfileUiState(
+                    isSignedIn = it.isSignedIn,
+                    displayName = if (it.isSignedIn) "NodeSeek 用户" else "",
+                )
+            }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                initialValue = ProfileUiState(isSignedIn = session.state.value.isSignedIn),
+                initialValue =
+                ProfileUiState(
+                    isSignedIn = session.state.value.isSignedIn,
+                    displayName = if (session.state.value.isSignedIn) "NodeSeek 用户" else "",
+                ),
             )
 
     fun signOut() {
@@ -64,4 +73,11 @@ class ProfileViewModel(
 
 data class ProfileUiState(
     val isSignedIn: Boolean = false,
+    val displayName: String = "",
+    val avatarUrl: String? = null,
+    val level: String? = null,
+    val memberSince: String? = null,
+    val chickenCount: Int? = null,
+    val coinCount: Int? = null,
+    val streakDays: Int? = null,
 )

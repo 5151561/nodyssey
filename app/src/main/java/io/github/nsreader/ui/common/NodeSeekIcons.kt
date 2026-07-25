@@ -52,6 +52,28 @@ object NodeSeekIcons {
                 "c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2zM19,21H8V7h11v14z",
         )
     }
+
+    /** Chicken-leg reward. Kept local because material-icons-core has no matching symbol. */
+    val ChickenLeg: ImageVector by lazy {
+        materialIcon(
+            name = "ChickenLeg",
+            pathData =
+            "M14.5,3.2c-2.7,-1.4 -6.3,-0.2 -8.2,2.5c-2,2.9 -1.7,6.3 0.6,8.1" +
+                "c2.3,1.8 5.7,1.2 7.6,-1.5c1.9,-2.7 2.7,-7.8 0,-9.1z" +
+                "M14.1,13.2l2.8,2.8c0.8,-0.4 1.8,-0.3 2.4,0.4c0.9,0.9 0.9,2.3 0,3.2" +
+                "c-0.9,0.9 -2.3,0.9 -3.2,0c-0.7,-0.7 -0.8,-1.6 -0.4,-2.4l-2.8,-2.8z",
+        )
+    }
+
+    val ThumbDown: ImageVector by lazy {
+        materialIcon(
+            name = "ThumbDown",
+            pathData =
+            "M15,3H6c-0.8,0 -1.5,0.5 -1.8,1.2L1.1,11.3C0.6,12.6 1.5,14 3,14h5.7" +
+                "l-1,4.6C7.5,19.4 8.1,20 8.8,20h0.4c0.4,0 0.8,-0.2 1.1,-0.5L16,13.8V5" +
+                "c0,-1.1 -0.9,-2 -2,-2zM18,3v11h4V3z",
+        )
+    }
 }
 
 private fun materialIcon(

@@ -14,6 +14,7 @@ import io.github.nsreader.core.net.WebViewCookieJar
 import io.github.nsreader.core.net.resolveUserAgent
 import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.NetworkPostDataSource
+import io.github.nsreader.data.NotificationRepository
 import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.local.NodeSeekDatabase
@@ -39,6 +40,7 @@ interface AppContainer {
     val postRepository: PostRepository
     val categoryRepository: CategoryRepository
     val settingsRepository: SettingsRepository
+    val notificationRepository: NotificationRepository
     val sessionRepository: SessionRepository
 
     /**
@@ -103,6 +105,10 @@ class DefaultAppContainer(
 
     override val settingsRepository: SettingsRepository by lazy {
         SettingsRepository(appContext.settingsDataStore)
+    }
+
+    override val notificationRepository: NotificationRepository by lazy {
+        NotificationRepository(jsonClient)
     }
 
     /**
