@@ -1,12 +1,15 @@
 package io.github.nsreader.data
 
+import io.github.nsreader.core.AppClock
 import io.github.nsreader.core.NodeSeekSite
-import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.core.net.JsonSource
 import io.github.nsreader.core.net.NodeSeekJsonClient
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import io.github.nsreader.core.runCatchingExceptCancellation
+import io.github.nsreader.data.local.BoardDao
+import io.github.nsreader.data.local.toBoard
+import io.github.nsreader.data.local.toEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerialName
@@ -18,45 +21,66 @@ import kotlinx.serialization.json.Json
  *
  * Boards come from `/api/content/list-categories` — one of the few endpoints NodeSeek serves as
  * JSON. It is authoritative: the hardcoded list in [NodeSeekSite] had already drifted
- * (`meaningless` no longer exists), so the API wins and the static list is only an offline fallback.
+ * (`meaningless` no longer exists), so the API wins and the static list is only a first-run fallback.
  *
- * Consumers **observe** [boards] rather than calling a getter and keeping a copy, so a later
- * refresh reaches every screen without anyone synchronising anything by hand.
+ * The truth now lives in Room rather than in a `StateFlow` field, so on a cold offline start the tab
+ * strip is populated before the first frame instead of appearing one request later.
  */
 class CategoryRepository(
     private val client: JsonSource,
+    private val boardDao: BoardDao,
+    private val clock: AppClock,
 ) {
-
     private val json = Json { ignoreUnknownKeys = true }
 
-    private val _boards = MutableStateFlow(listOf(FRONT_PAGE))
-    val boards: StateFlow<List<Board>> = _boards.asStateFlow()
+    /**
+     * The front page is prepended here rather than stored.
+     *
+     * It is not a board — the API never returns it and it has no slug — so persisting it would mean
+     * inventing a row that every query then has to filter back out.
+     */
+    val boards: Flow<List<Board>> =
+        boardDao.observeBoards().map { entities ->
+            listOf(FRONT_PAGE) + entities.map { it.toBoard() }
+        }
 
     private val refreshMutex = Mutex()
-    private var loadedFromNetwork = false
+    private var lastRefreshedAtMillis = 0L
 
-    /** Idempotent: concurrent callers collapse into one request, and a success is not re-fetched. */
+    /** Idempotent: concurrent callers collapse into one request, and a fresh list is not re-fetched. */
     suspend fun refreshIfNeeded() {
-        if (loadedFromNetwork) return
+        if (isFresh()) return
         refreshMutex.withLock {
-            if (loadedFromNetwork) return
-            val remote = runCatchingExceptCancellation {
-                val body = client.getJson(NodeSeekJsonClient.PATH_CATEGORIES)
-                json.decodeFromString<CategoriesResponse>(body)
-                    .takeIf { it.success }
-                    ?.data
-                    ?.map { it.toBoard() }
-                    .orEmpty()
-            }.getOrElse { emptyList() }
+            if (isFresh()) return
+            val remote =
+                runCatchingExceptCancellation {
+                    val body = client.getJson(NodeSeekJsonClient.PATH_CATEGORIES)
+                    json
+                        .decodeFromString<CategoriesResponse>(body)
+                        .takeIf { it.success }
+                        ?.data
+                        ?.map { it.toBoard() }
+                        .orEmpty()
+                }.getOrElse { emptyList() }
 
-            if (remote.isNotEmpty()) {
-                _boards.value = listOf(FRONT_PAGE) + remote
-                loadedFromNetwork = true
-            } else {
-                _boards.value = listOf(FRONT_PAGE) + fallbackBoards()
+            when {
+                remote.isNotEmpty() -> {
+                    boardDao.replaceAll(remote.mapIndexed { index, board -> board.toEntity(index) })
+                    lastRefreshedAtMillis = clock.nowMillis()
+                }
+
+                // A failed refresh must not blank out a list that already works offline. The static
+                // fallback is only for a database that has never been filled.
+                boardDao.count() == 0 -> {
+                    boardDao.replaceAll(
+                        fallbackBoards().mapIndexed { index, board -> board.toEntity(index) },
+                    )
+                }
             }
         }
     }
+
+    private fun isFresh(): Boolean = lastRefreshedAtMillis != 0L && clock.nowMillis() - lastRefreshedAtMillis < CACHE_TTL_MILLIS
 
     private fun fallbackBoards(): List<Board> =
         NodeSeekSite.categories
@@ -66,6 +90,9 @@ class CategoryRepository(
     companion object {
         /** The mixed front page is not a board, so the API never returns it. */
         val FRONT_PAGE = Board(slug = null, title = "综合", description = null)
+
+        /** Boards change perhaps twice a year; refreshing twice a day is already generous. */
+        const val CACHE_TTL_MILLIS = 12 * 60 * 60 * 1000L
     }
 }
 
@@ -90,10 +117,11 @@ private data class CategoryDto(
     val description: String? = null,
     val adminOnly: Boolean = false,
 ) {
-    fun toBoard() = Board(
-        slug = key,
-        title = cnText,
-        description = description?.ifBlank { null },
-        adminOnly = adminOnly,
-    )
+    fun toBoard() =
+        Board(
+            slug = key,
+            title = cnText,
+            description = description?.ifBlank { null },
+            adminOnly = adminOnly,
+        )
 }

@@ -16,6 +16,7 @@ object Selectors {
     const val LIST_VIEWS = "span.info-views span"
     const val LIST_COMMENTS = "span.info-comments-count span"
     const val LIST_LAST_ACTIVE = "a.info-last-comment-time time"
+
     /** The class moved once already, so fall back to any link into a board. */
     const val LIST_CATEGORY = "a.post-category, div.post-info a[href*=/categories/]"
     const val LIST_PAGER_NEXT = "a.pager-next[href]"
@@ -40,6 +41,7 @@ object Selectors {
     const val CONTENT_ARTICLE = "article.post-content"
 
     // --- Page-level state ---------------------------------------------------
+
     /** Markers that prove we received a real NodeSeek page rather than an interstitial. */
     val USABLE_PAGE_MARKERS = listOf(
         "id=\"nsk-body\"",

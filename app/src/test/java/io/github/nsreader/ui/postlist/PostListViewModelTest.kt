@@ -1,12 +1,15 @@
 package io.github.nsreader.ui.postlist
 
+import androidx.paging.testing.asSnapshot
 import io.github.nsreader.core.net.JsonSource
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.data.CategoryRepository
-import io.github.nsreader.data.FakePostRepository
-import io.github.nsreader.model.PostListPage
-import kotlinx.coroutines.CompletableDeferred
+import io.github.nsreader.data.FakePostRemoteDataSource
+import io.github.nsreader.data.MutableClock
+import io.github.nsreader.data.OfflineFirstPostRepository
+import io.github.nsreader.data.inMemoryDatabase
+import io.github.nsreader.data.local.NodeSeekDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -16,159 +19,140 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+/**
+ * The ViewModel is now a thin state holder: the list belongs to Room, and Paging owns loading and
+ * error state. What is left to test is board mirroring, board selection, and that rows really do
+ * reach the UI through the database.
+ *
+ * Three tests that used to live here — "does not start a second page while one is in flight",
+ * "discards a response that arrives after the board changed" and "cancelling an in-flight load does
+ * not surface an error" — now live in `FeedRemoteMediatorTest`. They were not dropped; the
+ * hand-rolled code they guarded was.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
 class PostListViewModelTest {
-
     private val dispatcher = StandardTestDispatcher()
-    private val repository = FakePostRepository()
+    private val remote = FakePostRemoteDataSource()
+    private val clock = MutableClock()
+    private lateinit var database: NodeSeekDatabase
 
     /** Fails on purpose, so the repository falls back to the offline board list. */
-    private val categoryRepository = CategoryRepository(
-        client = object : JsonSource {
-            override suspend fun getJson(path: String, referer: String): String =
-                throw NodeSeekException(NodeSeekError.Network)
-        },
-    )
-
-    @Before
-    fun setUp() = Dispatchers.setMain(dispatcher)
-
-    @After
-    fun tearDown() = Dispatchers.resetMain()
-
-    private fun viewModel() = PostListViewModel(repository, categoryRepository)
-
-    @Test
-    fun `loads the front page on creation`() = runTest(dispatcher) {
-        val vm = viewModel()
-        advanceUntilIdle()
-
-        val state = vm.uiState.value
-        assertEquals(1, state.posts.size)
-        assertEquals(null, state.categorySlug)
-        assertFalse(state.isLoading)
-        assertEquals(null, state.error)
-    }
-
-    @Test
-    fun `appends the next page instead of replacing`() = runTest(dispatcher) {
-        val vm = viewModel()
-        advanceUntilIdle()
-
-        vm.loadNextPage()
-        advanceUntilIdle()
-
-        assertEquals(2, vm.uiState.value.posts.size)
-        assertEquals(2, vm.uiState.value.page)
-    }
-
-    /** Regression: a slow response for the previous board must not leak into the new one. */
-    @Test
-    fun `discards a response that arrives after the board changed`() = runTest(dispatcher) {
-        val vm = viewModel()
-        advanceUntilIdle()
-
-        val gate = CompletableDeferred<Unit>()
-        repository.gate = gate
-        repository.listResult = { slug, page ->
-            PostListPage(listOf(FakePostRepository.post(slug, page)), page, hasNextPage = true)
+    private val failingJson =
+        object : JsonSource {
+            override suspend fun getJson(
+                path: String,
+                referer: String,
+            ): String = throw NodeSeekException(NodeSeekError.Network)
         }
 
-        vm.selectCategory("tech")
-        // While "tech" is still in flight the user jumps to "trade".
-        vm.selectCategory("trade")
-        gate.complete(Unit)
-        advanceUntilIdle()
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+        database = inMemoryDatabase(dispatcher)
+    }
 
-        val state = vm.uiState.value
-        assertEquals("trade", state.categorySlug)
-        assertTrue(
-            "leaked posts from another board: ${state.posts.map { it.categorySlug }}",
-            state.posts.all { it.categorySlug == "trade" },
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+        database.close()
+    }
+
+    private fun viewModel() =
+        PostListViewModel(
+            repository = OfflineFirstPostRepository(database, remote, clock),
+            categoryRepository = CategoryRepository(failingJson, database.boardDao(), clock),
         )
-    }
 
     @Test
-    fun `switching boards clears the previous list`() = runTest(dispatcher) {
-        val vm = viewModel()
-        advanceUntilIdle()
-        vm.loadNextPage()
-        advanceUntilIdle()
-        assertEquals(2, vm.uiState.value.posts.size)
+    fun `starts on the front page with the front page tab selected`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
 
-        vm.selectCategory("daily")
-        advanceUntilIdle()
-
-        assertEquals(1, vm.uiState.value.posts.size)
-        assertEquals(1, vm.uiState.value.page)
-    }
+            assertEquals(null, vm.uiState.value.categorySlug)
+            assertEquals(0, vm.uiState.value.selectedBoardIndex)
+        }
 
     @Test
-    fun `surfaces a typed error rather than a message string`() = runTest(dispatcher) {
-        repository.listError = NodeSeekException(NodeSeekError.LoginRequired)
-        val vm = viewModel()
-        advanceUntilIdle()
+    fun `mirrors the board list the repository owns`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
 
-        assertEquals(NodeSeekError.LoginRequired, vm.uiState.value.error)
-        assertFalse(vm.uiState.value.isLoading)
-    }
-
-    @Test
-    fun `an unclassified failure becomes Unknown, not a crash`() = runTest(dispatcher) {
-        repository.listError = IllegalStateException("boom")
-        val vm = viewModel()
-        advanceUntilIdle()
-
-        assertEquals(NodeSeekError.Unknown, vm.uiState.value.error)
-    }
-
-    /**
-     * Cancelling a coroutine throws CancellationException, and `runCatching` catches it like any
-     * other failure — so a cancelled load can report an error for a request nobody is waiting on.
-     */
-    @Test
-    fun `cancelling an in-flight load does not surface an error`() = runTest(dispatcher) {
-        val vm = viewModel()
-        advanceUntilIdle()
-
-        val gate = CompletableDeferred<Unit>()
-        repository.gate = gate
-        vm.loadNextPage()
-        // Let it actually start and park on the gate — otherwise there is nothing to cancel.
-        advanceUntilIdle()
-
-        // The user pulls to refresh while that page is still in flight.
-        repository.gate = null
-        vm.refresh()
-        advanceUntilIdle()
-        gate.complete(Unit)
-        advanceUntilIdle()
-
-        assertEquals(null, vm.uiState.value.error)
-        assertFalse(vm.uiState.value.isLoading)
-        assertFalse(vm.uiState.value.isAppending)
-    }
+            val boards = vm.uiState.value.boards
+            assertEquals(CategoryRepository.FRONT_PAGE, boards.first())
+            // The API call failed, so this is the offline fallback list — still more than nothing.
+            assertTrue("expected fallback boards, got $boards", boards.size > 1)
+        }
 
     @Test
-    fun `does not start a second page while one is in flight`() = runTest(dispatcher) {
-        val vm = viewModel()
-        advanceUntilIdle()
+    fun `selecting a board updates the state and the selected tab`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
 
-        val gate = CompletableDeferred<Unit>()
-        repository.gate = gate
-        val before = repository.requestedSlugs.size
+            val target =
+                vm.uiState.value.boards
+                    .first { it.slug != null }
+            vm.selectCategory(target.slug)
+            advanceUntilIdle()
 
-        vm.loadNextPage()
-        vm.loadNextPage()
-        vm.loadNextPage()
-        gate.complete(Unit)
-        advanceUntilIdle()
+            assertEquals(target.slug, vm.uiState.value.categorySlug)
+            assertEquals(
+                vm.uiState.value.boards
+                    .indexOf(target),
+                vm.uiState.value.selectedBoardIndex,
+            )
+        }
 
-        assertEquals(1, repository.requestedSlugs.size - before)
-    }
+    @Test
+    fun `re-selecting the current board is a no-op`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            vm.selectCategory("tech")
+            advanceUntilIdle()
+            val before = vm.uiState.value
+
+            vm.selectCategory("tech")
+            advanceUntilIdle()
+
+            // Same instance, so nothing downstream — the pager included — was rebuilt.
+            assertTrue(before === vm.uiState.value)
+        }
+
+    @Test
+    fun `the challenge url follows the selected board`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            assertTrue(vm.challengeUrl().startsWith("https://www.nodeseek.com"))
+
+            vm.selectCategory("tech")
+            advanceUntilIdle()
+
+            assertTrue("got ${vm.challengeUrl()}", vm.challengeUrl().contains("tech"))
+        }
+
+    /** End to end through Room: the network writes, the pager reads, the rows come out in order. */
+    @Test
+    fun `posts reach the ui through the database`() =
+        runTest(dispatcher) {
+            remote.listResult = { slug, page ->
+                FakePostRemoteDataSource.page(slug, page, firstId = 10, count = 3, hasNextPage = false)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            val titles = vm.feed.asSnapshot().map { it.summary.title }
+
+            assertEquals(listOf("post 10", "post 11", "post 12"), titles)
+        }
 }

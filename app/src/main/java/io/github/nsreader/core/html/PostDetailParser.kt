@@ -16,8 +16,10 @@ object PostDetailParser {
             ?: document.selectFirst(Selectors.DETAIL_TITLE_FALLBACK)?.text()?.trim()
             ?: ""
 
-        val bodyElement = document.selectFirst(Selectors.DETAIL_BODY_ITEM)
-        val body = bodyElement?.let { parseContent(it, isBody = true) } ?: emptyContent()
+        // Null rather than a blank placeholder: page 2 onwards has no opening post, and the cache
+        // must not mistake "not on this page" for "the author wrote nothing".
+        val body = document.selectFirst(Selectors.DETAIL_BODY_ITEM)
+            ?.let { parseContent(it, isBody = true) }
         val comments = document.select(Selectors.DETAIL_COMMENTS).map { parseContent(it, isBody = false) }
 
         val pager = document.selectFirst(Selectors.DETAIL_PAGER)
@@ -63,18 +65,4 @@ object PostDetailParser {
             nodes = RichContentParser.parse(element.selectFirst(Selectors.CONTENT_ARTICLE)),
         )
     }
-
-    private fun emptyContent() = PostContent(
-        commentId = null,
-        floor = null,
-        authorName = "",
-        authorUid = null,
-        avatarUrl = null,
-        isOriginalPoster = true,
-        badges = emptyList(),
-        createdAtText = null,
-        createdAtTitle = null,
-        categoryTitle = null,
-        nodes = emptyList(),
-    )
 }

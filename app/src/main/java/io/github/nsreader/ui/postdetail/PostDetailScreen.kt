@@ -41,8 +41,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.R
 import io.github.nsreader.model.PostContent
 import io.github.nsreader.ui.common.ErrorState
-import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.common.LoadingState
+import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.richtext.RichContent
 
 @Composable

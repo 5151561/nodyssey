@@ -27,8 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
+import io.github.nsreader.R
 import io.github.nsreader.core.NodeSeekSite
 
 /**
@@ -65,7 +67,10 @@ fun WebViewScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.Default.Close, contentDescription = "关闭")
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.action_close),
+                        )
                     }
                 },
             )

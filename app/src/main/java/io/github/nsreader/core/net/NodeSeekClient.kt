@@ -2,10 +2,10 @@ package io.github.nsreader.core.net
 
 import io.github.nsreader.core.AppDispatchers
 import io.github.nsreader.core.NodeSeekSite
-import java.io.IOException
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.IOException
 
 /**
  * Fetches NodeSeek pages as HTML.

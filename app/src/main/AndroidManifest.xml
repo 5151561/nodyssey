@@ -4,9 +4,17 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!--
+        Backup is on, but the WebView profile is excluded. Backing it up would put the session cookie
+        obtained by signing in into a cloud backup and onto any restored device — a credential leaving
+        the device it was issued to. Settings and the post cache are fine to carry over.
+        See res/xml/backup_rules.xml and res/xml/data_extraction_rules.xml.
+    -->
     <application
         android:name=".NodeSeekApp"
         android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
