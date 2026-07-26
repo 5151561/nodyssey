@@ -233,6 +233,7 @@ fun MainNavigation(container: AppContainer) {
                         onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                         onOpenBrowser = openExternalUrl,
                         onLinkClick = openContentUrl,
+                        onAuthorClick = openSpace,
                         onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
                         onFeedScrollActiveChanged = { feedScrollActive = it },
                     )
@@ -580,6 +581,7 @@ fun MainNavigation(container: AppContainer) {
                         onBack = { backStack.removeLastOrNull() },
                         onOpenBrowser = openExternalUrl,
                         onLinkClick = openContentUrl,
+                        onAuthorClick = openSpace,
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                         onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                         onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
@@ -649,6 +651,7 @@ private fun HomePane(
     onOpenBrowser: (String) -> Unit,
     onImageClick: (List<String>, String) -> Unit,
     onLinkClick: (String) -> Unit = onOpenBrowser,
+    onAuthorClick: (Long) -> Unit = {},
     /** Phone layout only: the tablet's rail sits beside the list, not under the thumb. */
     onFeedScrollActiveChanged: (Boolean) -> Unit = {},
 ) {
@@ -728,6 +731,7 @@ private fun HomePane(
                         onBack = { selectedPostId = null },
                         onOpenBrowser = onOpenBrowser,
                         onLinkClick = onLinkClick,
+                        onAuthorClick = onAuthorClick,
                         onSignIn = onSignIn,
                         onVerify = onVerify,
                         onImageClick = onImageClick,

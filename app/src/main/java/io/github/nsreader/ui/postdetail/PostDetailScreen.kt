@@ -2,6 +2,7 @@ package io.github.nsreader.ui.postdetail
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -112,6 +113,8 @@ fun PostDetailRoute(
     initialFloor: String? = null,
     /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
     onLinkClick: (String) -> Unit = onOpenBrowser,
+    /** Opens the tapped author's space. */
+    onAuthorClick: (Long) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val replyState by replyViewModel.uiState.collectAsStateWithLifecycle()
@@ -126,6 +129,7 @@ fun PostDetailRoute(
         onBack = onBack,
         onOpenBrowser = onOpenBrowser,
         onLinkClick = onLinkClick,
+        onAuthorClick = onAuthorClick,
         onSignIn = onSignIn,
         onVerify = { onVerify(postUrl) },
         onImageClick = { url -> onImageClick(images.ifEmpty { listOf(url) }, url) },
@@ -179,6 +183,8 @@ fun PostDetailScreen(
     replyOpen: Boolean = false,
     /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
     onLinkClick: (String) -> Unit = onOpenBrowser,
+    /** Opens the tapped author's space. */
+    onAuthorClick: (Long) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -311,6 +317,7 @@ fun PostDetailScreen(
                         },
                         onChickenClick = { chickenTarget = it },
                         onReplyToFloor = onReply,
+                        onAuthorClick = onAuthorClick,
                         modifier =
                         Modifier.floatingToolbarVerticalNestedScroll(
                             expanded = toolbarExpanded,
@@ -594,6 +601,7 @@ private fun ThreadList(
     onJumpToFloor: (String) -> Unit,
     onChickenClick: (PostContent) -> Unit,
     onReplyToFloor: (ReplyQuote?) -> Unit,
+    onAuthorClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -615,6 +623,7 @@ private fun ThreadList(
                     onImageClick = onImageClick,
                     onJumpToFloor = onJumpToFloor,
                     onChickenClick = { onChickenClick(body) },
+                    onAuthorClick = onAuthorClick,
                 )
             }
         }
@@ -634,6 +643,7 @@ private fun ThreadList(
                 onJumpToFloor = onJumpToFloor,
                 onChickenClick = { onChickenClick(comment) },
                 onReply = { onReplyToFloor(comment.toReplyQuote()) },
+                onAuthorClick = onAuthorClick,
             )
         }
 
@@ -690,6 +700,7 @@ private fun OriginalPost(
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
     onChickenClick: () -> Unit,
+    onAuthorClick: (Long) -> Unit,
 ) {
     Surface(
         modifier = Modifier.padding(horizontal = Spacing.lg),
@@ -703,25 +714,34 @@ private fun OriginalPost(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                UserAvatar(
-                    url = body.avatarUrl,
-                    name = body.authorName,
-                    size = Sizes.avatarOriginalPost,
-                )
-                Column(Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(
-                            text = body.authorName,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (body.isOriginalPoster) OriginalPosterBadge()
+                // The identity block opens the author's space; the floor label stays outside it.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    modifier = Modifier
+                        .weight(1f)
+                        .authorClickable(body.authorUid, onAuthorClick),
+                ) {
+                    UserAvatar(
+                        url = body.avatarUrl,
+                        name = body.authorName,
+                        size = Sizes.avatarOriginalPost,
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                text = body.authorName,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (body.isOriginalPoster) OriginalPosterBadge()
+                        }
+                        body.createdAtText?.let { MetaText(it) }
                     }
-                    body.createdAtText?.let { MetaText(it) }
                 }
                 body.floor?.let { FloorLabel(it) }
             }
@@ -807,6 +827,7 @@ private fun CommentRow(
     onJumpToFloor: (String) -> Unit,
     onChickenClick: () -> Unit,
     onReply: () -> Unit,
+    onAuthorClick: (Long) -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(
@@ -820,20 +841,27 @@ private fun CommentRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            UserAvatar(
-                url = comment.avatarUrl,
-                name = comment.authorName,
-                size = Sizes.avatarComment,
-            )
-            Text(
-                text = comment.authorName,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            // Every reply from the thread's author carries the badge, not just the first: on a long
-            // page the reader has long since lost track of who opened it.
-            if (comment.isOriginalPoster) OriginalPosterBadge()
+            // The identity block opens the author's space; the floor label stays outside it.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                modifier = Modifier.authorClickable(comment.authorUid, onAuthorClick),
+            ) {
+                UserAvatar(
+                    url = comment.avatarUrl,
+                    name = comment.authorName,
+                    size = Sizes.avatarComment,
+                )
+                Text(
+                    text = comment.authorName,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                // Every reply from the thread's author carries the badge, not just the first: on a
+                // long page the reader has long since lost track of who opened it.
+                if (comment.isOriginalPoster) OriginalPosterBadge()
+            }
             Box(Modifier.weight(1f))
             comment.floor?.let { FloorLabel(it) }
         }
@@ -851,6 +879,10 @@ private fun CommentRow(
         ReactionRow(onChickenClick = onChickenClick, onReply = onReply)
     }
 }
+
+/** Tappable only when the uid was actually parsed; a dead ripple would promise a screen we cannot open. */
+private fun Modifier.authorClickable(uid: Long?, onAuthorClick: (Long) -> Unit): Modifier =
+    if (uid == null) this else clickable { onAuthorClick(uid) }
 
 @Composable
 private fun ReactionRow(
