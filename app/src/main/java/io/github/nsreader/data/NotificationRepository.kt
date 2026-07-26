@@ -2,7 +2,7 @@ package io.github.nsreader.data
 
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.TimeFormat
-import io.github.nsreader.core.net.JsonSource
+import io.github.nsreader.core.net.JsonApi
 import io.github.nsreader.core.net.NodeSeekJsonClient
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -67,7 +67,7 @@ data class ForumNotification(
 )
 
 class NotificationRepository(
-    private val jsonSource: JsonSource,
+    private val jsonSource: JsonApi,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -77,6 +77,21 @@ class NotificationRepository(
             replies = root.int("reply", "replyCount"),
             mentions = root.int("atMe", "at_me", "mention"),
             messages = root.int("message", "messages", "msg"),
+        )
+    }
+
+    /**
+     * Clears the group server-side.
+     *
+     * The screen used to only grey the rows out locally, so the badge came back on the next refresh.
+     * The site's own 全部标记已读 posts to `markViewed?all=true` per group — see `notification.js`.
+     */
+    suspend fun markAllRead(category: NotificationCategory) {
+        val endpoint = category.endpoint ?: return
+        jsonSource.postJson(
+            path = NodeSeekJsonClient.markAllViewedPath(endpoint),
+            body = "",
+            referer = NodeSeekSite.BASE_URL + NodeSeekSite.NOTIFICATION_PATH,
         )
     }
 

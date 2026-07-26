@@ -10,32 +10,37 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Payloads here are trimmed captures of the live endpoints, taken from a signed-in device on
+ * 2026-07-26 — the field names are the site's, not a guess at them.
+ */
 class MessageRepositoryTest {
     private val listPath = NodeSeekJsonClient.messageListPath()
+    private val threadPath = NodeSeekJsonClient.messageThreadPath(5230)
 
     /**
-     * Regression for the Galaxy S24 crash: the live endpoint answers with one row per *message*, so
-     * a counterparty with two messages appeared twice and the uid-keyed list threw
-     * "Key … was already used". Rows must fold into one conversation per counterparty.
+     * Regression for the crash this screen shipped with: no row says which party is "the other
+     * person", so picking a uid field-by-field selected the sender — us — for every row, and the
+     * uid-keyed list threw "Key … was already used".
      */
     @Test
-    fun `folds the flat message list into one conversation per counterparty`() =
+    fun `keys each conversation on the counterparty rather than on us`() =
         runTest {
             val api =
                 FakeJsonApi(
                     mapOf(
                         listPath to
                             """
-                            {"msgArray":[
-                              {"sender_id":52425,"receiver_id":9,"sender_name":"nssk",
-                               "content":"改名的事我问过管理","created_at":"2026-07-26 10:18:00","viewed":0},
-                              {"sender_id":9,"receiver_id":52425,"receiver_name":"nssk",
-                               "content":"有消息同步我","created_at":"2026-07-26 10:02:00","viewed":1},
-                              {"sender_id":52425,"receiver_id":9,"sender_name":"nssk",
-                               "content":"UID 显示说是在做了","created_at":"2026-07-26 10:15:00","viewed":0},
-                              {"sender_id":1,"receiver_id":9,"sender_name":"系统通知",
-                               "content":"您的[评论](/post-1-1)被用户[iwil](/space/4471)投喂鸡腿",
-                               "created_at":"2026-07-26 09:12:00","viewed":0}
+                            {"success":true,"msgArray":[
+                              {"receiver_id":5230,"sender_id":52425,"max_id":7196941,"content":"test",
+                               "created_at":"2026-07-26T14:31:28.000Z","viewed":0,
+                               "sender_name":"林地雪原-0062","receiver_name":"系统通知"},
+                              {"receiver_id":16874,"sender_id":52425,"max_id":7168848,
+                               "content":"@WF5151561","created_at":"2026-07-24T16:24:20.000Z","viewed":1,
+                               "sender_name":"林地雪原-0062","receiver_name":"adang"},
+                              {"receiver_id":52425,"sender_id":51822,"max_id":6115015,"content":"收到了",
+                               "created_at":"2026-05-13T14:21:19.000Z","viewed":1,
+                               "sender_name":"ZcZiXs","receiver_name":"林地雪原-0062"}
                             ]}
                             """.trimIndent(),
                     ),
@@ -43,20 +48,16 @@ class MessageRepositoryTest {
 
             val conversations = NetworkMessageRepository(api).conversations()
 
-            // One row per counterparty, uids unique, system pinned first despite being older.
-            assertEquals(listOf("系统通知", "nssk"), conversations.map(MessageConversation::userName))
+            assertEquals(3, conversations.size)
             assertEquals(conversations.size, conversations.distinctBy(MessageConversation::uid).size)
+            // 系统通知 is pinned above the others even though a newer chat exists.
+            assertEquals("系统通知", conversations.first().userName)
             assertTrue(conversations.first().isSystem)
-            val nssk = conversations[1]
-            // Newest message wins the snippet; only their unread messages count.
-            assertEquals("改名的事我问过管理", nssk.snippet)
-            assertFalse(nssk.isSnippetMine)
-            assertEquals(2, nssk.unreadCount)
+            assertEquals(listOf(5230L, 16874L, 51822L), conversations.map(MessageConversation::uid).sorted())
         }
 
-    /** Rows that carry only the counterparty's id (no receiver field) still group correctly. */
     @Test
-    fun `member-style rows without a receiver id fold by sender`() =
+    fun `marks the snippet as ours only when we sent the last message`() =
         runTest {
             val api =
                 FakeJsonApi(
@@ -64,84 +65,78 @@ class MessageRepositoryTest {
                         listPath to
                             """
                             {"msgArray":[
-                              {"member_id":2,"member_name":"nssk","content":"第一条","created_at":"2026-07-26 10:00:00"},
-                              {"member_id":2,"member_name":"nssk","content":"第二条","created_at":"2026-07-26 10:05:00"},
-                              {"member_id":3,"member_name":"demain","content":"你好","created_at":"2026-07-26 09:00:00"}
+                              {"receiver_id":16874,"sender_id":52425,"content":"我发的",
+                               "created_at":"2026-07-24T16:24:20.000Z","viewed":1,
+                               "sender_name":"我","receiver_name":"adang"},
+                              {"receiver_id":52425,"sender_id":51822,"content":"他发的",
+                               "created_at":"2026-05-13T14:21:19.000Z","viewed":0,
+                               "sender_name":"ZcZiXs","receiver_name":"我"}
                             ]}
                             """.trimIndent(),
                     ),
                 )
 
-            val conversations = NetworkMessageRepository(api).conversations()
+            val conversations = NetworkMessageRepository(api).conversations().associateBy { it.userName }
 
-            assertEquals(2, conversations.size)
-            assertEquals("第二条", conversations.first { it.userName == "nssk" }.snippet)
+            assertTrue(conversations.getValue("adang").isSnippetMine)
+            assertFalse(conversations.getValue("ZcZiXs").isSnippetMine)
+            // Unread counts only their messages, so the one we sent never shows a badge.
+            assertEquals(0, conversations.getValue("adang").unreadCount)
+            assertEquals(1, conversations.getValue("ZcZiXs").unreadCount)
         }
 
-    /** The thread is the flat list sliced to one counterparty — there is no talk endpoint (404ed). */
+    /** The full history lives behind `with/{uid}`; the list only ever holds the latest message. */
     @Test
-    fun `thread slices the list to one counterparty and derives direction`() =
+    fun `thread reads the whole history and the talkTo header`() =
         runTest {
             val api =
                 FakeJsonApi(
                     mapOf(
-                        listPath to
+                        threadPath to
                             """
-                            {"msgArray":[
-                              {"id":2,"sender_id":9,"receiver_id":4471,"receiver_name":"iwil",
-                               "content":"那大概什么时候？","created_at":"2026-07-26 09:44:00"},
-                              {"id":1,"sender_id":4471,"receiver_id":9,"sender_name":"iwil",
-                               "content":"改名的事我问过管理","created_at":"2026-07-26 09:41:00"},
-                              {"id":3,"sender_id":7,"receiver_id":9,"sender_name":"demain",
-                               "content":"别的会话的消息","created_at":"2026-07-26 09:50:00"}
+                            {"success":true,
+                             "talkTo":{"member_id":5230,"member_name":"系统通知","rank":3},
+                             "msgArray":[
+                               {"id":7169823,"receiver_id":52425,"sender_id":5230,"viewed":1,
+                                "content":"您的帖子被投喂鸡腿","created_at":"2026-07-24T18:15:47.000Z",
+                                "is_markdown":1},
+                               {"id":7169651,"receiver_id":52425,"sender_id":5230,"viewed":1,
+                                "content":"您的评论被投喂鸡腿","created_at":"2026-07-24T17:46:45.000Z",
+                                "is_markdown":1},
+                               {"id":7196941,"receiver_id":5230,"sender_id":52425,"viewed":0,
+                                "content":"test","created_at":"2026-07-26T14:31:28.000Z","is_markdown":0}
                              ]}
                             """.trimIndent(),
                     ),
                 )
 
-            val thread = NetworkMessageRepository(api).thread(4471)
+            val thread = NetworkMessageRepository(api).thread(5230)
 
-            assertEquals("iwil", thread.userName)
-            // Another counterparty's message never leaks in; sorted oldest first whatever the wire order.
-            assertEquals(listOf("1", "2"), thread.messages.map(DirectMessage::id))
+            assertEquals("系统通知", thread.userName)
+            assertEquals(3, thread.level)
+            // Oldest first, whatever order the endpoint used.
+            assertEquals(listOf("7169651", "7169823", "7196941"), thread.messages.map(DirectMessage::id))
             assertFalse(thread.messages[0].isMine)
-            assertTrue(thread.messages[1].isMine)
+            assertTrue(thread.messages.last().isMine)
+            // Rendering follows the message's own flag, not the composer's switch.
+            assertTrue(thread.messages[0].isMarkdown)
+            assertFalse(thread.messages.last().isMarkdown)
         }
 
+    /** The recipient field is camel-cased here and nowhere else on this API. */
     @Test
-    fun `an updated timestamp marks a message as edited`() =
+    fun `send posts receiverUid`() =
         runTest {
             val api =
                 FakeJsonApi(
-                    mapOf(
-                        listPath to
-                            """
-                            {"msgArray":[{"id":1,"sender_id":4471,"content":"顶一下",
-                              "created_at":"2026-07-26 09:41:00","updated_at":"2026-07-26 09:52:00"}]}
-                            """.trimIndent(),
-                    ),
+                    posts = mapOf(NodeSeekJsonClient.PATH_MESSAGE_SEND to """{"success":true}"""),
                 )
 
-            assertTrue(NetworkMessageRepository(api).thread(4471).messages.single().isEdited)
-        }
+            NetworkMessageRepository(api).send(5230, "行", markdown = true)
 
-    @Test
-    fun `send returns the accepted message`() =
-        runTest {
-            val api =
-                FakeJsonApi(
-                    posts =
-                    mapOf(
-                        NodeSeekJsonClient.PATH_MESSAGE_SEND to
-                            """{"success":true,"data":{"id":7,"sender_id":9,"content":"行"}}""",
-                    ),
-                )
-
-            val sent = NetworkMessageRepository(api).send(4471, "行", markdown = true)
-
-            assertEquals("7", sent?.id)
-            assertTrue(sent!!.isMine)
-            assertTrue(api.postedBodies.single().contains("\"receiver_id\":4471"))
+            val body = api.postedBodies.single()
+            assertTrue(body, body.contains("\"receiverUid\":5230"))
+            assertTrue(body, body.contains("\"markdown\":true"))
         }
 
     @Test
@@ -163,6 +158,19 @@ class MessageRepositoryTest {
             assertEquals(NodeSeekError.Unknown, failure.error)
             assertEquals("对方已屏蔽你", failure.message)
         }
+
+    @Test
+    fun `mark all read hits the site's own all=true endpoint`() =
+        runTest {
+            val api =
+                FakeJsonApi(
+                    posts = mapOf(NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED_ALL to """{"success":true}"""),
+                )
+
+            NetworkMessageRepository(api).markAllRead()
+
+            assertEquals(listOf(NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED_ALL), api.postedPaths)
+        }
 }
 
 private class FakeJsonApi(
@@ -170,11 +178,13 @@ private class FakeJsonApi(
     private val posts: Map<String, String> = emptyMap(),
 ) : JsonApi {
     val postedBodies = mutableListOf<String>()
+    val postedPaths = mutableListOf<String>()
 
     override suspend fun getJson(path: String, referer: String): String =
         requireNotNull(responses[path]) { "No response for $path" }
 
     override suspend fun postJson(path: String, body: String, referer: String): String {
+        postedPaths += path
         postedBodies += body
         return requireNotNull(posts[path]) { "No response for $path" }
     }

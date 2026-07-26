@@ -22,8 +22,8 @@ import kotlinx.serialization.json.put
  * One row of board 7e's conversation list.
  *
  * [isSystem] is the pinned 系统通知 conversation. It is an ordinary conversation on the site — there
- * is no separate system notification group — but it is the one whose snippet arrives as Markdown, so
- * the row renders it as inline rich text rather than plain characters.
+ * is no separate system notification group — but its messages arrive as Markdown, so the row renders
+ * the snippet as inline rich text rather than plain characters.
  */
 data class MessageConversation(
     val uid: Long,
@@ -42,14 +42,15 @@ data class MessageConversation(
     }
 }
 
-/** One bubble in board 7f. Private messages are editable on NodeSeek, hence [isEdited]. */
+/** One bubble in board 7f. */
 data class DirectMessage(
     val id: String,
     val isMine: Boolean,
     val content: String,
+    /** The site stores this per message; the composer's own switch must not decide how one renders. */
+    val isMarkdown: Boolean,
     val sentAtMillis: Long?,
     val sentAtText: String?,
-    val isEdited: Boolean,
 )
 
 data class MessageThread(
@@ -72,18 +73,21 @@ interface MessageRepository {
         content: String,
         markdown: Boolean,
     ): DirectMessage?
+
+    /** Clears every unread message in the 私信 group. */
+    suspend fun markAllRead()
 }
 
 /**
- * Direct messages over the site's notification API.
+ * Direct messages, over the same three endpoints the site's own `notification.js` calls.
  *
- * **The endpoints are inferred** — see [NodeSeekJsonClient]'s companion. Parsing is therefore
- * deliberately shape-tolerant in the same way [NotificationRepository] is: field names are probed in
- * order rather than bound to a `@Serializable` schema, so a name that differs from the guess costs a
- * missing field instead of an unparsable screen.
+ * Read off the live bundle rather than guessed (2026-07-26, signed-in device): `message/list` is one
+ * row per *conversation* carrying only its latest message, `message/with/{uid}` is the full history,
+ * and `message/send` takes `receiverUid` — not the `receiver_id` the other endpoints use, which is
+ * the kind of detail no amount of consistency reasoning would have produced.
  *
- * Direction is derived by comparing each message's sender against the person being talked to, which
- * avoids a second round trip just to learn our own uid.
+ * Parsing stays shape-tolerant (field names probed in order, as in [NotificationRepository]) so a
+ * server-side rename costs a field rather than the screen.
  */
 class NetworkMessageRepository(
     private val jsonApi: JsonApi,
@@ -91,82 +95,48 @@ class NetworkMessageRepository(
     private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun conversations(): List<MessageConversation> {
-        val rows = listRawMessages()
+        val body = jsonApi.getJson(NodeSeekJsonClient.messageListPath(), REFERER)
+        val rows =
+            json
+                .parseToJsonElement(body)
+                .findObjectArray(PREFERRED_LIST_KEYS)
+                .mapNotNull { element -> (element as? JsonObject)?.toRawMessage() }
+        /*
+         * Each row names both ends of a conversation and neither is labelled "the other person", so
+         * the counterparty is whichever uid is not ours — the same reduction `notification.js` does.
+         * Grouping rather than mapping is what fixed the crash this screen shipped with: keying the
+         * list on a uid picked field-by-field made every row key on the sender, which is us.
+         */
         val ownUid = inferOwnUid(rows)
-        // The site pins 系统通知 to the top of the list; the endpoint does not promise that order.
         return rows
             .groupBy { it.counterpart(ownUid) }
-            .mapNotNull { (uid, messages) -> uid?.let { foldConversation(it, messages) } }
+            .mapNotNull { (uid, messages) -> uid?.let { conversationOf(it, messages, ownUid) } }
+            // The site pins 系统通知 to the top; the endpoint does not promise that order.
             .sortedWith(
                 compareByDescending(MessageConversation::isSystem)
                     .thenByDescending { it.updatedAtMillis ?: 0L },
             )
     }
 
-    /**
-     * Confirmed on a device (Galaxy S24, 2026-07-26): the message endpoint answers with a flat list
-     * of individual messages — one row per *message*, both directions, the same counterparty
-     * repeated. Both screens are projections of it: 7e folds the rows into conversations (without
-     * which the uid-keyed list crashed on the first person with two messages), 7f slices out one
-     * counterparty's rows.
-     */
-    private suspend fun listRawMessages(): List<RawMessage> {
-        val root = json.parseToJsonElement(jsonApi.getJson(NodeSeekJsonClient.messageListPath(), REFERER))
-        return root
-            .findObjectArray(PREFERRED_LIST_KEYS)
-            .mapNotNull { element -> (element as? JsonObject)?.toRawMessage() }
-    }
-
-    /**
-     * We are a party to every message, so ours is the uid that shows up most across the list; a
-     * counterparty's cannot — two conversations never share one. A single-conversation list is
-     * genuinely ambiguous, but there [RawMessage.counterpart] still resolves: whichever id this
-     * picks, the other becomes the conversation.
-     */
-    private fun inferOwnUid(rows: List<RawMessage>): Long? =
-        rows
-            .flatMap { listOfNotNull(it.senderId, it.receiverId) }
-            .groupingBy { it }
-            .eachCount()
-            .maxByOrNull { it.value }
-            ?.key
-
-    private fun foldConversation(
-        uid: Long,
-        messages: List<RawMessage>,
-    ): MessageConversation {
-        val newest = messages.maxBy { it.createdAtMillis ?: 0L }
-        val name =
-            messages.firstNotNullOfOrNull { it.nameOf(uid) } ?: "NodeSeek 用户"
-        val isSystem =
-            name == MessageConversation.SYSTEM_NAME || messages.any { it.isSystem }
-        return MessageConversation(
-            uid = uid,
-            userName = name,
-            avatarUrl = if (isSystem) null else NodeSeekSite.avatarUrl(uid),
-            snippet = newest.content,
-            isSnippetMine = newest.senderId != null && newest.senderId != uid,
-            updatedAtMillis = newest.createdAtMillis,
-            updatedAtText = newest.createdAtText,
-            unreadCount = messages.count { !it.viewed && it.senderId == uid },
-            isSystem = isSystem,
-        )
-    }
-
     override suspend fun thread(uid: Long): MessageThread {
-        // No per-conversation endpoint exists — the talk-path guess 404ed on a real device — so the
-        // thread is the flat list filtered to this counterparty. See [listRawMessages].
-        val rows = listRawMessages()
-        val ownUid = inferOwnUid(rows)
+        val body =
+            jsonApi.getJson(
+                path = NodeSeekJsonClient.messageThreadPath(uid),
+                referer = NodeSeekSite.BASE_URL + NodeSeekSite.messageThreadWebPath(uid),
+            )
+        val root = json.parseToJsonElement(body) as? JsonObject
+            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        val header = root["talkTo"] as? JsonObject
         val messages =
-            rows
-                .filter { it.counterpart(ownUid) == uid }
+            root
+                .findObjectArray(PREFERRED_THREAD_KEYS)
+                .mapNotNull { element -> (element as? JsonObject)?.toRawMessage() }
                 .sortedBy { it.createdAtMillis ?: 0L }
         return MessageThread(
             uid = uid,
-            userName = messages.firstNotNullOfOrNull { it.nameOf(uid) } ?: "NodeSeek 用户",
+            userName = header?.text("member_name", "username", "name") ?: "NodeSeek 用户",
             avatarUrl = NodeSeekSite.avatarUrl(uid),
-            level = null,
+            level = header?.get("rank")?.jsonPrimitive?.intOrNull,
             messages = messages.mapIndexed { index, raw -> raw.toDirectMessage(uid, index) },
         )
     }
@@ -178,7 +148,8 @@ class NetworkMessageRepository(
     ): DirectMessage? {
         val payload =
             buildJsonObject {
-                put("receiver_id", uid)
+                // `receiverUid`, camel-cased, unlike every other field in this API.
+                put("receiverUid", uid)
                 put("content", content)
                 put("markdown", markdown)
             }
@@ -199,20 +170,64 @@ class NetworkMessageRepository(
                 detail = root.text("message", "error"),
             )
         }
-        val accepted =
-            listOf("data", "message", "detail").firstNotNullOfOrNull { key ->
-                root[key] as? JsonObject
-            }
-        return accepted?.toMessage(otherUid = uid, index = 0)
+        // The endpoint answers with a bare ack; the screen keeps its own optimistic bubble.
+        return (root["data"] as? JsonObject)
+            ?.toRawMessage()
+            ?.toDirectMessage(uid, index = 0)
+    }
+
+    override suspend fun markAllRead() {
+        jsonApi.postJson(
+            path = NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED_ALL,
+            body = "",
+            referer = REFERER,
+        )
+    }
+
+    /**
+     * We are a party to every conversation, so ours is the uid that recurs across the list; a
+     * counterparty's cannot — two conversations never share one. With a single conversation both
+     * ids tie, but there [RawMessage.counterpart] still resolves: whichever this picks, the other
+     * becomes the conversation.
+     */
+    private fun inferOwnUid(rows: List<RawMessage>): Long? =
+        rows
+            .flatMap { listOfNotNull(it.senderId, it.receiverId) }
+            .groupingBy { it }
+            .eachCount()
+            .maxByOrNull { it.value }
+            ?.key
+
+    private fun conversationOf(
+        uid: Long,
+        rows: List<RawMessage>,
+        ownUid: Long?,
+    ): MessageConversation {
+        val newest = rows.maxBy { it.createdAtMillis ?: 0L }
+        val name = rows.firstNotNullOfOrNull { it.nameOf(uid) } ?: "NodeSeek 用户"
+        val isSystem = name == MessageConversation.SYSTEM_NAME
+        return MessageConversation(
+            uid = uid,
+            userName = name,
+            avatarUrl = if (isSystem) null else NodeSeekSite.avatarUrl(uid),
+            snippet = newest.content,
+            isSnippetMine = newest.senderId != null && newest.senderId == ownUid,
+            updatedAtMillis = newest.createdAtMillis,
+            updatedAtText = newest.createdAtText,
+            // The list carries one row per conversation, so this is "has unread", counted as one.
+            unreadCount = rows.count { !it.viewed && it.senderId == uid },
+            isSystem = isSystem,
+        )
     }
 
     private companion object {
         val REFERER = NodeSeekSite.BASE_URL + NodeSeekSite.NOTIFICATION_PATH
         val PREFERRED_LIST_KEYS = listOf("msgArray", "messageList", "conversations", "list", "data")
+        val PREFERRED_THREAD_KEYS = listOf("msgArray", "messageList", "list", "data")
     }
 }
 
-/** One wire row of the flat message list, before folding into conversations. */
+/** One wire row. The list and thread endpoints share a shape; only the completeness differs. */
 private data class RawMessage(
     val id: String?,
     val senderId: Long?,
@@ -220,11 +235,10 @@ private data class RawMessage(
     val senderName: String?,
     val receiverName: String?,
     val content: String,
+    val isMarkdown: Boolean,
     val createdAtMillis: Long?,
     val createdAtText: String?,
     val viewed: Boolean,
-    val isEdited: Boolean,
-    val isSystem: Boolean,
 ) {
     /** The conversation this message belongs to: whichever end of it is not us. */
     fun counterpart(ownUid: Long?): Long? =
@@ -249,18 +263,17 @@ private data class RawMessage(
         id = id ?: "$counterpartUid-$index-${content.hashCode()}",
         isMine = senderId != null && senderId != counterpartUid,
         content = content,
+        isMarkdown = isMarkdown,
         sentAtMillis = createdAtMillis,
         sentAtText = createdAtText,
-        isEdited = isEdited,
     )
 }
 
 private fun JsonObject.toRawMessage(): RawMessage? {
     val content =
-        text("content", "last_content", "message", "excerpt")?.collapseWhitespace()?.ifBlank { null }
+        text("content", "last_content", "message", "excerpt")?.trim()?.ifBlank { null }
             ?: return null
     val createdAt = text("created_at", "time", "sent_at", "last_time")
-    val updatedAt = text("updated_at", "edited_at")
     val name = text("member_name", "username", "name")
     return RawMessage(
         id = text("id", "message_id", "msg_id"),
@@ -269,39 +282,13 @@ private fun JsonObject.toRawMessage(): RawMessage? {
         senderName = text("sender_name") ?: name,
         receiverName = text("receiver_name", "target_name") ?: name,
         content = content,
-        createdAtMillis = TimeFormat.parseTimestamp(createdAt ?: updatedAt),
-        createdAtText = (createdAt ?: updatedAt)?.trim()?.ifBlank { null },
+        // Absent flag reads as Markdown: this forum writes Markdown, and rendering a plain message
+        // as Markdown is at worst a lost asterisk, while the reverse leaks link syntax into a bubble.
+        isMarkdown = boolean("is_markdown", "markdown") ?: true,
+        createdAtMillis = TimeFormat.parseTimestamp(createdAt),
+        createdAtText = createdAt?.trim()?.ifBlank { null },
         // Absent flag reads as read: inventing unread noise is worse than missing some.
         viewed = boolean("viewed", "is_read", "read") ?: true,
-        isEdited =
-        boolean("edited", "is_edited")
-            ?: (createdAt != null && updatedAt != null && updatedAt != createdAt),
-        isSystem =
-        boolean("is_system", "system") == true ||
-            name == MessageConversation.SYSTEM_NAME ||
-            text("sender_name") == MessageConversation.SYSTEM_NAME,
-    )
-}
-
-private fun JsonObject.toMessage(
-    otherUid: Long,
-    index: Int,
-): DirectMessage? {
-    val content = text("content", "message", "text") ?: return null
-    val sender = long("sender_id", "member_id", "from", "uid")
-    val sentAt = text("created_at", "time", "sent_at")
-    val updatedAt = text("updated_at", "edited_at")
-    return DirectMessage(
-        id = text("id", "message_id", "msg_id") ?: "$otherUid-$index-${content.hashCode()}",
-        // Unknown sender reads as theirs: showing an incoming message on the right is a lie about who
-        // said it, while showing our own on the left is only a cosmetic misalignment.
-        isMine = sender != null && sender != otherUid,
-        content = content,
-        sentAtMillis = TimeFormat.parseTimestamp(sentAt),
-        sentAtText = sentAt?.trim()?.ifBlank { null },
-        isEdited =
-        boolean("edited", "is_edited")
-            ?: (updatedAt != null && updatedAt != sentAt),
     )
 }
 
@@ -338,5 +325,3 @@ private fun JsonObject.boolean(vararg names: String): Boolean? {
     }
     return null
 }
-
-private fun String.collapseWhitespace(): String = trim().replace(Regex("\\s+"), " ")

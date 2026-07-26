@@ -167,7 +167,6 @@
     <string name="message_status_sending">发送中</string>
     <string name="message_status_failed">发送失败</string>
     <string name="message_status_sent">已送达 %1$s</string>
-    <string name="message_edited">%1$s · 已编辑</string>
 
     <!-- Profile -->
     <string name="profile_session_active">NodeSeek 登录会话有效</string>

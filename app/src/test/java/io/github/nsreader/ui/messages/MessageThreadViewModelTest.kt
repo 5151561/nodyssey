@@ -142,6 +142,8 @@ private class FakeMessageRepository(
 
     override suspend fun conversations() = emptyList<io.github.nsreader.data.MessageConversation>()
 
+    override suspend fun markAllRead() = Unit
+
     override suspend fun thread(uid: Long) =
         MessageThread(
             uid = uid,
@@ -154,9 +156,9 @@ private class FakeMessageRepository(
                     id = "1",
                     isMine = false,
                     content = "改名的事我问过管理",
+                    isMarkdown = true,
                     sentAtMillis = 1_784_999_000_000L,
                     sentAtText = null,
-                    isEdited = false,
                 ),
             ),
         )
@@ -173,9 +175,9 @@ private class FakeMessageRepository(
             id = "sent-$sendCount",
             isMine = true,
             content = content,
+            isMarkdown = markdown,
             sentAtMillis = 1_785_000_000_000L,
             sentAtText = null,
-            isEdited = false,
         )
     }
 }

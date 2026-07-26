@@ -214,7 +214,6 @@ private fun MessageBubbles(
             item(key = message.id) {
                 MessageBubbleRow(
                     message = message,
-                    isMarkdown = state.isMarkdown,
                     onOpenBrowser = onOpenBrowser,
                     onRetrySend = { onRetrySend(message.id) },
                 )
@@ -256,7 +255,6 @@ private fun DayDivider(label: String) {
 @Composable
 private fun MessageBubbleRow(
     message: MessageBubble,
-    isMarkdown: Boolean,
     onOpenBrowser: (String) -> Unit,
     onRetrySend: () -> Unit,
 ) {
@@ -295,7 +293,7 @@ private fun MessageBubbleRow(
                         MaterialTheme.colorScheme.onSurface
                     },
                 )
-            if (isMarkdown) {
+            if (message.isMarkdown) {
                 RichContent(
                     nodes = parseMarkdown(message.content),
                     onLinkClick = onOpenBrowser,
@@ -358,13 +356,6 @@ private fun MessageStatusLine(
 
             SendStatus.SENT ->
                 when {
-                    message.isEdited && clock != null ->
-                        Text(
-                            stringResource(R.string.message_edited, clock),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-
                     message.isMine && clock != null -> {
                         Icon(
                             Icons.Default.Check,
@@ -568,7 +559,7 @@ private fun MessageThreadPreview() {
                         content = "改名的事我问过管理，说要等 UID 显示上线",
                         sentAtMillis = now - 40 * 60_000L,
                         sentAtText = null,
-                        isEdited = false,
+                        isMarkdown = true,
                         status = SendStatus.SENT,
                     ),
                     MessageBubble(
@@ -577,7 +568,7 @@ private fun MessageThreadPreview() {
                         content = "那大概什么时候？我这 ID 打错字快两年了",
                         sentAtMillis = now - 37 * 60_000L,
                         sentAtText = null,
-                        isEdited = false,
+                        isMarkdown = true,
                         status = SendStatus.SENT,
                     ),
                     MessageBubble(
@@ -586,7 +577,7 @@ private fun MessageThreadPreview() {
                         content = "没给时间点。你可以先在 [求教如何改用户名](/post-1-1) 里顶一下",
                         sentAtMillis = now - 29 * 60_000L,
                         sentAtText = null,
-                        isEdited = true,
+                        isMarkdown = true,
                         status = SendStatus.SENT,
                     ),
                     MessageBubble(
@@ -595,7 +586,7 @@ private fun MessageThreadPreview() {
                         content = "行，我发个投票试试",
                         sentAtMillis = now - 60_000L,
                         sentAtText = null,
-                        isEdited = false,
+                        isMarkdown = true,
                         status = SendStatus.SENDING,
                     ),
                     MessageBubble(
@@ -604,7 +595,7 @@ private fun MessageThreadPreview() {
                         content = "顺便问下星辰能转账吗",
                         sentAtMillis = now,
                         sentAtText = null,
-                        isEdited = false,
+                        isMarkdown = true,
                         status = SendStatus.FAILED,
                     ),
                 ),

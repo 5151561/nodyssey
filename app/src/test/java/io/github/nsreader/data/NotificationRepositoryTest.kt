@@ -1,6 +1,6 @@
 package io.github.nsreader.data
 
-import io.github.nsreader.core.net.JsonSource
+import io.github.nsreader.core.net.JsonApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -87,6 +87,17 @@ class NotificationRepositoryTest {
             assertEquals("https://www.nodeseek.com/avatar/12.png", item.avatarUrl)
         }
 
+    /** 全部已读 used to be local-only, so the badge came back on the next refresh. */
+    @Test
+    fun `mark all read posts to the group's own endpoint`() =
+        runTest {
+            val source = FakeJsonSource(emptyMap())
+
+            NotificationRepository(source).markAllRead(NotificationCategory.MENTIONS)
+
+            assertEquals(listOf("/api/notification/at-me/markViewed?all=true"), source.postedPaths)
+        }
+
     @Test
     fun `viewed notification is not unread`() =
         runTest {
@@ -101,7 +112,14 @@ class NotificationRepositoryTest {
 
 private class FakeJsonSource(
     private val responses: Map<String, String>,
-) : JsonSource {
+) : JsonApi {
+    val postedPaths = mutableListOf<String>()
+
     override suspend fun getJson(path: String, referer: String): String =
         requireNotNull(responses[path]) { "No response for $path" }
+
+    override suspend fun postJson(path: String, body: String, referer: String): String {
+        postedPaths += path
+        return """{"success":true}"""
+    }
 }

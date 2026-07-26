@@ -100,16 +100,29 @@ class NotificationsViewModel(
     }
 
     /**
-     * The observed endpoint marks notifications as they are opened; this action clears the current
-     * presentation immediately and the next refresh reconciles with the server's authoritative count.
+     * Clears the group, optimistically and then for real.
+     *
+     * The local update lands first because the button should not feel like a network round trip; the
+     * request that follows is what makes it survive a refresh. A failure re-reads the server rather
+     * than restoring the badges by hand — whatever it says is the truth either way.
      */
     fun markAllRead() {
+        val category = _uiState.value.selectedCategory
         _uiState.update { state ->
             state.copy(
                 items = state.items.map { it.copy(isUnread = false) },
                 conversations = state.conversations.map { it.copy(unreadCount = 0) },
                 counts = NotificationCounts(),
             )
+        }
+        viewModelScope.launch {
+            runCatchingExceptCancellation {
+                if (category == NotificationCategory.MESSAGES) {
+                    messages.markAllRead()
+                } else {
+                    repository.markAllRead(category)
+                }
+            }.onFailure { refresh() }
         }
     }
 

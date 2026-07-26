@@ -94,9 +94,9 @@ class MessageThreadViewModel(
                 id = "pending-${pendingSeed++}",
                 isMine = true,
                 content = content,
+                isMarkdown = _uiState.value.isMarkdown,
                 sentAtMillis = clock.nowMillis(),
                 sentAtText = null,
-                isEdited = false,
                 status = SendStatus.SENDING,
             )
         _uiState.update {
@@ -150,9 +150,9 @@ class MessageThreadViewModel(
             id = message.id,
             isMine = message.isMine,
             content = message.content,
+            isMarkdown = message.isMarkdown,
             sentAtMillis = message.sentAtMillis,
             sentAtText = message.sentAtText,
-            isEdited = message.isEdited,
             status = SendStatus.SENT,
         )
 
@@ -186,9 +186,10 @@ data class MessageBubble(
     val id: String,
     val isMine: Boolean,
     val content: String,
+    /** The site records this per message, so an old plain message stays plain. */
+    val isMarkdown: Boolean,
     val sentAtMillis: Long?,
     val sentAtText: String?,
-    val isEdited: Boolean,
     val status: SendStatus,
     val failure: NodeSeekError? = null,
 )

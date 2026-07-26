@@ -130,17 +130,23 @@ class NodeSeekJsonClient(
 
         fun accountInfoPath(uid: Long) = "/api/account/getInfo/$uid"
 
+        /** `?all=true` with an empty body; the per-item form takes a JSON array we do not need. */
+        fun markAllViewedPath(type: String) = "/api/notification/$type/markViewed?all=true"
+
         /*
-         * Direct messages, checked against a signed-in device (Galaxy S24, 2026-07-26).
+         * Direct messages.
          *
-         * The list endpoint is real and is the *only* read endpoint: it answers with a flat list of
-         * individual messages, both directions mixed, which `MessageRepository` folds into
-         * conversations and threads. A per-conversation path (`message/talk/{uid}` was tried) does
-         * not exist — 404. The send path is still inferred from the shape of the rest of the API;
-         * the thread screen keeps an "open in browser" escape hatch until it is confirmed.
+         * Read out of the site's own `notification.js` on a signed-in device (2026-07-26) rather
+         * than inferred: `list` returns one row per conversation holding only its latest message,
+         * `with/{uid}` returns the full history plus a `talkTo` header, and `send` is a POST whose
+         * recipient field is camel-cased `receiverUid` while every other field on this API is
+         * snake_case. A `message/talk/{uid}` path does not exist — that guess 404ed.
          */
         fun messageListPath(page: Int = 1) = notificationListPath("message", page)
 
+        fun messageThreadPath(uid: Long) = "/api/notification/message/with/$uid"
+
         const val PATH_MESSAGE_SEND = "/api/notification/message/send"
+        const val PATH_MESSAGE_MARK_VIEWED_ALL = "/api/notification/message/markViewed?all=true"
     }
 }
