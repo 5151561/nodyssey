@@ -10,6 +10,7 @@ import io.github.nsreader.core.AppClock
 import io.github.nsreader.core.AppDispatchers
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.html.PostListParser
+import io.github.nsreader.core.html.Selectors
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.core.runCatchingExceptCancellation
@@ -123,6 +124,13 @@ class DefaultPostComposerRepository(
         }
         response.use {
             val body = it.body?.string().orEmpty()
+            // Cloudflare answers a blocked request with 403 plus challenge HTML, so the challenge
+            // check must run before the status check — "please verify" and "please sign in" send the
+            // user down entirely different recovery paths.
+            val isChallenge =
+                it.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
+                    Selectors.CLOUDFLARE_MARKERS.any(body::contains)
+            if (isChallenge) throw NodeSeekException(NodeSeekError.Cloudflare)
             if (it.code == 401 || it.code == 403) {
                 throw NodeSeekException(NodeSeekError.LoginRequired)
             }

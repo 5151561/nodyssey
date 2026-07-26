@@ -66,9 +66,11 @@ class PostDetailViewModel(
                             title = "",
                             body = null,
                             comments = emptyList(),
+                            commentPages = emptyList(),
                             page = 1,
                             totalPages = 1,
                             hasNextPage = false,
+                            pendingScrollPage = null,
                         )
                     }
                     return@collect
@@ -79,6 +81,7 @@ class PostDetailViewModel(
                         title = thread.title,
                         body = thread.body,
                         comments = thread.comments,
+                        commentPages = thread.commentPages,
                         page = thread.loadedPages,
                         totalPages = thread.totalPages,
                         hasNextPage = thread.hasNextPage,
@@ -132,10 +135,38 @@ class PostDetailViewModel(
         load(page = state.page + 1, append = true)
     }
 
+    /**
+     * Brings [page] onto the screen without breaking the database invariant that loaded pages form a
+     * contiguous prefix. A page already in the list is a scroll target, not a fetch; a page beyond
+     * the prefix is reached by fetching every page up to it, so the list never has a gap.
+     */
     fun loadPage(page: Int) {
         val state = _uiState.value
-        if (page < 1 || page > state.totalPages || state.isLoading || state.isAppending) return
-        load(page = page, append = page != 1)
+        if (page < 1 || page > state.totalPages) return
+        if (page <= state.page) {
+            _uiState.update { it.copy(pendingScrollPage = page) }
+            return
+        }
+        if (state.isLoading || state.isAppending) return
+        loadJob?.cancel()
+        _uiState.update { it.copy(isAppending = true, error = null) }
+        loadJob =
+            viewModelScope.launch {
+                runCatchingExceptCancellation {
+                    for (next in state.page + 1..page) repository.refreshThread(postId, next)
+                }.onSuccess {
+                    _uiState.update { it.copy(isAppending = false, pendingScrollPage = page) }
+                }.onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(isAppending = false, error = throwable.toNodeSeekError())
+                    }
+                }
+            }
+    }
+
+    /** The screen has scrolled to [PostDetailUiState.pendingScrollPage]; stop asking it to. */
+    fun onPageScrollHandled() {
+        _uiState.update { it.copy(pendingScrollPage = null) }
     }
 
     private fun load(
@@ -186,10 +217,14 @@ data class PostDetailUiState(
     val title: String = "",
     val body: PostContent? = null,
     val comments: List<PostContent> = emptyList(),
+    /** The site page each comment came from, index-aligned with [comments]. */
+    val commentPages: List<Int> = emptyList(),
     val page: Int = 1,
     val totalPages: Int = 1,
     val hasNextPage: Boolean = false,
     val isLoading: Boolean = false,
     val isAppending: Boolean = false,
+    /** A page the screen should scroll to once its comments are in [comments]. */
+    val pendingScrollPage: Int? = null,
     val error: NodeSeekError? = null,
 )

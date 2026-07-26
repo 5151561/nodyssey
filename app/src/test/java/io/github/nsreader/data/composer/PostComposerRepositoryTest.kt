@@ -5,7 +5,10 @@ import androidx.test.core.app.ApplicationProvider
 import io.github.nsreader.core.AppClock
 import io.github.nsreader.core.AppDispatchers
 import io.github.nsreader.core.NodeSeekSite
+import io.github.nsreader.core.net.NodeSeekError
+import io.github.nsreader.core.net.NodeSeekException
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
@@ -96,6 +99,77 @@ class PostComposerRepositoryTest {
             assertEquals("/categories/sandbox", recorder.feedRequest?.url?.encodedPath)
             assertEquals("postTime", recorder.feedRequest?.url?.queryParameter("sortBy"))
         }
+
+    /**
+     * Cloudflare blocks with 403 too. Reading that as "session expired" sends the user to the
+     * sign-in page when what clears the block is the challenge WebView.
+     */
+    @Test
+    fun `a Cloudflare 403 surfaces as a challenge, not a login prompt`() =
+        runTest {
+            val error =
+                publishExpectingError(
+                    StaticResponseInterceptor(
+                        code = 403,
+                        body = "<html><script src=\"/cdn-cgi/challenge-platform/h/b.js\"></script></html>",
+                        mediaType = "text/html",
+                        headers = mapOf("cf-mitigated" to "challenge"),
+                    ),
+                )
+            assertEquals(NodeSeekError.Cloudflare, error)
+        }
+
+    @Test
+    fun `a plain 403 still asks the user to sign in`() =
+        runTest {
+            val error =
+                publishExpectingError(
+                    StaticResponseInterceptor(code = 403, body = """{"success":false}"""),
+                )
+            assertEquals(NodeSeekError.LoginRequired, error)
+        }
+
+    private suspend fun TestScope.publishExpectingError(interceptor: Interceptor): NodeSeekError {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository =
+            DefaultPostComposerRepository(
+                context = context,
+                okHttpClient = OkHttpClient.Builder().addInterceptor(interceptor).build(),
+                dispatchers = AppDispatchers(dispatcher, dispatcher),
+                clock = AppClock { 0L },
+            )
+        return try {
+            repository.publish(
+                PostSubmission(
+                    title = "title",
+                    body = "body",
+                    boardSlug = "sandbox",
+                    permission = PostPermission.PUBLIC,
+                ),
+            )
+            throw AssertionError("publish should have failed")
+        } catch (exception: NodeSeekException) {
+            exception.error
+        }
+    }
+}
+
+private class StaticResponseInterceptor(
+    private val code: Int,
+    private val body: String,
+    private val mediaType: String = "application/json",
+    private val headers: Map<String, String> = emptyMap(),
+) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val builder = Response.Builder()
+            .request(chain.request())
+            .protocol(Protocol.HTTP_1_1)
+            .code(code)
+            .message("")
+            .body(body.toResponseBody(mediaType.toMediaType()))
+        headers.forEach { (name, value) -> builder.header(name, value) }
+        return builder.build()
+    }
 }
 
 private class RecordingPublishInterceptor : Interceptor {

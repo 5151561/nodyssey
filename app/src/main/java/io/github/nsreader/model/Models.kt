@@ -57,6 +57,8 @@ data class ThreadSnapshot(
     val loadedPages: Int,
     val totalPages: Int,
     val cachedAtMillis: Long,
+    /** The site page each comment came from, index-aligned with [comments]. */
+    val commentPages: List<Int> = emptyList(),
 ) {
     val hasNextPage: Boolean get() = loadedPages < totalPages
 }

@@ -22,19 +22,19 @@ data class CachedThread(
     val comments: List<CommentEntity>,
 )
 
-fun CachedThread.toSnapshot() =
-    ThreadSnapshot(
+fun CachedThread.toSnapshot(): ThreadSnapshot {
+    val ordered = comments.sortedWith(compareBy({ it.page }, { it.position }))
+    return ThreadSnapshot(
         postId = detail.postId,
         title = detail.title,
         body = detail.body,
-        comments =
-        comments
-            .sortedWith(compareBy({ it.page }, { it.position }))
-            .map { it.content },
+        comments = ordered.map { it.content },
+        commentPages = ordered.map { it.page },
         loadedPages = detail.loadedPages,
         totalPages = detail.totalPages,
         cachedAtMillis = detail.cachedAtMillis,
     )
+}
 
 @Dao
 interface PostDetailDao {

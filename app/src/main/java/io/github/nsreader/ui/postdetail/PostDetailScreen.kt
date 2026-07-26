@@ -121,6 +121,7 @@ fun PostDetailRoute(
         onRetry = viewModel::refresh,
         onLoadMore = viewModel::loadNextPage,
         onLoadPage = viewModel::loadPage,
+        onPageScrollHandled = viewModel::onPageScrollHandled,
         modifier = modifier,
     )
 }
@@ -137,6 +138,7 @@ fun PostDetailScreen(
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
     onLoadPage: (Int) -> Unit = { onLoadMore() },
+    onPageScrollHandled: () -> Unit = {},
     initialFloor: String? = null,
     /** Opens the sign-in page. Separate from [onOpenBrowser] because "登录" is not "看看网页版". */
     onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
@@ -148,7 +150,8 @@ fun PostDetailScreen(
     var chickenTarget by remember { mutableStateOf<PostContent?>(null) }
     var showPageSheet by remember { mutableStateOf(false) }
     var showReplySheet by remember { mutableStateOf(false) }
-    var pageToolbarExpanded by remember { mutableStateOf(true) }
+    var replyDraft by rememberSaveable { mutableStateOf("") }
+    var pageToolbarExpanded by rememberSaveable { mutableStateOf(true) }
     var hasJumpedToInitialFloor by remember(initialFloor) { mutableStateOf(false) }
     val collapsedTitleThreshold = with(LocalDensity.current) { 72.dp.roundToPx() }
     val showCollapsedTitle by remember {
@@ -181,6 +184,39 @@ fun PostDetailScreen(
         val index = state.indexOfFloor(floor) ?: return@LaunchedEffect
         listState.scrollToItem(index)
         hasJumpedToInitialFloor = true
+    }
+
+    // The page the reader is looking at, not the furthest page fetched. Pages already in the list
+    // are navigated by scrolling; only pages beyond the loaded prefix involve the network.
+    val visiblePage by remember(state.commentPages, state.body != null) {
+        derivedStateOf {
+            val commentIndex = listState.firstVisibleItemIndex - state.headerItemCount
+            if (commentIndex < 0) {
+                1
+            } else {
+                state.commentPages.getOrNull(commentIndex)
+                    ?: state.commentPages.lastOrNull()
+                    ?: 1
+            }
+        }
+    }
+    fun scrollToPage(target: Int) {
+        val index = state.firstIndexOfPage(target)
+        if (index != null) {
+            scope.launch { listState.animateScrollToItem(index) }
+        } else {
+            onLoadPage(target)
+        }
+    }
+    LaunchedEffect(state.pendingScrollPage, state.commentPages.size) {
+        val target = state.pendingScrollPage ?: return@LaunchedEffect
+        // The fetch has finished but the new comments may not have flowed out of Room yet; wait for
+        // the emission that carries them rather than scrolling to a stale end-of-list.
+        if (target > state.page) return@LaunchedEffect
+        val index = state.firstIndexOfPage(target)
+            ?: (state.headerItemCount + state.comments.size - 1).coerceAtLeast(0)
+        listState.scrollToItem(index)
+        onPageScrollHandled()
     }
     val toolbarExpanded =
         pageToolbarExpanded ||
@@ -243,10 +279,13 @@ fun PostDetailScreen(
             if (state.body != null && !showReplySheet) {
                 DetailBottomActions(
                     toolbarExpanded = toolbarExpanded,
-                    page = state.page,
+                    page = visiblePage,
                     totalPages = state.totalPages,
-                    onPrevious = { onLoadPage((state.page - 1).coerceAtLeast(1)) },
-                    onNext = { onLoadPage((state.page + 1).coerceAtMost(state.totalPages)) },
+                    onPrevious = { scrollToPage((visiblePage - 1).coerceAtLeast(1)) },
+                    onNext = {
+                        val next = (visiblePage + 1).coerceAtMost(state.totalPages)
+                        if (next <= state.page) scrollToPage(next) else onLoadPage(next)
+                    },
                     onPageClick = { showPageSheet = true },
                     onReply = { showReplySheet = true },
                     modifier = Modifier.align(Alignment.BottomEnd),
@@ -265,21 +304,24 @@ fun PostDetailScreen(
 
     if (showPageSheet) {
         PageJumpSheet(
-            page = state.page,
+            page = visiblePage,
+            loadedPage = state.page,
             totalPages = state.totalPages,
             loadedFloors = state.comments.size + if (state.body != null) 1 else 0,
             onDismiss = { showPageSheet = false },
             onGo = { target ->
                 showPageSheet = false
-                onLoadPage(target.coerceIn(1, state.totalPages.coerceAtLeast(1)))
+                val clamped = target.coerceIn(1, state.totalPages.coerceAtLeast(1))
+                if (clamped <= state.page) scrollToPage(clamped) else onLoadPage(clamped)
             },
         )
     }
 
     if (showReplySheet) {
         ReplyEditorSheet(
+            draft = replyDraft,
+            onDraftChange = { replyDraft = it },
             onDismiss = { showReplySheet = false },
-            onPublish = { showReplySheet = false },
         )
     }
 }
@@ -379,6 +421,7 @@ private fun DetailFloatingToolbarContent(
 @Composable
 private fun PageJumpSheet(
     page: Int,
+    loadedPage: Int,
     totalPages: Int,
     loadedFloors: Int,
     onDismiss: () -> Unit,
@@ -412,7 +455,7 @@ private fun PageJumpSheet(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 TextButton(onClick = { onGo(1) }) { Text(stringResource(R.string.post_first_page)) }
-                TextButton(onClick = { onGo(page) }) { Text(stringResource(R.string.post_latest_read)) }
+                TextButton(onClick = { onGo(loadedPage) }) { Text(stringResource(R.string.post_latest_read)) }
                 TextButton(onClick = { onGo(totalPages) }) { Text(stringResource(R.string.post_last_page)) }
             }
             Button(onClick = { input.toIntOrNull()?.let(onGo) }, modifier = Modifier.fillMaxWidth()) {
@@ -422,13 +465,18 @@ private fun PageJumpSheet(
     }
 }
 
+/**
+ * The reply editor shell. Posting a reply is not implemented yet, so everything that would promise
+ * otherwise is disabled: the publish button, and the formatting actions that have no handler. The
+ * draft lives with the screen, not the sheet, so closing the sheet does not silently discard it.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReplyEditorSheet(
+    draft: String,
+    onDraftChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onPublish: () -> Unit,
 ) {
-    var draft by rememberSaveable { mutableStateOf("") }
     val boldDescription = stringResource(R.string.post_tool_bold)
     val quoteDescription = stringResource(R.string.post_tool_quote)
     val emojiDescription = stringResource(R.string.post_tool_emoji)
@@ -448,7 +496,7 @@ private fun ReplyEditorSheet(
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.post_reply_editor_title), style = MaterialTheme.typography.titleLarge)
                     Text(
-                        stringResource(R.string.post_draft_saved),
+                        stringResource(R.string.post_reply_wip),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -457,17 +505,9 @@ private fun ReplyEditorSheet(
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel))
                 }
             }
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-                Text(
-                    stringResource(R.string.post_reply_context),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(Spacing.md),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             BasicTextField(
                 value = draft,
-                onValueChange = { draft = it },
+                onValueChange = onDraftChange,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).padding(vertical = Spacing.sm),
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                 decorationBox = { inner ->
@@ -486,6 +526,7 @@ private fun ReplyEditorSheet(
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 TextButton(
                     onClick = {},
+                    enabled = false,
                     modifier =
                     Modifier.semantics {
                         contentDescription = boldDescription
@@ -495,6 +536,7 @@ private fun ReplyEditorSheet(
                 }
                 TextButton(
                     onClick = {},
+                    enabled = false,
                     modifier =
                     Modifier.semantics {
                         contentDescription = quoteDescription
@@ -502,9 +544,10 @@ private fun ReplyEditorSheet(
                 ) {
                     Text(">_")
                 }
-                TextButton(onClick = {}) { Text(stringResource(R.string.post_tool_image)) }
+                TextButton(onClick = {}, enabled = false) { Text(stringResource(R.string.post_tool_image)) }
                 TextButton(
                     onClick = {},
+                    enabled = false,
                     modifier =
                     Modifier.semantics {
                         contentDescription = emojiDescription
@@ -513,7 +556,7 @@ private fun ReplyEditorSheet(
                     Text("🙂")
                 }
                 Box(Modifier.weight(1f))
-                Button(onClick = onPublish, enabled = draft.isNotBlank()) {
+                Button(onClick = {}, enabled = false) {
                     Text(stringResource(R.string.action_publish))
                 }
             }
@@ -975,12 +1018,26 @@ private fun MetaText(
     )
 }
 
+/** Items in [ThreadList] before the first comment: title, comments header, and the body when present. */
+private val PostDetailUiState.headerItemCount: Int
+    get() = 2 + (if (body != null) 1 else 0)
+
 /** Mirrors [ThreadList]'s item order so a quote reference can scroll to the floor it points at. */
 private fun PostDetailUiState.indexOfFloor(floor: String): Int? {
     val position = comments.indexOfFirst { it.floor == floor }
     if (position < 0) return null
-    val headerItems = 1 + (if (body != null) 1 else 0) + 1
-    return headerItems + position
+    return headerItemCount + position
+}
+
+/**
+ * The list index where [page] starts, or null when no loaded comment belongs to it yet. `>=` rather
+ * than `==` so a page whose comments were all deleted resolves to the next page instead of nowhere.
+ */
+private fun PostDetailUiState.firstIndexOfPage(page: Int): Int? {
+    if (page <= 1) return 0
+    val position = commentPages.indexOfFirst { it >= page }
+    if (position < 0) return null
+    return headerItemCount + position
 }
 
 /** The detail-screen skeleton: a title block, a body, and the first few replies. */

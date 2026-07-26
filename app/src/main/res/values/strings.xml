@@ -94,8 +94,7 @@
     <string name="post_last_page">最后一页</string>
     <string name="post_go_page">前往第 %1$s 页</string>
     <string name="post_reply_editor_title">回复</string>
-    <string name="post_draft_saved">草稿已保存 · 刚刚</string>
-    <string name="post_reply_context">回复 #12 · nssk</string>
+    <string name="post_reply_wip">回复功能开发中，暂不可发布</string>
     <string name="post_reply_editor_hint">写下你的回复…</string>
     <string name="post_tool_bold">加粗</string>
     <string name="post_tool_quote">引用</string>

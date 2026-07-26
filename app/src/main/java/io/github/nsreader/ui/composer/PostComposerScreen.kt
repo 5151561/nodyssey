@@ -1,5 +1,6 @@
 package io.github.nsreader.ui.composer
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -153,6 +154,12 @@ fun PostComposerScreen(
     onDiscardDraft: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // While a publish is in flight the request may already have created the topic; leaving now would
+    // cancel the ViewModel, keep the draft, and set up a duplicate post on the next attempt. Preview
+    // mode reuses the same handler so system back mirrors the top bar's "‹" instead of closing.
+    BackHandler(enabled = state.isPublishing || state.mode == ComposerMode.PREVIEW) {
+        if (!state.isPublishing) onBackToEditor()
+    }
     Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },

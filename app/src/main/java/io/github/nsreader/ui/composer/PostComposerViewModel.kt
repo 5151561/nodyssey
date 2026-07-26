@@ -159,7 +159,13 @@ class PostComposerViewModel(
         saveJob = viewModelScope.launch {
             delay(AUTOSAVE_DELAY_MILLIS)
             val state = _uiState.value
-            if (!state.hasContent || !state.draftDecisionMade) return@launch
+            if (!state.draftDecisionMade) return@launch
+            if (!state.hasContent) {
+                // Emptying the editor is how a draft is abandoned; keeping the old one stored would
+                // resurrect it in the recovery dialog on the next visit.
+                repository.deleteDraft()
+                return@launch
+            }
             repository.saveDraft(state.toDraft())
             _uiState.update { it.copy(savedAtMillis = clock.nowMillis()) }
         }

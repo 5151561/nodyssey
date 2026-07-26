@@ -345,6 +345,53 @@ class PostDetailViewModelTest {
             assertNotNull("cached content was read but not recorded", database.readMarkDao().find(42))
         }
 
+    /**
+     * Regression: jumping used to append the target page directly after page 1, leaving a gap in the
+     * middle of the thread and a `loadedPages` cursor that claimed pages 2-4 were present.
+     */
+    @Test
+    fun `jumping to a later page fetches every page in between`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 5)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            vm.loadPage(4)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals(listOf(2, 3, 4), remote.detailRequests.takeLast(3).map { it.second })
+            assertEquals(4, state.page)
+            assertEquals(8, state.comments.size)
+            assertEquals((1..4).flatMap { page -> List(2) { page } }, state.commentPages)
+            assertEquals(4, state.pendingScrollPage)
+
+            vm.onPageScrollHandled()
+            assertNull(vm.uiState.value.pendingScrollPage)
+        }
+
+    @Test
+    fun `jumping to an already loaded page issues no request`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 3)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+            vm.loadNextPage()
+            advanceUntilIdle()
+            val requestsBefore = remote.detailRequests.size
+
+            vm.loadPage(1)
+            advanceUntilIdle()
+
+            assertEquals(requestsBefore, remote.detailRequests.size)
+            assertEquals(1, vm.uiState.value.pendingScrollPage)
+            assertEquals(2, vm.uiState.value.page)
+        }
+
     @Test
     fun `the post url points at the page currently being read`() =
         runTest(dispatcher) {

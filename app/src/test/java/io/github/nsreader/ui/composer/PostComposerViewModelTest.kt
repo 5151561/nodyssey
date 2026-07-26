@@ -88,6 +88,23 @@ class PostComposerViewModelTest {
     }
 
     @Test
+    fun `clearing the editor deletes the stored draft instead of resurrecting it`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.updateTitle("标题")
+        viewModel.updateBody("正文")
+        advanceUntilIdle()
+        assertEquals("标题", repository.savedDraft?.title)
+
+        viewModel.updateTitle("")
+        viewModel.updateBody("")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.deleteCount)
+        assertNull(repository.draftState.value)
+    }
+
+    @Test
     fun `publish failure keeps the draft and exposes a retryable error`() = runTest(dispatcher) {
         repository.publishError = NodeSeekException(NodeSeekError.Network)
         val viewModel = viewModel()
