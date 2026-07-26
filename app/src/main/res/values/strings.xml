@@ -28,6 +28,12 @@
     <!-- Screen-reader description for the lock on a board only admins can open -->
     <string name="board_admin_only">仅管理员可见</string>
 
+    <!-- The four kinds every board falls into; the tag colour and the picker's headings share them -->
+    <string name="board_family_everyday">日常类</string>
+    <string name="board_family_technical">技术类</string>
+    <string name="board_family_trade">交易类</string>
+    <string name="board_family_flagged">警示类</string>
+
     <!-- Post list -->
     <string name="post_reply_count">%1$d 回复</string>
     <string name="post_new_reply_count">%1$d 条新回复</string>
@@ -156,6 +162,7 @@
     <string name="profile_comments">我的评论</string>
     <string name="profile_bookmarks">我的收藏</string>
     <string name="profile_open_web">在网页中打开个人主页</string>
+    <string name="profile_account_settings">账号设置</string>
 
     <!-- Settings -->
     <string name="settings_title">设置</string>
@@ -175,6 +182,128 @@
     <string name="settings_about_app">关于 NSReader</string>
     <string name="settings_version">v1.0.0</string>
     <string name="settings_licenses">开源许可</string>
+
+    <!-- Account settings (8g): the seven groups NodeSeek's own /setting page is split into -->
+    <string name="account_title">账号设置</string>
+    <string name="account_group_introduction">个人信息</string>
+    <string name="account_group_security">安全</string>
+    <string name="account_group_2fa">双因素验证</string>
+    <string name="account_group_contact">联系方式</string>
+    <string name="account_group_block">屏蔽用户</string>
+    <string name="account_group_preference">常用偏好</string>
+    <string name="account_group_homepage">首页版块</string>
+
+    <string name="account_avatar">头像</string>
+    <string name="account_bio">Bio</string>
+    <string name="account_signature">签名</string>
+    <string name="account_readme">Readme</string>
+    <string name="account_change_password">修改密码</string>
+    <string name="account_two_factor">两步验证（2FA）</string>
+    <string name="account_two_factor_on">已开启</string>
+    <string name="account_two_factor_off">未开启</string>
+    <string name="account_email">邮箱</string>
+    <string name="account_blocked_list">已屏蔽列表</string>
+    <string name="account_blocked_count">%1$d 人</string>
+    <string name="account_display_preferences">浏览与显示偏好</string>
+    <string name="account_home_boards">首页显示的版块</string>
+    <string name="account_home_boards_all">全部 %1$d 个版块</string>
+    <string name="account_home_boards_selected">已选 %1$d 个</string>
+
+    <!-- Current-value subtitles. App additions: the site's own page is a plain list of group links. -->
+    <string name="account_value_unknown">—</string>
+    <string name="account_bio_empty">未填写</string>
+    <string name="account_signature_lines">%1$d 行 · Markdown</string>
+    <string name="account_readme_chars">%1$d 字</string>
+
+    <!-- The endpoint seam. Shown wherever a group's requests have not been captured from a device yet. -->
+    <string name="account_endpoint_pending_title">这一组还没接入站点接口</string>
+    <string name="account_endpoint_pending_body">NodeSeek 没有公开 API，/setting 的读写请求要在真机登录后抓一遍才能对接。表单可以照常填，但读不到当前值、保存也不会生效。</string>
+    <string name="account_endpoint_pending_toast">「%1$s」的站点接口尚未接入，本次未保存</string>
+
+    <!-- 个人信息 (d6 1/4) -->
+    <string name="account_profile_title">个人信息</string>
+    <string name="account_action_save">保存</string>
+    <string name="account_action_saved">已保存</string>
+    <string name="account_avatar_change">更换头像</string>
+    <string name="account_avatar_take_photo">拍照</string>
+    <string name="account_avatar_pick">从相册选择</string>
+    <string name="account_avatar_remove">移除头像</string>
+    <string name="account_avatar_pending">新头像待保存</string>
+    <string name="account_avatar_failed">读取图片失败，换一张试试</string>
+    <string name="account_bio_hint">请用一句话介绍自己</string>
+    <string name="account_signature_helper">帖子内容下显示 · 支持 Markdown · 不支持图片和引用</string>
+    <string name="account_readme_helper">用户主页中显示 · 支持 Markdown</string>
+    <string name="account_format_bold">加粗</string>
+    <string name="account_format_italic">斜体</string>
+    <string name="account_format_strikethrough">删除线</string>
+    <string name="account_format_link">链接</string>
+    <string name="account_format_code">行内代码</string>
+
+    <!-- 安全 (d6 2/4) -->
+    <string name="account_security_title">安全</string>
+    <string name="account_password_current">当前密码</string>
+    <string name="account_password_new">新密码</string>
+    <string name="account_password_confirm">确认新密码</string>
+    <string name="account_password_confirm_hint">再输入一次新密码</string>
+    <string name="account_password_show">显示密码</string>
+    <string name="account_password_hide">隐藏密码</string>
+    <string name="account_password_update">更新密码</string>
+    <string name="account_password_mismatch">两次输入的新密码不一致</string>
+    <string name="account_password_too_short">新密码至少 %1$d 位</string>
+    <!-- App addition: the site gives no live strength feedback -->
+    <string name="account_password_strength">强度：%1$s</string>
+    <string name="account_password_strength_weak">较弱</string>
+    <string name="account_password_strength_fair">一般</string>
+    <string name="account_password_strength_strong">较强</string>
+    <string name="account_password_strength_best">很强</string>
+    <string name="account_password_strength_hint_length">再长一些会明显更安全</string>
+    <string name="account_password_strength_hint_variety">混入大小写、数字与符号可达到最高强度</string>
+    <string name="account_password_strength_hint_done">已经足够强了</string>
+    <string name="account_two_factor_section">两步验证</string>
+    <string name="account_two_factor_totp">验证器动态码（TOTP）</string>
+    <string name="account_two_factor_off_hint">未开启 · 建议开启以保护账号</string>
+    <string name="account_two_factor_on_hint">已开启 · 登录时需要输入动态码</string>
+    <string name="account_two_factor_body">绑定后，登录与修改密码等高风险操作需输入验证器生成的 6 位动态码。</string>
+    <string name="account_two_factor_bind">绑定验证器</string>
+    <string name="account_two_factor_rebind">重新绑定</string>
+
+    <!-- High-risk confirmations: the design gives these their own dialog rather than a switch -->
+    <string name="account_confirm_password_title">确认修改密码？</string>
+    <string name="account_confirm_password_body">修改后除当前设备外，其他已登录设备将全部退出，需要用新密码重新登录。</string>
+    <string name="account_confirm_password_action">确认修改</string>
+    <string name="account_confirm_2fa_title">确认绑定验证器？</string>
+    <string name="account_confirm_2fa_body">绑定后每次登录都需要验证器动态码。请先确保验证器 App 已装好，并妥善保存恢复码。</string>
+    <string name="account_confirm_2fa_action">开始绑定</string>
+    <string name="account_confirm_avatar_remove_title">移除头像？</string>
+    <string name="account_confirm_avatar_remove_body">移除后将显示默认头像，之前上传的图片无法恢复。</string>
+    <string name="account_confirm_avatar_remove_action">移除</string>
+    <string name="account_confirm_unblock_title">解除对 %1$s 的屏蔽？</string>
+    <string name="account_confirm_unblock_body">解除后你会重新看到 TA 的帖子与评论。</string>
+    <string name="account_confirm_unblock_action">解除屏蔽</string>
+
+    <!-- 联系方式 · 屏蔽 (d6 3/4) -->
+    <string name="account_contact_title">联系方式与屏蔽</string>
+    <string name="account_contact_section">联系方式</string>
+    <string name="account_email_backup">备用邮箱 · 选填</string>
+    <string name="account_email_verified">已验证</string>
+    <string name="account_email_unverified">未验证</string>
+    <string name="account_email_helper">用于登录与找回密码 · 更换后需重新验证</string>
+    <string name="account_email_invalid">邮箱格式不正确</string>
+    <string name="account_email_verification_sent">验证邮件已发送，10 分钟内有效</string>
+    <string name="account_email_resend">重新发送</string>
+    <string name="account_contact_save">保存修改</string>
+    <string name="account_block_section">屏蔽用户</string>
+    <string name="account_block_row_hint">已屏蔽 · 不再显示其帖子与评论</string>
+    <string name="account_block_unblock">解除屏蔽</string>
+    <string name="account_block_empty">你还没有屏蔽任何用户</string>
+
+    <!-- 首页版块 (d6 4/4) -->
+    <string name="account_home_boards_title">首页版块</string>
+    <string name="account_home_boards_summary">勾选的版块会出现在首页版块条 · 已选 %1$d / %2$d</string>
+    <string name="account_home_boards_reset">重置</string>
+    <string name="account_home_boards_save">保存 %1$d 个版块</string>
+    <string name="account_home_boards_min">至少要保留一个版块</string>
+    <string name="account_home_boards_empty">版块列表还没载入，回到首页刷新一下再来</string>
 
     <!-- Status and empty states: say what happened, then offer something to press -->
     <string name="status_empty_feed_title">这里还没有帖子</string>

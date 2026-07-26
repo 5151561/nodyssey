@@ -11,11 +11,14 @@ import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.inMemoryDatabase
 import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.session.SessionState
+import io.github.nsreader.data.settings.SettingsRepository
+import io.github.nsreader.data.testSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -71,12 +74,14 @@ class PostListViewModelTest {
 
     private val session = MutableStateFlow(SessionState())
 
-    private fun viewModel() =
-        PostListViewModel(
-            repository = OfflineFirstPostRepository(database, remote, clock),
-            categoryRepository = CategoryRepository(failingJson, database.boardDao(), clock),
-            session = session,
-        )
+    private fun TestScope.viewModel(
+        settings: SettingsRepository = testSettingsRepository(backgroundScope),
+    ) = PostListViewModel(
+        repository = OfflineFirstPostRepository(database, remote, clock),
+        categoryRepository = CategoryRepository(failingJson, database.boardDao(), clock),
+        settingsRepository = settings,
+        session = session,
+    )
 
     @Test
     fun `starts on the front page with the front page tab selected`() =
@@ -98,6 +103,40 @@ class PostListViewModelTest {
             assertEquals(CategoryRepository.FRONT_PAGE, boards.first())
             // The API call failed, so this is the offline fallback list — still more than nothing.
             assertTrue("expected fallback boards, got $boards", boards.size > 1)
+        }
+
+    @Test
+    fun `the strip honours the 首页版块 preference and always keeps the front page`() =
+        runTest(dispatcher) {
+            val settings = testSettingsRepository(backgroundScope)
+            settings.setHomeBoards(setOf("tech", "trade"))
+            val vm = viewModel(settings)
+            advanceUntilIdle()
+
+            val boards = vm.uiState.value.boards
+            assertEquals(CategoryRepository.FRONT_PAGE, boards.first())
+            assertEquals(listOf("tech", "trade"), boards.drop(1).map { it.slug })
+        }
+
+    /**
+     * Hiding the board being read would leave a selected pill that is no longer on the strip, and the
+     * feed underneath would keep paging a board the user can no longer see or leave.
+     */
+    @Test
+    fun `hiding the board being read falls back to the front page`() =
+        runTest(dispatcher) {
+            val settings = testSettingsRepository(backgroundScope)
+            val vm = viewModel(settings)
+            advanceUntilIdle()
+            vm.selectCategory("tech")
+            advanceUntilIdle()
+            assertEquals("tech", vm.uiState.value.categorySlug)
+
+            settings.setHomeBoards(setOf("trade"))
+            advanceUntilIdle()
+
+            assertEquals(null, vm.uiState.value.categorySlug)
+            assertEquals(0, vm.uiState.value.selectedBoardIndex)
         }
 
     @Test
@@ -204,6 +243,7 @@ class PostListViewModelTest {
                 PostListViewModel(
                     repository = repository,
                     categoryRepository = CategoryRepository(failingJson, database.boardDao(), clock),
+                    settingsRepository = testSettingsRepository(backgroundScope),
                     session = session,
                 )
             advanceUntilIdle()

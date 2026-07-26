@@ -56,8 +56,9 @@ fun ProfileRoute(
     viewModel: ProfileViewModel,
     onSignIn: () -> Unit,
     onSettings: () -> Unit,
+    onAccountSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
-    onEditProfile: (Long) -> Unit,
+    onEditProfile: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -67,8 +68,9 @@ fun ProfileRoute(
         onSignOut = viewModel::signOut,
         onRetry = viewModel::refresh,
         onSettings = onSettings,
+        onAccountSettings = onAccountSettings,
         onOpenWebsite = onOpenWebsite,
-        onEditProfile = { state.uid?.let(onEditProfile) },
+        onEditProfile = onEditProfile,
         modifier = modifier,
     )
 }
@@ -80,6 +82,7 @@ fun ProfileScreen(
     onSignOut: () -> Unit,
     onRetry: () -> Unit,
     onSettings: () -> Unit,
+    onAccountSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
     onEditProfile: () -> Unit,
     modifier: Modifier = Modifier,
@@ -164,6 +167,11 @@ fun ProfileScreen(
                 ProfileMenuGroup(
                     items =
                     listOf(
+                        ProfileMenuItem(
+                            R.string.profile_account_settings,
+                            NodeSeekIcons.Badge,
+                            onAccountSettings,
+                        ),
                         ProfileMenuItem(R.string.settings_title, Icons.Default.Settings, onSettings),
                         ProfileMenuItem(
                             R.string.profile_open_web,
@@ -351,6 +359,7 @@ private fun ProfileSignedInPreview() {
             onSignOut = {},
             onRetry = {},
             onSettings = {},
+            onAccountSettings = {},
             onOpenWebsite = {},
             onEditProfile = {},
         )
@@ -367,6 +376,7 @@ private fun ProfileSignedOutPreview() {
             onSignOut = {},
             onRetry = {},
             onSettings = {},
+            onAccountSettings = {},
             onOpenWebsite = {},
             onEditProfile = {},
         )

@@ -24,6 +24,16 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.di.AppContainer
+import io.github.nsreader.ui.account.AccountSettingsRoute
+import io.github.nsreader.ui.account.AccountSettingsViewModel
+import io.github.nsreader.ui.account.ContactBlockRoute
+import io.github.nsreader.ui.account.ContactBlockViewModel
+import io.github.nsreader.ui.account.HomeBoardsRoute
+import io.github.nsreader.ui.account.HomeBoardsViewModel
+import io.github.nsreader.ui.account.ProfileFieldsRoute
+import io.github.nsreader.ui.account.ProfileFieldsViewModel
+import io.github.nsreader.ui.account.SecurityRoute
+import io.github.nsreader.ui.account.SecurityViewModel
 import io.github.nsreader.ui.composer.PostComposerRoute
 import io.github.nsreader.ui.composer.PostComposerViewModel
 import io.github.nsreader.ui.login.WebViewGoal
@@ -191,10 +201,9 @@ fun MainNavigation(container: AppContainer) {
                         viewModel = viewModel,
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                         onSettings = { backStack.add(SettingsKey) },
+                        onAccountSettings = { backStack.add(AccountSettingsKey) },
                         onOpenWebsite = { openExternalUrl(NodeSeekSite.BASE_URL) },
-                        onEditProfile = { uid ->
-                            openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.spacePath(uid))
-                        },
+                        onEditProfile = { backStack.add(AccountProfileFieldsKey) },
                     )
                 }
 
@@ -202,6 +211,61 @@ fun MainNavigation(container: AppContainer) {
                     val viewModel: SettingsViewModel =
                         viewModel(factory = SettingsViewModel.factory(container))
                     SettingsRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                    )
+                }
+
+                entry<AccountSettingsKey> {
+                    val viewModel: AccountSettingsViewModel =
+                        viewModel(factory = AccountSettingsViewModel.factory(container))
+                    AccountSettingsRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                        onOpenProfileFields = { backStack.add(AccountProfileFieldsKey) },
+                        onOpenSecurity = { backStack.add(AccountSecurityKey) },
+                        onOpenContactAndBlock = { backStack.add(AccountContactBlockKey) },
+                        // 常用偏好 is this app's own settings screen rather than a copy of it: the site's
+                        // `#preference` group covers the website's layout, which the app does not render.
+                        onOpenDisplayPreferences = { backStack.add(SettingsKey) },
+                        onOpenHomeBoards = { backStack.add(HomeBoardsKey) },
+                    )
+                }
+
+                entry<AccountProfileFieldsKey> {
+                    val viewModel: ProfileFieldsViewModel =
+                        viewModel(factory = ProfileFieldsViewModel.factory(container))
+                    ProfileFieldsRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                    )
+                }
+
+                entry<AccountSecurityKey> {
+                    val viewModel: SecurityViewModel =
+                        viewModel(factory = SecurityViewModel.factory(container))
+                    SecurityRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                        // `otpauth://` belongs to whichever authenticator app registered for it, so it
+                        // leaves the app rather than being rendered here — the app never holds the secret.
+                        onOpenEnrolmentUri = { uri -> runCatching { uriHandler.openUri(uri) } },
+                    )
+                }
+
+                entry<AccountContactBlockKey> {
+                    val viewModel: ContactBlockViewModel =
+                        viewModel(factory = ContactBlockViewModel.factory(container))
+                    ContactBlockRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                    )
+                }
+
+                entry<HomeBoardsKey> {
+                    val viewModel: HomeBoardsViewModel =
+                        viewModel(factory = HomeBoardsViewModel.factory(container))
+                    HomeBoardsRoute(
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
                     )

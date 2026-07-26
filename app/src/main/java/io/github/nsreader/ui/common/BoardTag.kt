@@ -1,5 +1,6 @@
 package io.github.nsreader.ui.common
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.nsreader.R
 import io.github.nsreader.ui.theme.LocalNodeSeekExtraColors
 
 /**
@@ -24,20 +26,28 @@ import io.github.nsreader.ui.theme.LocalNodeSeekExtraColors
  * costs nothing in scanability.
  */
 @Immutable
-private data class TagColors(val container: Color, val content: Color)
+internal data class BoardFamilyColors(val container: Color, val content: Color)
 
-private enum class BoardFamily {
+/**
+ * Declaration order is the order the families are *shown* in, not an accident.
+ *
+ * The home-board picker lists all thirteen boards under these four headings and iterates
+ * [BoardFamily.entries] to do it, so reordering this enum reorders that screen.
+ */
+internal enum class BoardFamily(
+    @StringRes val labelRes: Int,
+) {
+    /** 日常 / 生活 / 贴图 / 无意义 / 沙盒 — everything else. */
+    Everyday(R.string.board_family_everyday),
+
     /** 技术 / Dev / 测评 / 情报 — the reason most people are here. */
-    Technical,
+    Technical(R.string.board_family_technical),
 
     /** 交易 / 拼车 / 推广 — money is changing hands. */
-    Trade,
-
-    /** 日常 / 生活 / 贴图 / 无意义 / 沙盒 — everything else. */
-    Everyday,
+    Trade(R.string.board_family_trade),
 
     /** 曝光 / 内版 — read these with more care than the rest. */
-    Flagged,
+    Flagged(R.string.board_family_flagged),
 }
 
 private val FAMILY_BY_SLUG =
@@ -78,15 +88,21 @@ private val FAMILY_BY_TITLE =
         "内版" to BoardFamily.Flagged,
     )
 
+/** The family a board belongs to; slug first, since the site renames boards more often than it re-keys them. */
+internal fun boardFamilyOf(slug: String?, title: String?): BoardFamily =
+    FAMILY_BY_SLUG[slug]
+        ?: FAMILY_BY_TITLE[title]
+        ?: BoardFamily.Everyday
+
 @Composable
-private fun colorsFor(family: BoardFamily): TagColors {
+internal fun boardFamilyColors(family: BoardFamily): BoardFamilyColors {
     val scheme = MaterialTheme.colorScheme
     val extra = LocalNodeSeekExtraColors.current
     return when (family) {
-        BoardFamily.Technical -> TagColors(scheme.primaryContainer, scheme.onPrimaryContainer)
-        BoardFamily.Trade -> TagColors(scheme.tertiaryContainer, scheme.onTertiaryContainer)
-        BoardFamily.Everyday -> TagColors(scheme.secondaryContainer, scheme.onSecondaryContainer)
-        BoardFamily.Flagged -> TagColors(extra.warningContainer, extra.onWarningContainer)
+        BoardFamily.Technical -> BoardFamilyColors(scheme.primaryContainer, scheme.onPrimaryContainer)
+        BoardFamily.Trade -> BoardFamilyColors(scheme.tertiaryContainer, scheme.onTertiaryContainer)
+        BoardFamily.Everyday -> BoardFamilyColors(scheme.secondaryContainer, scheme.onSecondaryContainer)
+        BoardFamily.Flagged -> BoardFamilyColors(extra.warningContainer, extra.onWarningContainer)
     }
 }
 
@@ -105,11 +121,7 @@ fun BoardTag(
 ) {
     if (title.isNullOrBlank()) return
 
-    val family =
-        FAMILY_BY_SLUG[slug]
-            ?: FAMILY_BY_TITLE[title]
-            ?: BoardFamily.Everyday
-    val colors = colorsFor(family)
+    val colors = boardFamilyColors(boardFamilyOf(slug, title))
 
     Text(
         text = title,

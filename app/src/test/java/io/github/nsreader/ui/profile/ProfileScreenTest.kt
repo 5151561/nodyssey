@@ -35,6 +35,7 @@ class ProfileScreenTest {
                     onSignOut = {},
                     onRetry = {},
                     onSettings = {},
+                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onEditProfile = {},
                 )
@@ -59,6 +60,7 @@ class ProfileScreenTest {
                     onSignOut = {},
                     onRetry = {},
                     onSettings = {},
+                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onEditProfile = {},
                 )
@@ -79,6 +81,7 @@ class ProfileScreenTest {
                     onSignOut = {},
                     onRetry = {},
                     onSettings = {},
+                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onEditProfile = { clicked = true },
                 )

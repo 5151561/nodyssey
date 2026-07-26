@@ -1,10 +1,12 @@
 package io.github.nsreader.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.github.nsreader.core.AppClock
 import io.github.nsreader.data.local.NodeSeekDatabase
+import io.github.nsreader.data.settings.SettingsRepository
 import io.github.nsreader.model.FeedSort
 import io.github.nsreader.model.PostContent
 import io.github.nsreader.model.PostDetail
@@ -13,7 +15,10 @@ import io.github.nsreader.model.PostSummary
 import io.github.nsreader.model.RichNode
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asExecutor
+import java.io.File
+import java.nio.file.Files
 
 /**
  * An in-memory database on the real Room implementation.
@@ -170,4 +175,20 @@ internal class FakePostRemoteDataSource : PostRemoteDataSource {
                 nodes = listOf(RichNode.CodeBlock(text, language = null)),
             )
     }
+}
+
+/**
+ * A [SettingsRepository] on a real DataStore in a throwaway directory.
+ *
+ * The real store rather than an interface fake, for the same reason [inMemoryDatabase] uses real
+ * Room: the behaviour worth testing is the encoding — a set that round-trips through one delimited
+ * string — and a fake would only prove the fake encodes correctly.
+ *
+ * [scope] should be a test's `backgroundScope` so the store's collector is cancelled with the test.
+ */
+internal fun testSettingsRepository(scope: CoroutineScope): SettingsRepository {
+    val directory = Files.createTempDirectory("nsreader-settings").toFile().apply { deleteOnExit() }
+    return SettingsRepository(
+        PreferenceDataStoreFactory.create(scope = scope) { File(directory, "settings.preferences_pb") },
+    )
 }

@@ -9,13 +9,10 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -49,7 +46,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -312,102 +308,6 @@ private fun <T> connectedButtonSpring() =
     spring<T>(
         dampingRatio = Spring.DampingRatioNoBouncy,
         stiffness = Spring.StiffnessMediumLow,
-    )
-
-@Composable
-private fun SettingsSectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = Spacing.xs, top = Spacing.xs),
-    )
-}
-
-@Composable
-private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp), content = content)
-}
-
-@Composable
-private fun SettingsBlock(
-    title: String,
-    top: Boolean = false,
-    bottom: Boolean = false,
-    icon: (@Composable () -> Unit)? = null,
-    subtitle: String? = null,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = expressiveGroupShape(top, bottom),
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                icon?.invoke()
-                Column(
-                    modifier = Modifier.weight(1f).padding(start = if (icon == null) 0.dp else Spacing.md),
-                ) {
-                    Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
-                    subtitle?.let {
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-            content()
-        }
-    }
-}
-
-@Composable
-private fun SettingsRow(
-    title: String,
-    top: Boolean = false,
-    bottom: Boolean = false,
-    subtitle: String? = null,
-    onClick: (() -> Unit)? = null,
-    leading: (@Composable () -> Unit)? = null,
-    trailing: @Composable () -> Unit = {},
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = expressiveGroupShape(top, bottom),
-        modifier = if (onClick == null) Modifier else Modifier.clickable(onClick = onClick),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            leading?.invoke()
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
-                subtitle?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            trailing()
-        }
-    }
-}
-
-private fun expressiveGroupShape(top: Boolean, bottom: Boolean) =
-    RoundedCornerShape(
-        topStart = if (top) 18.dp else 5.dp,
-        topEnd = if (top) 18.dp else 5.dp,
-        bottomEnd = if (bottom) 18.dp else 5.dp,
-        bottomStart = if (bottom) 18.dp else 5.dp,
     )
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
