@@ -1,5 +1,14 @@
 package io.github.nsreader.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,7 +45,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,6 +59,7 @@ import io.github.nsreader.data.settings.ThemeMode
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.Spacing
 import io.github.nsreader.ui.theme.readableWidth
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsRoute(
@@ -77,8 +90,8 @@ fun SettingsScreen(
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var fontScale by remember(state.settings.fontScale) {
-        mutableFloatStateOf(state.settings.fontScale)
+    var bodyFontSize by remember(state.settings.fontScale) {
+        mutableFloatStateOf(fontScaleToBodySize(state.settings.fontScale))
     }
     Scaffold(
         modifier = modifier,
@@ -122,17 +135,21 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_body_size),
                     subtitle = stringResource(
                         R.string.settings_body_size_value,
-                        (16 * state.settings.fontScale).toInt(),
+                        bodyFontSize.roundToInt(),
                     ),
                     bottom = true,
                 ) {
                     Slider(
-                        value = fontScale,
-                        onValueChange = { fontScale = it },
-                        onValueChangeFinished = { onFontScaleChange(fontScale) },
-                        valueRange =
-                        SettingsRepository.MIN_FONT_SCALE..SettingsRepository.MAX_FONT_SCALE,
-                        steps = 5,
+                        value = bodyFontSize,
+                        onValueChange = { bodyFontSize = it },
+                        onValueChangeFinished = {
+                            onFontScaleChange(bodySizeToFontScale(bodyFontSize))
+                        },
+                        valueRange = BODY_FONT_SIZE_RANGE,
+                        // Slider `steps` counts only the interior stops. 14..24sp therefore has
+                        // nine interior stops and ten 1sp intervals.
+                        steps = BODY_FONT_SIZE_STEPS,
+                        modifier = Modifier.testTag(BODY_FONT_SIZE_SLIDER_TAG),
                     )
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -204,38 +221,67 @@ private fun ConnectedThemeButtons(
             )
         choices.forEachIndexed { index, (mode, label) ->
             val isSelected = mode == selected
-            Surface(
-                onClick = { onSelected(mode) },
-                modifier = Modifier.weight(1f),
-                shape =
-                if (isSelected) {
-                    RoundedCornerShape(50)
+            val targetStartRadius =
+                if (isSelected || index == 0) CONNECTED_OUTER_RADIUS else CONNECTED_INNER_RADIUS
+            val targetEndRadius =
+                if (isSelected || index == choices.lastIndex) {
+                    CONNECTED_OUTER_RADIUS
                 } else {
-                    when (index) {
-                        0 -> RoundedCornerShape(20.dp, 5.dp, 5.dp, 20.dp)
-                        choices.lastIndex -> RoundedCornerShape(5.dp, 20.dp, 20.dp, 5.dp)
-                        else -> RoundedCornerShape(5.dp)
-                    }
-                },
-                color =
+                    CONNECTED_INNER_RADIUS
+                }
+            val startRadius by animateDpAsState(
+                targetValue = targetStartRadius,
+                animationSpec = connectedButtonSpring(),
+                label = "theme_${mode.name}_start_radius",
+            )
+            val endRadius by animateDpAsState(
+                targetValue = targetEndRadius,
+                animationSpec = connectedButtonSpring(),
+                label = "theme_${mode.name}_end_radius",
+            )
+            val containerColor by animateColorAsState(
+                targetValue =
                 if (isSelected) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.surfaceContainerHighest
                 },
-                contentColor =
+                animationSpec = connectedButtonSpring(),
+                label = "theme_${mode.name}_container",
+            )
+            val contentColor by animateColorAsState(
+                targetValue =
                 if (isSelected) {
                     MaterialTheme.colorScheme.onPrimary
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
+                animationSpec = connectedButtonSpring(),
+                label = "theme_${mode.name}_content",
+            )
+            Surface(
+                onClick = { onSelected(mode) },
+                modifier = Modifier.weight(1f).semantics { this.selected = isSelected },
+                shape =
+                RoundedCornerShape(
+                    topStart = startRadius,
+                    bottomStart = startRadius,
+                    topEnd = endRadius,
+                    bottomEnd = endRadius,
+                ),
+                color = containerColor,
+                contentColor = contentColor,
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 11.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (isSelected) {
+                    AnimatedVisibility(
+                        visible = isSelected,
+                        enter = fadeIn() + expandHorizontally(),
+                        exit = fadeOut() + shrinkHorizontally(),
+                    ) {
                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.width(16.dp))
                     }
                     Text(label, style = MaterialTheme.typography.labelMedium)
@@ -244,6 +290,29 @@ private fun ConnectedThemeButtons(
         }
     }
 }
+
+private val BODY_FONT_SIZE_RANGE = 14f..24f
+private const val BODY_FONT_SIZE_STEPS = 9
+private const val BASE_BODY_FONT_SIZE = 16f
+internal const val BODY_FONT_SIZE_SLIDER_TAG = "body-font-size-slider"
+private val CONNECTED_OUTER_RADIUS = 20.dp
+private val CONNECTED_INNER_RADIUS = 5.dp
+
+private fun fontScaleToBodySize(fontScale: Float): Float =
+    (fontScale * BASE_BODY_FONT_SIZE)
+        .roundToInt()
+        .toFloat()
+        .coerceIn(BODY_FONT_SIZE_RANGE)
+
+private fun bodySizeToFontScale(bodySize: Float): Float =
+    (bodySize.roundToInt() / BASE_BODY_FONT_SIZE)
+        .coerceIn(SettingsRepository.MIN_FONT_SCALE, SettingsRepository.MAX_FONT_SCALE)
+
+private fun <T> connectedButtonSpring() =
+    spring<T>(
+        dampingRatio = Spring.DampingRatioNoBouncy,
+        stiffness = Spring.StiffnessMediumLow,
+    )
 
 @Composable
 private fun SettingsSectionTitle(text: String) {

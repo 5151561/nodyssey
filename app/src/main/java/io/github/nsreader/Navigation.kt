@@ -186,6 +186,9 @@ fun MainNavigation(container: AppContainer) {
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                         onSettings = { backStack.add(SettingsKey) },
                         onOpenWebsite = { openExternalUrl(NodeSeekSite.BASE_URL) },
+                        onEditProfile = { uid ->
+                            openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.spacePath(uid))
+                        },
                     )
                 }
 

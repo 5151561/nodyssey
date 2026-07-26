@@ -1,5 +1,6 @@
 package io.github.nsreader.ui.profile
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,7 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -17,6 +20,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -26,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -34,11 +39,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.R
+import io.github.nsreader.core.net.NodeSeekError
+import io.github.nsreader.ui.common.LoadingState
+import io.github.nsreader.ui.common.NodeSeekErrorState
+import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.common.SignedOutState
 import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.Sizes
 import io.github.nsreader.ui.theme.Spacing
+import io.github.nsreader.ui.theme.StatusShapes
 import io.github.nsreader.ui.theme.readableWidth
 
 @Composable
@@ -47,6 +57,7 @@ fun ProfileRoute(
     onSignIn: () -> Unit,
     onSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
+    onEditProfile: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -54,8 +65,10 @@ fun ProfileRoute(
         state = state,
         onSignIn = onSignIn,
         onSignOut = viewModel::signOut,
+        onRetry = viewModel::refresh,
         onSettings = onSettings,
         onOpenWebsite = onOpenWebsite,
+        onEditProfile = { state.uid?.let(onEditProfile) },
         modifier = modifier,
     )
 }
@@ -65,13 +78,31 @@ fun ProfileScreen(
     state: ProfileUiState,
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
+    onRetry: () -> Unit,
     onSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
+    onEditProfile: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(modifier = modifier) { padding ->
         if (!state.isSignedIn) {
             SignedOutState(onSignIn = onSignIn, modifier = Modifier.padding(padding))
+            return@Scaffold
+        }
+
+        if (state.isLoading && !state.hasProfile) {
+            LoadingState(modifier = Modifier.padding(padding))
+            return@Scaffold
+        }
+
+        if (state.error != null && !state.hasProfile) {
+            NodeSeekErrorState(
+                error = state.error,
+                onRetry = onRetry,
+                onOpenBrowser =
+                if (state.error == NodeSeekError.LoginRequired) onSignIn else onOpenWebsite,
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
 
@@ -89,7 +120,7 @@ fun ProfileScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             item(key = "profile-header") {
-                ProfileHeader(state)
+                ProfileHeader(state, onEditProfile)
             }
             item(key = "resources") {
                 ResourceCards(state)
@@ -152,7 +183,10 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileHeader(state: ProfileUiState) {
+private fun ProfileHeader(
+    state: ProfileUiState,
+    onEditProfile: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -162,6 +196,7 @@ private fun ProfileHeader(state: ProfileUiState) {
             url = state.avatarUrl,
             name = state.displayName,
             size = Sizes.avatarProfile,
+            shape = StatusShapes.Welcome,
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -172,25 +207,38 @@ private fun ProfileHeader(state: ProfileUiState) {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                state.level?.let {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(start = Spacing.sm),
-                    ) {
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp),
-                        )
-                    }
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(start = Spacing.sm),
+                ) {
+                    Text(
+                        state.level ?: stringResource(R.string.profile_level_unknown),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp),
+                    )
                 }
             }
             Text(
                 text = state.memberSince ?: stringResource(R.string.profile_session_active),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(
+            onClick = onEditProfile,
+            modifier =
+            Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainer),
+        ) {
+            Icon(
+                imageVector = NodeSeekIcons.Edit,
+                contentDescription = stringResource(R.string.profile_edit),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
             )
         }
     }
@@ -208,8 +256,8 @@ private fun ResourceCards(state: ProfileUiState) {
             contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
         )
         ResourceCard(
-            value = state.coinCount?.toString() ?: "—",
-            label = stringResource(R.string.profile_coins),
+            value = state.starCount?.toString() ?: "—",
+            label = stringResource(R.string.profile_stars),
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(5.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
@@ -296,13 +344,15 @@ private fun ProfileSignedInPreview() {
                 level = "Lv 3",
                 memberSince = "2023年5月 注册 · UID 88423",
                 chickenCount = 1_284,
-                coinCount = 356,
+                starCount = 356,
                 streakDays = 27,
             ),
             onSignIn = {},
             onSignOut = {},
+            onRetry = {},
             onSettings = {},
             onOpenWebsite = {},
+            onEditProfile = {},
         )
     }
 }
@@ -315,8 +365,10 @@ private fun ProfileSignedOutPreview() {
             state = ProfileUiState(),
             onSignIn = {},
             onSignOut = {},
+            onRetry = {},
             onSettings = {},
             onOpenWebsite = {},
+            onEditProfile = {},
         )
     }
 }

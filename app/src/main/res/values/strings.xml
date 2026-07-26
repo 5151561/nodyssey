@@ -75,8 +75,10 @@
 
     <!-- Profile -->
     <string name="profile_session_active">NodeSeek 登录会话有效</string>
+    <string name="profile_level_unknown">Lv —</string>
+    <string name="profile_edit">编辑个人主页</string>
     <string name="profile_chicken">鸡腿</string>
-    <string name="profile_coins">硬币</string>
+    <string name="profile_stars">星辰</string>
     <string name="profile_streak">连续签到</string>
     <string name="profile_attendance">今日签到 · 领鸡腿</string>
     <string name="profile_topics">我的主题</string>

@@ -5,14 +5,22 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nsreader.core.net.NodeSeekError
+import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.PostRepository
+import io.github.nsreader.data.ProfileRepository
+import io.github.nsreader.data.UserProfile
 import io.github.nsreader.data.session.SessionRepository
 import io.github.nsreader.di.AppContainer
+import io.github.nsreader.ui.postlist.toNodeSeekError
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -24,25 +32,48 @@ import kotlinx.coroutines.launch
 class ProfileViewModel(
     private val session: SessionRepository,
     private val postRepository: PostRepository,
+    private val profileRepository: ProfileRepository,
 ) : ViewModel() {
     private var signOutJob: Job? = null
-    val uiState: StateFlow<ProfileUiState> =
+    private var loadJob: Job? = null
+    private val _uiState =
+        MutableStateFlow(
+            ProfileUiState(
+                isSignedIn = session.state.value.isSignedIn,
+                isLoading = session.state.value.isSignedIn,
+            ),
+        )
+    val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+
+    init {
         session.state
-            .map {
-                ProfileUiState(
-                    isSignedIn = it.isSignedIn,
-                    displayName = if (it.isSignedIn) "NodeSeek 用户" else "",
-                )
+            .distinctUntilChangedBy { it.generation }
+            .onEach { value ->
+                if (value.isSignedIn) {
+                    _uiState.update { it.copy(isSignedIn = true) }
+                    refresh()
+                } else {
+                    loadJob?.cancel()
+                    _uiState.value = ProfileUiState()
+                }
+            }.launchIn(viewModelScope)
+    }
+
+    fun refresh() {
+        if (!session.state.value.isSignedIn) return
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launch {
+                _uiState.update { it.copy(isSignedIn = true, isLoading = true, error = null) }
+                runCatchingExceptCancellation { profileRepository.profile() }
+                    .onSuccess { profile -> _uiState.value = profile.toUiState() }
+                    .onFailure { throwable ->
+                        _uiState.update {
+                            it.copy(isLoading = false, error = throwable.toNodeSeekError())
+                        }
+                    }
             }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                initialValue =
-                ProfileUiState(
-                    isSignedIn = session.state.value.isSignedIn,
-                    displayName = if (session.state.value.isSignedIn) "NodeSeek 用户" else "",
-                ),
-            )
+    }
 
     fun signOut() {
         if (signOutJob?.isActive == true) return
@@ -57,27 +88,58 @@ class ProfileViewModel(
     }
 
     companion object {
-        private const val STOP_TIMEOUT_MILLIS = 5_000L
-
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
                     ProfileViewModel(
                         session = container.sessionRepository,
                         postRepository = container.postRepository,
+                        profileRepository = container.profileRepository,
                     )
                 }
             }
     }
 }
 
+private fun UserProfile.toUiState(): ProfileUiState =
+    ProfileUiState(
+        isSignedIn = true,
+        uid = uid,
+        displayName = name,
+        avatarUrl = avatarUrl,
+        level = rank?.let { "Lv $it" },
+        memberSince = memberSinceLabel(),
+        chickenCount = chickenCount,
+        starCount = starCount,
+        streakDays = streakDays,
+    )
+
+private fun UserProfile.memberSinceLabel(): String {
+    val match = createdAt?.let(REGISTERED_YEAR_MONTH::find)
+    val date =
+        match?.let {
+            val year = it.groupValues[1].toIntOrNull()
+            val month = it.groupValues[2].toIntOrNull()
+            if (year != null && month != null) "${year}年${month}月 注册 · " else ""
+        }.orEmpty()
+    return "${date}UID $uid"
+}
+
 data class ProfileUiState(
     val isSignedIn: Boolean = false,
+    val isLoading: Boolean = false,
+    val error: NodeSeekError? = null,
+    val uid: Long? = null,
     val displayName: String = "",
     val avatarUrl: String? = null,
     val level: String? = null,
     val memberSince: String? = null,
     val chickenCount: Int? = null,
-    val coinCount: Int? = null,
+    val starCount: Int? = null,
     val streakDays: Int? = null,
-)
+) {
+    val hasProfile: Boolean
+        get() = uid != null && displayName.isNotBlank()
+}
+
+private val REGISTERED_YEAR_MONTH = Regex("""^(\d{4})-(\d{2})""")

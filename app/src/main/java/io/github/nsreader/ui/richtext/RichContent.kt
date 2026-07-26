@@ -46,8 +46,8 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -508,31 +508,31 @@ private fun InlineText(
         inlineContent = stickerContent,
         onTextLayout = { textLayoutResult = it },
         modifier =
-            Modifier.drawBehind {
-                val layout = textLayoutResult ?: return@drawBehind
-                val chipHeight = QUOTE_HEIGHT.toPx()
-                quoteRanges.forEach { range ->
-                    var start = range.first
-                    while (start <= range.last) {
-                        val line = layout.getLineForOffset(start)
-                        var end = start + 1
-                        while (end <= range.last && layout.getLineForOffset(end) == line) end++
+        Modifier.drawBehind {
+            val layout = textLayoutResult ?: return@drawBehind
+            val chipHeight = QUOTE_HEIGHT.toPx()
+            quoteRanges.forEach { range ->
+                var start = range.first
+                while (start <= range.last) {
+                    val line = layout.getLineForOffset(start)
+                    var end = start + 1
+                    while (end <= range.last && layout.getLineForOffset(end) == line) end++
 
-                        val first = layout.getBoundingBox(start)
-                        val last = layout.getBoundingBox(end - 1)
-                        val left = minOf(first.left, last.left)
-                        val right = maxOf(first.right, last.right)
-                        val centerY = (first.top + first.bottom) / 2f
-                        drawRoundRect(
-                            color = quoteBackground,
-                            topLeft = Offset(left, centerY - chipHeight / 2f),
-                            size = Size(right - left, chipHeight),
-                            cornerRadius = CornerRadius(chipHeight / 2f),
-                        )
-                        start = end
-                    }
+                    val first = layout.getBoundingBox(start)
+                    val last = layout.getBoundingBox(end - 1)
+                    val left = minOf(first.left, last.left)
+                    val right = maxOf(first.right, last.right)
+                    val centerY = (first.top + first.bottom) / 2f
+                    drawRoundRect(
+                        color = quoteBackground,
+                        topLeft = Offset(left, centerY - chipHeight / 2f),
+                        size = Size(right - left, chipHeight),
+                        cornerRadius = CornerRadius(chipHeight / 2f),
+                    )
+                    start = end
                 }
-            },
+            }
+        },
     )
 }
 

@@ -14,9 +14,11 @@ import io.github.nsreader.core.net.WebViewCookieJar
 import io.github.nsreader.core.net.resolveUserAgent
 import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.NetworkPostDataSource
+import io.github.nsreader.data.NetworkProfileRepository
 import io.github.nsreader.data.NotificationRepository
 import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.PostRepository
+import io.github.nsreader.data.ProfileRepository
 import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.session.SessionRepository
 import io.github.nsreader.data.settings.SettingsRepository
@@ -41,6 +43,7 @@ interface AppContainer {
     val categoryRepository: CategoryRepository
     val settingsRepository: SettingsRepository
     val notificationRepository: NotificationRepository
+    val profileRepository: ProfileRepository
     val sessionRepository: SessionRepository
 
     /**
@@ -109,6 +112,10 @@ class DefaultAppContainer(
 
     override val notificationRepository: NotificationRepository by lazy {
         NotificationRepository(jsonClient)
+    }
+
+    override val profileRepository: ProfileRepository by lazy {
+        NetworkProfileRepository(htmlClient, jsonClient)
     }
 
     /**
