@@ -35,7 +35,10 @@ class SearchViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
-    private var searchJob: Job? = null
+
+    // One job per target: paging posts must not cancel a user lookup, and vice versa.
+    private var postJob: Job? = null
+    private var userJob: Job? = null
 
     init {
         categoryRepository.boards
@@ -67,11 +70,20 @@ class SearchViewModel(
                 it.copy(query = value)
             }
         }
-        if (invalidatesSubmittedSearch) searchJob?.cancel()
+        if (invalidatesSubmittedSearch) {
+            postJob?.cancel()
+            userJob?.cancel()
+        }
     }
 
     fun selectTarget(target: SearchTarget) {
         _uiState.update { it.copy(target = target) }
+        // The other tab's search runs lazily, on first visit: a posts search must not spend a user
+        // API call (and the reverse) for a tab the user may never open.
+        val state = _uiState.value
+        val submitted = state.submittedQuery ?: return
+        val loadState = if (target == SearchTarget.POSTS) state.postLoadState else state.userLoadState
+        if (loadState == SearchLoadState.Idle) startSearch(target, submitted)
     }
 
     fun submitSearch() {
@@ -152,62 +164,128 @@ class SearchViewModel(
         )
     }
 
+    /** Appends the next server page of post results; a no-op while one is already on its way. */
+    fun loadMorePosts() {
+        val state = _uiState.value
+        val submitted = state.submittedQuery ?: return
+        if (!state.postHasNext || state.isAppendingPosts) return
+        if (state.postLoadState != SearchLoadState.Success) return
+        _uiState.update { it.copy(isAppendingPosts = true) }
+        postJob =
+            viewModelScope.launch {
+                try {
+                    val next =
+                        searchRepository.searchPosts(
+                            query = submitted,
+                            page = state.postPage + 1,
+                            categorySlugs = state.selectedBoards,
+                            sort = state.sort,
+                        )
+                    _uiState.update { current ->
+                        val merged =
+                            (current.postResults.map(FeedPost::summary) + next.posts)
+                                .distinctBy { it.postId }
+                        current.copy(
+                            postResults = merged.map { FeedPost(it, isRead = false, newCommentCount = 0) },
+                            postPage = next.page,
+                            postTotalPages = next.totalPages,
+                            postHasNext = next.hasNextPage,
+                            isAppendingPosts = false,
+                        )
+                    }
+                } catch (exception: CancellationException) {
+                    throw exception
+                } catch (throwable: Throwable) {
+                    // The loaded prefix stays useful; the next scroll to the end simply tries again.
+                    _uiState.update { it.copy(isAppendingPosts = false) }
+                }
+            }
+    }
+
     private fun executeSearch(
         query: String,
         historyEntry: SearchHistoryEntry?,
     ) {
         val normalized = query.trim()
         if (normalized.isEmpty()) return
-        searchJob?.cancel()
-        val selectedBoards = _uiState.value.selectedBoards
-        val sort = _uiState.value.sort
+        postJob?.cancel()
+        userJob?.cancel()
         _uiState.update {
             it.copy(
                 query = normalized,
                 submittedQuery = normalized,
                 postResults = emptyList(),
                 userResults = emptyList(),
-                postLoadState = SearchLoadState.Loading,
-                userLoadState = SearchLoadState.Loading,
+                postPage = 1,
+                postTotalPages = 1,
+                postHasNext = false,
+                isAppendingPosts = false,
+                postLoadState = SearchLoadState.Idle,
+                userLoadState = SearchLoadState.Idle,
             )
         }
         historyEntry?.copy(query = normalized)?.let { entry ->
             viewModelScope.launch { settings.addSearchHistory(entry) }
         }
+        startSearch(_uiState.value.target, normalized)
+    }
 
-        searchJob =
-            viewModelScope.launch {
-                launch {
-                    try {
-                        val posts = searchRepository.searchPosts(normalized, selectedBoards, sort)
-                        _uiState.update {
-                            it.copy(
-                                postResults = posts.map { summary -> FeedPost(summary, isRead = false, newCommentCount = 0) },
-                                postLoadState = SearchLoadState.Success,
-                            )
+    private fun startSearch(target: SearchTarget, query: String) {
+        when (target) {
+            SearchTarget.POSTS -> {
+                val selectedBoards = _uiState.value.selectedBoards
+                val sort = _uiState.value.sort
+                _uiState.update { it.copy(postLoadState = SearchLoadState.Loading) }
+                postJob =
+                    viewModelScope.launch {
+                        try {
+                            val results =
+                                searchRepository.searchPosts(
+                                    query = query,
+                                    page = 1,
+                                    categorySlugs = selectedBoards,
+                                    sort = sort,
+                                )
+                            _uiState.update {
+                                it.copy(
+                                    postResults =
+                                    results.posts.map { summary ->
+                                        FeedPost(summary, isRead = false, newCommentCount = 0)
+                                    },
+                                    postPage = results.page,
+                                    postTotalPages = results.totalPages,
+                                    postHasNext = results.hasNextPage,
+                                    postLoadState = SearchLoadState.Success,
+                                )
+                            }
+                        } catch (exception: CancellationException) {
+                            throw exception
+                        } catch (throwable: Throwable) {
+                            _uiState.update { it.copy(postLoadState = SearchLoadState.Error(throwable.toNodeSeekError())) }
                         }
-                    } catch (exception: CancellationException) {
-                        throw exception
-                    } catch (throwable: Throwable) {
-                        _uiState.update { it.copy(postLoadState = SearchLoadState.Error(throwable.toNodeSeekError())) }
                     }
-                }
-                launch {
-                    try {
-                        val users = searchRepository.searchUsers(normalized)
-                        _uiState.update {
-                            it.copy(
-                                userResults = users,
-                                userLoadState = SearchLoadState.Success,
-                            )
-                        }
-                    } catch (exception: CancellationException) {
-                        throw exception
-                    } catch (throwable: Throwable) {
-                        _uiState.update { it.copy(userLoadState = SearchLoadState.Error(throwable.toNodeSeekError())) }
-                    }
-                }
             }
+
+            SearchTarget.USERS -> {
+                _uiState.update { it.copy(userLoadState = SearchLoadState.Loading) }
+                userJob =
+                    viewModelScope.launch {
+                        try {
+                            val users = searchRepository.searchUsers(query)
+                            _uiState.update {
+                                it.copy(
+                                    userResults = users,
+                                    userLoadState = SearchLoadState.Success,
+                                )
+                            }
+                        } catch (exception: CancellationException) {
+                            throw exception
+                        } catch (throwable: Throwable) {
+                            _uiState.update { it.copy(userLoadState = SearchLoadState.Error(throwable.toNodeSeekError())) }
+                        }
+                    }
+            }
+        }
     }
 
     companion object {
@@ -245,6 +323,10 @@ data class SearchUiState(
     val sort: SearchSort = SearchSort.RELEVANCE,
     val postResults: List<FeedPost> = emptyList(),
     val userResults: List<UserSearchResult> = emptyList(),
+    val postPage: Int = 1,
+    val postTotalPages: Int = 1,
+    val postHasNext: Boolean = false,
+    val isAppendingPosts: Boolean = false,
     val postLoadState: SearchLoadState = SearchLoadState.Idle,
     val userLoadState: SearchLoadState = SearchLoadState.Idle,
 ) {
