@@ -76,6 +76,7 @@ private fun NodeSeekError.messageRes(): Int =
         NodeSeekError.LoginRequired -> R.string.status_sign_in_title
         NodeSeekError.Network -> R.string.status_network_title
         NodeSeekError.Unparsable -> R.string.status_unparsable_title
+        NodeSeekError.NotWired -> R.string.status_not_wired_title
         is NodeSeekError.Http, NodeSeekError.Unknown -> R.string.status_unknown_title
     }
 

@@ -172,11 +172,33 @@ fun LoadingState(modifier: Modifier = Modifier) {
 // -------------------------------------------------------------------------------------------------
 
 /**
+ * The same failures as one line, for somewhere a [StatusView] will not fit — a bottom sheet, a row.
+ *
+ * Shares the titles with the full-screen states so the two never drift into saying different things
+ * about the same failure.
+ */
+@Composable
+fun NodeSeekError.shortMessage(): String =
+    when (this) {
+        NodeSeekError.Cloudflare -> stringResource(R.string.status_challenge_title)
+        NodeSeekError.LoginRequired -> stringResource(R.string.status_sign_in_title)
+        NodeSeekError.Network -> stringResource(R.string.status_network_title)
+        NodeSeekError.Unparsable -> stringResource(R.string.status_unparsable_title)
+        is NodeSeekError.Http -> stringResource(R.string.status_http_title, statusCode)
+        NodeSeekError.NotWired -> stringResource(R.string.status_not_wired_title)
+        NodeSeekError.Unknown -> stringResource(R.string.status_unknown_title)
+    }
+
+/**
  * Turns a data-layer failure into a screen.
  *
  * Most NodeSeek failures are not really errors — they are a human step the app cannot take: solve
  * the Cloudflare challenge, or sign in. Those get the action as the *primary* button and the retry
  * as the quiet one, because retrying without doing the thing will fail again.
+ *
+ * Picking the recovery action per error lives here, not at call sites: [onSignIn] and [onVerify]
+ * exist so a screen never has to branch on the error itself — a hand-written
+ * `if (LoginRequired) …` at every call site is exactly the copy that goes stale.
  */
 @Composable
 fun NodeSeekErrorState(
@@ -186,6 +208,8 @@ fun NodeSeekErrorState(
     modifier: Modifier = Modifier,
     boardTitle: String? = null,
     onBrowseElsewhere: (() -> Unit)? = null,
+    onSignIn: (() -> Unit)? = null,
+    onVerify: (() -> Unit)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     val extra = LocalNodeSeekExtraColors.current
@@ -201,7 +225,7 @@ fun NodeSeekErrorState(
                 title = stringResource(R.string.status_challenge_title),
                 description = stringResource(R.string.status_challenge_body),
                 footnote = stringResource(R.string.status_challenge_footnote),
-                primaryAction = StatusAction(stringResource(R.string.action_verify), onOpenBrowser),
+                primaryAction = StatusAction(stringResource(R.string.action_verify), onVerify ?: onOpenBrowser),
                 secondaryAction = retry,
                 modifier = modifier,
             )
@@ -219,7 +243,7 @@ fun NodeSeekErrorState(
                     stringResource(R.string.status_sign_in_title_board, boardTitle)
                 },
                 description = stringResource(R.string.status_sign_in_body),
-                primaryAction = StatusAction(stringResource(R.string.action_sign_in), onOpenBrowser),
+                primaryAction = StatusAction(stringResource(R.string.action_sign_in), onSignIn ?: onOpenBrowser),
                 secondaryAction =
                 onBrowseElsewhere?.let {
                     StatusAction(stringResource(R.string.status_sign_in_secondary), it)
@@ -268,6 +292,9 @@ fun NodeSeekErrorState(
                 StatusAction(stringResource(R.string.action_open_in_browser), onOpenBrowser),
                 modifier = modifier,
             )
+
+        // Nothing was requested, so "重试" would be a lie: the only move is the site's own page.
+        NodeSeekError.NotWired -> NotWiredState(onOpenBrowser = onOpenBrowser, modifier = modifier)
 
         NodeSeekError.Unknown ->
             StatusView(
@@ -374,6 +401,32 @@ fun SignedInState(
         title = stringResource(R.string.status_signed_in_title),
         description = stringResource(R.string.status_signed_in_body),
         secondaryAction = StatusAction(stringResource(R.string.action_sign_out), onSignOut),
+        modifier = modifier,
+    )
+}
+
+/**
+ * The site renders this page in the browser and exposes no endpoint we can read.
+ *
+ * Distinct from [ComingSoonState] on purpose: the screen exists and is designed, what is missing is
+ * the data. Saying "还在做" would blame the wrong half and hide the one action that works today —
+ * opening the same page in the web view, where the site's own JavaScript renders it.
+ */
+@Composable
+fun NotWiredState(
+    onOpenBrowser: () -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+) {
+    StatusView(
+        icon = Icons.Default.Info,
+        shape = StatusShapes.Empty,
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        title = stringResource(R.string.status_not_wired_title),
+        description = description ?: stringResource(R.string.status_not_wired_body),
+        primaryAction =
+        StatusAction(stringResource(R.string.action_open_in_browser), onOpenBrowser),
         modifier = modifier,
     )
 }

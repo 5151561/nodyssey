@@ -10,10 +10,16 @@ import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.Board
+import io.github.nsreader.data.ProfileRepository
+import io.github.nsreader.data.composer.ImageAttachment
+import io.github.nsreader.data.composer.ImageUploadQueue
+import io.github.nsreader.data.composer.ImageUploader
+import io.github.nsreader.data.composer.PickedImage
 import io.github.nsreader.data.composer.PostComposerRepository
 import io.github.nsreader.data.composer.PostDraft
 import io.github.nsreader.data.composer.PostPermission
 import io.github.nsreader.data.composer.PostSubmission
+import io.github.nsreader.data.composer.UploadStatus
 import io.github.nsreader.data.session.SessionState
 import io.github.nsreader.di.AppContainer
 import kotlinx.coroutines.Job
@@ -33,12 +39,17 @@ class PostComposerViewModel(
     boards: Flow<List<Board>>,
     session: StateFlow<SessionState>,
     private val clock: AppClock,
+    uploader: ImageUploader,
+    private val profileRepository: ProfileRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostComposerUiState())
     val uiState: StateFlow<PostComposerUiState> = _uiState.asStateFlow()
 
+    private val uploads = ImageUploadQueue(viewModelScope, uploader)
+
     private var saveJob: Job? = null
     private var publishJob: Job? = null
+    private var authorJob: Job? = null
 
     init {
         boards
@@ -50,6 +61,16 @@ class PostComposerViewModel(
         session
             .onEach { session -> _uiState.update { it.copy(isSignedIn = session.isSignedIn) } }
             .launchIn(viewModelScope)
+        uploads.attachments
+            .onEach { attachments -> _uiState.update { it.copy(attachments = attachments) } }
+            .launchIn(viewModelScope)
+        // An upload lands while typing continues, so its Markdown goes to the end of the body
+        // rather than wherever the caret happens to be sitting.
+        uploads.uploaded
+            .onEach { attachment ->
+                val markdown = attachment.markdown ?: return@onEach
+                mutate { it.copy(body = appendBlock(it.body, markdown)) }
+            }.launchIn(viewModelScope)
 
         viewModelScope.launch {
             val draft = repository.draft.first()
@@ -70,26 +91,13 @@ class PostComposerViewModel(
 
     fun updateBody(body: String) = mutate { it.copy(body = body) }
 
-    fun selectBoard(board: Board) = mutate {
-        it.copy(
-            boardSlug = board.slug,
-            boardTitle = board.title,
-            showRuleReminder = board.slug == TECH_BOARD && !it.ruleReminderDismissed,
-        )
-    }
+    fun selectBoard(board: Board) = mutate { it.copy(boardSlug = board.slug, boardTitle = board.title) }
 
     fun selectPermission(permission: PostPermission) = mutate { it.copy(permission = permission) }
 
-    fun showPreview() {
-        _uiState.update { it.copy(mode = ComposerMode.PREVIEW) }
-    }
-
-    fun showEditor() {
-        _uiState.update { it.copy(mode = ComposerMode.EDIT) }
-    }
-
-    fun dismissRuleReminder() {
-        _uiState.update { it.copy(showRuleReminder = false, ruleReminderDismissed = true) }
+    fun setViewMode(mode: ComposerViewMode) {
+        _uiState.update { it.copy(viewMode = mode) }
+        if (mode != ComposerViewMode.CONTENT) loadAuthorName()
     }
 
     fun continueDraft() {
@@ -104,7 +112,6 @@ class PostComposerViewModel(
                 savedAtMillis = draft.savedAtMillis,
                 pendingDraft = null,
                 draftDecisionMade = true,
-                showRuleReminder = draft.boardSlug == TECH_BOARD,
             )
         }
     }
@@ -113,6 +120,23 @@ class PostComposerViewModel(
         viewModelScope.launch { repository.deleteDraft() }
         _uiState.update { it.copy(pendingDraft = null, draftDecisionMade = true) }
     }
+
+    // --- Attachments --------------------------------------------------------
+
+    fun addImages(images: List<PickedImage>) = uploads.enqueue(images)
+
+    fun retryUpload(attachment: ImageAttachment) = uploads.retry(attachment.id)
+
+    fun retryFailedUploads() = uploads.retryFailed()
+
+    /** Dismissing a finished upload also takes its Markdown out of the body it was written into. */
+    fun removeAttachment(attachment: ImageAttachment) {
+        val removed = uploads.remove(attachment.id) ?: return
+        val markdown = removed.markdown ?: return
+        mutate { it.copy(body = removeBlock(it.body, markdown)) }
+    }
+
+    // --- Publishing ---------------------------------------------------------
 
     fun publish(onPublished: (Long?) -> Unit) {
         val state = _uiState.value
@@ -149,6 +173,20 @@ class PostComposerViewModel(
         _uiState.update { it.copy(publishError = null, publishErrorDetail = null) }
     }
 
+    /**
+     * The preview's byline needs a name, and nothing else in the composer does — so it is fetched
+     * the first time a preview is opened rather than on entry, and a failure just leaves the byline
+     * one field shorter.
+     */
+    private fun loadAuthorName() {
+        val repository = profileRepository ?: return
+        if (_uiState.value.authorName != null || authorJob?.isActive == true) return
+        authorJob = viewModelScope.launch {
+            runCatchingExceptCancellation { repository.profile() }
+                .onSuccess { profile -> _uiState.update { it.copy(authorName = profile.name) } }
+        }
+    }
+
     private fun mutate(transform: (PostComposerUiState) -> PostComposerUiState) {
         _uiState.update { transform(it).copy(draftDecisionMade = true, pendingDraft = null) }
         scheduleSave()
@@ -173,7 +211,6 @@ class PostComposerViewModel(
 
     companion object {
         const val MAX_TITLE_LENGTH = 60
-        private const val TECH_BOARD = "tech"
         private const val AUTOSAVE_DELAY_MILLIS = 750L
 
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
@@ -183,13 +220,16 @@ class PostComposerViewModel(
                     boards = container.categoryRepository.boards,
                     session = container.sessionRepository.state,
                     clock = container.clock,
+                    uploader = container.imageUploader,
+                    profileRepository = container.profileRepository,
                 )
             }
         }
     }
 }
 
-enum class ComposerMode { EDIT, PREVIEW }
+/** The site's three editor views (§1.8). 对照 stacks them, which is the only way it fits a phone. */
+enum class ComposerViewMode { CONTENT, PREVIEW, COMPARE }
 
 data class PostComposerUiState(
     val isSignedIn: Boolean = false,
@@ -199,19 +239,30 @@ data class PostComposerUiState(
     val boardSlug: String? = null,
     val boardTitle: String? = null,
     val permission: PostPermission = PostPermission.PUBLIC,
-    val mode: ComposerMode = ComposerMode.EDIT,
+    val viewMode: ComposerViewMode = ComposerViewMode.CONTENT,
     val isPublishing: Boolean = false,
     val publishError: NodeSeekError? = null,
     val publishErrorDetail: String? = null,
     val savedAtMillis: Long? = null,
     val pendingDraft: PostDraft? = null,
     val draftDecisionMade: Boolean = false,
-    val showRuleReminder: Boolean = false,
-    val ruleReminderDismissed: Boolean = false,
+    val attachments: List<ImageAttachment> = emptyList(),
+    val authorName: String? = null,
 ) {
     val hasContent: Boolean get() = title.isNotBlank() || body.isNotBlank()
+
+    val failedUploadCount: Int get() = attachments.count { it.status == UploadStatus.FAILED }
+
+    /**
+     * Publishing is blocked while an upload is still moving: the Markdown for a pending image is
+     * written only when it lands, so posting early silently drops the picture from the thread.
+     */
     val canPublish: Boolean
-        get() = title.isNotBlank() && body.isNotBlank() && boardSlug != null && !isPublishing
+        get() = title.isNotBlank() &&
+            body.isNotBlank() &&
+            boardSlug != null &&
+            !isPublishing &&
+            attachments.none { it.status == UploadStatus.UPLOADING || it.status == UploadStatus.WAITING }
 }
 
 private fun PostComposerUiState.toDraft() = PostDraft(

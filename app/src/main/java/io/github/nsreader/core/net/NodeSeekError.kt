@@ -23,15 +23,32 @@ sealed interface NodeSeekError {
     /** Transport failure — no connection, timeout, TLS. */
     data object Network : NodeSeekError
 
+    /**
+     * The page exists on the site but the app has no endpoint for it.
+     *
+     * Not a failure of this request — nothing was sent. Several NodeSeek pages (`/credit`,
+     * `/stardust/list`, `/fans`, `/ruling`) render entirely client-side and expose no XHR we could
+     * read without guessing at a contract, so the screen says so and offers the web page instead of
+     * inventing rows. Distinct from [Unparsable], which means we *did* ask and could not read the
+     * answer.
+     */
+    data object NotWired : NodeSeekError
+
     /** Anything we could not classify. */
     data object Unknown : NodeSeekError
 }
 
-/** Thrown by the data layer; carries [error] so the UI can pick both wording and recovery action. */
+/**
+ * Thrown by the data layer; carries [error] so the UI can pick both wording and recovery action.
+ *
+ * [detail] is the server's own sentence when there is one — "对方已屏蔽你" and the like. Kept as a
+ * property rather than folded into the message because a screen that can show it should not have to
+ * guess whether [Exception.message] holds a reason or just the name of an [error] case.
+ */
 class NodeSeekException(
     val error: NodeSeekError,
     cause: Throwable? = null,
-    detail: String? = null,
+    val detail: String? = null,
 ) : Exception(detail ?: error.toString(), cause)
 
 /** True when a human can clear this by acting inside a WebView. */

@@ -37,7 +37,10 @@ class ProfileScreenTest {
                     onSettings = {},
                     onAccountSettings = {},
                     onOpenWebsite = {},
-                    onEditProfile = {},
+                    onOpenSpace = {},
+                    onAssets = {},
+                    onFollow = {},
+                    onTools = {},
                 )
             }
         }
@@ -62,7 +65,10 @@ class ProfileScreenTest {
                     onSettings = {},
                     onAccountSettings = {},
                     onOpenWebsite = {},
-                    onEditProfile = {},
+                    onOpenSpace = {},
+                    onAssets = {},
+                    onFollow = {},
+                    onTools = {},
                 )
             }
         }
@@ -71,7 +77,7 @@ class ProfileScreenTest {
     }
 
     @Test
-    fun `edit profile button invokes its callback`() {
+    fun `header avatar action opens the space page`() {
         var clicked = false
         composeRule.setContent {
             NodeSeekTheme {
@@ -83,12 +89,15 @@ class ProfileScreenTest {
                     onSettings = {},
                     onAccountSettings = {},
                     onOpenWebsite = {},
-                    onEditProfile = { clicked = true },
+                    onOpenSpace = { clicked = true },
+                    onAssets = {},
+                    onFollow = {},
+                    onTools = {},
                 )
             }
         }
 
-        composeRule.onNodeWithContentDescription("编辑个人主页").performClick()
+        composeRule.onNodeWithContentDescription("我的主页").performClick()
 
         check(clicked)
     }

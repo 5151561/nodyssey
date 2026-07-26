@@ -42,12 +42,14 @@ class ProfileFieldsViewModelTest {
 
     private val profiles =
         object : ProfileRepository {
-            override suspend fun profile() =
+            override suspend fun profile(refresh: Boolean) =
                 UserProfile(
                     uid = 52425,
                     name = "林地雪原-0062",
                     avatarUrl = "https://www.nodeseek.com/avatar/52425.png",
                 )
+
+            override suspend fun profile(uid: Long) = profile()
         }
 
     private fun pendingAvatar() =

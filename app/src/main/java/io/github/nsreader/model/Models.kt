@@ -24,6 +24,14 @@ data class PostListPage(
     val posts: List<PostSummary>,
     val page: Int,
     val hasNextPage: Boolean,
+    /**
+     * Highest page the pager offers, or [page] when it offers none.
+     *
+     * The feed ignores this — it scrolls — but the lists the site pages by number (curated threads,
+     * the moderation log) need the total to draw "1 … 18", and it is only knowable from the markup we
+     * are already holding.
+     */
+    val totalPages: Int = page,
 )
 
 /**

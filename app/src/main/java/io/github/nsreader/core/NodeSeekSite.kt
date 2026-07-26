@@ -72,6 +72,73 @@ object NodeSeekSite {
 
     fun spacePath(uid: Long): String = "/space/$uid"
 
+    /**
+     * The site's own hash routes inside a space page.
+     *
+     * Worth naming because the tab a user was on is not recoverable from the path alone: `/space/12`
+     * and `/space/12#/comments` are the same document, and the WebView fallbacks below only land on
+     * the right tab when the fragment goes with them.
+     */
+    fun spaceTabPath(uid: Long, tab: String): String = "${spacePath(uid)}#/$tab"
+
+    const val SPACE_TAB_GENERAL = "general"
+    const val SPACE_TAB_DISCUSSIONS = "discussions"
+    const val SPACE_TAB_COMMENTS = "comments"
+    const val SPACE_TAB_COLLECTIONS = "collections"
+
+    /** The conversation with one user, which is the only action a public space page offers. */
+    fun messagePath(uid: Long): String = "/notification#/message?mode=talk&to=$uid"
+
+    /** Follows and followers are one page with a query parameter, and only for the signed-in user. */
+    fun fansPath(followers: Boolean): String = if (followers) "/fans?type=fans" else "/fans?type=follow"
+
+    const val PROGRESS_PATH = "/progress"
+    const val CREDIT_PATH = "/credit"
+
+    fun stardustPath(uid: Long): String = "/stardust/list?member_id=$uid"
+
+    const val RULING_PATH = "/ruling"
+    const val INVITE_PATH = "/invite"
+    const val LUCKY_PATH = "/lucky"
+    const val PROVIDERS_PATH = "/providers"
+    const val FRIENDS_PATH = "/friends"
+
+    /**
+     * Curated ("加精") threads. Server-rendered like the feed, so [listPath]'s parser applies.
+     *
+     * Paged as `/award/page-2`, the same scheme as the boards. `?page=` looks plausible and the server
+     * even answers it — with page 1, silently, which is worse than an error (verified live 2026-07).
+     */
+    fun awardPath(page: Int): String {
+        val safePage = page.coerceAtLeast(1)
+        return if (safePage == 1) "/award" else "/award/page-$safePage"
+    }
+
+    /**
+     * Account settings, one hash per group.
+     *
+     * Every one of these opens in the WebView rather than in a native form: they change credentials,
+     * two-factor enrolment and block lists, and the site exposes no API for any of it. Guessing the
+     * form fields would mean submitting credential changes we cannot verify.
+     */
+    fun settingPath(group: String): String = "/setting#$group"
+
+    const val SETTING_INTRODUCTION = "introduction"
+    const val SETTING_SECURITY = "security"
+    const val SETTING_TWO_FACTOR = "2fa"
+    const val SETTING_CONTACT = "contact"
+    const val SETTING_BLOCK = "block"
+    const val SETTING_PREFERENCE = "preference"
+    const val SETTING_HOMEPAGE = "homepage"
+
+    /** Accounts without an upload 404 here; [io.github.nsreader.ui.common.UserAvatar] draws the initial instead. */
+    fun avatarUrl(uid: Long): String? = absoluteUrl("/avatar/$uid.png")
+
+    const val NOTIFICATION_PATH = "/notification"
+
+    /** The web conversation, for the "open in browser" escape hatch on the message thread. */
+    fun messageThreadWebPath(uid: Long): String = "$NOTIFICATION_PATH#/message?mode=talk&to=$uid"
+
     const val NEW_DISCUSSION_PATH = "/new-discussion"
     const val NEW_DISCUSSION_API_PATH = "/api/content/new-discussion"
 

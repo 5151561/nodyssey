@@ -49,6 +49,15 @@ enum class WebViewGoal {
 
     /** Close once Cloudflare has issued a clearance cookie. */
     CHALLENGE,
+
+    /**
+     * Stays open until the user leaves it.
+     *
+     * For the authenticated pages the app deliberately does not reimplement — account settings, the
+     * stardust transfer layer, buying an invite code. There is no cookie to wait for: the user is done
+     * when they say so, and auto-closing mid-form would lose what they typed.
+     */
+    MANAGE,
 }
 
 /**
@@ -110,6 +119,8 @@ fun WebViewRoute(
                     state.hasClearance && state.fingerprint != baseline.fingerprint
                 }
             }
+
+            WebViewGoal.MANAGE -> null
         },
         modifier = modifier,
     )
