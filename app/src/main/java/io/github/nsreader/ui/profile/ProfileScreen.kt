@@ -58,12 +58,12 @@ fun ProfileRoute(
     viewModel: ProfileViewModel,
     onSignIn: () -> Unit,
     onSettings: () -> Unit,
+    onAccountSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
     onOpenSpace: (Long) -> Unit,
     onAssets: () -> Unit,
     onFollow: () -> Unit,
     onTools: () -> Unit,
-    onAccountSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -73,12 +73,12 @@ fun ProfileRoute(
         onSignOut = viewModel::signOut,
         onRetry = viewModel::refresh,
         onSettings = onSettings,
+        onAccountSettings = onAccountSettings,
         onOpenWebsite = onOpenWebsite,
         onOpenSpace = { state.uid?.let(onOpenSpace) },
         onAssets = onAssets,
         onFollow = onFollow,
         onTools = onTools,
-        onAccountSettings = onAccountSettings,
         modifier = modifier,
     )
 }
@@ -90,12 +90,12 @@ fun ProfileScreen(
     onSignOut: () -> Unit,
     onRetry: () -> Unit,
     onSettings: () -> Unit,
+    onAccountSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
     onOpenSpace: () -> Unit,
     onAssets: () -> Unit,
     onFollow: () -> Unit,
     onTools: () -> Unit,
-    onAccountSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(modifier = modifier) { padding ->
@@ -171,7 +171,7 @@ fun ProfileScreen(
                     listOf(
                         ProfileMenuItem(
                             R.string.profile_account_settings,
-                            Icons.Default.Person,
+                            NodeSeekIcons.Badge,
                             onAccountSettings,
                         ),
                         ProfileMenuItem(R.string.settings_title, Icons.Default.Settings, onSettings),
@@ -354,12 +354,12 @@ private fun ProfileSignedInPreview() {
             onSignOut = {},
             onRetry = {},
             onSettings = {},
+            onAccountSettings = {},
             onOpenWebsite = {},
             onOpenSpace = {},
             onAssets = {},
             onFollow = {},
             onTools = {},
-            onAccountSettings = {},
         )
     }
 }
@@ -374,12 +374,12 @@ private fun ProfileSignedOutPreview() {
             onSignOut = {},
             onRetry = {},
             onSettings = {},
+            onAccountSettings = {},
             onOpenWebsite = {},
             onOpenSpace = {},
             onAssets = {},
             onFollow = {},
             onTools = {},
-            onAccountSettings = {},
         )
     }
 }

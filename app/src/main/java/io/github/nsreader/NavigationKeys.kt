@@ -20,6 +20,28 @@ data object ProfileKey : NavKey
 @Serializable
 data object SettingsKey : NavKey
 
+/**
+ * 账号设置 (8g) and its four sub-pages (d6).
+ *
+ * Separate from [SettingsKey], which is the app's own display preferences. The two are different
+ * things that happen to share a word: one is what the site knows about the account, the other is how
+ * this app draws it. 8g's 常用偏好 row is the link between them.
+ */
+@Serializable
+data object AccountSettingsKey : NavKey
+
+@Serializable
+data object AccountProfileFieldsKey : NavKey
+
+@Serializable
+data object AccountSecurityKey : NavKey
+
+@Serializable
+data object AccountContactBlockKey : NavKey
+
+@Serializable
+data object HomeBoardsKey : NavKey
+
 @Serializable
 data object PostComposerKey : NavKey
 
@@ -65,9 +87,6 @@ data object AssetsKey : NavKey
 
 @Serializable
 data object StardustKey : NavKey
-
-@Serializable
-data object AccountSettingsKey : NavKey
 
 @Serializable
 data object CommunityToolsKey : NavKey

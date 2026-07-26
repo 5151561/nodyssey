@@ -35,12 +35,12 @@ class ProfileScreenTest {
                     onSignOut = {},
                     onRetry = {},
                     onSettings = {},
+                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onOpenSpace = {},
                     onAssets = {},
                     onFollow = {},
                     onTools = {},
-                    onAccountSettings = {},
                 )
             }
         }
@@ -63,12 +63,12 @@ class ProfileScreenTest {
                     onSignOut = {},
                     onRetry = {},
                     onSettings = {},
+                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onOpenSpace = {},
                     onAssets = {},
                     onFollow = {},
                     onTools = {},
-                    onAccountSettings = {},
                 )
             }
         }
@@ -87,12 +87,12 @@ class ProfileScreenTest {
                     onSignOut = {},
                     onRetry = {},
                     onSettings = {},
+                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onOpenSpace = { clicked = true },
                     onAssets = {},
                     onFollow = {},
                     onTools = {},
-                    onAccountSettings = {},
                 )
             }
         }

@@ -42,6 +42,7 @@ class SettingsRepository(
                 imagesOnWifiOnly = preferences[KEY_IMAGES_WIFI_ONLY] ?: false,
                 searchHistory = decodeSearchHistory(preferences),
                 recentBoards = decodeValues(preferences[KEY_RECENT_BOARDS]),
+                homeBoards = decodeValues(preferences[KEY_HOME_BOARDS]).toSet(),
             )
         }
 
@@ -90,6 +91,18 @@ class SettingsRepository(
         }
     }
 
+    /**
+     * Which boards the home strip shows. An empty set means "all of them" and is the default.
+     *
+     * Empty rather than a snapshot of every slug on first run, because the board list is owned by the
+     * server: seeding the preference would silently pin the user to whatever thirteen boards existed
+     * the day they installed the app, and a board added later would never show up.
+     */
+    suspend fun setHomeBoards(slugs: Set<String>) =
+        edit { it[KEY_HOME_BOARDS] = encodeValues(slugs.toList(), MAX_HOME_BOARDS) }
+
+    suspend fun clearHomeBoards() = edit { it.remove(KEY_HOME_BOARDS) }
+
     suspend fun recordRecentBoards(boards: Set<String>) {
         if (boards.isEmpty()) return
         dataStore.edit { preferences ->
@@ -116,10 +129,14 @@ class SettingsRepository(
         private val KEY_RECENT_SEARCHES = stringPreferencesKey("recent_searches")
         private val KEY_SEARCH_HISTORY = stringPreferencesKey("search_history_v3")
         private val KEY_RECENT_BOARDS = stringPreferencesKey("recent_boards")
+        private val KEY_HOME_BOARDS = stringPreferencesKey("home_boards")
 
         private const val RECENT_SEARCH_SEPARATOR = '\u001F'
         private const val MAX_RECENT_SEARCHES = 8
         private const val MAX_RECENT_BOARDS = 6
+
+        /** Generous ceiling on a list the server currently caps at thirteen; a runaway guard, not a rule. */
+        private const val MAX_HOME_BOARDS = 64
 
         private fun decodeRecentSearches(value: String?): List<String> =
             value.orEmpty().split(RECENT_SEARCH_SEPARATOR).filter(String::isNotBlank)
@@ -160,6 +177,8 @@ data class UserSettings(
     val imagesOnWifiOnly: Boolean = false,
     val searchHistory: List<SearchHistoryEntry> = emptyList(),
     val recentBoards: List<String> = emptyList(),
+    /** Slugs the home strip is limited to. Empty means unrestricted — see `setHomeBoards`. */
+    val homeBoards: Set<String> = emptySet(),
 )
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }

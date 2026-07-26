@@ -12,6 +12,10 @@ import androidx.compose.ui.unit.dp
  * Declared here rather than pulling in `material-icons-extended`, which would add roughly two
  * thousand unused vectors — and, more to the point, a dependency-graph change that this project's
  * strict lockfile makes a separate, deliberate operation.
+ *
+ * The bar for adding one: the icon has to carry meaning a core icon cannot. 账号设置's `tune` became
+ * `Icons.Default.Settings` and `logout` became `ExitToApp` for exactly that reason, and the signature
+ * editor's format toolbar uses the same text glyphs the post composer already does.
  */
 object NodeSeekIcons {
     val History: ImageVector by lazy {
@@ -255,6 +259,65 @@ object NodeSeekIcons {
         )
     }
 
+    /** Bio — the one-line self-introduction, on the 账号设置 list. */
+    val Badge: ImageVector by lazy {
+        materialIcon(
+            name = "Badge",
+            pathData =
+            "M20,7h-5V4c0,-1.1 -0.9,-2 -2,-2h-2c-1.1,0 -2,0.9 -2,2v3H4C2.9,7 2,7.9 2,9v11" +
+                "c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V9C22,7.9 21.1,7 20,7zM11,4h2v3h-2V4z" +
+                "M12,12.5c0.83,0 1.5,0.67 1.5,1.5s-0.67,1.5 -1.5,1.5s-1.5,-0.67 -1.5,-1.5" +
+                "S11.17,12.5 12,12.5zM15,18H9v-0.75c0,-1 1.34,-1.81 3,-1.81s3,0.81 3,1.81V18z",
+        )
+    }
+
+    /** Readme — the long Markdown block shown on a user's page. */
+    val Article: ImageVector by lazy {
+        materialIcon(
+            name = "Article",
+            pathData =
+            "M19,3H5C3.9,3 3,3.9 3,5v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V5C21,3.9 20.1,3 19,3z" +
+                "M14,17H7v-2h7V17zM17,13H7v-2h10V13zM17,9H7V7h10V9z",
+        )
+    }
+
+    /** Which boards the home strip shows. */
+    val DashboardCustomize: ImageVector by lazy {
+        materialIcon(
+            name = "DashboardCustomize",
+            pathData =
+            "M3,11h8V3H3V11zM5,5h4v4H5V5zM13,3v8h8V3H13zM19,9h-4V5h4V9zM3,21h8v-8H3V21z" +
+                "M5,15h4v4H5V15zM18,13h-2v3h-3v2h3v3h2v-3h3v-2h-3V13z",
+        )
+    }
+
+    /** The struck-through eye on a password field. Pairs with [Visibility]. */
+    val VisibilityOff: ImageVector by lazy {
+        materialIcon(
+            name = "VisibilityOff",
+            pathData =
+            "M12,7c2.76,0 5,2.24 5,5c0,0.65 -0.13,1.26 -0.36,1.83l2.92,2.92" +
+                "c1.51,-1.26 2.7,-2.89 3.43,-4.75c-1.73,-4.39 -6,-7.5 -11,-7.5c-1.4,0 -2.74,0.25 -3.98,0.7" +
+                "l2.16,2.16C10.74,7.13 11.35,7 12,7zM2,4.27l2.28,2.28l0.46,0.46C3.08,8.3 1.78,10.02 1,12" +
+                "c1.73,4.39 6,7.5 11,7.5c1.55,0 3.03,-0.3 4.38,-0.84l0.42,0.42L19.73,22L21,20.73L3.27,3L2,4.27z" +
+                "M7.53,9.8l1.55,1.55c-0.05,0.21 -0.08,0.43 -0.08,0.65c0,1.66 1.34,3 3,3c0.22,0 0.44,-0.03 0.65,-0.08" +
+                "l1.55,1.55c-0.67,0.33 -1.41,0.53 -2.2,0.53c-2.76,0 -5,-2.24 -5,-5C7,11.21 7.2,10.47 7.53,9.8z" +
+                "M11.84,9.02l3.15,3.15l0.02,-0.16c0,-1.66 -1.34,-3 -3,-3L11.84,9.02z",
+        )
+    }
+
+    /** Take a new avatar photo. */
+    val PhotoCamera: ImageVector by lazy {
+        materialIcon(
+            name = "PhotoCamera",
+            pathData =
+            "M12,12m-3.2,0a3.2,3.2 0,1 1,6.4 0a3.2,3.2 0,1 1,-6.4 0" +
+                "M9,2L7.17,4H4C2.9,4 2,4.9 2,6v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6" +
+                "c0,-1.1 -0.9,-2 -2,-2h-3.17L15,2H9zM12,17c-2.76,0 -5,-2.24 -5,-5s2.24,-5 5,-5" +
+                "s5,2.24 5,5S14.76,17 12,17z",
+        )
+    }
+
     // --- Editor toolbar (boards 6d / 7a / c5 / c6) ---------------------------
 
     val FormatBold: ImageVector by lazy {
@@ -310,6 +373,7 @@ object NodeSeekIcons {
         )
     }
 
+    /** Insert an image from the photo library — the editor toolbar, and the avatar picker. */
     val Image: ImageVector by lazy {
         materialIcon(
             name = "Image",
@@ -378,14 +442,25 @@ object NodeSeekIcons {
         )
     }
 
-    /** An attachment that has not started uploading yet. */
+    /** An attachment that has not started uploading yet; also "awaiting verification" on a freshly changed email. */
     val Schedule: ImageVector by lazy {
         materialIcon(
             name = "Schedule",
             pathData =
             "M11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2z" +
-                "M12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z" +
-                "M12.5,7H11v6l5.25,3.15 0.75,-1.23 -4.5,-2.67z",
+                "M12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8s8,3.58 8,8S16.42,20 12,20z" +
+                "M12.5,7H11v6l5.25,3.15l0.75,-1.23l-4.5,-2.67z",
+        )
+    }
+
+    /** Bind an authenticator app by scanning a code. */
+    val QrCode: ImageVector by lazy {
+        materialIcon(
+            name = "QrCode",
+            pathData =
+            "M3,11h8V3H3V11zM5,5h4v4H5V5zM3,21h8v-8H3V21zM5,15h4v4H5V15zM13,3v8h8V3H13z" +
+                "M19,9h-4V5h4V9zM19,19h2v2h-2V19zM13,13h2v2h-2V13zM15,15h2v2h-2V15z" +
+                "M13,17h2v2h-2V17zM15,19h2v2h-2V19zM17,17h2v2h-2V17zM17,13h2v2h-2V13zM19,15h2v2h-2V15z",
         )
     }
 }

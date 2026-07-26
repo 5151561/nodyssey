@@ -36,6 +36,8 @@ import io.github.nsreader.data.SiteOnlyRulingRepository
 import io.github.nsreader.data.SiteOnlyStardustRepository
 import io.github.nsreader.data.StardustRepository
 import io.github.nsreader.data.UserSpaceRepository
+import io.github.nsreader.data.account.AccountSettingsRepository
+import io.github.nsreader.data.account.NetworkAccountSettingsRepository
 import io.github.nsreader.data.composer.CommentComposerRepository
 import io.github.nsreader.data.composer.DefaultPostComposerRepository
 import io.github.nsreader.data.composer.ImageUploader
@@ -70,6 +72,7 @@ interface AppContainer {
     val profileRepository: ProfileRepository
     val searchRepository: SearchRepository
     val postComposerRepository: PostComposerRepository
+    val accountSettingsRepository: AccountSettingsRepository
     val commentComposerRepository: CommentComposerRepository
     val imageUploader: ImageUploader
     val sessionRepository: SessionRepository
@@ -171,6 +174,10 @@ class DefaultAppContainer(
 
     override val postComposerRepository: PostComposerRepository by lazy {
         DefaultPostComposerRepository(appContext, okHttpClient, dispatchers, clock)
+    }
+
+    override val accountSettingsRepository: AccountSettingsRepository by lazy {
+        NetworkAccountSettingsRepository()
     }
 
     override val userSpaceRepository: UserSpaceRepository by lazy {

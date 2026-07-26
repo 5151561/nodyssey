@@ -16,6 +16,8 @@ import io.github.nsreader.data.FeedPost
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.session.SessionRepository
 import io.github.nsreader.data.session.SessionState
+import io.github.nsreader.data.settings.SettingsRepository
+import io.github.nsreader.data.settings.visibleHomeBoards
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.model.FeedSort
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,6 +49,7 @@ import kotlinx.coroutines.launch
 class PostListViewModel(
     private val repository: PostRepository,
     private val categoryRepository: CategoryRepository,
+    settingsRepository: SettingsRepository,
     session: StateFlow<SessionState> = MutableStateFlow(SessionState()),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostListUiState())
@@ -80,11 +83,29 @@ class PostListViewModel(
             .cachedIn(viewModelScope)
 
     init {
-        // Boards are owned by the repository; the ViewModel mirrors them into UiState but never
-        // becomes their source of truth.
-        categoryRepository.boards
-            .onEach { boards -> _uiState.update { it.copy(boards = boards) } }
-            .launchIn(viewModelScope)
+        /*
+         * Boards are owned by the repository; the ViewModel mirrors them into UiState but never
+         * becomes their source of truth. The 首页版块 preference narrows what the strip shows without
+         * touching that list — 综合 is always kept, since it is the front page rather than a board.
+         *
+         * Hiding the board the user is currently reading would leave a selected pill with no pill,
+         * so the selection falls back to the front page when its board goes away.
+         */
+        combine(
+            categoryRepository.boards,
+            settingsRepository.settings.map { it.homeBoards }.distinctUntilChanged(),
+        ) { boards, homeBoards ->
+            val (frontPage, real) = boards.partition { it.slug == null }
+            frontPage + visibleHomeBoards(real, homeBoards)
+        }.onEach { visible ->
+            _uiState.update { state ->
+                val stillVisible = visible.any { it.slug == state.categorySlug }
+                state.copy(
+                    boards = visible,
+                    categorySlug = if (stillVisible) state.categorySlug else null,
+                )
+            }
+        }.launchIn(viewModelScope)
 
         // Reconcile the first cookie snapshot before opening a Pager. Later generations either
         // invalidate authenticated data or clear it when the user becomes signed out.
@@ -142,6 +163,7 @@ class PostListViewModel(
                     PostListViewModel(
                         container.postRepository,
                         container.categoryRepository,
+                        container.settingsRepository,
                         container.sessionRepository.state,
                     )
                 }
