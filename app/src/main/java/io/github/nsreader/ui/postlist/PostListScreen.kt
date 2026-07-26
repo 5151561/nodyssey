@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -33,6 +34,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -95,6 +97,7 @@ import kotlinx.coroutines.flow.flowOf
 fun PostListRoute(
     viewModel: PostListViewModel,
     onPostClick: (Long) -> Unit,
+    onCreatePost: () -> Unit,
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -104,6 +107,7 @@ fun PostListRoute(
         state = state,
         posts = viewModel.feed.collectAsLazyPagingItems(),
         onPostClick = onPostClick,
+        onCreatePost = onCreatePost,
         onBoardClick = viewModel::selectCategory,
         onSortChange = viewModel::selectSort,
         onSignInClick = onSignIn,
@@ -132,6 +136,7 @@ fun PostListScreen(
     onSignInClick: () -> Unit,
     onRecoverInBrowser: () -> Unit,
     modifier: Modifier = Modifier,
+    onCreatePost: () -> Unit = {},
 ) {
     val listState = rememberLazyListState()
 
@@ -152,6 +157,15 @@ fun PostListScreen(
                     onBoardClick = onBoardClick,
                 )
             }
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onCreatePost,
+                icon = {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                },
+                text = { Text(stringResource(R.string.action_create_post)) },
+            )
         },
     ) { padding ->
         Box(Modifier.padding(padding)) {

@@ -21,6 +21,9 @@ data object ProfileKey : NavKey
 data object SettingsKey : NavKey
 
 @Serializable
+data object PostComposerKey : NavKey
+
+@Serializable
 data class PostDetailKey(
     val postId: Long,
     val floor: String? = null,

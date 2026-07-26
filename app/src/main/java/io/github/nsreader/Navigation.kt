@@ -24,6 +24,8 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.di.AppContainer
+import io.github.nsreader.ui.composer.PostComposerRoute
+import io.github.nsreader.ui.composer.PostComposerViewModel
 import io.github.nsreader.ui.login.WebViewGoal
 import io.github.nsreader.ui.login.WebViewRoute
 import io.github.nsreader.ui.navigation.NodeSeekNavigationItems
@@ -147,6 +149,7 @@ fun MainNavigation(container: AppContainer) {
                     PostListRoute(
                         viewModel = viewModel,
                         onPostClick = { backStack.add(PostDetailKey(it)) },
+                        onCreatePost = { backStack.add(PostComposerKey) },
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                         onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                     )
@@ -216,6 +219,31 @@ fun MainNavigation(container: AppContainer) {
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                         onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                         onImageClick = openExternalUrl,
+                    )
+                }
+
+                entry<PostComposerKey> {
+                    val viewModel: PostComposerViewModel =
+                        viewModel(factory = PostComposerViewModel.factory(container))
+                    PostComposerRoute(
+                        viewModel = viewModel,
+                        onClose = { backStack.removeLastOrNull() },
+                        onSignIn = {
+                            backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
+                        },
+                        onVerify = {
+                            backStack.add(
+                                WebKey(
+                                    NodeSeekSite.BASE_URL + "/new-discussion",
+                                    siteTitle,
+                                    WebViewGoal.CHALLENGE,
+                                ),
+                            )
+                        },
+                        onPublished = { postId ->
+                            backStack.removeLastOrNull()
+                            backStack.add(PostDetailKey(postId))
+                        },
                     )
                 }
 

@@ -19,6 +19,8 @@ import io.github.nsreader.data.NotificationRepository
 import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.ProfileRepository
+import io.github.nsreader.data.composer.DefaultPostComposerRepository
+import io.github.nsreader.data.composer.PostComposerRepository
 import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.session.SessionRepository
 import io.github.nsreader.data.settings.SettingsRepository
@@ -44,6 +46,7 @@ interface AppContainer {
     val settingsRepository: SettingsRepository
     val notificationRepository: NotificationRepository
     val profileRepository: ProfileRepository
+    val postComposerRepository: PostComposerRepository
     val sessionRepository: SessionRepository
 
     /**
@@ -116,6 +119,10 @@ class DefaultAppContainer(
 
     override val profileRepository: ProfileRepository by lazy {
         NetworkProfileRepository(htmlClient, jsonClient)
+    }
+
+    override val postComposerRepository: PostComposerRepository by lazy {
+        DefaultPostComposerRepository(appContext, okHttpClient, dispatchers, clock)
     }
 
     /**

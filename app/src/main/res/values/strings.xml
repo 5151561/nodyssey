@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">NodeSeek</string>
 
     <!-- Actions -->
@@ -17,6 +17,9 @@
     <string name="action_sort">排序方式</string>
     <string name="action_show_all_boards">全部版块</string>
     <string name="action_hide_all_boards">收起版块</string>
+    <string name="action_create_post">发帖</string>
+    <string name="action_publish">发布</string>
+    <string name="action_preview">预览</string>
 
     <!-- Sort order: the site offers both, and heavy users switch between them -->
     <string name="sort_by_reply_time">按回复时间</string>
@@ -32,6 +35,42 @@
     <string name="post_badge_pinned">置顶</string>
     <string name="post_badge_locked">已锁帖</string>
     <string name="post_badge_original_poster">楼主</string>
+
+    <!-- Post composer -->
+    <string name="composer_title">新建帖子</string>
+    <string name="composer_preview_title">预览</string>
+    <string name="composer_title_hint">一句话说清主题</string>
+    <string name="composer_body_hint">写下正文，支持 Markdown…</string>
+    <string name="composer_title_count">%1$d/%2$d</string>
+    <string name="composer_select_board">选择版块</string>
+    <string name="composer_permission">阅读权限：%1$s</string>
+    <string name="composer_permission_public">公开</string>
+    <string name="composer_permission_level_one" tools:ignore="Typos">Lv1</string>
+    <string name="composer_permission_private">私有</string>
+    <string name="composer_draft_saved">草稿 %1$s</string>
+    <string name="composer_draft_saving">草稿自动保存</string>
+    <string name="composer_rule_title">技术版发帖提醒</string>
+    <string name="composer_rule_body">请带上系统版本与可复现步骤；纯提问请优先发到「日常」。</string>
+    <string name="composer_rule_dismiss">关闭版规提醒</string>
+    <string name="composer_restore_title">继续上次的草稿？</string>
+    <string name="composer_restore_body">保存于 %1$s · %2$s · 「%3$s」</string>
+    <string name="composer_restore_continue">继续编辑</string>
+    <string name="composer_restore_discard">放弃草稿</string>
+    <string name="composer_publish_failed">发布失败：%1$s，草稿已保留</string>
+    <string name="composer_publish_network_failed">网络超时</string>
+    <string name="composer_publish_login_required">登录状态已失效</string>
+    <string name="composer_publish_challenge">需要完成人机验证</string>
+    <string name="composer_publish_http">服务器返回 HTTP %1$d</string>
+    <string name="composer_publish_unknown">请稍后重试</string>
+    <string name="composer_format_bold">加粗</string>
+    <string name="composer_format_heading">二级标题</string>
+    <string name="composer_format_code">行内代码</string>
+    <string name="composer_format_list">无序列表</string>
+    <string name="composer_format_link">链接</string>
+    <string name="composer_format_image">图片</string>
+    <string name="composer_format_emoji">表情</string>
+    <string name="composer_preview_empty">正文预览会显示在这里</string>
+    <string name="composer_just_now">刚刚</string>
 
     <!-- Post detail -->
     <string name="post_comments_header">评论 · %1$d</string>
