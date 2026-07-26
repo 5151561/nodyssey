@@ -104,6 +104,119 @@ object NodeSeekIcons {
         )
     }
 
+    /** Curated reading list. */
+    val MenuBook: ImageVector by lazy {
+        materialIcon(
+            name = "MenuBook",
+            pathData =
+            "M21,5c-1.1,-0.35 -2.3,-0.5 -3.5,-0.5 -1.95,0 -4.05,0.4 -5.5,1.5" +
+                "c-1.45,-1.1 -3.55,-1.5 -5.5,-1.5S2.45,4.9 1,6v14.65c0,0.25 0.25,0.5 0.5,0.5" +
+                "c0.1,0 0.15,-0.05 0.25,-0.05C3.1,20.45 5.05,20 6.5,20c1.95,0 4.05,0.4 5.5,1.5" +
+                "c1.35,-0.85 3.8,-1.5 5.5,-1.5 1.65,0 3.35,0.3 4.75,1.05 0.1,0.05 0.15,0.05 0.25,0.05" +
+                "c0.25,0 0.5,-0.25 0.5,-0.5V6c-0.6,-0.45 -1.25,-0.75 -2,-1z" +
+                "M21,18.5c-1.1,-0.35 -2.3,-0.5 -3.5,-0.5 -1.7,0 -4.15,0.65 -5.5,1.5V8" +
+                "c1.35,-0.85 3.8,-1.5 5.5,-1.5 1.2,0 2.4,0.15 3.5,0.5v11.5z",
+        )
+    }
+
+    /** Lucky draw — the site's T-floor notary tool. */
+    val Casino: ImageVector by lazy {
+        materialIcon(
+            name = "Casino",
+            pathData =
+            "M19,3H5C3.9,3 3,3.9 3,5v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2z" +
+                "M7.5,18C6.67,18 6,17.33 6,16.5S6.67,15 7.5,15 9,15.67 9,16.5 8.33,18 7.5,18z" +
+                "M7.5,9C6.67,9 6,8.33 6,7.5S6.67,6 7.5,6 9,6.67 9,7.5 8.33,9 7.5,9z" +
+                "M12,13.5c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5 1.5,0.67 1.5,1.5 -0.67,1.5 -1.5,1.5z" +
+                "M16.5,18c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5 1.5,0.67 1.5,1.5 -0.67,1.5 -1.5,1.5z" +
+                "M16.5,9c-0.83,0 -1.5,-0.67 -1.5,-1.5S15.67,6 16.5,6 18,6.67 18,7.5 17.33,9 16.5,9z",
+        )
+    }
+
+    /** Invite code. */
+    val ConfirmationNumber: ImageVector by lazy {
+        materialIcon(
+            name = "ConfirmationNumber",
+            pathData =
+            "M22,10V6c0,-1.1 -0.9,-2 -2,-2H4C2.9,4 2.01,4.9 2.01,6v4C3.11,10 4,10.9 4,12s-0.89,2 -2,2v4" +
+                "c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2v-4c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2z" +
+                "M13,17.5h-2v-2h2v2zM13,13h-2v-2h2v2zM13,8.5h-2v-2h2v2z",
+        )
+    }
+
+    /** Moderation log. */
+    val Gavel: ImageVector by lazy {
+        materialIcon(
+            name = "Gavel",
+            pathData =
+            "M2,20h12v2H2zM14.5,2.5l-3,3 6,6 3,-3zM10.4,6.6l-6.5,6.5 3,3 6.5,-6.5z",
+        )
+    }
+
+    /** Balances and the transfer sheet. */
+    val Wallet: ImageVector by lazy {
+        materialIcon(
+            name = "Wallet",
+            pathData =
+            "M21,18v1c0,1.1 -0.9,2 -2,2H5c-1.11,0 -2,-0.9 -2,-2V5c0,-1.1 0.89,-2 2,-2h14" +
+                "c1.1,0 2,0.9 2,2v1h-9c-1.11,0 -2,0.9 -2,2v8c0,1.1 0.89,2 2,2h9z" +
+                "M12,16h10V8H12v8zM16,13.5c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5 1.5,0.67 1.5,1.5" +
+                " -0.67,1.5 -1.5,1.5z",
+        )
+    }
+
+    /** Two-factor authentication. */
+    val Shield: ImageVector by lazy {
+        materialIcon(
+            name = "Shield",
+            pathData =
+            "M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4z" +
+                "M12,11.99h7c-0.53,4.12 -3.28,7.79 -7,8.94V12H5V6.3l7,-3.11v8.8z",
+        )
+    }
+
+    /** Blocked users. */
+    val Block: ImageVector by lazy {
+        materialIcon(
+            name = "Block",
+            pathData =
+            "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z" +
+                "M4,12c0,-4.42 3.58,-8 8,-8 1.85,0 3.55,0.63 4.9,1.69L5.69,16.9C4.63,15.55 4,13.85 4,12z" +
+                "M12,20c-1.85,0 -3.55,-0.63 -4.9,-1.69L18.31,7.1C19.37,8.45 20,10.15 20,12c0,4.42 -3.58,8 -8,8z",
+        )
+    }
+
+    /** Saves a viewed image to the gallery. */
+    val Download: ImageVector by lazy {
+        materialIcon(
+            name = "Download",
+            pathData = "M19,9h-4V3H9v6H5l7,7 7,-7zM5,18v2h14v-2H5z",
+        )
+    }
+
+    /** Leaves the app for the site. */
+    val OpenInNew: ImageVector by lazy {
+        materialIcon(
+            name = "OpenInNew",
+            pathData =
+            "M19,19H5V5h7V3H5c-1.11,0 -2,0.9 -2,2v14c0,1.1 0.89,2 2,2h14c1.1,0 2,-0.9 2,-2v-7h-2v7z" +
+                "M14,3v2h3.59l-9.83,9.83 1.41,1.41L19,6.41V10h2V3h-7z",
+        )
+    }
+
+    /** Follows and followers. */
+    val Group: ImageVector by lazy {
+        materialIcon(
+            name = "Group",
+            pathData =
+            "M16,11c1.66,0 2.99,-1.34 2.99,-3S17.66,5 16,5c-1.66,0 -3,1.34 -3,3s1.34,3 3,3z" +
+                "M8,11c1.66,0 2.99,-1.34 2.99,-3S9.66,5 8,5C6.34,5 5,6.34 5,8s1.34,3 3,3z" +
+                "M8,13c-2.33,0 -7,1.17 -7,3.5V19h14v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5z" +
+                "M16,13c-0.29,0 -0.62,0.02 -0.97,0.05 1.16,0.84 1.97,1.97 1.97,3.45V19h6v-2.5" +
+                "c0,-2.33 -4.67,-3.5 -7,-3.5z",
+        )
+    }
+
     /** Sends a direct message (board 7f). */
     val Send: ImageVector by lazy {
         materialIcon(

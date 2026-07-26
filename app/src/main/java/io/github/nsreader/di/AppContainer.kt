@@ -13,17 +13,29 @@ import io.github.nsreader.core.net.UserAgent
 import io.github.nsreader.core.net.WebViewCookieJar
 import io.github.nsreader.core.net.resolveUserAgent
 import io.github.nsreader.core.runCatchingExceptCancellation
+import io.github.nsreader.data.AssetsRepository
+import io.github.nsreader.data.AwardRepository
 import io.github.nsreader.data.CategoryRepository
+import io.github.nsreader.data.FollowRepository
 import io.github.nsreader.data.MessageRepository
+import io.github.nsreader.data.NetworkAssetsRepository
+import io.github.nsreader.data.NetworkAwardRepository
 import io.github.nsreader.data.NetworkMessageRepository
 import io.github.nsreader.data.NetworkPostDataSource
 import io.github.nsreader.data.NetworkProfileRepository
 import io.github.nsreader.data.NetworkSearchRepository
+import io.github.nsreader.data.NetworkUserSpaceRepository
 import io.github.nsreader.data.NotificationRepository
 import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.ProfileRepository
+import io.github.nsreader.data.RulingRepository
 import io.github.nsreader.data.SearchRepository
+import io.github.nsreader.data.SiteOnlyFollowRepository
+import io.github.nsreader.data.SiteOnlyRulingRepository
+import io.github.nsreader.data.SiteOnlyStardustRepository
+import io.github.nsreader.data.StardustRepository
+import io.github.nsreader.data.UserSpaceRepository
 import io.github.nsreader.data.composer.CommentComposerRepository
 import io.github.nsreader.data.composer.DefaultPostComposerRepository
 import io.github.nsreader.data.composer.ImageUploader
@@ -61,6 +73,17 @@ interface AppContainer {
     val commentComposerRepository: CommentComposerRepository
     val imageUploader: ImageUploader
     val sessionRepository: SessionRepository
+    val userSpaceRepository: UserSpaceRepository
+    val assetsRepository: AssetsRepository
+    val awardRepository: AwardRepository
+
+    /*
+     * The three site-only pages. Typed here rather than left out so that wiring one up later is a
+     * single constructor swap — see `SiteOnlyRepositories.kt` for why they answer NotWired today.
+     */
+    val followRepository: FollowRepository
+    val stardustRepository: StardustRepository
+    val rulingRepository: RulingRepository
 
     /**
      * The UA the WebView and OkHttp both use. Shared rather than duplicated: `cf_clearance` is issued
@@ -139,7 +162,7 @@ class DefaultAppContainer(
     }
 
     override val profileRepository: ProfileRepository by lazy {
-        NetworkProfileRepository(htmlClient, jsonClient)
+        NetworkProfileRepository(htmlClient, jsonClient, clock)
     }
 
     override val searchRepository: SearchRepository by lazy {
@@ -149,6 +172,24 @@ class DefaultAppContainer(
     override val postComposerRepository: PostComposerRepository by lazy {
         DefaultPostComposerRepository(appContext, okHttpClient, dispatchers, clock)
     }
+
+    override val userSpaceRepository: UserSpaceRepository by lazy {
+        NetworkUserSpaceRepository(jsonClient, dispatchers)
+    }
+
+    override val assetsRepository: AssetsRepository by lazy {
+        NetworkAssetsRepository(profileRepository, jsonClient, dispatchers)
+    }
+
+    override val awardRepository: AwardRepository by lazy {
+        NetworkAwardRepository(htmlClient, dispatchers)
+    }
+
+    override val followRepository: FollowRepository by lazy { SiteOnlyFollowRepository() }
+
+    override val stardustRepository: StardustRepository by lazy { SiteOnlyStardustRepository() }
+
+    override val rulingRepository: RulingRepository by lazy { SiteOnlyRulingRepository() }
 
     override val commentComposerRepository: CommentComposerRepository by lazy {
         LocalCommentComposerRepository(appContext, clock)

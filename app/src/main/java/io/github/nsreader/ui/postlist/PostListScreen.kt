@@ -186,8 +186,8 @@ fun PostListScreen(
                             onRetry = posts::refresh,
                             // Both recoveries open a browser, but not the same page: a challenge is
                             // cleared on the list URL, a locked board on the sign-in page.
-                            onOpenBrowser =
-                            if (error == NodeSeekError.LoginRequired) onSignInClick else onRecoverInBrowser,
+                            onOpenBrowser = onRecoverInBrowser,
+                            onSignIn = onSignInClick,
                             boardTitle = state.selectedBoardTitle,
                             onBrowseElsewhere = { onBoardClick(null) }.takeIf { state.categorySlug != null },
                         )

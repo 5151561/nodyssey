@@ -1,5 +1,6 @@
 package io.github.nsreader.data
 
+import io.github.nsreader.core.AppClock
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.HtmlSource
 import io.github.nsreader.core.net.JsonSource
@@ -7,13 +8,11 @@ import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.core.net.NodeSeekJsonClient
 import io.github.nsreader.core.runCatchingExceptCancellation
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 import org.jsoup.Jsoup
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -27,10 +26,38 @@ data class UserProfile(
     val chickenCount: Int? = null,
     val starCount: Int? = null,
     val streakDays: Int? = null,
+    val bio: String? = null,
+    /** Markdown, shown on the space page. The site's own empty state is "没有找到readme 🙄". */
+    val readme: String? = null,
+    val topicCount: Int? = null,
+    val commentCount: Int? = null,
 )
 
 interface ProfileRepository {
-    suspend fun profile(): UserProfile
+    /**
+     * The signed-in account.
+     *
+     * May answer from a short-lived cache: every profile-area screen asks for this on entry, and the
+     * call behind it costs two round-trips (home-page HTML, then the account endpoint). [refresh]
+     * bypasses the cache for the flows that must see the network — pull-to-refresh, sign-in changes.
+     */
+    suspend fun profile(refresh: Boolean = false): UserProfile
+
+    /**
+     * Any account, by uid — the public space page.
+     *
+     * Separate from [profile] because the two resolve their subject differently: this one is told who
+     * to load, while [profile] has to work out who the session belongs to before it can ask.
+     */
+    suspend fun profile(uid: Long): UserProfile
+
+    /**
+     * The signed-in account's uid, remembered from the last successful [profile] call.
+     *
+     * Null until a profile has loaded once this process. Callers that navigate to a user's space use
+     * it to decide `isSelf` — a null simply means "not known to be self", never "known not to be".
+     */
+    val selfUid: Long? get() = null
 }
 
 /**
@@ -44,12 +71,39 @@ interface ProfileRepository {
 class NetworkProfileRepository(
     private val htmlSource: HtmlSource,
     private val jsonSource: JsonSource,
+    private val clock: AppClock,
 ) : ProfileRepository {
     private val json = Json { ignoreUnknownKeys = true }
 
-    override suspend fun profile(): UserProfile {
+    @Volatile
+    override var selfUid: Long? = null
+        private set
+
+    private val cacheLock = Mutex()
+    private var cachedProfile: UserProfile? = null
+    private var cachedAtMillis = 0L
+
+    override suspend fun profile(refresh: Boolean): UserProfile =
+        // The lock also serializes concurrent callers, so two screens opening at once cost one
+        // fetch, not two racing ones.
+        cacheLock.withLock {
+            if (!refresh) {
+                cachedProfile
+                    ?.takeIf { clock.nowMillis() - cachedAtMillis < PROFILE_CACHE_TTL_MILLIS }
+                    ?.let { return@withLock it }
+            }
+            fetchProfile().also {
+                cachedProfile = it
+                cachedAtMillis = clock.nowMillis()
+            }
+        }
+
+    private suspend fun fetchProfile(): UserProfile {
         val bootstrap = parseProfilePage(htmlSource.getHtml("/"))
-        val uid = bootstrap.uid ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        // The page parsed but named no account: the session cookie is missing or stale. Reporting
+        // that as Unparsable sent users to a "站点改版" card whose retry can never succeed.
+        val uid = bootstrap.uid ?: throw NodeSeekException(NodeSeekError.LoginRequired)
+        selfUid = uid
         val account =
             runCatchingExceptCancellation {
                 parseProfileJson(
@@ -63,6 +117,17 @@ class NetworkProfileRepository(
         return bootstrap.merge(account).toProfile()
     }
 
+    override suspend fun profile(uid: Long): UserProfile {
+        val body =
+            jsonSource.getJson(
+                path = NodeSeekJsonClient.accountInfoPath(uid),
+                referer = NodeSeekSite.BASE_URL + NodeSeekSite.spacePath(uid),
+            )
+        val raw = parseProfileJson(body) ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        // The endpoint omits the uid on some accounts, and the caller already knows it.
+        return raw.copy(uid = raw.uid ?: uid).toProfile()
+    }
+
     internal fun parseProfilePage(html: String): RawProfile {
         val encoded =
             Jsoup.parse(html)
@@ -70,7 +135,9 @@ class NetworkProfileRepository(
                 ?.data()
                 ?.trim()
                 .orEmpty()
-        if (encoded.isEmpty()) throw NodeSeekException(NodeSeekError.Unparsable)
+        // No bootstrap element at all is how the home page looks to a signed-out visitor, not how a
+        // redesign would look — a redesign would still carry *something* where the profile was.
+        if (encoded.isEmpty()) throw NodeSeekException(NodeSeekError.LoginRequired)
 
         val decoded =
             try {
@@ -103,6 +170,10 @@ class NetworkProfileRepository(
             chickenCount = newer.chickenCount ?: chickenCount,
             starCount = newer.starCount ?: starCount,
             streakDays = newer.streakDays ?: streakDays,
+            bio = newer.bio ?: bio,
+            readme = newer.readme ?: readme,
+            topicCount = newer.topicCount ?: topicCount,
+            commentCount = newer.commentCount ?: commentCount,
         )
     }
 
@@ -120,6 +191,10 @@ class NetworkProfileRepository(
             chickenCount = chickenCount,
             starCount = starCount,
             streakDays = streakDays,
+            bio = bio,
+            readme = readme,
+            topicCount = topicCount,
+            commentCount = commentCount,
         )
     }
 
@@ -137,6 +212,10 @@ internal data class RawProfile(
     val chickenCount: Int? = null,
     val starCount: Int? = null,
     val streakDays: Int? = null,
+    val bio: String? = null,
+    val readme: String? = null,
+    val topicCount: Int? = null,
+    val commentCount: Int? = null,
 )
 
 private fun JsonElement.findProfileObject(): JsonObject? {
@@ -158,26 +237,18 @@ private fun JsonObject.toRawProfile(): RawProfile =
         name = text(*PROFILE_NAME_KEYS.toTypedArray()),
         avatarUrl = text("avatar", "avatarUrl", "avatar_url"),
         rank = int("rank", "level"),
-        createdAt = text("created_at", "createdAt", "registered_at"),
+        createdAt = text("created_at", "createdAt", "registered_at", "created_at_str"),
         chickenCount = int("coin", "chicken", "chickenCount", "chicken_count"),
         starCount = int("stardust", "star", "stars", "starCount", "star_count"),
         streakDays = int("streak", "streakDays", "streak_days"),
+        bio = text("bio", "introduction", "signature_text"),
+        readme = text("readme", "readMe", "read_me"),
+        topicCount = int("nPost", "post_count", "postCount", "topicCount", "discussion_count"),
+        commentCount = int("nComment", "comment_count", "commentCount"),
     )
 
-private fun JsonObject.text(vararg names: String): String? {
-    names.forEach { name -> this[name]?.jsonPrimitive?.contentOrNull?.let { return it } }
-    return null
-}
-
-private fun JsonObject.long(vararg names: String): Long? {
-    names.forEach { name -> this[name]?.jsonPrimitive?.longOrNull?.let { return it } }
-    return null
-}
-
-private fun JsonObject.int(vararg names: String): Int? {
-    names.forEach { name -> this[name]?.jsonPrimitive?.intOrNull?.let { return it } }
-    return null
-}
+/** Long enough to cover one walk through the profile area, short enough that balances stay honest. */
+private const val PROFILE_CACHE_TTL_MILLIS = 60_000L
 
 private val PROFILE_ID_KEYS = setOf("member_id", "uid", "user_id")
 private val PROFILE_NAME_KEYS = setOf("member_name", "username", "name")

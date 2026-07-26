@@ -23,6 +23,17 @@ sealed interface NodeSeekError {
     /** Transport failure — no connection, timeout, TLS. */
     data object Network : NodeSeekError
 
+    /**
+     * The page exists on the site but the app has no endpoint for it.
+     *
+     * Not a failure of this request — nothing was sent. Several NodeSeek pages (`/credit`,
+     * `/stardust/list`, `/fans`, `/ruling`) render entirely client-side and expose no XHR we could
+     * read without guessing at a contract, so the screen says so and offers the web page instead of
+     * inventing rows. Distinct from [Unparsable], which means we *did* ask and could not read the
+     * answer.
+     */
+    data object NotWired : NodeSeekError
+
     /** Anything we could not classify. */
     data object Unknown : NodeSeekError
 }

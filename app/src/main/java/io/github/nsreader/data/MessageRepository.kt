@@ -12,10 +12,8 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 /**
@@ -318,16 +316,6 @@ private fun JsonElement.findObjectArray(preferred: List<String>): JsonArray {
         if (found.isNotEmpty()) return found
     }
     return JsonArray(emptyList())
-}
-
-private fun JsonObject.text(vararg names: String): String? {
-    names.forEach { name -> this[name]?.jsonPrimitive?.contentOrNull?.let { return it } }
-    return null
-}
-
-private fun JsonObject.long(vararg names: String): Long? {
-    names.forEach { name -> this[name]?.jsonPrimitive?.longOrNull?.let { return it } }
-    return null
 }
 
 private fun JsonObject.boolean(vararg names: String): Boolean? {

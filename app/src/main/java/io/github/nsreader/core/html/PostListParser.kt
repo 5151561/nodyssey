@@ -18,6 +18,15 @@ object PostListParser {
             // The pager renders `pager-next` as a disabled <span> on the last page, so
             // requiring an <a href> is what tells us whether more pages exist.
             hasNextPage = document.selectFirst(Selectors.LIST_PAGER_NEXT) != null,
+            totalPages =
+            document
+                .select(Selectors.LIST_PAGER_POSITIONS)
+                // The last position renders as "..100" — an ellipsis span glued to the number — so
+                // only the digits are read; a position with none (a bare "…") is skipped.
+                .mapNotNull { position -> position.text().filter(Char::isDigit).toIntOrNull() }
+                .maxOrNull()
+                ?.coerceAtLeast(page)
+                ?: page,
         )
     }
 

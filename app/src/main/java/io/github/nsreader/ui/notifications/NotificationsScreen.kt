@@ -183,8 +183,8 @@ fun NotificationsScreen(
                         NodeSeekErrorState(
                             error = state.error,
                             onRetry = onRetry,
-                            onOpenBrowser =
-                            if (state.error == NodeSeekError.LoginRequired) onSignIn else onVerify,
+                            onOpenBrowser = onVerify,
+                            onSignIn = onSignIn,
                         )
 
                     state.selectedCategory == NotificationCategory.MESSAGES ->

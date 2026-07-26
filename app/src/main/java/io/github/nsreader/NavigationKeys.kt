@@ -43,6 +43,60 @@ data class PostDetailKey(
 ) : NavKey
 
 /**
+ * A user's space.
+ *
+ * [isSelf] is carried rather than compared at render time because it changes the screen's shape, not
+ * just its contents: the signed-in user gets a 收藏 tab and no 私信 button, and the site has no way to
+ * read anyone else's collections. Deciding that from the session inside the screen would make the tab
+ * row flicker on the first frame, before the profile call resolves.
+ */
+@Serializable
+data class UserSpaceKey(
+    val uid: Long,
+    val isSelf: Boolean = false,
+) : NavKey
+
+/** 我的关注 / 我的粉丝. Only ever the signed-in user's — the site publishes nobody else's. */
+@Serializable
+data object FollowKey : NavKey
+
+@Serializable
+data object AssetsKey : NavKey
+
+@Serializable
+data object StardustKey : NavKey
+
+@Serializable
+data object AccountSettingsKey : NavKey
+
+@Serializable
+data object CommunityToolsKey : NavKey
+
+@Serializable
+data object AwardKey : NavKey
+
+@Serializable
+data object LuckyKey : NavKey
+
+@Serializable
+data object InviteKey : NavKey
+
+@Serializable
+data object RulingKey : NavKey
+
+/**
+ * Full-screen image viewer.
+ *
+ * Carries the whole set of images in the thread plus which one was tapped, so swiping between them
+ * needs no further trip to the data layer — the URLs were already parsed into the rendered content.
+ */
+@Serializable
+data class ImageViewerKey(
+    val urls: List<String>,
+    val index: Int = 0,
+) : NavKey
+
+/**
  * Opens the restricted in-app browser for login and Cloudflare challenges.
  *
  * [goal] is what turns it from a browser into a step in a flow: it names the cookie the screen is

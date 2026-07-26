@@ -1,5 +1,6 @@
 package io.github.nsreader.data
 
+import io.github.nsreader.core.AppClock
 import io.github.nsreader.core.html.Fixtures
 import io.github.nsreader.core.net.HtmlSource
 import io.github.nsreader.core.net.JsonSource
@@ -26,6 +27,7 @@ class ProfileRepositoryTest {
                 NetworkProfileRepository(
                     htmlSource = FakeProfileHtmlSource(Fixtures.load("page-1.html")),
                     jsonSource = jsonSource,
+                    clock = AppClock { 0L },
                 )
 
             val profile = repository.profile()
@@ -49,6 +51,7 @@ class ProfileRepositoryTest {
                     FakeProfileJsonSource(
                         error = NodeSeekException(NodeSeekError.Http(500)),
                     ),
+                    clock = AppClock { 0L },
                 )
 
             val profile = repository.profile()
@@ -60,12 +63,33 @@ class ProfileRepositoryTest {
             assertEquals(2, profile.starCount)
         }
 
+    /** The profile-area screens each ask on entry; a minute-long cache keeps that to one fetch. */
+    @Test
+    fun `serves repeat profile calls from the cache until refreshed`() =
+        runTest {
+            val htmlSource = FakeProfileHtmlSource(Fixtures.load("page-1.html"))
+            val repository =
+                NetworkProfileRepository(
+                    htmlSource = htmlSource,
+                    jsonSource = FakeProfileJsonSource(error = NodeSeekException(NodeSeekError.Http(500))),
+                    clock = AppClock { 0L },
+                )
+
+            repository.profile()
+            repository.profile()
+            assertEquals(1, htmlSource.callCount)
+
+            repository.profile(refresh = true)
+            assertEquals(2, htmlSource.callCount)
+        }
+
     @Test(expected = NodeSeekException::class)
     fun `rejects a page without signed in profile data`() =
         runTest {
             NetworkProfileRepository(
                 htmlSource = FakeProfileHtmlSource("<html><body></body></html>"),
                 jsonSource = FakeProfileJsonSource(response = "{}"),
+                clock = AppClock { 0L },
             ).profile()
         }
 }
@@ -73,7 +97,13 @@ class ProfileRepositoryTest {
 private class FakeProfileHtmlSource(
     private val response: String,
 ) : HtmlSource {
-    override suspend fun getHtml(path: String): String = response
+    var callCount = 0
+        private set
+
+    override suspend fun getHtml(path: String): String {
+        callCount++
+        return response
+    }
 }
 
 private class FakeProfileJsonSource(

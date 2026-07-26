@@ -41,6 +41,25 @@ class PostListParserTest {
         assertTrue(page.hasNextPage)
     }
 
+    /** The last pager position renders as "..100"; the digits are the total. */
+    @Test
+    fun `reads the page total from the pager`() {
+        assertEquals(100, page.totalPages)
+    }
+
+    /** A pager whose positions carry no digits must degrade to the page we are on, not to 1. */
+    @Test
+    fun `falls back to the current page when the pager is unreadable`() {
+        val html =
+            """
+            <html><body><div role="navigation" aria-label="pagination">
+              <span class="pager-pos pager-cur">…</span>
+            </div></body></html>
+            """.trimIndent()
+
+        assertEquals(3, PostListParser.parse(html, page = 3).totalPages)
+    }
+
     @Test
     fun `every row carries an id, title and author`() {
         page.posts.forEach { post ->

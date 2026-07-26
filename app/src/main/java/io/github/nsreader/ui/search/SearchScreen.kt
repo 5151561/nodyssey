@@ -91,9 +91,8 @@ fun SearchRoute(
         onPostClick = onPostClick,
         onUserClick = onUserClick,
         onRetry = viewModel::retry,
-        onOpenBrowser = { error ->
-            if (error == NodeSeekError.LoginRequired) onSignIn() else onVerify(viewModel.challengeUrl())
-        },
+        onSignIn = onSignIn,
+        onVerify = { onVerify(viewModel.challengeUrl()) },
         modifier = modifier,
     )
 }
@@ -111,7 +110,8 @@ fun SearchScreen(
     onPostClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
     onRetry: () -> Unit,
-    onOpenBrowser: (NodeSeekError) -> Unit,
+    onSignIn: () -> Unit,
+    onVerify: () -> Unit,
     modifier: Modifier = Modifier,
     onBoardsChange: (Set<String>) -> Unit = {},
     onSortChange: (SearchSort) -> Unit = {},
@@ -222,7 +222,8 @@ fun SearchScreen(
                 onPostClick = onPostClick,
                 onUserClick = onUserClick,
                 onRetry = onRetry,
-                onOpenBrowser = onOpenBrowser,
+                onSignIn = onSignIn,
+                onVerify = onVerify,
             )
         }
     }
@@ -265,7 +266,8 @@ private fun SearchContent(
     onPostClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
     onRetry: () -> Unit,
-    onOpenBrowser: (NodeSeekError) -> Unit,
+    onSignIn: () -> Unit,
+    onVerify: () -> Unit,
 ) {
     if (state.submittedQuery == null) {
         SearchHistory(
@@ -287,7 +289,9 @@ private fun SearchContent(
             NodeSeekErrorState(
                 error = loadState.error,
                 onRetry = onRetry,
-                onOpenBrowser = { onOpenBrowser(loadState.error) },
+                onOpenBrowser = onVerify,
+                onSignIn = onSignIn,
+                onVerify = onVerify,
             )
 
         SearchLoadState.Success -> {
@@ -538,7 +542,8 @@ private fun SearchPreview() {
             onPostClick = {},
             onUserClick = {},
             onRetry = {},
-            onOpenBrowser = {},
+            onSignIn = {},
+            onVerify = {},
         )
     }
 }
