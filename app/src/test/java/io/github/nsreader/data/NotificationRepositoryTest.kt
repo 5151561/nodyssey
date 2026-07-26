@@ -51,6 +51,42 @@ class NotificationRepositoryTest {
             assertTrue(item.isUnread)
         }
 
+    /** §1.5: 私信 is a conversation list, so it has no notification endpoint of its own. */
+    @Test
+    fun `the message group has no notification rows`() =
+        runTest {
+            val items =
+                NotificationRepository(FakeJsonSource(emptyMap()))
+                    .notifications(NotificationCategory.MESSAGES)
+
+            assertTrue(items.isEmpty())
+        }
+
+    @Test
+    fun `keeps both the parsed instant and the server wording`() =
+        runTest {
+            val path = "/api/notification/at-me/list?page=1"
+            val source =
+                FakeJsonSource(
+                    mapOf(
+                        path to
+                            """
+                            {"atList":[{"id":1,"member_id":12,"username":"nssk",
+                              "post_title":"求教如何改用户名","created_at":"2026-07-26 09:56:03"}]}
+                            """.trimIndent(),
+                    ),
+                )
+
+            val item = NotificationRepository(source).notifications(NotificationCategory.MENTIONS).single()
+
+            assertEquals("2026-07-26 09:56:03", item.createdAtText)
+            assertEquals(
+                io.github.nsreader.core.TimeFormat.parseTimestamp("2026-07-26 09:56:03"),
+                item.createdAtMillis,
+            )
+            assertEquals("https://www.nodeseek.com/avatar/12.png", item.avatarUrl)
+        }
+
     @Test
     fun `viewed notification is not unread`() =
         runTest {

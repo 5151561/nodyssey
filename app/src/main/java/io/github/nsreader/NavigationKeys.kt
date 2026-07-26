@@ -23,6 +23,19 @@ data object SettingsKey : NavKey
 @Serializable
 data object PostComposerKey : NavKey
 
+/**
+ * A private-message conversation (board 7f).
+ *
+ * [userName] travels with the key so the app bar has a title before the thread has loaded — the
+ * conversation list already knew it, and re-deriving it from a network round trip would leave the
+ * header blank for as long as that takes.
+ */
+@Serializable
+data class MessageThreadKey(
+    val uid: Long,
+    val userName: String,
+) : NavKey
+
 @Serializable
 data class PostDetailKey(
     val postId: Long,

@@ -72,6 +72,14 @@ object NodeSeekSite {
 
     fun spacePath(uid: Long): String = "/space/$uid"
 
+    /** Accounts without an upload 404 here; [io.github.nsreader.ui.common.UserAvatar] draws the initial instead. */
+    fun avatarUrl(uid: Long): String? = absoluteUrl("/avatar/$uid.png")
+
+    const val NOTIFICATION_PATH = "/notification"
+
+    /** The web conversation, for the "open in browser" escape hatch on the message thread. */
+    fun messageThreadWebPath(uid: Long): String = "$NOTIFICATION_PATH#/message?mode=talk&to=$uid"
+
     const val NEW_DISCUSSION_PATH = "/new-discussion"
     const val NEW_DISCUSSION_API_PATH = "/api/content/new-discussion"
 

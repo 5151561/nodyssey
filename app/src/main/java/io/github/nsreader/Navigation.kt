@@ -28,6 +28,8 @@ import io.github.nsreader.ui.composer.PostComposerRoute
 import io.github.nsreader.ui.composer.PostComposerViewModel
 import io.github.nsreader.ui.login.WebViewGoal
 import io.github.nsreader.ui.login.WebViewRoute
+import io.github.nsreader.ui.messages.MessageThreadRoute
+import io.github.nsreader.ui.messages.MessageThreadViewModel
 import io.github.nsreader.ui.navigation.NodeSeekNavigationItems
 import io.github.nsreader.ui.navigation.TopLevelDestination
 import io.github.nsreader.ui.notifications.NotificationsRoute
@@ -181,6 +183,33 @@ fun MainNavigation(container: AppContainer) {
                                 backStack.add(PostDetailKey(it, notification.floor))
                             }
                         },
+                        onOpenThread = { uid, name ->
+                            backStack.add(MessageThreadKey(uid, name))
+                        },
+                    )
+                }
+
+                entry<MessageThreadKey> { key ->
+                    val viewModel: MessageThreadViewModel =
+                        viewModel(
+                            key = "message-${key.uid}",
+                            factory =
+                            MessageThreadViewModel.factory(container, key.uid, key.userName),
+                        )
+                    MessageThreadRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                        onVerify = {
+                            backStack.add(
+                                WebKey(
+                                    NodeSeekSite.BASE_URL + NodeSeekSite.NOTIFICATION_PATH,
+                                    siteTitle,
+                                    WebViewGoal.CHALLENGE,
+                                ),
+                            )
+                        },
+                        onOpenBrowser = openExternalUrl,
                     )
                 }
 

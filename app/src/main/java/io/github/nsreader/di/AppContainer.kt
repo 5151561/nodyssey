@@ -13,6 +13,8 @@ import io.github.nsreader.core.net.UserAgent
 import io.github.nsreader.core.net.WebViewCookieJar
 import io.github.nsreader.core.net.resolveUserAgent
 import io.github.nsreader.data.CategoryRepository
+import io.github.nsreader.data.MessageRepository
+import io.github.nsreader.data.NetworkMessageRepository
 import io.github.nsreader.data.NetworkPostDataSource
 import io.github.nsreader.data.NetworkProfileRepository
 import io.github.nsreader.data.NetworkSearchRepository
@@ -47,6 +49,7 @@ interface AppContainer {
     val categoryRepository: CategoryRepository
     val settingsRepository: SettingsRepository
     val notificationRepository: NotificationRepository
+    val messageRepository: MessageRepository
     val profileRepository: ProfileRepository
     val searchRepository: SearchRepository
     val postComposerRepository: PostComposerRepository
@@ -118,6 +121,10 @@ class DefaultAppContainer(
 
     override val notificationRepository: NotificationRepository by lazy {
         NotificationRepository(jsonClient)
+    }
+
+    override val messageRepository: MessageRepository by lazy {
+        NetworkMessageRepository(jsonClient)
     }
 
     override val profileRepository: ProfileRepository by lazy {
