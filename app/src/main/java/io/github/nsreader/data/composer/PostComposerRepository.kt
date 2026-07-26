@@ -9,8 +9,11 @@ import androidx.datastore.preferences.preferencesDataStore
 import io.github.nsreader.core.AppClock
 import io.github.nsreader.core.AppDispatchers
 import io.github.nsreader.core.NodeSeekSite
+import io.github.nsreader.core.html.PostListParser
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
+import io.github.nsreader.core.runCatchingExceptCancellation
+import io.github.nsreader.model.FeedSort
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -47,7 +50,7 @@ data class PostDraft(
 enum class PostPermission(val wireValue: Int) {
     PUBLIC(0),
     LEVEL_ONE(1),
-    PRIVATE(-1),
+    PRIVATE(255),
 }
 
 data class PostSubmission(
@@ -64,7 +67,7 @@ interface PostComposerRepository {
 
     suspend fun deleteDraft()
 
-    suspend fun publish(submission: PostSubmission): Long
+    suspend fun publish(submission: PostSubmission): Long?
 }
 
 class DefaultPostComposerRepository(
@@ -92,24 +95,24 @@ class DefaultPostComposerRepository(
         dataStore.edit { preferences -> preferences.remove(DRAFT_KEY) }
     }
 
-    override suspend fun publish(submission: PostSubmission): Long = withContext(dispatchers.io) {
+    override suspend fun publish(submission: PostSubmission): Long? = withContext(dispatchers.io) {
         val payload = json.encodeToString(
             PublishPayload(
                 title = submission.title.trim(),
                 content = submission.body.trim(),
                 category = submission.boardSlug,
-                permission = submission.permission.wireValue,
-                mode = "new-post",
+                rank = submission.permission.wireValue,
+                mode = "new-discussion",
             ),
         )
         val request = Request.Builder()
-            .url(NodeSeekSite.absoluteUrl(PATH_NEW_POST) ?: error("Invalid publish path"))
+            .url(NodeSeekSite.absoluteUrl(NodeSeekSite.NEW_DISCUSSION_API_PATH) ?: error("Invalid publish path"))
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
             .header("X-Requested-With", "XMLHttpRequest")
-            .header("csrf-token", UUID.randomUUID().toString().replace("-", "").take(16))
+            .header("Csrf-Token", UUID.randomUUID().toString().replace("-", "").take(16))
             .header("Origin", NodeSeekSite.BASE_URL)
-            .header("Referer", NodeSeekSite.BASE_URL + "/new-discussion")
+            .header("Referer", NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH)
             .post(payload.toRequestBody(JSON_MEDIA_TYPE))
             .build()
 
@@ -123,9 +126,14 @@ class DefaultPostComposerRepository(
             if (it.code == 401 || it.code == 403) {
                 throw NodeSeekException(NodeSeekError.LoginRequired)
             }
-            if (!it.isSuccessful) throw NodeSeekException(NodeSeekError.Http(it.code))
+            if (!it.isSuccessful) {
+                throw NodeSeekException(
+                    error = NodeSeekError.Http(it.code),
+                    detail = parseErrorDetail(body),
+                )
+            }
             if (body.trimStart().startsWith("<")) throw NodeSeekException(NodeSeekError.Cloudflare)
-            parsePublishResponse(body, it.header("Location"))
+            parsePublishResponse(body, it.header("Location")) ?: findPublishedPostId(submission)
         }
     }
 
@@ -134,11 +142,11 @@ class DefaultPostComposerRepository(
         val title: String,
         val content: String,
         val category: String,
-        val permission: Int,
+        val rank: Int,
         val mode: String,
     )
 
-    private fun parsePublishResponse(body: String, location: String?): Long {
+    private fun parsePublishResponse(body: String, location: String?): Long? {
         val root = runCatching { json.parseToJsonElement(body).jsonObject }
             .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
         val success = root["success"]?.jsonPrimitive?.booleanOrNull ?: false
@@ -148,22 +156,61 @@ class DefaultPostComposerRepository(
         fun idIn(name: String): Long? = root[name]?.jsonPrimitive?.let { it.longOrNull ?: it.contentOrNull?.toLongOrNull() }
         val nestedId = listOf("data", "detail").firstNotNullOfOrNull { key ->
             root[key]?.runCatching { jsonObject }?.getOrNull()?.let { nested ->
-                listOf("postId", "id").firstNotNullOfOrNull { name ->
+                listOf("postId", "post_id", "id").firstNotNullOfOrNull { name ->
                     nested[name]?.jsonPrimitive?.let { it.longOrNull ?: it.contentOrNull?.toLongOrNull() }
                 }
             }
         }
         return idIn("postId")
+            ?: idIn("post_id")
             ?: idIn("id")
             ?: nestedId
             ?: POST_ID.find(location.orEmpty())?.groupValues?.get(1)?.toLongOrNull()
-            ?: error("发布成功但没有返回帖子编号")
+    }
+
+    /**
+     * The current endpoint's success response contains no topic id. Resolve the new thread from
+     * the board's post-time feed; failure here must not turn a successful publish into a retry
+     * prompt, otherwise the next tap creates a duplicate topic.
+     */
+    private fun findPublishedPostId(submission: PostSubmission): Long? {
+        val path = NodeSeekSite.listPath(submission.boardSlug, page = 1, sort = FeedSort.POST_TIME)
+        val request = Request.Builder()
+            .url(NodeSeekSite.absoluteUrl(path) ?: return null)
+            .header("Accept", NodeSeekSite.HTML_ACCEPT)
+            .header("Referer", NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH)
+            .get()
+            .build()
+        val response =
+            runCatchingExceptCancellation { okHttpClient.newCall(request).execute() }
+                .getOrNull()
+                ?: return null
+        return response.use {
+            if (!it.isSuccessful) return@use null
+            val html = it.body?.string().orEmpty()
+            runCatching {
+                PostListParser.parse(html, page = 1).posts.firstOrNull { post ->
+                    post.title == submission.title.trim() && post.categorySlug == submission.boardSlug
+                }?.postId
+            }.getOrNull()
+        }
+    }
+
+    private fun parseErrorDetail(body: String): String? {
+        val trimmed = body.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith("<")) return null
+        return runCatching {
+            val root = json.parseToJsonElement(trimmed).jsonObject
+            listOf("message", "error").firstNotNullOfOrNull { key ->
+                root[key]?.jsonPrimitive?.contentOrNull
+            }
+        }.getOrNull() ?: trimmed.take(MAX_ERROR_DETAIL_LENGTH)
     }
 
     private companion object {
-        const val PATH_NEW_POST = "/api/content/new-post"
         val DRAFT_KEY = stringPreferencesKey("draft")
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         val POST_ID = Regex("""/post-(\d+)""")
+        const val MAX_ERROR_DETAIL_LENGTH = 200
     }
 }

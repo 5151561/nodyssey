@@ -234,7 +234,7 @@ fun MainNavigation(container: AppContainer) {
                         onVerify = {
                             backStack.add(
                                 WebKey(
-                                    NodeSeekSite.BASE_URL + "/new-discussion",
+                                    NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH,
                                     siteTitle,
                                     WebViewGoal.CHALLENGE,
                                 ),
@@ -242,7 +242,7 @@ fun MainNavigation(container: AppContainer) {
                         },
                         onPublished = { postId ->
                             backStack.removeLastOrNull()
-                            backStack.add(PostDetailKey(postId))
+                            postId?.let { backStack.add(PostDetailKey(it)) }
                         },
                     )
                 }

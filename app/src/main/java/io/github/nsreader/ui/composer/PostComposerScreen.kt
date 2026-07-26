@@ -82,7 +82,7 @@ fun PostComposerRoute(
     onClose: () -> Unit,
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
-    onPublished: (Long) -> Unit,
+    onPublished: (Long?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -596,9 +596,16 @@ private fun DraftRecoveryDialog(
 private fun publishErrorMessage(error: NodeSeekError, detail: String?): String {
     val reason = when (error) {
         NodeSeekError.Network -> stringResource(R.string.composer_publish_network_failed)
+
         NodeSeekError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
+
         NodeSeekError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
-        is NodeSeekError.Http -> stringResource(R.string.composer_publish_http, error.statusCode)
+
+        is NodeSeekError.Http -> {
+            val status = stringResource(R.string.composer_publish_http, error.statusCode)
+            detail?.takeIf { it.isNotBlank() && it != error.toString() }?.let { "$status：$it" } ?: status
+        }
+
         else -> detail?.takeIf { it.isNotBlank() } ?: stringResource(R.string.composer_publish_unknown)
     }
     return stringResource(R.string.composer_publish_failed, reason)

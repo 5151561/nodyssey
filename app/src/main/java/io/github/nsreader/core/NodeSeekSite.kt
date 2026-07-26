@@ -70,6 +70,9 @@ object NodeSeekSite {
 
     fun spacePath(uid: Long): String = "/space/$uid"
 
+    const val NEW_DISCUSSION_PATH = "/new-discussion"
+    const val NEW_DISCUSSION_API_PATH = "/api/content/new-discussion"
+
     const val SIGN_IN_PATH = "/signIn.html"
 
     /** Resolves site-relative URLs (`/avatar/1.png`) against the base URL; leaves absolute ones alone. */

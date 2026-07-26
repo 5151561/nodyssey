@@ -121,6 +121,24 @@ class PostComposerViewModelTest {
         assertEquals(1, repository.deleteCount)
         assertEquals("tech", repository.submission?.boardSlug)
     }
+
+    @Test
+    fun `success without an id clears the draft instead of offering a duplicate retry`() = runTest(dispatcher) {
+        repository.publishedId = null
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.updateTitle("标题")
+        viewModel.updateBody("正文")
+        viewModel.selectBoard(boards.value.single())
+        var callbackInvoked = false
+
+        viewModel.publish { callbackInvoked = true }
+        advanceUntilIdle()
+
+        assertTrue(callbackInvoked)
+        assertEquals(1, repository.deleteCount)
+        assertNull(viewModel.uiState.value.publishError)
+    }
 }
 
 private class FakeComposerRepository : PostComposerRepository {
@@ -129,6 +147,7 @@ private class FakeComposerRepository : PostComposerRepository {
     var savedDraft: PostDraft? = null
     var submission: PostSubmission? = null
     var publishError: Throwable? = null
+    var publishedId: Long? = 456L
     var deleteCount = 0
 
     override suspend fun saveDraft(draft: PostDraft) {
@@ -141,9 +160,9 @@ private class FakeComposerRepository : PostComposerRepository {
         draftState.value = null
     }
 
-    override suspend fun publish(submission: PostSubmission): Long {
+    override suspend fun publish(submission: PostSubmission): Long? {
         this.submission = submission
         publishError?.let { throw it }
-        return 456L
+        return publishedId
     }
 }

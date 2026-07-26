@@ -114,7 +114,7 @@ class PostComposerViewModel(
         _uiState.update { it.copy(pendingDraft = null, draftDecisionMade = true) }
     }
 
-    fun publish(onPublished: (Long) -> Unit) {
+    fun publish(onPublished: (Long?) -> Unit) {
         val state = _uiState.value
         if (!state.canPublish || publishJob?.isActive == true) return
         publishJob = viewModelScope.launch {

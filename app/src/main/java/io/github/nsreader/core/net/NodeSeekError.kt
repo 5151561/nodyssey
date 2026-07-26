@@ -31,7 +31,8 @@ sealed interface NodeSeekError {
 class NodeSeekException(
     val error: NodeSeekError,
     cause: Throwable? = null,
-) : Exception(error.toString(), cause)
+    detail: String? = null,
+) : Exception(detail ?: error.toString(), cause)
 
 /** True when a human can clear this by acting inside a WebView. */
 val NodeSeekError.isRecoverableInBrowser: Boolean
