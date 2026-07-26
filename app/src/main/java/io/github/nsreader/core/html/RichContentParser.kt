@@ -41,10 +41,10 @@ object RichContentParser {
                 }
 
                 node is Element -> {
-                    val block = parseBlockElement(node)
-                    if (block != null) {
+                    val parsedBlocks = parseBlockElement(node)
+                    if (parsedBlocks != null) {
                         flushLoose()
-                        blocks += block
+                        blocks += parsedBlocks
                     } else {
                         looseInlines += parseInlines(listOf(node))
                     }
@@ -56,56 +56,77 @@ object RichContentParser {
     }
 
     /** Returns null when the element is inline and should be folded into the surrounding paragraph. */
-    private fun parseBlockElement(element: Element): RichNode? = when (element.tagName()) {
-        "p" -> paragraphOrImage(element)
+    private fun parseBlockElement(element: Element): List<RichNode>? = when (element.tagName()) {
+        "p" -> paragraphBlocks(element)
 
         "h1", "h2", "h3", "h4", "h5", "h6" ->
-            RichNode.Heading(
-                level = element.tagName().substring(1).toIntOrNull() ?: 3,
-                inlines = finishInlines(parseInlines(element.childNodes())),
+            listOf(
+                RichNode.Heading(
+                    level = element.tagName().substring(1).toIntOrNull() ?: 3,
+                    inlines = finishInlines(parseInlines(element.childNodes())),
+                ),
             )
 
-        "pre" -> codeBlock(element)
+        "pre" -> listOf(codeBlock(element))
 
-        "blockquote" -> RichNode.Quote(parseBlocks(element.childNodes()))
+        "blockquote" -> listOf(RichNode.Quote(parseBlocks(element.childNodes())))
 
-        "ul" -> listBlock(element, ordered = false)
+        "ul" -> listOf(listBlock(element, ordered = false))
 
-        "ol" -> listBlock(element, ordered = true)
+        "ol" -> listOf(listBlock(element, ordered = true))
 
-        "hr" -> RichNode.Divider
+        "hr" -> listOf(RichNode.Divider)
 
-        "table" -> table(element)
+        "table" -> listOf(table(element))
 
         "div" ->
             if (element.hasClass("quote")) {
-                RichNode.Quote(parseBlocks(element.childNodes()))
+                listOf(RichNode.Quote(parseBlocks(element.childNodes())))
             } else {
-                RichNode.Paragraph(finishInlines(parseInlines(element.childNodes())))
+                paragraphBlocks(element)
             }
 
-        "img" -> if (isSticker(element)) null else blockImage(element)
+        "img" -> if (isSticker(element)) null else listOf(blockImage(element))
 
         else -> null
     }
 
     /**
-     * A paragraph holding nothing but images is really a figure — rendering those full width
-     * instead of inline is the single biggest readability win over the mobile web layout.
+     * Ordinary images are blocks even when the site's generated HTML leaves them inside a text
+     * paragraph. Only NodeSeek's own stickers participate in the inline text layout.
+     *
+     * Splitting here also preserves text on both sides of an image instead of forcing every image
+     * through [InlineNode.Sticker]'s 20sp placeholder.
      */
-    private fun paragraphOrImage(element: Element): RichNode {
-        val images = element.select("img").filterNot { isSticker(it) }
-        val hasText = element.text().isNotBlank()
-        if (!hasText && images.size == 1) return blockImage(images.first())
-        if (!hasText && images.size > 1) {
-            // Multiple bare images: keep the first as the block and let the rest follow as inlines.
-            return RichNode.Paragraph(
-                images.mapNotNull { img ->
-                    NodeSeekSite.absoluteUrl(img.attr("src"))?.let { InlineNode.Sticker(it, img.attr("alt")) }
-                },
-            )
+    private fun paragraphBlocks(element: Element): List<RichNode> {
+        val blocks = mutableListOf<RichNode>()
+        val inlineNodes = mutableListOf<Node>()
+
+        fun flushInlineNodes() {
+            val inlines = finishInlines(parseInlines(inlineNodes))
+            if (inlines.isNotEmpty()) blocks += RichNode.Paragraph(inlines)
+            inlineNodes.clear()
         }
-        return RichNode.Paragraph(finishInlines(parseInlines(element.childNodes())))
+
+        element.childNodes().forEach { child ->
+            val image = child.blockImageElement()
+            if (image == null) {
+                inlineNodes += child
+            } else {
+                flushInlineNodes()
+                blocks += blockImage(image)
+            }
+        }
+        flushInlineNodes()
+        return blocks
+    }
+
+    /** Accepts both a bare image and the common `<a><img></a>` image-link markup. */
+    private fun Node.blockImageElement(): Element? {
+        val element = this as? Element ?: return null
+        if (element.tagName() == "img") return element.takeUnless(::isSticker)
+        if (element.text().isNotBlank()) return null
+        return element.select("img").singleOrNull()?.takeUnless(::isSticker)
     }
 
     private fun blockImage(element: Element): RichNode {
@@ -164,9 +185,12 @@ object RichContentParser {
 
                     "a" -> result += link(node, style)
 
-                    "img" -> NodeSeekSite.absoluteUrl(node.attr("src"))?.let {
-                        result += InlineNode.Sticker(it, node.attr("alt").ifBlank { null })
-                    }
+                    "img" ->
+                        if (isSticker(node)) {
+                            NodeSeekSite.absoluteUrl(node.attr("src"))?.let {
+                                result += InlineNode.Sticker(it, node.attr("alt").ifBlank { null })
+                            }
+                        }
 
                     else -> result += parseInlines(node.childNodes(), style)
                 }

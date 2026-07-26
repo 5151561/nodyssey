@@ -33,6 +33,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -43,6 +47,7 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -52,7 +57,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.nsreader.R
@@ -411,10 +415,22 @@ private fun InlineText(
             ),
         )
     val codeBackground = MaterialTheme.colorScheme.surfaceContainer
+    val quoteBackground = MaterialTheme.colorScheme.primaryContainer
+    val quoteLinkStyles =
+        TextLinkStyles(
+            style =
+            SpanStyle(
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFeatureSettings = TABULAR_FIGURES,
+            ),
+        )
     val quoteLabels =
         inlines.filterIsInstance<InlineNode.QuoteRef>().associateWith { ref ->
             stringResource(R.string.post_quote_reply, ref.name, ref.floor)
         }
+    val quoteRanges = mutableListOf<IntRange>()
 
     val text =
         buildAnnotatedString {
@@ -439,12 +455,23 @@ private fun InlineText(
                             inline.alt ?: "[表情]",
                         )
 
-                    is InlineNode.QuoteRef ->
-                        appendInlineContent(
-                            QUOTE_PREFIX + inline.name + inline.floor,
-                            // Also what a text selection yields, so it has to read as the chip does.
-                            quoteLabels.getValue(inline),
-                        )
+                    is InlineNode.QuoteRef -> {
+                        val start = length
+                        withLink(
+                            LinkAnnotation.Clickable(
+                                tag = QUOTE_PREFIX + inline.name + inline.floor,
+                                styles = quoteLinkStyles,
+                                linkInteractionListener = { onQuoteRefClick(inline) },
+                            ),
+                        ) {
+                            // Spaces reserve the chip's horizontal padding without introducing a
+                            // separate inline layout whose baseline can drift from this paragraph.
+                            append(QUOTE_HORIZONTAL_SPACE)
+                            append(quoteLabels.getValue(inline).replace(' ', '\u00A0'))
+                            append(QUOTE_HORIZONTAL_SPACE)
+                        }
+                        quoteRanges += start until length
+                    }
 
                     InlineNode.LineBreak -> append("\n")
                 }
@@ -474,60 +501,44 @@ private fun InlineText(
                 }
         }
 
-    val quoteContent = quoteRefContent(inlines, onQuoteRefClick)
+    var textLayoutResult by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
+    Text(
+        text = text,
+        style = style,
+        inlineContent = stickerContent,
+        onTextLayout = { textLayoutResult = it },
+        modifier =
+            Modifier.drawBehind {
+                val layout = textLayoutResult ?: return@drawBehind
+                val chipHeight = QUOTE_HEIGHT.toPx()
+                quoteRanges.forEach { range ->
+                    var start = range.first
+                    while (start <= range.last) {
+                        val line = layout.getLineForOffset(start)
+                        var end = start + 1
+                        while (end <= range.last && layout.getLineForOffset(end) == line) end++
 
-    Text(text = text, style = style, inlineContent = stickerContent + quoteContent)
+                        val first = layout.getBoundingBox(start)
+                        val last = layout.getBoundingBox(end - 1)
+                        val left = minOf(first.left, last.left)
+                        val right = maxOf(first.right, last.right)
+                        val centerY = (first.top + first.bottom) / 2f
+                        drawRoundRect(
+                            color = quoteBackground,
+                            topLeft = Offset(left, centerY - chipHeight / 2f),
+                            size = Size(right - left, chipHeight),
+                            cornerRadius = CornerRadius(chipHeight / 2f),
+                        )
+                        start = end
+                    }
+                }
+            },
+    )
 }
 
-/**
- * The `@name #3` chip.
- *
- * Sized in `em` rather than measured: the label is inside the placeholder anyway, so the width only
- * has to be *close*, and an em-based estimate scales with the reader's font size for free. Chinese
- * names run one em per glyph and Latin roughly half, so the estimate splits the difference.
- */
-@Composable
-private fun quoteRefContent(
-    inlines: List<InlineNode>,
-    onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
-): Map<String, InlineTextContent> =
-    inlines.filterIsInstance<InlineNode.QuoteRef>().associate { ref ->
-        val label = stringResource(R.string.post_quote_reply, ref.name, ref.floor)
-        val estimatedWidth =
-            label.sumOf { char -> if (char.code > 0x2E80) 100 else 55 } / 100f + 1.4f
-
-        QUOTE_PREFIX + ref.name + ref.floor to
-            InlineTextContent(
-                Placeholder(
-                    width = estimatedWidth.em,
-                    height = 1.5.em,
-                    placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter,
-                ),
-            ) {
-                Box(
-                    modifier =
-                    Modifier
-                        .clip(RoundedCornerShape(percent = 50))
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .clickable { onQuoteRefClick(ref) }
-                        .padding(horizontal = 9.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = label,
-                        style =
-                        MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontFeatureSettings = TABULAR_FIGURES,
-                        ),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        maxLines = 1,
-                    )
-                }
-            }
-    }
-
 private val STICKER_SIZE = 20.sp
+private val QUOTE_HEIGHT = 22.sp
+private const val QUOTE_HORIZONTAL_SPACE = "\u00A0\u00A0"
 private const val STICKER_PREFIX = "sticker:"
 private const val QUOTE_PREFIX = "quote:"
 

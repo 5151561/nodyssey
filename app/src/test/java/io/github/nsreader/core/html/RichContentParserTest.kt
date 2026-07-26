@@ -64,4 +64,39 @@ class RichContentParserTest {
 
         assertTrue(inlinesOf(nodes).none { it is InlineNode.QuoteRef })
     }
+
+    @Test
+    fun `splits ordinary images out of a text paragraph as full width blocks`() {
+        val nodes =
+            parse("""<p>图片之前<img src="/attachments/result.png" alt="测速结果">图片之后</p>""")
+
+        assertEquals(3, nodes.size)
+        assertEquals("图片之前", ((nodes[0] as RichNode.Paragraph).inlines.single() as InlineNode.Text).text)
+        assertTrue(nodes[1] is RichNode.BlockImage)
+        assertTrue((nodes[1] as RichNode.BlockImage).url.endsWith("/attachments/result.png"))
+        assertEquals("图片之后", ((nodes[2] as RichNode.Paragraph).inlines.single() as InlineNode.Text).text)
+    }
+
+    @Test
+    fun `keeps only site stickers inline`() {
+        val nodes =
+            parse(
+                """<p>表情<img class="sticker" src="/static/image/sticker/ac/01.png" alt="ac01">仍在本行</p>""",
+            )
+
+        assertEquals(1, nodes.size)
+        val inlines = inlinesOf(nodes)
+        assertEquals(1, inlines.filterIsInstance<InlineNode.Sticker>().size)
+    }
+
+    @Test
+    fun `renders every bare ordinary image as its own block`() {
+        val nodes =
+            parse(
+                """<p><a href="/full/a.png"><img src="/thumb/a.png"></a><img src="/b.png"></p>""",
+            )
+
+        assertEquals(2, nodes.size)
+        assertTrue(nodes.all { it is RichNode.BlockImage })
+    }
 }
