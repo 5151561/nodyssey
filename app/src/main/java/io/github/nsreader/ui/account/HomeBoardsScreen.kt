@@ -70,15 +70,19 @@ fun HomeBoardsRoute(
         viewModel.consumeMessage()
     }
 
+    // Saving returns to 账号设置, whose 首页版块 row immediately reads the new count — that is the
+    // confirmation, and a truer one than a snackbar because it comes from the stored value.
+    LaunchedEffect(state.saved) {
+        if (state.saved) onBack()
+    }
+
     HomeBoardsScreen(
         state = state,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onToggle = viewModel::toggle,
         onReset = viewModel::reset,
-        // Saving returns to 账号设置, whose 首页版块 row immediately reads the new count — that is the
-        // confirmation, and it is a truer one than a snackbar because it comes from the stored value.
-        onSave = { viewModel.save(onSaved = onBack) },
+        onSave = viewModel::save,
         modifier = modifier,
     )
 }

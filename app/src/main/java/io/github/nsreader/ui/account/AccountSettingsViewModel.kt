@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nsreader.core.runCatchingExceptCancellation
-import io.github.nsreader.data.Board
 import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.ProfileRepository
@@ -14,6 +13,7 @@ import io.github.nsreader.data.account.AccountProfileFields
 import io.github.nsreader.data.account.AccountSettingsRepository
 import io.github.nsreader.data.session.SessionRepository
 import io.github.nsreader.data.settings.SettingsRepository
+import io.github.nsreader.data.settings.visibleHomeBoards
 import io.github.nsreader.di.AppContainer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,11 +44,17 @@ class AccountSettingsViewModel(
     private val session: SessionRepository,
 ) : ViewModel() {
     private val remote = MutableStateFlow(RemoteAccountState())
+    private val signedOut = MutableStateFlow(false)
     private var loadJob: Job? = null
     private var signOutJob: Job? = null
 
     val uiState: StateFlow<AccountSettingsUiState> =
-        combine(remote, settings.settings, categories.boards) { site, preferences, boards ->
+        combine(
+            remote,
+            settings.settings,
+            categories.boards,
+            signedOut,
+        ) { site, preferences, boards, isSignedOut ->
             val selectable = boards.filter { it.slug != null }
             AccountSettingsUiState(
                 avatarUrl = site.avatarUrl,
@@ -60,6 +66,7 @@ class AccountSettingsViewModel(
                 homeBoardCount = visibleHomeBoards(selectable, preferences.homeBoards).size,
                 totalBoardCount = selectable.size,
                 homeBoardsRestricted = preferences.homeBoards.isNotEmpty(),
+                signedOut = isSignedOut,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -92,7 +99,14 @@ class AccountSettingsViewModel(
             }
     }
 
-    fun signOut(onSignedOut: () -> Unit) {
+    /**
+     * Signs out, then reports it through [AccountSettingsUiState.signedOut].
+     *
+     * A flag rather than a completion callback, for the same reason as `HomeBoardsViewModel.save`: a
+     * lambda captured across the suspend point would navigate a back stack that a configuration change
+     * has already replaced, leaving the user on the account settings of an account nobody is in.
+     */
+    fun signOut() {
         if (signOutJob?.isActive == true) return
         signOutJob =
             viewModelScope.launch {
@@ -100,7 +114,7 @@ class AccountSettingsViewModel(
                 // or the tabs still holding a Navigation 3 entry keep showing what they already drew.
                 posts.clearSessionData()
                 session.signOut()
-                onSignedOut()
+                signedOut.value = true
             }
     }
 
@@ -143,17 +157,6 @@ data class AccountSettingsUiState(
     val homeBoardCount: Int = 0,
     val totalBoardCount: Int = 0,
     val homeBoardsRestricted: Boolean = false,
+    /** Set once sign-out has committed; the screen pops itself on it. See `signOut`. */
+    val signedOut: Boolean = false,
 )
-
-/**
- * Narrows a board list to the user's home-strip preference.
- *
- * Callers pass only the real boards — 综合 is not one, has no slug, and is prepended by whoever draws
- * the strip. An empty preference means unrestricted. A preference that no longer matches anything, as
- * happens when every chosen board is renamed server-side, also falls back to unrestricted rather than
- * to nothing: an empty strip is indistinguishable from a broken one.
- */
-internal fun visibleHomeBoards(boards: List<Board>, preference: Set<String>): List<Board> {
-    if (preference.isEmpty()) return boards
-    return boards.filter { it.slug in preference }.ifEmpty { boards }
-}

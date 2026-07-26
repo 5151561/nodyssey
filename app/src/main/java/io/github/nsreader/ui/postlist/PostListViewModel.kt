@@ -17,9 +17,9 @@ import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.session.SessionRepository
 import io.github.nsreader.data.session.SessionState
 import io.github.nsreader.data.settings.SettingsRepository
+import io.github.nsreader.data.settings.visibleHomeBoards
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.model.FeedSort
-import io.github.nsreader.ui.account.visibleHomeBoards
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -23,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,6 +54,13 @@ fun AccountSettingsRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Signing out unmakes this screen: leaving it on the stack would show the account settings of an
+    // account nobody is signed in to.
+    LaunchedEffect(state.signedOut) {
+        if (state.signedOut) onBack()
+    }
+
     AccountSettingsScreen(
         state = state,
         onBack = onBack,
@@ -61,9 +69,7 @@ fun AccountSettingsRoute(
         onOpenContactAndBlock = onOpenContactAndBlock,
         onOpenDisplayPreferences = onOpenDisplayPreferences,
         onOpenHomeBoards = onOpenHomeBoards,
-        // Signing out unmakes this screen: leaving it on the stack would show the account settings of
-        // an account nobody is signed in to.
-        onSignOut = { viewModel.signOut(onSignedOut = onBack) },
+        onSignOut = viewModel::signOut,
         modifier = modifier,
     )
 }

@@ -4,9 +4,12 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -182,7 +185,15 @@ internal fun HighRiskDialog(
     )
 }
 
-/** A row of trailing actions pinned to the bottom of a sub-page, above the navigation bar. */
+/**
+ * A row of trailing actions pinned to the bottom of a sub-page, above the navigation bar.
+ *
+ * The navigation-bar inset is applied here rather than left to the caller. `Scaffold` dispatches no
+ * insets to its `bottomBar` slot — `NavigationBar` and `BottomAppBar` only look like it does because
+ * they carry their own `windowInsets` defaults — so an edge-to-edge app puts a bare `Surface` under
+ * the gesture pill, and under the whole bar on a three-button device. Owning it in the component
+ * means every caller is correct by construction.
+ */
 @Composable
 internal fun AccountBottomBar(
     modifier: Modifier = Modifier,
@@ -193,6 +204,7 @@ internal fun AccountBottomBar(
             modifier =
             modifier
                 .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(horizontal = Spacing.lg, vertical = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),

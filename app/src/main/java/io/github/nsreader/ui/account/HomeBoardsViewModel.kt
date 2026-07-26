@@ -9,7 +9,9 @@ import io.github.nsreader.R
 import io.github.nsreader.data.Board
 import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.settings.SettingsRepository
+import io.github.nsreader.data.settings.visibleHomeBoards
 import io.github.nsreader.di.AppContainer
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +38,8 @@ class HomeBoardsViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeBoardsUiState())
     val uiState: StateFlow<HomeBoardsUiState> = _uiState.asStateFlow()
+
+    private var saveJob: Job? = null
 
     init {
         viewModelScope.launch { categories.refreshIfNeeded() }
@@ -88,20 +92,30 @@ class HomeBoardsViewModel(
         }
     }
 
-    fun save(onSaved: () -> Unit) {
+    /**
+     * Writes the selection and then reports it through [HomeBoardsUiState.saved].
+     *
+     * A flag rather than a completion callback: the ViewModel outlives the composition, so a lambda
+     * captured across the DataStore write acts on the back stack that existed before a configuration
+     * change, and the navigation is silently lost. Observing state means whichever composition is
+     * alive when the write lands is the one that navigates.
+     */
+    fun save() {
+        if (saveJob?.isActive == true) return
         val state = _uiState.value
         if (state.selected.isEmpty()) return
-        viewModelScope.launch {
-            val allSlugs = state.boards.mapNotNull(Board::slug).toSet()
-            // Storing "every board" as an explicit list would pin the strip to today's board list and
-            // silently hide any board the site adds later. Unrestricted is stored as unrestricted.
-            if (state.selected == allSlugs) {
-                settings.clearHomeBoards()
-            } else {
-                settings.setHomeBoards(state.selected)
+        saveJob =
+            viewModelScope.launch {
+                val allSlugs = state.boards.mapNotNull(Board::slug).toSet()
+                // Storing "every board" as an explicit list would pin the strip to today's board list
+                // and silently hide any board the site adds later. Unrestricted stays unrestricted.
+                if (state.selected == allSlugs) {
+                    settings.clearHomeBoards()
+                } else {
+                    settings.setHomeBoards(state.selected)
+                }
+                _uiState.update { it.copy(saved = true) }
             }
-            onSaved()
-        }
     }
 
     fun consumeMessage() = _uiState.update { it.copy(message = null) }
@@ -124,6 +138,8 @@ data class HomeBoardsUiState(
     val boards: List<Board> = emptyList(),
     val selected: Set<String> = emptySet(),
     val message: AccountMessage? = null,
+    /** Set once the selection has been written; the screen navigates back on it. See `save`. */
+    val saved: Boolean = false,
     /** True once [selected] has been derived from the stored preference; see the init block. */
     internal val seeded: Boolean = false,
 ) {

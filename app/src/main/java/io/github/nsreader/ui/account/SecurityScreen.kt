@@ -9,10 +9,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -38,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -53,7 +56,7 @@ import io.github.nsreader.ui.theme.readableWidth
 fun SecurityRoute(
     viewModel: SecurityViewModel,
     onBack: () -> Unit,
-    onOpenEnrolmentUri: (String) -> Unit,
+    onOpenEnrolmentUri: (String) -> Boolean,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,8 +73,9 @@ fun SecurityRoute(
     // secret, which is the entire reason to pass the URI straight through rather than render the code.
     LaunchedEffect(state.enrolmentUri) {
         val uri = state.enrolmentUri ?: return@LaunchedEffect
-        onOpenEnrolmentUri(uri)
+        val opened = onOpenEnrolmentUri(uri)
         viewModel.consumeEnrolmentUri()
+        if (!opened) viewModel.reportMissingAuthenticatorApp()
     }
 
     SecurityScreen(
@@ -143,6 +147,9 @@ fun SecurityScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
+                // See ProfileFieldsScreen: edge-to-edge plus Scaffold's IME-free insets would leave
+                // 确认新密码 under the keyboard and unreachable.
+                .imePadding()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
@@ -253,6 +260,11 @@ private fun PasswordField(
         singleLine = true,
         isError = isError,
         supportingText = supportingText?.let { { Text(it) } },
+        // `PasswordVisualTransformation` only masks what is drawn. Without the password keyboard type
+        // a third-party IME — which on this forum's audience is essentially everyone — keeps
+        // autocorrecting and learning, so a new password can end up in the IME's personal dictionary
+        // and be suggested elsewhere. That would undo the point of this screen.
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         visualTransformation =
         if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         shape = AccountFieldShape,

@@ -125,6 +125,17 @@ class SecurityViewModel(
 
     fun consumeEnrolmentUri() = _uiState.update { it.copy(enrolmentUri = null) }
 
+    /**
+     * No installed app claims `otpauth://`.
+     *
+     * Worth saying out loud: the user pressed 开始绑定 and, without this, absolutely nothing happened —
+     * which reads as the app being broken rather than as a missing authenticator.
+     */
+    fun reportMissingAuthenticatorApp() =
+        _uiState.update {
+            it.copy(message = AccountMessage.Info(R.string.account_two_factor_no_app))
+        }
+
     fun consumeMessage() = _uiState.update { it.copy(message = null) }
 
     companion object {

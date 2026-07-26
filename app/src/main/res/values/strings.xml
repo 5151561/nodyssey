@@ -266,6 +266,7 @@
     <string name="account_two_factor_body">绑定后，登录与修改密码等高风险操作需输入验证器生成的 6 位动态码。</string>
     <string name="account_two_factor_bind">绑定验证器</string>
     <string name="account_two_factor_rebind">重新绑定</string>
+    <string name="account_two_factor_no_app">没找到验证器应用，先装一个（如 Google Authenticator / Aegis）再绑定</string>
 
     <!-- High-risk confirmations: the design gives these their own dialog rather than a switch -->
     <string name="account_confirm_password_title">确认修改密码？</string>

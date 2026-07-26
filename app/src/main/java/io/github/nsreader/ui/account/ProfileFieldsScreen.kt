@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,14 +46,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.R
+import io.github.nsreader.ui.common.MARKDOWN_LINK_CARET
+import io.github.nsreader.ui.common.MARKDOWN_LINK_SUFFIX
+import io.github.nsreader.ui.common.MarkdownInsertion
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.common.UserAvatar
+import io.github.nsreader.ui.common.applyMarkdown
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.Spacing
 import io.github.nsreader.ui.theme.readableWidth
@@ -142,6 +146,10 @@ fun ProfileFieldsScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
+                // Edge-to-edge makes API 30+ ignore the manifest's adjustResize, and Scaffold's
+                // default insets exclude the IME, so without this the keyboard covers Readme with
+                // no way to scroll it back into view. Same call the post composer makes.
+                .imePadding()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
@@ -358,7 +366,7 @@ private fun MarkdownField(
                     val description = stringResource(format.descriptionRes)
                     IconButton(
                         onClick = {
-                            fieldValue = applySignatureFormat(fieldValue, format)
+                            fieldValue = fieldValue.applyMarkdown(format.insertion)
                             onValueChange(fieldValue.text)
                         },
                         modifier = Modifier.semantics { contentDescription = description },
@@ -371,38 +379,32 @@ private fun MarkdownField(
     }
 }
 
-/** Bold, italic, strikethrough, link, inline code — and deliberately nothing else. */
-private enum class SignatureFormat(val glyph: String, val descriptionRes: Int) {
-    Bold("B", R.string.account_format_bold),
-    Italic("I", R.string.account_format_italic),
-    Strikethrough("S", R.string.account_format_strikethrough),
-    Link("↗", R.string.account_format_link),
-    Code("</>", R.string.account_format_code),
-}
-
-private fun applySignatureFormat(value: TextFieldValue, format: SignatureFormat): TextFieldValue {
-    val start = value.selection.min.coerceIn(0, value.text.length)
-    val end = value.selection.max.coerceIn(0, value.text.length)
-    val selected = value.text.substring(start, end)
-    val (replacement, cursorOffset) =
-        when (format) {
-            SignatureFormat.Bold ->
-                "**${selected.ifEmpty { "加粗文字" }}**" to if (selected.isEmpty()) 2 else selected.length + 4
-
-            SignatureFormat.Italic ->
-                "*${selected.ifEmpty { "斜体文字" }}*" to if (selected.isEmpty()) 1 else selected.length + 2
-
-            SignatureFormat.Strikethrough ->
-                "~~${selected.ifEmpty { "删除线" }}~~" to if (selected.isEmpty()) 2 else selected.length + 4
-
-            SignatureFormat.Link ->
-                "[${selected.ifEmpty { "链接文字" }}](https://)" to if (selected.isEmpty()) 1 else selected.length + 3
-
-            SignatureFormat.Code ->
-                "`${selected.ifEmpty { "code" }}`" to if (selected.isEmpty()) 1 else selected.length + 2
-        }
-    val text = value.text.replaceRange(start, end, replacement)
-    return TextFieldValue(text, TextRange((start + cursorOffset).coerceIn(0, text.length)))
+/**
+ * Bold, italic, strikethrough, link, inline code — and deliberately nothing else.
+ *
+ * The absent actions are the point: NodeSeek's own helper text says a signature supports neither
+ * images nor quotes. The insertion mechanics come from [applyMarkdown], shared with the post
+ * composer, so only the *set* differs between the two editors.
+ */
+private enum class SignatureFormat(
+    val glyph: String,
+    val descriptionRes: Int,
+    val insertion: MarkdownInsertion,
+) {
+    Bold("B", R.string.account_format_bold, MarkdownInsertion("**", "**", "加粗文字")),
+    Italic("I", R.string.account_format_italic, MarkdownInsertion("*", "*", "斜体文字")),
+    Strikethrough("S", R.string.account_format_strikethrough, MarkdownInsertion("~~", "~~", "删除线")),
+    Link(
+        "↗",
+        R.string.account_format_link,
+        MarkdownInsertion(
+            prefix = "[",
+            suffix = MARKDOWN_LINK_SUFFIX,
+            placeholder = "链接文字",
+            caretInSuffix = MARKDOWN_LINK_CARET,
+        ),
+    ),
+    Code("</>", R.string.account_format_code, MarkdownInsertion("`", "`", "code")),
 }
 
 private val AVATAR_SIZE = 84.dp

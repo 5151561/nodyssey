@@ -248,8 +248,12 @@ fun MainNavigation(container: AppContainer) {
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
                         // `otpauth://` belongs to whichever authenticator app registered for it, so it
-                        // leaves the app rather than being rendered here — the app never holds the secret.
-                        onOpenEnrolmentUri = { uri -> runCatching { uriHandler.openUri(uri) } },
+                        // leaves the app rather than being rendered here — the app never holds the
+                        // secret. Returns false when nothing claims the scheme, so the screen can say so
+                        // instead of appearing to do nothing.
+                        onOpenEnrolmentUri = { uri ->
+                            runCatching { uriHandler.openUri(uri) }.isSuccess
+                        },
                     )
                 }
 

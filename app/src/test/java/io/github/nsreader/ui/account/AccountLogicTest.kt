@@ -1,6 +1,7 @@
 package io.github.nsreader.ui.account
 
 import io.github.nsreader.data.Board
+import io.github.nsreader.data.settings.visibleHomeBoards
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

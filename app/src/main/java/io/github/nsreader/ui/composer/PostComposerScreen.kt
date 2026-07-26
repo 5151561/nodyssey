@@ -69,7 +69,11 @@ import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.data.Board
 import io.github.nsreader.data.composer.PostDraft
 import io.github.nsreader.data.composer.PostPermission
+import io.github.nsreader.ui.common.MARKDOWN_LINK_CARET
+import io.github.nsreader.ui.common.MARKDOWN_LINK_SUFFIX
+import io.github.nsreader.ui.common.MarkdownInsertion
 import io.github.nsreader.ui.common.NodeSeekIcons
+import io.github.nsreader.ui.common.applyMarkdown
 import io.github.nsreader.ui.richtext.RichContent
 import io.github.nsreader.ui.theme.PostBody
 import io.github.nsreader.ui.theme.Spacing
@@ -618,25 +622,36 @@ private fun publishErrorMessage(error: NodeSeekError, detail: String?): String {
     return stringResource(R.string.composer_publish_failed, reason)
 }
 
-private enum class MarkdownFormat { BOLD, HEADING, CODE, LIST, LINK, IMAGE, EMOJI }
-
-private fun applyFormat(value: TextFieldValue, format: MarkdownFormat): TextFieldValue {
-    val start = value.selection.min.coerceIn(0, value.text.length)
-    val end = value.selection.max.coerceIn(0, value.text.length)
-    val selected = value.text.substring(start, end)
-    val (replacement, cursorOffset) = when (format) {
-        MarkdownFormat.BOLD -> "**${selected.ifEmpty { "加粗文字" }}**" to if (selected.isEmpty()) 2 else selected.length + 4
-        MarkdownFormat.HEADING -> "## ${selected.ifEmpty { "标题" }}" to if (selected.isEmpty()) 3 else selected.length + 3
-        MarkdownFormat.CODE -> "`${selected.ifEmpty { "code" }}`" to if (selected.isEmpty()) 1 else selected.length + 2
-        MarkdownFormat.LIST -> "- ${selected.ifEmpty { "列表项" }}" to if (selected.isEmpty()) 2 else selected.length + 2
-        MarkdownFormat.LINK -> "[${selected.ifEmpty { "链接文字" }}](https://)" to if (selected.isEmpty()) 1 else selected.length + 3
-        MarkdownFormat.IMAGE -> "![${selected.ifEmpty { "图片说明" }}](https://)" to if (selected.isEmpty()) 2 else selected.length + 4
-        MarkdownFormat.EMOJI -> "$selected🙂" to selected.length + 2
-    }
-    val text = value.text.replaceRange(start, end, replacement)
-    val cursor = (start + cursorOffset).coerceIn(0, text.length)
-    return TextFieldValue(text, TextRange(cursor))
+/**
+ * The composer's full set. The signature editor declares a deliberately smaller one; both insert
+ * through [applyMarkdown], so the caret arithmetic exists once.
+ */
+private enum class MarkdownFormat(val insertion: MarkdownInsertion) {
+    BOLD(MarkdownInsertion(prefix = "**", suffix = "**", placeholder = "加粗文字")),
+    HEADING(MarkdownInsertion(prefix = "## ", placeholder = "标题")),
+    CODE(MarkdownInsertion(prefix = "`", suffix = "`", placeholder = "code")),
+    LIST(MarkdownInsertion(prefix = "- ", placeholder = "列表项")),
+    LINK(
+        MarkdownInsertion(
+            prefix = "[",
+            suffix = MARKDOWN_LINK_SUFFIX,
+            placeholder = "链接文字",
+            caretInSuffix = MARKDOWN_LINK_CARET,
+        ),
+    ),
+    IMAGE(
+        MarkdownInsertion(
+            prefix = "![",
+            suffix = MARKDOWN_LINK_SUFFIX,
+            placeholder = "图片说明",
+            caretInSuffix = MARKDOWN_LINK_CARET,
+        ),
+    ),
+    EMOJI(MarkdownInsertion(prefix = "", suffix = "🙂", placeholder = "")),
 }
+
+private fun applyFormat(value: TextFieldValue, format: MarkdownFormat): TextFieldValue =
+    value.applyMarkdown(format.insertion)
 
 private fun formatTime(timestamp: Long): String =
     DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(timestamp))

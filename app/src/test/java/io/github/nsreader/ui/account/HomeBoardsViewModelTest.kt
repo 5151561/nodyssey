@@ -9,7 +9,6 @@ import io.github.nsreader.data.inMemoryDatabase
 import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.settings.SettingsRepository
 import io.github.nsreader.data.testSettingsRepository
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -69,14 +68,13 @@ class HomeBoardsViewModelTest {
      *
      * DataStore does its file write on a real `Dispatchers.IO` that the test scheduler does not own,
      * so the scheduler goes idle while the write is still in flight and an assertion placed after
-     * `advanceUntilIdle()` reads the store before it has been touched. Awaiting the callback waits for
-     * the effect itself, which is the thing the test is actually about.
+     * `advanceUntilIdle()` reads the store before it has been touched. Waiting for the `saved` flag
+     * waits for the effect itself, which is the thing the test is actually about.
      */
     private suspend fun TestScope.saveAndAwait(viewModel: HomeBoardsViewModel) {
-        val done = CompletableDeferred<Unit>()
-        viewModel.save { done.complete(Unit) }
+        viewModel.save()
         advanceUntilIdle()
-        withTimeout(SAVE_TIMEOUT_MILLIS) { done.await() }
+        withTimeout(SAVE_TIMEOUT_MILLIS) { viewModel.uiState.first { it.saved } }
     }
 
     @Test
