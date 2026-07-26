@@ -21,3 +21,9 @@ docs/private/
 # settings-level configurations, which here resolve nothing (`empty=incomingCatalogForLibs0`).
 # app/gradle.lockfile is the one that matters and is committed.
 settings-gradle.lockfile
+
+# 设计稿与 Claude Design 同步产物，只在本地保留
+/design/
+/ds-bundle/
+/ns-bundle/
+/.design-sync/

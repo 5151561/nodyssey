@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ds-bundle-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8642", "--directory", "/Users/changlepan/Claude/Projects/nodeseek-android/ds-bundle"],
+      "port": 8642
+    }
+  ]
+}
