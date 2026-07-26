@@ -23,6 +23,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -510,8 +511,9 @@ fun MainNavigation(container: AppContainer) {
                 }
 
                 entry<ImageViewerKey> { key ->
+                    val context = LocalContext.current
                     val viewModel: ImageViewerViewModel =
-                        viewModel(factory = ImageViewerViewModel.factory(container))
+                        viewModel(factory = ImageViewerViewModel.factory(container, context))
                     val saveOutcome by viewModel.saveOutcome.collectAsStateWithLifecycle()
                     ImageViewerScreen(
                         urls = key.urls,

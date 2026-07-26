@@ -34,13 +34,16 @@ class ImageViewerViewModel(
     }
 
     companion object {
-        fun factory(container: AppContainer): ViewModelProvider.Factory =
-            viewModelFactory {
-                initializer {
-                    val application =
-                        checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
-                    ImageViewerViewModel(application, container.dispatchers)
-                }
+        /*
+         * Takes the context as a parameter instead of reading APPLICATION_KEY from CreationExtras:
+         * Navigation 3's ViewModelStoreNavEntryDecorator does not supply that key, so the lookup
+         * crashed on every open.
+         */
+        fun factory(container: AppContainer, context: Context): ViewModelProvider.Factory {
+            val appContext = context.applicationContext
+            return viewModelFactory {
+                initializer { ImageViewerViewModel(appContext, container.dispatchers) }
             }
+        }
     }
 }
