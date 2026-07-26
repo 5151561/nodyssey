@@ -81,7 +81,7 @@ tasks.register("resolveAndLockAll") {
 
 android {
     namespace = "io.github.nsreader"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         applicationId = "io.github.nsreader"
         minSdk = 26

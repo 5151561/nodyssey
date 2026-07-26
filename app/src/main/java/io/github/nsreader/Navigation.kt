@@ -161,6 +161,9 @@ fun MainNavigation(container: AppContainer) {
                     SearchRoute(
                         viewModel = viewModel,
                         onPostClick = { backStack.add(PostDetailKey(it)) },
+                        onUserClick = { uid -> openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.spacePath(uid)) },
+                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                        onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                     )
                 }
 

@@ -1,10 +1,21 @@
 package io.github.nsreader.core
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NodeSeekSiteTest {
+    @Test
+    fun `search paths encode query range page and sort`() {
+        assertEquals(
+            "/search?q=Android%20TV&page=2&category=tech&sortBy=postTime",
+            NodeSeekSite.postSearchPath("Android TV", page = 2, categorySlug = "tech", sort = io.github.nsreader.model.FeedSort.POST_TIME),
+        )
+        assertEquals("/member?q=%E8%8A%B1%E7%94%B0", NodeSeekSite.userSearchPath("花田"))
+        assertEquals("/api/account/find/%E8%8A%B1%E7%94%B0", NodeSeekSite.userSearchApiPath("花田"))
+    }
+
     @Test
     fun `authentication WebView accepts only HTTPS NodeSeek hosts`() {
         assertTrue(NodeSeekSite.isTrustedWebViewUrl("https://www.nodeseek.com/signIn.html"))

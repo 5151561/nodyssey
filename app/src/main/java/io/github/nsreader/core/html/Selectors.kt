@@ -20,6 +20,7 @@ object Selectors {
     /** The class moved once already, so fall back to any link into a board. */
     const val LIST_CATEGORY = "a.post-category, div.post-info a[href*=/categories/]"
     const val LIST_PAGER_NEXT = "a.pager-next[href]"
+    const val LIST_PAGER_POSITIONS = "[aria-label=pagination] .pager-pos"
 
     // --- Post detail --------------------------------------------------------
     const val DETAIL_TITLE = "div.post-title a.post-title-link"

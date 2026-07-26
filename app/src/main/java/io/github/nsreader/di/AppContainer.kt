@@ -15,10 +15,12 @@ import io.github.nsreader.core.net.resolveUserAgent
 import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.NetworkPostDataSource
 import io.github.nsreader.data.NetworkProfileRepository
+import io.github.nsreader.data.NetworkSearchRepository
 import io.github.nsreader.data.NotificationRepository
 import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.ProfileRepository
+import io.github.nsreader.data.SearchRepository
 import io.github.nsreader.data.composer.DefaultPostComposerRepository
 import io.github.nsreader.data.composer.PostComposerRepository
 import io.github.nsreader.data.local.NodeSeekDatabase
@@ -46,6 +48,7 @@ interface AppContainer {
     val settingsRepository: SettingsRepository
     val notificationRepository: NotificationRepository
     val profileRepository: ProfileRepository
+    val searchRepository: SearchRepository
     val postComposerRepository: PostComposerRepository
     val sessionRepository: SessionRepository
 
@@ -119,6 +122,10 @@ class DefaultAppContainer(
 
     override val profileRepository: ProfileRepository by lazy {
         NetworkProfileRepository(htmlClient, jsonClient)
+    }
+
+    override val searchRepository: SearchRepository by lazy {
+        NetworkSearchRepository(htmlClient, jsonClient, dispatchers)
     }
 
     override val postComposerRepository: PostComposerRepository by lazy {

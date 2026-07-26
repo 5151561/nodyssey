@@ -132,6 +132,12 @@ class PostDetailViewModel(
         load(page = state.page + 1, append = true)
     }
 
+    fun loadPage(page: Int) {
+        val state = _uiState.value
+        if (page < 1 || page > state.totalPages || state.isLoading || state.isAppending) return
+        load(page = page, append = page != 1)
+    }
+
     private fun load(
         page: Int,
         append: Boolean,

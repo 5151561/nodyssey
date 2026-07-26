@@ -1,73 +1,84 @@
 package io.github.nsreader.data
 
-import io.github.nsreader.data.local.NodeSeekDatabase
-import io.github.nsreader.data.local.toEntity
-import io.github.nsreader.model.PostSummary
-import kotlinx.coroutines.flow.first
+import io.github.nsreader.core.AppDispatchers
+import io.github.nsreader.core.html.Fixtures
+import io.github.nsreader.core.net.HtmlSource
+import io.github.nsreader.core.net.JsonSource
+import io.github.nsreader.model.SearchSort
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
-@RunWith(RobolectricTestRunner::class)
 class SearchRepositoryTest {
-    private lateinit var database: NodeSeekDatabase
-    private lateinit var repository: OfflineFirstPostRepository
-
-    @Before
-    fun setUp() {
-        database = inMemoryDatabase()
-        repository = OfflineFirstPostRepository(database, FakePostRemoteDataSource(), MutableClock())
-    }
-
-    @After
-    fun tearDown() {
-        database.close()
-    }
-
     @Test
-    fun `search matches cached title and author`() =
+    fun `post search loads every server result page`() =
         runTest {
-            database.feedDao().upsertPosts(
-                listOf(
-                    post(1, "腾讯云轻量测评", "cloudpeak"),
-                    post(2, "普通帖子", "腾讯云用户"),
-                    post(3, "不相关", "someone"),
-                ).map { it.toEntity(1_000) },
-            )
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val html = RecordingHtmlSource(Fixtures.load("search-results.html"))
+            val repository =
+                NetworkSearchRepository(
+                    htmlSource = html,
+                    jsonSource = RecordingJsonSource("{}"),
+                    dispatchers = AppDispatchers(dispatcher, dispatcher),
+                )
 
-            assertEquals(listOf(2L, 1L), repository.search("腾讯云").first().map { it.summary.postId })
+            val posts = repository.searchPosts("Android TV", emptySet(), SearchSort.TIME)
+
+            assertEquals(1, posts.size)
+            assertEquals(
+                setOf(
+                    "/search?q=Android%20TV&sortBy=postTime",
+                    "/search?q=Android%20TV&page=2&sortBy=postTime",
+                    "/search?q=Android%20TV&page=3&sortBy=postTime",
+                ),
+                html.paths.toSet(),
+            )
         }
 
     @Test
-    fun `like wildcards are searched as ordinary characters`() =
+    fun `user search uses account endpoint and maps all real fields`() =
         runTest {
-            database.feedDao().upsertPosts(
-                listOf(post(1, "100% 可用", "tester"), post(2, "普通帖子", "tester"))
-                    .map { it.toEntity(1_000) },
-            )
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val json = RecordingJsonSource(Fixtures.load("user-search-results.json"))
+            val repository =
+                NetworkSearchRepository(
+                    htmlSource = FailingHtmlSource,
+                    jsonSource = json,
+                    dispatchers = AppDispatchers(dispatcher, dispatcher),
+                )
 
-            assertEquals(listOf(1L), repository.search("%").first().map { it.summary.postId })
+            val user = repository.searchUsers("花田").single()
+
+            assertEquals("/api/account/find/%E8%8A%B1%E7%94%B0", json.path)
+            assertEquals(63289L, user.uid)
+            assertEquals("花田错不错", user.name)
+            assertEquals("Android 用户", user.bio)
+            assertEquals(1, user.level)
+            assertEquals(4, user.topicCount)
+            assertEquals(87, user.commentCount)
+            assertEquals("22days ago", user.joinedText)
         }
+}
 
-    private fun post(
-        id: Long,
-        title: String,
-        author: String,
-    ) = PostSummary(
-        postId = id,
-        title = title,
-        authorName = author,
-        authorUid = null,
-        avatarUrl = null,
-        categoryTitle = null,
-        categorySlug = null,
-        viewCount = null,
-        commentCount = null,
-        lastActiveText = null,
-        lastActiveTitle = null,
-    )
+private object FailingHtmlSource : HtmlSource {
+    override suspend fun getHtml(path: String): String = error("HTML must not be used for user search")
+}
+
+private class RecordingHtmlSource(private val body: String) : HtmlSource {
+    val paths = mutableListOf<String>()
+
+    override suspend fun getHtml(path: String): String {
+        paths += path
+        return body
+    }
+}
+
+private class RecordingJsonSource(private val body: String) : JsonSource {
+    var path: String? = null
+
+    override suspend fun getJson(path: String, referer: String): String {
+        this.path = path
+        return body
+    }
 }

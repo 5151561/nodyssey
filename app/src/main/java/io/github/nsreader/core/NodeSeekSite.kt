@@ -2,6 +2,8 @@ package io.github.nsreader.core
 
 import io.github.nsreader.model.FeedSort
 import java.net.URI
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 /**
  * Everything we know about the shape of nodeseek.com lives here.
@@ -73,6 +75,26 @@ object NodeSeekSite {
     const val NEW_DISCUSSION_PATH = "/new-discussion"
     const val NEW_DISCUSSION_API_PATH = "/api/content/new-discussion"
 
+    fun postSearchPath(
+        query: String,
+        page: Int = 1,
+        categorySlug: String? = null,
+        sort: FeedSort = FeedSort.LAST_REPLY,
+    ): String {
+        val parameters =
+            buildList {
+                add("q=${query.urlEncode()}")
+                if (page > 1) add("page=${page.coerceAtLeast(1)}")
+                categorySlug?.takeIf(String::isNotBlank)?.let { add("category=${it.urlEncode()}") }
+                if (sort == FeedSort.POST_TIME) add("sortBy=postTime")
+            }
+        return "/search?${parameters.joinToString("&")}"
+    }
+
+    fun userSearchPath(query: String): String = "/member?q=${query.urlEncode()}"
+
+    fun userSearchApiPath(query: String): String = "/api/account/find/${query.urlEncode()}"
+
     const val SIGN_IN_PATH = "/signIn.html"
 
     /** Resolves site-relative URLs (`/avatar/1.png`) against the base URL; leaves absolute ones alone. */
@@ -126,4 +148,7 @@ object NodeSeekSite {
         SPACE_PATH.find(href.orEmpty())?.groupValues?.get(1)?.toLongOrNull()
 
     data class PostRoute(val postId: Long, val page: Int)
+
+    private fun String.urlEncode(): String =
+        URLEncoder.encode(this, StandardCharsets.UTF_8.toString()).replace("+", "%20")
 }

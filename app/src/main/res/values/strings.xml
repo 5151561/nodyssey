@@ -82,7 +82,25 @@
     <string name="post_image_view_full">点击查看全图</string>
     <string name="post_quote_reply">@%1$s %2$s</string>
     <string name="post_auto_paging">自动续页</string>
-    <string name="post_reply_hint">回复这个帖子…</string>
+    <string name="post_reply_action">回复</string>
+    <string name="post_previous_page">上一页</string>
+    <string name="post_next_page">下一页</string>
+    <string name="post_page_of">第 %1$d / %2$d 页</string>
+    <string name="post_jump_title">跳转到</string>
+    <string name="post_page_progress">第 %1$d / %2$d 页 · 已载入 %3$d 楼</string>
+    <string name="post_page_input">页码（1–%1$d）</string>
+    <string name="post_first_page">第一页</string>
+    <string name="post_latest_read">上次阅读</string>
+    <string name="post_last_page">最后一页</string>
+    <string name="post_go_page">前往第 %1$s 页</string>
+    <string name="post_reply_editor_title">回复</string>
+    <string name="post_draft_saved">草稿已保存 · 刚刚</string>
+    <string name="post_reply_context">回复 #12 · nssk</string>
+    <string name="post_reply_editor_hint">写下你的回复…</string>
+    <string name="post_tool_bold">加粗</string>
+    <string name="post_tool_quote">引用</string>
+    <string name="post_tool_image">图片</string>
+    <string name="post_tool_emoji">表情</string>
     <string name="post_reaction_like">点赞</string>
     <string name="post_reaction_chicken">投喂鸡腿</string>
     <string name="post_reaction_dislike">点踩</string>
@@ -96,13 +114,28 @@
     <string name="tab_notifications">通知</string>
     <string name="tab_profile">我的</string>
 
-    <!-- Search: results are the posts already owned by the offline Room cache -->
+    <!-- Search: authenticated remote results and condition-aware local history -->
     <string name="search_hint">搜索帖子、用户</string>
+    <string name="search_user_hint">搜索用户名</string>
+    <string name="search_posts_tab">帖子</string>
+    <string name="search_users_tab">用户</string>
+    <string name="search_all_boards">全部版块</string>
+    <string name="search_selected_boards">已选 %1$d 个版块</string>
+    <string name="search_sort_relevance">相关度</string>
+    <string name="search_sort_time">时间</string>
+    <string name="search_history_empty">还没有搜索记录</string>
+    <string name="search_history_scope">帖子 · 全部版块</string>
+    <string name="search_user_history_scope">用户</string>
+    <string name="search_history_board_scope">帖子 · %1$s</string>
+    <string name="search_board_range">版块范围</string>
+    <string name="search_board_range_hint">选择要搜索的版块，最近使用会置顶</string>
+    <string name="search_recent_boards">最近使用</string>
+    <string name="search_reset">重置</string>
+    <string name="search_apply_boards">应用 %1$d 个版块</string>
     <string name="search_clear_query">清空关键词</string>
     <string name="search_recent">最近搜索</string>
     <string name="search_clear_all">全部清除</string>
     <string name="search_remove_recent">删除最近搜索：%1$s</string>
-    <string name="search_local_results">本地缓存中找到 %1$d 条结果</string>
 
     <!-- Notifications -->
     <string name="notifications_mark_all_read">全部已读</string>

@@ -7,11 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,25 +23,36 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingToolbarDefaults.floatingToolbarVerticalNestedScroll
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -46,6 +60,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +68,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -103,6 +120,7 @@ fun PostDetailRoute(
         onImageClick = onImageClick,
         onRetry = viewModel::refresh,
         onLoadMore = viewModel::loadNextPage,
+        onLoadPage = viewModel::loadPage,
         modifier = modifier,
     )
 }
@@ -118,6 +136,7 @@ fun PostDetailScreen(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
+    onLoadPage: (Int) -> Unit = { onLoadMore() },
     initialFloor: String? = null,
     /** Opens the sign-in page. Separate from [onOpenBrowser] because "登录" is not "看看网页版". */
     onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
@@ -127,6 +146,9 @@ fun PostDetailScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var chickenTarget by remember { mutableStateOf<PostContent?>(null) }
+    var showPageSheet by remember { mutableStateOf(false) }
+    var showReplySheet by remember { mutableStateOf(false) }
+    var pageToolbarExpanded by remember { mutableStateOf(true) }
     var hasJumpedToInitialFloor by remember(initialFloor) { mutableStateOf(false) }
     val collapsedTitleThreshold = with(LocalDensity.current) { 72.dp.roundToPx() }
     val showCollapsedTitle by remember {
@@ -142,6 +164,14 @@ fun PostDetailScreen(
             lastVisible >= listState.layoutInfo.totalItemsCount - 4
         }
     }
+    val atPagingBoundary by remember {
+        derivedStateOf {
+            val totalItems = listState.layoutInfo.totalItemsCount
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) ||
+                (totalItems > 0 && lastVisible >= totalItems - 1)
+        }
+    }
     LaunchedEffect(shouldLoadMore, state.comments.size) {
         if (shouldLoadMore) onLoadMore()
     }
@@ -152,6 +182,12 @@ fun PostDetailScreen(
         listState.scrollToItem(index)
         hasJumpedToInitialFloor = true
     }
+    val toolbarExpanded =
+        pageToolbarExpanded ||
+            atPagingBoundary ||
+            state.isAppending ||
+            state.error != null ||
+            showPageSheet
 
     Scaffold(
         modifier = modifier,
@@ -164,13 +200,8 @@ fun PostDetailScreen(
                 onOpenInBrowser = { onOpenBrowser(postUrl) },
             )
         },
-        bottomBar = {
-            if (state.body != null) {
-                ReplyBar()
-            }
-        },
     ) { padding ->
-        Box(Modifier.padding(padding)) {
+        Box(Modifier.padding(padding).fillMaxSize()) {
             val error = state.error
             when {
                 state.body == null && state.isLoading -> ThreadSkeleton()
@@ -200,7 +231,26 @@ fun PostDetailScreen(
                             if (index != null) scope.launch { listState.animateScrollToItem(index) }
                         },
                         onChickenClick = { chickenTarget = it },
+                        modifier =
+                        Modifier.floatingToolbarVerticalNestedScroll(
+                            expanded = toolbarExpanded,
+                            onExpand = { pageToolbarExpanded = true },
+                            onCollapse = { pageToolbarExpanded = false },
+                        ),
                     )
+            }
+
+            if (state.body != null && !showReplySheet) {
+                DetailBottomActions(
+                    toolbarExpanded = toolbarExpanded,
+                    page = state.page,
+                    totalPages = state.totalPages,
+                    onPrevious = { onLoadPage((state.page - 1).coerceAtLeast(1)) },
+                    onNext = { onLoadPage((state.page + 1).coerceAtMost(state.totalPages)) },
+                    onPageClick = { showPageSheet = true },
+                    onReply = { showReplySheet = true },
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                )
             }
         }
     }
@@ -211,6 +261,264 @@ fun PostDetailScreen(
             onConfirm = { chickenTarget = null },
             authorName = target.authorName,
         )
+    }
+
+    if (showPageSheet) {
+        PageJumpSheet(
+            page = state.page,
+            totalPages = state.totalPages,
+            loadedFloors = state.comments.size + if (state.body != null) 1 else 0,
+            onDismiss = { showPageSheet = false },
+            onGo = { target ->
+                showPageSheet = false
+                onLoadPage(target.coerceIn(1, state.totalPages.coerceAtLeast(1)))
+            },
+        )
+    }
+
+    if (showReplySheet) {
+        ReplyEditorSheet(
+            onDismiss = { showReplySheet = false },
+            onPublish = { showReplySheet = false },
+        )
+    }
+}
+
+@Composable
+private fun DetailBottomActions(
+    toolbarExpanded: Boolean,
+    page: Int,
+    totalPages: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onPageClick: () -> Unit,
+    onReply: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    HorizontalFloatingToolbar(
+        expanded = toolbarExpanded,
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                text = { Text(stringResource(R.string.post_reply_action)) },
+                icon = {
+                    Icon(
+                        NodeSeekIcons.Reply,
+                        contentDescription = null,
+                    )
+                },
+                onClick = onReply,
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(18.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            )
+        },
+        modifier = modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+    ) {
+        DetailFloatingToolbarContent(
+            page = page,
+            totalPages = totalPages,
+            onPrevious = onPrevious,
+            onNext = onNext,
+            onPageClick = onPageClick,
+        )
+    }
+}
+
+@Composable
+private fun DetailFloatingToolbarContent(
+    page: Int,
+    totalPages: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onPageClick: () -> Unit,
+) {
+    val previousPageDescription = stringResource(R.string.post_previous_page)
+    val nextPageDescription = stringResource(R.string.post_next_page)
+    Row(
+        modifier = Modifier.height(48.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        IconButton(
+            onClick = onPrevious,
+            enabled = page > 1,
+            modifier =
+            Modifier.semantics {
+                contentDescription = previousPageDescription
+            },
+        ) {
+            Text(
+                "‹",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = onPageClick, contentPadding = PaddingValues(horizontal = Spacing.sm)) {
+            Text(stringResource(R.string.post_page_of, page, totalPages))
+            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+        }
+        IconButton(
+            onClick = onNext,
+            enabled = page < totalPages,
+            modifier =
+            Modifier.semantics {
+                contentDescription = nextPageDescription
+            },
+        ) {
+            Text(
+                "›",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PageJumpSheet(
+    page: Int,
+    totalPages: Int,
+    loadedFloors: Int,
+    onDismiss: () -> Unit,
+    onGo: (Int) -> Unit,
+) {
+    var input by remember { mutableStateOf(page.toString()) }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState =
+        rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            Text(stringResource(R.string.post_jump_title), style = MaterialTheme.typography.titleLarge)
+            Text(
+                stringResource(R.string.post_page_progress, page, totalPages, loadedFloors),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            androidx.compose.material3.OutlinedTextField(
+                value = input,
+                onValueChange = { input = it.filter { character -> character.isDigit() } },
+                label = { Text(stringResource(R.string.post_page_input, totalPages)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                TextButton(onClick = { onGo(1) }) { Text(stringResource(R.string.post_first_page)) }
+                TextButton(onClick = { onGo(page) }) { Text(stringResource(R.string.post_latest_read)) }
+                TextButton(onClick = { onGo(totalPages) }) { Text(stringResource(R.string.post_last_page)) }
+            }
+            Button(onClick = { input.toIntOrNull()?.let(onGo) }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.post_go_page, input.ifBlank { page.toString() }))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReplyEditorSheet(
+    onDismiss: () -> Unit,
+    onPublish: () -> Unit,
+) {
+    var draft by rememberSaveable { mutableStateOf("") }
+    val boldDescription = stringResource(R.string.post_tool_bold)
+    val quoteDescription = stringResource(R.string.post_tool_quote)
+    val emojiDescription = stringResource(R.string.post_tool_emoji)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState =
+        rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg).imePadding(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.post_reply_editor_title), style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        stringResource(R.string.post_draft_saved),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel))
+                }
+            }
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+                Text(
+                    stringResource(R.string.post_reply_context),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(Spacing.md),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            BasicTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).padding(vertical = Spacing.sm),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                decorationBox = { inner ->
+                    Box {
+                        if (draft.isEmpty()) {
+                            Text(
+                                stringResource(R.string.post_reply_editor_hint),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        inner()
+                    }
+                },
+            )
+            HorizontalDivider()
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                TextButton(
+                    onClick = {},
+                    modifier =
+                    Modifier.semantics {
+                        contentDescription = boldDescription
+                    },
+                ) {
+                    Text("B", fontWeight = FontWeight.Bold)
+                }
+                TextButton(
+                    onClick = {},
+                    modifier =
+                    Modifier.semantics {
+                        contentDescription = quoteDescription
+                    },
+                ) {
+                    Text(">_")
+                }
+                TextButton(onClick = {}) { Text(stringResource(R.string.post_tool_image)) }
+                TextButton(
+                    onClick = {},
+                    modifier =
+                    Modifier.semantics {
+                        contentDescription = emojiDescription
+                    },
+                ) {
+                    Text("🙂")
+                }
+                Box(Modifier.weight(1f))
+                Button(onClick = onPublish, enabled = draft.isNotBlank()) {
+                    Text(stringResource(R.string.action_publish))
+                }
+            }
+            androidx.compose.foundation.layout.Spacer(Modifier.height(Spacing.lg))
+        }
     }
 }
 
@@ -306,10 +614,12 @@ private fun ThreadList(
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
     onChickenClick: (PostContent) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         state = listState,
-        modifier = Modifier
+        contentPadding = PaddingValues(bottom = 80.dp),
+        modifier = modifier
             .fillMaxHeight()
             .readableWidth(),
     ) {
@@ -595,30 +905,6 @@ private fun QuietReaction(
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(start = Spacing.xs),
         )
-    }
-}
-
-@Composable
-private fun ReplyBar() {
-    Surface(color = MaterialTheme.colorScheme.surface) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(26.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-            ) {
-                Text(
-                    text = stringResource(R.string.post_reply_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                )
-            }
-        }
     }
 }
 

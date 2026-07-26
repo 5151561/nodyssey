@@ -14,6 +14,35 @@ import androidx.compose.ui.unit.dp
  * strict lockfile makes a separate, deliberate operation.
  */
 object NodeSeekIcons {
+    val History: ImageVector by lazy {
+        materialIcon(
+            name = "History",
+            pathData =
+            "M13,3a9,9 0,0 0,-9,9H1l4,4 4,-4H6a7,7 0,1 1,2.05,4.95l-1.42,1.42A9,9 0,1 0,13,3z" +
+                "m-1,5v5l4.25,2.52.75,-1.23 -3.5,-2.04V8z",
+        )
+    }
+
+    val PersonSearch: ImageVector by lazy {
+        materialIcon(
+            name = "PersonSearch",
+            pathData =
+            "M10,8a4,4 0,1 1,-8,0 4,4 0,0 1,8,0zM6,14c-2.67,0 -6,1.34 -6,4v2h9.35" +
+                "A7,7 0,0 1,9,18c0,-1.38 .4,-2.66 1.1,-3.74A16,16 0,0 0,6,14z" +
+                "M16,12a3,3 0,1 0,1.66,5.49L20.17,20 21,19.17l-2.51,-2.51A3,3 0,0 0,16,12z" +
+                "M16,14a1,1 0,1 1,0,2 1,1 0,0 1,0,-2z",
+        )
+    }
+
+    /** Reply action used by the detail screen's sole primary FAB. */
+    val Reply: ImageVector by lazy {
+        materialIcon(
+            name = "Reply",
+            pathData =
+            "M10,9V5L3,12l7,7v-4.1c5,0 8.5,1.6 11,5.1-1,-5-4,-11-11,-11z",
+        )
+    }
+
     /** Edit action used by the profile header without pulling in material-icons-extended. */
     val Edit: ImageVector by lazy {
         materialIcon(
