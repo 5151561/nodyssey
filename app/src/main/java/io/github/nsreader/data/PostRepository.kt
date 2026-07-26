@@ -5,12 +5,15 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import androidx.room.withTransaction
 import io.github.nsreader.core.AppClock
+import io.github.nsreader.data.local.CacheSessionEntity
 import io.github.nsreader.data.local.CommentEntity
 import io.github.nsreader.data.local.FeedPostRow
 import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.local.toSnapshot
 import io.github.nsreader.data.local.toSummary
+import io.github.nsreader.model.FeedSort
 import io.github.nsreader.model.PostSummary
 import io.github.nsreader.model.ThreadSnapshot
 import kotlinx.coroutines.flow.Flow
@@ -38,7 +41,47 @@ data class FeedPost(
  */
 interface PostRepository {
     /** A pager backed by the database, refilled from the network by [FeedRemoteMediator]. */
-    fun feed(categorySlug: String?): Flow<PagingData<FeedPost>>
+    fun feed(
+        categorySlug: String?,
+        sort: FeedSort,
+    ): Flow<PagingData<FeedPost>>
+
+    /** Searches the local feed cache by title or author. */
+    fun search(query: String): Flow<List<FeedPost>>
+
+    /**
+     * Marks every cached feed and thread stale.
+     *
+     * Called when the session changes. NodeSeek serves different content to a signed-in reader — whole
+     * boards appear — so what is stored answered a different question and its freshness window is a
+     * lie. The content stays readable until the refresh lands; only the timestamp is withdrawn.
+     */
+    suspend fun invalidateCaches()
+
+    /**
+     * Removes every post-derived value that may have been fetched with an authenticated session.
+     *
+     * The database cannot currently prove which rows came from a public page and which came from a
+     * signed-in-only board, so logout must fail closed and clear the whole post cache. Boards and
+     * settings are not session-scoped and are deliberately retained.
+     */
+    suspend fun clearSessionData()
+
+    /** Clears downloaded post content while preserving the current session provenance marker. */
+    suspend fun clearCache(
+        isSignedIn: Boolean,
+        fingerprint: Int,
+    )
+
+    /**
+     * Reconciles persisted cache provenance with the cookie jar before cached rows are exposed.
+     *
+     * @return true when authenticated rows were cleared because the current process is signed out.
+     */
+    suspend fun reconcileSession(
+        isSignedIn: Boolean,
+        fingerprint: Int,
+    ): Boolean
 
     /** The cached thread, emitting null until page 1 has ever been fetched. */
     fun thread(postId: Long): Flow<ThreadSnapshot?>
@@ -67,8 +110,11 @@ class OfflineFirstPostRepository(
     private val remote: PostRemoteDataSource,
     private val clock: AppClock,
 ) : PostRepository {
-    override fun feed(categorySlug: String?): Flow<PagingData<FeedPost>> {
-        val feedKey = feedKeyFor(categorySlug)
+    override fun feed(
+        categorySlug: String?,
+        sort: FeedSort,
+    ): Flow<PagingData<FeedPost>> {
+        val feedKey = feedKeyFor(categorySlug, sort)
         return Pager(
             config =
             PagingConfig(
@@ -82,12 +128,77 @@ class OfflineFirstPostRepository(
             FeedRemoteMediator(
                 feedKey = feedKey,
                 categorySlug = categorySlug,
+                sort = sort,
                 database = database,
                 remote = remote,
                 clock = clock,
             ),
             pagingSourceFactory = { database.feedDao().pagingSource(feedKey) },
         ).flow.map { pagingData -> pagingData.map(FeedPostRow::toFeedPost) }
+    }
+
+    override fun search(query: String): Flow<List<FeedPost>> {
+        val escaped = query.trim().escapeLikePattern()
+        if (escaped.isEmpty()) return kotlinx.coroutines.flow.flowOf(emptyList())
+        return database.feedDao().search(escaped).map { rows -> rows.map(FeedPostRow::toFeedPost) }
+    }
+
+    override suspend fun invalidateCaches() {
+        database.feedDao().expireAllFeeds()
+        database.postDetailDao().expireAllThreads()
+    }
+
+    override suspend fun clearSessionData() {
+        database.withTransaction {
+            clearPostData()
+            database.cacheSessionDao().upsert(
+                CacheSessionEntity(authenticated = false, fingerprint = 0),
+            )
+        }
+    }
+
+    override suspend fun clearCache(
+        isSignedIn: Boolean,
+        fingerprint: Int,
+    ) {
+        database.withTransaction {
+            clearPostData()
+            database.cacheSessionDao().upsert(
+                CacheSessionEntity(
+                    authenticated = isSignedIn,
+                    fingerprint = if (isSignedIn) fingerprint else 0,
+                ),
+            )
+        }
+    }
+
+    override suspend fun reconcileSession(
+        isSignedIn: Boolean,
+        fingerprint: Int,
+    ): Boolean =
+        database.withTransaction {
+            val previous = database.cacheSessionDao().find()
+            val mustClear =
+                previous?.authenticated == true &&
+                    (!isSignedIn || previous.fingerprint != fingerprint)
+            if (mustClear) clearPostData()
+            database.cacheSessionDao().upsert(
+                CacheSessionEntity(
+                    authenticated = isSignedIn,
+                    fingerprint = if (isSignedIn) fingerprint else 0,
+                ),
+            )
+            mustClear
+        }
+
+    private suspend fun clearPostData() {
+        // Positions reference posts, and comments reference details. Clear owners only after their
+        // membership rows so foreign-key enforcement never observes an invalid graph.
+        database.feedDao().clearAllFeedPositions()
+        database.feedDao().clearAllRemoteKeys()
+        database.feedDao().clearAllPosts()
+        database.postDetailDao().clearAllThreads()
+        database.readMarkDao().clearAll()
     }
 
     override fun thread(postId: Long): Flow<ThreadSnapshot?> = database.postDetailDao().observeThread(postId).map { it?.toSnapshot() }
@@ -157,3 +268,8 @@ private fun FeedPostRow.toFeedPost(): FeedPost {
         newCommentCount = if (seen == null) 0 else ((post.commentCount ?: 0) - seen).coerceAtLeast(0),
     )
 }
+
+private fun String.escapeLikePattern(): String =
+    replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")

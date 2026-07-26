@@ -6,22 +6,145 @@
     <string name="action_close">关闭</string>
     <string name="action_retry">重试</string>
     <string name="action_sign_in">登录</string>
+    <string name="action_sign_out">退出登录</string>
+    <string name="action_verify">去验证</string>
     <string name="action_open_in_browser">在网页中打开</string>
-    <string name="action_verify_in_browser">在浏览器中验证</string>
+    <string name="action_copy">复制</string>
+    <string name="action_copy_link">复制链接</string>
+    <string name="action_share">分享</string>
+    <string name="action_more">更多</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_sort">排序方式</string>
+    <string name="action_show_all_boards">全部版块</string>
+    <string name="action_hide_all_boards">收起版块</string>
+
+    <!-- Sort order: the site offers both, and heavy users switch between them -->
+    <string name="sort_by_reply_time">按回复时间</string>
+    <string name="sort_by_post_time">按发帖时间</string>
+
+    <!-- Screen-reader description for the lock on a board only admins can open -->
+    <string name="board_admin_only">仅管理员可见</string>
 
     <!-- Post list -->
     <string name="post_reply_count">%1$d 回复</string>
     <string name="post_new_reply_count">%1$d 条新回复</string>
     <string name="post_view_count">%1$d 浏览</string>
+    <string name="post_badge_pinned">置顶</string>
+    <string name="post_badge_locked">已锁帖</string>
     <string name="post_badge_original_poster">楼主</string>
 
-    <!-- Errors: wording lives here, never in the data layer -->
-    <string name="error_cloudflare">需要在浏览器里完成一次人机验证，之后就能正常浏览了</string>
-    <string name="error_login_required">这个版块的内容需要登录后才能查看</string>
-    <string name="error_http">服务器返回了 HTTP %1$d</string>
-    <string name="error_unparsable">页面结构和预期不一致，可能是站点改版了</string>
-    <string name="error_network">连不上 NodeSeek，检查一下网络</string>
-    <string name="error_unknown">加载失败</string>
+    <!-- Post detail -->
+    <string name="post_comments_header">评论 · %1$d</string>
+    <string name="post_body_empty">这个帖子没有正文</string>
+    <string name="post_comments_empty">还没有人回复</string>
+    <string name="post_comments_empty_hint">来做第一个吧——不过 v1 还是只读的</string>
+    <string name="post_link_copied">链接已复制</string>
+    <string name="post_code_copied">代码已复制</string>
+    <string name="post_image_view_full">点击查看全图</string>
+    <string name="post_quote_reply">@%1$s %2$s</string>
+    <string name="post_auto_paging">自动续页</string>
+    <string name="post_reply_hint">回复这个帖子…</string>
+    <string name="post_reaction_like">点赞</string>
+    <string name="post_reaction_chicken">投喂鸡腿</string>
+    <string name="post_reaction_dislike">点踩</string>
+    <string name="chicken_dialog_title">投喂鸡腿？</string>
+    <string name="chicken_dialog_body">是否向 %1$s 投喂鸡腿？这将消耗你一个鸡腿。</string>
+    <string name="chicken_dialog_confirm">投喂</string>
+
+    <!-- Top-level navigation: a bar on a phone, a rail once the window is wide enough -->
+    <string name="tab_home">首页</string>
+    <string name="tab_search">搜索</string>
+    <string name="tab_notifications">通知</string>
+    <string name="tab_profile">我的</string>
+
+    <!-- Search: results are the posts already owned by the offline Room cache -->
+    <string name="search_hint">搜索帖子、用户</string>
+    <string name="search_clear_query">清空关键词</string>
+    <string name="search_recent">最近搜索</string>
+    <string name="search_clear_all">全部清除</string>
+    <string name="search_remove_recent">删除最近搜索：%1$s</string>
+    <string name="search_local_results">本地缓存中找到 %1$d 条结果</string>
+
+    <!-- Notifications -->
+    <string name="notifications_mark_all_read">全部已读</string>
+    <string name="notifications_replies">回复我的</string>
+    <string name="notifications_mentions">@我的</string>
+    <string name="notifications_messages">私信</string>
+    <string name="notifications_system">系统</string>
+    <string name="notifications_empty">这里暂时没有通知</string>
+
+    <!-- Profile -->
+    <string name="profile_session_active">NodeSeek 登录会话有效</string>
+    <string name="profile_level_unknown">Lv —</string>
+    <string name="profile_edit">编辑个人主页</string>
+    <string name="profile_chicken">鸡腿</string>
+    <string name="profile_stars">星辰</string>
+    <string name="profile_streak">连续签到</string>
+    <string name="profile_attendance">今日签到 · 领鸡腿</string>
+    <string name="profile_topics">我的主题</string>
+    <string name="profile_comments">我的评论</string>
+    <string name="profile_bookmarks">我的收藏</string>
+    <string name="profile_open_web">在网页中打开个人主页</string>
+
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+    <string name="settings_appearance">外观</string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_body_size">正文字号</string>
+    <string name="settings_body_size_value">%1$dsp</string>
+    <string name="settings_text_preview">预览：中文长文的阅读体验。</string>
+    <string name="settings_content">内容</string>
+    <string name="settings_wifi_images">仅 Wi-Fi 下加载图片</string>
+    <string name="settings_wifi_images_hint">移动网络显示占位图</string>
+    <string name="settings_clear_cache">清除缓存</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_about_app">关于 NSReader</string>
+    <string name="settings_version">v1.0.0</string>
+    <string name="settings_licenses">开源许可</string>
+
+    <!-- Status and empty states: say what happened, then offer something to press -->
+    <string name="status_empty_feed_title">这里还没有帖子</string>
+    <string name="status_empty_feed_body">这个版块暂时是空的，去别的版块看看</string>
+    <string name="status_empty_feed_action">换个版块</string>
+
+    <string name="status_network_title">网络开小差了</string>
+    <string name="status_network_body">连不上 NodeSeek，检查一下网络后再试一次。</string>
+
+    <string name="status_challenge_title">需要确认一下你不是机器人</string>
+    <string name="status_challenge_body">NodeSeek 开启了访问保护。在浏览器里点一下验证，马上就能回来继续刷。</string>
+    <string name="status_challenge_footnote">验证在应用内置浏览器中完成，通过后自动返回列表</string>
+
+    <string name="status_sign_in_title">需要登录后查看</string>
+    <string name="status_sign_in_title_board">「%1$s」需要登录后查看</string>
+    <string name="status_sign_in_body">登录 NodeSeek 账号后即可浏览本版块的内容。登录成功会自动返回并重新加载。</string>
+    <string name="status_sign_in_secondary">先逛逛别的版块</string>
+
+    <string name="status_deleted_title">内容已被删除</string>
+    <string name="status_deleted_body">这个帖子被作者或管理员删除了。</string>
+    <string name="status_deleted_action">返回列表</string>
+
+    <string name="status_no_results_title">没搜到相关帖子</string>
+    <string name="status_no_results_body">换个关键词，或者去版块里翻翻。</string>
+    <string name="status_no_results_action">清空关键词</string>
+
+    <string name="status_signed_out_title">登录后解锁完整体验</string>
+    <string name="status_signed_out_body">收藏、通知、签到都在登录之后。</string>
+
+    <string name="status_signed_in_title">已登录 NodeSeek</string>
+    <string name="status_signed_in_body">应用现在会带着你的登录状态请求内容，内版这类版块可以直接看了。收藏、通知和签到还在做。</string>
+
+    <string name="status_unparsable_title">这个页面读不出来</string>
+    <string name="status_unparsable_body">页面结构和预期不一致，多半是站点改版了。先去网页里看看。</string>
+
+    <string name="status_http_title">服务器返回了 HTTP %1$d</string>
+    <string name="status_unknown_title">加载失败</string>
+    <string name="status_generic_body">再试一次，或者到网页里看看。</string>
+
+    <string name="status_coming_soon_title">%1$s 还在做</string>
+    <string name="status_coming_soon_body">这个页面的设计稿还没定，先用首页凑合一下。</string>
 
     <string name="image_description_sticker">表情</string>
 </resources>

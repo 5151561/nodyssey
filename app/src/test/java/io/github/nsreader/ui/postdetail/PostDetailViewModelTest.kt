@@ -7,9 +7,11 @@ import io.github.nsreader.data.MutableClock
 import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.inMemoryDatabase
 import io.github.nsreader.data.local.NodeSeekDatabase
+import io.github.nsreader.data.session.SessionState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -49,7 +51,44 @@ class PostDetailViewModelTest {
         database.close()
     }
 
-    private fun viewModel(postId: Long = 42) = PostDetailViewModel(postId, repository)
+    private val session = MutableStateFlow(SessionState())
+
+    private fun viewModel(postId: Long = 42) = PostDetailViewModel(postId, repository, session)
+
+    /**
+     * A thread that answered "登录后查看" a second ago has content now. The freshness window would
+     * otherwise suppress the one request that matters.
+     */
+    @Test
+    fun `signing in refetches the thread even inside the cache window`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            val requestsBefore = remote.detailRequests.size
+            assertTrue("expected an initial fetch", requestsBefore > 0)
+
+            session.value = SessionState(isSignedIn = true, fingerprint = 1, generation = 1)
+            advanceUntilIdle()
+
+            assertTrue(
+                "expected a refetch, still at $requestsBefore",
+                remote.detailRequests.size > requestsBefore,
+            )
+        }
+
+    @Test
+    fun `an unchanged session does not refetch the thread`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            val requestsBefore = remote.detailRequests.size
+
+            session.value = SessionState()
+            advanceUntilIdle()
+
+            assertEquals(requestsBefore, remote.detailRequests.size)
+            assertNull(vm.uiState.value.error)
+        }
 
     @Test
     fun `loads a thread that is not cached yet`() =
@@ -144,6 +183,47 @@ class PostDetailViewModelTest {
             advanceUntilIdle()
 
             assertEquals(5, vm.uiState.value.comments.size)
+        }
+
+    @Test
+    fun `removing session data clears a still alive detail entry`() =
+        runTest(dispatcher) {
+            repository.refreshThread(postId = 42, page = 1)
+            val vm = viewModel()
+            advanceUntilIdle()
+            assertNotNull(vm.uiState.value.body)
+
+            repository.clearSessionData()
+            advanceUntilIdle()
+
+            assertNull(vm.uiState.value.body)
+            assertTrue(vm.uiState.value.comments.isEmpty())
+            assertEquals(1, vm.uiState.value.page)
+        }
+
+    @Test
+    fun `refresh after page three resumes from page two without a gap`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 1, totalPages = 5)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+            vm.loadNextPage()
+            advanceUntilIdle()
+            vm.loadNextPage()
+            advanceUntilIdle()
+            assertEquals(3, vm.uiState.value.page)
+
+            vm.refresh()
+            advanceUntilIdle()
+            assertEquals(1, vm.uiState.value.page)
+
+            vm.loadNextPage()
+            advanceUntilIdle()
+
+            assertEquals(2, remote.detailRequests.last().second)
+            assertEquals(2, vm.uiState.value.page)
         }
 
     /** A flaky connection must not throw away content the user is already reading. */

@@ -6,7 +6,9 @@
     minSdk is 26, so this file still applies on real devices and is not dead weight.
 -->
 <full-backup-content>
-    <exclude domain="database" path="webview.db" />
-    <exclude domain="file" path="app_webview" />
-    <exclude domain="file" path="webview" />
+    <!-- All Room tables are re-downloadable caches and may contain signed-in-only content. -->
+    <exclude domain="database" path="." />
+    <!-- WebView stores cookies under getDataDir(), which is the backup "root" domain. -->
+    <exclude domain="root" path="app_webview" />
+    <exclude domain="root" path="webview" />
 </full-backup-content>

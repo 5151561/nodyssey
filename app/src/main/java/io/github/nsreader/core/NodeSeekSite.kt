@@ -1,5 +1,8 @@
 package io.github.nsreader.core
 
+import io.github.nsreader.model.FeedSort
+import java.net.URI
+
 /**
  * Everything we know about the shape of nodeseek.com lives here.
  *
@@ -11,8 +14,15 @@ object NodeSeekSite {
 
     const val BASE_URL = "https://www.nodeseek.com"
 
-    /** The site sits behind Cloudflare, so requests must look like a real mobile browser. */
-    const val USER_AGENT =
+    /**
+     * Last resort only. The real UA is read off the WebView — see `resolveUserAgent`.
+     *
+     * Hardcoding this as *the* UA is what caused the infinite Cloudflare challenge: it contradicted
+     * the UA client hints the WebView keeps sending from its actual Chromium version, and a managed
+     * challenge answers a contradiction with another challenge. It survives here for the one case
+     * where the WebView cannot be asked at all.
+     */
+    const val FALLBACK_USER_AGENT =
         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) " +
             "Chrome/126.0.6478.71 Mobile Safari/537.36"
 
@@ -40,10 +50,20 @@ object NodeSeekSite {
     data class Category(val slug: String?, val title: String)
 
     /** `null` slug means the mixed front page, which pages as `/page-2` rather than `/categories/…`. */
-    fun listPath(categorySlug: String?, page: Int): String {
+    fun listPath(
+        categorySlug: String?,
+        page: Int,
+        sort: FeedSort = FeedSort.LAST_REPLY,
+    ): String {
         val safePage = page.coerceAtLeast(1)
         val base = if (categorySlug == null) "" else "/categories/$categorySlug"
-        return if (safePage == 1) base.ifEmpty { "/" } else "$base/page-$safePage"
+        val path = if (safePage == 1) base.ifEmpty { "/" } else "$base/page-$safePage"
+        // The site's default order carries no parameter, so the URL stays byte-identical to what it
+        // was before sorting existed — which is what keeps every cached feed key valid.
+        return when (sort) {
+            FeedSort.LAST_REPLY -> path
+            FeedSort.POST_TIME -> "$path?sortBy=postTime"
+        }
     }
 
     fun postPath(postId: Long, page: Int = 1): String = "/post-$postId-${page.coerceAtLeast(1)}"
@@ -64,8 +84,32 @@ object NodeSeekSite {
         }
     }
 
+    /** Only these URLs may execute JavaScript inside the authenticated WebView. */
+    fun isTrustedWebViewUrl(url: String): Boolean =
+        parseWebUri(url)?.let { uri ->
+            uri.scheme.equals("https", ignoreCase = true) &&
+                uri.host?.lowercase() in TRUSTED_WEBVIEW_HOSTS &&
+                (uri.port == -1 || uri.port == 443)
+        } == true
+
+    /** Ordinary links leave the app and are accepted only when they are normal web URLs. */
+    fun isExternalWebUrl(url: String): Boolean =
+        parseWebUri(url)?.let { uri ->
+            uri.host != null &&
+                (
+                    uri.scheme.equals("https", ignoreCase = true) ||
+                        uri.scheme.equals("http", ignoreCase = true)
+                    )
+        } == true
+
+    private fun parseWebUri(url: String): URI? =
+        runCatching { URI(url.trim()) }
+            .getOrNull()
+            ?.takeIf { it.isAbsolute && it.userInfo == null }
+
     private val POST_PATH = Regex("""/post-(\d+)(?:-(\d+))?""")
     private val SPACE_PATH = Regex("""/space/(\d+)""")
+    private val TRUSTED_WEBVIEW_HOSTS = setOf("www.nodeseek.com", "nodeseek.com")
 
     /** Extracts the post id (and page, when present) from `/post-703863-2`. */
     fun parsePostRoute(href: String?): PostRoute? {

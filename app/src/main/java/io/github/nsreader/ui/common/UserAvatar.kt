@@ -2,6 +2,7 @@ package io.github.nsreader.ui.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -11,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -28,13 +30,13 @@ fun UserAvatar(
     name: String,
     size: Dp,
     modifier: Modifier = Modifier,
+    shape: Shape = CircleShape,
     fontSize: TextUnit = (size.value * 0.42f).sp,
 ) {
-    val fallback: @Composable () -> Unit = {
+    val fallback: @Composable (Modifier) -> Unit = { avatarModifier ->
         Box(
-            modifier = Modifier
-                .size(size)
-                .clip(CircleShape)
+            modifier = avatarModifier
+                .clip(shape)
                 .background(colorForName(name)),
             contentAlignment = Alignment.Center,
         ) {
@@ -48,7 +50,7 @@ fun UserAvatar(
     }
 
     if (url == null || name.isEmpty()) {
-        fallback()
+        fallback(modifier.size(size))
         return
     }
 
@@ -59,15 +61,15 @@ fun UserAvatar(
         loading = {
             Box(
                 Modifier
-                    .size(size)
-                    .clip(CircleShape)
+                    .fillMaxSize()
+                    .clip(shape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             )
         },
-        error = { fallback() },
+        error = { fallback(Modifier.fillMaxSize()) },
         modifier = modifier
             .size(size)
-            .clip(CircleShape),
+            .clip(shape),
     )
 }
 

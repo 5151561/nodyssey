@@ -14,13 +14,19 @@ import io.github.nsreader.data.Board
 import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.FeedPost
 import io.github.nsreader.data.PostRepository
+import io.github.nsreader.data.session.SessionRepository
+import io.github.nsreader.data.session.SessionState
 import io.github.nsreader.di.AppContainer
+import io.github.nsreader.model.FeedSort
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -41,9 +47,21 @@ import kotlinx.coroutines.launch
 class PostListViewModel(
     private val repository: PostRepository,
     private val categoryRepository: CategoryRepository,
+    session: StateFlow<SessionState> = MutableStateFlow(SessionState()),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostListUiState())
     val uiState: StateFlow<PostListUiState> = _uiState.asStateFlow()
+
+    /**
+     * Bumped once the caches have been marked stale after a session change.
+     *
+     * It is a separate flow from [SessionRepository.state] precisely so the ordering is visible: the
+     * pager must not be rebuilt until the invalidation has committed, or the mediator answers
+     * `SKIP_INITIAL_REFRESH` and the user who just signed in keeps reading the signed-out list.
+     */
+    // Negative until the persisted cache provenance has been reconciled with the current cookie jar.
+    // This prevents a signed-out cold start from briefly exposing rows fetched while signed in.
+    private val feedGeneration = MutableStateFlow(-1)
 
     /**
      * `cachedIn` keeps the loaded pages alive across configuration changes and across navigating into
@@ -52,10 +70,13 @@ class PostListViewModel(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val feed: Flow<PagingData<FeedPost>> =
-        uiState
-            .map { it.categorySlug }
+        combine(
+            uiState.map { it.categorySlug to it.sort },
+            feedGeneration,
+        ) { (slug, sort), generation -> FeedKey(slug, sort, generation) }
+            .filter { it.sessionGeneration >= 0 }
             .distinctUntilChanged()
-            .flatMapLatest { slug -> repository.feed(slug) }
+            .flatMapLatest { key -> repository.feed(key.categorySlug, key.sort) }
             .cachedIn(viewModelScope)
 
     init {
@@ -64,6 +85,29 @@ class PostListViewModel(
         categoryRepository.boards
             .onEach { boards -> _uiState.update { it.copy(boards = boards) } }
             .launchIn(viewModelScope)
+
+        // Reconcile the first cookie snapshot before opening a Pager. Later generations either
+        // invalidate authenticated data or clear it when the user becomes signed out.
+        session
+            .distinctUntilChangedBy { it.generation }
+            .onEach { sessionState ->
+                val isInitial = feedGeneration.value < 0
+                val cleared =
+                    repository.reconcileSession(
+                        isSignedIn = sessionState.isSignedIn,
+                        fingerprint = sessionState.fingerprint,
+                    )
+                if (!isInitial && sessionState.isSignedIn && !cleared) {
+                    repository.invalidateCaches()
+                }
+                feedGeneration.update { generation ->
+                    when {
+                        generation < 0 -> 0
+                        cleared || !isInitial -> generation + 1
+                        else -> generation
+                    }
+                }
+            }.launchIn(viewModelScope)
 
         viewModelScope.launch { categoryRepository.refreshIfNeeded() }
     }
@@ -74,18 +118,48 @@ class PostListViewModel(
         _uiState.update { it.copy(categorySlug = slug) }
     }
 
+    /**
+     * Sort order is session state rather than a stored setting.
+     *
+     * Switching it is a "look at this differently for a minute" action, not a preference — and each
+     * order is a separate feed in the database, so persisting it would also mean deciding which of
+     * the two cached lists a cold start should paint.
+     */
+    fun selectSort(sort: FeedSort) {
+        if (_uiState.value.sort == sort) return
+        _uiState.update { it.copy(sort = sort) }
+    }
+
     /** The URL a WebView should open to clear the current error. */
-    fun challengeUrl(): String = NodeSeekSite.BASE_URL + NodeSeekSite.listPath(_uiState.value.categorySlug, 1)
+    fun challengeUrl(): String =
+        NodeSeekSite.BASE_URL +
+            NodeSeekSite.listPath(_uiState.value.categorySlug, 1, _uiState.value.sort)
 
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
-                    PostListViewModel(container.postRepository, container.categoryRepository)
+                    PostListViewModel(
+                        container.postRepository,
+                        container.categoryRepository,
+                        container.sessionRepository.state,
+                    )
                 }
             }
     }
 }
+
+/**
+ * Everything that decides *which* pager the screen is showing.
+ *
+ * A data class rather than a `Triple` so `distinctUntilChanged` compares fields that have names, and
+ * so adding a fourth reason to rebuild cannot silently reorder the destructuring.
+ */
+private data class FeedKey(
+    val categorySlug: String?,
+    val sort: FeedSort,
+    val sessionGeneration: Int,
+)
 
 /**
  * Everything about the list that is *not* the list.
@@ -96,9 +170,19 @@ class PostListViewModel(
 data class PostListUiState(
     val boards: List<Board> = listOf(CategoryRepository.FRONT_PAGE),
     val categorySlug: String? = null,
+    val sort: FeedSort = FeedSort.LAST_REPLY,
 ) {
     val selectedBoardIndex: Int
         get() = boards.indexOfFirst { it.slug == categorySlug }.coerceAtLeast(0)
+
+    /**
+     * The selected board's name, or null on the mixed front page.
+     *
+     * Null rather than "综合" on purpose: it feeds the "needs login" screen, and "「综合」需要登录"
+     * would be a sentence about a board that does not exist.
+     */
+    val selectedBoardTitle: String?
+        get() = categorySlug?.let { slug -> boards.firstOrNull { it.slug == slug }?.title }
 }
 
 internal fun Throwable.toNodeSeekError(): NodeSeekError = (this as? NodeSeekException)?.error ?: NodeSeekError.Unknown

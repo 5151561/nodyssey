@@ -33,6 +33,7 @@ class SettingsRepository(
                 dynamicColor = preferences[KEY_DYNAMIC_COLOR] ?: false,
                 fontScale = preferences[KEY_FONT_SCALE] ?: 1f,
                 imagesOnWifiOnly = preferences[KEY_IMAGES_WIFI_ONLY] ?: false,
+                recentSearches = decodeRecentSearches(preferences[KEY_RECENT_SEARCHES]),
             )
         }
 
@@ -44,6 +45,25 @@ class SettingsRepository(
         edit { it[KEY_FONT_SCALE] = scale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE) }
 
     suspend fun setImagesOnWifiOnly(enabled: Boolean) = edit { it[KEY_IMAGES_WIFI_ONLY] = enabled }
+
+    suspend fun addRecentSearch(query: String) {
+        val normalized = query.trim()
+        if (normalized.isEmpty()) return
+        dataStore.edit { preferences ->
+            val searches = decodeRecentSearches(preferences[KEY_RECENT_SEARCHES])
+            preferences[KEY_RECENT_SEARCHES] =
+                encodeRecentSearches(listOf(normalized) + searches.filterNot { it == normalized })
+        }
+    }
+
+    suspend fun removeRecentSearch(query: String) {
+        dataStore.edit { preferences ->
+            val searches = decodeRecentSearches(preferences[KEY_RECENT_SEARCHES]).filterNot { it == query }
+            preferences[KEY_RECENT_SEARCHES] = encodeRecentSearches(searches)
+        }
+    }
+
+    suspend fun clearRecentSearches() = edit { it.remove(KEY_RECENT_SEARCHES) }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         dataStore.edit(block)
@@ -59,6 +79,22 @@ class SettingsRepository(
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
         private val KEY_IMAGES_WIFI_ONLY = booleanPreferencesKey("images_on_wifi_only")
+        private val KEY_RECENT_SEARCHES = stringPreferencesKey("recent_searches")
+
+        private const val RECENT_SEARCH_SEPARATOR = '\u001F'
+        private const val MAX_RECENT_SEARCHES = 8
+
+        private fun decodeRecentSearches(value: String?): List<String> =
+            value.orEmpty().split(RECENT_SEARCH_SEPARATOR).filter(String::isNotBlank)
+
+        private fun encodeRecentSearches(searches: List<String>): String =
+            searches
+                .asSequence()
+                .map { it.replace(RECENT_SEARCH_SEPARATOR.toString(), " ").trim() }
+                .filter(String::isNotEmpty)
+                .distinct()
+                .take(MAX_RECENT_SEARCHES)
+                .joinToString(RECENT_SEARCH_SEPARATOR.toString())
     }
 }
 
@@ -67,6 +103,7 @@ data class UserSettings(
     val dynamicColor: Boolean = false,
     val fontScale: Float = 1f,
     val imagesOnWifiOnly: Boolean = false,
+    val recentSearches: List<String> = emptyList(),
 )
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }

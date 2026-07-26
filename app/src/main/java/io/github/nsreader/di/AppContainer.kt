@@ -9,12 +9,18 @@ import io.github.nsreader.core.AppDispatchers
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.NodeSeekClient
 import io.github.nsreader.core.net.NodeSeekJsonClient
+import io.github.nsreader.core.net.UserAgent
 import io.github.nsreader.core.net.WebViewCookieJar
+import io.github.nsreader.core.net.resolveUserAgent
 import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.NetworkPostDataSource
+import io.github.nsreader.data.NetworkProfileRepository
+import io.github.nsreader.data.NotificationRepository
 import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.PostRepository
+import io.github.nsreader.data.ProfileRepository
 import io.github.nsreader.data.local.NodeSeekDatabase
+import io.github.nsreader.data.session.SessionRepository
 import io.github.nsreader.data.settings.SettingsRepository
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -36,6 +42,15 @@ interface AppContainer {
     val postRepository: PostRepository
     val categoryRepository: CategoryRepository
     val settingsRepository: SettingsRepository
+    val notificationRepository: NotificationRepository
+    val profileRepository: ProfileRepository
+    val sessionRepository: SessionRepository
+
+    /**
+     * The UA the WebView and OkHttp both use. Shared rather than duplicated: `cf_clearance` is issued
+     * against the UA that solved the challenge and rejected for any other.
+     */
+    val userAgent: UserAgent
     val okHttpClient: OkHttpClient
 }
 
@@ -52,6 +67,8 @@ class DefaultAppContainer(
 
     override val cookieJar: WebViewCookieJar by lazy { WebViewCookieJar() }
 
+    override val userAgent: UserAgent by lazy { resolveUserAgent(appContext) }
+
     override val okHttpClient: OkHttpClient by lazy {
         OkHttpClient
             .Builder()
@@ -63,7 +80,7 @@ class DefaultAppContainer(
                 val request = chain.request()
                 val builder = request.newBuilder()
                 if (request.header("User-Agent") == null) {
-                    builder.header("User-Agent", NodeSeekSite.USER_AGENT)
+                    builder.header("User-Agent", userAgent.value)
                 }
                 if (request.header("Referer") == null) {
                     builder.header("Referer", "${NodeSeekSite.BASE_URL}/")
@@ -92,4 +109,18 @@ class DefaultAppContainer(
     override val settingsRepository: SettingsRepository by lazy {
         SettingsRepository(appContext.settingsDataStore)
     }
+
+    override val notificationRepository: NotificationRepository by lazy {
+        NotificationRepository(jsonClient)
+    }
+
+    override val profileRepository: ProfileRepository by lazy {
+        NetworkProfileRepository(htmlClient, jsonClient)
+    }
+
+    /**
+     * Shares the cookie jar rather than owning a store of its own: the cookies OkHttp sends and the
+     * ones the WebView collects have to be the same cookies, or "am I signed in" gets two answers.
+     */
+    override val sessionRepository: SessionRepository by lazy { SessionRepository(cookieJar) }
 }

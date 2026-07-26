@@ -59,6 +59,9 @@ class NodeSeekJsonClient(
         const val PATH_CATEGORIES = "/api/content/list-categories"
         const val PATH_UNREAD_COUNT = "/api/notification/unread-count"
 
+        fun notificationListPath(type: String, page: Int = 1) =
+            "/api/notification/$type/list?page=$page"
+
         fun accountInfoPath(uid: Long) = "/api/account/getInfo/$uid"
     }
 }

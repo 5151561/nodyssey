@@ -10,8 +10,11 @@ import io.github.nsreader.data.MutableClock
 import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.inMemoryDatabase
 import io.github.nsreader.data.local.NodeSeekDatabase
+import io.github.nsreader.data.session.SessionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -19,6 +22,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -64,10 +69,13 @@ class PostListViewModelTest {
         database.close()
     }
 
+    private val session = MutableStateFlow(SessionState())
+
     private fun viewModel() =
         PostListViewModel(
             repository = OfflineFirstPostRepository(database, remote, clock),
             categoryRepository = CategoryRepository(failingJson, database.boardDao(), clock),
+            session = session,
         )
 
     @Test
@@ -154,5 +162,74 @@ class PostListViewModelTest {
             val titles = vm.feed.asSnapshot().map { it.summary.title }
 
             assertEquals(listOf("post 10", "post 11", "post 12"), titles)
+        }
+
+    /**
+     * The bug this exists for: signing in used to change nothing on screen. The cookies were shared
+     * all along, but the feed was inside its five-minute cache window, so the signed-in reader kept
+     * being served the list a signed-out one had fetched.
+     */
+    @Test
+    fun `signing in refetches the feed instead of serving the signed-out cache`() =
+        runTest(dispatcher) {
+            remote.listResult = { slug, page ->
+                FakePostRemoteDataSource.page(slug, page, firstId = 10, count = 1, hasNextPage = false)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+            assertEquals(listOf("post 10"), vm.feed.asSnapshot().map { it.summary.title })
+            val requestsBefore = remote.listRequests.size
+
+            // What the site serves a signed-in reader is a different list.
+            remote.listResult = { slug, page ->
+                FakePostRemoteDataSource.page(slug, page, firstId = 99, count = 1, hasNextPage = false)
+            }
+            session.value = SessionState(isSignedIn = true, fingerprint = 1, generation = 1)
+            advanceUntilIdle()
+
+            assertEquals(listOf("post 99"), vm.feed.asSnapshot().map { it.summary.title })
+            assertTrue(
+                "expected a new request, still at $requestsBefore",
+                remote.listRequests.size > requestsBefore,
+            )
+        }
+
+    @Test
+    fun `signing out removes content fetched by the authenticated session`() =
+        runTest(dispatcher) {
+            val repository = OfflineFirstPostRepository(database, remote, clock)
+            repository.refreshThread(postId = 42, page = 1)
+            session.value = SessionState(isSignedIn = true, fingerprint = 7)
+            val vm =
+                PostListViewModel(
+                    repository = repository,
+                    categoryRepository = CategoryRepository(failingJson, database.boardDao(), clock),
+                    session = session,
+                )
+            advanceUntilIdle()
+            assertNotNull(repository.thread(42).first())
+
+            session.value = SessionState(isSignedIn = false, fingerprint = 0, generation = 1)
+            advanceUntilIdle()
+
+            assertNull(repository.thread(42).first())
+            assertEquals(0, vm.uiState.value.selectedBoardIndex)
+        }
+
+    /** A cold start reads cookies that were already on disk; that is not a session *change*. */
+    @Test
+    fun `the session the app started with does not trigger an extra fetch`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            vm.feed.asSnapshot()
+            val requestsBefore = remote.listRequests.size
+
+            // Same generation re-emitted: the WebView was opened and nothing changed.
+            session.value = SessionState()
+            advanceUntilIdle()
+            vm.feed.asSnapshot()
+
+            assertEquals(requestsBefore, remote.listRequests.size)
         }
 }

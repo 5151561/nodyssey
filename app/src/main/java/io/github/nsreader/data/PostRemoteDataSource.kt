@@ -5,6 +5,7 @@ import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.html.PostDetailParser
 import io.github.nsreader.core.html.PostListParser
 import io.github.nsreader.core.net.NodeSeekClient
+import io.github.nsreader.model.FeedSort
 import io.github.nsreader.model.PostDetail
 import io.github.nsreader.model.PostListPage
 import kotlinx.coroutines.withContext
@@ -20,6 +21,7 @@ interface PostRemoteDataSource {
     suspend fun loadList(
         categorySlug: String?,
         page: Int,
+        sort: FeedSort,
     ): PostListPage
 
     suspend fun loadDetail(
@@ -35,8 +37,9 @@ class NetworkPostDataSource(
     override suspend fun loadList(
         categorySlug: String?,
         page: Int,
+        sort: FeedSort,
     ): PostListPage {
-        val html = client.getHtml(NodeSeekSite.listPath(categorySlug, page))
+        val html = client.getHtml(NodeSeekSite.listPath(categorySlug, page, sort))
         // Parsing an 80 KB page is real CPU work and must never land on the main thread.
         return withContext(dispatchers.default) { PostListParser.parse(html, page) }
     }

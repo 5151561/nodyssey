@@ -7,6 +7,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
 
 /**
  * A feed row joined with the read state the list needs to dim it or badge it.
@@ -41,6 +42,26 @@ interface FeedDao {
     )
     fun pagingSource(feedKey: String): PagingSource<Int, FeedPostRow>
 
+    /**
+     * Searches the posts that have already reached the offline cache.
+     *
+     * Search is deliberately local-first: NodeSeek has no stable public search API, while this table
+     * already contains the threads the reader is most likely trying to find again. [query] is escaped
+     * by the repository before it reaches LIKE, so `%` and `_` remain ordinary search characters.
+     */
+    @Query(
+        """
+        SELECT p.*, r.lastReadAtMillis AS lastReadAtMillis, r.lastSeenCommentCount AS lastSeenCommentCount
+        FROM posts p
+        LEFT JOIN post_read_marks r ON r.postId = p.postId
+        WHERE p.title LIKE '%' || :query || '%' ESCAPE '\'
+           OR p.authorName LIKE '%' || :query || '%' ESCAPE '\'
+        ORDER BY p.lastActiveText IS NULL, p.postId DESC
+        LIMIT :limit
+        """,
+    )
+    fun search(query: String, limit: Int = 100): Flow<List<FeedPostRow>>
+
     @Upsert
     suspend fun upsertPosts(posts: List<PostEntity>)
 
@@ -73,6 +94,25 @@ interface FeedDao {
 
     @Upsert
     suspend fun upsertRemoteKey(key: FeedRemoteKeyEntity)
+
+    /**
+     * Makes every stored feed count as stale without deleting a row.
+     *
+     * Rows are kept on purpose: the stale list still paints on the first frame while the refresh runs,
+     * which is the offline-first behaviour. Only the *freshness* claim is withdrawn, so the mediator
+     * stops answering `SKIP_INITIAL_REFRESH`.
+     */
+    @Query("UPDATE feed_remote_keys SET refreshedAtMillis = 0")
+    suspend fun expireAllFeeds()
+
+    @Query("DELETE FROM feed_positions")
+    suspend fun clearAllFeedPositions()
+
+    @Query("DELETE FROM feed_remote_keys")
+    suspend fun clearAllRemoteKeys()
+
+    @Query("DELETE FROM posts")
+    suspend fun clearAllPosts()
 
     /**
      * Drops posts that no feed points at any more and that nobody has read.

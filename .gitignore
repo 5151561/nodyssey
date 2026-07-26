@@ -16,3 +16,8 @@ local.properties
 
 # 本地笔记：接口清单与抓取策略，不对外发布
 docs/private/
+
+# Byproduct of `./gradlew resolveAndLockAll --write-locks`: Gradle also writes lock state for the
+# settings-level configurations, which here resolve nothing (`empty=incomingCatalogForLibs0`).
+# app/gradle.lockfile is the one that matters and is committed.
+settings-gradle.lockfile

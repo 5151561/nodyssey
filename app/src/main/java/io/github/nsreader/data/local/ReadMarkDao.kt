@@ -12,6 +12,9 @@ interface ReadMarkDao {
     @Query("SELECT * FROM post_read_marks WHERE postId = :postId")
     suspend fun find(postId: Long): ReadMarkEntity?
 
+    @Query("DELETE FROM post_read_marks")
+    suspend fun clearAll()
+
     /**
      * Records that the thread was read at [nowMillis] with [commentCount] comments visible.
      *

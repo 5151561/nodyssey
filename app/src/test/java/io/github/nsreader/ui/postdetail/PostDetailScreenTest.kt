@@ -16,11 +16,15 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /** Screen-level tests for the thread view, including the offline-first error behaviour. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+// The design targets a 360×800dp compact phone; Robolectric's default window is far
+// shorter than any real device and would fail screens that fit fine in the hand.
+@Config(qualifiers = "w360dp-h800dp")
 class PostDetailScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -52,12 +56,12 @@ class PostDetailScreenTest {
             NodeSeekTheme {
                 PostDetailScreen(
                     state = state,
+                    postUrl = "https://www.nodeseek.com/post-1-1",
                     onBack = onBack,
                     onOpenBrowser = onOpenBrowser,
                     onImageClick = {},
                     onRetry = onRetry,
                     onLoadMore = {},
-                    onOpenPostInBrowser = {},
                 )
             }
         }
@@ -73,8 +77,8 @@ class PostDetailScreenTest {
             ),
         )
 
-        // Twice by design: truncated in the app bar, and in full as the list header.
-        composeRule.onAllNodesWithText("a thread title").assertCountEquals(2)
+        // The app bar stays quiet until the full title has scrolled away.
+        composeRule.onAllNodesWithText("a thread title").assertCountEquals(1)
         composeRule.onNodeWithText("the opening post").assertIsDisplayed()
         composeRule.onNodeWithText("first reply").assertIsDisplayed()
         composeRule.onNodeWithText("second reply").assertIsDisplayed()
@@ -94,11 +98,23 @@ class PostDetailScreenTest {
     }
 
     @Test
+    fun `feeding chicken opens the confirmation dialog`() {
+        setScreen(PostDetailUiState(title = "t", body = content("body", author = "op")))
+
+        composeRule.onNodeWithContentDescription("投喂鸡腿").performClick()
+
+        composeRule.onNodeWithText("投喂鸡腿？").assertIsDisplayed()
+        composeRule.onNodeWithText("是否向 op 投喂鸡腿？这将消耗你一个鸡腿。").assertIsDisplayed()
+        composeRule.onNodeWithText("取消").performClick()
+        composeRule.onNodeWithText("投喂鸡腿？").assertDoesNotExist()
+    }
+
+    @Test
     fun `an error with nothing cached takes over the screen`() {
         setScreen(PostDetailUiState(body = null, error = NodeSeekError.Cloudflare))
 
-        composeRule.onNodeWithText("需要在浏览器里完成一次人机验证，之后就能正常浏览了").assertIsDisplayed()
-        composeRule.onNodeWithText("在浏览器中验证").assertIsDisplayed()
+        composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
+        composeRule.onNodeWithText("去验证").assertIsDisplayed()
     }
 
     @Test
@@ -131,7 +147,7 @@ class PostDetailScreenTest {
 
         composeRule.onNodeWithText("cached body").assertIsDisplayed()
         composeRule.onNodeWithText("cached reply").assertIsDisplayed()
-        composeRule.onNodeWithText("连不上 NodeSeek，检查一下网络").assertDoesNotExist()
+        composeRule.onNodeWithText("网络开小差了").assertDoesNotExist()
     }
 
     @Test

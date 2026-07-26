@@ -7,7 +7,8 @@
     <!--
         Backup is on, but the WebView profile is excluded. Backing it up would put the session cookie
         obtained by signing in into a cloud backup and onto any restored device — a credential leaving
-        the device it was issued to. Settings and the post cache are fine to carry over.
+        the device it was issued to. The Room cache is excluded too because it can contain content
+        fetched from signed-in-only boards; settings remain safe to carry over.
         See res/xml/backup_rules.xml and res/xml/data_extraction_rules.xml.
     -->
     <application

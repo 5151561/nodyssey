@@ -20,8 +20,11 @@ theme.
 - 头像加载失败时回退到首字母色块
 - 深色模式
 - WebView 登录 / Cloudflare 验证，Cookie 与 OkHttp 共享
+- 本地缓存搜索 + 最近搜索
+- 回复 / @ / 私信通知、未读数与楼层跳转
+- “我的”与设置（主题、阅读字号、图片策略、清缓存）
 
-尚未实现（见 [Roadmap](#roadmap)）：回复、点赞、收藏、签到、通知、搜索、离线缓存。
+尚未实现（见 [Roadmap](#roadmap)）：回复、点赞、收藏、签到与全站远程搜索。
 
 ## Architecture
 
@@ -80,10 +83,11 @@ NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口，其�
 
 - [ ] 回复、引用、表情、图片上传（走 JSON 接口，失败回退隐藏 WebView 注入 JS）
 - [ ] 点赞 / 踩 / 收藏 / 鸡腿
-- [ ] 消息通知与未读数（`/api/notification/*`）
+- [x] 消息通知与未读数（`/api/notification/*`）
 - [ ] 每日签到（`/api/attendance`）
-- [ ] 搜索、用户主页
-- [ ] Room 离线缓存 + 已读标记
+- [x] 已缓存帖子 / 用户搜索
+- [ ] 全站远程搜索、完整用户资料
+- [x] Room 离线缓存 + 已读标记
 - [ ] 图片全屏预览与保存
 
 ## 架构
@@ -101,7 +105,26 @@ NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口，其�
 
 ## 设计
 
-视觉重做的需求文档在 [docs/design-brief.md](docs/design-brief.md)（M3 Expressive 方向）。
+需求文档在 [docs/design-brief.md](docs/design-brief.md)，视觉稿据此产出，已落地的部分：
+
+> 关于「Expressive」的口径：落地的是 M3 Expressive 的 **token 与版式方向**——配色、字阶、形状、
+> tonal 色块、选中态换填充图标。**没有**用到 `MaterialExpressiveTheme` / `MotionScheme` 那套
+> 动效 API：它们在 material3 1.4.0（当前 BOM 解析到的版本）里是 `internal`，1.5.0 才转正式 API，
+> 而 1.5.0 目前还是 alpha。为一套动效把整个应用挪到 alpha 版 Material 不划算，等它转 stable 再说，
+> 触发条件写在 `ui/theme/Theme.kt` 里。
+
+- **Token**：`ui/theme/` 下的 light / dark 全量 M3 配色（品牌色「石墨青」`#35606E`，
+  深色 surface `#121318` 而非纯黑，保证分割线可见）、字阶、形状与间距。不跟随壁纸取色。
+- **首页**：分割线密集列表（一屏 9 条）、tonal 版块标签按四类分组、已读态降对比度、
+  置顶 / 锁帖标识、骨架屏、人机验证态、需登录态、排序切换。
+- **详情**：滚动后才出现标题的 App Bar + 24dp tonal 楼主卡 + 无分割线评论流；`@某人 #3`
+  折叠成可点 chip 并滚动到对应楼层；鸡腿确认弹层已预留写操作入口。
+  正文排版规范见 `RichContent.kt` 里的 `RichContentSpec` preview。
+- **状态合集**：`ui/common/StatusViews.kt`，一套 tonal 有机形 + 图标 + 说明 + 动作。
+- **搜索 / 通知 / 我的 / 设置**：离线缓存搜索、最近记录、通知分段与未读、个人资源卡、M3E 分组设置。
+- **底部导航**：4 tab；窗口够宽时由
+  `NavigationSuiteScaffold` 自动换成侧边 rail，每个 tab 各留一条返回栈。
+
 当前实现截图在 [docs/screenshots/](docs/screenshots/)。
 
 ## 致谢

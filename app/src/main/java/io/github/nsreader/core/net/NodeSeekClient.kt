@@ -7,6 +7,10 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 
+interface HtmlSource {
+    suspend fun getHtml(path: String): String
+}
+
 /**
  * Fetches NodeSeek pages as HTML.
  *
@@ -16,10 +20,10 @@ import java.io.IOException
 class NodeSeekClient(
     private val okHttpClient: OkHttpClient,
     private val dispatchers: AppDispatchers,
-) {
+) : HtmlSource {
 
     /** Returns the page body, or throws [NodeSeekException] describing why it is unusable. */
-    suspend fun getHtml(path: String): String = withContext(dispatchers.io) {
+    override suspend fun getHtml(path: String): String = withContext(dispatchers.io) {
         val url = NodeSeekSite.absoluteUrl(path) ?: error("Invalid path: $path")
         val request = Request.Builder()
             .url(url)
