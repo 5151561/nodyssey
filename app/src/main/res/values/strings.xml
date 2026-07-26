@@ -43,17 +43,18 @@
     <string name="composer_body_hint">写下正文，支持 Markdown…</string>
     <string name="composer_title_count">%1$d/%2$d</string>
     <string name="composer_select_board">选择版块</string>
-    <string name="composer_permission">阅读权限：%1$s</string>
     <string name="composer_permission_public">公开</string>
     <string name="composer_permission_level_one" tools:ignore="Typos">Lv1</string>
     <string name="composer_permission_private">私有</string>
     <string name="composer_draft_saved">草稿 %1$s</string>
     <string name="composer_draft_saving">草稿自动保存</string>
-    <string name="composer_rule_title">技术版发帖提醒</string>
-    <string name="composer_rule_body">请带上系统版本与可复现步骤；纯提问请优先发到「日常」。</string>
-    <string name="composer_rule_dismiss">关闭版规提醒</string>
+    <string name="composer_publishing">发布中</string>
+    <!-- The site's own right-hand rules card, verbatim in substance; shown on every board -->
+    <string name="composer_rule_title">重要提醒</string>
+    <string name="composer_rule_body">敏感话题请发内版 · 发卡站 / 大量出售必须发推广 · 禁止人身攻击 · 违规将受惩罚</string>
     <string name="composer_restore_title">继续上次的草稿？</string>
     <string name="composer_restore_body">保存于 %1$s · %2$s · 「%3$s」</string>
+    <string name="composer_restore_body_images">保存于 %1$s · %2$s · 「%3$s」，含 %4$d 张图片。</string>
     <string name="composer_restore_continue">继续编辑</string>
     <string name="composer_restore_discard">放弃草稿</string>
     <string name="composer_publish_failed">发布失败：%1$s，草稿已保留</string>
@@ -65,12 +66,37 @@
     <string name="composer_format_bold">加粗</string>
     <string name="composer_format_heading">二级标题</string>
     <string name="composer_format_code">行内代码</string>
+    <string name="composer_format_quote">引用</string>
     <string name="composer_format_list">无序列表</string>
     <string name="composer_format_link">链接</string>
+    <string name="composer_format_mention">提到某人</string>
     <string name="composer_format_image">图片</string>
     <string name="composer_format_emoji">表情</string>
     <string name="composer_preview_empty">正文预览会显示在这里</string>
     <string name="composer_just_now">刚刚</string>
+    <string name="composer_view_content">内容</string>
+    <string name="composer_view_preview">预览</string>
+    <string name="composer_view_compare">对照</string>
+
+    <!-- Image attachments: NodeImage is the site's own host -->
+    <string name="composer_image_uploading">上传中 %1$d%%</string>
+    <string name="composer_image_uploaded">已上传</string>
+    <string name="composer_image_failed">失败 · 重试</string>
+    <string name="composer_image_waiting">等待中</string>
+    <string name="composer_image_remove">移除 %1$s</string>
+    <string name="composer_image_retry_one">重试上传 %1$s</string>
+    <string name="composer_image_failed_count">%1$d 张图片上传失败</string>
+    <string name="composer_image_default_name">图片</string>
+
+    <!-- Emoji panel: five groups, matching the site's own editor -->
+    <string name="composer_emoji_group_acn">AC娘</string>
+    <string name="composer_emoji_group_onion">洋葱头</string>
+    <string name="composer_emoji_group_chick">小黄鸡</string>
+    <string name="composer_emoji_group_fluent">Fluent</string>
+    <string name="composer_emoji_group_app">App</string>
+    <string name="composer_emoji_recent">最近使用</string>
+    <string name="composer_emoji_backspace">删除</string>
+    <string name="composer_emoji_stickers_pending">站内贴图素材尚未接入，先用下面两组 emoji</string>
 
     <!-- Post detail -->
     <string name="post_comments_header">评论 · %1$d</string>
@@ -94,12 +120,15 @@
     <string name="post_last_page">最后一页</string>
     <string name="post_go_page">前往第 %1$s 页</string>
     <string name="post_reply_editor_title">回复</string>
-    <string name="post_reply_wip">回复功能开发中，暂不可发布</string>
+    <string name="post_reply_editor_title_floor">回复 #%1$d · %2$s</string>
     <string name="post_reply_editor_hint">写下你的回复…</string>
-    <string name="post_tool_bold">加粗</string>
-    <string name="post_tool_quote">引用</string>
-    <string name="post_tool_image">图片</string>
-    <string name="post_tool_emoji">表情</string>
+    <string name="post_reply_preview_title">预览 · 回复</string>
+    <string name="post_reply_preview_title_floor">预览 · 回复 #%1$d</string>
+    <string name="post_reply_draft_saved">草稿已保存 %1$s</string>
+    <string name="post_reply_quote_remove">移除引用</string>
+    <string name="post_reply_publish_failed">发布失败：%1$s，草稿已保留</string>
+    <string name="post_reply_publish_unavailable">评论发布接口尚未接入</string>
+    <string name="post_quote_prefix">#%1$d</string>
     <string name="post_reaction_like">点赞</string>
     <string name="post_reaction_chicken">投喂鸡腿</string>
     <string name="post_reaction_dislike">点踩</string>

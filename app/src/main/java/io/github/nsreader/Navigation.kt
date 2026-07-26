@@ -26,6 +26,7 @@ import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.ui.composer.PostComposerRoute
 import io.github.nsreader.ui.composer.PostComposerViewModel
+import io.github.nsreader.ui.composer.ReplyComposerViewModel
 import io.github.nsreader.ui.login.WebViewGoal
 import io.github.nsreader.ui.login.WebViewRoute
 import io.github.nsreader.ui.navigation.NodeSeekNavigationItems
@@ -214,8 +215,16 @@ fun MainNavigation(container: AppContainer) {
                             key = "post-${key.postId}",
                             factory = PostDetailViewModel.factory(container, key.postId),
                         )
+                    // Its own ViewModel, keyed the same way: an unsent reply belongs to one thread
+                    // and has to outlive the sheet that shows it.
+                    val replyViewModel: ReplyComposerViewModel =
+                        viewModel(
+                            key = "reply-${key.postId}",
+                            factory = ReplyComposerViewModel.factory(container, key.postId),
+                        )
                     PostDetailRoute(
                         viewModel = viewModel,
+                        replyViewModel = replyViewModel,
                         initialFloor = key.floor,
                         onBack = { backStack.removeLastOrNull() },
                         onOpenBrowser = openExternalUrl,

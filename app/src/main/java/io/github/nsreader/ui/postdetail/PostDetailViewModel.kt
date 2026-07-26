@@ -99,6 +99,12 @@ class PostDetailViewModel(
             }
         }
 
+        // The reply editor is the only thing here that needs an account, and it needs to know before
+        // it opens rather than after a failed publish.
+        session
+            .onEach { sessionState -> _uiState.update { it.copy(isSignedIn = sessionState.isSignedIn) } }
+            .launchIn(viewModelScope)
+
         // Coming back from the WebView signed in, or with a challenge cleared, is the one case where a
         // thread that was "fresh" a second ago is worth re-fetching: a locked thread has content now.
         // `drop(1)` skips the cookies we started with — a cold start is not a session change.
@@ -224,6 +230,7 @@ data class PostDetailUiState(
     val hasNextPage: Boolean = false,
     val isLoading: Boolean = false,
     val isAppending: Boolean = false,
+    val isSignedIn: Boolean = false,
     /** A page the screen should scroll to once its comments are in [comments]. */
     val pendingScrollPage: Int? = null,
     val error: NodeSeekError? = null,

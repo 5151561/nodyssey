@@ -21,7 +21,11 @@ import io.github.nsreader.data.OfflineFirstPostRepository
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.ProfileRepository
 import io.github.nsreader.data.SearchRepository
+import io.github.nsreader.data.composer.CommentComposerRepository
 import io.github.nsreader.data.composer.DefaultPostComposerRepository
+import io.github.nsreader.data.composer.ImageUploader
+import io.github.nsreader.data.composer.LocalCommentComposerRepository
+import io.github.nsreader.data.composer.NodeImageUploader
 import io.github.nsreader.data.composer.PostComposerRepository
 import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.session.SessionRepository
@@ -50,6 +54,8 @@ interface AppContainer {
     val profileRepository: ProfileRepository
     val searchRepository: SearchRepository
     val postComposerRepository: PostComposerRepository
+    val commentComposerRepository: CommentComposerRepository
+    val imageUploader: ImageUploader
     val sessionRepository: SessionRepository
 
     /**
@@ -131,6 +137,12 @@ class DefaultAppContainer(
     override val postComposerRepository: PostComposerRepository by lazy {
         DefaultPostComposerRepository(appContext, okHttpClient, dispatchers, clock)
     }
+
+    override val commentComposerRepository: CommentComposerRepository by lazy {
+        LocalCommentComposerRepository(appContext, clock)
+    }
+
+    override val imageUploader: ImageUploader by lazy { NodeImageUploader() }
 
     /**
      * Shares the cookie jar rather than owning a store of its own: the cookies OkHttp sends and the
