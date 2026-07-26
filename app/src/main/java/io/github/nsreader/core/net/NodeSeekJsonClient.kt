@@ -72,11 +72,13 @@ class NodeSeekJsonClient(
 
             response.use {
                 val body = it.body?.string().orEmpty()
-                if (!it.isSuccessful) throw NodeSeekException(NodeSeekError.Http(it.code))
-                // An HTML body on a JSON endpoint means Cloudflare intercepted the call.
+                // An HTML body on a JSON endpoint means Cloudflare intercepted the call, and it says
+                // so with 403 — so the body has to be read before the status, or every challenge on a
+                // read looks like a server fault and sends the user to "retry" instead of "verify".
                 if (body.trimStart().startsWith("<")) {
                     throw NodeSeekException(NodeSeekError.Cloudflare)
                 }
+                if (!it.isSuccessful) throw NodeSeekException(NodeSeekError.Http(it.code))
                 body
             }
         }
@@ -142,6 +144,8 @@ class NodeSeekJsonClient(
          * recipient field is camel-cased `receiverUid` while every other field on this API is
          * snake_case. A `message/talk/{uid}` path does not exist — that guess 404ed.
          */
+        // Callers currently read page 1 only, so a very long inbox is truncated; the parameter is
+        // here so paging is a call-site change rather than a new endpoint.
         fun messageListPath(page: Int = 1) = notificationListPath("message", page)
 
         fun messageThreadPath(uid: Long) = "/api/notification/message/with/$uid"

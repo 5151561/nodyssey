@@ -16,6 +16,17 @@ import org.junit.Test
  */
 class MessageRepositoryTest {
     private val listPath = NodeSeekJsonClient.messageListPath()
+
+    /** Most cases have several conversations, where the rows alone say which uid is ours. */
+    private fun repository(
+        api: JsonApi,
+        ownUid: Long? = null,
+        onAsked: () -> Unit = {},
+    ) = NetworkMessageRepository(api) {
+        onAsked()
+        ownUid
+    }
+
     private val threadPath = NodeSeekJsonClient.messageThreadPath(5230)
 
     /**
@@ -46,7 +57,7 @@ class MessageRepositoryTest {
                     ),
                 )
 
-            val conversations = NetworkMessageRepository(api).conversations()
+            val conversations = repository(api).conversations()
 
             assertEquals(3, conversations.size)
             assertEquals(conversations.size, conversations.distinctBy(MessageConversation::uid).size)
@@ -54,6 +65,66 @@ class MessageRepositoryTest {
             assertEquals("系统通知", conversations.first().userName)
             assertTrue(conversations.first().isSystem)
             assertEquals(listOf(5230L, 16874L, 51822L), conversations.map(MessageConversation::uid).sorted())
+        }
+
+    /**
+     * A brand-new account's inbox holds exactly one conversation — the system one — and both uids
+     * then occur equally often, so counting occurrences cannot say which is ours. Getting it
+     * backwards keys the row on our own uid, loses the name, and puts every incoming message on the
+     * right of the thread as though we had written it.
+     */
+    @Test
+    fun `a single-conversation inbox still identifies the counterparty`() =
+        runTest {
+            val api =
+                FakeJsonApi(
+                    mapOf(
+                        listPath to
+                            """
+                            {"success":true,"msgArray":[
+                              {"receiver_id":52425,"sender_id":5230,"content":"您的评论被投喂鸡腿",
+                               "created_at":"2026-07-26T14:31:28.000Z","viewed":0,
+                               "sender_name":"系统通知","receiver_name":"林地雪原-0062"}
+                            ]}
+                            """.trimIndent(),
+                    ),
+                )
+
+            val conversation =
+                repository(api, ownUid = 52425L).conversations().single()
+
+            assertEquals(5230L, conversation.uid)
+            assertEquals("系统通知", conversation.userName)
+            assertTrue(conversation.isSystem)
+            assertFalse(conversation.isSnippetMine)
+            assertEquals(1, conversation.unreadCount)
+        }
+
+    /** The uid lookup is only worth a request when the rows cannot answer on their own. */
+    @Test
+    fun `several conversations identify us without asking who we are`() =
+        runTest {
+            var asked = 0
+            val api =
+                FakeJsonApi(
+                    mapOf(
+                        listPath to
+                            """
+                            {"msgArray":[
+                              {"receiver_id":16874,"sender_id":52425,"content":"我发的",
+                               "created_at":"2026-07-24T16:24:20.000Z","viewed":1},
+                              {"receiver_id":52425,"sender_id":51822,"content":"他发的",
+                               "created_at":"2026-05-13T14:21:19.000Z","viewed":1}
+                            ]}
+                            """.trimIndent(),
+                    ),
+                )
+
+            val conversations =
+                repository(api, onAsked = { asked++ }).conversations()
+
+            assertEquals(0, asked)
+            assertEquals(listOf(16874L, 51822L), conversations.map(MessageConversation::uid).sorted())
         }
 
     @Test
@@ -76,7 +147,7 @@ class MessageRepositoryTest {
                     ),
                 )
 
-            val conversations = NetworkMessageRepository(api).conversations().associateBy { it.userName }
+            val conversations = repository(api).conversations().associateBy { it.userName }
 
             assertTrue(conversations.getValue("adang").isSnippetMine)
             assertFalse(conversations.getValue("ZcZiXs").isSnippetMine)
@@ -110,7 +181,7 @@ class MessageRepositoryTest {
                     ),
                 )
 
-            val thread = NetworkMessageRepository(api).thread(5230)
+            val thread = repository(api).thread(5230)
 
             assertEquals("系统通知", thread.userName)
             assertEquals(3, thread.level)
@@ -132,7 +203,7 @@ class MessageRepositoryTest {
                     posts = mapOf(NodeSeekJsonClient.PATH_MESSAGE_SEND to """{"success":true}"""),
                 )
 
-            NetworkMessageRepository(api).send(5230, "行", markdown = true)
+            repository(api).send(5230, "行", markdown = true)
 
             val body = api.postedBodies.single()
             assertTrue(body, body.contains("\"receiverUid\":5230"))
@@ -152,7 +223,7 @@ class MessageRepositoryTest {
                 )
 
             val failure =
-                runCatching { NetworkMessageRepository(api).send(4471, "在吗", markdown = false) }
+                runCatching { repository(api).send(4471, "在吗", markdown = false) }
                     .exceptionOrNull() as NodeSeekException
 
             assertEquals(NodeSeekError.Unknown, failure.error)
@@ -167,7 +238,7 @@ class MessageRepositoryTest {
                     posts = mapOf(NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED_ALL to """{"success":true}"""),
                 )
 
-            NetworkMessageRepository(api).markAllRead()
+            repository(api).markAllRead()
 
             assertEquals(listOf(NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED_ALL), api.postedPaths)
         }

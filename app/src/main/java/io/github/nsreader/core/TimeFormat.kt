@@ -16,6 +16,10 @@ import java.time.temporal.ChronoUnit
  * fall back to showing the server's own string rather than inventing a time.
  *
  * The zone is the device's, not the site's: a timestamp is only useful relative to the reader.
+ *
+ * The wording is Chinese and hardcoded, which is the one place this app lets a data-shaped class
+ * decide copy. It holds only because NodeSeek is a Chinese-language forum with no localised build;
+ * adding a second language means moving these strings to resources and the formatting to the UI.
  */
 object TimeFormat {
 

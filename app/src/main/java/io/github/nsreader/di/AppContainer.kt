@@ -12,6 +12,7 @@ import io.github.nsreader.core.net.NodeSeekJsonClient
 import io.github.nsreader.core.net.UserAgent
 import io.github.nsreader.core.net.WebViewCookieJar
 import io.github.nsreader.core.net.resolveUserAgent
+import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.MessageRepository
 import io.github.nsreader.data.NetworkMessageRepository
@@ -124,7 +125,11 @@ class DefaultAppContainer(
     }
 
     override val messageRepository: MessageRepository by lazy {
-        NetworkMessageRepository(jsonClient)
+        NetworkMessageRepository(jsonClient) {
+            // Only consulted when a one-conversation inbox leaves the rows ambiguous, and allowed to
+            // fail: a missing uid degrades the guess, it does not fail the screen.
+            runCatchingExceptCancellation { profileRepository.profile().uid }.getOrNull()
+        }
     }
 
     override val profileRepository: ProfileRepository by lazy {

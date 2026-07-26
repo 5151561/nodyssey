@@ -50,6 +50,7 @@ import io.github.nsreader.model.InlineNode
 import io.github.nsreader.model.RichNode
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.common.UserAvatar
+import io.github.nsreader.ui.common.shortMessage
 import io.github.nsreader.ui.composer.parseMarkdown
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.Spacing
@@ -301,6 +302,15 @@ private fun NewConversationSheet(
             )
             when {
                 state.isSearching -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+
+                // Before the empty case: a search that never reached the server has not found
+                // "no such user", and telling the user it did sends them off renaming their query.
+                state.error != null ->
+                    Text(
+                        state.error.shortMessage(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
 
                 state.results.isEmpty() && state.query.isNotBlank() ->
                     Text(

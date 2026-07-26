@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nsreader.core.AppClock
 import io.github.nsreader.core.net.NodeSeekError
+import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.DirectMessage
 import io.github.nsreader.data.MessageRepository
@@ -122,12 +123,19 @@ class MessageThreadViewModel(
                 )
             }.onSuccess { accepted ->
                 replace(bubble.id) {
-                    accepted?.let(::delivered)?.copy(id = bubble.id)
+                    // Whatever the echo says, this bubble is ours: an ack without a sender must not
+                    // send the message we just wrote over to the other side of the thread.
+                    accepted?.let(::delivered)?.copy(id = bubble.id, isMine = true)
                         ?: it.copy(status = SendStatus.SENT)
                 }
             }.onFailure { throwable ->
                 replace(bubble.id) {
-                    it.copy(status = SendStatus.FAILED, failure = throwable.toNodeSeekError())
+                    it.copy(
+                        status = SendStatus.FAILED,
+                        // "对方已屏蔽你" is not something retrying will fix, and it is the only way
+                        // the user finds that out — a bare 发送失败 invites tapping 重试 forever.
+                        failureReason = (throwable as? NodeSeekException)?.detail,
+                    )
                 }
             }
         }
@@ -191,7 +199,8 @@ data class MessageBubble(
     val sentAtMillis: Long?,
     val sentAtText: String?,
     val status: SendStatus,
-    val failure: NodeSeekError? = null,
+    /** The server's own words for a rejection, when it gave any. */
+    val failureReason: String? = null,
 )
 
 data class MessageThreadUiState(

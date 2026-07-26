@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -37,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -199,41 +201,66 @@ private fun MessageBubbles(
     onRetrySend: (String) -> Unit,
 ) {
     val listState = rememberLazyListState()
-    LaunchedEffect(state.messages.size) {
-        if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex)
+    /*
+     * The rows are built up front rather than emitted inline because the day separators are items
+     * too. Scrolling to `messages.lastIndex` stopped short by one position per separator, which on a
+     * conversation spanning a few days left the newest message off screen — the one place the screen
+     * must always land.
+     */
+    val rows = remember(state.messages, state.nowMillis) { threadRows(state.messages, state.nowMillis) }
+    LaunchedEffect(rows.size) {
+        if (rows.isNotEmpty()) listState.animateScrollToItem(rows.lastIndex)
     }
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        state.messages.forEachIndexed { index, message ->
-            dividerLabel(message, state.messages.getOrNull(index - 1), state.nowMillis)?.let { label ->
-                item(key = "divider-${message.id}") { DayDivider(label) }
-            }
-            item(key = message.id) {
-                MessageBubbleRow(
-                    message = message,
-                    onOpenBrowser = onOpenBrowser,
-                    onRetrySend = { onRetrySend(message.id) },
-                )
+        items(rows, key = ThreadRow::key) { row ->
+            when (row) {
+                is ThreadRow.Day -> DayDivider(row.label)
+
+                is ThreadRow.Bubble ->
+                    MessageBubbleRow(
+                        message = row.message,
+                        onOpenBrowser = onOpenBrowser,
+                        onRetrySend = { onRetrySend(row.message.id) },
+                    )
             }
         }
     }
 }
 
-/** A chip appears at the start of the thread and whenever the conversation crosses to a new day. */
-private fun dividerLabel(
-    message: MessageBubble,
-    previous: MessageBubble?,
+internal sealed interface ThreadRow {
+    val key: String
+
+    data class Day(val label: String) : ThreadRow {
+        override val key get() = "day-$label"
+    }
+
+    data class Bubble(val message: MessageBubble) : ThreadRow {
+        override val key get() = message.id
+    }
+}
+
+/** A separator opens the thread and reappears whenever the conversation crosses into a new day. */
+internal fun threadRows(
+    messages: List<MessageBubble>,
     nowMillis: Long,
-): String? {
-    val millis = message.sentAtMillis ?: return null
-    val label = TimeFormat.messageDivider(millis, nowMillis)
-    val previousLabel =
-        previous?.sentAtMillis?.let { TimeFormat.messageDivider(it, nowMillis) } ?: return label
-    // The label carries a clock as well as a day, so only the day half decides.
-    return label.takeIf { it.substringBefore(' ') != previousLabel.substringBefore(' ') }
+): List<ThreadRow> {
+    val rows = mutableListOf<ThreadRow>()
+    var currentDay: String? = null
+    messages.forEach { message ->
+        val label = message.sentAtMillis?.let { TimeFormat.messageDivider(it, nowMillis) }
+        // The label carries a clock as well as a day, so only the day half decides.
+        val day = label?.substringBefore(' ')
+        if (label != null && day != currentDay) {
+            rows += ThreadRow.Day(label)
+            currentDay = day
+        }
+        rows += ThreadRow.Bubble(message)
+    }
+    return rows
 }
 
 @Composable
@@ -340,7 +367,8 @@ private fun MessageStatusLine(
                     modifier = Modifier.size(13.dp),
                 )
                 Text(
-                    stringResource(R.string.message_status_failed),
+                    // The server's reason when it gave one — retrying a block never succeeds.
+                    text = message.failureReason ?: stringResource(R.string.message_status_failed),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -350,7 +378,11 @@ private fun MessageStatusLine(
                     fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.clickable(onClick = onRetrySend).padding(horizontal = 2.dp),
+                    modifier =
+                    Modifier
+                        .minimumInteractiveComponentSize()
+                        .clickable(onClick = onRetrySend)
+                        .padding(horizontal = 2.dp),
                 )
             }
 
@@ -424,6 +456,7 @@ private fun MessageInputBar(
         Box(
             modifier =
             Modifier
+                .minimumInteractiveComponentSize()
                 .size(44.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(
@@ -468,6 +501,7 @@ private fun MarkdownToggle(
     Column(
         modifier =
         Modifier
+            .minimumInteractiveComponentSize()
             .width(48.dp)
             .height(44.dp)
             .clip(RoundedCornerShape(14.dp))

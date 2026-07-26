@@ -91,6 +91,11 @@ interface MessageRepository {
  */
 class NetworkMessageRepository(
     private val jsonApi: JsonApi,
+    /**
+     * Our own uid, for the one case the rows cannot resolve on their own. Suspending and nullable
+     * because the only source is a network round trip that is allowed to fail — see [inferOwnUid].
+     */
+    private val currentUid: suspend () -> Long?,
 ) : MessageRepository {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -185,18 +190,27 @@ class NetworkMessageRepository(
     }
 
     /**
-     * We are a party to every conversation, so ours is the uid that recurs across the list; a
-     * counterparty's cannot — two conversations never share one. With a single conversation both
-     * ids tie, but there [RawMessage.counterpart] still resolves: whichever this picks, the other
-     * becomes the conversation.
+     * Which uid in these rows is us.
+     *
+     * We are a party to every conversation, so our uid is in the intersection of every row's two
+     * ends; a counterparty's cannot be, because no two conversations share one. That settles it as
+     * soon as there are two conversations.
+     *
+     * One conversation is genuinely ambiguous — both ids appear once — and guessing there is not
+     * harmless: a new account's inbox holds exactly the system conversation, and picking wrong keys
+     * the row on ourselves and flips the whole thread. So that case asks who we are instead. A
+     * failed lookup falls back to the sender, which is right whenever the last word was theirs.
      */
-    private fun inferOwnUid(rows: List<RawMessage>): Long? =
-        rows
-            .flatMap { listOfNotNull(it.senderId, it.receiverId) }
-            .groupingBy { it }
-            .eachCount()
-            .maxByOrNull { it.value }
-            ?.key
+    private suspend fun inferOwnUid(rows: List<RawMessage>): Long? {
+        val candidates =
+            rows
+                .map { setOfNotNull(it.senderId, it.receiverId) }
+                .reduceOrNull { shared, row -> shared intersect row }
+                .orEmpty()
+        return candidates.singleOrNull()
+            ?: currentUid()?.takeIf { it in candidates }
+            ?: candidates.firstOrNull { it != rows.firstOrNull()?.senderId }
+    }
 
     private fun conversationOf(
         uid: Long,
