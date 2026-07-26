@@ -23,8 +23,19 @@ data class ImageAttachment(
     val progress: Float = 0f,
     val remoteUrl: String? = null,
 ) {
-    /** What gets inserted into the body — and, on removal, deleted from it again. */
-    val markdown: String? get() = remoteUrl?.let { "![$name]($it)" }
+    /**
+     * What gets inserted into the body — and, on removal, deleted from it again.
+     *
+     * The display name comes from a content provider, which is allowed to answer with anything;
+     * a `]` or `(` in it would end the alt text early and leave broken syntax the removal path
+     * could no longer find.
+     */
+    val markdown: String?
+        get() = remoteUrl?.let { url -> "![${name.replace(ALT_UNSAFE, " ").trim()}]($url)" }
+
+    private companion object {
+        val ALT_UNSAFE = Regex("""[\[\]()]""")
+    }
 }
 
 /**

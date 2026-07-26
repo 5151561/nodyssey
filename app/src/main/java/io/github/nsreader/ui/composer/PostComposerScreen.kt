@@ -77,6 +77,7 @@ import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.theme.PostBody
 import io.github.nsreader.ui.theme.Spacing
 import io.github.nsreader.ui.theme.readableWidth
+import java.text.BreakIterator
 import java.text.DateFormat
 import java.util.Date
 
@@ -341,6 +342,8 @@ private fun EditorContent(
         mutableStateOf(TextFieldValue(state.body, TextRange(state.body.length)))
     }
     var emojiOpen by rememberSaveable { mutableStateOf(false) }
+    // Held here, not in the panel: the panel leaves the composition whenever it closes.
+    var recentEmoji by rememberSaveable { mutableStateOf(listOf<String>()) }
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(state.body) {
@@ -400,6 +403,8 @@ private fun EditorContent(
             EmojiPanel(
                 onInsert = { text -> edit(insertText(bodyValue, text)) },
                 onBackspace = { edit(bodyValue.deleteBackwards()) },
+                recent = recentEmoji,
+                onRecentChange = { recentEmoji = it },
             )
         }
     }
@@ -734,8 +739,11 @@ internal fun TextFieldValue.deleteBackwards(): TextFieldValue {
         return TextFieldValue(text.removeRange(start, end), TextRange(start))
     }
     if (start == 0) return this
-    // Step by code point so a single tap removes a whole emoji rather than half a surrogate pair.
-    val previous = text.offsetByCodePoints(start, -1)
+    // Step back one grapheme cluster, not one code point: the panel's own ❤️ is base + variation
+    // selector, and a code-point step would strip the selector and leave a black text-style heart.
+    val iterator = BreakIterator.getCharacterInstance()
+    iterator.setText(text)
+    val previous = iterator.preceding(start).let { if (it == BreakIterator.DONE) 0 else it }
     return TextFieldValue(text.removeRange(previous, start), TextRange(previous))
 }
 

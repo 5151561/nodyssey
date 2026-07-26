@@ -92,24 +92,26 @@ val NodeSeekEmojiGroups = listOf(
  * ("面板与键盘同高切换，不叠加"), and on a 360×800 screen a panel that stacks leaves two lines of
  * the reply visible. The caller is responsible for dismissing the IME before showing it.
  *
- * Recently used emoji live in [rememberSaveable] rather than a repository: the list is worth
- * keeping across a rotation or a process death, not worth a schema.
+ * [recent] is hoisted rather than remembered here: the panel is conditionally composed, so any
+ * state it held itself would be thrown away every time the panel closes — which is exactly when
+ * the recents were just used and are worth keeping.
  */
 @Composable
 fun EmojiPanel(
     onInsert: (String) -> Unit,
     onBackspace: () -> Unit,
+    recent: List<String>,
+    onRecentChange: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
     groups: List<EmojiGroup> = NodeSeekEmojiGroups,
 ) {
     // Opens on the first group that has anything in it, so the panel is useful the moment it shows.
     var selectedIndex by rememberSaveable { mutableStateOf(groups.indexOfFirst { it.entries.isNotEmpty() }.coerceAtLeast(0)) }
-    var recent by rememberSaveable { mutableStateOf(listOf<String>()) }
     val group = groups.getOrNull(selectedIndex) ?: groups.first()
 
     fun insert(text: String) {
         onInsert(text)
-        recent = (listOf(text) + recent.filterNot { it == text }).take(RECENT_LIMIT)
+        onRecentChange((listOf(text) + recent.filterNot { it == text }).take(RECENT_LIMIT))
     }
 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = modifier) {
@@ -155,7 +157,9 @@ private fun GroupPill(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    // The selectable overload, so a screen reader hears which group is open.
     Surface(
+        selected = selected,
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLow,

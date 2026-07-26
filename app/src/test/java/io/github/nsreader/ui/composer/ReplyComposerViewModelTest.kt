@@ -130,6 +130,18 @@ class ReplyComposerViewModelTest {
     }
 
     @Test
+    fun `a bracketed display name cannot break the image markdown`() {
+        val attachment = ImageAttachment(
+            id = "1",
+            source = "content://pick/1",
+            name = "shot [v2] (final).png",
+            remoteUrl = "https://cdn.nodeimage.com/i/x.webp",
+        )
+
+        assertEquals("![shot  v2   final .png](https://cdn.nodeimage.com/i/x.webp)", attachment.markdown)
+    }
+
+    @Test
     fun `clearing the reply removes the stored draft`() = runTest(dispatcher) {
         val viewModel = viewModel()
         viewModel.open()

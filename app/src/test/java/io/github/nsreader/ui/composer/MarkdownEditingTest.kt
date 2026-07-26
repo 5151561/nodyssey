@@ -74,4 +74,14 @@ class MarkdownEditingTest {
 
         assertEquals("赞一个", result.text)
     }
+
+    @Test
+    fun `backspace removes a variation-selector emoji in one tap`() {
+        // ❤️ is U+2764 + U+FE0F; a code-point step would leave the black text-style heart behind.
+        val value = TextFieldValue("好❤️", TextRange("好❤️".length))
+
+        val result = value.deleteBackwards()
+
+        assertEquals("好", result.text)
+    }
 }

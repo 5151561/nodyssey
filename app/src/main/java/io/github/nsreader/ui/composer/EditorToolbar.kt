@@ -167,7 +167,10 @@ fun <T> ViewModeSwitch(
         ) {
             options.forEach { option ->
                 val isSelected = option == selected
+                // The selectable overload, so TalkBack announces which of the three views is
+                // active — colour is the only visual cue and reads as nothing.
                 Surface(
+                    selected = isSelected,
                     onClick = { onSelect(option) },
                     shape = MaterialTheme.shapes.extraLarge,
                     color = if (isSelected) {

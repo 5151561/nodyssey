@@ -940,17 +940,21 @@ private fun PostContent.toReplyQuote(): ReplyQuote? {
     return ReplyQuote(floor = number, author = authorName, excerpt = nodes.excerpt())
 }
 
-/** First readable line of a floor, short enough to sit on one line of the quote chip. */
-private fun List<RichNode>.excerpt(): String {
-    val text = firstNotNullOfOrNull { node ->
-        when (node) {
-            is RichNode.Paragraph -> node.inlines.plainText()
-            is RichNode.Heading -> node.inlines.plainText()
-            else -> null
-        }?.takeIf(String::isNotBlank)
-    }.orEmpty().trim()
-    return if (text.length > EXCERPT_LENGTH) text.take(EXCERPT_LENGTH).trimEnd() + "…" else text
-}
+/**
+ * The floor's readable text, in full.
+ *
+ * Deliberately not truncated here: the same string is the chip's label, the preview's quote block
+ * *and* the blockquote that goes on the wire, and only the first of those wants to be short. The
+ * chip ellipsizes at render time; publishing a quote cut to 40 characters with a `…` would put a
+ * mangled quote into a real thread the moment the comment endpoint is wired up.
+ */
+private fun List<RichNode>.excerpt(): String = mapNotNull { node ->
+    when (node) {
+        is RichNode.Paragraph -> node.inlines.plainText()
+        is RichNode.Heading -> node.inlines.plainText()
+        else -> null
+    }?.trim()?.takeIf(String::isNotBlank)
+}.joinToString("\n")
 
 private fun List<InlineNode>.plainText(): String = joinToString("") { inline ->
     when (inline) {
@@ -959,8 +963,6 @@ private fun List<InlineNode>.plainText(): String = joinToString("") { inline ->
         else -> ""
     }
 }
-
-private const val EXCERPT_LENGTH = 40
 
 /** Tabular figures so `#9` and `#127` sit on the same right edge as the list scrolls. */
 @Composable

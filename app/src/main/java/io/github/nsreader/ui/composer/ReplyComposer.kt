@@ -101,6 +101,9 @@ fun ReplyComposerHost(
     onClearError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Above the early return on purpose: the host stays composed while the sheet is closed, so
+    // this is the one place the recents survive both the emoji panel and the sheet being dismissed.
+    var recentEmoji by rememberSaveable { mutableStateOf(listOf<String>()) }
     if (!state.visible) return
     val context = LocalContext.current
     val picker = rememberLauncherForActivityResult(
@@ -141,6 +144,8 @@ fun ReplyComposerHost(
             onRetryFailedUploads = onRetryFailedUploads,
             onPublish = onPublish,
             onClearError = onClearError,
+            recentEmoji = recentEmoji,
+            onRecentEmojiChange = { recentEmoji = it },
         )
     }
 }
@@ -159,6 +164,8 @@ private fun ReplyEditorSheet(
     onRetryFailedUploads: () -> Unit,
     onPublish: () -> Unit,
     onClearError: () -> Unit,
+    recentEmoji: List<String>,
+    onRecentEmojiChange: (List<String>) -> Unit,
 ) {
     var bodyValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(state.body, TextRange(state.body.length)))
@@ -176,7 +183,9 @@ private fun ReplyEditorSheet(
     }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        // Guarded like the close button and the BackHandler: while a publish is in flight, a swipe
+        // or scrim tap must not be the one dismiss path that still works.
+        onDismissRequest = { if (!state.isPublishing) onDismiss() },
         sheetState = rememberBottomSheetState(
             initialValue = SheetValue.Hidden,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
@@ -299,6 +308,8 @@ private fun ReplyEditorSheet(
                 EmojiPanel(
                     onInsert = { text -> edit(insertText(bodyValue, text)) },
                     onBackspace = { edit(bodyValue.deleteBackwards()) },
+                    recent = recentEmoji,
+                    onRecentChange = onRecentEmojiChange,
                 )
             }
         }
