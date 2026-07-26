@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -54,6 +53,7 @@ import io.github.nsreader.ui.common.shortMessage
 import io.github.nsreader.ui.composer.parseMarkdown
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.Spacing
+import io.github.nsreader.ui.theme.TABULAR_FIGURES
 
 /**
  * Board 7e — the 私信 group of the notification tab.
@@ -166,30 +166,45 @@ private fun ConversationRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = conversation.userName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (isUnread) FontWeight.Bold else FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    // `fill = false` keeps the pin beside the name instead of at the far right; the
-                    // stamp is pushed away by the spacer below.
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                if (conversation.isSystem) {
-                    Icon(
-                        NodeSeekIcons.PushPin,
-                        contentDescription = stringResource(R.string.messages_pinned),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp),
+                /*
+                 * The name and its pin travel together inside one weighted row, and the stamp is the
+                 * only unweighted child, so it sits against the right edge of every row alike.
+                 *
+                 * Weighting the name *and* a spacer instead made the two split the slack evenly,
+                 * which parked each row's stamp a different distance in from the edge — a column of
+                 * times that visibly failed to line up.
+                 */
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = conversation.userName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (isUnread) FontWeight.Bold else FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
+                    if (conversation.isSystem) {
+                        Icon(
+                            NodeSeekIcons.PushPin,
+                            contentDescription = stringResource(R.string.messages_pinned),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
                 }
-                Spacer(Modifier.weight(1f))
                 conversationStamp(conversation, nowMillis)?.let { stamp ->
                     Text(
                         text = stamp,
-                        style = MaterialTheme.typography.labelMedium,
+                        style =
+                        MaterialTheme.typography.labelMedium.copy(
+                            fontFeatureSettings = TABULAR_FIGURES,
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
                     )
                 }
             }

@@ -76,6 +76,34 @@ class NotificationsScreenTest {
         assertEquals(true, markedAllRead)
     }
 
+    /**
+     * The stamps form a column, so every row's must end at the same x. They drifted when the name
+     * and a spacer both carried weight and split the slack between them.
+     */
+    @Test
+    fun `conversation stamps share one right edge`() {
+        setContent(
+            state(
+                category = NotificationCategory.MESSAGES,
+                conversations =
+                listOf(
+                    systemConversation(),
+                    conversation(uid = 2, name = "a", stamp = NOW - 26 * 60 * 60_000L),
+                    conversation(uid = 3, name = "一个很长的用户名字", stamp = NOW - 40L * 24 * 60 * 60_000L),
+                ),
+            ),
+        )
+
+        // The row is clickable, so its semantics are merged: asking the merged tree for a stamp
+        // hands back the whole row, whose width is the screen's and always matches.
+        val rightEdges =
+            listOf("09:12", "昨天", "6月16日")
+                .map { composeRule.onNodeWithText(it, useUnmergedTree = true).fetchSemanticsNode() }
+                .map { it.positionInRoot.x + it.size.width }
+
+        rightEdges.forEach { assertEquals(rightEdges.first(), it, 1f) }
+    }
+
     /** Board 7e: the pinned system conversation shows its Markdown as text, never as syntax. */
     @Test
     fun `system conversation snippet drops its markdown syntax`() {
@@ -140,6 +168,22 @@ class NotificationsScreenTest {
             createdAtText = null,
             isUnread = true,
         )
+
+    private fun conversation(
+        uid: Long,
+        name: String,
+        stamp: Long,
+    ) = MessageConversation(
+        uid = uid,
+        userName = name,
+        avatarUrl = null,
+        snippet = "摘要",
+        isSnippetMine = false,
+        updatedAtMillis = stamp,
+        updatedAtText = null,
+        unreadCount = 0,
+        isSystem = false,
+    )
 
     private fun systemConversation() =
         MessageConversation(
