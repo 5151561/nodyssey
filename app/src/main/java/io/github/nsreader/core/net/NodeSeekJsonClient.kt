@@ -131,19 +131,15 @@ class NodeSeekJsonClient(
         fun accountInfoPath(uid: Long) = "/api/account/getInfo/$uid"
 
         /*
-         * Direct messages.
+         * Direct messages, checked against a signed-in device (Galaxy S24, 2026-07-26).
          *
-         * These three are **inferred**, not observed: Cloudflare keeps the endpoints out of reach of
-         * anything but a signed-in browser, so they are modelled on the hash routes the web client
-         * uses (`#/message?mode=list`, `#/message?mode=talk&to={uid}`) and on the shape every other
-         * `/api/notification` endpoint follows. They are gathered here so confirming them on a device
-         * is a one-file edit; until then the screens degrade to their error state, and board 7f keeps
-         * an "open in browser" action for exactly that case.
+         * The list endpoint is real and is the *only* read endpoint: it answers with a flat list of
+         * individual messages, both directions mixed, which `MessageRepository` folds into
+         * conversations and threads. A per-conversation path (`message/talk/{uid}` was tried) does
+         * not exist — 404. The send path is still inferred from the shape of the rest of the API;
+         * the thread screen keeps an "open in browser" escape hatch until it is confirmed.
          */
         fun messageListPath(page: Int = 1) = notificationListPath("message", page)
-
-        fun messageThreadPath(uid: Long, page: Int = 1) =
-            "/api/notification/message/talk/$uid?page=$page"
 
         const val PATH_MESSAGE_SEND = "/api/notification/message/send"
     }
