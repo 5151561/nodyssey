@@ -75,6 +75,7 @@ data class PostEntity(
     val lastActiveTitle: String?,
     val isPinned: Boolean,
     val isLocked: Boolean,
+    val lockLevel: Int?,
     val cachedAtMillis: Long,
 )
 
@@ -93,6 +94,7 @@ fun PostEntity.toSummary() =
         lastActiveTitle = lastActiveTitle,
         isPinned = isPinned,
         isLocked = isLocked,
+        lockLevel = lockLevel,
     )
 
 fun PostSummary.toEntity(cachedAtMillis: Long) =
@@ -110,6 +112,7 @@ fun PostSummary.toEntity(cachedAtMillis: Long) =
         lastActiveTitle = lastActiveTitle,
         isPinned = isPinned,
         isLocked = isLocked,
+        lockLevel = lockLevel,
         cachedAtMillis = cachedAtMillis,
     )
 

@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import kotlinx.coroutines.launch
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.ui.account.AccountSettingsRoute
@@ -128,6 +130,9 @@ fun MainNavigation(container: AppContainer) {
 
     var currentTab by rememberSaveable { mutableStateOf(TopLevelDestination.HOME) }
 
+    // Transient by design: a fling should tuck the bar away, not a configuration change keep it away.
+    var feedScrollActive by remember { mutableStateOf(false) }
+
     val backStack: NavBackStack<NavKey> =
         when (currentTab) {
             TopLevelDestination.HOME -> homeStack
@@ -139,6 +144,31 @@ fun MainNavigation(container: AppContainer) {
     // The bar belongs to the top-level destinations only. A thread, the image viewer and the web
     // view are full-screen by design — showing a tab bar under them would invite leaving mid-read.
     val atTabRoot = TopLevelDestination.forKey(backStack.lastOrNull()) != null
+
+    // Content links only: our own post/space/mention URLs stay in the app; everything else leaves
+    // it. Explicit "open in browser" actions keep openExternalUrl, or they would loop back here.
+    val scope = rememberCoroutineScope()
+    val openSpace: (Long) -> Unit = { uid ->
+        backStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid))
+    }
+    val openContentUrl: (String) -> Unit = { url ->
+        when (val route = NodeSeekSite.parseInternalRoute(url)) {
+            is NodeSeekSite.InternalRoute.Post -> backStack.add(PostDetailKey(route.postId))
+            is NodeSeekSite.InternalRoute.Space -> openSpace(route.uid)
+            is NodeSeekSite.InternalRoute.Member ->
+                // A mention carries only the user name; the uid comes from the member-search API.
+                // Any failure (offline, signed out, renamed user) falls back to the site itself.
+                scope.launch {
+                    val uid =
+                        runCatching { container.searchRepository.searchUsers(route.name) }
+                            .getOrNull()
+                            ?.firstOrNull { it.name.equals(route.name, ignoreCase = true) }
+                            ?.uid
+                    if (uid != null) openSpace(uid) else openExternalUrl(url)
+                }
+            null -> openExternalUrl(NodeSeekSite.unwrapJumpUrl(url))
+        }
+    }
 
     /*
      * Back out of a secondary tab returns to home rather than leaving the app.
@@ -167,7 +197,7 @@ fun MainNavigation(container: AppContainer) {
          * phone-shaped.
          */
         navigationSuiteType =
-        if (atTabRoot) {
+        if (atTabRoot && !feedScrollActive) {
             NavigationSuiteScaffoldDefaults.navigationSuiteType(currentWindowAdaptiveInfo())
         } else {
             NavigationSuiteType.None
@@ -202,7 +232,9 @@ fun MainNavigation(container: AppContainer) {
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                         onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                         onOpenBrowser = openExternalUrl,
+                        onLinkClick = openContentUrl,
                         onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
+                        onFeedScrollActiveChanged = { feedScrollActive = it },
                     )
                 }
 
@@ -265,6 +297,7 @@ fun MainNavigation(container: AppContainer) {
                             )
                         },
                         onOpenBrowser = openExternalUrl,
+                        onLinkClick = openContentUrl,
                     )
                 }
 
@@ -316,6 +349,7 @@ fun MainNavigation(container: AppContainer) {
                         },
                         onEditProfile = { backStack.add(AccountSettingsKey) },
                         onOpenBrowser = openExternalUrl,
+                        onLinkClick = openContentUrl,
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                     )
                 }
@@ -545,6 +579,7 @@ fun MainNavigation(container: AppContainer) {
                         initialFloor = key.floor,
                         onBack = { backStack.removeLastOrNull() },
                         onOpenBrowser = openExternalUrl,
+                        onLinkClick = openContentUrl,
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                         onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                         onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
@@ -613,6 +648,9 @@ private fun HomePane(
     onVerify: (String) -> Unit,
     onOpenBrowser: (String) -> Unit,
     onImageClick: (List<String>, String) -> Unit,
+    onLinkClick: (String) -> Unit = onOpenBrowser,
+    /** Phone layout only: the tablet's rail sits beside the list, not under the thumb. */
+    onFeedScrollActiveChanged: (Boolean) -> Unit = {},
 ) {
     BoxWithConstraints {
         val twoPane = maxWidth >= TWO_PANE_MIN_WIDTH
@@ -641,6 +679,7 @@ private fun HomePane(
                 onCreatePost = onCreatePost,
                 onSignIn = onSignIn,
                 onVerify = onVerify,
+                onScrollActiveChanged = onFeedScrollActiveChanged,
             )
             return@BoxWithConstraints
         }
@@ -688,6 +727,7 @@ private fun HomePane(
                         replyViewModel = replyViewModel,
                         onBack = { selectedPostId = null },
                         onOpenBrowser = onOpenBrowser,
+                        onLinkClick = onLinkClick,
                         onSignIn = onSignIn,
                         onVerify = onVerify,
                         onImageClick = onImageClick,

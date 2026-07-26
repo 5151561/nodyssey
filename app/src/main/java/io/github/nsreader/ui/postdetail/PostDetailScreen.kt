@@ -110,6 +110,8 @@ fun PostDetailRoute(
     onImageClick: (List<String>, String) -> Unit,
     modifier: Modifier = Modifier,
     initialFloor: String? = null,
+    /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
+    onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val replyState by replyViewModel.uiState.collectAsStateWithLifecycle()
@@ -123,6 +125,7 @@ fun PostDetailRoute(
         postUrl = postUrl,
         onBack = onBack,
         onOpenBrowser = onOpenBrowser,
+        onLinkClick = onLinkClick,
         onSignIn = onSignIn,
         onVerify = { onVerify(postUrl) },
         onImageClick = { url -> onImageClick(images.ifEmpty { listOf(url) }, url) },
@@ -174,6 +177,8 @@ fun PostDetailScreen(
     onReply: (ReplyQuote?) -> Unit = {},
     /** Hides the bottom toolbar while the editor covers it. */
     replyOpen: Boolean = false,
+    /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
+    onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -195,12 +200,16 @@ fun PostDetailScreen(
             lastVisible >= listState.layoutInfo.totalItemsCount - 4
         }
     }
-    val atPagingBoundary by remember {
+    val atListTop by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        }
+    }
+    val atListEnd by remember {
         derivedStateOf {
             val totalItems = listState.layoutInfo.totalItemsCount
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) ||
-                (totalItems > 0 && lastVisible >= totalItems - 1)
+            totalItems > 0 && lastVisible >= totalItems - 1
         }
     }
     LaunchedEffect(shouldLoadMore, state.comments.size) {
@@ -246,10 +255,16 @@ fun PostDetailScreen(
         listState.scrollToItem(index)
         onPageScrollHandled()
     }
+    /*
+     * The nested-scroll state drives the toolbar; boundaries only pin it open where that is stable.
+     * The bottom counts solely once the thread is fully loaded — while auto-append still runs, the
+     * "last item visible" instant flips back and forth with every batch of inserted comments, and
+     * tying expansion to it (or to isAppending itself) made the bar blink through a long scroll.
+     */
     val toolbarExpanded =
         pageToolbarExpanded ||
-            atPagingBoundary ||
-            state.isAppending ||
+            atListTop ||
+            (atListEnd && !state.hasNextPage && !state.isAppending) ||
             state.error != null ||
             showPageSheet
 
@@ -288,7 +303,7 @@ fun PostDetailScreen(
                     ThreadList(
                         state = state,
                         listState = listState,
-                        onOpenBrowser = onOpenBrowser,
+                        onOpenBrowser = onLinkClick,
                         onImageClick = onImageClick,
                         onJumpToFloor = { floor ->
                             val index = state.indexOfFloor(floor)
@@ -781,8 +796,8 @@ private fun CommentsHeader(count: Int) {
  * One reply.
  *
  * Real replies on this forum are anywhere between two characters and several screens, so the header
- * row is fixed and everything below it hangs off a 36dp indent — which gives even a two-word reply
- * a shape, and stops a long one from losing its author.
+ * row is fixed, the timestamp hangs under the author name, and the body runs the full width — a
+ * 36dp indent on every body line wasted a fifth of a phone's width on empty space.
  */
 @Composable
 private fun CommentRow(
@@ -831,7 +846,7 @@ private fun CommentRow(
             onImageClick = onImageClick,
             onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
             textStyle = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(start = 36.dp, top = Spacing.sm),
+            modifier = Modifier.padding(top = Spacing.sm),
         )
         ReactionRow(onChickenClick = onChickenClick, onReply = onReply)
     }

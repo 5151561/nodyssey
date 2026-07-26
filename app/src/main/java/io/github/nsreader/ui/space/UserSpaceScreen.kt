@@ -76,6 +76,8 @@ fun UserSpaceRoute(
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Readme/bio links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
+    onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     UserSpaceScreen(
@@ -89,6 +91,7 @@ fun UserSpaceRoute(
         onMessage = { onMessage(state.uid) },
         onEditProfile = onEditProfile,
         onOpenBrowser = onOpenBrowser,
+        onLinkClick = onLinkClick,
         onSignIn = onSignIn,
         modifier = modifier,
     )
@@ -109,6 +112,8 @@ fun UserSpaceScreen(
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Readme/bio links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
+    onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
     val spaceUrl = NodeSeekSite.BASE_URL + NodeSeekSite.spacePath(state.uid)
 
@@ -179,6 +184,7 @@ fun UserSpaceScreen(
                 onLoadMore = onLoadMore,
                 onRetryTab = onRetryTab,
                 onOpenBrowser = onOpenBrowser,
+                onLinkClick = onLinkClick,
                 onSignIn = onSignIn,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -340,11 +346,12 @@ private fun SpaceTabContent(
     onLoadMore: (SpaceTab) -> Unit,
     onRetryTab: (SpaceTab) -> Unit,
     onOpenBrowser: (String) -> Unit,
+    onLinkClick: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state.selectedTab) {
-        SpaceTab.GENERAL -> GeneralTab(state, onOpenBrowser, modifier)
+        SpaceTab.GENERAL -> GeneralTab(state, onLinkClick, modifier)
 
         SpaceTab.TOPICS ->
             SpaceListTab(

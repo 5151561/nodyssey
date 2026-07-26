@@ -83,6 +83,26 @@ class PostDetailParserTest {
     }
 
     @Test
+    fun `reads the total from the elided last-page shortcut on a long thread`() {
+        // A long thread's pager renders the far end as `<span class="ellipsis">..</span>37`,
+        // whose text is not a number — the total must come from the href instead.
+        val html =
+            """
+            <html><body>
+            <div class="nsk-pager post-top-pager"><div role="navigation">
+              <span href="/post-1-1" class="pager-pos pager-cur">1</span>
+              <a href="/post-1-2" class="pager-pos">2</a>
+              <a href="/post-1-5" class="pager-pos">5</a>
+              <a href="/post-1-37" class="pager-pos"><span class="ellipsis">..</span>37</a>
+              <a href="/post-1-2" rel="next" class="pager-next"></a>
+            </div></div>
+            </body></html>
+            """.trimIndent()
+        val parsed = PostDetailParser.parse(html, postId = 1L, page = 1)
+        assertEquals(37, parsed.totalPages)
+    }
+
+    @Test
     fun `parses a long post without dropping content`() {
         val long =
             PostDetailParser.parse(Fixtures.load("post-705039-1.html"), postId = 705039L, page = 1)

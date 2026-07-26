@@ -47,6 +47,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -101,6 +102,7 @@ fun PostListRoute(
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onScrollActiveChanged: (Boolean) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     PostListScreen(
@@ -115,6 +117,7 @@ fun PostListRoute(
         // request did — a different page can be served without a challenge and prove nothing.
         onRecoverInBrowser = { onVerify(viewModel.challengeUrl()) },
         modifier = modifier,
+        onScrollActiveChanged = onScrollActiveChanged,
     )
 }
 
@@ -137,11 +140,18 @@ fun PostListScreen(
     onRecoverInBrowser: () -> Unit,
     modifier: Modifier = Modifier,
     onCreatePost: () -> Unit = {},
+    /** Fires on scroll start/stop, so the host can tuck the navigation bar away mid-scroll (MD3E). */
+    onScrollActiveChanged: (Boolean) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
 
     // Switching boards is the one case where the previous scroll offset is meaningless.
     LaunchedEffect(state.categorySlug, state.sort) { listState.scrollToItem(0) }
+
+    val scrollActive = listState.isScrollInProgress
+    LaunchedEffect(scrollActive) { onScrollActiveChanged(scrollActive) }
+    // The host must not stay stuck bar-less if this screen leaves the composition mid-fling.
+    DisposableEffect(Unit) { onDispose { onScrollActiveChanged(false) } }
 
     val refreshState = posts.loadState.refresh
     val appendState = posts.loadState.append
@@ -159,8 +169,10 @@ fun PostListScreen(
             }
         },
         floatingActionButton = {
+            // Collapses to a plain icon while the list moves, matching the bar tucking away.
             ExtendedFloatingActionButton(
                 onClick = onCreatePost,
+                expanded = !scrollActive,
                 icon = {
                     Icon(Icons.Default.Add, contentDescription = null)
                 },
@@ -536,12 +548,22 @@ internal fun PostRow(
                 if (summary.isLocked) {
                     Icon(
                         Icons.Default.Lock,
-                        contentDescription = stringResource(R.string.post_badge_locked),
+                        contentDescription =
+                        summary.lockLevel
+                            ?.let { stringResource(R.string.post_badge_locked_level, it) }
+                            ?: stringResource(R.string.post_badge_locked),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .padding(start = Spacing.xs)
                             .size(15.dp),
                     )
+                    summary.lockLevel?.let { level ->
+                        Text(
+                            text = level.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
             PostMetaRow(post)

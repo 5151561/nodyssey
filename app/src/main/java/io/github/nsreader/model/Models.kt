@@ -18,6 +18,8 @@ data class PostSummary(
     val lastActiveTitle: String?,
     val isPinned: Boolean = false,
     val isLocked: Boolean = false,
+    /** The reader level a locked post demands, when the list shows one next to the lock icon. */
+    val lockLevel: Int? = null,
 )
 
 data class PostListPage(

@@ -37,6 +37,18 @@ class PostListParserTest {
     }
 
     @Test
+    fun `reads the level a locked post demands`() {
+        val locked = page.posts.first { it.postId == 703692L }
+        assertEquals(1, locked.lockLevel)
+    }
+
+    @Test
+    fun `leaves the lock level null on an open post`() {
+        val open = page.posts.first { !it.isLocked }
+        assertEquals(null, open.lockLevel)
+    }
+
+    @Test
     fun `reports a next page when the pager offers one`() {
         assertTrue(page.hasNextPage)
     }

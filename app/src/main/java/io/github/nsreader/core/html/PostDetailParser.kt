@@ -23,8 +23,13 @@ object PostDetailParser {
         val comments = document.select(Selectors.DETAIL_COMMENTS).map { parseContent(it, isBody = false) }
 
         val pager = document.selectFirst(Selectors.DETAIL_PAGER)
+        // The href, not the text: the last-page shortcut on a long thread renders as "..37", which
+        // `toIntOrNull` rejected — the total then crept up page by page as the user scrolled.
         val totalPages = pager?.select(Selectors.DETAIL_PAGER_POSITIONS)
-            ?.mapNotNull { it.text().trim().toIntOrNull() }
+            ?.mapNotNull { pos ->
+                NodeSeekSite.parsePostRoute(pos.attr("href"))?.page
+                    ?: pos.text().filter(Char::isDigit).toIntOrNull()
+            }
             ?.maxOrNull()
             ?: 1
 
