@@ -142,7 +142,7 @@ private data class UserSearchDto(
         UserSearchResult(
             uid = uid,
             name = name,
-            avatarUrl = NodeSeekSite.absoluteUrl("/avatar/$uid.png"),
+            avatarUrl = NodeSeekSite.avatarUrl(uid),
             level = rank,
             bio = bio?.trim()?.ifBlank { null },
             joinedText = joinedText?.trim()?.ifBlank { null },

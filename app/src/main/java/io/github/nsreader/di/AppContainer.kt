@@ -12,12 +12,15 @@ import io.github.nsreader.core.net.NodeSeekJsonClient
 import io.github.nsreader.core.net.UserAgent
 import io.github.nsreader.core.net.WebViewCookieJar
 import io.github.nsreader.core.net.resolveUserAgent
+import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.AssetsRepository
 import io.github.nsreader.data.AwardRepository
 import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.FollowRepository
+import io.github.nsreader.data.MessageRepository
 import io.github.nsreader.data.NetworkAssetsRepository
 import io.github.nsreader.data.NetworkAwardRepository
+import io.github.nsreader.data.NetworkMessageRepository
 import io.github.nsreader.data.NetworkPostDataSource
 import io.github.nsreader.data.NetworkProfileRepository
 import io.github.nsreader.data.NetworkSearchRepository
@@ -33,7 +36,11 @@ import io.github.nsreader.data.SiteOnlyRulingRepository
 import io.github.nsreader.data.SiteOnlyStardustRepository
 import io.github.nsreader.data.StardustRepository
 import io.github.nsreader.data.UserSpaceRepository
+import io.github.nsreader.data.composer.CommentComposerRepository
 import io.github.nsreader.data.composer.DefaultPostComposerRepository
+import io.github.nsreader.data.composer.ImageUploader
+import io.github.nsreader.data.composer.LocalCommentComposerRepository
+import io.github.nsreader.data.composer.NodeImageUploader
 import io.github.nsreader.data.composer.PostComposerRepository
 import io.github.nsreader.data.local.NodeSeekDatabase
 import io.github.nsreader.data.session.SessionRepository
@@ -59,9 +66,12 @@ interface AppContainer {
     val categoryRepository: CategoryRepository
     val settingsRepository: SettingsRepository
     val notificationRepository: NotificationRepository
+    val messageRepository: MessageRepository
     val profileRepository: ProfileRepository
     val searchRepository: SearchRepository
     val postComposerRepository: PostComposerRepository
+    val commentComposerRepository: CommentComposerRepository
+    val imageUploader: ImageUploader
     val sessionRepository: SessionRepository
     val userSpaceRepository: UserSpaceRepository
     val assetsRepository: AssetsRepository
@@ -143,6 +153,14 @@ class DefaultAppContainer(
         NotificationRepository(jsonClient)
     }
 
+    override val messageRepository: MessageRepository by lazy {
+        NetworkMessageRepository(jsonClient) {
+            // Only consulted when a one-conversation inbox leaves the rows ambiguous, and allowed to
+            // fail: a missing uid degrades the guess, it does not fail the screen.
+            runCatchingExceptCancellation { profileRepository.profile().uid }.getOrNull()
+        }
+    }
+
     override val profileRepository: ProfileRepository by lazy {
         NetworkProfileRepository(htmlClient, jsonClient, clock)
     }
@@ -172,6 +190,12 @@ class DefaultAppContainer(
     override val stardustRepository: StardustRepository by lazy { SiteOnlyStardustRepository() }
 
     override val rulingRepository: RulingRepository by lazy { SiteOnlyRulingRepository() }
+
+    override val commentComposerRepository: CommentComposerRepository by lazy {
+        LocalCommentComposerRepository(appContext, clock)
+    }
+
+    override val imageUploader: ImageUploader by lazy { NodeImageUploader() }
 
     /**
      * Shares the cookie jar rather than owning a store of its own: the cookies OkHttp sends and the

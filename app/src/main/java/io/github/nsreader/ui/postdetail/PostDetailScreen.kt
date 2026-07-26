@@ -87,6 +87,9 @@ import io.github.nsreader.ui.common.NodeSeekErrorState
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.common.rememberClipboardCopy
+import io.github.nsreader.ui.composer.ReplyComposerHost
+import io.github.nsreader.ui.composer.ReplyComposerViewModel
+import io.github.nsreader.ui.composer.ReplyQuote
 import io.github.nsreader.ui.richtext.RichContent
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.PostTitle
@@ -99,6 +102,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun PostDetailRoute(
     viewModel: PostDetailViewModel,
+    replyViewModel: ReplyComposerViewModel,
     onBack: () -> Unit,
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
@@ -108,6 +112,7 @@ fun PostDetailRoute(
     initialFloor: String? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val replyState by replyViewModel.uiState.collectAsStateWithLifecycle()
     val postUrl = viewModel.postUrl()
     // Every image in the thread as currently loaded, so the viewer can page between them without
     // going back to the data layer — the URLs were already parsed into the rendered content.
@@ -125,7 +130,25 @@ fun PostDetailRoute(
         onLoadMore = viewModel::loadNextPage,
         onLoadPage = viewModel::loadPage,
         onPageScrollHandled = viewModel::onPageScrollHandled,
+        // Replying needs an account; sending an anonymous reply into the void is the one outcome
+        // the editor must not produce, so the sign-in page comes first.
+        onReply = { quote -> if (state.isSignedIn) replyViewModel.open(quote) else onSignIn() },
+        replyOpen = replyState.visible,
         modifier = modifier,
+    )
+
+    ReplyComposerHost(
+        state = replyState,
+        onDismiss = replyViewModel::close,
+        onBodyChange = replyViewModel::updateBody,
+        onClearQuote = replyViewModel::clearQuote,
+        onPreviewChange = replyViewModel::setPreviewing,
+        onPickImages = replyViewModel::addImages,
+        onRemoveAttachment = replyViewModel::removeAttachment,
+        onRetryAttachment = replyViewModel::retryUpload,
+        onRetryFailedUploads = replyViewModel::retryFailedUploads,
+        onPublish = { replyViewModel.publish { viewModel.refresh() } },
+        onClearError = replyViewModel::clearPublishError,
     )
 }
 
@@ -147,13 +170,15 @@ fun PostDetailScreen(
     onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
     /** Clears a Cloudflare challenge on this thread's own URL. */
     onVerify: () -> Unit = { onOpenBrowser(postUrl) },
+    /** `null` opens an empty reply; a quote answers one floor (6d). The editor itself is hosted by the route. */
+    onReply: (ReplyQuote?) -> Unit = {},
+    /** Hides the bottom toolbar while the editor covers it. */
+    replyOpen: Boolean = false,
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var chickenTarget by remember { mutableStateOf<PostContent?>(null) }
     var showPageSheet by remember { mutableStateOf(false) }
-    var showReplySheet by remember { mutableStateOf(false) }
-    var replyDraft by rememberSaveable { mutableStateOf("") }
     var pageToolbarExpanded by rememberSaveable { mutableStateOf(true) }
     var hasJumpedToInitialFloor by remember(initialFloor) { mutableStateOf(false) }
     val collapsedTitleThreshold = with(LocalDensity.current) { 72.dp.roundToPx() }
@@ -270,6 +295,7 @@ fun PostDetailScreen(
                             if (index != null) scope.launch { listState.animateScrollToItem(index) }
                         },
                         onChickenClick = { chickenTarget = it },
+                        onReplyToFloor = onReply,
                         modifier =
                         Modifier.floatingToolbarVerticalNestedScroll(
                             expanded = toolbarExpanded,
@@ -279,7 +305,7 @@ fun PostDetailScreen(
                     )
             }
 
-            if (state.body != null && !showReplySheet) {
+            if (state.body != null && !replyOpen) {
                 DetailBottomActions(
                     toolbarExpanded = toolbarExpanded,
                     page = visiblePage,
@@ -290,7 +316,7 @@ fun PostDetailScreen(
                         if (next <= state.page) scrollToPage(next) else onLoadPage(next)
                     },
                     onPageClick = { showPageSheet = true },
-                    onReply = { showReplySheet = true },
+                    onReply = { onReply(null) },
                     modifier = Modifier.align(Alignment.BottomEnd),
                 )
             }
@@ -317,14 +343,6 @@ fun PostDetailScreen(
                 val clamped = target.coerceIn(1, state.totalPages.coerceAtLeast(1))
                 if (clamped <= state.page) scrollToPage(clamped) else onLoadPage(clamped)
             },
-        )
-    }
-
-    if (showReplySheet) {
-        ReplyEditorSheet(
-            draft = replyDraft,
-            onDraftChange = { replyDraft = it },
-            onDismiss = { showReplySheet = false },
         )
     }
 }
@@ -468,106 +486,6 @@ private fun PageJumpSheet(
     }
 }
 
-/**
- * The reply editor shell. Posting a reply is not implemented yet, so everything that would promise
- * otherwise is disabled: the publish button, and the formatting actions that have no handler. The
- * draft lives with the screen, not the sheet, so closing the sheet does not silently discard it.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ReplyEditorSheet(
-    draft: String,
-    onDraftChange: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val boldDescription = stringResource(R.string.post_tool_bold)
-    val quoteDescription = stringResource(R.string.post_tool_quote)
-    val emojiDescription = stringResource(R.string.post_tool_emoji)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState =
-        rememberBottomSheetState(
-            initialValue = SheetValue.Hidden,
-            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
-        ),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg).imePadding(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.post_reply_editor_title), style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        stringResource(R.string.post_reply_wip),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel))
-                }
-            }
-            BasicTextField(
-                value = draft,
-                onValueChange = onDraftChange,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).padding(vertical = Spacing.sm),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                decorationBox = { inner ->
-                    Box {
-                        if (draft.isEmpty()) {
-                            Text(
-                                stringResource(R.string.post_reply_editor_hint),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        inner()
-                    }
-                },
-            )
-            HorizontalDivider()
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                TextButton(
-                    onClick = {},
-                    enabled = false,
-                    modifier =
-                    Modifier.semantics {
-                        contentDescription = boldDescription
-                    },
-                ) {
-                    Text("B", fontWeight = FontWeight.Bold)
-                }
-                TextButton(
-                    onClick = {},
-                    enabled = false,
-                    modifier =
-                    Modifier.semantics {
-                        contentDescription = quoteDescription
-                    },
-                ) {
-                    Text(">_")
-                }
-                TextButton(onClick = {}, enabled = false) { Text(stringResource(R.string.post_tool_image)) }
-                TextButton(
-                    onClick = {},
-                    enabled = false,
-                    modifier =
-                    Modifier.semantics {
-                        contentDescription = emojiDescription
-                    },
-                ) {
-                    Text("🙂")
-                }
-                Box(Modifier.weight(1f))
-                Button(onClick = {}, enabled = false) {
-                    Text(stringResource(R.string.action_publish))
-                }
-            }
-            androidx.compose.foundation.layout.Spacer(Modifier.height(Spacing.lg))
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DetailTopBar(
@@ -660,6 +578,7 @@ private fun ThreadList(
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
     onChickenClick: (PostContent) -> Unit,
+    onReplyToFloor: (ReplyQuote?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -699,6 +618,7 @@ private fun ThreadList(
                 onImageClick = onImageClick,
                 onJumpToFloor = onJumpToFloor,
                 onChickenClick = { onChickenClick(comment) },
+                onReply = { onReplyToFloor(comment.toReplyQuote()) },
             )
         }
 
@@ -871,6 +791,7 @@ private fun CommentRow(
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
     onChickenClick: () -> Unit,
+    onReply: () -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(
@@ -912,7 +833,7 @@ private fun CommentRow(
             textStyle = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(start = 36.dp, top = Spacing.sm),
         )
-        ReactionRow(onChickenClick = onChickenClick)
+        ReactionRow(onChickenClick = onChickenClick, onReply = onReply)
     }
 }
 
@@ -920,6 +841,7 @@ private fun CommentRow(
 private fun ReactionRow(
     onChickenClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onReply: (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier.fillMaxWidth().padding(top = Spacing.sm),
@@ -934,6 +856,16 @@ private fun ReactionRow(
             onClick = onChickenClick,
         )
         QuietReaction(NodeSeekIcons.ThumbDown, R.string.post_reaction_dislike, "0")
+        // The one interaction on a floor that is actually wired up. It carries the floor into the
+        // editor as a quote, which is what 6d's "回复 #12 · nssk" header is showing.
+        onReply?.let {
+            QuietReaction(
+                icon = NodeSeekIcons.Reply,
+                label = R.string.post_reply_action,
+                count = "",
+                onClick = it,
+            )
+        }
     }
 }
 
@@ -946,11 +878,13 @@ private fun QuietReaction(
 ) {
     TextButton(onClick = onClick ?: {}, enabled = onClick != null) {
         Icon(icon, contentDescription = stringResource(label), modifier = Modifier.size(18.dp))
-        Text(
-            text = count,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(start = Spacing.xs),
-        )
+        if (count.isNotEmpty()) {
+            Text(
+                text = count,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(start = Spacing.xs),
+            )
+        }
     }
 }
 
@@ -996,6 +930,41 @@ private fun OriginalPosterBadge() {
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 7.dp, vertical = 1.dp),
     )
+}
+
+/**
+ * The quote context the reply editor opens with.
+ *
+ * `null` for a floor with no number — a reply that says "回复 #" answers nothing, and the editor
+ * handles a missing quote perfectly well by opening empty.
+ */
+private fun PostContent.toReplyQuote(): ReplyQuote? {
+    val number = floor?.trimStart('#')?.toIntOrNull() ?: return null
+    return ReplyQuote(floor = number, author = authorName, excerpt = nodes.excerpt())
+}
+
+/**
+ * The floor's readable text, in full.
+ *
+ * Deliberately not truncated here: the same string is the chip's label, the preview's quote block
+ * *and* the blockquote that goes on the wire, and only the first of those wants to be short. The
+ * chip ellipsizes at render time; publishing a quote cut to 40 characters with a `…` would put a
+ * mangled quote into a real thread the moment the comment endpoint is wired up.
+ */
+private fun List<RichNode>.excerpt(): String = mapNotNull { node ->
+    when (node) {
+        is RichNode.Paragraph -> node.inlines.plainText()
+        is RichNode.Heading -> node.inlines.plainText()
+        else -> null
+    }?.trim()?.takeIf(String::isNotBlank)
+}.joinToString("\n")
+
+private fun List<InlineNode>.plainText(): String = joinToString("") { inline ->
+    when (inline) {
+        is InlineNode.Text -> inline.text
+        is InlineNode.Link -> inline.text
+        else -> ""
+    }
 }
 
 /** Tabular figures so `#9` and `#127` sit on the same right edge as the list scrolls. */

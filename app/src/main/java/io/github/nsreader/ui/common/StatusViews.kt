@@ -172,6 +172,24 @@ fun LoadingState(modifier: Modifier = Modifier) {
 // -------------------------------------------------------------------------------------------------
 
 /**
+ * The same failures as one line, for somewhere a [StatusView] will not fit — a bottom sheet, a row.
+ *
+ * Shares the titles with the full-screen states so the two never drift into saying different things
+ * about the same failure.
+ */
+@Composable
+fun NodeSeekError.shortMessage(): String =
+    when (this) {
+        NodeSeekError.Cloudflare -> stringResource(R.string.status_challenge_title)
+        NodeSeekError.LoginRequired -> stringResource(R.string.status_sign_in_title)
+        NodeSeekError.Network -> stringResource(R.string.status_network_title)
+        NodeSeekError.Unparsable -> stringResource(R.string.status_unparsable_title)
+        is NodeSeekError.Http -> stringResource(R.string.status_http_title, statusCode)
+        NodeSeekError.NotWired -> stringResource(R.string.status_not_wired_title)
+        NodeSeekError.Unknown -> stringResource(R.string.status_unknown_title)
+    }
+
+/**
  * Turns a data-layer failure into a screen.
  *
  * Most NodeSeek failures are not really errors — they are a human step the app cannot take: solve

@@ -38,11 +38,17 @@ sealed interface NodeSeekError {
     data object Unknown : NodeSeekError
 }
 
-/** Thrown by the data layer; carries [error] so the UI can pick both wording and recovery action. */
+/**
+ * Thrown by the data layer; carries [error] so the UI can pick both wording and recovery action.
+ *
+ * [detail] is the server's own sentence when there is one — "对方已屏蔽你" and the like. Kept as a
+ * property rather than folded into the message because a screen that can show it should not have to
+ * guess whether [Exception.message] holds a reason or just the name of an [error] case.
+ */
 class NodeSeekException(
     val error: NodeSeekError,
     cause: Throwable? = null,
-    detail: String? = null,
+    val detail: String? = null,
 ) : Exception(detail ?: error.toString(), cause)
 
 /** True when a human can clear this by acting inside a WebView. */

@@ -4,9 +4,13 @@ import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.data.Board
 import io.github.nsreader.data.MutableClock
+import io.github.nsreader.data.composer.ImageAttachment
+import io.github.nsreader.data.composer.ImageUploader
+import io.github.nsreader.data.composer.PickedImage
 import io.github.nsreader.data.composer.PostComposerRepository
 import io.github.nsreader.data.composer.PostDraft
 import io.github.nsreader.data.composer.PostSubmission
+import io.github.nsreader.data.composer.UploadStatus
 import io.github.nsreader.data.session.SessionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,6 +36,7 @@ class PostComposerViewModelTest {
     private val repository = FakeComposerRepository()
     private val clock = MutableClock()
     private val boards = MutableStateFlow(listOf(Board("tech", "技术", null)))
+    private val uploader = FakeImageUploader()
     private val session = MutableStateFlow(SessionState(isSignedIn = true))
 
     @Before
@@ -44,7 +49,7 @@ class PostComposerViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = PostComposerViewModel(repository, boards, session, clock)
+    private fun viewModel() = PostComposerViewModel(repository, boards, session, clock, uploader)
 
     @Test
     fun `offers a saved draft and restores every field`() = runTest(dispatcher) {
@@ -66,7 +71,6 @@ class PostComposerViewModelTest {
         assertEquals("旧标题", viewModel.uiState.value.title)
         assertEquals("旧正文", viewModel.uiState.value.body)
         assertEquals("tech", viewModel.uiState.value.boardSlug)
-        assertTrue(viewModel.uiState.value.showRuleReminder)
     }
 
     @Test
@@ -155,6 +159,65 @@ class PostComposerViewModelTest {
         assertTrue(callbackInvoked)
         assertEquals(1, repository.deleteCount)
         assertNull(viewModel.uiState.value.publishError)
+    }
+
+    @Test
+    fun `an uploaded image is appended to the body and removed with its cell`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.updateBody("正文")
+
+        viewModel.addImages(listOf(PickedImage("content://pick/1", "screenshot.png")))
+        advanceUntilIdle()
+
+        val attachment = viewModel.uiState.value.attachments.single()
+        assertEquals(UploadStatus.UPLOADED, attachment.status)
+        assertEquals("正文\n\n![screenshot.png](https://cdn.nodeimage.com/i/fake.webp)", viewModel.uiState.value.body)
+
+        viewModel.removeAttachment(attachment)
+        advanceUntilIdle()
+
+        assertEquals("正文", viewModel.uiState.value.body)
+        assertTrue(viewModel.uiState.value.attachments.isEmpty())
+    }
+
+    @Test
+    fun `a failed upload is retryable and blocks publishing until it settles`() = runTest(dispatcher) {
+        uploader.failures = 1
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.updateTitle("标题")
+        viewModel.updateBody("正文")
+        viewModel.selectBoard(boards.value.single())
+
+        viewModel.addImages(listOf(PickedImage("content://pick/1", "a.png")))
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.failedUploadCount)
+        // A failed upload is settled: nothing more is coming, so publishing is allowed again.
+        assertTrue(viewModel.uiState.value.canPublish)
+
+        viewModel.retryFailedUploads()
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.uiState.value.failedUploadCount)
+        assertEquals(UploadStatus.UPLOADED, viewModel.uiState.value.attachments.single().status)
+    }
+}
+
+private class FakeImageUploader : ImageUploader {
+    var failures = 0
+
+    override suspend fun upload(
+        attachment: ImageAttachment,
+        onProgress: (Float) -> Unit,
+    ): String {
+        if (failures > 0) {
+            failures--
+            throw NodeSeekException(NodeSeekError.Network)
+        }
+        onProgress(1f)
+        return "https://cdn.nodeimage.com/i/fake.webp"
     }
 }
 

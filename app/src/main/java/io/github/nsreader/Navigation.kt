@@ -45,8 +45,11 @@ import io.github.nsreader.ui.assets.StardustRoute
 import io.github.nsreader.ui.assets.StardustViewModel
 import io.github.nsreader.ui.composer.PostComposerRoute
 import io.github.nsreader.ui.composer.PostComposerViewModel
+import io.github.nsreader.ui.composer.ReplyComposerViewModel
 import io.github.nsreader.ui.login.WebViewGoal
 import io.github.nsreader.ui.login.WebViewRoute
+import io.github.nsreader.ui.messages.MessageThreadRoute
+import io.github.nsreader.ui.messages.MessageThreadViewModel
 import io.github.nsreader.ui.navigation.NodeSeekNavigationItems
 import io.github.nsreader.ui.navigation.TopLevelDestination
 import io.github.nsreader.ui.notifications.NotificationsRoute
@@ -226,6 +229,33 @@ fun MainNavigation(container: AppContainer) {
                                 backStack.add(PostDetailKey(it, notification.floor))
                             }
                         },
+                        onOpenThread = { uid, name ->
+                            backStack.add(MessageThreadKey(uid, name))
+                        },
+                    )
+                }
+
+                entry<MessageThreadKey> { key ->
+                    val viewModel: MessageThreadViewModel =
+                        viewModel(
+                            key = "message-${key.uid}",
+                            factory =
+                            MessageThreadViewModel.factory(container, key.uid, key.userName),
+                        )
+                    MessageThreadRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                        onVerify = {
+                            backStack.add(
+                                WebKey(
+                                    NodeSeekSite.BASE_URL + NodeSeekSite.NOTIFICATION_PATH,
+                                    siteTitle,
+                                    WebViewGoal.CHALLENGE,
+                                ),
+                            )
+                        },
+                        onOpenBrowser = openExternalUrl,
                     )
                 }
 
@@ -451,8 +481,16 @@ fun MainNavigation(container: AppContainer) {
                             key = "post-${key.postId}",
                             factory = PostDetailViewModel.factory(container, key.postId),
                         )
+                    // Its own ViewModel, keyed the same way: an unsent reply belongs to one thread
+                    // and has to outlive the sheet that shows it.
+                    val replyViewModel: ReplyComposerViewModel =
+                        viewModel(
+                            key = "reply-${key.postId}",
+                            factory = ReplyComposerViewModel.factory(container, key.postId),
+                        )
                     PostDetailRoute(
                         viewModel = viewModel,
+                        replyViewModel = replyViewModel,
                         initialFloor = key.floor,
                         onBack = { backStack.removeLastOrNull() },
                         onOpenBrowser = openExternalUrl,
@@ -589,8 +627,14 @@ private fun HomePane(
                             viewModelStoreOwner = storeOwner,
                             factory = PostDetailViewModel.factory(container, postId),
                         )
+                    val replyViewModel: ReplyComposerViewModel =
+                        viewModel(
+                            viewModelStoreOwner = storeOwner,
+                            factory = ReplyComposerViewModel.factory(container, postId),
+                        )
                     PostDetailRoute(
                         viewModel = detailViewModel,
+                        replyViewModel = replyViewModel,
                         onBack = { selectedPostId = null },
                         onOpenBrowser = onOpenBrowser,
                         onSignIn = onSignIn,
