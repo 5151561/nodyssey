@@ -104,6 +104,34 @@ object NodeSeekIcons {
         )
     }
 
+    /** Sends a direct message (board 7f). */
+    val Send: ImageVector by lazy {
+        materialIcon(
+            name = "Send",
+            pathData = "M2.01,21L23,12 2.01,3 2,10l15,2 -15,2z",
+        )
+    }
+
+    /** Starts a conversation from the message list's FAB (board 7e). */
+    val AddComment: ImageVector by lazy {
+        materialIcon(
+            name = "AddComment",
+            pathData =
+            "M22,4c0,-1.1 -0.9,-2 -2,-2H4c-1.1,0 -2,0.9 -2,2v18l4,-4h14c1.1,0 2,-0.9 2,-2V4z" +
+                "M17,11h-4v4h-2v-4H7V9h4V5h2v4h4v2z",
+        )
+    }
+
+    /** A message that failed to send (board 7f). */
+    val ErrorCircle: ImageVector by lazy {
+        materialIcon(
+            name = "ErrorCircle",
+            pathData =
+            "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z" +
+                "m1,15h-2v-2h2v2zm0,-4h-2L11,7h2v6z",
+        )
+    }
+
     val ThumbDown: ImageVector by lazy {
         materialIcon(
             name = "ThumbDown",

@@ -165,13 +165,37 @@
     <string name="search_clear_all">全部清除</string>
     <string name="search_remove_recent">删除最近搜索：%1$s</string>
 
-    <!-- Notifications -->
+    <!-- Notifications: the site has three groups, and 私信 is a conversation list rather than rows -->
     <string name="notifications_mark_all_read">全部已读</string>
-    <string name="notifications_replies">回复我的</string>
-    <string name="notifications_mentions">@我的</string>
+    <string name="notifications_mentions">@我</string>
+    <string name="notifications_replies">回复主题</string>
     <string name="notifications_messages">私信</string>
-    <string name="notifications_system">系统</string>
     <string name="notifications_empty">这里暂时没有通知</string>
+    <string name="notification_sentence_mention">%1$s 在帖子 %2$s 中@了我</string>
+    <string name="notification_sentence_reply">%1$s 回复了帖子 %2$s</string>
+    <string name="notification_unknown_thread">某个帖子</string>
+    <string name="notification_time_pair">%1$s · %2$s</string>
+
+    <!-- Direct messages -->
+    <string name="messages_empty">还没有私信</string>
+    <string name="messages_pinned">置顶会话</string>
+    <string name="messages_snippet_mine_prefix">你：</string>
+    <string name="messages_new_conversation">新建私信</string>
+    <string name="messages_new_conversation_hint">搜索用户名</string>
+    <string name="messages_new_conversation_empty">没有找到这个用户</string>
+    <string name="messages_new_conversation_intro">站点没有「新建会话」入口，这里用用户搜索选收件人。</string>
+    <string name="message_thread_title">与 %1$s 的对话</string>
+    <string name="message_thread_subtitle">UID %1$d</string>
+    <string name="message_thread_subtitle_level">UID %1$d · Lv %2$d</string>
+    <string name="message_thread_empty">还没有消息，说点什么吧</string>
+    <string name="message_input_hint_markdown">发消息（Markdown 已开）</string>
+    <string name="message_input_hint_plain">发消息</string>
+    <string name="message_markdown_toggle">Markdown 开关</string>
+    <string name="message_markdown_label" tools:ignore="Typos">MD</string>
+    <string name="message_send">发送</string>
+    <string name="message_status_sending">发送中</string>
+    <string name="message_status_failed">发送失败</string>
+    <string name="message_status_sent">已送达 %1$s</string>
 
     <!-- Profile -->
     <string name="profile_session_active">NodeSeek 登录会话有效</string>
