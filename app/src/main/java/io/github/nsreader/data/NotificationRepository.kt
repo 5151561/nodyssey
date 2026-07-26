@@ -3,14 +3,8 @@ package io.github.nsreader.data
 import io.github.nsreader.core.net.JsonSource
 import io.github.nsreader.core.net.NodeSeekJsonClient
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 
 enum class NotificationCategory(val endpoint: String?) {
     REPLIES("reply-to-me"),
@@ -53,10 +47,10 @@ class NotificationRepository(
 
     suspend fun unreadCounts(): NotificationCounts {
         val root = json.parseToJsonElement(jsonSource.getJson(NodeSeekJsonClient.PATH_UNREAD_COUNT))
-        val replies = root.int("reply", "replyCount")
-        val mentions = root.int("atMe", "at_me", "mention")
-        val messages = root.int("message", "messages", "msg")
-        val declaredAll = root.int("all", "total")
+        val replies = root.count("reply", "replyCount")
+        val mentions = root.count("atMe", "at_me", "mention")
+        val messages = root.count("message", "messages", "msg")
+        val declaredAll = root.count("all", "total")
         return NotificationCounts(
             replies = replies,
             mentions = mentions,
@@ -71,61 +65,30 @@ class NotificationRepository(
             json.parseToJsonElement(
                 jsonSource.getJson(NodeSeekJsonClient.notificationListPath(endpoint)),
             )
-        val rows = root.findNotificationArray()
-        return rows.mapIndexedNotNull { index, element ->
-            val item = element as? JsonObject ?: return@mapIndexedNotNull null
-            item.toNotification(category, index)
-        }
+        val rows =
+            root.findObjectArray("replyList", "atList", "msgArray", "notifications", "list", "data")
+        return rows.orEmpty().mapIndexed { index, item -> item.toNotification(category, index) }
     }
 }
 
-private fun JsonElement.int(vararg names: String): Int {
+/** The counts endpoint sometimes nests its numbers one level down; zero is the honest default. */
+private fun JsonElement.count(vararg names: String): Int {
     val objectValue = this as? JsonObject ?: return 0
-    names.forEach { name ->
-        objectValue[name]?.jsonPrimitive?.intOrNull?.let { return it }
-    }
+    objectValue.int(*names)?.let { return it }
     objectValue.values.forEach { child ->
-        val nested = child as? JsonObject ?: return@forEach
-        names.forEach { name -> nested[name]?.jsonPrimitive?.intOrNull?.let { return it } }
+        (child as? JsonObject)?.int(*names)?.let { return it }
     }
     return 0
-}
-
-private fun JsonElement.findNotificationArray(): JsonArray {
-    if (this is JsonArray && any { it is JsonObject }) return this
-    if (this !is JsonObject) return JsonArray(emptyList())
-    val preferred = listOf("replyList", "atList", "msgArray", "notifications", "list", "data")
-    preferred.forEach { key ->
-        val child = this[key] ?: return@forEach
-        val found = child.findNotificationArray()
-        if (found.isNotEmpty()) return found
-    }
-    values.forEach { child ->
-        val found = child.findNotificationArray()
-        if (found.isNotEmpty()) return found
-    }
-    return JsonArray(emptyList())
 }
 
 private fun JsonObject.toNotification(
     category: NotificationCategory,
     index: Int,
 ): ForumNotification {
-    fun text(vararg names: String): String? {
-        names.forEach { name -> this[name]?.jsonPrimitive?.contentOrNull?.let { return it } }
-        return null
-    }
-
-    fun long(vararg names: String): Long? {
-        names.forEach { name -> this[name]?.jsonPrimitive?.longOrNull?.let { return it } }
-        return null
-    }
-
     val postId = long("post_id", "postId", "discussion_id")
     val floorValue = text("floor_id", "floor", "floorId")
     val actor = text("commenter_name", "username", "sender_name", "name") ?: "NodeSeek 用户"
-    val viewed =
-        this["viewed"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.intOrNull ?: 0) != 0 } ?: false
+    val viewed = bool("viewed") ?: false
     return ForumNotification(
         id = text("comment_id", "id", "message_id") ?: "${category.name}-$postId-$index",
         postId = postId,

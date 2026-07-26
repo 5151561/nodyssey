@@ -103,12 +103,15 @@ fun PostDetailRoute(
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
-    onImageClick: (String) -> Unit,
+    onImageClick: (List<String>, String) -> Unit,
     modifier: Modifier = Modifier,
     initialFloor: String? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val postUrl = viewModel.postUrl()
+    // Every image in the thread as currently loaded, so the viewer can page between them without
+    // going back to the data layer — the URLs were already parsed into the rendered content.
+    val images = remember(state.body, state.comments) { state.imageUrls() }
     PostDetailScreen(
         state = state,
         initialFloor = initialFloor,
@@ -117,7 +120,7 @@ fun PostDetailRoute(
         onOpenBrowser = onOpenBrowser,
         onSignIn = onSignIn,
         onVerify = { onVerify(postUrl) },
-        onImageClick = onImageClick,
+        onImageClick = { url -> onImageClick(images.ifEmpty { listOf(url) }, url) },
         onRetry = viewModel::refresh,
         onLoadMore = viewModel::loadNextPage,
         onLoadPage = viewModel::loadPage,
@@ -1194,6 +1197,28 @@ private fun PostDetailDarkPreview() {
         )
     }
 }
+
+/**
+ * Every block image in the thread, in reading order and without duplicates.
+ *
+ * Reading order is what makes the viewer's "2 / 4" mean anything: it has to match the order the images
+ * appear while scrolling, so a tap on the third screenshot opens page three. Inline stickers are left
+ * out — nobody opens a full-screen viewer for an emoji.
+ */
+internal fun PostDetailUiState.imageUrls(): List<String> =
+    (listOfNotNull(body) + comments)
+        .flatMap { content -> content.nodes.imageUrls() }
+        .distinct()
+
+private fun List<RichNode>.imageUrls(): List<String> =
+    flatMap { node ->
+        when (node) {
+            is RichNode.BlockImage -> listOf(node.url)
+            is RichNode.Quote -> node.children.imageUrls()
+            is RichNode.ListBlock -> node.items.flatMap { it.imageUrls() }
+            else -> emptyList()
+        }
+    }
 
 @Suppress("UnusedPrivateMember")
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post detail · skeleton")

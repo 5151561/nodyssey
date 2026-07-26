@@ -106,10 +106,12 @@ private class FakeProfileRepository(
     private val profile: UserProfile? = null,
     private val error: Throwable? = null,
 ) : ProfileRepository {
-    override suspend fun profile(): UserProfile {
+    override suspend fun profile(refresh: Boolean): UserProfile {
         error?.let { throw it }
         return requireNotNull(profile)
     }
+
+    override suspend fun profile(uid: Long): UserProfile = profile()
 }
 
 private object NoOpPostRepository : PostRepository {

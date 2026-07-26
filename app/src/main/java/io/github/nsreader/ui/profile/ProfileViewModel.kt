@@ -65,7 +65,7 @@ class ProfileViewModel(
         loadJob =
             viewModelScope.launch {
                 _uiState.update { it.copy(isSignedIn = true, isLoading = true, error = null) }
-                runCatchingExceptCancellation { profileRepository.profile() }
+                runCatchingExceptCancellation { profileRepository.profile(refresh = true) }
                     .onSuccess { profile -> _uiState.value = profile.toUiState() }
                     .onFailure { throwable ->
                         _uiState.update {

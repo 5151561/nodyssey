@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.R
 import io.github.nsreader.core.net.NodeSeekError
+import io.github.nsreader.ui.common.GroupedColumn
+import io.github.nsreader.ui.common.GroupedRow
 import io.github.nsreader.ui.common.LoadingState
 import io.github.nsreader.ui.common.NodeSeekErrorState
 import io.github.nsreader.ui.common.NodeSeekIcons
@@ -57,7 +59,11 @@ fun ProfileRoute(
     onSignIn: () -> Unit,
     onSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
-    onEditProfile: (Long) -> Unit,
+    onOpenSpace: (Long) -> Unit,
+    onAssets: () -> Unit,
+    onFollow: () -> Unit,
+    onTools: () -> Unit,
+    onAccountSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -68,7 +74,11 @@ fun ProfileRoute(
         onRetry = viewModel::refresh,
         onSettings = onSettings,
         onOpenWebsite = onOpenWebsite,
-        onEditProfile = { state.uid?.let(onEditProfile) },
+        onOpenSpace = { state.uid?.let(onOpenSpace) },
+        onAssets = onAssets,
+        onFollow = onFollow,
+        onTools = onTools,
+        onAccountSettings = onAccountSettings,
         modifier = modifier,
     )
 }
@@ -81,7 +91,11 @@ fun ProfileScreen(
     onRetry: () -> Unit,
     onSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
-    onEditProfile: () -> Unit,
+    onOpenSpace: () -> Unit,
+    onAssets: () -> Unit,
+    onFollow: () -> Unit,
+    onTools: () -> Unit,
+    onAccountSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(modifier = modifier) { padding ->
@@ -99,8 +113,8 @@ fun ProfileScreen(
             NodeSeekErrorState(
                 error = state.error,
                 onRetry = onRetry,
-                onOpenBrowser =
-                if (state.error == NodeSeekError.LoginRequired) onSignIn else onOpenWebsite,
+                onOpenBrowser = onOpenWebsite,
+                onSignIn = onSignIn,
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -120,14 +134,14 @@ fun ProfileScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             item(key = "profile-header") {
-                ProfileHeader(state, onEditProfile)
+                ProfileHeader(state, onOpenSpace)
             }
             item(key = "resources") {
-                ResourceCards(state)
+                ResourceCards(state, onAssets)
             }
             item(key = "attendance") {
                 Button(
-                    onClick = onOpenWebsite,
+                    onClick = onAssets,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
                 ) {
@@ -138,25 +152,16 @@ fun ProfileScreen(
                     )
                 }
             }
+            // The content menu now points at real screens. 主题帖 / 评论 / 收藏 are the space page's own
+            // tabs, so they open it on the right one rather than opening three near-identical screens.
             item(key = "content-menu") {
                 ProfileMenuGroup(
                     items =
                     listOf(
-                        ProfileMenuItem(
-                            R.string.profile_topics,
-                            Icons.Default.Home,
-                            onOpenWebsite,
-                        ),
-                        ProfileMenuItem(
-                            R.string.profile_comments,
-                            Icons.Default.Person,
-                            onOpenWebsite,
-                        ),
-                        ProfileMenuItem(
-                            R.string.profile_bookmarks,
-                            Icons.Default.Check,
-                            onOpenWebsite,
-                        ),
+                        ProfileMenuItem(R.string.profile_space, Icons.Default.Person, onOpenSpace),
+                        ProfileMenuItem(R.string.profile_follow, NodeSeekIcons.Group, onFollow),
+                        ProfileMenuItem(R.string.profile_assets, NodeSeekIcons.Wallet, onAssets),
+                        ProfileMenuItem(R.string.profile_tools, NodeSeekIcons.MenuBook, onTools),
                     ),
                 )
             }
@@ -164,6 +169,11 @@ fun ProfileScreen(
                 ProfileMenuGroup(
                     items =
                     listOf(
+                        ProfileMenuItem(
+                            R.string.profile_account_settings,
+                            Icons.Default.Person,
+                            onAccountSettings,
+                        ),
                         ProfileMenuItem(R.string.settings_title, Icons.Default.Settings, onSettings),
                         ProfileMenuItem(
                             R.string.profile_open_web,
@@ -185,7 +195,7 @@ fun ProfileScreen(
 @Composable
 private fun ProfileHeader(
     state: ProfileUiState,
-    onEditProfile: () -> Unit,
+    onOpenSpace: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -227,7 +237,7 @@ private fun ProfileHeader(
             )
         }
         IconButton(
-            onClick = onEditProfile,
+            onClick = onOpenSpace,
             modifier =
             Modifier
                 .size(48.dp)
@@ -236,7 +246,7 @@ private fun ProfileHeader(
         ) {
             Icon(
                 imageVector = NodeSeekIcons.Edit,
-                contentDescription = stringResource(R.string.profile_edit),
+                contentDescription = stringResource(R.string.profile_space),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
@@ -245,7 +255,10 @@ private fun ProfileHeader(
 }
 
 @Composable
-private fun ResourceCards(state: ProfileUiState) {
+private fun ResourceCards(
+    state: ProfileUiState,
+    onAssets: () -> Unit,
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         ResourceCard(
             value = state.chickenCount?.toString() ?: "—",
@@ -254,6 +267,7 @@ private fun ResourceCards(state: ProfileUiState) {
             shape = RoundedCornerShape(18.dp, 5.dp, 5.dp, 18.dp),
             color = MaterialTheme.colorScheme.tertiaryContainer,
             contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            onClick = onAssets,
         )
         ResourceCard(
             value = state.starCount?.toString() ?: "—",
@@ -262,6 +276,7 @@ private fun ResourceCards(state: ProfileUiState) {
             shape = RoundedCornerShape(5.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            onClick = onAssets,
         )
         ResourceCard(
             value = state.streakDays?.toString() ?: "—",
@@ -270,6 +285,7 @@ private fun ResourceCards(state: ProfileUiState) {
             shape = RoundedCornerShape(5.dp, 18.dp, 18.dp, 5.dp),
             color = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            onClick = onAssets,
         )
     }
 }
@@ -281,9 +297,15 @@ private fun ResourceCard(
     shape: RoundedCornerShape,
     color: androidx.compose.ui.graphics.Color,
     contentColor: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(modifier = modifier, shape = shape, color = color, contentColor = contentColor) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = shape,
+        color = color,
+        contentColor = contentColor,
+    ) {
         Column(Modifier.padding(horizontal = Spacing.lg, vertical = 14.dp)) {
             Text(value, style = MaterialTheme.typography.titleLarge)
             Text(label, style = MaterialTheme.typography.labelSmall)
@@ -297,37 +319,18 @@ private data class ProfileMenuItem(
     val onClick: () -> Unit,
 )
 
+/** Renders through the shared grouped-list components so 我的 matches the screens it links to. */
 @Composable
 private fun ProfileMenuGroup(items: List<ProfileMenuItem>) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    GroupedColumn {
         items.forEachIndexed { index, item ->
-            val first = index == 0
-            val last = index == items.lastIndex
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape =
-                RoundedCornerShape(
-                    topStart = if (first) 18.dp else 5.dp,
-                    topEnd = if (first) 18.dp else 5.dp,
-                    bottomEnd = if (last) 18.dp else 5.dp,
-                    bottomStart = if (last) 18.dp else 5.dp,
-                ),
-                modifier = Modifier.clickable(onClick = item.onClick),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                ) {
-                    Icon(item.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        stringResource(item.title),
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
+            GroupedRow(
+                title = stringResource(item.title),
+                first = index == 0,
+                last = index == items.lastIndex,
+                icon = item.icon,
+                onClick = item.onClick,
+            )
         }
     }
 }
@@ -352,7 +355,11 @@ private fun ProfileSignedInPreview() {
             onRetry = {},
             onSettings = {},
             onOpenWebsite = {},
-            onEditProfile = {},
+            onOpenSpace = {},
+            onAssets = {},
+            onFollow = {},
+            onTools = {},
+            onAccountSettings = {},
         )
     }
 }
@@ -368,7 +375,11 @@ private fun ProfileSignedOutPreview() {
             onRetry = {},
             onSettings = {},
             onOpenWebsite = {},
-            onEditProfile = {},
+            onOpenSpace = {},
+            onAssets = {},
+            onFollow = {},
+            onTools = {},
+            onAccountSettings = {},
         )
     }
 }

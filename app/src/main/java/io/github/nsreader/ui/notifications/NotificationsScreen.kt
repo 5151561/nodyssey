@@ -132,12 +132,8 @@ fun NotificationsScreen(
                         NodeSeekErrorState(
                             error = state.error,
                             onRetry = onRetry,
-                            onOpenBrowser =
-                            if (state.error == io.github.nsreader.core.net.NodeSeekError.LoginRequired) {
-                                onSignIn
-                            } else {
-                                onVerify
-                            },
+                            onOpenBrowser = onVerify,
+                            onSignIn = onSignIn,
                         )
 
                     state.items.isEmpty() ->
