@@ -10,9 +10,6 @@ import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.model.FeedSort
 import io.github.nsreader.model.PostSummary
 import io.github.nsreader.model.SearchSort
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -29,12 +26,21 @@ data class UserSearchResult(
     val commentCount: Int?,
 )
 
+/** One server page of post results, so the caller can page on demand instead of prefetching. */
+data class PostSearchResults(
+    val posts: List<PostSummary>,
+    val page: Int,
+    val totalPages: Int,
+    val hasNextPage: Boolean,
+)
+
 interface SearchRepository {
     suspend fun searchPosts(
         query: String,
+        page: Int,
         categorySlugs: Set<String>,
         sort: SearchSort,
-    ): List<PostSummary>
+    ): PostSearchResults
 
     suspend fun searchUsers(query: String): List<UserSearchResult>
 }
@@ -45,25 +51,37 @@ class NetworkSearchRepository(
     private val dispatchers: AppDispatchers,
 ) : SearchRepository {
     private val json = Json { ignoreUnknownKeys = true }
+
+    /*
+     * Exactly one request per call, exactly the site's own search route. Prefetching every result
+     * page in parallel was what tripped Cloudflare's rate limiting: a popular keyword turned one
+     * search into dozens of simultaneous requests. Ordering is the server's — its relevance ranking
+     * for RELEVANCE, `sortBy=postTime` for TIME — so pages append without reshuffling.
+     */
     override suspend fun searchPosts(
         query: String,
+        page: Int,
         categorySlugs: Set<String>,
         sort: SearchSort,
-    ): List<PostSummary> = coroutineScope {
-        // NodeSeek accepts one category per request. A single selected board can therefore be sent
-        // to the server directly; for a multi-board range, search once globally and filter the real
-        // server result set locally instead of multiplying one search into dozens of requests.
+    ): PostSearchResults {
+        val feedSort = if (sort == SearchSort.TIME) FeedSort.POST_TIME else FeedSort.LAST_REPLY
+        // NodeSeek accepts one category per request. A single selected board goes to the server;
+        // a multi-board range searches globally and filters each page locally as it arrives.
         val serverCategory = categorySlugs.singleOrNull()
-        loadPostScope(query, serverCategory, sort)
-            .filter { post -> categorySlugs.isEmpty() || post.categorySlug in categorySlugs }
-            .distinctBy(PostSummary::postId)
-            .let { posts ->
-                if (sort == SearchSort.RELEVANCE) {
-                    posts.sortedByDescending { it.relevanceFor(query) }
-                } else {
-                    posts.sortedByDescending(PostSummary::postId)
-                }
-            }
+        val html =
+            htmlSource.getHtml(
+                NodeSeekSite.postSearchPath(query.trim(), page, serverCategory, feedSort),
+            )
+        val parsed = withContext(dispatchers.default) { SearchParser.parsePosts(html, page) }
+        return PostSearchResults(
+            posts =
+            parsed.posts
+                .filter { post -> categorySlugs.size < 2 || post.categorySlug in categorySlugs }
+                .distinctBy(PostSummary::postId),
+            page = page,
+            totalPages = parsed.totalPages,
+            hasNextPage = parsed.hasNextPage,
+        )
     }
 
     override suspend fun searchUsers(query: String): List<UserSearchResult> {
@@ -80,45 +98,6 @@ class NetworkSearchRepository(
             if (!response.success) throw NodeSeekException(NodeSeekError.LoginRequired)
             response.memberList.map(UserSearchDto::toResult)
         }
-    }
-
-    private suspend fun loadPostScope(
-        query: String,
-        categorySlug: String?,
-        sort: SearchSort,
-    ): List<PostSummary> = coroutineScope {
-        val feedSort = if (sort == SearchSort.TIME) FeedSort.POST_TIME else FeedSort.LAST_REPLY
-        val firstHtml =
-            htmlSource.getHtml(
-                NodeSeekSite.postSearchPath(query.trim(), categorySlug = categorySlug, sort = feedSort),
-            )
-        val first = withContext(dispatchers.default) { SearchParser.parsePosts(firstHtml, page = 1) }
-        if (first.totalPages == 1) return@coroutineScope first.posts
-
-        val remaining =
-            (2..first.totalPages)
-                .map { page ->
-                    async {
-                        val html = htmlSource.getHtml(NodeSeekSite.postSearchPath(query, page, categorySlug, feedSort))
-                        withContext(dispatchers.default) { SearchParser.parsePosts(html, page).posts }
-                    }
-                }.awaitAll()
-        first.posts + remaining.flatten()
-    }
-}
-
-private fun PostSummary.relevanceFor(query: String): Int {
-    val normalized = query.trim().lowercase()
-    if (normalized.isEmpty()) return 0
-    val titleText = title.lowercase()
-    val authorText = authorName.lowercase()
-    return when {
-        titleText == normalized -> 1_000
-        titleText.startsWith(normalized) -> 800
-        titleText.contains(normalized) -> 600
-        authorText == normalized -> 500
-        authorText.contains(normalized) -> 300
-        else -> normalized.split(Regex("\\s+")).count(titleText::contains) * 100
     }
 }
 

@@ -1,5 +1,14 @@
 package io.github.nsreader.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,14 +16,23 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.nsreader.ui.theme.Spacing
@@ -36,7 +54,7 @@ internal fun SettingsSectionTitle(
         text = text,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = Spacing.xs, top = Spacing.xs),
+        modifier = modifier.padding(start = Spacing.xs, top = Spacing.xs).semantics { heading() },
     )
 }
 
@@ -105,7 +123,12 @@ internal fun SettingsRow(
         color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = contentColor,
         shape = expressiveGroupShape(top, bottom),
-        modifier = if (onClick == null) Modifier else Modifier.clickable(onClick = onClick),
+        modifier =
+        if (onClick == null) {
+            Modifier
+        } else {
+            Modifier.clickable(role = Role.Button, onClick = onClick)
+        },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
@@ -127,6 +150,98 @@ internal fun SettingsRow(
         }
     }
 }
+
+/**
+ * The M3E connected button group: one full-round selected segment with a check, 5dp seams between
+ * the rest. Shared by the theme picker and the poll-frequency picker so the two cannot drift.
+ */
+@Composable
+internal fun ConnectedChoiceButtons(
+    labels: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        labels.forEachIndexed { index, label ->
+            val isSelected = index == selectedIndex
+            val targetStartRadius =
+                if (isSelected || index == 0) CONNECTED_OUTER_RADIUS else CONNECTED_INNER_RADIUS
+            val targetEndRadius =
+                if (isSelected || index == labels.lastIndex) {
+                    CONNECTED_OUTER_RADIUS
+                } else {
+                    CONNECTED_INNER_RADIUS
+                }
+            val startRadius by animateDpAsState(
+                targetValue = targetStartRadius,
+                animationSpec = connectedButtonSpring(),
+                label = "choice_${index}_start_radius",
+            )
+            val endRadius by animateDpAsState(
+                targetValue = targetEndRadius,
+                animationSpec = connectedButtonSpring(),
+                label = "choice_${index}_end_radius",
+            )
+            val containerColor by animateColorAsState(
+                targetValue =
+                if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                },
+                animationSpec = connectedButtonSpring(),
+                label = "choice_${index}_container",
+            )
+            val contentColor by animateColorAsState(
+                targetValue =
+                if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                animationSpec = connectedButtonSpring(),
+                label = "choice_${index}_content",
+            )
+            Surface(
+                onClick = { onSelect(index) },
+                modifier = Modifier.weight(1f).semantics { this.selected = isSelected },
+                shape =
+                RoundedCornerShape(
+                    topStart = startRadius,
+                    bottomStart = startRadius,
+                    topEnd = endRadius,
+                    bottomEnd = endRadius,
+                ),
+                color = containerColor,
+                contentColor = contentColor,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 11.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AnimatedVisibility(
+                        visible = isSelected,
+                        enter = fadeIn() + expandHorizontally(),
+                        exit = fadeOut() + shrinkHorizontally(),
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.width(16.dp))
+                    }
+                    Text(label, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+
+private val CONNECTED_OUTER_RADIUS = 20.dp
+private val CONNECTED_INNER_RADIUS = 5.dp
+
+private fun <T> connectedButtonSpring() =
+    spring<T>(
+        dampingRatio = Spring.DampingRatioNoBouncy,
+        stiffness = Spring.StiffnessMediumLow,
+    )
 
 /** 2dp: wide enough to read as a seam, narrow enough that the group stays one object. */
 private val GROUP_SEAM = 2.dp

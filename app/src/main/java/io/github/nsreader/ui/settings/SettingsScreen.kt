@@ -1,17 +1,7 @@
 package io.github.nsreader.ui.settings
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -20,9 +10,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,12 +30,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -61,6 +48,9 @@ import kotlin.math.roundToInt
 fun SettingsRoute(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
+    onOpenNotifications: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -71,6 +61,9 @@ fun SettingsRoute(
         onFontScaleChange = viewModel::setFontScale,
         onImagesOnWifiOnlyChange = viewModel::setImagesOnWifiOnly,
         onClearCache = viewModel::clearCache,
+        onOpenNotifications = onOpenNotifications,
+        onOpenAbout = onOpenAbout,
+        onOpenLicenses = onOpenLicenses,
         modifier = modifier,
     )
 }
@@ -85,6 +78,9 @@ fun SettingsScreen(
     onImagesOnWifiOnlyChange: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenNotifications: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+    onOpenLicenses: () -> Unit = {},
 ) {
     var bodyFontSize by remember(state.settings.fontScale) {
         mutableFloatStateOf(fontScaleToBodySize(state.settings.fontScale))
@@ -186,17 +182,31 @@ fun SettingsScreen(
                 )
             }
 
+            SettingsSectionTitle(stringResource(R.string.notify_settings_title))
+            SettingsGroup {
+                SettingsRow(
+                    title = stringResource(R.string.notify_master_title),
+                    subtitle = stringResource(R.string.notify_settings_entry_hint),
+                    top = true,
+                    bottom = true,
+                    onClick = onOpenNotifications,
+                    leading = { Icon(Icons.Default.Notifications, contentDescription = null) },
+                )
+            }
+
             SettingsSectionTitle(stringResource(R.string.settings_about))
             SettingsGroup {
                 SettingsRow(
                     title = stringResource(R.string.settings_about_app),
                     subtitle = stringResource(R.string.settings_version),
                     top = true,
+                    onClick = onOpenAbout,
                     leading = { Icon(Icons.Default.Info, contentDescription = null) },
                 )
                 SettingsRow(
                     title = stringResource(R.string.settings_licenses),
                     bottom = true,
+                    onClick = onOpenLicenses,
                 )
             }
         }
@@ -208,91 +218,23 @@ private fun ConnectedThemeButtons(
     selected: ThemeMode,
     onSelected: (ThemeMode) -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        val choices =
-            listOf(
-                ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
-                ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
-                ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
-            )
-        choices.forEachIndexed { index, (mode, label) ->
-            val isSelected = mode == selected
-            val targetStartRadius =
-                if (isSelected || index == 0) CONNECTED_OUTER_RADIUS else CONNECTED_INNER_RADIUS
-            val targetEndRadius =
-                if (isSelected || index == choices.lastIndex) {
-                    CONNECTED_OUTER_RADIUS
-                } else {
-                    CONNECTED_INNER_RADIUS
-                }
-            val startRadius by animateDpAsState(
-                targetValue = targetStartRadius,
-                animationSpec = connectedButtonSpring(),
-                label = "theme_${mode.name}_start_radius",
-            )
-            val endRadius by animateDpAsState(
-                targetValue = targetEndRadius,
-                animationSpec = connectedButtonSpring(),
-                label = "theme_${mode.name}_end_radius",
-            )
-            val containerColor by animateColorAsState(
-                targetValue =
-                if (isSelected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainerHighest
-                },
-                animationSpec = connectedButtonSpring(),
-                label = "theme_${mode.name}_container",
-            )
-            val contentColor by animateColorAsState(
-                targetValue =
-                if (isSelected) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                animationSpec = connectedButtonSpring(),
-                label = "theme_${mode.name}_content",
-            )
-            Surface(
-                onClick = { onSelected(mode) },
-                modifier = Modifier.weight(1f).semantics { this.selected = isSelected },
-                shape =
-                RoundedCornerShape(
-                    topStart = startRadius,
-                    bottomStart = startRadius,
-                    topEnd = endRadius,
-                    bottomEnd = endRadius,
-                ),
-                color = containerColor,
-                contentColor = contentColor,
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 11.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    AnimatedVisibility(
-                        visible = isSelected,
-                        enter = fadeIn() + expandHorizontally(),
-                        exit = fadeOut() + shrinkHorizontally(),
-                    ) {
-                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.width(16.dp))
-                    }
-                    Text(label, style = MaterialTheme.typography.labelMedium)
-                }
-            }
-        }
-    }
+    val choices =
+        listOf(
+            ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
+            ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
+            ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
+        )
+    ConnectedChoiceButtons(
+        labels = choices.map { it.second },
+        selectedIndex = choices.indexOfFirst { it.first == selected },
+        onSelect = { onSelected(choices[it].first) },
+    )
 }
 
 private val BODY_FONT_SIZE_RANGE = 14f..24f
 private const val BODY_FONT_SIZE_STEPS = 9
 private const val BASE_BODY_FONT_SIZE = 16f
 internal const val BODY_FONT_SIZE_SLIDER_TAG = "body-font-size-slider"
-private val CONNECTED_OUTER_RADIUS = 20.dp
-private val CONNECTED_INNER_RADIUS = 5.dp
 
 private fun fontScaleToBodySize(fontScale: Float): Float =
     (fontScale * BASE_BODY_FONT_SIZE)
@@ -303,12 +245,6 @@ private fun fontScaleToBodySize(fontScale: Float): Float =
 private fun bodySizeToFontScale(bodySize: Float): Float =
     (bodySize.roundToInt() / BASE_BODY_FONT_SIZE)
         .coerceIn(SettingsRepository.MIN_FONT_SCALE, SettingsRepository.MAX_FONT_SCALE)
-
-private fun <T> connectedButtonSpring() =
-    spring<T>(
-        dampingRatio = Spring.DampingRatioNoBouncy,
-        stiffness = Spring.StiffnessMediumLow,
-    )
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable

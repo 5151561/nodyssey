@@ -9,6 +9,7 @@ import org.jsoup.Jsoup
 data class PostSearchPage(
     val posts: List<PostSummary>,
     val totalPages: Int,
+    val hasNextPage: Boolean,
 )
 
 object SearchParser {
@@ -17,16 +18,12 @@ object SearchParser {
         if (document.getElementById("nsk-frame") == null) {
             throw NodeSeekException(NodeSeekError.LoginRequired)
         }
+        // The list parser already reads the pager, "..100"-style elided totals included.
         val parsed = PostListParser.parse(html, page)
         return PostSearchPage(
             posts = parsed.posts,
-            totalPages =
-            document
-                .select(Selectors.LIST_PAGER_POSITIONS)
-                .mapNotNull { it.text().trim().toIntOrNull() }
-                .maxOrNull()
-                ?.coerceAtLeast(page)
-                ?: page,
+            totalPages = parsed.totalPages,
+            hasNextPage = parsed.hasNextPage,
         )
     }
 }

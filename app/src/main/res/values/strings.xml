@@ -5,6 +5,7 @@
     <string name="action_back">返回</string>
     <string name="action_close">关闭</string>
     <string name="action_retry">重试</string>
+    <string name="search_load_more_failed">加载更多失败</string>
     <string name="action_sign_in">登录</string>
     <string name="action_sign_out">退出登录</string>
     <string name="action_verify">去验证</string>
@@ -14,6 +15,7 @@
     <string name="action_share">分享</string>
     <string name="action_more">更多</string>
     <string name="action_cancel">取消</string>
+    <string name="action_confirm">确定</string>
     <string name="action_done">确定</string>
     <string name="action_sort">排序方式</string>
     <string name="action_show_all_boards">全部版块</string>
@@ -41,7 +43,12 @@
     <string name="post_view_count">%1$d 浏览</string>
     <string name="post_badge_pinned">置顶</string>
     <string name="post_badge_locked">已锁帖</string>
+    <string name="post_badge_locked_level">%1$d 级可见</string>
     <string name="post_badge_original_poster">楼主</string>
+    <!-- Badge stack overflow chip (b1 §8: at most three chips, the rest fold into +N) -->
+    <string name="post_badge_more">+%1$d</string>
+    <!-- The header's edited marker; the site's own text ("edited 36min ago") becomes the a11y label -->
+    <string name="post_edited">已编辑</string>
 
     <!-- Post composer -->
     <string name="composer_title">新建帖子</string>
@@ -231,8 +238,82 @@
     <string name="settings_clear_cache">清除缓存</string>
     <string name="settings_about">关于</string>
     <string name="settings_about_app">关于 NSReader</string>
-    <string name="settings_version">v1.0.0</string>
+    <string name="settings_version">v1.0</string>
     <string name="settings_licenses">开源许可</string>
+
+    <!-- About & community (board f1). -->
+    <string name="about_title">关于</string>
+    <string name="about_community_title">关于 · 社区</string>
+    <string name="about_app_name">NodeSeek 客户端</string>
+    <string name="about_version">版本 %1$s (%2$d)</string>
+    <string name="about_check_updates">检查更新</string>
+    <string name="about_update_unknown">前往 GitHub 检查 ↗</string>
+    <string name="about_update_latest">已是最新</string>
+    <string name="about_update_available">发现 %1$s ↗</string>
+    <string name="about_project_home">项目主页</string>
+    <string name="about_feedback">问题反馈</string>
+    <string name="about_feedback_hint">提 GitHub Issue 或站内私信开发者</string>
+    <string name="about_changelog">更新日志</string>
+    <string name="about_theme_signature">Material 3 Expressive · 主题色「石墨青」</string>
+    <string name="about_community">社区</string>
+    <string name="about_forum_stats_value">64,902 位 seeker</string>
+    <string name="about_forum_stats_snapshot">论坛注册用户总数 · 每日更新</string>
+    <string name="about_site">关于本站</string>
+    <string name="about_site_hint">站长置顶帖 · 在 App 内打开</string>
+    <string name="about_privacy">隐私协议和服务条款</string>
+    <!--suppress TypographyDashes: ISO 8601 dates use hyphens, matching the source document. -->
+    <string name="about_privacy_hint">生效日期 2022-11-24</string>
+    <string name="about_rss">RSS 订阅</string>
+    <string name="about_copy_rss">复制 RSS 地址</string>
+    <string name="about_rss_copied">RSS 地址已复制</string>
+    <string name="about_contact">联络与友站</string>
+    <string name="about_telegram_channel">电报频道</string>
+    <string name="about_telegram_group">电报群组</string>
+    <string name="about_email">联系我们</string>
+    <string name="about_deepflood">DeepFlood</string>
+    <string name="about_deepflood_hint">姊妹站 · deepflood.com</string>
+    <string name="about_licenses_hint">本应用许可证与第三方库清单</string>
+    <string name="about_unofficial_notice">本应用是 NodeSeek 论坛的非官方开源客户端，与站点运营方无隶属关系；帖子与评论内容的版权归论坛及原作者所有。</string>
+
+    <!-- Privacy terms (board f2); WebView is only the load/parse fallback. -->
+    <string name="privacy_title">隐私协议</string>
+    <string name="privacy_open_original">在浏览器中打开原文</string>
+    <string name="privacy_effective_date">最新版本生效日期 %1$s</string>
+    <string name="privacy_source">来自 nodeseek.com/termsofservice</string>
+    <string name="privacy_keep_scrolling">继续滚动阅读</string>
+    <string name="privacy_load_failed">暂时无法载入协议</string>
+    <string name="privacy_load_failed_hint">原生正文加载或解析失败，可以重试，或使用站内网页阅读。</string>
+    <string name="privacy_open_web_fallback">使用网页版阅读</string>
+    <string name="changelog_current_version">当前版本 %1$s</string>
+    <string name="changelog_summary">当前构建尚未附带结构化更新记录。完整提交与发行说明以项目 Releases 页面为准。</string>
+    <string name="changelog_all_releases">查看全部 Releases ↗</string>
+
+    <string name="licenses_summary">NSReader 是 GPL-3.0 开源软件，并使用下列主要开源组件。点击条目可查看对应源码与许可信息。</string>
+    <string name="licenses_app_section">本应用</string>
+    <string name="licenses_dependencies_section">主要运行时依赖</string>
+    <string name="licenses_lockfile_note">完整且精确的传递依赖版本以源码仓库中的 app/gradle.lockfile 为准。</string>
+
+    <!-- App notification polling (board f4): the site has no push, a periodic worker checks unread -->
+    <string name="notify_settings_title">通知</string>
+    <string name="notify_master_title">新消息通知</string>
+    <string name="notify_settings_entry_hint">后台定期检查未读并发系统通知</string>
+    <string name="notify_master_hint">后台定期检查未读并发系统通知；站点无推送服务，无法做到即时</string>
+    <string name="notify_frequency">检查频率</string>
+    <string name="notify_frequency_15">15 分钟</string>
+    <string name="notify_frequency_30">30 分钟</string>
+    <string name="notify_frequency_60">1 小时</string>
+    <string name="notify_frequency_hint">受系统省电策略影响，实际间隔可能更长（WorkManager 下限 15 分钟）</string>
+    <string name="notify_wifi_only">仅 Wi-Fi 下检查</string>
+    <string name="notify_wifi_only_hint">移动网络时暂停轮询，省电省流量</string>
+    <string name="notify_quiet_hours">免打扰时段</string>
+    <string name="notify_quiet_hours_hint">23:00 – 07:00 · 时段内静默收取，不发通知</string>
+    <string name="notify_channels_section">通知类别 · 映射 Android 通知渠道</string>
+    <string name="notify_telegram_title">想要即时提醒？</string>
+    <string name="notify_telegram_body">绑定 Telegram 后由站点即时转发未读消息</string>
+    <string name="notify_telegram_action">去绑定</string>
+    <string name="notify_body_mentions">%1$d 条新的 @ 提醒</string>
+    <string name="notify_body_replies">%1$d 条新回复</string>
+    <string name="notify_body_messages">%1$d 条新私信</string>
 
     <!-- Account settings (8g): the seven groups NodeSeek's own /setting page is split into -->
     <string name="account_title">账号设置</string>
@@ -255,10 +336,10 @@
     <string name="account_email">邮箱</string>
     <string name="account_blocked_list">已屏蔽列表</string>
     <string name="account_blocked_count">%1$d 人</string>
-    <string name="account_display_preferences">浏览与显示偏好</string>
+    <string name="account_display_preferences">偏好与首页版块</string>
     <string name="account_home_boards">首页显示的版块</string>
-    <string name="account_home_boards_all">全部 %1$d 个版块</string>
-    <string name="account_home_boards_selected">已选 %1$d 个</string>
+    <string name="account_home_boards_hidden">已隐藏 %1$d 个</string>
+    <string name="account_home_boards_all_shown">全部显示</string>
 
     <!-- Current-value subtitles. App additions: the site's own page is a plain list of group links. -->
     <string name="account_value_unknown">—</string>
@@ -333,29 +414,80 @@
     <string name="account_confirm_unblock_body">解除后你会重新看到 TA 的帖子与评论。</string>
     <string name="account_confirm_unblock_action">解除屏蔽</string>
 
-    <!-- 联系方式 · 屏蔽 (d6 3/4) -->
-    <string name="account_contact_title">联系方式与屏蔽</string>
+    <!-- 联系方式 (d6 3/5)，站点文案照抄 -->
+    <string name="account_contact_title">联系方式</string>
     <string name="account_contact_section">联系方式</string>
-    <string name="account_email_backup">备用邮箱 · 选填</string>
+    <string name="account_email_section">邮箱</string>
+    <string name="account_email_current">当前邮箱</string>
+    <string name="account_email_change">修改</string>
     <string name="account_email_verified">已验证</string>
-    <string name="account_email_unverified">未验证</string>
-    <string name="account_email_helper">用于登录与找回密码 · 更换后需重新验证</string>
     <string name="account_email_invalid">邮箱格式不正确</string>
-    <string name="account_email_verification_sent">验证邮件已发送，10 分钟内有效</string>
-    <string name="account_email_resend">重新发送</string>
-    <string name="account_contact_save">保存修改</string>
+    <string name="account_email_step_password">① 为确保是用户本人，请输入密码</string>
+    <string name="account_email_step_verify">② 邮箱验证</string>
+    <string name="account_email_new">新邮箱</string>
+    <string name="account_email_code">验证码</string>
+    <string name="account_email_code_hint">6 位数字</string>
+    <string name="account_email_send_code">发送验证码</string>
+    <string name="account_email_code_sent">验证码已发送至新邮箱 · 10 分钟内有效</string>
+    <string name="account_email_changed">邮箱已更新</string>
+    <string name="account_email_change_confirm">修改邮箱</string>
+    <string name="account_phone_section">手机</string>
+    <string name="account_phone_add">添加手机</string>
+    <string name="account_phone_disabled_reason">手机短信验证API暂不可用</string>
+    <string name="account_phone_unavailable">暂不可用</string>
+
+    <!-- Telegram 绑定 (f3)。未绑定文案为站点原文；已绑定态是设计假设，待真机校准 -->
+    <string name="account_telegram_section">Telegram</string>
+    <string name="account_telegram_title">Telegram 提醒</string>
+    <string name="account_telegram_unbound">暂未绑定 telegram</string>
+    <string name="account_telegram_bound">已绑定</string>
+    <string name="account_telegram_bound_at">%1$s 绑定</string>
+    <string name="account_telegram_bind">立即绑定</string>
+    <string name="account_telegram_bind_hint">绑定 telegram 后可以及时提醒未读消息，@我、回复与私信都会转发到你的 Telegram。</string>
+    <string name="account_telegram_bound_hint">未读的 @我、回复与私信会转发到你的 Telegram；已读消息不重复提醒。</string>
+    <string name="account_telegram_unbind">解绑</string>
+    <string name="account_telegram_open_bot">打开 Bot 会话</string>
+    <string name="account_telegram_dialog_title">在 Telegram 中完成绑定</string>
+    <string name="account_telegram_dialog_body">即将打开 Telegram 的 NodeSeek 绑定会话。在 Bot 中确认后，@我、回复与私信的未读提醒将转发到你的 Telegram。</string>
+    <string name="account_telegram_dialog_note">未安装 Telegram 时将打开网页版；绑定不会向对方暴露你的手机号。</string>
+    <string name="account_telegram_open">打开 Telegram</string>
+    <string name="account_telegram_done_question">已在 Telegram 完成绑定？</string>
+    <string name="account_telegram_refresh">刷新绑定状态</string>
+    <string name="account_telegram_still_unbound">还未检测到绑定，在 Bot 中完成后再刷新试试</string>
+    <string name="account_telegram_bound_toast">已绑定 Telegram，未读提醒将同步过去</string>
+    <string name="account_telegram_unbound_toast">已解除 Telegram 绑定</string>
+    <string name="account_telegram_unbind_title">解除 Telegram 绑定？</string>
+    <string name="account_telegram_unbind_body">解绑后将立即停止向 %1$s 转发未读提醒；可随时重新绑定。</string>
+    <string name="account_telegram_unbind_confirm">确认解绑</string>
+
+    <!-- 屏蔽用户 (d6 4/5) -->
+    <string name="account_block_title">屏蔽用户</string>
     <string name="account_block_section">屏蔽用户</string>
+    <string name="account_block_show_temporarily">临时显示被屏蔽内容</string>
+    <string name="account_block_show_temporarily_hint">开启后被屏蔽用户的帖子与评论临时可见，重启 App 后恢复屏蔽</string>
     <string name="account_block_row_hint">已屏蔽 · 不再显示其帖子与评论</string>
     <string name="account_block_unblock">解除屏蔽</string>
     <string name="account_block_empty">你还没有屏蔽任何用户</string>
+    <string name="account_block_footer">被屏蔽用户的帖子在列表中隐藏，评论显示为「已屏蔽用户的评论」折叠行；解除立即生效。</string>
 
-    <!-- 首页版块 (d6 4/4) -->
-    <string name="account_home_boards_title">首页版块</string>
-    <string name="account_home_boards_summary">勾选的版块会出现在首页版块条 · 已选 %1$d / %2$d</string>
-    <string name="account_home_boards_reset">重置</string>
-    <string name="account_home_boards_save">保存 %1$d 个版块</string>
-    <string name="account_home_boards_min">至少要保留一个版块</string>
-    <string name="account_home_boards_empty">版块列表还没载入，回到首页刷新一下再来</string>
+    <!-- 偏好与首页版块 (d6 5/5)。Local=本机 DataStore，Remote=账号（服务端），归属徽标随行展示 -->
+    <string name="account_preferences_title">偏好与首页版块</string>
+    <string name="account_holiday_theme">启用节日主题</string>
+    <string name="account_holiday_theme_hint">节日期间使用节日配色，跟随账号同步</string>
+    <string name="account_holiday_theme_on">节日主题已开启</string>
+    <string name="account_holiday_theme_off">节日主题已关闭</string>
+    <string name="account_auto_night">自动夜间模式</string>
+    <string name="account_auto_night_hint">按下方依据自动切换深浅色</string>
+    <string name="account_night_basis">夜间模式依据</string>
+    <string name="account_night_basis_system">跟随系统</string>
+    <string name="account_night_basis_timed">定时（日落）</string>
+    <string name="account_night_basis_note">站点仅支持「系统时间」定时；「跟随系统」为 App 增强并默认。定时窗口约 19:00–07:00。</string>
+    <string name="account_preferences_new_tab_note">站点另有「新标签页打开主题帖」（Local）— 浏览器概念，App 不适用，刻意省略。</string>
+    <string name="account_home_boards_hint">关闭后首页信息流不再显示该版块；其余版块不可关闭（站点仅开放这三项）。</string>
+    <string name="account_board_trade">交易</string>
+    <string name="account_board_life">生活</string>
+    <string name="account_board_photo">贴图</string>
+    <string name="account_storage_legend">Local = 仅本机生效 · Remote = 跟随账号同步（服务端存储）</string>
 
     <!-- Status and empty states: say what happened, then offer something to press -->
     <string name="status_empty_feed_title">这里还没有帖子</string>

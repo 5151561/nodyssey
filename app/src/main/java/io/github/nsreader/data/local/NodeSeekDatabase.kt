@@ -24,7 +24,7 @@ import androidx.room.TypeConverters
         ReadMarkEntity::class,
         CacheSessionEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)

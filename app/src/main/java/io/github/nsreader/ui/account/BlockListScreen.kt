@@ -5,27 +5,22 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -37,25 +32,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.R
-import io.github.nsreader.data.account.AccountContact
 import io.github.nsreader.data.account.BlockedUser
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.common.UserAvatar
-import io.github.nsreader.ui.theme.LocalNodeSeekExtraColors
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.Sizes
 import io.github.nsreader.ui.theme.Spacing
 import io.github.nsreader.ui.theme.readableWidth
 
 @Composable
-fun ContactBlockRoute(
-    viewModel: ContactBlockViewModel,
+fun BlockListRoute(
+    viewModel: BlockListViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -69,14 +61,11 @@ fun ContactBlockRoute(
         viewModel.consumeMessage()
     }
 
-    ContactBlockScreen(
+    BlockListScreen(
         state = state,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
-        onEmailChange = viewModel::updateEmail,
-        onBackupEmailChange = viewModel::updateBackupEmail,
-        onResend = viewModel::resendVerification,
-        onSave = viewModel::save,
+        onShowBlockedChange = viewModel::setShowBlockedContent,
         onRequestUnblock = viewModel::requestUnblock,
         onDismissUnblock = viewModel::dismissUnblock,
         onConfirmUnblock = viewModel::confirmUnblock,
@@ -85,23 +74,19 @@ fun ContactBlockRoute(
 }
 
 /**
- * 联系方式与屏蔽 (d6 3/4).
+ * 屏蔽用户 (d6 4/5): the session-scoped reveal switch on top, then the site's blocked list.
  *
- * The verified badge is the load-bearing part: an email address that looks saved but is not verified
- * cannot recover the account, and the site's own page shows nothing about it. Changing an address
- * clears the badge immediately rather than after a refresh, so the state on screen is never a claim
- * the server has not agreed to.
+ * The switch's subtitle says out loud that the reveal ends with the app — that promise is what makes
+ * it safe to flip out of curiosity, and it is the app keeping the site's own wording for the feature
+ * rather than inventing a scarier or softer version.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactBlockScreen(
-    state: ContactBlockUiState,
+fun BlockListScreen(
+    state: BlockListUiState,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
-    onEmailChange: (String) -> Unit,
-    onBackupEmailChange: (String) -> Unit,
-    onResend: (String) -> Unit,
-    onSave: () -> Unit,
+    onShowBlockedChange: (Boolean) -> Unit,
     onRequestUnblock: (BlockedUser) -> Unit,
     onDismissUnblock: () -> Unit,
     onConfirmUnblock: () -> Unit,
@@ -112,7 +97,7 @@ fun ContactBlockScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.account_contact_title)) },
+                title = { Text(stringResource(R.string.account_block_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -131,58 +116,18 @@ fun ContactBlockScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                // See ProfileFieldsScreen: without this the keyboard hides the backup-address field.
-                .imePadding()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             if (state.endpointPending) EndpointPendingBanner()
 
-            AccountSectionLabel(stringResource(R.string.account_contact_section))
-
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                EmailField(
-                    value = state.email,
-                    onValueChange = onEmailChange,
-                    label = stringResource(R.string.account_email),
-                    verified = state.emailVerified,
-                    isError = state.isEmailMalformed,
-                )
-                AccountFieldHelper(stringResource(R.string.account_email_helper))
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                EmailField(
-                    value = state.backupEmail,
-                    onValueChange = onBackupEmailChange,
-                    label = stringResource(R.string.account_email_backup),
-                    verified = state.backupEmailVerified,
-                    isError = state.isBackupMalformed,
-                )
-                if (state.backupEmail.isNotEmpty() && !state.backupEmailVerified) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AccountFieldHelper(
-                            text = stringResource(R.string.account_email_verification_sent),
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(onClick = { onResend(state.backupEmail) }) {
-                            Text(stringResource(R.string.account_email_resend))
-                        }
-                    }
-                }
-            }
-
-            Button(
-                onClick = onSave,
-                enabled = state.canSave,
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.align(Alignment.End),
-            ) {
-                Text(stringResource(R.string.account_contact_save))
-            }
+            ShowBlockedSwitchCard(
+                checked = state.showBlockedContent,
+                onCheckedChange = onShowBlockedChange,
+            )
 
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
+                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 AccountSectionLabel(
@@ -198,7 +143,7 @@ fun ContactBlockScreen(
                 }
             }
 
-            if (state.blocked.isEmpty()) {
+            if (!state.isLoading && state.blocked.isEmpty()) {
                 BlockedEmptyState()
             } else {
                 Column {
@@ -209,6 +154,12 @@ fun ContactBlockScreen(
                         }
                     }
                 }
+                Text(
+                    stringResource(R.string.account_block_footer),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = Spacing.xs),
+                )
             }
         }
     }
@@ -226,59 +177,38 @@ fun ContactBlockScreen(
 }
 
 @Composable
-private fun EmailField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    verified: Boolean,
-    isError: Boolean,
+private fun ShowBlockedSwitchCard(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = true,
-        isError = isError,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-        supportingText =
-        if (isError) {
-            { Text(stringResource(R.string.account_email_invalid)) }
-        } else {
-            null
-        },
-        shape = AccountFieldShape,
-        trailingIcon = { if (value.isNotEmpty()) VerificationBadge(verified) },
-        modifier = Modifier.fillMaxWidth(),
-    )
-}
-
-/** Verified reads as primary, unverified as the warning family — never as an error, since it is not one. */
-@Composable
-private fun VerificationBadge(verified: Boolean) {
-    val extra = LocalNodeSeekExtraColors.current
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = if (verified) MaterialTheme.colorScheme.primaryContainer else extra.warningContainer,
-        contentColor =
-        if (verified) MaterialTheme.colorScheme.onPrimaryContainer else extra.onWarningContainer,
-        modifier = Modifier.padding(end = Spacing.sm),
+        shape = AccountFieldShape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 3.dp),
+            modifier = Modifier.padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Icon(
-                imageVector = if (verified) Icons.Default.Check else NodeSeekIcons.Schedule,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-            )
-            Text(
-                stringResource(
-                    if (verified) R.string.account_email_verified else R.string.account_email_unverified,
-                ),
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    Text(
+                        stringResource(R.string.account_block_show_temporarily),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    )
+                    StorageBadge(local = true)
+                }
+                Text(
+                    stringResource(R.string.account_block_show_temporarily_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }
@@ -342,21 +272,12 @@ private fun BlockedEmptyState() {
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
-private fun ContactBlockPreview() {
+private fun BlockListPreview() {
     NodeSeekTheme {
-        ContactBlockScreen(
+        BlockListScreen(
             state =
-            ContactBlockUiState(
+            BlockListUiState(
                 isLoading = false,
-                email = "hikari.zhg@gmail.com",
-                backupEmail = "ns.backup@outlook.com",
-                saved =
-                AccountContact(
-                    email = "hikari.zhg@gmail.com",
-                    emailVerified = true,
-                    backupEmail = "ns.backup@outlook.com",
-                    backupEmailVerified = false,
-                ),
                 blocked =
                 listOf(
                     BlockedUser(uid = 1, name = "机场信仰充值中"),
@@ -366,10 +287,7 @@ private fun ContactBlockPreview() {
             ),
             snackbarHostState = remember { SnackbarHostState() },
             onBack = {},
-            onEmailChange = {},
-            onBackupEmailChange = {},
-            onResend = {},
-            onSave = {},
+            onShowBlockedChange = {},
             onRequestUnblock = {},
             onDismissUnblock = {},
             onConfirmUnblock = {},

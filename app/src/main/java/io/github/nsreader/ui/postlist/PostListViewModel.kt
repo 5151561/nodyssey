@@ -93,10 +93,10 @@ class PostListViewModel(
          */
         combine(
             categoryRepository.boards,
-            settingsRepository.settings.map { it.homeBoards }.distinctUntilChanged(),
-        ) { boards, homeBoards ->
+            settingsRepository.settings.map { it.hiddenHomeBoards }.distinctUntilChanged(),
+        ) { boards, hiddenBoards ->
             val (frontPage, real) = boards.partition { it.slug == null }
-            frontPage + visibleHomeBoards(real, homeBoards)
+            frontPage + visibleHomeBoards(real, hiddenBoards)
         }.onEach { visible ->
             _uiState.update { state ->
                 val stillVisible = visible.any { it.slug == state.categorySlug }

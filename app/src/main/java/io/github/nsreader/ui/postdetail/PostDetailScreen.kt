@@ -2,6 +2,7 @@ package io.github.nsreader.ui.postdetail
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +66,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -85,6 +89,7 @@ import io.github.nsreader.ui.common.BoardTag
 import io.github.nsreader.ui.common.LoadingState
 import io.github.nsreader.ui.common.NodeSeekErrorState
 import io.github.nsreader.ui.common.NodeSeekIcons
+import io.github.nsreader.ui.common.RoleBadgeRow
 import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.common.rememberClipboardCopy
 import io.github.nsreader.ui.composer.ReplyComposerHost
@@ -110,6 +115,10 @@ fun PostDetailRoute(
     onImageClick: (List<String>, String) -> Unit,
     modifier: Modifier = Modifier,
     initialFloor: String? = null,
+    /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
+    onLinkClick: (String) -> Unit = onOpenBrowser,
+    /** Opens the tapped author's space. */
+    onAuthorClick: (Long) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val replyState by replyViewModel.uiState.collectAsStateWithLifecycle()
@@ -123,6 +132,8 @@ fun PostDetailRoute(
         postUrl = postUrl,
         onBack = onBack,
         onOpenBrowser = onOpenBrowser,
+        onLinkClick = onLinkClick,
+        onAuthorClick = onAuthorClick,
         onSignIn = onSignIn,
         onVerify = { onVerify(postUrl) },
         onImageClick = { url -> onImageClick(images.ifEmpty { listOf(url) }, url) },
@@ -174,6 +185,10 @@ fun PostDetailScreen(
     onReply: (ReplyQuote?) -> Unit = {},
     /** Hides the bottom toolbar while the editor covers it. */
     replyOpen: Boolean = false,
+    /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
+    onLinkClick: (String) -> Unit = onOpenBrowser,
+    /** Opens the tapped author's space. */
+    onAuthorClick: (Long) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -195,12 +210,16 @@ fun PostDetailScreen(
             lastVisible >= listState.layoutInfo.totalItemsCount - 4
         }
     }
-    val atPagingBoundary by remember {
+    val atListTop by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        }
+    }
+    val atListEnd by remember {
         derivedStateOf {
             val totalItems = listState.layoutInfo.totalItemsCount
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) ||
-                (totalItems > 0 && lastVisible >= totalItems - 1)
+            totalItems > 0 && lastVisible >= totalItems - 1
         }
     }
     LaunchedEffect(shouldLoadMore, state.comments.size) {
@@ -246,10 +265,16 @@ fun PostDetailScreen(
         listState.scrollToItem(index)
         onPageScrollHandled()
     }
+    /*
+     * The nested-scroll state drives the toolbar; boundaries only pin it open where that is stable.
+     * The bottom counts solely once the thread is fully loaded — while auto-append still runs, the
+     * "last item visible" instant flips back and forth with every batch of inserted comments, and
+     * tying expansion to it (or to isAppending itself) made the bar blink through a long scroll.
+     */
     val toolbarExpanded =
         pageToolbarExpanded ||
-            atPagingBoundary ||
-            state.isAppending ||
+            atListTop ||
+            (atListEnd && !state.hasNextPage && !state.isAppending) ||
             state.error != null ||
             showPageSheet
 
@@ -288,7 +313,7 @@ fun PostDetailScreen(
                     ThreadList(
                         state = state,
                         listState = listState,
-                        onOpenBrowser = onOpenBrowser,
+                        onOpenBrowser = onLinkClick,
                         onImageClick = onImageClick,
                         onJumpToFloor = { floor ->
                             val index = state.indexOfFloor(floor)
@@ -296,6 +321,7 @@ fun PostDetailScreen(
                         },
                         onChickenClick = { chickenTarget = it },
                         onReplyToFloor = onReply,
+                        onAuthorClick = onAuthorClick,
                         modifier =
                         Modifier.floatingToolbarVerticalNestedScroll(
                             expanded = toolbarExpanded,
@@ -579,6 +605,7 @@ private fun ThreadList(
     onJumpToFloor: (String) -> Unit,
     onChickenClick: (PostContent) -> Unit,
     onReplyToFloor: (ReplyQuote?) -> Unit,
+    onAuthorClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -600,6 +627,7 @@ private fun ThreadList(
                     onImageClick = onImageClick,
                     onJumpToFloor = onJumpToFloor,
                     onChickenClick = { onChickenClick(body) },
+                    onAuthorClick = onAuthorClick,
                 )
             }
         }
@@ -619,6 +647,7 @@ private fun ThreadList(
                 onJumpToFloor = onJumpToFloor,
                 onChickenClick = { onChickenClick(comment) },
                 onReply = { onReplyToFloor(comment.toReplyQuote()) },
+                onAuthorClick = onAuthorClick,
             )
         }
 
@@ -675,6 +704,7 @@ private fun OriginalPost(
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
     onChickenClick: () -> Unit,
+    onAuthorClick: (Long) -> Unit,
 ) {
     Surface(
         modifier = Modifier.padding(horizontal = Spacing.lg),
@@ -688,25 +718,35 @@ private fun OriginalPost(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                UserAvatar(
-                    url = body.avatarUrl,
-                    name = body.authorName,
-                    size = Sizes.avatarOriginalPost,
-                )
-                Column(Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(
-                            text = body.authorName,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (body.isOriginalPoster) OriginalPosterBadge()
+                // The identity block opens the author's space; the floor label stays outside it.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    modifier = Modifier
+                        .weight(1f)
+                        .authorClickable(body.authorUid, onAuthorClick),
+                ) {
+                    UserAvatar(
+                        url = body.avatarUrl,
+                        name = body.authorName,
+                        size = Sizes.avatarOriginalPost,
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                text = body.authorName,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            FloorBadges(body)
+                        }
+                        FloorTimeLine(body)
                     }
-                    body.createdAtText?.let { MetaText(it) }
                 }
                 body.floor?.let { FloorLabel(it) }
             }
@@ -781,8 +821,8 @@ private fun CommentsHeader(count: Int) {
  * One reply.
  *
  * Real replies on this forum are anywhere between two characters and several screens, so the header
- * row is fixed and everything below it hangs off a 36dp indent — which gives even a two-word reply
- * a shape, and stops a long one from losing its author.
+ * row is fixed, the timestamp hangs under the author name, and the body runs the full width — a
+ * 36dp indent on every body line wasted a fifth of a phone's width on empty space.
  */
 @Composable
 private fun CommentRow(
@@ -792,6 +832,7 @@ private fun CommentRow(
     onJumpToFloor: (String) -> Unit,
     onChickenClick: () -> Unit,
     onReply: () -> Unit,
+    onAuthorClick: (Long) -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(
@@ -805,37 +846,47 @@ private fun CommentRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            UserAvatar(
-                url = comment.avatarUrl,
-                name = comment.authorName,
-                size = Sizes.avatarComment,
-            )
-            Text(
-                text = comment.authorName,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            // Every reply from the thread's author carries the badge, not just the first: on a long
-            // page the reader has long since lost track of who opened it.
-            if (comment.isOriginalPoster) OriginalPosterBadge()
-            Box(Modifier.weight(1f))
+            // The identity block opens the author's space; the floor label stays outside it.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                modifier =
+                Modifier
+                    .weight(1f)
+                    .authorClickable(comment.authorUid, onAuthorClick),
+            ) {
+                UserAvatar(
+                    url = comment.avatarUrl,
+                    name = comment.authorName,
+                    size = Sizes.avatarComment,
+                )
+                Text(
+                    text = comment.authorName,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                FloorBadges(comment)
+            }
             comment.floor?.let { FloorLabel(it) }
         }
-        comment.createdAtText?.let {
-            MetaText(it, modifier = Modifier.padding(start = 36.dp, top = 2.dp))
-        }
+        FloorTimeLine(comment, modifier = Modifier.padding(start = 36.dp, top = 2.dp))
         RichContent(
             nodes = comment.nodes,
             onLinkClick = onOpenBrowser,
             onImageClick = onImageClick,
             onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
             textStyle = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(start = 36.dp, top = Spacing.sm),
+            modifier = Modifier.padding(top = Spacing.sm),
         )
         ReactionRow(onChickenClick = onChickenClick, onReply = onReply)
     }
 }
+
+/** Tappable only when the uid was actually parsed; a dead ripple would promise a screen we cannot open. */
+private fun Modifier.authorClickable(uid: Long?, onAuthorClick: (Long) -> Unit): Modifier =
+    if (uid == null) this else clickable { onAuthorClick(uid) }
 
 @Composable
 private fun ReactionRow(
@@ -918,17 +969,67 @@ private fun FeedChickenDialog(
     )
 }
 
+/**
+ * The header's badge chips: everything the parser read, with 楼主 prepended when the page marked
+ * the author as OP some other way (the opening post itself carries no `is-poster` span on page 1
+ * of some templates). Capped at three plus a +N chip — see [RoleBadgeRow].
+ */
 @Composable
-private fun OriginalPosterBadge() {
+private fun FloorBadges(content: PostContent) {
+    val opLabel = stringResource(R.string.post_badge_original_poster)
+    val labels =
+        if (content.isOriginalPoster && content.badges.none { it == opLabel }) {
+            listOf(opLabel) + content.badges
+        } else {
+            content.badges
+        }
+    if (labels.isNotEmpty()) RoleBadgeRow(labels)
+}
+
+/** The floor's time, and after it the dashed-underline 已编辑 marker (b1 §8). */
+@Composable
+private fun FloorTimeLine(
+    content: PostContent,
+    modifier: Modifier = Modifier,
+) {
+    if (content.createdAtText == null && !content.isEdited) return
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        content.createdAtText?.let { MetaText(it) }
+        if (content.isEdited) {
+            if (content.createdAtText != null) MetaText("·")
+            EditedMarker(content.editedAtText)
+        }
+    }
+}
+
+@Composable
+private fun EditedMarker(fullText: String?) {
+    val label = stringResource(R.string.post_edited)
+    val underline = MaterialTheme.colorScheme.outlineVariant
     Text(
-        text = stringResource(R.string.post_badge_original_poster),
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier =
         Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(horizontal = 7.dp, vertical = 1.dp),
+            // The site's marker text ("edited 36min ago") is the accessible name; the visible
+            // label compresses it to two characters.
+            .semantics { contentDescription = fullText ?: label }
+            .drawBehind {
+                // TextDecoration has no dashed variant, so the spec's dashed underline is drawn.
+                val y = size.height - 0.5.dp.toPx()
+                drawLine(
+                    color = underline,
+                    start = Offset(0f, y),
+                    end = Offset(size.width, y),
+                    strokeWidth = 1.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 2.dp.toPx())),
+                )
+            },
     )
 }
 

@@ -81,6 +81,8 @@ fun MessageThreadRoute(
     onVerify: () -> Unit,
     onOpenBrowser: (String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Bubble-content links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
+    onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     MessageThreadScreen(
@@ -89,6 +91,7 @@ fun MessageThreadRoute(
         onSignIn = onSignIn,
         onVerify = onVerify,
         onOpenBrowser = onOpenBrowser,
+        onLinkClick = onLinkClick,
         onRetryLoad = viewModel::refresh,
         onDraftChange = viewModel::updateDraft,
         onToggleMarkdown = viewModel::toggleMarkdown,
@@ -113,6 +116,8 @@ fun MessageThreadScreen(
     onSend: () -> Unit,
     onRetrySend: (String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Bubble-content links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
+    onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
     val webUrl = NodeSeekSite.BASE_URL + NodeSeekSite.messageThreadWebPath(state.uid)
     Scaffold(
@@ -178,7 +183,7 @@ fun MessageThreadScreen(
                             modifier = Modifier.align(Alignment.Center),
                         )
 
-                    else -> MessageBubbles(state, onOpenBrowser, onRetrySend)
+                    else -> MessageBubbles(state, onLinkClick, onRetrySend)
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

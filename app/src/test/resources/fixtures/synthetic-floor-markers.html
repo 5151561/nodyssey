@@ -1,0 +1,67 @@
+<!--
+  HAND-BUILT fixture, not a capture. Mirrors the structure of post-703863-1.html; the multi-badge
+  header, the edited marker and the read-only list label follow docs/design-requirements-additions.md
+  §1.4, whose markup has not been captured from a device yet. Replace the invented pieces (the
+  `edited-flag` class, the 只读 span) with a live capture as soon as one exists — the parsers match
+  them by text, so a different class name on the real site should keep passing.
+-->
+<div id="nsk-body">
+  <ul class="post-list">
+    <li class="post-list-item">
+      <div class="post-title"><a href="/post-999901-1" target="">NodeSeek 十一月活动公告</a>
+        <span style="color: rgb(255 152 152); font-family: sans-serif;">只读</span>
+      </div>
+      <div class="post-info"><span class="info-author"><a href="/space/1">Lloyd</a></span></div>
+    </li>
+    <li class="post-list-item">
+      <div class="post-title"><a href="/post-999902-1" target="">普通帖子</a></div>
+      <div class="post-info"><span class="info-author"><a href="/space/2">someone</a></span></div>
+    </li>
+  </ul>
+
+  <div class="nsk-post post-card">
+    <div class="content-item">
+      <div class="avatar-wrapper"><img src="/avatar/1.png"></div>
+      <div class="author-info">
+        <a href="/space/1" class="author-name">Lloyd</a>
+        <span class="is-poster role-tag nsk-badge">楼主</span>
+        <span class="nsk-badge role-tag role-owner"><span>服主</span></span>
+        <span class="nsk-badge role-tag role-admin"><span>管理</span></span>
+        <span class="nsk-badge role-tag role-retired"><span>管理(退休)</span></span>
+      </div>
+      <div class="content-info">
+        <span class="date-created"><time title="2026-07-01 10:00:00" datetime="2026-07-01T02:00:00.000Z">36min ago</time></span>
+        <span class="edited-flag">edited 5min ago</span>
+        <span class="content-category"> in <a href="/categories/dev">Dev</a></span>
+      </div>
+      <article class="post-content"><p>公告正文</p></article>
+    </div>
+  </div>
+  <ul class="comments">
+    <li class="content-item" data-comment-id="1">
+      <div class="avatar-wrapper"><img src="/avatar/2.png"></div>
+      <div class="author-info">
+        <a href="/space/2" class="author-name">某用户</a>
+        <span class="nsk-badge role-tag role-scam"><span>骗子</span></span>
+        <span class="nsk-badge role-tag role-ban"><span>违规禁止</span></span>
+      </div>
+      <div class="content-info">
+        <span class="date-created"><time title="2026-07-01 11:00:00" datetime="2026-07-01T03:00:00.000Z">30min ago</time></span>
+        <span class="edited-flag">已编辑</span>
+      </div>
+      <a class="floor-link" href="#1">#1</a>
+      <article class="post-content"><p>评论正文，提到 edited 这个词不该误判。</p></article>
+    </li>
+    <li class="content-item" data-comment-id="2">
+      <div class="avatar-wrapper"><img src="/avatar/3.png"></div>
+      <div class="author-info"><a href="/space/3" class="author-name">路人</a><!----></div>
+      <div class="content-info">
+        <span class="date-created"><time title="2026-07-01 12:00:00" datetime="2026-07-01T04:00:00.000Z">20min ago</time></span>
+        <!---->
+        <!---->
+      </div>
+      <a class="floor-link" href="#2">#2</a>
+      <article class="post-content"><p>正文里出现 edited three times 也不算编辑标记。</p></article>
+    </li>
+  </ul>
+</div>

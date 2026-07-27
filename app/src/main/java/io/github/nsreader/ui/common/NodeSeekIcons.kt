@@ -396,6 +396,14 @@ object NodeSeekIcons {
         )
     }
 
+    /** The 回复主题 notification channel (board f4). */
+    val ChatBubble: ImageVector by lazy {
+        materialIcon(
+            name = "ChatBubble",
+            pathData = "M20,2H4C2.9,2 2,2.9 2,4v18l4,-4h14c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2z",
+        )
+    }
+
     /** Mentions another member; the reply editor's `@`. */
     val AlternateEmail: ImageVector by lazy {
         materialIcon(
@@ -450,6 +458,29 @@ object NodeSeekIcons {
             "M11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2z" +
                 "M12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8s8,3.58 8,8S16.42,20 12,20z" +
                 "M12.5,7H11v6l5.25,3.15l0.75,-1.23l-4.5,-2.67z",
+        )
+    }
+
+    /** The disabled 添加手机 card — the site's SMS verification is itself switched off. */
+    val Sms: ImageVector by lazy {
+        materialIcon(
+            name = "Sms",
+            pathData =
+            "M20,2H4C2.9,2 2,2.9 2,4v18l4,-4h14c1.1,0 2,-0.9 2,-2V4C22,2.9 21.1,2 20,2z" +
+                "M9,11H7V9h2V11zM13,11h-2V9h2V11zM17,11h-2V9h2V11z",
+        )
+    }
+
+    /** Unbinding Telegram — the destructive counterpart of the bind link. */
+    val LinkOff: ImageVector by lazy {
+        materialIcon(
+            name = "LinkOff",
+            pathData =
+            "M17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1 0,1.43 -0.98,2.63 -2.31,2.98l1.46,1.46" +
+                "C20.88,15.61 22,13.95 22,12c0,-2.76 -2.24,-5 -5,-5z" +
+                "M2,4.27l3.11,3.11C3.29,8.12 2,9.91 2,12c0,2.76 2.24,5 5,5h4v-1.9H7" +
+                "c-1.71,0 -3.1,-1.39 -3.1,-3.1 0,-1.59 1.21,-2.9 2.76,-3.07L8.73,11H8v2h2.73L13,15.27V17h1.73" +
+                "l4.01,4L20,19.74 3.27,3 2,4.27zM13.5,8l2,2h.5V8h-2.5z",
         )
     }
 

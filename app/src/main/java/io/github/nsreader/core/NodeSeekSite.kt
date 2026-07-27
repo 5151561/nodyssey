@@ -2,6 +2,7 @@ package io.github.nsreader.core
 
 import io.github.nsreader.model.FeedSort
 import java.net.URI
+import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -102,6 +103,8 @@ object NodeSeekSite {
     const val LUCKY_PATH = "/lucky"
     const val PROVIDERS_PATH = "/providers"
     const val FRIENDS_PATH = "/friends"
+    const val ABOUT_PATH = "/about"
+    const val TERMS_OF_SERVICE_PATH = "/termsofservice"
 
     /**
      * Curated ("加精") threads. Server-rendered like the feed, so [listPath]'s parser applies.
@@ -215,6 +218,51 @@ object NodeSeekSite {
         SPACE_PATH.find(href.orEmpty())?.groupValues?.get(1)?.toLongOrNull()
 
     data class PostRoute(val postId: Long, val page: Int)
+
+    /** A link into the site that the app can open on a screen of its own. */
+    sealed interface InternalRoute {
+        data class Post(val postId: Long, val page: Int) : InternalRoute
+        data class Space(val uid: Long) : InternalRoute
+
+        /** An `@mention` links `/member?t=<name>`, so only the name is known until it is resolved. */
+        data class Member(val name: String) : InternalRoute
+    }
+
+    /** Classifies a clicked link: an in-app destination when it is one of ours, null for the browser. */
+    fun parseInternalRoute(url: String): InternalRoute? {
+        if (!isTrustedWebViewUrl(url)) return null
+        val unwrapped = unwrapJumpUrl(url)
+        if (unwrapped != url) return parseInternalRoute(unwrapped)
+        parsePostRoute(url)?.let { return InternalRoute.Post(it.postId, it.page) }
+        parseUid(url)?.let { return InternalRoute.Space(it) }
+        parseMemberName(url)?.let { return InternalRoute.Member(it) }
+        return null
+    }
+
+    /**
+     * The site wraps outbound links as `/jump?to=<encoded target>`. Returns the target for a jump
+     * link on our own host, the URL unchanged otherwise — so a browser handoff opens the real
+     * destination instead of the interstitial.
+     */
+    fun unwrapJumpUrl(url: String): String {
+        val uri = parseWebUri(url) ?: return url
+        if (uri.host?.lowercase() !in TRUSTED_WEBVIEW_HOSTS || uri.path != "/jump") return url
+        val target = uri.queryParameter("to") ?: return url
+        return target.ifBlank { url }
+    }
+
+    private fun parseMemberName(url: String): String? =
+        parseWebUri(url)
+            ?.takeIf { it.path == "/member" }
+            ?.queryParameter("t")
+            ?.ifBlank { null }
+
+    private fun URI.queryParameter(name: String): String? =
+        rawQuery
+            ?.split('&')
+            ?.firstOrNull { it.substringBefore('=') == name }
+            ?.substringAfter('=', missingDelimiterValue = "")
+            ?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) }
 
     private fun String.urlEncode(): String =
         URLEncoder.encode(this, StandardCharsets.UTF_8.toString()).replace("+", "%20")

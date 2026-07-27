@@ -19,25 +19,29 @@ class AccountLogicTest {
         )
 
     @Test
-    fun `an empty home-board preference means every board`() {
+    fun `an empty hidden set means every board`() {
         assertEquals(boards, visibleHomeBoards(boards, emptySet()))
     }
 
     @Test
-    fun `a home-board preference keeps only the chosen boards, in the server's order`() {
+    fun `hiding an optional board removes exactly that board`() {
         assertEquals(
-            listOf(boards[0], boards[2]),
-            visibleHomeBoards(boards, setOf("trade", "daily")),
+            listOf(boards[0], boards[1]),
+            visibleHomeBoards(boards, setOf("trade")),
         )
     }
 
     /**
-     * The case that matters after the site renames a board: the stored slugs match nothing, and
-     * honouring the preference literally would leave the home strip empty and looking broken.
+     * Only 交易 / 生活 / 贴图 can be switched off — a stray slug in the store (a rename, a bad write)
+     * must never thin the strip beyond what the site itself allows.
      */
     @Test
-    fun `a home-board preference matching nothing falls back to every board`() {
-        assertEquals(boards, visibleHomeBoards(boards, setOf("gone", "also-gone")))
+    fun `a hidden slug outside the optional three is ignored`() {
+        assertEquals(boards, visibleHomeBoards(boards, setOf("daily", "tech", "gone")))
+        assertEquals(
+            listOf(boards[0], boards[1]),
+            visibleHomeBoards(boards, setOf("trade", "daily", "gone")),
+        )
     }
 
     @Test

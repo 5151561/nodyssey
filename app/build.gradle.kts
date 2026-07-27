@@ -215,6 +215,9 @@ dependencies {
     // Settings SSOT
     implementation(libs.androidx.datastore.preferences)
 
+    // Background notification polling: the site has no push, so a periodic worker checks unread.
+    implementation(libs.androidx.work.runtime)
+
     // Offline-first SSOT: Room owns posts/comments/boards, the network only writes into it.
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

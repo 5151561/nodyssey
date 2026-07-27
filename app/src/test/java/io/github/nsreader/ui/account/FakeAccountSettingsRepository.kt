@@ -6,6 +6,8 @@ import io.github.nsreader.data.account.AccountSettingsRepository
 import io.github.nsreader.data.account.AvatarUpload
 import io.github.nsreader.data.account.BlockedUser
 import io.github.nsreader.data.account.EndpointNotVerifiedException
+import io.github.nsreader.data.account.RemoteAccountPreferences
+import io.github.nsreader.data.account.TelegramBinding
 import io.github.nsreader.data.account.TwoFactorState
 
 /**
@@ -21,7 +23,9 @@ import io.github.nsreader.data.account.TwoFactorState
 internal class FakeAccountSettingsRepository(
     var fields: AccountProfileFields = AccountProfileFields(),
     var contact: AccountContact = AccountContact(),
+    var telegram: TelegramBinding = TelegramBinding(),
     var twoFactor: TwoFactorState = TwoFactorState(),
+    var remotePreferences: RemoteAccountPreferences = RemoteAccountPreferences(),
     var blocked: List<BlockedUser> = emptyList(),
     var failWith: (() -> Throwable)? = null,
 ) : AccountSettingsRepository {
@@ -30,11 +34,15 @@ internal class FakeAccountSettingsRepository(
     val calls = mutableListOf<String>()
 
     var savedFields: AccountProfileFields? = null
-    var savedContact: Pair<String, String>? = null
+    var sentEmailChangeCode: Pair<String, String>? = null
+    var confirmedEmailChange: Triple<String, String, String>? = null
     var changedPassword: Pair<String, String>? = null
     var uploadedAvatar: AvatarUpload? = null
     var unblocked = mutableListOf<Long>()
+    var holidayThemeWrites = mutableListOf<Boolean>()
+    var boardHiddenWrites = mutableListOf<Pair<String, Boolean>>()
     var enrolmentUri: String = "otpauth://totp/NodeSeek:tester?secret=ABC"
+    var bindUrl: String = "https://t.me/nodeseek_bot?start=test-token"
 
     private fun record(name: String) {
         calls += name
@@ -78,12 +86,42 @@ internal class FakeAccountSettingsRepository(
         return contact
     }
 
-    override suspend fun saveContact(email: String, backupEmail: String) {
-        record("saveContact")
-        savedContact = email to backupEmail
+    override suspend fun sendEmailChangeCode(password: String, newEmail: String) {
+        record("sendEmailChangeCode")
+        sentEmailChangeCode = password to newEmail
     }
 
-    override suspend fun resendVerification(email: String) = record("resendVerification")
+    override suspend fun confirmEmailChange(password: String, newEmail: String, code: String) {
+        record("confirmEmailChange")
+        confirmedEmailChange = Triple(password, newEmail, code)
+    }
+
+    override suspend fun telegramBinding(): TelegramBinding {
+        record("telegramBinding")
+        return telegram
+    }
+
+    override suspend fun beginTelegramBinding(): String {
+        record("beginTelegramBinding")
+        return bindUrl
+    }
+
+    override suspend fun unbindTelegram() = record("unbindTelegram")
+
+    override suspend fun remotePreferences(): RemoteAccountPreferences {
+        record("remotePreferences")
+        return remotePreferences
+    }
+
+    override suspend fun setHolidayTheme(enabled: Boolean) {
+        record("setHolidayTheme")
+        holidayThemeWrites += enabled
+    }
+
+    override suspend fun setHomeBoardHidden(slug: String, hidden: Boolean) {
+        record("setHomeBoardHidden")
+        boardHiddenWrites += slug to hidden
+    }
 
     override suspend fun blockedUsers(): List<BlockedUser> {
         record("blockedUsers")

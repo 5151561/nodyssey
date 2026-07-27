@@ -1,5 +1,8 @@
 package io.github.nsreader
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,10 +22,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -41,10 +46,12 @@ import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.ui.account.AccountSettingsRoute
 import io.github.nsreader.ui.account.AccountSettingsViewModel
-import io.github.nsreader.ui.account.ContactBlockRoute
-import io.github.nsreader.ui.account.ContactBlockViewModel
-import io.github.nsreader.ui.account.HomeBoardsRoute
-import io.github.nsreader.ui.account.HomeBoardsViewModel
+import io.github.nsreader.ui.account.BlockListRoute
+import io.github.nsreader.ui.account.BlockListViewModel
+import io.github.nsreader.ui.account.ContactRoute
+import io.github.nsreader.ui.account.ContactViewModel
+import io.github.nsreader.ui.account.PreferencesRoute
+import io.github.nsreader.ui.account.PreferencesViewModel
 import io.github.nsreader.ui.account.ProfileFieldsRoute
 import io.github.nsreader.ui.account.ProfileFieldsViewModel
 import io.github.nsreader.ui.account.SecurityRoute
@@ -72,6 +79,15 @@ import io.github.nsreader.ui.profile.ProfileRoute
 import io.github.nsreader.ui.profile.ProfileViewModel
 import io.github.nsreader.ui.search.SearchRoute
 import io.github.nsreader.ui.search.SearchViewModel
+import io.github.nsreader.ui.settings.AboutCommunityScreen
+import io.github.nsreader.ui.settings.AppUpdateStatus
+import io.github.nsreader.ui.settings.ChangelogScreen
+import io.github.nsreader.ui.settings.CommunityLinks
+import io.github.nsreader.ui.settings.NotificationSettingsRoute
+import io.github.nsreader.ui.settings.NotificationSettingsViewModel
+import io.github.nsreader.ui.settings.OpenSourceLicensesScreen
+import io.github.nsreader.ui.settings.PrivacyRoute
+import io.github.nsreader.ui.settings.PrivacyViewModel
 import io.github.nsreader.ui.settings.SettingsRoute
 import io.github.nsreader.ui.settings.SettingsViewModel
 import io.github.nsreader.ui.space.FollowRoute
@@ -89,13 +105,20 @@ import io.github.nsreader.ui.tools.RulingRoute
 import io.github.nsreader.ui.tools.RulingViewModel
 import io.github.nsreader.ui.viewer.ImageViewerScreen
 import io.github.nsreader.ui.viewer.ImageViewerViewModel
+import kotlinx.coroutines.launch
 
 @Composable
-fun MainNavigation(container: AppContainer) {
+fun MainNavigation(
+    container: AppContainer,
+    initialTab: TopLevelDestination = TopLevelDestination.HOME,
+) {
     val signInUrl = NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH
 
     // Hoisted out of the navigation lambdas below, which are not composable.
     val siteTitle = stringResource(R.string.app_name)
+    val aboutSiteTitle = stringResource(R.string.about_site)
+    val privacyTitle = stringResource(R.string.about_privacy)
+    val rssLabel = stringResource(R.string.about_rss)
     val uriHandler = LocalUriHandler.current
     val openExternalUrl: (String) -> Unit = remember(uriHandler) {
         { url ->
@@ -125,7 +148,10 @@ fun MainNavigation(container: AppContainer) {
     val notificationsStack = rememberNavBackStack(NotificationsKey)
     val profileStack = rememberNavBackStack(ProfileKey)
 
-    var currentTab by rememberSaveable { mutableStateOf(TopLevelDestination.HOME) }
+    var currentTab by rememberSaveable { mutableStateOf(initialTab) }
+
+    // Transient by design: a fling should tuck the bar away, not a configuration change keep it away.
+    var feedScrollActive by remember { mutableStateOf(false) }
 
     val backStack: NavBackStack<NavKey> =
         when (currentTab) {
@@ -138,6 +164,34 @@ fun MainNavigation(container: AppContainer) {
     // The bar belongs to the top-level destinations only. A thread, the image viewer and the web
     // view are full-screen by design — showing a tab bar under them would invite leaving mid-read.
     val atTabRoot = TopLevelDestination.forKey(backStack.lastOrNull()) != null
+
+    // Content links only: our own post/space/mention URLs stay in the app; everything else leaves
+    // it. Explicit "open in browser" actions keep openExternalUrl, or they would loop back here.
+    val scope = rememberCoroutineScope()
+    val openSpace: (Long) -> Unit = { uid ->
+        backStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid))
+    }
+    val openContentUrl: (String) -> Unit = { url ->
+        when (val route = NodeSeekSite.parseInternalRoute(url)) {
+            is NodeSeekSite.InternalRoute.Post -> backStack.add(PostDetailKey(route.postId))
+
+            is NodeSeekSite.InternalRoute.Space -> openSpace(route.uid)
+
+            is NodeSeekSite.InternalRoute.Member ->
+                // A mention carries only the user name; the uid comes from the member-search API.
+                // Any failure (offline, signed out, renamed user) falls back to the site itself.
+                scope.launch {
+                    val uid =
+                        runCatching { container.searchRepository.searchUsers(route.name) }
+                            .getOrNull()
+                            ?.firstOrNull { it.name.equals(route.name, ignoreCase = true) }
+                            ?.uid
+                    if (uid != null) openSpace(uid) else openExternalUrl(url)
+                }
+
+            null -> openExternalUrl(NodeSeekSite.unwrapJumpUrl(url))
+        }
+    }
 
     /*
      * Back out of a secondary tab returns to home rather than leaving the app.
@@ -166,7 +220,7 @@ fun MainNavigation(container: AppContainer) {
          * phone-shaped.
          */
         navigationSuiteType =
-        if (atTabRoot) {
+        if (atTabRoot && !feedScrollActive) {
             NavigationSuiteScaffoldDefaults.navigationSuiteType(currentWindowAdaptiveInfo())
         } else {
             NavigationSuiteType.None
@@ -201,7 +255,10 @@ fun MainNavigation(container: AppContainer) {
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                         onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                         onOpenBrowser = openExternalUrl,
+                        onLinkClick = openContentUrl,
+                        onAuthorClick = openSpace,
                         onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
+                        onFeedScrollActiveChanged = { feedScrollActive = it },
                     )
                 }
 
@@ -264,6 +321,7 @@ fun MainNavigation(container: AppContainer) {
                             )
                         },
                         onOpenBrowser = openExternalUrl,
+                        onLinkClick = openContentUrl,
                     )
                 }
 
@@ -289,6 +347,110 @@ fun MainNavigation(container: AppContainer) {
                     SettingsRoute(
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
+                        onOpenNotifications = { backStack.add(NotificationSettingsKey) },
+                        onOpenAbout = { backStack.add(AboutCommunityKey) },
+                        onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
+                    )
+                }
+
+                entry<NotificationSettingsKey> {
+                    val viewModel: NotificationSettingsViewModel =
+                        viewModel(factory = NotificationSettingsViewModel.factory(container))
+                    NotificationSettingsRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                        // 绑定 Telegram lives on 联系方式 (d6 3/4), the site's own binding entry.
+                        onOpenTelegram = { backStack.add(AccountContactKey) },
+                    )
+                }
+
+                entry<AboutCommunityKey> {
+                    val context = LocalContext.current
+                    val packageInfo =
+                        remember(context) {
+                            context.packageManager.getPackageInfo(context.packageName, 0)
+                        }
+                    AboutCommunityScreen(
+                        versionName = packageInfo.versionName.orEmpty().ifBlank { "—" },
+                        versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            packageInfo.longVersionCode
+                        } else {
+                            @Suppress("DEPRECATION")
+                            packageInfo.versionCode.toLong()
+                        },
+                        updateStatus = AppUpdateStatus.Unknown,
+                        onBack = { backStack.removeLastOrNull() },
+                        onCheckUpdates = { openExternalUrl(CommunityLinks.RELEASES) },
+                        onOpenAboutSite = {
+                            backStack.add(
+                                WebKey(
+                                    NodeSeekSite.BASE_URL + NodeSeekSite.ABOUT_PATH,
+                                    aboutSiteTitle,
+                                    WebViewGoal.MANAGE,
+                                ),
+                            )
+                        },
+                        onOpenPrivacy = { backStack.add(PrivacyKey) },
+                        onOpenChangelog = { backStack.add(ChangelogKey) },
+                        onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
+                        onOpenUri = { uri ->
+                            if (NodeSeekSite.isExternalWebUrl(uri)) {
+                                openExternalUrl(uri)
+                            } else if (uri == CommunityLinks.EMAIL) {
+                                runCatching { uriHandler.openUri(uri) }
+                            }
+                        },
+                        onCopyRss = {
+                            context
+                                .getSystemService(ClipboardManager::class.java)
+                                ?.setPrimaryClip(
+                                    ClipData.newPlainText(
+                                        rssLabel,
+                                        CommunityLinks.RSS,
+                                    ),
+                                )
+                        },
+                    )
+                }
+
+                entry<PrivacyKey> {
+                    val privacyViewModel: PrivacyViewModel =
+                        viewModel(factory = PrivacyViewModel.factory(container))
+                    PrivacyRoute(
+                        viewModel = privacyViewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                        onOpenOriginal = {
+                            openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH)
+                        },
+                        onOpenWebFallback = {
+                            backStack.add(
+                                WebKey(
+                                    NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH,
+                                    privacyTitle,
+                                    WebViewGoal.MANAGE,
+                                ),
+                            )
+                        },
+                    )
+                }
+
+                entry<ChangelogKey> {
+                    val context = LocalContext.current
+                    val versionName = remember(context) {
+                        context.packageManager.getPackageInfo(context.packageName, 0)
+                            .versionName.orEmpty().ifBlank { "—" }
+                    }
+                    ChangelogScreen(
+                        versionName = versionName,
+                        onBack = { backStack.removeLastOrNull() },
+                        onOpenReleases = { openExternalUrl(CommunityLinks.RELEASES) },
+                    )
+                }
+
+                entry<OpenSourceLicensesKey> {
+                    OpenSourceLicensesScreen(
+                        onBack = { backStack.removeLastOrNull() },
+                        onOpenUri = openExternalUrl,
                     )
                 }
 
@@ -315,6 +477,7 @@ fun MainNavigation(container: AppContainer) {
                         },
                         onEditProfile = { backStack.add(AccountSettingsKey) },
                         onOpenBrowser = openExternalUrl,
+                        onLinkClick = openContentUrl,
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                     )
                 }
@@ -403,11 +566,11 @@ fun MainNavigation(container: AppContainer) {
                         onBack = { backStack.removeLastOrNull() },
                         onOpenProfileFields = { backStack.add(AccountProfileFieldsKey) },
                         onOpenSecurity = { backStack.add(AccountSecurityKey) },
-                        onOpenContactAndBlock = { backStack.add(AccountContactBlockKey) },
-                        // 常用偏好 is this app's own settings screen rather than a copy of it: the site's
-                        // `#preference` group covers the website's layout, which the app does not render.
-                        onOpenDisplayPreferences = { backStack.add(SettingsKey) },
-                        onOpenHomeBoards = { backStack.add(HomeBoardsKey) },
+                        onOpenContact = { backStack.add(AccountContactKey) },
+                        onOpenBlockList = { backStack.add(AccountBlockListKey) },
+                        // 常用偏好 and 首页版块 share one page (d6 5/5): three of their rows are the
+                        // same account-side switches, and splitting them would leave two stub screens.
+                        onOpenPreferences = { backStack.add(AccountPreferencesKey) },
                     )
                 }
 
@@ -436,19 +599,32 @@ fun MainNavigation(container: AppContainer) {
                     )
                 }
 
-                entry<AccountContactBlockKey> {
-                    val viewModel: ContactBlockViewModel =
-                        viewModel(factory = ContactBlockViewModel.factory(container))
-                    ContactBlockRoute(
+                entry<AccountContactKey> {
+                    val viewModel: ContactViewModel =
+                        viewModel(factory = ContactViewModel.factory(container))
+                    ContactRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                        // The bind link belongs to Telegram (t.me / tg://), so it leaves the app for
+                        // whatever owns the scheme — the Telegram app, or the browser's web version.
+                        // Never the in-app web view, whose cookie jar is for nodeseek.com only.
+                        onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
+                    )
+                }
+
+                entry<AccountBlockListKey> {
+                    val viewModel: BlockListViewModel =
+                        viewModel(factory = BlockListViewModel.factory(container))
+                    BlockListRoute(
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
                     )
                 }
 
-                entry<HomeBoardsKey> {
-                    val viewModel: HomeBoardsViewModel =
-                        viewModel(factory = HomeBoardsViewModel.factory(container))
-                    HomeBoardsRoute(
+                entry<AccountPreferencesKey> {
+                    val viewModel: PreferencesViewModel =
+                        viewModel(factory = PreferencesViewModel.factory(container))
+                    PreferencesRoute(
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
                     )
@@ -463,6 +639,7 @@ fun MainNavigation(container: AppContainer) {
                         onLucky = { backStack.add(LuckyKey) },
                         onInvite = { backStack.add(InviteKey) },
                         onRuling = { backStack.add(RulingKey) },
+                        onAbout = { backStack.add(AboutCommunityKey) },
                     )
                 }
 
@@ -510,8 +687,9 @@ fun MainNavigation(container: AppContainer) {
                 }
 
                 entry<ImageViewerKey> { key ->
+                    val context = LocalContext.current
                     val viewModel: ImageViewerViewModel =
-                        viewModel(factory = ImageViewerViewModel.factory(container))
+                        viewModel(factory = ImageViewerViewModel.factory(container, context))
                     val saveOutcome by viewModel.saveOutcome.collectAsStateWithLifecycle()
                     ImageViewerScreen(
                         urls = key.urls,
@@ -543,6 +721,8 @@ fun MainNavigation(container: AppContainer) {
                         initialFloor = key.floor,
                         onBack = { backStack.removeLastOrNull() },
                         onOpenBrowser = openExternalUrl,
+                        onLinkClick = openContentUrl,
+                        onAuthorClick = openSpace,
                         onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                         onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                         onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
@@ -611,6 +791,10 @@ private fun HomePane(
     onVerify: (String) -> Unit,
     onOpenBrowser: (String) -> Unit,
     onImageClick: (List<String>, String) -> Unit,
+    onLinkClick: (String) -> Unit = onOpenBrowser,
+    onAuthorClick: (Long) -> Unit = {},
+    /** Phone layout only: the tablet's rail sits beside the list, not under the thumb. */
+    onFeedScrollActiveChanged: (Boolean) -> Unit = {},
 ) {
     BoxWithConstraints {
         val twoPane = maxWidth >= TWO_PANE_MIN_WIDTH
@@ -639,6 +823,7 @@ private fun HomePane(
                 onCreatePost = onCreatePost,
                 onSignIn = onSignIn,
                 onVerify = onVerify,
+                onScrollActiveChanged = onFeedScrollActiveChanged,
             )
             return@BoxWithConstraints
         }
@@ -686,6 +871,8 @@ private fun HomePane(
                         replyViewModel = replyViewModel,
                         onBack = { selectedPostId = null },
                         onOpenBrowser = onOpenBrowser,
+                        onLinkClick = onLinkClick,
+                        onAuthorClick = onAuthorClick,
                         onSignIn = onSignIn,
                         onVerify = onVerify,
                         onImageClick = onImageClick,

@@ -12,7 +12,7 @@ import org.junit.Test
 
 class SearchRepositoryTest {
     @Test
-    fun `post search loads every server result page`() =
+    fun `post search makes exactly one request per page`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val html = RecordingHtmlSource(Fixtures.load("search-results.html"))
@@ -23,17 +23,52 @@ class SearchRepositoryTest {
                     dispatchers = AppDispatchers(dispatcher, dispatcher),
                 )
 
-            val posts = repository.searchPosts("Android TV", emptySet(), SearchSort.TIME)
+            val results = repository.searchPosts("Android TV", page = 1, emptySet(), SearchSort.TIME)
 
-            assertEquals(1, posts.size)
-            assertEquals(
-                setOf(
-                    "/search?q=Android%20TV&sortBy=postTime",
-                    "/search?q=Android%20TV&page=2&sortBy=postTime",
-                    "/search?q=Android%20TV&page=3&sortBy=postTime",
-                ),
-                html.paths.toSet(),
-            )
+            // One search must never fan out into a request per result page — that is what used to
+            // trip Cloudflare's rate limiting.
+            assertEquals(listOf("/search?q=Android%20TV&sortBy=postTime"), html.paths)
+            assertEquals(1, results.posts.size)
+            assertEquals(1, results.page)
+            assertEquals(3, results.totalPages)
+        }
+
+    @Test
+    fun `post search requests the page it is asked for`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val html = RecordingHtmlSource(Fixtures.load("search-results.html"))
+            val repository =
+                NetworkSearchRepository(
+                    htmlSource = html,
+                    jsonSource = RecordingJsonSource("{}"),
+                    dispatchers = AppDispatchers(dispatcher, dispatcher),
+                )
+
+            repository.searchPosts("Android TV", page = 2, emptySet(), SearchSort.TIME)
+
+            assertEquals(listOf("/search?q=Android%20TV&page=2&sortBy=postTime"), html.paths)
+        }
+
+    @Test
+    fun `a single selected board goes to the server, a range filters locally`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val html = RecordingHtmlSource(Fixtures.load("search-results.html"))
+            val repository =
+                NetworkSearchRepository(
+                    htmlSource = html,
+                    jsonSource = RecordingJsonSource("{}"),
+                    dispatchers = AppDispatchers(dispatcher, dispatcher),
+                )
+
+            repository.searchPosts("tv", page = 1, setOf("tech"), SearchSort.RELEVANCE)
+            assertEquals(listOf("/search?q=tv&category=tech"), html.paths)
+
+            html.paths.clear()
+            val filtered = repository.searchPosts("tv", page = 1, setOf("tech", "trade"), SearchSort.RELEVANCE)
+            assertEquals(listOf("/search?q=tv"), html.paths)
+            filtered.posts.forEach { post -> assertEquals(true, post.categorySlug in setOf("tech", "trade")) }
         }
 
     @Test

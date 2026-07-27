@@ -62,6 +62,25 @@ class PostDetailParserTest {
         assertEquals("#4", first.floor)
         assertEquals(9727591L, first.commentId)
         assertFalse(first.isOriginalPoster)
+        assertTrue(first.badges.isEmpty())
+    }
+
+    @Test
+    fun `reads the header badges`() {
+        assertEquals(listOf("楼主"), body.badges)
+
+        val opReply = detail.comments.first { it.isOriginalPoster }
+        assertEquals(listOf("楼主"), opReply.badges)
+
+        // The role-tag structure differs from is-poster (text sits in a nested span) — both parse.
+        val dev = detail.comments.first { it.authorName == "ggchaos" }
+        assertEquals(listOf("Dev"), dev.badges)
+    }
+
+    @Test
+    fun `floors without an edited marker read as unedited`() {
+        assertFalse(body.isEdited)
+        assertTrue(detail.comments.none { it.isEdited })
     }
 
     @Test
@@ -80,6 +99,26 @@ class PostDetailParserTest {
         assertEquals(1, detail.page)
         assertTrue(detail.totalPages >= 4)
         assertTrue(detail.hasNextPage)
+    }
+
+    @Test
+    fun `reads the total from the elided last-page shortcut on a long thread`() {
+        // A long thread's pager renders the far end as `<span class="ellipsis">..</span>37`,
+        // whose text is not a number — the total must come from the href instead.
+        val html =
+            """
+            <html><body>
+            <div class="nsk-pager post-top-pager"><div role="navigation">
+              <span href="/post-1-1" class="pager-pos pager-cur">1</span>
+              <a href="/post-1-2" class="pager-pos">2</a>
+              <a href="/post-1-5" class="pager-pos">5</a>
+              <a href="/post-1-37" class="pager-pos"><span class="ellipsis">..</span>37</a>
+              <a href="/post-1-2" rel="next" class="pager-next"></a>
+            </div></div>
+            </body></html>
+            """.trimIndent()
+        val parsed = PostDetailParser.parse(html, postId = 1L, page = 1)
+        assertEquals(37, parsed.totalPages)
     }
 
     @Test

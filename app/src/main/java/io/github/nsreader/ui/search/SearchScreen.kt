@@ -5,15 +5,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -21,6 +25,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,6 +44,8 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,12 +55,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.R
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.data.Board
+import io.github.nsreader.data.FeedPost
 import io.github.nsreader.data.UserSearchResult
 import io.github.nsreader.model.SearchHistoryEntry
 import io.github.nsreader.model.SearchSort
@@ -90,6 +99,7 @@ fun SearchRoute(
         onSortChange = viewModel::selectSort,
         onPostClick = onPostClick,
         onUserClick = onUserClick,
+        onLoadMorePosts = viewModel::loadMorePosts,
         onRetry = viewModel::retry,
         onSignIn = onSignIn,
         onVerify = { onVerify(viewModel.challengeUrl()) },
@@ -115,6 +125,7 @@ fun SearchScreen(
     modifier: Modifier = Modifier,
     onBoardsChange: (Set<String>) -> Unit = {},
     onSortChange: (SearchSort) -> Unit = {},
+    onLoadMorePosts: () -> Unit = {},
 ) {
     var showBoardSheet by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
@@ -221,6 +232,7 @@ fun SearchScreen(
                 onClearHistory = onClearHistory,
                 onPostClick = onPostClick,
                 onUserClick = onUserClick,
+                onLoadMorePosts = onLoadMorePosts,
                 onRetry = onRetry,
                 onSignIn = onSignIn,
                 onVerify = onVerify,
@@ -265,6 +277,7 @@ private fun SearchContent(
     onClearHistory: () -> Unit,
     onPostClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
+    onLoadMorePosts: () -> Unit,
     onRetry: () -> Unit,
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
@@ -302,12 +315,65 @@ private fun SearchContent(
                     UserResults(users = state.userResults, onUserClick = onUserClick)
                 }
             } else if (state.postResults.isEmpty()) {
-                Box(Modifier.fillMaxSize()) { NoSearchResultsState(onClearQuery = { onQueryChange("") }) }
+                if (state.postHasNext) {
+                    // A multi-board range filters each server page locally, so the first page can
+                    // come back empty while matches sit further in — keep paging, not "no results".
+                    LaunchedEffect(state.postPage) { onLoadMorePosts() }
+                    LoadingState()
+                } else {
+                    Box(Modifier.fillMaxSize()) { NoSearchResultsState(onClearQuery = { onQueryChange("") }) }
+                }
             } else {
-                LazyColumn {
-                    items(state.postResults, key = { it.summary.postId }) { post ->
-                        PostRow(post = post, onClick = { onPostClick(post.summary.postId) })
-                    }
+                PostResults(
+                    posts = state.postResults,
+                    appending = state.isAppendingPosts,
+                    appendFailed = state.postAppendFailed,
+                    onPostClick = onPostClick,
+                    onLoadMore = onLoadMorePosts,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PostResults(
+    posts: List<FeedPost>,
+    appending: Boolean,
+    appendFailed: Boolean,
+    onPostClick: (Long) -> Unit,
+    onLoadMore: () -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisible >= listState.layoutInfo.totalItemsCount - 4
+        }
+    }
+    LaunchedEffect(shouldLoadMore, posts.size) { if (shouldLoadMore) onLoadMore() }
+    LazyColumn(state = listState) {
+        items(posts, key = { it.summary.postId }) { post ->
+            PostRow(post = post, onClick = { onPostClick(post.summary.postId) })
+        }
+        if (appending) {
+            item("appending") {
+                Box(Modifier.fillMaxWidth().padding(Spacing.lg), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(Modifier.size(24.dp))
+                }
+            }
+        } else if (appendFailed) {
+            item("append-failed") {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.search_load_more_failed),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = onLoadMore) { Text(stringResource(R.string.action_retry)) }
                 }
             }
         }
@@ -464,6 +530,9 @@ private fun BoardRangeSheet(
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
     ) {
+        val toggle: (Board, Boolean) -> Unit = { board, isChecked ->
+            board.slug?.let { slug -> checked = if (isChecked) checked + slug else checked - slug }
+        }
         Column(
             Modifier.fillMaxWidth().padding(horizontal = Spacing.xl, vertical = Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -474,27 +543,28 @@ private fun BoardRangeSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (recent.isNotEmpty()) {
+            // The board list scrolls on its own so the reset/apply row below stays reachable even
+            // on a short window; the buttons are the whole point of opening the sheet.
+            Column(
+                Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                if (recent.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.search_recent_boards),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    BoardCheckboxGrid(recent, checked, toggle)
+                }
                 Text(
-                    stringResource(R.string.search_recent_boards),
+                    stringResource(R.string.search_all_boards),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                recent.forEach { board ->
-                    BoardCheckboxRow(board, board.slug in checked) { isChecked ->
-                        board.slug?.let { slug -> checked = if (isChecked) checked + slug else checked - slug }
-                    }
-                }
-            }
-            Text(
-                stringResource(R.string.search_all_boards),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            remaining.forEach { board ->
-                BoardCheckboxRow(board, board.slug in checked) { isChecked ->
-                    board.slug?.let { slug -> checked = if (isChecked) checked + slug else checked - slug }
-                }
+                BoardCheckboxGrid(remaining, checked, toggle)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 OutlinedButton(onClick = { checked = emptySet() }, modifier = Modifier.weight(1f)) {
@@ -508,15 +578,43 @@ private fun BoardRangeSheet(
     }
 }
 
+/** Two columns: fourteen boards in seven rows fit a phone screen without a scroll to the buttons. */
+@Composable
+private fun BoardCheckboxGrid(
+    boards: List<Board>,
+    checked: Set<String>,
+    onToggle: (Board, Boolean) -> Unit,
+) {
+    boards.chunked(2).forEach { row ->
+        Row(Modifier.fillMaxWidth()) {
+            row.forEach { board ->
+                BoardCheckboxRow(
+                    board = board,
+                    checked = board.slug in checked,
+                    onCheckedChange = { onToggle(board, it) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            if (row.size == 1) Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
 @Composable
 private fun BoardCheckboxRow(
     board: Board,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
-        Text(board.title, modifier = Modifier.weight(1f))
+        Text(
+            board.title,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
