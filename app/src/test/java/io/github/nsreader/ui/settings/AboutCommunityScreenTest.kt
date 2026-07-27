@@ -33,9 +33,13 @@ class AboutCommunityScreenTest {
             NodeSeekTheme {
                 AboutCommunityScreen(
                     versionName = "9.9",
+                    versionCode = 99,
+                    updateStatus = AppUpdateStatus.Latest,
                     onBack = {},
+                    onCheckUpdates = {},
                     onOpenAboutSite = { openedAbout = true },
                     onOpenPrivacy = { openedPrivacy = true },
+                    onOpenChangelog = {},
                     onOpenLicenses = {},
                     onOpenUri = openedUris::add,
                     onCopyRss = { copiedRss = true },
@@ -43,10 +47,10 @@ class AboutCommunityScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("版本 9.9").assertIsDisplayed()
+        composeRule.onNodeWithText("版本 9.9 (99)").assertIsDisplayed()
         composeRule.onNodeWithText("关于本站").performScrollTo().performClick()
         composeRule.onNodeWithText("隐私协议和服务条款").performScrollTo().performClick()
-        composeRule.onNodeWithText("Telegram 频道").performScrollTo().performClick()
+        composeRule.onNodeWithText("电报频道").performScrollTo().performClick()
         composeRule.onNodeWithContentDescription("复制 RSS 地址").performScrollTo().performClick()
 
         assertTrue(openedAbout)
@@ -62,9 +66,13 @@ class AboutCommunityScreenTest {
             NodeSeekTheme {
                 AboutCommunityScreen(
                     versionName = "1.0",
+                    versionCode = 1,
+                    updateStatus = AppUpdateStatus.Available("1.1.0"),
                     onBack = {},
+                    onCheckUpdates = {},
                     onOpenAboutSite = {},
                     onOpenPrivacy = {},
+                    onOpenChangelog = {},
                     onOpenLicenses = { opened = true },
                     onOpenUri = {},
                     onCopyRss = {},
@@ -75,5 +83,30 @@ class AboutCommunityScreenTest {
         composeRule.onNodeWithText("开源许可").performScrollTo().performClick()
 
         assertTrue(opened)
+    }
+
+    @Test
+    fun `friend sites are chips and telegram support is absent`() {
+        composeRule.setContent {
+            NodeSeekTheme {
+                AboutCommunityScreen(
+                    versionName = "1.0",
+                    versionCode = 1,
+                    updateStatus = AppUpdateStatus.Latest,
+                    onBack = {},
+                    onCheckUpdates = {},
+                    onOpenAboutSite = {},
+                    onOpenPrivacy = {},
+                    onOpenChangelog = {},
+                    onOpenLicenses = {},
+                    onOpenUri = {},
+                    onCopyRss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("LowEndTalk").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("ServerHunter").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Telegram 客服").assertDoesNotExist()
     }
 }

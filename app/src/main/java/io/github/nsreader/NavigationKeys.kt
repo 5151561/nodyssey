@@ -31,6 +31,9 @@ data object AboutCommunityKey : NavKey
 data object PrivacyKey : NavKey
 
 @Serializable
+data object ChangelogKey : NavKey
+
+@Serializable
 data object OpenSourceLicensesKey : NavKey
 
 /**

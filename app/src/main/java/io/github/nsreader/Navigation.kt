@@ -2,6 +2,7 @@ package io.github.nsreader
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -79,10 +80,14 @@ import io.github.nsreader.ui.profile.ProfileViewModel
 import io.github.nsreader.ui.search.SearchRoute
 import io.github.nsreader.ui.search.SearchViewModel
 import io.github.nsreader.ui.settings.AboutCommunityScreen
+import io.github.nsreader.ui.settings.AppUpdateStatus
+import io.github.nsreader.ui.settings.ChangelogScreen
 import io.github.nsreader.ui.settings.CommunityLinks
 import io.github.nsreader.ui.settings.NotificationSettingsRoute
 import io.github.nsreader.ui.settings.NotificationSettingsViewModel
 import io.github.nsreader.ui.settings.OpenSourceLicensesScreen
+import io.github.nsreader.ui.settings.PrivacyRoute
+import io.github.nsreader.ui.settings.PrivacyViewModel
 import io.github.nsreader.ui.settings.SettingsRoute
 import io.github.nsreader.ui.settings.SettingsViewModel
 import io.github.nsreader.ui.space.FollowRoute
@@ -361,17 +366,21 @@ fun MainNavigation(
 
                 entry<AboutCommunityKey> {
                     val context = LocalContext.current
-                    val versionName =
+                    val packageInfo =
                         remember(context) {
-                            context.packageManager
-                                .getPackageInfo(context.packageName, 0)
-                                .versionName
-                                .orEmpty()
-                                .ifBlank { "—" }
+                            context.packageManager.getPackageInfo(context.packageName, 0)
                         }
                     AboutCommunityScreen(
-                        versionName = versionName,
+                        versionName = packageInfo.versionName.orEmpty().ifBlank { "—" },
+                        versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            packageInfo.longVersionCode
+                        } else {
+                            @Suppress("DEPRECATION")
+                            packageInfo.versionCode.toLong()
+                        },
+                        updateStatus = AppUpdateStatus.Unknown,
                         onBack = { backStack.removeLastOrNull() },
+                        onCheckUpdates = { openExternalUrl(CommunityLinks.RELEASES) },
                         onOpenAboutSite = {
                             backStack.add(
                                 WebKey(
@@ -382,6 +391,7 @@ fun MainNavigation(
                             )
                         },
                         onOpenPrivacy = { backStack.add(PrivacyKey) },
+                        onOpenChangelog = { backStack.add(ChangelogKey) },
                         onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
                         onOpenUri = { uri ->
                             if (NodeSeekSite.isExternalWebUrl(uri)) {
@@ -404,14 +414,36 @@ fun MainNavigation(
                 }
 
                 entry<PrivacyKey> {
-                    WebViewRoute(
-                        url = NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH,
-                        title = privacyTitle,
-                        goal = WebViewGoal.MANAGE,
-                        session = container.sessionRepository,
-                        userAgent = container.userAgent,
-                        onOpenExternal = openExternalUrl,
-                        onClose = { backStack.removeLastOrNull() },
+                    val privacyViewModel: PrivacyViewModel =
+                        viewModel(factory = PrivacyViewModel.factory(container))
+                    PrivacyRoute(
+                        viewModel = privacyViewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                        onOpenOriginal = {
+                            openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH)
+                        },
+                        onOpenWebFallback = {
+                            backStack.add(
+                                WebKey(
+                                    NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH,
+                                    privacyTitle,
+                                    WebViewGoal.MANAGE,
+                                ),
+                            )
+                        },
+                    )
+                }
+
+                entry<ChangelogKey> {
+                    val context = LocalContext.current
+                    val versionName = remember(context) {
+                        context.packageManager.getPackageInfo(context.packageName, 0)
+                            .versionName.orEmpty().ifBlank { "—" }
+                    }
+                    ChangelogScreen(
+                        versionName = versionName,
+                        onBack = { backStack.removeLastOrNull() },
+                        onOpenReleases = { openExternalUrl(CommunityLinks.RELEASES) },
                     )
                 }
 

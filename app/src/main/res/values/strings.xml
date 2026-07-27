@@ -241,31 +241,52 @@
     <string name="settings_version">v1.0</string>
     <string name="settings_licenses">开源许可</string>
 
-    <!-- About & community (board f1); privacy itself uses the restricted in-app WebView fallback. -->
-    <string name="about_title">关于与社区</string>
-    <string name="about_version">版本 %1$s</string>
-    <string name="about_app_summary">为 NodeSeek 阅读体验设计的非官方 Android 客户端</string>
+    <!-- About & community (board f1). -->
+    <string name="about_title">关于</string>
+    <string name="about_community_title">关于 · 社区</string>
+    <string name="about_app_name">NodeSeek 客户端</string>
+    <string name="about_version">版本 %1$s (%2$d)</string>
     <string name="about_check_updates">检查更新</string>
-    <string name="about_community">社区信息</string>
-    <string name="about_forum_stats">论坛统计</string>
+    <string name="about_update_unknown">前往 GitHub 检查 ↗</string>
+    <string name="about_update_latest">已是最新</string>
+    <string name="about_update_available">发现 %1$s ↗</string>
+    <string name="about_project_home">项目主页</string>
+    <string name="about_feedback">问题反馈</string>
+    <string name="about_feedback_hint">提 GitHub Issue 或站内私信开发者</string>
+    <string name="about_changelog">更新日志</string>
+    <string name="about_theme_signature">Material 3 Expressive · 主题色「石墨青」</string>
+    <string name="about_community">社区</string>
     <string name="about_forum_stats_value">64,902 位 seeker</string>
-    <string name="about_forum_stats_snapshot">2026 年 7 月 27 日站点侧栏快照，并非实时数据</string>
+    <string name="about_forum_stats_snapshot">论坛注册用户总数 · 每日更新</string>
     <string name="about_site">关于本站</string>
-    <string name="about_site_hint">NodeSeek 置顶介绍帖</string>
+    <string name="about_site_hint">站长置顶帖 · 在 App 内打开</string>
     <string name="about_privacy">隐私协议和服务条款</string>
-    <string name="about_privacy_hint">在受限站内浏览器中阅读当前版本</string>
-    <string name="about_rss">RSS 全站订阅</string>
+    <!--suppress TypographyDashes: ISO 8601 dates use hyphens, matching the source document. -->
+    <string name="about_privacy_hint">生效日期 2022-11-24</string>
+    <string name="about_rss">RSS 订阅</string>
     <string name="about_copy_rss">复制 RSS 地址</string>
     <string name="about_rss_copied">RSS 地址已复制</string>
-    <string name="about_contact">联系 NodeSeek</string>
-    <string name="about_telegram_channel">Telegram 频道</string>
-    <string name="about_telegram_group">Telegram 群组</string>
-    <string name="about_telegram_support">Telegram 客服</string>
-    <string name="about_email">联系邮箱</string>
-    <string name="about_friends">姊妹站与相关网站</string>
+    <string name="about_contact">联络与友站</string>
+    <string name="about_telegram_channel">电报频道</string>
+    <string name="about_telegram_group">电报群组</string>
+    <string name="about_email">联系我们</string>
     <string name="about_deepflood">DeepFlood</string>
-    <string name="about_licenses_hint">查看本应用及主要依赖采用的许可证</string>
-    <string name="about_unofficial_notice">NSReader 与 NodeSeek 官方无关。站点名称、内容与社区服务归其各自权利人所有。</string>
+    <string name="about_deepflood_hint">姊妹站 · deepflood.com</string>
+    <string name="about_licenses_hint">本应用许可证与第三方库清单</string>
+    <string name="about_unofficial_notice">本应用是 NodeSeek 论坛的非官方开源客户端，与站点运营方无隶属关系；帖子与评论内容的版权归论坛及原作者所有。</string>
+
+    <!-- Privacy terms (board f2); WebView is only the load/parse fallback. -->
+    <string name="privacy_title">隐私协议</string>
+    <string name="privacy_open_original">在浏览器中打开原文</string>
+    <string name="privacy_effective_date">最新版本生效日期 %1$s</string>
+    <string name="privacy_source">来自 nodeseek.com/termsofservice</string>
+    <string name="privacy_keep_scrolling">继续滚动阅读</string>
+    <string name="privacy_load_failed">暂时无法载入协议</string>
+    <string name="privacy_load_failed_hint">原生正文加载或解析失败，可以重试，或使用站内网页阅读。</string>
+    <string name="privacy_open_web_fallback">使用网页版阅读</string>
+    <string name="changelog_current_version">当前版本 %1$s</string>
+    <string name="changelog_summary">当前构建尚未附带结构化更新记录。完整提交与发行说明以项目 Releases 页面为准。</string>
+    <string name="changelog_all_releases">查看全部 Releases ↗</string>
 
     <string name="licenses_summary">NSReader 是 GPL-3.0 开源软件，并使用下列主要开源组件。点击条目可查看对应源码与许可信息。</string>
     <string name="licenses_app_section">本应用</string>
