@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import io.github.nsreader.data.settings.ThemeMode
 import io.github.nsreader.data.settings.UserSettings
 import io.github.nsreader.data.settings.isTimedNightHour
+import io.github.nsreader.ui.navigation.TopLevelDestination
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import kotlinx.coroutines.delay
 import java.util.Calendar
@@ -26,6 +27,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val container = (application as NodeSeekApp).container
+        // Only a poll notification carries the extra; a cold start from it should land on 通知.
+        // A saved UI state still wins — see the rememberSaveable inside MainNavigation.
+        val initialTab =
+            if (intent?.getStringExtra(EXTRA_OPEN_TAB) == TAB_NOTIFICATIONS) {
+                TopLevelDestination.NOTIFICATIONS
+            } else {
+                TopLevelDestination.HOME
+            }
 
         setContent {
             // Theme reads the settings SSOT directly. No copy is kept anywhere, so changing the
@@ -49,10 +58,15 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    MainNavigation(container = container)
+                    MainNavigation(container = container, initialTab = initialTab)
                 }
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_OPEN_TAB = "io.github.nsreader.OPEN_TAB"
+        const val TAB_NOTIFICATIONS = "notifications"
     }
 }
 

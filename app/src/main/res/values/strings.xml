@@ -45,6 +45,10 @@
     <string name="post_badge_locked">已锁帖</string>
     <string name="post_badge_locked_level">%1$d 级可见</string>
     <string name="post_badge_original_poster">楼主</string>
+    <!-- Badge stack overflow chip (b1 §8: at most three chips, the rest fold into +N) -->
+    <string name="post_badge_more">+%1$d</string>
+    <!-- The header's edited marker; the site's own text ("edited 36min ago") becomes the a11y label -->
+    <string name="post_edited">已编辑</string>
 
     <!-- Post composer -->
     <string name="composer_title">新建帖子</string>
@@ -236,6 +240,28 @@
     <string name="settings_about_app">关于 NSReader</string>
     <string name="settings_version">v1.0.0</string>
     <string name="settings_licenses">开源许可</string>
+
+    <!-- App notification polling (board f4): the site has no push, a periodic worker checks unread -->
+    <string name="notify_settings_title">通知</string>
+    <string name="notify_master_title">新消息通知</string>
+    <string name="notify_settings_entry_hint">后台定期检查未读并发系统通知</string>
+    <string name="notify_master_hint">后台定期检查未读并发系统通知；站点无推送服务，无法做到即时</string>
+    <string name="notify_frequency">检查频率</string>
+    <string name="notify_frequency_15">15 分钟</string>
+    <string name="notify_frequency_30">30 分钟</string>
+    <string name="notify_frequency_60">1 小时</string>
+    <string name="notify_frequency_hint">受系统省电策略影响，实际间隔可能更长（WorkManager 下限 15 分钟）</string>
+    <string name="notify_wifi_only">仅 Wi-Fi 下检查</string>
+    <string name="notify_wifi_only_hint">移动网络时暂停轮询，省电省流量</string>
+    <string name="notify_quiet_hours">免打扰时段</string>
+    <string name="notify_quiet_hours_hint">23:00 – 07:00 · 时段内静默收取，不发通知</string>
+    <string name="notify_channels_section">通知类别 · 映射 Android 通知渠道</string>
+    <string name="notify_telegram_title">想要即时提醒？</string>
+    <string name="notify_telegram_body">绑定 Telegram 后由站点即时转发未读消息</string>
+    <string name="notify_telegram_action">去绑定</string>
+    <string name="notify_body_mentions">%1$d 条新的 @ 提醒</string>
+    <string name="notify_body_replies">%1$d 条新回复</string>
+    <string name="notify_body_messages">%1$d 条新私信</string>
 
     <!-- Account settings (8g): the seven groups NodeSeek's own /setting page is split into -->
     <string name="account_title">账号设置</string>

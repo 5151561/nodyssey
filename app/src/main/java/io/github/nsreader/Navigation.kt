@@ -76,6 +76,8 @@ import io.github.nsreader.ui.profile.ProfileRoute
 import io.github.nsreader.ui.profile.ProfileViewModel
 import io.github.nsreader.ui.search.SearchRoute
 import io.github.nsreader.ui.search.SearchViewModel
+import io.github.nsreader.ui.settings.NotificationSettingsRoute
+import io.github.nsreader.ui.settings.NotificationSettingsViewModel
 import io.github.nsreader.ui.settings.SettingsRoute
 import io.github.nsreader.ui.settings.SettingsViewModel
 import io.github.nsreader.ui.space.FollowRoute
@@ -96,7 +98,10 @@ import io.github.nsreader.ui.viewer.ImageViewerViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun MainNavigation(container: AppContainer) {
+fun MainNavigation(
+    container: AppContainer,
+    initialTab: TopLevelDestination = TopLevelDestination.HOME,
+) {
     val signInUrl = NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH
 
     // Hoisted out of the navigation lambdas below, which are not composable.
@@ -130,7 +135,7 @@ fun MainNavigation(container: AppContainer) {
     val notificationsStack = rememberNavBackStack(NotificationsKey)
     val profileStack = rememberNavBackStack(ProfileKey)
 
-    var currentTab by rememberSaveable { mutableStateOf(TopLevelDestination.HOME) }
+    var currentTab by rememberSaveable { mutableStateOf(initialTab) }
 
     // Transient by design: a fling should tuck the bar away, not a configuration change keep it away.
     var feedScrollActive by remember { mutableStateOf(false) }
@@ -329,6 +334,18 @@ fun MainNavigation(container: AppContainer) {
                     SettingsRoute(
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
+                        onOpenNotifications = { backStack.add(NotificationSettingsKey) },
+                    )
+                }
+
+                entry<NotificationSettingsKey> {
+                    val viewModel: NotificationSettingsViewModel =
+                        viewModel(factory = NotificationSettingsViewModel.factory(container))
+                    NotificationSettingsRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                        // 绑定 Telegram lives on 联系方式 (d6 3/4), the site's own binding entry.
+                        onOpenTelegram = { backStack.add(AccountContactKey) },
                     )
                 }
 

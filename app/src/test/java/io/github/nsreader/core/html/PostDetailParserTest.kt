@@ -62,6 +62,25 @@ class PostDetailParserTest {
         assertEquals("#4", first.floor)
         assertEquals(9727591L, first.commentId)
         assertFalse(first.isOriginalPoster)
+        assertTrue(first.badges.isEmpty())
+    }
+
+    @Test
+    fun `reads the header badges`() {
+        assertEquals(listOf("楼主"), body.badges)
+
+        val opReply = detail.comments.first { it.isOriginalPoster }
+        assertEquals(listOf("楼主"), opReply.badges)
+
+        // The role-tag structure differs from is-poster (text sits in a nested span) — both parse.
+        val dev = detail.comments.first { it.authorName == "ggchaos" }
+        assertEquals(listOf("Dev"), dev.badges)
+    }
+
+    @Test
+    fun `floors without an edited marker read as unedited`() {
+        assertFalse(body.isEdited)
+        assertTrue(detail.comments.none { it.isEdited })
     }
 
     @Test

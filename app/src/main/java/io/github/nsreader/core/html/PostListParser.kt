@@ -52,7 +52,8 @@ object PostListParser {
             lastActiveText = lastActive?.text()?.trim()?.ifBlank { null },
             lastActiveTitle = lastActive?.attr("title")?.ifBlank { null },
             isPinned = item.selectFirst(Selectors.LIST_PINNED) != null,
-            isLocked = lockIcon != null,
+            // 公告行的红框「只读」与锁图标语义相同；只有真实锁图标携带等级。
+            isLocked = lockIcon != null || item.selectFirst(Selectors.LIST_READ_ONLY) != null,
             lockLevel = lockIcon?.let(::parseLockLevel),
         )
     }

@@ -553,9 +553,10 @@ internal fun PostRow(
                             ?.let { stringResource(R.string.post_badge_locked_level, it) }
                             ?: stringResource(R.string.post_badge_locked),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // 16dp per the b1 §8 只读→锁定 mapping spec.
                         modifier = Modifier
                             .padding(start = Spacing.xs)
-                            .size(15.dp),
+                            .size(16.dp),
                     )
                     summary.lockLevel?.let { level ->
                         Text(

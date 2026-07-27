@@ -20,6 +20,10 @@ data object ProfileKey : NavKey
 @Serializable
 data object SettingsKey : NavKey
 
+/** App notification polling (board f4) — a child of [SettingsKey]'s 通知 group. */
+@Serializable
+data object NotificationSettingsKey : NavKey
+
 /**
  * 账号设置 (8g) and its five sub-pages (d6 1–5/5).
  *

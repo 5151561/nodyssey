@@ -11,6 +11,12 @@ object Selectors {
     const val LIST_TITLE_LINK = "div.post-title > a[href]"
     const val LIST_PINNED = "div.post-title use[href=#pin]"
     const val LIST_LOCKED = "div.post-title use[href=#lock]"
+
+    /**
+     * The red-boxed 只读 label on an announcement row. Same meaning as the lock icon
+     * (additions.md §1.4), so the parser folds it into `isLocked` — the app draws one lock state.
+     */
+    const val LIST_READ_ONLY = "div.post-title span:matchesOwn(^\\s*只读\\s*$)"
     const val LIST_AVATAR = "img.avatar-normal, img[src*=/avatar/]"
     const val LIST_AUTHOR = "span.info-author a[href]"
     const val LIST_VIEWS = "span.info-views span"
@@ -37,6 +43,9 @@ object Selectors {
     const val CONTENT_POSTER_BADGE = "div.author-info .is-poster"
     const val CONTENT_BADGES = "div.author-info .nsk-badge, div.author-info .role-tag"
     const val CONTENT_CREATED_AT = "span.date-created time"
+
+    /** The header strip holding the time — and, on edited floors, the `edited Xmin ago` marker. */
+    const val CONTENT_INFO = "div.content-info"
     const val CONTENT_CATEGORY = "span.content-category a"
     const val CONTENT_FLOOR = "a.floor-link"
     const val CONTENT_ARTICLE = "article.post-content"

@@ -5,7 +5,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import io.github.nsreader.data.NotificationCounts
 import io.github.nsreader.model.SearchHistoryEntry
 import io.github.nsreader.model.SearchSort
 import io.github.nsreader.model.SearchTarget
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -52,6 +55,15 @@ class SettingsRepository(
                     // store (a renamed slug, a bad write) must not silently thin out the feed.
                     .filter { it in OPTIONAL_HOME_BOARD_SLUGS }
                     .toSet(),
+                notificationsEnabled = preferences[KEY_NOTIFICATIONS_ENABLED] ?: false,
+                notificationPollMinutes =
+                (preferences[KEY_NOTIFICATION_POLL_MINUTES] ?: DEFAULT_POLL_MINUTES)
+                    .let { minutes -> if (minutes in POLL_MINUTE_CHOICES) minutes else DEFAULT_POLL_MINUTES },
+                notificationsWifiOnly = preferences[KEY_NOTIFICATIONS_WIFI_ONLY] ?: false,
+                notificationQuietHours = preferences[KEY_NOTIFICATION_QUIET_HOURS] ?: true,
+                notifyMentions = preferences[KEY_NOTIFY_MENTIONS] ?: true,
+                notifyReplies = preferences[KEY_NOTIFY_REPLIES] ?: true,
+                notifyMessages = preferences[KEY_NOTIFY_MESSAGES] ?: true,
             )
         }
 
@@ -78,6 +90,27 @@ class SettingsRepository(
         edit { it[KEY_FONT_SCALE] = scale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE) }
 
     suspend fun setImagesOnWifiOnly(enabled: Boolean) = edit { it[KEY_IMAGES_WIFI_ONLY] = enabled }
+
+    suspend fun setNotificationsEnabled(enabled: Boolean) =
+        edit { it[KEY_NOTIFICATIONS_ENABLED] = enabled }
+
+    suspend fun setNotificationPollMinutes(minutes: Int) =
+        edit {
+            it[KEY_NOTIFICATION_POLL_MINUTES] =
+                if (minutes in POLL_MINUTE_CHOICES) minutes else DEFAULT_POLL_MINUTES
+        }
+
+    suspend fun setNotificationsWifiOnly(enabled: Boolean) =
+        edit { it[KEY_NOTIFICATIONS_WIFI_ONLY] = enabled }
+
+    suspend fun setNotificationQuietHours(enabled: Boolean) =
+        edit { it[KEY_NOTIFICATION_QUIET_HOURS] = enabled }
+
+    suspend fun setNotifyMentions(enabled: Boolean) = edit { it[KEY_NOTIFY_MENTIONS] = enabled }
+
+    suspend fun setNotifyReplies(enabled: Boolean) = edit { it[KEY_NOTIFY_REPLIES] = enabled }
+
+    suspend fun setNotifyMessages(enabled: Boolean) = edit { it[KEY_NOTIFY_MESSAGES] = enabled }
 
     suspend fun addSearchHistory(entry: SearchHistoryEntry) {
         val normalized = entry.copy(query = entry.query.trim())
@@ -151,6 +184,30 @@ class SettingsRepository(
         }
     }
 
+    /**
+     * The unread totals the poll worker most recently saw. Worker bookkeeping, not a user setting —
+     * deliberately absent from [settings]; it lives here only because this class owns the DataStore.
+     */
+    suspend fun notificationSeenCounts(): NotificationCounts {
+        val preferences =
+            dataStore.data
+                .catch { throwable ->
+                    if (throwable is IOException) emit(emptyPreferences()) else throw throwable
+                }.first()
+        return NotificationCounts(
+            replies = preferences[KEY_SEEN_REPLIES] ?: 0,
+            mentions = preferences[KEY_SEEN_MENTIONS] ?: 0,
+            messages = preferences[KEY_SEEN_MESSAGES] ?: 0,
+        )
+    }
+
+    suspend fun setNotificationSeenCounts(counts: NotificationCounts) =
+        edit {
+            it[KEY_SEEN_REPLIES] = counts.replies
+            it[KEY_SEEN_MENTIONS] = counts.mentions
+            it[KEY_SEEN_MESSAGES] = counts.messages
+        }
+
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         dataStore.edit(block)
     }
@@ -161,6 +218,10 @@ class SettingsRepository(
         const val MIN_FONT_SCALE = 0.85f
         const val MAX_FONT_SCALE = 1.5f
 
+        /** WorkManager's own floor is 15 minutes, which is why the choices start there — board f4. */
+        val POLL_MINUTE_CHOICES = listOf(15, 30, 60)
+        const val DEFAULT_POLL_MINUTES = 30
+
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
@@ -170,6 +231,16 @@ class SettingsRepository(
         private val KEY_RECENT_BOARDS = stringPreferencesKey("recent_boards")
         private val KEY_HIDDEN_HOME_BOARDS = stringPreferencesKey("hidden_home_boards")
         private val KEY_HOLIDAY_THEME = booleanPreferencesKey("holiday_theme")
+        private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+        private val KEY_NOTIFICATION_POLL_MINUTES = intPreferencesKey("notification_poll_minutes")
+        private val KEY_NOTIFICATIONS_WIFI_ONLY = booleanPreferencesKey("notifications_wifi_only")
+        private val KEY_NOTIFICATION_QUIET_HOURS = booleanPreferencesKey("notification_quiet_hours")
+        private val KEY_NOTIFY_MENTIONS = booleanPreferencesKey("notify_mentions")
+        private val KEY_NOTIFY_REPLIES = booleanPreferencesKey("notify_replies")
+        private val KEY_NOTIFY_MESSAGES = booleanPreferencesKey("notify_messages")
+        private val KEY_SEEN_REPLIES = intPreferencesKey("notification_seen_replies")
+        private val KEY_SEEN_MENTIONS = intPreferencesKey("notification_seen_mentions")
+        private val KEY_SEEN_MESSAGES = intPreferencesKey("notification_seen_messages")
 
         private const val RECENT_SEARCH_SEPARATOR = '\u001F'
         private const val MAX_RECENT_SEARCHES = 8
@@ -218,6 +289,18 @@ data class UserSettings(
     val recentBoards: List<String> = emptyList(),
     /** Boards switched off the home feed. Empty — the default — hides nothing; see `setHomeBoardHidden`. */
     val hiddenHomeBoards: Set<String> = emptySet(),
+    /*
+     * App notification polling (board f4). Off by default: polling costs battery and needs the
+     * POST_NOTIFICATIONS runtime permission, so it starts only when the user asks for it.
+     */
+    val notificationsEnabled: Boolean = false,
+    val notificationPollMinutes: Int = SettingsRepository.DEFAULT_POLL_MINUTES,
+    val notificationsWifiOnly: Boolean = false,
+    /** Fixed 23:00–07:00 window (board f4): the worker still fetches, but posts nothing. */
+    val notificationQuietHours: Boolean = true,
+    val notifyMentions: Boolean = true,
+    val notifyReplies: Boolean = true,
+    val notifyMessages: Boolean = true,
 )
 
 /**

@@ -66,6 +66,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -86,6 +89,7 @@ import io.github.nsreader.ui.common.BoardTag
 import io.github.nsreader.ui.common.LoadingState
 import io.github.nsreader.ui.common.NodeSeekErrorState
 import io.github.nsreader.ui.common.NodeSeekIcons
+import io.github.nsreader.ui.common.RoleBadgeRow
 import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.common.rememberClipboardCopy
 import io.github.nsreader.ui.composer.ReplyComposerHost
@@ -737,10 +741,11 @@ private fun OriginalPost(
                                 style = MaterialTheme.typography.titleSmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
                             )
-                            if (body.isOriginalPoster) OriginalPosterBadge()
+                            FloorBadges(body)
                         }
-                        body.createdAtText?.let { MetaText(it) }
+                        FloorTimeLine(body)
                     }
                 }
                 body.floor?.let { FloorLabel(it) }
@@ -845,7 +850,10 @@ private fun CommentRow(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                modifier = Modifier.authorClickable(comment.authorUid, onAuthorClick),
+                modifier =
+                Modifier
+                    .weight(1f)
+                    .authorClickable(comment.authorUid, onAuthorClick),
             ) {
                 UserAvatar(
                     url = comment.avatarUrl,
@@ -857,17 +865,13 @@ private fun CommentRow(
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
-                // Every reply from the thread's author carries the badge, not just the first: on a
-                // long page the reader has long since lost track of who opened it.
-                if (comment.isOriginalPoster) OriginalPosterBadge()
+                FloorBadges(comment)
             }
-            Box(Modifier.weight(1f))
             comment.floor?.let { FloorLabel(it) }
         }
-        comment.createdAtText?.let {
-            MetaText(it, modifier = Modifier.padding(start = 36.dp, top = 2.dp))
-        }
+        FloorTimeLine(comment, modifier = Modifier.padding(start = 36.dp, top = 2.dp))
         RichContent(
             nodes = comment.nodes,
             onLinkClick = onOpenBrowser,
@@ -965,17 +969,67 @@ private fun FeedChickenDialog(
     )
 }
 
+/**
+ * The header's badge chips: everything the parser read, with 楼主 prepended when the page marked
+ * the author as OP some other way (the opening post itself carries no `is-poster` span on page 1
+ * of some templates). Capped at three plus a +N chip — see [RoleBadgeRow].
+ */
 @Composable
-private fun OriginalPosterBadge() {
+private fun FloorBadges(content: PostContent) {
+    val opLabel = stringResource(R.string.post_badge_original_poster)
+    val labels =
+        if (content.isOriginalPoster && content.badges.none { it == opLabel }) {
+            listOf(opLabel) + content.badges
+        } else {
+            content.badges
+        }
+    if (labels.isNotEmpty()) RoleBadgeRow(labels)
+}
+
+/** The floor's time, and after it the dashed-underline 已编辑 marker (b1 §8). */
+@Composable
+private fun FloorTimeLine(
+    content: PostContent,
+    modifier: Modifier = Modifier,
+) {
+    if (content.createdAtText == null && !content.isEdited) return
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        content.createdAtText?.let { MetaText(it) }
+        if (content.isEdited) {
+            if (content.createdAtText != null) MetaText("·")
+            EditedMarker(content.editedAtText)
+        }
+    }
+}
+
+@Composable
+private fun EditedMarker(fullText: String?) {
+    val label = stringResource(R.string.post_edited)
+    val underline = MaterialTheme.colorScheme.outlineVariant
     Text(
-        text = stringResource(R.string.post_badge_original_poster),
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier =
         Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(horizontal = 7.dp, vertical = 1.dp),
+            // The site's marker text ("edited 36min ago") is the accessible name; the visible
+            // label compresses it to two characters.
+            .semantics { contentDescription = fullText ?: label }
+            .drawBehind {
+                // TextDecoration has no dashed variant, so the spec's dashed underline is drawn.
+                val y = size.height - 0.5.dp.toPx()
+                drawLine(
+                    color = underline,
+                    start = Offset(0f, y),
+                    end = Offset(size.width, y),
+                    strokeWidth = 1.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 2.dp.toPx())),
+                )
+            },
     )
 }
 

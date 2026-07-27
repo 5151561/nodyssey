@@ -96,6 +96,14 @@ data class PostContent(
     val createdAtTitle: String?,
     val categoryTitle: String?,
     val nodes: List<RichNode>,
+    /*
+     * Defaults are load-bearing on the two fields below: rows serialized before they existed have
+     * no such keys, and `encodeDefaults = false` means rows written now omit them when false/null.
+     */
+    /** The header's `edited Xmin ago` marker (additions.md §1.4) — posts and comments alike. */
+    val isEdited: Boolean = false,
+    /** The marker's own text, kept verbatim for the 已编辑 row's accessibility label. */
+    val editedAtText: String? = null,
 )
 
 /** Block-level pieces of rendered post markup. */

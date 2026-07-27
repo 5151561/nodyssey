@@ -396,6 +396,14 @@ object NodeSeekIcons {
         )
     }
 
+    /** The 回复主题 notification channel (board f4). */
+    val ChatBubble: ImageVector by lazy {
+        materialIcon(
+            name = "ChatBubble",
+            pathData = "M20,2H4C2.9,2 2,2.9 2,4v18l4,-4h14c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2z",
+        )
+    }
+
     /** Mentions another member; the reply editor's `@`. */
     val AlternateEmail: ImageVector by lazy {
         materialIcon(

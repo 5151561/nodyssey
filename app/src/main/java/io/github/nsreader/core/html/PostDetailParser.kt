@@ -44,10 +44,18 @@ object PostDetailParser {
         )
     }
 
+    /**
+     * Matches the `edited Xmin ago` marker next to the floor time. Anchored to the start so that a
+     * comment merely containing the word cannot trip it — the search is already scoped to the
+     * header strip, this narrows it to the marker itself.
+     */
+    private val EDITED_MARKER = Regex("""^(edited\b|已编辑)""", RegexOption.IGNORE_CASE)
+
     private fun parseContent(element: Element, isBody: Boolean): PostContent {
         val authorLink = element.selectFirst(Selectors.CONTENT_AUTHOR)
         val createdAt = element.selectFirst(Selectors.CONTENT_CREATED_AT)
         val posterBadge = element.selectFirst(Selectors.CONTENT_POSTER_BADGE)
+        val editedText = element.selectFirst(Selectors.CONTENT_INFO)?.let(::findEditedMarker)
 
         return PostContent(
             commentId = element.attr("data-comment-id").toLongOrNull(),
@@ -68,6 +76,18 @@ object PostDetailParser {
             categoryTitle = element.selectFirst(Selectors.CONTENT_CATEGORY)?.text()?.trim()
                 ?.ifBlank { null },
             nodes = RichContentParser.parse(element.selectFirst(Selectors.CONTENT_ARTICLE)),
+            isEdited = editedText != null,
+            editedAtText = editedText,
         )
     }
+
+    /**
+     * By marker text rather than by class: the marker's own class has not been captured from a
+     * device yet, so this checks every element in the header strip — plus the strip's bare text,
+     * in case the marker is not wrapped at all — and takes whatever starts like the marker.
+     */
+    private fun findEditedMarker(contentInfo: Element): String? =
+        (contentInfo.select("*").map { it.ownText() } + contentInfo.ownText())
+            .map { it.trim() }
+            .firstOrNull { EDITED_MARKER.containsMatchIn(it) }
 }
