@@ -24,6 +24,7 @@ import io.github.nsreader.data.NetworkMessageRepository
 import io.github.nsreader.data.NetworkPostDataSource
 import io.github.nsreader.data.NetworkProfileRepository
 import io.github.nsreader.data.NetworkSearchRepository
+import io.github.nsreader.data.NetworkTermsRepository
 import io.github.nsreader.data.NetworkUserSpaceRepository
 import io.github.nsreader.data.NotificationRepository
 import io.github.nsreader.data.OfflineFirstPostRepository
@@ -35,6 +36,7 @@ import io.github.nsreader.data.SiteOnlyFollowRepository
 import io.github.nsreader.data.SiteOnlyRulingRepository
 import io.github.nsreader.data.SiteOnlyStardustRepository
 import io.github.nsreader.data.StardustRepository
+import io.github.nsreader.data.TermsRepository
 import io.github.nsreader.data.UserSpaceRepository
 import io.github.nsreader.data.account.AccountSettingsRepository
 import io.github.nsreader.data.account.NetworkAccountSettingsRepository
@@ -53,9 +55,9 @@ import java.util.concurrent.TimeUnit
 /**
  * The application's dependency graph.
  *
- * Manual constructor injection rather than Hilt: KSP has no release for Kotlin 2.3.x yet, and the
- * alternative (kapt) is the deprecated path. This interface keeps dependencies explicit and
- * swappable, which is what matters — see `docs/architecture.md` for the migration trigger.
+ * Manual constructor injection rather than Hilt: the graph is still small enough that a framework
+ * would add more machinery than value. This interface keeps dependencies explicit and swappable;
+ * see `docs/architecture.md` for the migration trigger.
  *
  * Nothing here is a global: the container is created by the Application and handed down. That is
  * what makes [FakeAppContainer]-style substitution possible in tests.
@@ -79,6 +81,7 @@ interface AppContainer {
     val userSpaceRepository: UserSpaceRepository
     val assetsRepository: AssetsRepository
     val awardRepository: AwardRepository
+    val termsRepository: TermsRepository
 
     /*
      * The three site-only pages. Typed here rather than left out so that wiring one up later is a
@@ -190,6 +193,10 @@ class DefaultAppContainer(
 
     override val awardRepository: AwardRepository by lazy {
         NetworkAwardRepository(htmlClient, dispatchers)
+    }
+
+    override val termsRepository: TermsRepository by lazy {
+        NetworkTermsRepository(htmlClient)
     }
 
     override val followRepository: FollowRepository by lazy { SiteOnlyFollowRepository() }

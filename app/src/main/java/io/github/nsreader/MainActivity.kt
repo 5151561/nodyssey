@@ -9,10 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.data.settings.ThemeMode
 import io.github.nsreader.data.settings.UserSettings
 import io.github.nsreader.data.settings.isTimedNightHour
@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
             // Theme reads the settings SSOT directly. No copy is kept anywhere, so changing the
             // setting can never leave part of the app on the old value.
             val settings by container.settingsRepository.settings
-                .collectAsState(initial = UserSettings())
+                .collectAsStateWithLifecycle(initialValue = UserSettings())
 
             val darkTheme = when (settings.themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()

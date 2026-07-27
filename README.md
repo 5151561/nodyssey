@@ -63,7 +63,7 @@ Detailed architecture rules are in [docs/architecture.md](docs/architecture.md).
 
 ## Build
 
-Requires JDK 21 and the Android SDK (compileSdk 36, minSdk 26).
+Requires JDK 21 and the Android SDK (compileSdk 37, minSdk 26).
 
 ```bash
 ./gradlew :app:assembleDebug

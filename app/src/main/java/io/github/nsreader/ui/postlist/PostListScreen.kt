@@ -52,11 +52,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -89,6 +95,7 @@ import io.github.nsreader.ui.theme.TABULAR_FIGURES
 import io.github.nsreader.ui.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlin.math.abs
 
 /**
  * Stateful entry point. It only wires the ViewModel to the stateless [PostListScreen] below, which is
@@ -102,7 +109,7 @@ fun PostListRoute(
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
-    onScrollActiveChanged: (Boolean) -> Unit = {},
+    onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     PostListScreen(
@@ -117,7 +124,7 @@ fun PostListRoute(
         // request did — a different page can be served without a challenge and prove nothing.
         onRecoverInBrowser = { onVerify(viewModel.challengeUrl()) },
         modifier = modifier,
-        onScrollActiveChanged = onScrollActiveChanged,
+        onNavigationBarHiddenChanged = onNavigationBarHiddenChanged,
     )
 }
 
@@ -140,18 +147,32 @@ fun PostListScreen(
     onRecoverInBrowser: () -> Unit,
     modifier: Modifier = Modifier,
     onCreatePost: () -> Unit = {},
-    /** Fires on scroll start/stop, so the host can tuck the navigation bar away mid-scroll (MD3E). */
-    onScrollActiveChanged: (Boolean) -> Unit = {},
+    /** Keeps the host navigation bar hidden until the user deliberately scrolls toward the list start. */
+    onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
+    val directionThresholdPx = with(LocalDensity.current) { NavigationDirectionThreshold.toPx() }
+    val currentOnNavigationBarHiddenChanged by
+        rememberUpdatedState(onNavigationBarHiddenChanged)
+    var navigationBarHidden by remember { mutableStateOf(false) }
+    val navigationBarScrollConnection =
+        remember(directionThresholdPx) {
+            FeedNavigationBarScrollConnection(directionThresholdPx) { hidden ->
+                navigationBarHidden = hidden
+                currentOnNavigationBarHiddenChanged(hidden)
+            }
+        }
 
     // Switching boards is the one case where the previous scroll offset is meaningless.
     LaunchedEffect(state.categorySlug, state.sort) { listState.scrollToItem(0) }
 
     val scrollActive = listState.isScrollInProgress
-    LaunchedEffect(scrollActive) { onScrollActiveChanged(scrollActive) }
-    // The host must not stay stuck bar-less if this screen leaves the composition mid-fling.
-    DisposableEffect(Unit) { onDispose { onScrollActiveChanged(false) } }
+    // Ending a gesture clears only its partial distance. It deliberately does not reveal the bar.
+    LaunchedEffect(scrollActive) {
+        if (!scrollActive) navigationBarScrollConnection.resetGesture()
+    }
+    // The host must not stay stuck bar-less if this screen leaves the composition.
+    DisposableEffect(Unit) { onDispose { currentOnNavigationBarHiddenChanged(false) } }
 
     val refreshState = posts.loadState.refresh
     val appendState = posts.loadState.append
@@ -169,10 +190,11 @@ fun PostListScreen(
             }
         },
         floatingActionButton = {
-            // Collapses to a plain icon while the list moves, matching the bar tucking away.
+            // Follow the same sticky direction state as the navigation bar. Stopping cannot briefly
+            // flip this value, so the built-in extended-FAB animation gets one stable target.
             ExtendedFloatingActionButton(
                 onClick = onCreatePost,
-                expanded = !scrollActive,
+                expanded = !navigationBarHidden,
                 icon = {
                     Icon(Icons.Default.Add, contentDescription = null)
                 },
@@ -219,6 +241,7 @@ fun PostListScreen(
                                 state = listState,
                                 modifier = Modifier
                                     .fillMaxHeight()
+                                    .nestedScroll(navigationBarScrollConnection)
                                     .readableWidth(),
                             ) {
                                 items(
@@ -251,6 +274,51 @@ fun PostListScreen(
                 }
             }
         }
+    }
+}
+
+private val NavigationDirectionThreshold = 16.dp
+
+/**
+ * Turns deliberate user scroll direction into a sticky navigation-bar state.
+ *
+ * A negative Y delta advances the feed and hides the bar. A positive delta moves back toward earlier
+ * rows and reveals it. Fling/programmatic deltas are ignored, so neither momentum nor coming to rest
+ * can reveal the bar on the user's behalf.
+ */
+internal class FeedNavigationBarScrollConnection(
+    private val directionThresholdPx: Float,
+    private val onHiddenChanged: (Boolean) -> Unit,
+) : NestedScrollConnection {
+    private var accumulatedDeltaY = 0f
+    private var isHidden = false
+
+    init {
+        require(directionThresholdPx > 0f)
+    }
+
+    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+        val deltaY = available.y
+        if (source != NestedScrollSource.UserInput || deltaY == 0f) return Offset.Zero
+
+        if (accumulatedDeltaY != 0f && accumulatedDeltaY * deltaY < 0f) {
+            accumulatedDeltaY = 0f
+        }
+        accumulatedDeltaY += deltaY
+
+        if (abs(accumulatedDeltaY) >= directionThresholdPx) {
+            val shouldHide = accumulatedDeltaY < 0f
+            accumulatedDeltaY = 0f
+            if (shouldHide != isHidden) {
+                isHidden = shouldHide
+                onHiddenChanged(shouldHide)
+            }
+        }
+        return Offset.Zero
+    }
+
+    fun resetGesture() {
+        accumulatedDeltaY = 0f
     }
 }
 

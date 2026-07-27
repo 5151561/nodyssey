@@ -10,6 +10,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
+import io.github.nsreader.core.image.ImageNetworkPolicyInterceptor
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.di.DefaultAppContainer
 import io.github.nsreader.notifications.NotificationChannels
@@ -63,6 +64,7 @@ class NodeSeekApp :
         ImageLoader
             .Builder(context)
             .components {
+                add(ImageNetworkPolicyInterceptor(context, container.settingsRepository.settings))
                 add(OkHttpNetworkFetcherFactory(callFactory = { container.okHttpClient }))
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     add(AnimatedImageDecoder.Factory())

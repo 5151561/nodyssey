@@ -6,7 +6,7 @@ This is a single-module Android application. Production Kotlin lives under `app/
 
 ## Build, Test, and Development Commands
 
-The project requires JDK 21 and Android SDK 36. Use the checked-in Gradle wrapper:
+The project requires JDK 21 and Android SDK 37. Use the checked-in Gradle wrapper:
 
 - `./gradlew :app:assembleDebug` builds the debug APK.
 - `./gradlew :app:testDebugUnitTest` runs JVM, Robolectric, Room, Paging, and Compose tests.

@@ -5,8 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nsreader.core.net.NodeSeekClient
-import io.github.nsreader.data.NetworkTermsRepository
 import io.github.nsreader.data.TermsRepository
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.model.TermsDocument
@@ -54,9 +52,7 @@ class PrivacyViewModel(
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                PrivacyViewModel(
-                    NetworkTermsRepository(NodeSeekClient(container.okHttpClient, container.dispatchers)),
-                )
+                PrivacyViewModel(container.termsRepository)
             }
         }
     }

@@ -43,6 +43,8 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.github.nsreader.core.NodeSeekSite
+import io.github.nsreader.core.runCatchingExceptCancellation
+import io.github.nsreader.data.UserSearchResult
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.ui.account.AccountSettingsRoute
 import io.github.nsreader.ui.account.AccountSettingsViewModel
@@ -150,8 +152,8 @@ fun MainNavigation(
 
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
 
-    // Transient by design: a fling should tuck the bar away, not a configuration change keep it away.
-    var feedScrollActive by remember { mutableStateOf(false) }
+    // Transient by design: rotation should not restore a navigation bar hidden by an old gesture.
+    var feedNavigationBarHidden by remember { mutableStateOf(false) }
 
     val backStack: NavBackStack<NavKey> =
         when (currentTab) {
@@ -181,12 +183,12 @@ fun MainNavigation(
                 // A mention carries only the user name; the uid comes from the member-search API.
                 // Any failure (offline, signed out, renamed user) falls back to the site itself.
                 scope.launch {
-                    val uid =
-                        runCatching { container.searchRepository.searchUsers(route.name) }
-                            .getOrNull()
-                            ?.firstOrNull { it.name.equals(route.name, ignoreCase = true) }
-                            ?.uid
-                    if (uid != null) openSpace(uid) else openExternalUrl(url)
+                    resolveMemberLink(
+                        name = route.name,
+                        searchUsers = container.searchRepository::searchUsers,
+                        onResolved = openSpace,
+                        onFailure = { openExternalUrl(url) },
+                    )
                 }
 
             null -> openExternalUrl(NodeSeekSite.unwrapJumpUrl(url))
@@ -220,7 +222,7 @@ fun MainNavigation(
          * phone-shaped.
          */
         navigationSuiteType =
-        if (atTabRoot && !feedScrollActive) {
+        if (atTabRoot && !feedNavigationBarHidden) {
             NavigationSuiteScaffoldDefaults.navigationSuiteType(currentWindowAdaptiveInfo())
         } else {
             NavigationSuiteType.None
@@ -258,7 +260,7 @@ fun MainNavigation(
                         onLinkClick = openContentUrl,
                         onAuthorClick = openSpace,
                         onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
-                        onFeedScrollActiveChanged = { feedScrollActive = it },
+                        onFeedNavigationBarHiddenChanged = { feedNavigationBarHidden = it },
                     )
                 }
 
@@ -770,6 +772,21 @@ fun MainNavigation(
     }
 }
 
+/** Resolves a member-name link without turning coroutine cancellation into browser navigation. */
+internal suspend fun resolveMemberLink(
+    name: String,
+    searchUsers: suspend (String) -> List<UserSearchResult>,
+    onResolved: (Long) -> Unit,
+    onFailure: () -> Unit,
+) {
+    val uid =
+        runCatchingExceptCancellation { searchUsers(name) }
+            .getOrNull()
+            ?.firstOrNull { it.name.equals(name, ignoreCase = true) }
+            ?.uid
+    if (uid != null) onResolved(uid) else onFailure()
+}
+
 /**
  * The home tab: one column on a phone, list and thread side by side once the window can hold both.
  *
@@ -794,7 +811,7 @@ private fun HomePane(
     onLinkClick: (String) -> Unit = onOpenBrowser,
     onAuthorClick: (Long) -> Unit = {},
     /** Phone layout only: the tablet's rail sits beside the list, not under the thumb. */
-    onFeedScrollActiveChanged: (Boolean) -> Unit = {},
+    onFeedNavigationBarHiddenChanged: (Boolean) -> Unit = {},
 ) {
     BoxWithConstraints {
         val twoPane = maxWidth >= TWO_PANE_MIN_WIDTH
@@ -823,7 +840,7 @@ private fun HomePane(
                 onCreatePost = onCreatePost,
                 onSignIn = onSignIn,
                 onVerify = onVerify,
-                onScrollActiveChanged = onFeedScrollActiveChanged,
+                onNavigationBarHiddenChanged = onFeedNavigationBarHiddenChanged,
             )
             return@BoxWithConstraints
         }

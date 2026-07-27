@@ -58,8 +58,8 @@ jobs:
       - name: Android lint
         run: ./gradlew :app:lintDebug
 
-      - name: Assemble
-        run: ./gradlew :app:assembleDebug
+      - name: Assemble debug APK and optimized release bundle
+        run: ./gradlew :app:assembleDebug :app:bundleRelease
 
       # A Room schema is checked in per version. If codegen produced a different one, the entity change
       # needs either a version bump and a migration, or a deliberate re-export — not a silent diff.
@@ -80,5 +80,53 @@ jobs:
           path: |
             app/build/reports/
             app/build/test-results/
+            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/mapping/release/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  device-test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run device journeys
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: 36
+          arch: x86_64
+          profile: pixel_7
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: ./gradlew :app:connectedDebugAndroidTest
+
+      - name: Upload device test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-test-reports
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
           retention-days: 14
           if-no-files-found: ignore
