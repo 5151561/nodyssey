@@ -32,7 +32,7 @@ class NotificationSettingsScreenTest {
     val composeRule = createComposeRule()
 
     @Composable
-    private fun screen(
+    private fun Screen(
         settings: UserSettings,
         onEnabledChange: (Boolean) -> Unit = {},
         onPollMinutesChange: (Int) -> Unit = {},
@@ -57,7 +57,7 @@ class NotificationSettingsScreenTest {
     fun `master switch toggles and reflects the store`() {
         composeRule.setContent {
             var enabled by remember { mutableStateOf(false) }
-            screen(
+            Screen(
                 settings = UserSettings(notificationsEnabled = enabled),
                 onEnabledChange = { enabled = it },
             )
@@ -72,7 +72,7 @@ class NotificationSettingsScreenTest {
     @Test
     fun `channel switches are inert while the master switch is off`() {
         composeRule.setContent {
-            screen(settings = UserSettings(notificationsEnabled = false))
+            Screen(settings = UserSettings(notificationsEnabled = false))
         }
 
         composeRule
@@ -84,7 +84,7 @@ class NotificationSettingsScreenTest {
     fun `frequency choice reports the chosen minutes`() {
         var chosen: Int? = null
         composeRule.setContent {
-            screen(
+            Screen(
                 settings = UserSettings(notificationsEnabled = true),
                 onPollMinutesChange = { chosen = it },
             )

@@ -238,8 +238,39 @@
     <string name="settings_clear_cache">清除缓存</string>
     <string name="settings_about">关于</string>
     <string name="settings_about_app">关于 NSReader</string>
-    <string name="settings_version">v1.0.0</string>
+    <string name="settings_version">v1.0</string>
     <string name="settings_licenses">开源许可</string>
+
+    <!-- About & community (board f1); privacy itself uses the restricted in-app WebView fallback. -->
+    <string name="about_title">关于与社区</string>
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_app_summary">为 NodeSeek 阅读体验设计的非官方 Android 客户端</string>
+    <string name="about_check_updates">检查更新</string>
+    <string name="about_community">社区信息</string>
+    <string name="about_forum_stats">论坛统计</string>
+    <string name="about_forum_stats_value">64,902 位 seeker</string>
+    <string name="about_forum_stats_snapshot">2026 年 7 月 27 日站点侧栏快照，并非实时数据</string>
+    <string name="about_site">关于本站</string>
+    <string name="about_site_hint">NodeSeek 置顶介绍帖</string>
+    <string name="about_privacy">隐私协议和服务条款</string>
+    <string name="about_privacy_hint">在受限站内浏览器中阅读当前版本</string>
+    <string name="about_rss">RSS 全站订阅</string>
+    <string name="about_copy_rss">复制 RSS 地址</string>
+    <string name="about_rss_copied">RSS 地址已复制</string>
+    <string name="about_contact">联系 NodeSeek</string>
+    <string name="about_telegram_channel">Telegram 频道</string>
+    <string name="about_telegram_group">Telegram 群组</string>
+    <string name="about_telegram_support">Telegram 客服</string>
+    <string name="about_email">联系邮箱</string>
+    <string name="about_friends">姊妹站与相关网站</string>
+    <string name="about_deepflood">DeepFlood</string>
+    <string name="about_licenses_hint">查看本应用及主要依赖采用的许可证</string>
+    <string name="about_unofficial_notice">NSReader 与 NodeSeek 官方无关。站点名称、内容与社区服务归其各自权利人所有。</string>
+
+    <string name="licenses_summary">NSReader 是 GPL-3.0 开源软件，并使用下列主要开源组件。点击条目可查看对应源码与许可信息。</string>
+    <string name="licenses_app_section">本应用</string>
+    <string name="licenses_dependencies_section">主要运行时依赖</string>
+    <string name="licenses_lockfile_note">完整且精确的传递依赖版本以源码仓库中的 app/gradle.lockfile 为准。</string>
 
     <!-- App notification polling (board f4): the site has no push, a periodic worker checks unread -->
     <string name="notify_settings_title">通知</string>

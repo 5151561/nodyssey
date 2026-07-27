@@ -29,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -52,7 +54,7 @@ internal fun SettingsSectionTitle(
         text = text,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = Spacing.xs, top = Spacing.xs),
+        modifier = modifier.padding(start = Spacing.xs, top = Spacing.xs).semantics { heading() },
     )
 }
 
@@ -121,7 +123,12 @@ internal fun SettingsRow(
         color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = contentColor,
         shape = expressiveGroupShape(top, bottom),
-        modifier = if (onClick == null) Modifier else Modifier.clickable(onClick = onClick),
+        modifier =
+        if (onClick == null) {
+            Modifier
+        } else {
+            Modifier.clickable(role = Role.Button, onClick = onClick)
+        },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),

@@ -49,6 +49,8 @@ fun SettingsRoute(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -60,6 +62,8 @@ fun SettingsRoute(
         onImagesOnWifiOnlyChange = viewModel::setImagesOnWifiOnly,
         onClearCache = viewModel::clearCache,
         onOpenNotifications = onOpenNotifications,
+        onOpenAbout = onOpenAbout,
+        onOpenLicenses = onOpenLicenses,
         modifier = modifier,
     )
 }
@@ -73,8 +77,10 @@ fun SettingsScreen(
     onFontScaleChange: (Float) -> Unit,
     onImagesOnWifiOnlyChange: (Boolean) -> Unit,
     onClearCache: () -> Unit,
-    onOpenNotifications: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onOpenNotifications: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+    onOpenLicenses: () -> Unit = {},
 ) {
     var bodyFontSize by remember(state.settings.fontScale) {
         mutableFloatStateOf(fontScaleToBodySize(state.settings.fontScale))
@@ -194,11 +200,13 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_about_app),
                     subtitle = stringResource(R.string.settings_version),
                     top = true,
+                    onClick = onOpenAbout,
                     leading = { Icon(Icons.Default.Info, contentDescription = null) },
                 )
                 SettingsRow(
                     title = stringResource(R.string.settings_licenses),
                     bottom = true,
+                    onClick = onOpenLicenses,
                 )
             }
         }

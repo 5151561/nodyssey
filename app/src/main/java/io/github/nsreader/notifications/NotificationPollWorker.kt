@@ -1,6 +1,7 @@
 package io.github.nsreader.notifications
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -68,6 +69,7 @@ class NotificationPollWorker(
         return Result.success()
     }
 
+    @SuppressLint("MissingPermission")
     private fun notify(
         category: NotificationCategory,
         fresh: NotificationCounts,
@@ -96,7 +98,11 @@ class NotificationPollWorker(
                 .setAutoCancel(true)
                 .build()
         // One notification per group, updated in place — three site groups, at most three entries.
-        NotificationManagerCompat.from(context).notify(category.ordinal, notification)
+        try {
+            NotificationManagerCompat.from(context).notify(category.ordinal, notification)
+        } catch (_: SecurityException) {
+            // Permission can be revoked between the explicit check above and this call.
+        }
     }
 
     private fun canPostNotifications(): Boolean {

@@ -24,6 +24,15 @@ data object SettingsKey : NavKey
 @Serializable
 data object NotificationSettingsKey : NavKey
 
+@Serializable
+data object AboutCommunityKey : NavKey
+
+@Serializable
+data object PrivacyKey : NavKey
+
+@Serializable
+data object OpenSourceLicensesKey : NavKey
+
 /**
  * 账号设置 (8g) and its five sub-pages (d6 1–5/5).
  *

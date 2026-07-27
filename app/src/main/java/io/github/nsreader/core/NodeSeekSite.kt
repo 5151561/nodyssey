@@ -103,6 +103,8 @@ object NodeSeekSite {
     const val LUCKY_PATH = "/lucky"
     const val PROVIDERS_PATH = "/providers"
     const val FRIENDS_PATH = "/friends"
+    const val ABOUT_PATH = "/about"
+    const val TERMS_OF_SERVICE_PATH = "/termsofservice"
 
     /**
      * Curated ("加精") threads. Server-rendered like the feed, so [listPath]'s parser applies.

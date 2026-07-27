@@ -1,5 +1,7 @@
 package io.github.nsreader
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -76,8 +78,11 @@ import io.github.nsreader.ui.profile.ProfileRoute
 import io.github.nsreader.ui.profile.ProfileViewModel
 import io.github.nsreader.ui.search.SearchRoute
 import io.github.nsreader.ui.search.SearchViewModel
+import io.github.nsreader.ui.settings.AboutCommunityScreen
+import io.github.nsreader.ui.settings.CommunityLinks
 import io.github.nsreader.ui.settings.NotificationSettingsRoute
 import io.github.nsreader.ui.settings.NotificationSettingsViewModel
+import io.github.nsreader.ui.settings.OpenSourceLicensesScreen
 import io.github.nsreader.ui.settings.SettingsRoute
 import io.github.nsreader.ui.settings.SettingsViewModel
 import io.github.nsreader.ui.space.FollowRoute
@@ -106,6 +111,9 @@ fun MainNavigation(
 
     // Hoisted out of the navigation lambdas below, which are not composable.
     val siteTitle = stringResource(R.string.app_name)
+    val aboutSiteTitle = stringResource(R.string.about_site)
+    val privacyTitle = stringResource(R.string.about_privacy)
+    val rssLabel = stringResource(R.string.about_rss)
     val uriHandler = LocalUriHandler.current
     val openExternalUrl: (String) -> Unit = remember(uriHandler) {
         { url ->
@@ -335,6 +343,8 @@ fun MainNavigation(
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
                         onOpenNotifications = { backStack.add(NotificationSettingsKey) },
+                        onOpenAbout = { backStack.add(AboutCommunityKey) },
+                        onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
                     )
                 }
 
@@ -346,6 +356,69 @@ fun MainNavigation(
                         onBack = { backStack.removeLastOrNull() },
                         // 绑定 Telegram lives on 联系方式 (d6 3/4), the site's own binding entry.
                         onOpenTelegram = { backStack.add(AccountContactKey) },
+                    )
+                }
+
+                entry<AboutCommunityKey> {
+                    val context = LocalContext.current
+                    val versionName =
+                        remember(context) {
+                            context.packageManager
+                                .getPackageInfo(context.packageName, 0)
+                                .versionName
+                                .orEmpty()
+                                .ifBlank { "—" }
+                        }
+                    AboutCommunityScreen(
+                        versionName = versionName,
+                        onBack = { backStack.removeLastOrNull() },
+                        onOpenAboutSite = {
+                            backStack.add(
+                                WebKey(
+                                    NodeSeekSite.BASE_URL + NodeSeekSite.ABOUT_PATH,
+                                    aboutSiteTitle,
+                                    WebViewGoal.MANAGE,
+                                ),
+                            )
+                        },
+                        onOpenPrivacy = { backStack.add(PrivacyKey) },
+                        onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
+                        onOpenUri = { uri ->
+                            if (NodeSeekSite.isExternalWebUrl(uri)) {
+                                openExternalUrl(uri)
+                            } else if (uri == CommunityLinks.EMAIL) {
+                                runCatching { uriHandler.openUri(uri) }
+                            }
+                        },
+                        onCopyRss = {
+                            context
+                                .getSystemService(ClipboardManager::class.java)
+                                ?.setPrimaryClip(
+                                    ClipData.newPlainText(
+                                        rssLabel,
+                                        CommunityLinks.RSS,
+                                    ),
+                                )
+                        },
+                    )
+                }
+
+                entry<PrivacyKey> {
+                    WebViewRoute(
+                        url = NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH,
+                        title = privacyTitle,
+                        goal = WebViewGoal.MANAGE,
+                        session = container.sessionRepository,
+                        userAgent = container.userAgent,
+                        onOpenExternal = openExternalUrl,
+                        onClose = { backStack.removeLastOrNull() },
+                    )
+                }
+
+                entry<OpenSourceLicensesKey> {
+                    OpenSourceLicensesScreen(
+                        onBack = { backStack.removeLastOrNull() },
+                        onOpenUri = openExternalUrl,
                     )
                 }
 
@@ -534,6 +607,7 @@ fun MainNavigation(
                         onLucky = { backStack.add(LuckyKey) },
                         onInvite = { backStack.add(InviteKey) },
                         onRuling = { backStack.add(RulingKey) },
+                        onAbout = { backStack.add(AboutCommunityKey) },
                     )
                 }
 

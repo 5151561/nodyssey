@@ -2,9 +2,7 @@ package io.github.nsreader.notifications
 
 import io.github.nsreader.data.NotificationCounts
 
-/**
- * The decisions the poll worker makes, kept free of Android types so they run as plain JVM tests.
- */
+// The decisions the poll worker makes stay free of Android types so they run as plain JVM tests.
 
 /** Fixed 23:00–07:00 window — board f4 shows the range as copy, not as an editable control. */
 const val QUIET_START_MINUTE = 23 * 60
