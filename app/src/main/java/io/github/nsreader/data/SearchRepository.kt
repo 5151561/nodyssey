@@ -99,7 +99,6 @@ class NetworkSearchRepository(
             response.memberList.map(UserSearchDto::toResult)
         }
     }
-
 }
 
 @Serializable

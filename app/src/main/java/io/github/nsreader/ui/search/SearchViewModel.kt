@@ -14,6 +14,7 @@ import io.github.nsreader.data.SearchRepository
 import io.github.nsreader.data.UserSearchResult
 import io.github.nsreader.data.settings.SettingsRepository
 import io.github.nsreader.di.AppContainer
+import io.github.nsreader.model.PostSummary
 import io.github.nsreader.model.SearchHistoryEntry
 import io.github.nsreader.model.SearchSort
 import io.github.nsreader.model.SearchTarget
@@ -164,42 +165,98 @@ class SearchViewModel(
         )
     }
 
-    /** Appends the next server page of post results; a no-op while one is already on its way. */
+    /** Appends the next batch of post results; a no-op while one is already on its way. */
     fun loadMorePosts() {
         val state = _uiState.value
         val submitted = state.submittedQuery ?: return
         if (!state.postHasNext || state.isAppendingPosts) return
         if (state.postLoadState != SearchLoadState.Success) return
-        _uiState.update { it.copy(isAppendingPosts = true) }
+        _uiState.update { it.copy(isAppendingPosts = true, postAppendFailed = false) }
         postJob =
             viewModelScope.launch {
                 try {
-                    val next =
-                        searchRepository.searchPosts(
+                    val batch =
+                        fetchPostBatch(
                             query = submitted,
-                            page = state.postPage + 1,
-                            categorySlugs = state.selectedBoards,
+                            startPage = state.postPage + 1,
+                            existingIds = state.postResults.map { it.summary.postId }.toSet(),
+                            boards = state.selectedBoards,
                             sort = state.sort,
                         )
                     _uiState.update { current ->
-                        val merged =
-                            (current.postResults.map(FeedPost::summary) + next.posts)
-                                .distinctBy { it.postId }
                         current.copy(
-                            postResults = merged.map { FeedPost(it, isRead = false, newCommentCount = 0) },
-                            postPage = next.page,
-                            postTotalPages = next.totalPages,
-                            postHasNext = next.hasNextPage,
+                            postResults =
+                            current.postResults +
+                                batch.added.map { FeedPost(it, isRead = false, newCommentCount = 0) },
+                            postPage = batch.page,
+                            postTotalPages = batch.totalPages,
+                            postHasNext = batch.hasNext,
                             isAppendingPosts = false,
+                            postAppendFailed = false,
                         )
                     }
                 } catch (exception: CancellationException) {
                     throw exception
                 } catch (throwable: Throwable) {
-                    // The loaded prefix stays useful; the next scroll to the end simply tries again.
-                    _uiState.update { it.copy(isAppendingPosts = false) }
+                    _uiState.update {
+                        if (it.postResults.isEmpty()) {
+                            // Nothing on screen worth keeping — fail loudly on the standard error
+                            // surface, whose retry restarts the search.
+                            it.copy(
+                                isAppendingPosts = false,
+                                postLoadState = SearchLoadState.Error(throwable.toNodeSeekError()),
+                            )
+                        } else {
+                            // The loaded prefix stays useful; the list's tail row offers a retry.
+                            it.copy(isAppendingPosts = false, postAppendFailed = true)
+                        }
+                    }
                 }
             }
+    }
+
+    private class PostBatch(
+        val added: List<PostSummary>,
+        val page: Int,
+        val totalPages: Int,
+        val hasNext: Boolean,
+    )
+
+    /*
+     * Fetches server pages one at a time until at least one new row turns up, the results run out,
+     * or MAX_PAGES_PER_BATCH is reached. The cap matters for a multi-board range, which searches
+     * globally and filters each page locally: a long empty stretch must not turn one tap into an
+     * unbounded page-by-page crawl of the whole result set — past the cap, continuing is an
+     * explicit user action.
+     */
+    private suspend fun fetchPostBatch(
+        query: String,
+        startPage: Int,
+        existingIds: Set<Long>,
+        boards: Set<String>,
+        sort: SearchSort,
+    ): PostBatch {
+        val added = mutableListOf<PostSummary>()
+        var nextPage = startPage
+        var lastPage = startPage - 1
+        var totalPages = lastPage
+        var hasNext = true
+        var fetched = 0
+        do {
+            val result = searchRepository.searchPosts(query, nextPage, boards, sort)
+            added += result.posts.filter { post -> post.postId !in existingIds }
+            lastPage = result.page
+            totalPages = result.totalPages
+            hasNext = result.hasNextPage
+            nextPage = result.page + 1
+            fetched++
+        } while (added.isEmpty() && hasNext && fetched < MAX_PAGES_PER_BATCH)
+        return PostBatch(
+            added = added.distinctBy { it.postId },
+            page = lastPage,
+            totalPages = totalPages,
+            hasNext = hasNext,
+        )
     }
 
     private fun executeSearch(
@@ -220,6 +277,7 @@ class SearchViewModel(
                 postTotalPages = 1,
                 postHasNext = false,
                 isAppendingPosts = false,
+                postAppendFailed = false,
                 postLoadState = SearchLoadState.Idle,
                 userLoadState = SearchLoadState.Idle,
             )
@@ -289,6 +347,8 @@ class SearchViewModel(
     }
 
     companion object {
+        internal const val MAX_PAGES_PER_BATCH = 3
+
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -327,6 +387,7 @@ data class SearchUiState(
     val postTotalPages: Int = 1,
     val postHasNext: Boolean = false,
     val isAppendingPosts: Boolean = false,
+    val postAppendFailed: Boolean = false,
     val postLoadState: SearchLoadState = SearchLoadState.Idle,
     val userLoadState: SearchLoadState = SearchLoadState.Idle,
 ) {

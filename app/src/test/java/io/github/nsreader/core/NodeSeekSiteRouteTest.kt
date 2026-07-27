@@ -8,12 +8,14 @@ class NodeSeekSiteRouteTest {
             NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/space/23042#/general"),
         )
     }
+
     @Test fun post() {
         assertEquals(
             NodeSeekSite.InternalRoute.Post(832584L, 2),
             NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/post-832584-2"),
         )
     }
+
     @Test fun external() {
         assertEquals(null, NodeSeekSite.parseInternalRoute("https://ilatency.com/"))
     }

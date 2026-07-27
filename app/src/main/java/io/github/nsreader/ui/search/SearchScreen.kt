@@ -14,10 +14,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -327,6 +327,7 @@ private fun SearchContent(
                 PostResults(
                     posts = state.postResults,
                     appending = state.isAppendingPosts,
+                    appendFailed = state.postAppendFailed,
                     onPostClick = onPostClick,
                     onLoadMore = onLoadMorePosts,
                 )
@@ -339,6 +340,7 @@ private fun SearchContent(
 private fun PostResults(
     posts: List<FeedPost>,
     appending: Boolean,
+    appendFailed: Boolean,
     onPostClick: (Long) -> Unit,
     onLoadMore: () -> Unit,
 ) {
@@ -358,6 +360,20 @@ private fun PostResults(
             item("appending") {
                 Box(Modifier.fillMaxWidth().padding(Spacing.lg), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(Modifier.size(24.dp))
+                }
+            }
+        } else if (appendFailed) {
+            item("append-failed") {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.search_load_more_failed),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = onLoadMore) { Text(stringResource(R.string.action_retry)) }
                 }
             }
         }

@@ -5,6 +5,7 @@
     <string name="action_back">返回</string>
     <string name="action_close">关闭</string>
     <string name="action_retry">重试</string>
+    <string name="search_load_more_failed">加载更多失败</string>
     <string name="action_sign_in">登录</string>
     <string name="action_sign_out">退出登录</string>
     <string name="action_verify">去验证</string>

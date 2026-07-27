@@ -39,7 +39,6 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import kotlinx.coroutines.launch
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.ui.account.AccountSettingsRoute
@@ -92,6 +91,7 @@ import io.github.nsreader.ui.tools.RulingRoute
 import io.github.nsreader.ui.tools.RulingViewModel
 import io.github.nsreader.ui.viewer.ImageViewerScreen
 import io.github.nsreader.ui.viewer.ImageViewerViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun MainNavigation(container: AppContainer) {
@@ -154,7 +154,9 @@ fun MainNavigation(container: AppContainer) {
     val openContentUrl: (String) -> Unit = { url ->
         when (val route = NodeSeekSite.parseInternalRoute(url)) {
             is NodeSeekSite.InternalRoute.Post -> backStack.add(PostDetailKey(route.postId))
+
             is NodeSeekSite.InternalRoute.Space -> openSpace(route.uid)
+
             is NodeSeekSite.InternalRoute.Member ->
                 // A mention carries only the user name; the uid comes from the member-search API.
                 // Any failure (offline, signed out, renamed user) falls back to the site itself.
@@ -166,6 +168,7 @@ fun MainNavigation(container: AppContainer) {
                             ?.uid
                     if (uid != null) openSpace(uid) else openExternalUrl(url)
                 }
+
             null -> openExternalUrl(NodeSeekSite.unwrapJumpUrl(url))
         }
     }
