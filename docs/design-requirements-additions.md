@@ -7,8 +7,13 @@
 >
 > ✅ **2026-07-27 已完成**:§2 全部返工/增补(d6 五卡重做、5a/6a/7g/9a 备注、b1 新增 §8
 > 徽章家族分节)与 §3 批次 F 四张(f1–f4)均已出稿入库;v2 批次 A 的 9 块旧板也已完成
-> token 清理并生成暗色。`design/boards.json` 现共 76 块、`design/dist` 130 个文件。
+> token 清理并生成暗色。`design/boards.json` 现共 76 块；`design/dist` 当前有 132 个构建产物
+> （含明暗稿与索引）。
 > 8h/8i 按"待确认豁免"保持 light-only。
+>
+> **📱 App 对照（2026-07-28）**：f1–f4 已进入代码；f1/f2 已按画板重做，f3/f4 已接账号与通知流程。
+> 逐项代码入口和仍存在的边界见 [`design-implementation.md`](design-implementation.md)，
+> 全局功能状态见 [`implementation-status.md`](implementation-status.md)。
 
 ## 0. 结论摘要
 
@@ -69,10 +74,10 @@ inside 内版 / sandbox 沙盒 / meaningless 无意义;**内版仅登录可见**
 | 入口 | 真实形态 | App 处理 |
 |---|---|---|
 | 关于本站 `/about` | 置顶帖(Dev 版,带 8 页评论) | 帖子深链,不做独立页 |
-| 隐私协议 `/termsofservice` | 独立长文页「隐私协议和服务条款」 | App 内长文阅读页(1l 排版)或 WebView |
+| 隐私协议 `/termsofservice` | 独立长文页「隐私协议和服务条款」 | App 内按 1l 原生排版；加载/解析失败才提供 WebView |
 | RSS 订阅 | `rss.nodeseek.com` → 全站 `rss.xml`(RSS 2.0,ttl 60) | 外链 + 复制地址,不做阅读器 |
 | sitemap `/sitemap.xml` | XML | 不做 |
-| 电报 | 频道 t.me/nodeseekc、群组 t.me/nodeseekg、客服 t.me/nodeseek | 外链行 |
+| 电报 | 频道 t.me/nodeseekc、群组 t.me/nodeseekg、客服 t.me/nodeseek | f1 只保留设计稿中的频道/群组；不额外增加客服行 |
 | 联系我们 | mailto:Lloyd@nodeseek.com | 外链行 |
 | DeepFlood | https://www.deepflood.com 姊妹站(顶栏一级) | 外链行,不做原生化 |
 | 论坛统计 | "目前论坛共有64902位seeker" | 数据卡(来源待定,标注) |
