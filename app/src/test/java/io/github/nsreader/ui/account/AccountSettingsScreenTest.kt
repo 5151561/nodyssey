@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import io.github.nsreader.data.account.AccountProfileFields
+import io.github.nsreader.data.account.TelegramBinding
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -33,19 +34,18 @@ class AccountSettingsScreenTest {
             ),
             twoFactorEnabled = false,
             email = "hikari.zhg@gmail.com",
+            telegram = TelegramBinding(bound = false),
             blockedCount = 3,
-            homeBoardCount = 6,
-            totalBoardCount = 13,
-            homeBoardsRestricted = true,
+            hiddenBoardCount = 2,
         )
 
     private fun setContent(
         state: AccountSettingsUiState = populated,
         onOpenProfileFields: () -> Unit = {},
         onOpenSecurity: () -> Unit = {},
-        onOpenContactAndBlock: () -> Unit = {},
-        onOpenDisplayPreferences: () -> Unit = {},
-        onOpenHomeBoards: () -> Unit = {},
+        onOpenContact: () -> Unit = {},
+        onOpenBlockList: () -> Unit = {},
+        onOpenPreferences: () -> Unit = {},
         onSignOut: () -> Unit = {},
     ) {
         composeRule.setContent {
@@ -55,9 +55,9 @@ class AccountSettingsScreenTest {
                     onBack = {},
                     onOpenProfileFields = onOpenProfileFields,
                     onOpenSecurity = onOpenSecurity,
-                    onOpenContactAndBlock = onOpenContactAndBlock,
-                    onOpenDisplayPreferences = onOpenDisplayPreferences,
-                    onOpenHomeBoards = onOpenHomeBoards,
+                    onOpenContact = onOpenContact,
+                    onOpenBlockList = onOpenBlockList,
+                    onOpenPreferences = onOpenPreferences,
                     onSignOut = onSignOut,
                 )
             }
@@ -82,8 +82,9 @@ class AccountSettingsScreenTest {
         composeRule.onNodeWithText("2 行 · Markdown").assertExists()
         composeRule.onNodeWithText("10 字").assertExists()
         composeRule.onNodeWithText("未开启").assertExists()
+        composeRule.onNodeWithText("暂未绑定 telegram").performScrollTo().assertExists()
         composeRule.onNodeWithText("3 人").performScrollTo().assertExists()
-        composeRule.onNodeWithText("已选 6 个").performScrollTo().assertExists()
+        composeRule.onNodeWithText("已隐藏 2 个").performScrollTo().assertExists()
     }
 
     /** An address on a screen that gets screenshotted; the sub-page shows it in full. */
@@ -96,19 +97,28 @@ class AccountSettingsScreenTest {
     }
 
     @Test
-    fun `an unrestricted home-board preference reads as all boards rather than a count`() {
-        setContent(populated.copy(homeBoardsRestricted = false))
+    fun `a bound telegram row shows the username`() {
+        setContent(
+            populated.copy(telegram = TelegramBinding(bound = true, username = "@hikari_zhg")),
+        )
 
-        composeRule.onNodeWithText("全部 13 个版块").performScrollTo().assertExists()
+        composeRule.onNodeWithText("@hikari_zhg").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun `an untouched home-board preference reads as everything shown`() {
+        setContent(populated.copy(hiddenBoardCount = 0))
+
+        composeRule.onNodeWithText("全部显示").performScrollTo().assertExists()
     }
 
     /** Values the site has not answered for yet are left blank, never guessed at. */
     @Test
     fun `rows carry no subtitle before the account has loaded`() {
-        setContent(AccountSettingsUiState(totalBoardCount = 13))
+        setContent(AccountSettingsUiState())
 
         composeRule.onNodeWithText("未开启").assertDoesNotExist()
-        composeRule.onNodeWithText("已选 0 个").assertDoesNotExist()
+        composeRule.onNodeWithText("暂未绑定 telegram").assertDoesNotExist()
     }
 
     @Test
@@ -117,20 +127,21 @@ class AccountSettingsScreenTest {
         setContent(
             onOpenProfileFields = { opened += "profile" },
             onOpenSecurity = { opened += "security" },
-            onOpenContactAndBlock = { opened += "contact" },
-            onOpenDisplayPreferences = { opened += "preferences" },
-            onOpenHomeBoards = { opened += "boards" },
+            onOpenContact = { opened += "contact" },
+            onOpenBlockList = { opened += "block" },
+            onOpenPreferences = { opened += "preferences" },
         )
 
         composeRule.onNodeWithText("Bio").performScrollTo().performClick()
         composeRule.onNodeWithText("修改密码").performScrollTo().performClick()
         composeRule.onNodeWithText("两步验证（2FA）").performScrollTo().performClick()
+        composeRule.onNodeWithText("Telegram 提醒").performScrollTo().performClick()
         composeRule.onNodeWithText("已屏蔽列表").performScrollTo().performClick()
-        composeRule.onNodeWithText("浏览与显示偏好").performScrollTo().performClick()
+        composeRule.onNodeWithText("偏好与首页版块").performScrollTo().performClick()
         composeRule.onNodeWithText("首页显示的版块").performScrollTo().performClick()
 
         assertEquals(
-            listOf("profile", "security", "security", "contact", "preferences", "boards"),
+            listOf("profile", "security", "security", "contact", "block", "preferences", "preferences"),
             opened,
         )
     }

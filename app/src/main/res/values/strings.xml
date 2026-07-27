@@ -15,6 +15,7 @@
     <string name="action_share">分享</string>
     <string name="action_more">更多</string>
     <string name="action_cancel">取消</string>
+    <string name="action_confirm">确定</string>
     <string name="action_done">确定</string>
     <string name="action_sort">排序方式</string>
     <string name="action_show_all_boards">全部版块</string>
@@ -257,10 +258,10 @@
     <string name="account_email">邮箱</string>
     <string name="account_blocked_list">已屏蔽列表</string>
     <string name="account_blocked_count">%1$d 人</string>
-    <string name="account_display_preferences">浏览与显示偏好</string>
+    <string name="account_display_preferences">偏好与首页版块</string>
     <string name="account_home_boards">首页显示的版块</string>
-    <string name="account_home_boards_all">全部 %1$d 个版块</string>
-    <string name="account_home_boards_selected">已选 %1$d 个</string>
+    <string name="account_home_boards_hidden">已隐藏 %1$d 个</string>
+    <string name="account_home_boards_all_shown">全部显示</string>
 
     <!-- Current-value subtitles. App additions: the site's own page is a plain list of group links. -->
     <string name="account_value_unknown">—</string>
@@ -335,29 +336,80 @@
     <string name="account_confirm_unblock_body">解除后你会重新看到 TA 的帖子与评论。</string>
     <string name="account_confirm_unblock_action">解除屏蔽</string>
 
-    <!-- 联系方式 · 屏蔽 (d6 3/4) -->
-    <string name="account_contact_title">联系方式与屏蔽</string>
+    <!-- 联系方式 (d6 3/5)，站点文案照抄 -->
+    <string name="account_contact_title">联系方式</string>
     <string name="account_contact_section">联系方式</string>
-    <string name="account_email_backup">备用邮箱 · 选填</string>
+    <string name="account_email_section">邮箱</string>
+    <string name="account_email_current">当前邮箱</string>
+    <string name="account_email_change">修改</string>
     <string name="account_email_verified">已验证</string>
-    <string name="account_email_unverified">未验证</string>
-    <string name="account_email_helper">用于登录与找回密码 · 更换后需重新验证</string>
     <string name="account_email_invalid">邮箱格式不正确</string>
-    <string name="account_email_verification_sent">验证邮件已发送，10 分钟内有效</string>
-    <string name="account_email_resend">重新发送</string>
-    <string name="account_contact_save">保存修改</string>
+    <string name="account_email_step_password">① 为确保是用户本人，请输入密码</string>
+    <string name="account_email_step_verify">② 邮箱验证</string>
+    <string name="account_email_new">新邮箱</string>
+    <string name="account_email_code">验证码</string>
+    <string name="account_email_code_hint">6 位数字</string>
+    <string name="account_email_send_code">发送验证码</string>
+    <string name="account_email_code_sent">验证码已发送至新邮箱 · 10 分钟内有效</string>
+    <string name="account_email_changed">邮箱已更新</string>
+    <string name="account_email_change_confirm">修改邮箱</string>
+    <string name="account_phone_section">手机</string>
+    <string name="account_phone_add">添加手机</string>
+    <string name="account_phone_disabled_reason">手机短信验证API暂不可用</string>
+    <string name="account_phone_unavailable">暂不可用</string>
+
+    <!-- Telegram 绑定 (f3)。未绑定文案为站点原文；已绑定态是设计假设，待真机校准 -->
+    <string name="account_telegram_section">Telegram</string>
+    <string name="account_telegram_title">Telegram 提醒</string>
+    <string name="account_telegram_unbound">暂未绑定 telegram</string>
+    <string name="account_telegram_bound">已绑定</string>
+    <string name="account_telegram_bound_at">%1$s 绑定</string>
+    <string name="account_telegram_bind">立即绑定</string>
+    <string name="account_telegram_bind_hint">绑定 telegram 后可以及时提醒未读消息，@我、回复与私信都会转发到你的 Telegram。</string>
+    <string name="account_telegram_bound_hint">未读的 @我、回复与私信会转发到你的 Telegram；已读消息不重复提醒。</string>
+    <string name="account_telegram_unbind">解绑</string>
+    <string name="account_telegram_open_bot">打开 Bot 会话</string>
+    <string name="account_telegram_dialog_title">在 Telegram 中完成绑定</string>
+    <string name="account_telegram_dialog_body">即将打开 Telegram 的 NodeSeek 绑定会话。在 Bot 中确认后，@我、回复与私信的未读提醒将转发到你的 Telegram。</string>
+    <string name="account_telegram_dialog_note">未安装 Telegram 时将打开网页版；绑定不会向对方暴露你的手机号。</string>
+    <string name="account_telegram_open">打开 Telegram</string>
+    <string name="account_telegram_done_question">已在 Telegram 完成绑定？</string>
+    <string name="account_telegram_refresh">刷新绑定状态</string>
+    <string name="account_telegram_still_unbound">还未检测到绑定，在 Bot 中完成后再刷新试试</string>
+    <string name="account_telegram_bound_toast">已绑定 Telegram，未读提醒将同步过去</string>
+    <string name="account_telegram_unbound_toast">已解除 Telegram 绑定</string>
+    <string name="account_telegram_unbind_title">解除 Telegram 绑定？</string>
+    <string name="account_telegram_unbind_body">解绑后将立即停止向 %1$s 转发未读提醒；可随时重新绑定。</string>
+    <string name="account_telegram_unbind_confirm">确认解绑</string>
+
+    <!-- 屏蔽用户 (d6 4/5) -->
+    <string name="account_block_title">屏蔽用户</string>
     <string name="account_block_section">屏蔽用户</string>
+    <string name="account_block_show_temporarily">临时显示被屏蔽内容</string>
+    <string name="account_block_show_temporarily_hint">开启后被屏蔽用户的帖子与评论临时可见，重启 App 后恢复屏蔽</string>
     <string name="account_block_row_hint">已屏蔽 · 不再显示其帖子与评论</string>
     <string name="account_block_unblock">解除屏蔽</string>
     <string name="account_block_empty">你还没有屏蔽任何用户</string>
+    <string name="account_block_footer">被屏蔽用户的帖子在列表中隐藏，评论显示为「已屏蔽用户的评论」折叠行；解除立即生效。</string>
 
-    <!-- 首页版块 (d6 4/4) -->
-    <string name="account_home_boards_title">首页版块</string>
-    <string name="account_home_boards_summary">勾选的版块会出现在首页版块条 · 已选 %1$d / %2$d</string>
-    <string name="account_home_boards_reset">重置</string>
-    <string name="account_home_boards_save">保存 %1$d 个版块</string>
-    <string name="account_home_boards_min">至少要保留一个版块</string>
-    <string name="account_home_boards_empty">版块列表还没载入，回到首页刷新一下再来</string>
+    <!-- 偏好与首页版块 (d6 5/5)。Local=本机 DataStore，Remote=账号（服务端），归属徽标随行展示 -->
+    <string name="account_preferences_title">偏好与首页版块</string>
+    <string name="account_holiday_theme">启用节日主题</string>
+    <string name="account_holiday_theme_hint">节日期间使用节日配色，跟随账号同步</string>
+    <string name="account_holiday_theme_on">节日主题已开启</string>
+    <string name="account_holiday_theme_off">节日主题已关闭</string>
+    <string name="account_auto_night">自动夜间模式</string>
+    <string name="account_auto_night_hint">按下方依据自动切换深浅色</string>
+    <string name="account_night_basis">夜间模式依据</string>
+    <string name="account_night_basis_system">跟随系统</string>
+    <string name="account_night_basis_timed">定时（日落）</string>
+    <string name="account_night_basis_note">站点仅支持「系统时间」定时；「跟随系统」为 App 增强并默认。定时窗口约 19:00–07:00。</string>
+    <string name="account_preferences_new_tab_note">站点另有「新标签页打开主题帖」（Local）— 浏览器概念，App 不适用，刻意省略。</string>
+    <string name="account_home_boards_hint">关闭后首页信息流不再显示该版块；其余版块不可关闭（站点仅开放这三项）。</string>
+    <string name="account_board_trade">交易</string>
+    <string name="account_board_life">生活</string>
+    <string name="account_board_photo">贴图</string>
+    <string name="account_storage_legend">Local = 仅本机生效 · Remote = 跟随账号同步（服务端存储）</string>
 
     <!-- Status and empty states: say what happened, then offer something to press -->
     <string name="status_empty_feed_title">这里还没有帖子</string>

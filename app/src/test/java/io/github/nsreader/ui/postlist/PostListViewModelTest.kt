@@ -109,13 +109,17 @@ class PostListViewModelTest {
     fun `the strip honours the 首页版块 preference and always keeps the front page`() =
         runTest(dispatcher) {
             val settings = testSettingsRepository(backgroundScope)
-            settings.setHomeBoards(setOf("tech", "trade"))
+            settings.setHomeBoardHidden("trade", true)
+            settings.setHomeBoardHidden("life", true)
             val vm = viewModel(settings)
             advanceUntilIdle()
 
             val boards = vm.uiState.value.boards
             assertEquals(CategoryRepository.FRONT_PAGE, boards.first())
-            assertEquals(listOf("tech", "trade"), boards.drop(1).map { it.slug })
+            val slugs = boards.drop(1).map { it.slug }
+            assertTrue("tech" in slugs)
+            assertTrue("trade" !in slugs)
+            assertTrue("life" !in slugs)
         }
 
     /**
@@ -128,11 +132,11 @@ class PostListViewModelTest {
             val settings = testSettingsRepository(backgroundScope)
             val vm = viewModel(settings)
             advanceUntilIdle()
-            vm.selectCategory("tech")
+            vm.selectCategory("trade")
             advanceUntilIdle()
-            assertEquals("tech", vm.uiState.value.categorySlug)
+            assertEquals("trade", vm.uiState.value.categorySlug)
 
-            settings.setHomeBoards(setOf("trade"))
+            settings.setHomeBoardHidden("trade", true)
             advanceUntilIdle()
 
             assertEquals(null, vm.uiState.value.categorySlug)

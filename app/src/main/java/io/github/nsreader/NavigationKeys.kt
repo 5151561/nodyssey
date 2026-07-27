@@ -21,11 +21,11 @@ data object ProfileKey : NavKey
 data object SettingsKey : NavKey
 
 /**
- * 账号设置 (8g) and its four sub-pages (d6).
+ * 账号设置 (8g) and its five sub-pages (d6 1–5/5).
  *
  * Separate from [SettingsKey], which is the app's own display preferences. The two are different
  * things that happen to share a word: one is what the site knows about the account, the other is how
- * this app draws it. 8g's 常用偏好 row is the link between them.
+ * this app draws it.
  */
 @Serializable
 data object AccountSettingsKey : NavKey
@@ -36,11 +36,17 @@ data object AccountProfileFieldsKey : NavKey
 @Serializable
 data object AccountSecurityKey : NavKey
 
+/** 联系方式 (d6 3/5), including the Telegram binding flow (f3). */
 @Serializable
-data object AccountContactBlockKey : NavKey
+data object AccountContactKey : NavKey
 
+/** 屏蔽用户 (d6 4/5). */
 @Serializable
-data object HomeBoardsKey : NavKey
+data object AccountBlockListKey : NavKey
+
+/** 偏好与首页版块 (d6 5/5). */
+@Serializable
+data object AccountPreferencesKey : NavKey
 
 @Serializable
 data object PostComposerKey : NavKey

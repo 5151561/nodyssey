@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.R
 import io.github.nsreader.data.account.AccountProfileFields
+import io.github.nsreader.data.account.TelegramBinding
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.settings.SettingsGroup
@@ -48,9 +49,9 @@ fun AccountSettingsRoute(
     onBack: () -> Unit,
     onOpenProfileFields: () -> Unit,
     onOpenSecurity: () -> Unit,
-    onOpenContactAndBlock: () -> Unit,
-    onOpenDisplayPreferences: () -> Unit,
-    onOpenHomeBoards: () -> Unit,
+    onOpenContact: () -> Unit,
+    onOpenBlockList: () -> Unit,
+    onOpenPreferences: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -66,9 +67,9 @@ fun AccountSettingsRoute(
         onBack = onBack,
         onOpenProfileFields = onOpenProfileFields,
         onOpenSecurity = onOpenSecurity,
-        onOpenContactAndBlock = onOpenContactAndBlock,
-        onOpenDisplayPreferences = onOpenDisplayPreferences,
-        onOpenHomeBoards = onOpenHomeBoards,
+        onOpenContact = onOpenContact,
+        onOpenBlockList = onOpenBlockList,
+        onOpenPreferences = onOpenPreferences,
         onSignOut = viewModel::signOut,
         modifier = modifier,
     )
@@ -90,9 +91,9 @@ fun AccountSettingsScreen(
     onBack: () -> Unit,
     onOpenProfileFields: () -> Unit,
     onOpenSecurity: () -> Unit,
-    onOpenContactAndBlock: () -> Unit,
-    onOpenDisplayPreferences: () -> Unit,
-    onOpenHomeBoards: () -> Unit,
+    onOpenContact: () -> Unit,
+    onOpenBlockList: () -> Unit,
+    onOpenPreferences: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -204,9 +205,24 @@ fun AccountSettingsScreen(
                     title = stringResource(R.string.account_email),
                     subtitle = state.email?.maskEmail(),
                     top = true,
-                    bottom = true,
-                    onClick = onOpenContactAndBlock,
+                    onClick = onOpenContact,
                     leading = { RowIcon(Icons.Default.Email) },
+                    trailing = { Chevron() },
+                )
+                SettingsRow(
+                    title = stringResource(R.string.account_telegram_title),
+                    subtitle =
+                    state.telegram?.let { binding ->
+                        if (binding.bound) {
+                            binding.username
+                                ?: stringResource(R.string.account_telegram_bound)
+                        } else {
+                            stringResource(R.string.account_telegram_unbound)
+                        }
+                    },
+                    bottom = true,
+                    onClick = onOpenContact,
+                    leading = { RowIcon(NodeSeekIcons.Send) },
                     trailing = { Chevron() },
                 )
             }
@@ -219,7 +235,7 @@ fun AccountSettingsScreen(
                     state.blockedCount?.let { stringResource(R.string.account_blocked_count, it) },
                     top = true,
                     bottom = true,
-                    onClick = onOpenContactAndBlock,
+                    onClick = onOpenBlockList,
                     leading = { RowIcon(NodeSeekIcons.Block) },
                     trailing = { Chevron() },
                 )
@@ -229,9 +245,17 @@ fun AccountSettingsScreen(
             SettingsGroup {
                 SettingsRow(
                     title = stringResource(R.string.account_display_preferences),
+                    subtitle =
+                    stringResource(
+                        if (state.holidayTheme) {
+                            R.string.account_holiday_theme_on
+                        } else {
+                            R.string.account_holiday_theme_off
+                        },
+                    ),
                     top = true,
                     bottom = true,
-                    onClick = onOpenDisplayPreferences,
+                    onClick = onOpenPreferences,
                     leading = { RowIcon(Icons.Default.Settings) },
                     trailing = { Chevron() },
                 )
@@ -242,14 +266,14 @@ fun AccountSettingsScreen(
                 SettingsRow(
                     title = stringResource(R.string.account_home_boards),
                     subtitle =
-                    if (state.homeBoardsRestricted) {
-                        stringResource(R.string.account_home_boards_selected, state.homeBoardCount)
+                    if (state.hiddenBoardCount > 0) {
+                        stringResource(R.string.account_home_boards_hidden, state.hiddenBoardCount)
                     } else {
-                        stringResource(R.string.account_home_boards_all, state.totalBoardCount)
+                        stringResource(R.string.account_home_boards_all_shown)
                     },
                     top = true,
                     bottom = true,
-                    onClick = onOpenHomeBoards,
+                    onClick = onOpenPreferences,
                     leading = { RowIcon(NodeSeekIcons.DashboardCustomize) },
                     trailing = { Chevron() },
                 )
@@ -327,17 +351,16 @@ private fun AccountSettingsPreview() {
                 ),
                 twoFactorEnabled = false,
                 email = "hikari.zhg@gmail.com",
+                telegram = TelegramBinding(bound = false),
                 blockedCount = 3,
-                homeBoardCount = 6,
-                totalBoardCount = 13,
-                homeBoardsRestricted = true,
+                hiddenBoardCount = 2,
             ),
             onBack = {},
             onOpenProfileFields = {},
             onOpenSecurity = {},
-            onOpenContactAndBlock = {},
-            onOpenDisplayPreferences = {},
-            onOpenHomeBoards = {},
+            onOpenContact = {},
+            onOpenBlockList = {},
+            onOpenPreferences = {},
             onSignOut = {},
         )
     }

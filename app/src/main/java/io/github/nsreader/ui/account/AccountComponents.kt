@@ -114,6 +114,52 @@ internal fun EndpointPendingBanner(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * The Local / Remote storage badge d6 puts beside every preference row.
+ *
+ * The site itself splits its settings by where they live — this browser or this account — and the
+ * app keeps the distinction visible because it changes what the user should expect: a Local row is
+ * instant and this-device-only, a Remote row follows the account. Monospace, like the design, so it
+ * reads as a technical annotation rather than part of the row's title.
+ */
+@Composable
+internal fun StorageBadge(
+    local: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color =
+        if (local) {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        } else {
+            MaterialTheme.colorScheme.primaryContainer
+        },
+        contentColor =
+        if (local) {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        } else {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        },
+        border =
+        if (local) {
+            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        } else {
+            null
+        },
+        modifier = modifier,
+    ) {
+        Text(
+            text = if (local) "Local" else "Remote",
+            style =
+            MaterialTheme.typography.labelSmall.copy(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            ),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+        )
+    }
+}
+
 /** The group heading inside a sub-page — same weight and colour as 8g's, without the list around it. */
 @Composable
 internal fun AccountSectionLabel(

@@ -43,10 +43,12 @@ import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.ui.account.AccountSettingsRoute
 import io.github.nsreader.ui.account.AccountSettingsViewModel
-import io.github.nsreader.ui.account.ContactBlockRoute
-import io.github.nsreader.ui.account.ContactBlockViewModel
-import io.github.nsreader.ui.account.HomeBoardsRoute
-import io.github.nsreader.ui.account.HomeBoardsViewModel
+import io.github.nsreader.ui.account.BlockListRoute
+import io.github.nsreader.ui.account.BlockListViewModel
+import io.github.nsreader.ui.account.ContactRoute
+import io.github.nsreader.ui.account.ContactViewModel
+import io.github.nsreader.ui.account.PreferencesRoute
+import io.github.nsreader.ui.account.PreferencesViewModel
 import io.github.nsreader.ui.account.ProfileFieldsRoute
 import io.github.nsreader.ui.account.ProfileFieldsViewModel
 import io.github.nsreader.ui.account.SecurityRoute
@@ -442,11 +444,11 @@ fun MainNavigation(container: AppContainer) {
                         onBack = { backStack.removeLastOrNull() },
                         onOpenProfileFields = { backStack.add(AccountProfileFieldsKey) },
                         onOpenSecurity = { backStack.add(AccountSecurityKey) },
-                        onOpenContactAndBlock = { backStack.add(AccountContactBlockKey) },
-                        // 常用偏好 is this app's own settings screen rather than a copy of it: the site's
-                        // `#preference` group covers the website's layout, which the app does not render.
-                        onOpenDisplayPreferences = { backStack.add(SettingsKey) },
-                        onOpenHomeBoards = { backStack.add(HomeBoardsKey) },
+                        onOpenContact = { backStack.add(AccountContactKey) },
+                        onOpenBlockList = { backStack.add(AccountBlockListKey) },
+                        // 常用偏好 and 首页版块 share one page (d6 5/5): three of their rows are the
+                        // same account-side switches, and splitting them would leave two stub screens.
+                        onOpenPreferences = { backStack.add(AccountPreferencesKey) },
                     )
                 }
 
@@ -475,19 +477,32 @@ fun MainNavigation(container: AppContainer) {
                     )
                 }
 
-                entry<AccountContactBlockKey> {
-                    val viewModel: ContactBlockViewModel =
-                        viewModel(factory = ContactBlockViewModel.factory(container))
-                    ContactBlockRoute(
+                entry<AccountContactKey> {
+                    val viewModel: ContactViewModel =
+                        viewModel(factory = ContactViewModel.factory(container))
+                    ContactRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                        // The bind link belongs to Telegram (t.me / tg://), so it leaves the app for
+                        // whatever owns the scheme — the Telegram app, or the browser's web version.
+                        // Never the in-app web view, whose cookie jar is for nodeseek.com only.
+                        onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
+                    )
+                }
+
+                entry<AccountBlockListKey> {
+                    val viewModel: BlockListViewModel =
+                        viewModel(factory = BlockListViewModel.factory(container))
+                    BlockListRoute(
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
                     )
                 }
 
-                entry<HomeBoardsKey> {
-                    val viewModel: HomeBoardsViewModel =
-                        viewModel(factory = HomeBoardsViewModel.factory(container))
-                    HomeBoardsRoute(
+                entry<AccountPreferencesKey> {
+                    val viewModel: PreferencesViewModel =
+                        viewModel(factory = PreferencesViewModel.factory(container))
+                    PreferencesRoute(
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
                     )

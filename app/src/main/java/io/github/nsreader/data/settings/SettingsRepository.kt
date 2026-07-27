@@ -10,6 +10,9 @@ import io.github.nsreader.model.SearchHistoryEntry
 import io.github.nsreader.model.SearchSort
 import io.github.nsreader.model.SearchTarget
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -40,11 +43,32 @@ class SettingsRepository(
                 dynamicColor = preferences[KEY_DYNAMIC_COLOR] ?: false,
                 fontScale = preferences[KEY_FONT_SCALE] ?: 1f,
                 imagesOnWifiOnly = preferences[KEY_IMAGES_WIFI_ONLY] ?: false,
+                holidayTheme = preferences[KEY_HOLIDAY_THEME] ?: false,
                 searchHistory = decodeSearchHistory(preferences),
                 recentBoards = decodeValues(preferences[KEY_RECENT_BOARDS]),
-                homeBoards = decodeValues(preferences[KEY_HOME_BOARDS]).toSet(),
+                hiddenHomeBoards =
+                decodeValues(preferences[KEY_HIDDEN_HOME_BOARDS])
+                    // Only the three slugs the site allows can hide a board; anything else in the
+                    // store (a renamed slug, a bad write) must not silently thin out the feed.
+                    .filter { it in OPTIONAL_HOME_BOARD_SLUGS }
+                    .toSet(),
             )
         }
+
+    /**
+     * 临时显示被屏蔽内容 — deliberately *not* in DataStore.
+     *
+     * The site keeps this in the user menu as a momentary escape hatch, and d6 4/5 words the app's
+     * version the same way: "重启 App 后恢复屏蔽". Local storage that survived the process would
+     * quietly turn "show me, just for now" into "never block again", so the flag lives and dies with
+     * the process on purpose.
+     */
+    private val showBlockedContentState = MutableStateFlow(false)
+    val showBlockedContent: StateFlow<Boolean> = showBlockedContentState.asStateFlow()
+
+    fun setShowBlockedContent(enabled: Boolean) {
+        showBlockedContentState.value = enabled
+    }
 
     suspend fun setThemeMode(mode: ThemeMode) = edit { it[KEY_THEME_MODE] = mode.name }
 
@@ -92,16 +116,31 @@ class SettingsRepository(
     }
 
     /**
-     * Which boards the home strip shows. An empty set means "all of them" and is the default.
+     * The local mirror of the site's 首页版块 switches — Remote rows, cached so the feed can draw
+     * itself without the network.
      *
-     * Empty rather than a snapshot of every slug on first run, because the board list is owned by the
-     * server: seeding the preference would silently pin the user to whatever thirteen boards existed
-     * the day they installed the app, and a board added later would never show up.
+     * Stored as the *hidden* set rather than the visible one because that is the shape of the site's
+     * own preference: only 交易 / 生活 / 贴图 can be turned off, everything else is always on, and
+     * the empty set — the default — means "hide nothing". [slug] outside
+     * [OPTIONAL_HOME_BOARD_SLUGS] is refused here and filtered on read, so the store can never hide
+     * a board the site would show.
      */
-    suspend fun setHomeBoards(slugs: Set<String>) =
-        edit { it[KEY_HOME_BOARDS] = encodeValues(slugs.toList(), MAX_HOME_BOARDS) }
+    suspend fun setHomeBoardHidden(slug: String, hidden: Boolean) {
+        if (slug !in OPTIONAL_HOME_BOARD_SLUGS) return
+        dataStore.edit { preferences ->
+            val current = decodeValues(preferences[KEY_HIDDEN_HOME_BOARDS]).toSet()
+            val next = if (hidden) current + slug else current - slug
+            if (next.isEmpty()) {
+                preferences.remove(KEY_HIDDEN_HOME_BOARDS)
+            } else {
+                preferences[KEY_HIDDEN_HOME_BOARDS] =
+                    encodeValues(next.toList(), OPTIONAL_HOME_BOARD_SLUGS.size)
+            }
+        }
+    }
 
-    suspend fun clearHomeBoards() = edit { it.remove(KEY_HOME_BOARDS) }
+    /** Local mirror of the site's Remote 启用节日主题 switch; the sync authority is the account. */
+    suspend fun setHolidayTheme(enabled: Boolean) = edit { it[KEY_HOLIDAY_THEME] = enabled }
 
     suspend fun recordRecentBoards(boards: Set<String>) {
         if (boards.isEmpty()) return
@@ -129,14 +168,12 @@ class SettingsRepository(
         private val KEY_RECENT_SEARCHES = stringPreferencesKey("recent_searches")
         private val KEY_SEARCH_HISTORY = stringPreferencesKey("search_history_v3")
         private val KEY_RECENT_BOARDS = stringPreferencesKey("recent_boards")
-        private val KEY_HOME_BOARDS = stringPreferencesKey("home_boards")
+        private val KEY_HIDDEN_HOME_BOARDS = stringPreferencesKey("hidden_home_boards")
+        private val KEY_HOLIDAY_THEME = booleanPreferencesKey("holiday_theme")
 
         private const val RECENT_SEARCH_SEPARATOR = '\u001F'
         private const val MAX_RECENT_SEARCHES = 8
         private const val MAX_RECENT_BOARDS = 6
-
-        /** Generous ceiling on a list the server currently caps at thirteen; a runaway guard, not a rule. */
-        private const val MAX_HOME_BOARDS = 64
 
         private fun decodeRecentSearches(value: String?): List<String> =
             value.orEmpty().split(RECENT_SEARCH_SEPARATOR).filter(String::isNotBlank)
@@ -175,13 +212,33 @@ data class UserSettings(
     val dynamicColor: Boolean = false,
     val fontScale: Float = 1f,
     val imagesOnWifiOnly: Boolean = false,
+    /** Local mirror of the account's Remote 启用节日主题 switch. */
+    val holidayTheme: Boolean = false,
     val searchHistory: List<SearchHistoryEntry> = emptyList(),
     val recentBoards: List<String> = emptyList(),
-    /** Slugs the home strip is limited to. Empty means unrestricted — see `setHomeBoards`. */
-    val homeBoards: Set<String> = emptySet(),
+    /** Boards switched off the home feed. Empty — the default — hides nothing; see `setHomeBoardHidden`. */
+    val hiddenHomeBoards: Set<String> = emptySet(),
 )
 
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
+/**
+ * [TIMED] is d6 5/5's 夜间模式依据 = 定时（日落）: dark by the clock, regardless of the system theme.
+ * The site's own automatic night mode is time-based too ("系统时间"); 跟随系统 ([SYSTEM]) is the app's
+ * addition and the default.
+ */
+enum class ThemeMode { SYSTEM, LIGHT, DARK, TIMED }
+
+/**
+ * Whether the 定时 night window covers this hour.
+ *
+ * A fixed 19:00–07:00 window: the site publishes no schedule to copy and "日落" without a location
+ * permission is a fiction, so the app uses the plainest defensible approximation and says so in the
+ * settings row rather than pretending to track the sun.
+ */
+fun isTimedNightHour(hourOfDay: Int): Boolean =
+    hourOfDay >= TIMED_NIGHT_START_HOUR || hourOfDay < TIMED_NIGHT_END_HOUR
+
+const val TIMED_NIGHT_START_HOUR = 19
+const val TIMED_NIGHT_END_HOUR = 7
 
 @Serializable
 private data class StoredSearchHistory(

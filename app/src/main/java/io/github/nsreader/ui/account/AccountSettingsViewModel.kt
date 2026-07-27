@@ -6,14 +6,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nsreader.core.runCatchingExceptCancellation
-import io.github.nsreader.data.CategoryRepository
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.ProfileRepository
 import io.github.nsreader.data.account.AccountProfileFields
 import io.github.nsreader.data.account.AccountSettingsRepository
+import io.github.nsreader.data.account.TelegramBinding
 import io.github.nsreader.data.session.SessionRepository
 import io.github.nsreader.data.settings.SettingsRepository
-import io.github.nsreader.data.settings.visibleHomeBoards
 import io.github.nsreader.di.AppContainer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +38,6 @@ class AccountSettingsViewModel(
     private val account: AccountSettingsRepository,
     private val profiles: ProfileRepository,
     private val settings: SettingsRepository,
-    categories: CategoryRepository,
     private val posts: PostRepository,
     private val session: SessionRepository,
 ) : ViewModel() {
@@ -52,20 +50,18 @@ class AccountSettingsViewModel(
         combine(
             remote,
             settings.settings,
-            categories.boards,
             signedOut,
-        ) { site, preferences, boards, isSignedOut ->
-            val selectable = boards.filter { it.slug != null }
+        ) { site, preferences, isSignedOut ->
             AccountSettingsUiState(
                 avatarUrl = site.avatarUrl,
                 displayName = site.displayName,
                 fields = site.fields,
                 twoFactorEnabled = site.twoFactorEnabled,
                 email = site.email,
+                telegram = site.telegram,
                 blockedCount = site.blockedCount,
-                homeBoardCount = visibleHomeBoards(selectable, preferences.homeBoards).size,
-                totalBoardCount = selectable.size,
-                homeBoardsRestricted = preferences.homeBoards.isNotEmpty(),
+                hiddenBoardCount = preferences.hiddenHomeBoards.size,
+                holidayTheme = preferences.holidayTheme,
                 signedOut = isSignedOut,
             )
         }.stateIn(
@@ -94,6 +90,8 @@ class AccountSettingsViewModel(
                     .onSuccess { state -> remote.update { it.copy(twoFactorEnabled = state.enabled) } }
                 runCatchingExceptCancellation { account.contact() }
                     .onSuccess { contact -> remote.update { it.copy(email = contact.email) } }
+                runCatchingExceptCancellation { account.telegramBinding() }
+                    .onSuccess { binding -> remote.update { it.copy(telegram = binding) } }
                 runCatchingExceptCancellation { account.blockedUsers() }
                     .onSuccess { blocked -> remote.update { it.copy(blockedCount = blocked.size) } }
             }
@@ -128,7 +126,6 @@ class AccountSettingsViewModel(
                         account = container.accountSettingsRepository,
                         profiles = container.profileRepository,
                         settings = container.settingsRepository,
-                        categories = container.categoryRepository,
                         posts = container.postRepository,
                         session = container.sessionRepository,
                     )
@@ -144,6 +141,7 @@ private data class RemoteAccountState(
     val fields: AccountProfileFields? = null,
     val twoFactorEnabled: Boolean? = null,
     val email: String? = null,
+    val telegram: TelegramBinding? = null,
     val blockedCount: Int? = null,
 )
 
@@ -153,10 +151,12 @@ data class AccountSettingsUiState(
     val fields: AccountProfileFields? = null,
     val twoFactorEnabled: Boolean? = null,
     val email: String? = null,
+    /** null until the (stubbed) endpoint answers; the row shows no guess. */
+    val telegram: TelegramBinding? = null,
     val blockedCount: Int? = null,
-    val homeBoardCount: Int = 0,
-    val totalBoardCount: Int = 0,
-    val homeBoardsRestricted: Boolean = false,
+    /** How many of the three optional home boards are switched off; 0 means the feed shows everything. */
+    val hiddenBoardCount: Int = 0,
+    val holidayTheme: Boolean = false,
     /** Set once sign-out has committed; the screen pops itself on it. See `signOut`. */
     val signedOut: Boolean = false,
 )
