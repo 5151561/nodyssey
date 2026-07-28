@@ -255,10 +255,11 @@ private fun NightBasisRow(
             )
             StorageBadge(local = true)
         }
-        SingleChoiceSegmentedButtonRow {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             SegmentedButton(
                 selected = !timed,
                 onClick = { onTimedChange(false) },
+                modifier = Modifier.weight(1f),
                 enabled = enabled,
                 shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
             ) {
@@ -267,6 +268,7 @@ private fun NightBasisRow(
             SegmentedButton(
                 selected = timed,
                 onClick = { onTimedChange(true) },
+                modifier = Modifier.weight(1f),
                 enabled = enabled,
                 shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
             ) {
