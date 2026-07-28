@@ -91,6 +91,22 @@ android {
     }
 
     buildTypes {
+        /*
+         * A separate applicationId so a debug build and an installed release build can coexist.
+         *
+         * The two are signed with different keys, and Android refuses to replace an APK with one
+         * whose signature differs — the only ways out are uninstalling the release copy first or
+         * giving the debug build an id of its own. This is the second.
+         *
+         * Safe to suffix here because nothing pins the package name: the one manifest authority is
+         * written as `${applicationId}`, `buildConfig` is off so no code reads APPLICATION_ID, and
+         * AGP derives the instrumentation test id from this value too. The launcher name follows in
+         * `src/debug/res/values/strings.xml`, so the two are also told apart on the home screen.
+         */
+        debug {
+            applicationIdSuffix = ".debug"
+        }
+
         release {
             isMinifyEnabled = true
             isShrinkResources = true
