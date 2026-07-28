@@ -29,9 +29,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -458,30 +460,20 @@ private fun MessageInputBar(
             ),
             modifier = Modifier.weight(1f),
         )
-        Box(
-            modifier =
-            Modifier
-                .minimumInteractiveComponentSize()
-                .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(
-                    if (canSend) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHighest
-                    },
-                ).clickable(enabled = canSend, onClick = onSend),
-            contentAlignment = Alignment.Center,
+        FilledIconButton(
+            onClick = onSend,
+            enabled = canSend,
+            shape = RoundedCornerShape(14.dp),
+            colors =
+            IconButtonDefaults.filledIconButtonColors(
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+            modifier = Modifier.size(44.dp),
         ) {
             Icon(
                 NodysseyIcons.Send,
                 contentDescription = stringResource(R.string.message_send),
-                tint =
-                if (canSend) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
                 modifier = Modifier.size(20.dp),
             )
         }

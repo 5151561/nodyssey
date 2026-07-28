@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -63,8 +64,10 @@ fun AttendanceBoardDialog(
 
                 else ->
                     LazyColumn(Modifier.height(BOARD_LIST_HEIGHT)) {
-                        items(count = entries.size, key = { it }) { index ->
-                            val entry = entries[index]
+                        // No `key`: the board is a one-shot snapshot that never reorders or grows,
+                        // and names are not guaranteed unique — a duplicate key would crash for the
+                        // sake of an identity Lazy already gets from the index.
+                        itemsIndexed(entries) { index, entry ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()

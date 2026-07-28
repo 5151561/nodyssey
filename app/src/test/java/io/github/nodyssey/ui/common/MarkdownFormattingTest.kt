@@ -1,7 +1,7 @@
 package io.github.nodyssey.ui.common
 
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -21,67 +21,81 @@ class MarkdownFormattingTest {
         )
 
     private fun field(text: String, selection: IntRange? = null) =
-        TextFieldValue(
-            text = text,
-            selection =
+        TextFieldState(
+            initialText = text,
+            initialSelection =
             selection?.let { TextRange(it.first, it.last) } ?: TextRange(text.length),
         )
 
     @Test
     fun `with nothing selected the placeholder is inserted and the caret sits on it`() {
-        val result = field("").applyMarkdown(bold)
+        val state = field("")
 
-        assertEquals("**加粗文字**", result.text)
+        state.edit { applyMarkdown(bold) }
+
+        assertEquals("**加粗文字**", state.text.toString())
         // Just past the opening delimiter, so typing replaces the placeholder in place.
-        assertEquals(TextRange(2), result.selection)
+        assertEquals(TextRange(2), state.selection)
     }
 
     @Test
     fun `a selection is wrapped and the caret goes to the end`() {
-        val result = field("出杭州轻量", selection = 0..5).applyMarkdown(bold)
+        val state = field("出杭州轻量", selection = 0..5)
 
-        assertEquals("**出杭州轻量**", result.text)
-        assertEquals(TextRange("**出杭州轻量**".length), result.selection)
+        state.edit { applyMarkdown(bold) }
+
+        assertEquals("**出杭州轻量**", state.text.toString())
+        assertEquals(TextRange("**出杭州轻量**".length), state.selection)
     }
 
     @Test
     fun `a prefix-only action needs no suffix`() {
-        val result = field("关于我", selection = 0..3).applyMarkdown(heading)
+        val state = field("关于我", selection = 0..3)
 
-        assertEquals("## 关于我", result.text)
-        assertEquals(TextRange("## 关于我".length), result.selection)
+        state.edit { applyMarkdown(heading) }
+
+        assertEquals("## 关于我", state.text.toString())
+        assertEquals(TextRange("## 关于我".length), state.selection)
     }
 
     /** Link is the exception: with the text written, the URL is the only thing left to type. */
     @Test
     fun `link puts the caret in the url slot rather than at the end`() {
-        val result = field("星辰担保", selection = 0..4).applyMarkdown(link)
+        val state = field("星辰担保", selection = 0..4)
 
-        assertEquals("[星辰担保](https://)", result.text)
-        assertEquals(TextRange("[星辰担保](".length), result.selection)
+        state.edit { applyMarkdown(link) }
+
+        assertEquals("[星辰担保](https://)", state.text.toString())
+        assertEquals(TextRange("[星辰担保](".length), state.selection)
     }
 
     @Test
     fun `an empty link selection puts the caret on the link text`() {
-        val result = field("").applyMarkdown(link)
+        val state = field("")
 
-        assertEquals("[链接文字](https://)", result.text)
-        assertEquals(TextRange(1), result.selection)
+        state.edit { applyMarkdown(link) }
+
+        assertEquals("[链接文字](https://)", state.text.toString())
+        assertEquals(TextRange(1), state.selection)
     }
 
     @Test
     fun `formatting applies in the middle of existing text`() {
-        val result = field("交易走星辰担保，勿私", selection = 3..7).applyMarkdown(bold)
+        val state = field("交易走星辰担保，勿私", selection = 3..7)
 
-        assertEquals("交易走**星辰担保**，勿私", result.text)
-        assertEquals(TextRange("交易走**星辰担保**".length), result.selection)
+        state.edit { applyMarkdown(bold) }
+
+        assertEquals("交易走**星辰担保**，勿私", state.text.toString())
+        assertEquals(TextRange("交易走**星辰担保**".length), state.selection)
     }
 
+    /** The buffer clamps a selection to the text on construction; formatting must survive that. */
     @Test
     fun `an out-of-range selection is clamped rather than crashing`() {
-        val result =
-            TextFieldValue("短", selection = TextRange(0, 99)).applyMarkdown(bold)
+        val state = TextFieldState(initialText = "短", initialSelection = TextRange(0, 99))
 
-        assertEquals("**短**", result.text)
+        state.edit { applyMarkdown(bold) }
+
+        assertEquals("**短**", state.text.toString())
     }
 }

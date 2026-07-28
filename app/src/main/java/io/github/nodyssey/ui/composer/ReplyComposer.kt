@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -62,7 +64,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,6 +73,8 @@ import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.deleteBackwards
+import io.github.nodyssey.ui.common.insertText
 import io.github.nodyssey.ui.theme.CommentBody
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.readableWidth
@@ -90,7 +93,7 @@ import java.util.Date
 fun ReplyComposerHost(
     state: ReplyComposerUiState,
     onDismiss: () -> Unit,
-    onBodyChange: (String) -> Unit,
+    bodyState: TextFieldState,
     onClearQuote: () -> Unit,
     onPreviewChange: (Boolean) -> Unit,
     onPickImages: (List<PickedImage>) -> Unit,
@@ -137,7 +140,7 @@ fun ReplyComposerHost(
         ReplyEditorSheet(
             state = state,
             onDismiss = onDismiss,
-            onBodyChange = onBodyChange,
+            bodyState = bodyState,
             onClearQuote = onClearQuote,
             onPreview = { onPreviewChange(true) },
             onPickImages = launchPicker,
@@ -157,7 +160,7 @@ fun ReplyComposerHost(
 private fun ReplyEditorSheet(
     state: ReplyComposerUiState,
     onDismiss: () -> Unit,
-    onBodyChange: (String) -> Unit,
+    bodyState: TextFieldState,
     onClearQuote: () -> Unit,
     onPreview: () -> Unit,
     onPickImages: () -> Unit,
@@ -169,20 +172,8 @@ private fun ReplyEditorSheet(
     recentEmoji: List<String>,
     onRecentEmojiChange: (List<String>) -> Unit,
 ) {
-    var bodyValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue(state.body, TextRange(state.body.length)))
-    }
     var emojiOpen by rememberSaveable { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(state.body) {
-        if (state.body != bodyValue.text) {
-            bodyValue = TextFieldValue(state.body, TextRange(state.body.length))
-        }
-    }
-    fun edit(next: TextFieldValue) {
-        bodyValue = next
-        onBodyChange(next.text)
-    }
 
     ModalBottomSheet(
         // Guarded like the close button and the BackHandler: while a publish is in flight, a swipe
@@ -233,8 +224,8 @@ private fun ReplyEditorSheet(
                 )
             }
             BasicTextField(
-                value = bodyValue,
-                onValueChange = ::edit,
+                state = bodyState,
+                lineLimits = TextFieldLineLimits.MultiLine(),
                 textStyle = CommentBody.copy(
                     fontSize = 16.sp,
                     lineHeight = 26.sp,
@@ -245,11 +236,11 @@ private fun ReplyEditorSheet(
                     .readableWidth()
                     .heightIn(min = MIN_EDITOR_HEIGHT, max = MAX_EDITOR_HEIGHT)
                     .padding(horizontal = Spacing.xl, vertical = Spacing.sm),
-                decorationBox = { inner ->
+                decorator = { inner ->
                     // Fills the width it was given: `readableWidth` centres what it wraps, so a
                     // decoration that measures to its content would centre a half-typed reply.
                     Box(Modifier.fillMaxWidth()) {
-                        if (bodyValue.text.isEmpty()) {
+                        if (bodyState.text.isEmpty()) {
                             Text(
                                 text = stringResource(R.string.post_reply_editor_hint),
                                 style = CommentBody.copy(fontSize = 16.sp, lineHeight = 26.sp),
@@ -296,7 +287,7 @@ private fun ReplyEditorSheet(
 
                         else -> {
                             emojiOpen = false
-                            edit(applyMarkdown(bodyValue, action))
+                            bodyState.edit { applyMarkdown(action) }
                         }
                     }
                 },
@@ -310,8 +301,8 @@ private fun ReplyEditorSheet(
             )
             if (emojiOpen) {
                 EmojiPanel(
-                    onInsert = { text -> edit(insertText(bodyValue, text)) },
-                    onBackspace = { edit(bodyValue.deleteBackwards()) },
+                    onInsert = { text -> bodyState.edit { insertText(text) } },
+                    onBackspace = { bodyState.edit { deleteBackwards() } },
                     recent = recentEmoji,
                     onRecentChange = onRecentEmojiChange,
                 )

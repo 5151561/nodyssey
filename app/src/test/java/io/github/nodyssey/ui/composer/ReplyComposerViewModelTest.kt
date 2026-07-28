@@ -8,6 +8,8 @@ import io.github.nodyssey.data.composer.CommentDraft
 import io.github.nodyssey.data.composer.CommentSubmission
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.ImageUploader
+import io.github.nodyssey.ui.ViewModels
+import io.github.nodyssey.ui.typeText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -39,18 +42,22 @@ class ReplyComposerViewModelTest {
 
     @After
     fun tearDown() {
+        viewModels.clear(dispatcher.scheduler)
         Dispatchers.resetMain()
     }
 
+    private val viewModels = ViewModels()
+
     private fun viewModel(postId: Long = 1L) =
-        ReplyComposerViewModel(postId, repository, clock, uploader)
+        viewModels.track(ReplyComposerViewModel(postId, repository, clock, uploader))
 
     @Test
     fun `closing the sheet keeps the reply, and reopening restores the stored draft`() = runTest(dispatcher) {
         val viewModel = viewModel()
         viewModel.open()
         advanceUntilIdle()
-        viewModel.updateBody("写到一半")
+        viewModel.bodyState.typeText("写到一半")
+        runCurrent()
         advanceUntilIdle()
 
         assertEquals("写到一半", repository.saved[1L]?.body)
@@ -72,7 +79,8 @@ class ReplyComposerViewModelTest {
         val first = viewModel(postId = 1L)
         first.open()
         advanceUntilIdle()
-        first.updateBody("第一帖")
+        first.bodyState.typeText("第一帖")
+        runCurrent()
         advanceUntilIdle()
 
         val second = viewModel(postId = 2L)
@@ -100,7 +108,8 @@ class ReplyComposerViewModelTest {
             ),
         )
         advanceUntilIdle()
-        viewModel.updateBody("赞成用星辰兑换改名")
+        viewModel.bodyState.typeText("赞成用星辰兑换改名")
+        runCurrent()
         advanceUntilIdle()
 
         viewModel.publish {}
@@ -123,7 +132,8 @@ class ReplyComposerViewModelTest {
         val viewModel = viewModel(postId = 7L)
         viewModel.open(ReplyQuote(floor = 3, author = "nssk", excerpt = "占位"))
         advanceUntilIdle()
-        viewModel.updateBody("好")
+        viewModel.bodyState.typeText("好")
+        runCurrent()
         advanceUntilIdle()
 
         viewModel.publish {}
@@ -153,7 +163,8 @@ class ReplyComposerViewModelTest {
         val viewModel = viewModel()
         viewModel.open()
         advanceUntilIdle()
-        viewModel.updateBody("这条要留住")
+        viewModel.bodyState.typeText("这条要留住")
+        runCurrent()
         advanceUntilIdle()
 
         viewModel.publish { error("must not report success") }
@@ -183,11 +194,13 @@ class ReplyComposerViewModelTest {
         val viewModel = viewModel()
         viewModel.open()
         advanceUntilIdle()
-        viewModel.updateBody("先写点")
+        viewModel.bodyState.typeText("先写点")
+        runCurrent()
         advanceUntilIdle()
         assertEquals("先写点", repository.saved[1L]?.body)
 
-        viewModel.updateBody("")
+        viewModel.bodyState.typeText("")
+        runCurrent()
         advanceUntilIdle()
 
         assertNull(repository.saved[1L])

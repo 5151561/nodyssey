@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,11 +24,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ThumbUp
@@ -47,6 +46,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
@@ -155,7 +155,7 @@ fun PostDetailRoute(
     ReplyComposerHost(
         state = replyState,
         onDismiss = replyViewModel::close,
-        onBodyChange = replyViewModel::updateBody,
+        bodyState = replyViewModel.bodyState,
         onClearQuote = replyViewModel::clearQuote,
         onPreviewChange = replyViewModel::setPreviewing,
         onPickImages = replyViewModel::addImages,
@@ -428,43 +428,27 @@ private fun DetailFloatingToolbarContent(
     onNext: () -> Unit,
     onPageClick: () -> Unit,
 ) {
-    val previousPageDescription = stringResource(R.string.post_previous_page)
-    val nextPageDescription = stringResource(R.string.post_next_page)
     Row(
         modifier = Modifier.height(48.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        IconButton(
-            onClick = onPrevious,
-            enabled = page > 1,
-            modifier =
-            Modifier.semantics {
-                contentDescription = previousPageDescription
-            },
-        ) {
-            Text(
-                "‹",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        IconButton(onClick = onPrevious, enabled = page > 1) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = stringResource(R.string.post_previous_page),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         TextButton(onClick = onPageClick, contentPadding = PaddingValues(horizontal = Spacing.sm)) {
             Text(stringResource(R.string.post_page_of, page, totalPages))
             Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
         }
-        IconButton(
-            onClick = onNext,
-            enabled = page < totalPages,
-            modifier =
-            Modifier.semantics {
-                contentDescription = nextPageDescription
-            },
-        ) {
-            Text(
-                "›",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        IconButton(onClick = onNext, enabled = page < totalPages) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = stringResource(R.string.post_next_page),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -499,7 +483,7 @@ private fun PageJumpSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
-            androidx.compose.material3.OutlinedTextField(
+            OutlinedTextField(
                 value = input,
                 onValueChange = { input = it.filter { character -> character.isDigit() } },
                 label = { Text(stringResource(R.string.post_page_input, totalPages)) },
@@ -675,7 +659,6 @@ private fun ThreadList(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 /**
  * Full-width opening punctuation draws its ink in the right half of the em box, so a title like
  * 「【出】92折出SG落地机」 starts a good half character right of everything under it. That gap was
@@ -692,6 +675,7 @@ private fun TextStyle.hangLeadingPunctuation(text: String): TextStyle =
         this
     }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ThreadHeader(
     title: String,

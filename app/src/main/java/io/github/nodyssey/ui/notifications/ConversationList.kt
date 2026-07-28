@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -222,18 +223,13 @@ private fun ConversationRow(
                     modifier = Modifier.weight(1f),
                 )
                 if (isUnread) {
-                    Box(
-                        Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                    // `primary`, not Badge's default `error`: an unread message is a thing to read,
+                    // not a thing that went wrong.
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                     ) {
-                        Text(
-                            text = conversation.unreadCount.coerceAtMost(MAX_UNREAD).toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                        )
+                        Text(conversation.unreadCount.coerceAtMost(MAX_UNREAD).toString())
                     }
                 }
             }

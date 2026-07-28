@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.account
 
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.assertIsEnabled
@@ -47,17 +48,14 @@ class SecurityScreenTest {
             NodysseyTheme {
                 SecurityScreen(
                     state = state,
+                    currentPasswordState = rememberTextFieldState(state.currentPassword),
+                    newPasswordState = rememberTextFieldState(state.newPassword),
+                    confirmPasswordState = rememberTextFieldState(state.confirmPassword),
+                    twoFactorPasswordState = rememberTextFieldState(),
                     snackbarHostState = remember { SnackbarHostState() },
                     onBack = {},
-                    onCurrentPasswordChange = {},
-                    onNewPasswordChange = {},
-                    onRepeatPasswordChange = {},
-                    onToggleCurrentVisible = {},
-                    onToggleNewVisible = {},
-                    onToggleConfirmVisible = {},
                     onRequestPasswordChange = onRequestPasswordChange,
                     onRequestTwoFactor = {},
-                    onTwoFactorPasswordChange = {},
                     onDismissConfirmation = onDismissConfirmation,
                     onConfirmPasswordChange = onConfirmPasswordChange,
                     onConfirmTwoFactor = {},

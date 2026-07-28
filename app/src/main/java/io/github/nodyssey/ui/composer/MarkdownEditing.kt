@@ -1,7 +1,12 @@
 package io.github.nodyssey.ui.composer
 
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.foundation.text.input.TextFieldBuffer
+import io.github.nodyssey.ui.common.MARKDOWN_LINK_CARET
+import io.github.nodyssey.ui.common.MARKDOWN_LINK_SUFFIX
+import io.github.nodyssey.ui.common.MarkdownCaret
+import io.github.nodyssey.ui.common.MarkdownInsertion
+import io.github.nodyssey.ui.common.applyMarkdown
+import io.github.nodyssey.ui.common.toggleLinePrefix
 
 /**
  * Everything the editor toolbar can do.
@@ -20,106 +25,62 @@ val EditorAction.isTextTransform: Boolean
 /**
  * Applies one toolbar action to the current selection.
  *
- * Two shapes, both operating on [TextFieldValue] rather than a plain string so the caret lands
- * somewhere useful afterwards — an editor that formats correctly but drops the caret at the end of
- * the document makes people stop using the toolbar:
+ * Two shapes, both leaving the caret somewhere useful — an editor that formats correctly but drops
+ * the caret at the end of the document makes people stop using the toolbar:
  *
  * - **Wrapping** (bold, inline code, links) surrounds the selection, or inserts a placeholder and
  *   selects it so the next keystroke replaces it.
  * - **Line prefixes** (heading, quote, list) toggle at the start of the caret's line, so tapping
  *   the same key twice undoes it instead of stacking `>> `.
+ *
+ * The mechanics live in `ui/common`, shared with the signature editor; this file only says which
+ * insertion each key stands for.
  */
-fun applyMarkdown(
-    value: TextFieldValue,
-    action: EditorAction,
-): TextFieldValue = when (action) {
-    EditorAction.BOLD -> value.wrap("**", "**", "加粗文字")
-    EditorAction.CODE -> value.wrap("`", "`", "code")
-    EditorAction.LINK -> value.link()
-    EditorAction.MENTION -> value.insert("@")
-    EditorAction.HEADING -> value.togglePrefix("## ")
-    EditorAction.QUOTE -> value.togglePrefix("> ")
-    EditorAction.LIST -> value.togglePrefix("- ")
-    EditorAction.IMAGE, EditorAction.EMOJI, EditorAction.PREVIEW -> value
+internal fun TextFieldBuffer.applyMarkdown(action: EditorAction) {
+    when (action) {
+        EditorAction.BOLD -> applyMarkdown(BOLD)
+        EditorAction.CODE -> applyMarkdown(CODE)
+        EditorAction.LINK -> applyMarkdown(LINK)
+        EditorAction.MENTION -> applyMarkdown(MENTION)
+        EditorAction.HEADING -> toggleLinePrefix("## ")
+        EditorAction.QUOTE -> toggleLinePrefix("> ")
+        EditorAction.LIST -> toggleLinePrefix("- ")
+        EditorAction.IMAGE, EditorAction.EMOJI, EditorAction.PREVIEW -> Unit
+    }
 }
 
-/** Drops [text] in at the caret, replacing the selection. Used by the emoji panel. */
-fun insertText(
-    value: TextFieldValue,
-    text: String,
-): TextFieldValue = value.insert(text)
+private val BOLD =
+    MarkdownInsertion(
+        prefix = "**",
+        suffix = "**",
+        placeholder = "加粗文字",
+        caret = MarkdownCaret.SELECT_CONTENT,
+    )
+
+private val CODE =
+    MarkdownInsertion(
+        prefix = "`",
+        suffix = "`",
+        placeholder = "code",
+        caret = MarkdownCaret.SELECT_CONTENT,
+    )
 
 /**
- * Appends an uploaded image on a line of its own.
+ * The caret goes into the empty address, never onto the label.
  *
- * Not inserted at the caret: uploads finish while typing continues, and dropping `![…](…)` into the
- * middle of the sentence being written is both surprising and hard to undo. A block image also has
- * to start its own line to render as one.
+ * Unlike the signature editor's link, which stops just past `](`: here the scheme is already typed,
+ * so landing after it is one fewer thing to do.
  */
-fun appendBlock(
-    body: String,
-    block: String,
-): String = when {
-    body.isBlank() -> block
-    body.endsWith("\n\n") -> body + block
-    body.endsWith("\n") -> body + "\n" + block
-    else -> body + "\n\n" + block
-}
+private val LINK =
+    MarkdownInsertion(
+        prefix = "[",
+        suffix = MARKDOWN_LINK_SUFFIX,
+        placeholder = "链接文字",
+        caretInSuffix = MARKDOWN_LINK_CARET + URL_SCHEME.length,
+        caret = MarkdownCaret.IN_SUFFIX,
+    )
 
-/** Removes an attachment's Markdown again when its cell is dismissed. */
-fun removeBlock(
-    body: String,
-    block: String,
-): String = body
-    .replace("\n\n$block", "")
-    .replace("\n$block", "")
-    .replace(block, "")
-
-private fun TextFieldValue.wrap(
-    prefix: String,
-    suffix: String,
-    placeholder: String,
-): TextFieldValue {
-    val start = selection.min.coerceIn(0, text.length)
-    val end = selection.max.coerceIn(0, text.length)
-    val selected = text.substring(start, end)
-    val content = selected.ifEmpty { placeholder }
-    val replaced = text.replaceRange(start, end, prefix + content + suffix)
-    val contentStart = start + prefix.length
-    return TextFieldValue(replaced, TextRange(contentStart, contentStart + content.length))
-}
-
-private fun TextFieldValue.link(): TextFieldValue {
-    val start = selection.min.coerceIn(0, text.length)
-    val end = selection.max.coerceIn(0, text.length)
-    val label = text.substring(start, end).ifEmpty { "链接文字" }
-    val replaced = text.replaceRange(start, end, "[$label](https://)")
-    // Caret inside the empty URL: the label is the easy part, the address is what needs typing.
-    val cursor = start + label.length + 3 + URL_SCHEME.length
-    return TextFieldValue(replaced, TextRange(cursor.coerceIn(0, replaced.length)))
-}
-
-private fun TextFieldValue.insert(insertion: String): TextFieldValue {
-    val start = selection.min.coerceIn(0, text.length)
-    val end = selection.max.coerceIn(0, text.length)
-    val replaced = text.replaceRange(start, end, insertion)
-    val cursor = (start + insertion.length).coerceIn(0, replaced.length)
-    return TextFieldValue(replaced, TextRange(cursor))
-}
-
-private fun TextFieldValue.togglePrefix(prefix: String): TextFieldValue {
-    val caret = selection.min.coerceIn(0, text.length)
-    val lineStart = text.lastIndexOf('\n', (caret - 1).coerceAtLeast(0))
-        .let { if (it < 0 || text.isEmpty()) 0 else it + 1 }
-    val hasPrefix = text.startsWith(prefix, lineStart)
-    val replaced = if (hasPrefix) {
-        text.removeRange(lineStart, lineStart + prefix.length)
-    } else {
-        text.replaceRange(lineStart, lineStart, prefix)
-    }
-    val shift = if (hasPrefix) -prefix.length else prefix.length
-    val cursor = (caret + shift).coerceIn(lineStart.coerceAtMost(replaced.length), replaced.length)
-    return TextFieldValue(replaced, TextRange(cursor))
-}
+/** A bare `@` with no placeholder: the name follows immediately, typed by hand. */
+private val MENTION = MarkdownInsertion(prefix = "@", placeholder = "")
 
 private const val URL_SCHEME = "https://"

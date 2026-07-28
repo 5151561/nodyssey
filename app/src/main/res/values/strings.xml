@@ -365,8 +365,6 @@
     <string name="account_password_new">新密码</string>
     <string name="account_password_confirm">确认新密码</string>
     <string name="account_password_confirm_hint">再输入一次新密码</string>
-    <string name="account_password_show">显示密码</string>
-    <string name="account_password_hide">隐藏密码</string>
     <string name="account_password_update">更新密码</string>
     <string name="account_password_mismatch">两次输入的新密码不一致</string>
     <string name="account_password_too_short">新密码至少 %1$d 位</string>

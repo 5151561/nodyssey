@@ -74,6 +74,7 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.NodeSeekError
@@ -244,7 +245,7 @@ fun PostListScreen(
                             ) {
                                 items(
                                     count = posts.itemCount,
-                                    key = { index -> posts.peek(index)?.summary?.postId ?: index },
+                                    key = posts.itemKey { it.summary.postId },
                                 ) { index ->
                                     val post = posts[index]
                                     if (post != null) {

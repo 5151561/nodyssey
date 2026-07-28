@@ -4,7 +4,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
-/** The Material 3 shape scale, at the radii the design doc specifies. */
+/**
+ * The Material 3 shape scale, at the radii the design doc specifies.
+ *
+ * The four in-between slots — `largeIncreased` (20.dp) and friends — are left at their Material
+ * defaults, which already match the design doc; read them as `MaterialTheme.shapes.largeIncreased`
+ * rather than declaring a parallel constant.
+ */
 val NodysseyShapes =
     Shapes(
         extraSmall = RoundedCornerShape(4.dp),
@@ -13,9 +19,6 @@ val NodysseyShapes =
         large = RoundedCornerShape(16.dp),
         extraLarge = RoundedCornerShape(28.dp),
     )
-
-/** Between `large` and `extraLarge`; Material 3 has the token but not yet a stable `Shapes` slot. */
-val ShapeLargeIncreased = RoundedCornerShape(20.dp)
 
 /**
  * The status-screen shape family.

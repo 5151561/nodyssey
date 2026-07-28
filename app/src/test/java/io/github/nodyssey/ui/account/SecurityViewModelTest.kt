@@ -1,11 +1,15 @@
 package io.github.nodyssey.ui.account
 
 import io.github.nodyssey.data.account.TwoFactorState
+import io.github.nodyssey.ui.ViewModels
+import io.github.nodyssey.ui.typeText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -28,20 +32,30 @@ class SecurityViewModelTest {
     fun setUp() = Dispatchers.setMain(dispatcher)
 
     @After
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        viewModels.clear(dispatcher.scheduler)
+        Dispatchers.resetMain()
+    }
 
-    private fun readyViewModel(repository: FakeAccountSettingsRepository): SecurityViewModel {
-        val vm = SecurityViewModel(repository)
-        vm.updateCurrentPassword("old-password")
-        vm.updateNewPassword("Correct-Horse-9")
-        vm.updateConfirmPassword("Correct-Horse-9")
+    private val viewModels = ViewModels()
+
+    private fun viewModel(repository: FakeAccountSettingsRepository) =
+        viewModels.track(SecurityViewModel(repository))
+
+    private fun TestScope.readyViewModel(repository: FakeAccountSettingsRepository): SecurityViewModel {
+        val vm = viewModel(repository)
+        vm.currentPasswordState.typeText("old-password")
+        vm.newPasswordState.typeText("Correct-Horse-9")
+        vm.confirmPasswordState.typeText("Correct-Horse-9")
+        runCurrent()
+        advanceUntilIdle()
         return vm
     }
 
     @Test
     fun `reads the two-factor state on open`() =
         runTest(dispatcher) {
-            val vm = SecurityViewModel(FakeAccountSettingsRepository(twoFactor = TwoFactorState(true)))
+            val vm = viewModel(FakeAccountSettingsRepository(twoFactor = TwoFactorState(true)))
             advanceUntilIdle()
 
             assertFalse(vm.uiState.value.isLoading)
@@ -112,12 +126,14 @@ class SecurityViewModelTest {
     fun `an incomplete or mismatched form cannot be submitted`() =
         runTest(dispatcher) {
             val repository = FakeAccountSettingsRepository()
-            val vm = SecurityViewModel(repository)
+            val vm = viewModel(repository)
             advanceUntilIdle()
 
-            vm.updateCurrentPassword("old-password")
-            vm.updateNewPassword("Correct-Horse-9")
-            vm.updateConfirmPassword("Correct-Horse-8")
+            vm.currentPasswordState.typeText("old-password")
+            vm.newPasswordState.typeText("Correct-Horse-9")
+            vm.confirmPasswordState.typeText("Correct-Horse-8")
+            runCurrent()
+            advanceUntilIdle()
             assertTrue(vm.uiState.value.isMismatched)
             assertFalse(vm.uiState.value.canSubmitPassword)
 
@@ -130,12 +146,14 @@ class SecurityViewModelTest {
     fun `a too-short password cannot be submitted`() =
         runTest(dispatcher) {
             val repository = FakeAccountSettingsRepository()
-            val vm = SecurityViewModel(repository)
+            val vm = viewModel(repository)
             advanceUntilIdle()
 
-            vm.updateCurrentPassword("old-password")
-            vm.updateNewPassword("short")
-            vm.updateConfirmPassword("short")
+            vm.currentPasswordState.typeText("old-password")
+            vm.newPasswordState.typeText("short")
+            vm.confirmPasswordState.typeText("short")
+            runCurrent()
+            advanceUntilIdle()
 
             assertTrue(vm.uiState.value.isTooShort)
             vm.confirmPasswordChange()
@@ -147,7 +165,7 @@ class SecurityViewModelTest {
     fun `two-factor enrolment also waits for its confirmation, then hands out the uri`() =
         runTest(dispatcher) {
             val repository = FakeAccountSettingsRepository()
-            val vm = SecurityViewModel(repository)
+            val vm = viewModel(repository)
             advanceUntilIdle()
 
             vm.requestTwoFactorEnrolment()
@@ -156,7 +174,9 @@ class SecurityViewModelTest {
             assertFalse(repository.calls.contains("beginTwoFactorEnrolment"))
 
             // The site's enrolment endpoint takes the account password, so the dialog collects one.
-            vm.updateTwoFactorPassword("hunter2!")
+            vm.twoFactorPasswordState.typeText("hunter2!")
+            runCurrent()
+            advanceUntilIdle()
             vm.confirmTwoFactorEnrolment()
             advanceUntilIdle()
 
@@ -173,7 +193,7 @@ class SecurityViewModelTest {
     fun `enrolment without a password never reaches the site`() =
         runTest(dispatcher) {
             val repository = FakeAccountSettingsRepository()
-            val vm = SecurityViewModel(repository)
+            val vm = viewModel(repository)
             advanceUntilIdle()
 
             vm.requestTwoFactorEnrolment()
@@ -188,9 +208,11 @@ class SecurityViewModelTest {
     @Test
     fun `the enrolment uri is consumed after being handed over`() =
         runTest(dispatcher) {
-            val vm = SecurityViewModel(FakeAccountSettingsRepository())
+            val vm = viewModel(FakeAccountSettingsRepository())
             advanceUntilIdle()
-            vm.updateTwoFactorPassword("hunter2!")
+            vm.twoFactorPasswordState.typeText("hunter2!")
+            runCurrent()
+            advanceUntilIdle()
             vm.confirmTwoFactorEnrolment()
             advanceUntilIdle()
 
@@ -202,7 +224,7 @@ class SecurityViewModelTest {
     @Test
     fun `a missing authenticator app is reported rather than swallowed`() =
         runTest(dispatcher) {
-            val vm = SecurityViewModel(FakeAccountSettingsRepository())
+            val vm = viewModel(FakeAccountSettingsRepository())
             advanceUntilIdle()
 
             vm.reportMissingAuthenticatorApp()
