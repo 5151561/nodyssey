@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -49,6 +48,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.PagingData
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nsreader.R
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.NodeSeekError
@@ -60,11 +63,13 @@ import io.github.nsreader.ui.common.NodeSeekErrorState
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.composer.parseMarkdown
+import io.github.nsreader.ui.postlist.toNodeSeekError
 import io.github.nsreader.ui.richtext.RichContent
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.Spacing
 import io.github.nsreader.ui.theme.TABULAR_FIGURES
 import io.github.nsreader.ui.theme.readableWidth
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun UserSpaceRoute(
@@ -80,13 +85,20 @@ fun UserSpaceRoute(
     onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val topics =
+        if (state.selectedTab == SpaceTab.TOPICS) viewModel.topics.collectAsLazyPagingItems() else null
+    val comments =
+        if (state.selectedTab == SpaceTab.COMMENTS) viewModel.comments.collectAsLazyPagingItems() else null
+    val collections =
+        if (state.selectedTab == SpaceTab.COLLECTIONS) viewModel.collections.collectAsLazyPagingItems() else null
     UserSpaceScreen(
         state = state,
+        topics = topics,
+        comments = comments,
+        collections = collections,
         onBack = onBack,
         onTabSelected = viewModel::selectTab,
         onPostClick = onPostClick,
-        onLoadMore = viewModel::loadMore,
-        onRetryTab = viewModel::retryTab,
         onRetryProfile = viewModel::refreshProfile,
         onMessage = { onMessage(state.uid) },
         onEditProfile = onEditProfile,
@@ -104,14 +116,15 @@ fun UserSpaceScreen(
     onBack: () -> Unit,
     onTabSelected: (SpaceTab) -> Unit,
     onPostClick: (Long, String?) -> Unit,
-    onLoadMore: (SpaceTab) -> Unit,
-    onRetryTab: (SpaceTab) -> Unit,
     onRetryProfile: () -> Unit,
     onMessage: () -> Unit,
     onEditProfile: () -> Unit,
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
+    topics: LazyPagingItems<SpacePost>? = null,
+    comments: LazyPagingItems<SpaceComment>? = null,
+    collections: LazyPagingItems<SpacePost>? = null,
     /** Readme/bio links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
     onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
@@ -180,9 +193,10 @@ fun UserSpaceScreen(
             }
             SpaceTabContent(
                 state = state,
+                topics = topics,
+                comments = comments,
+                collections = collections,
                 onPostClick = onPostClick,
-                onLoadMore = onLoadMore,
-                onRetryTab = onRetryTab,
                 onOpenBrowser = onOpenBrowser,
                 onLinkClick = onLinkClick,
                 onSignIn = onSignIn,
@@ -342,9 +356,10 @@ private fun Int.formatted(): String = if (this >= 1_000) "%,d".format(this) else
 @Composable
 private fun SpaceTabContent(
     state: UserSpaceUiState,
+    topics: LazyPagingItems<SpacePost>?,
+    comments: LazyPagingItems<SpaceComment>?,
+    collections: LazyPagingItems<SpacePost>?,
     onPostClick: (Long, String?) -> Unit,
-    onLoadMore: (SpaceTab) -> Unit,
-    onRetryTab: (SpaceTab) -> Unit,
     onOpenBrowser: (String) -> Unit,
     onLinkClick: (String) -> Unit,
     onSignIn: () -> Unit,
@@ -355,12 +370,9 @@ private fun SpaceTabContent(
 
         SpaceTab.TOPICS ->
             SpaceListTab(
-                list = state.topics,
-                tab = SpaceTab.TOPICS,
+                list = topics,
                 emptyText = stringResource(R.string.space_empty_topics),
                 endTextRes = R.string.space_end_topics,
-                onLoadMore = onLoadMore,
-                onRetryTab = onRetryTab,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
                 key = { _, post -> post.postId },
@@ -371,12 +383,9 @@ private fun SpaceTabContent(
 
         SpaceTab.COMMENTS ->
             SpaceListTab(
-                list = state.comments,
-                tab = SpaceTab.COMMENTS,
+                list = comments,
                 emptyText = stringResource(R.string.space_empty_comments),
                 endTextRes = R.string.space_end_comments,
-                onLoadMore = onLoadMore,
-                onRetryTab = onRetryTab,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
                 // The payload's own id when it has one; the position only for the rare row without.
@@ -392,12 +401,9 @@ private fun SpaceTabContent(
 
         SpaceTab.COLLECTIONS ->
             SpaceListTab(
-                list = state.collections,
-                tab = SpaceTab.COLLECTIONS,
+                list = collections,
                 emptyText = stringResource(R.string.space_empty_collections),
                 endTextRes = R.string.space_end_collections,
-                onLoadMore = onLoadMore,
-                onRetryTab = onRetryTab,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
                 key = { _, post -> post.postId },
@@ -497,18 +503,13 @@ private fun SpaceCard(
 /**
  * The list tabs, which differ only in their row and their end-of-list sentence.
  *
- * Paging is by "load more" rather than by Paging 3: these lists are short (five topics, ninety-six
- * comments) and the endpoints are page-numbered XHRs, so a RemoteMediator would add a Room table and a
- * cache-invalidation question to save nothing.
+ * The repository remains page-numbered, while Paging 3 owns loading, retries and append state.
  */
 @Composable
-private fun <T> SpaceListTab(
-    list: SpaceListState<T>,
-    tab: SpaceTab,
+private fun <T : Any> SpaceListTab(
+    list: LazyPagingItems<T>?,
     emptyText: String,
     endTextRes: Int,
-    onLoadMore: (SpaceTab) -> Unit,
-    onRetryTab: (SpaceTab) -> Unit,
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     /** Stable row identity, so a page-1 replace recomposes only the rows that actually changed. */
@@ -516,20 +517,24 @@ private fun <T> SpaceListTab(
     modifier: Modifier = Modifier,
     row: @Composable (T) -> Unit,
 ) {
-    if (list.items.isEmpty()) {
-        when {
-            list.isLoading -> LoadingState(modifier)
+    if (list == null) {
+        LoadingState(modifier)
+        return
+    }
+    if (list.itemCount == 0) {
+        when (val refresh = list.loadState.refresh) {
+            LoadState.Loading -> LoadingState(modifier)
 
-            list.error != null ->
+            is LoadState.Error ->
                 NodeSeekErrorState(
-                    error = list.error,
-                    onRetry = { onRetryTab(tab) },
+                    error = refresh.error.toNodeSeekError(),
+                    onRetry = list::retry,
                     onOpenBrowser = { onOpenBrowser(NodeSeekSite.BASE_URL) },
                     onSignIn = onSignIn,
                     modifier = modifier,
                 )
 
-            else ->
+            is LoadState.NotLoading ->
                 Box(modifier, contentAlignment = Alignment.Center) {
                     Text(
                         emptyText,
@@ -543,41 +548,41 @@ private fun <T> SpaceListTab(
     }
 
     LazyColumn(modifier) {
-        items(count = list.items.size, key = { key(it, list.items[it]) }) { index ->
-            row(list.items[index])
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        items(
+            count = list.itemCount,
+            key = { index -> list.peek(index)?.let { key(index, it) } ?: index },
+        ) { index ->
+            list[index]?.let { item ->
+                row(item)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
         }
-        listFooter(list = list, tab = tab, endTextRes = endTextRes, onLoadMore = onLoadMore)
-    }
-}
+        item(key = "footer") {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 22.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                when (list.loadState.append) {
+                    LoadState.Loading -> CircularProgressIndicator(Modifier.size(22.dp))
 
-private fun <T> LazyListScope.listFooter(
-    list: SpaceListState<T>,
-    tab: SpaceTab,
-    endTextRes: Int,
-    onLoadMore: (SpaceTab) -> Unit,
-) {
-    item(key = "footer") {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 22.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            when {
-                list.isLoading -> CircularProgressIndicator(Modifier.size(22.dp))
+                    is LoadState.Error ->
+                        TextButton(onClick = list::retry) {
+                            Text(stringResource(R.string.action_retry))
+                        }
 
-                list.hasNextPage ->
-                    TextButton(onClick = { onLoadMore(tab) }) {
-                        Text(stringResource(R.string.space_load_more))
-                    }
-
-                else ->
-                    Text(
-                        text = stringResource(endTextRes, list.items.size),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    is LoadState.NotLoading ->
+                        if (list.loadState.append.endOfPaginationReached) {
+                            Text(
+                                text = stringResource(endTextRes, list.itemCount),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            CircularProgressIndicator(Modifier.size(22.dp))
+                        }
+                }
             }
         }
     }
@@ -688,7 +693,6 @@ private val previewSelfState =
         topicCount = 5,
         commentCount = 96,
         selectedTab = SpaceTab.TOPICS,
-        topics = SpaceListState(items = previewTopics, loaded = true),
     )
 
 private val previewPublicState =
@@ -735,13 +739,13 @@ private fun UserSpaceSelfDarkPreview() {
 
 @Composable
 private fun PreviewScreen(state: UserSpaceUiState) {
+    val topics = flowOf(PagingData.from(previewTopics)).collectAsLazyPagingItems()
     UserSpaceScreen(
         state = state,
+        topics = topics,
         onBack = {},
         onTabSelected = {},
         onPostClick = { _, _ -> },
-        onLoadMore = {},
-        onRetryTab = {},
         onRetryProfile = {},
         onMessage = {},
         onEditProfile = {},

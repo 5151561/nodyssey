@@ -162,10 +162,12 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_wifi_images),
                     subtitle = stringResource(R.string.settings_wifi_images_hint),
                     top = true,
+                    checked = state.settings.imagesOnWifiOnly,
+                    onCheckedChange = onImagesOnWifiOnlyChange,
                     trailing = {
                         Switch(
                             checked = state.settings.imagesOnWifiOnly,
-                            onCheckedChange = onImagesOnWifiOnlyChange,
+                            onCheckedChange = null,
                         )
                     },
                 )

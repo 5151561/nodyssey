@@ -21,7 +21,6 @@ import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -119,7 +118,9 @@ fun NotificationSettingsScreen(
                     subtitle = stringResource(R.string.notify_master_hint),
                     top = true,
                     bottom = true,
-                    trailing = { Switch(checked = enabled, onCheckedChange = onEnabledChange) },
+                    checked = enabled,
+                    onCheckedChange = onEnabledChange,
+                    trailing = { Switch(checked = enabled, onCheckedChange = null) },
                 )
             }
 
@@ -144,7 +145,8 @@ fun NotificationSettingsScreen(
                                 stringResource(R.string.notify_frequency_60),
                             ),
                             selectedIndex = choices.indexOf(settings.notificationPollMinutes),
-                            onSelect = { if (enabled) onPollMinutesChange(choices[it]) },
+                            onSelect = { onPollMinutesChange(choices[it]) },
+                            enabled = enabled,
                         )
                         Text(
                             stringResource(R.string.notify_frequency_hint),
@@ -159,10 +161,13 @@ fun NotificationSettingsScreen(
                         title = stringResource(R.string.notify_wifi_only),
                         subtitle = stringResource(R.string.notify_wifi_only_hint),
                         top = true,
+                        checked = settings.notificationsWifiOnly,
+                        onCheckedChange = onWifiOnlyChange,
+                        enabled = enabled,
                         trailing = {
                             Switch(
                                 checked = settings.notificationsWifiOnly,
-                                onCheckedChange = onWifiOnlyChange,
+                                onCheckedChange = null,
                                 enabled = enabled,
                             )
                         },
@@ -171,10 +176,13 @@ fun NotificationSettingsScreen(
                         title = stringResource(R.string.notify_quiet_hours),
                         subtitle = stringResource(R.string.notify_quiet_hours_hint),
                         bottom = true,
+                        checked = settings.notificationQuietHours,
+                        onCheckedChange = onQuietHoursChange,
+                        enabled = enabled,
                         trailing = {
                             Switch(
                                 checked = settings.notificationQuietHours,
-                                onCheckedChange = onQuietHoursChange,
+                                onCheckedChange = null,
                                 enabled = enabled,
                             )
                         },
@@ -187,10 +195,13 @@ fun NotificationSettingsScreen(
                         title = stringResource(R.string.notifications_mentions),
                         top = true,
                         leading = { Icon(NodeSeekIcons.AlternateEmail, contentDescription = null) },
+                        checked = settings.notifyMentions,
+                        onCheckedChange = onNotifyMentionsChange,
+                        enabled = enabled,
                         trailing = {
                             Switch(
                                 checked = settings.notifyMentions,
-                                onCheckedChange = onNotifyMentionsChange,
+                                onCheckedChange = null,
                                 enabled = enabled,
                             )
                         },
@@ -198,10 +209,13 @@ fun NotificationSettingsScreen(
                     SettingsRow(
                         title = stringResource(R.string.notifications_replies),
                         leading = { Icon(NodeSeekIcons.ChatBubble, contentDescription = null) },
+                        checked = settings.notifyReplies,
+                        onCheckedChange = onNotifyRepliesChange,
+                        enabled = enabled,
                         trailing = {
                             Switch(
                                 checked = settings.notifyReplies,
-                                onCheckedChange = onNotifyRepliesChange,
+                                onCheckedChange = null,
                                 enabled = enabled,
                             )
                         },
@@ -210,10 +224,13 @@ fun NotificationSettingsScreen(
                         title = stringResource(R.string.notifications_messages),
                         bottom = true,
                         leading = { Icon(Icons.Default.Email, contentDescription = null) },
+                        checked = settings.notifyMessages,
+                        onCheckedChange = onNotifyMessagesChange,
+                        enabled = enabled,
                         trailing = {
                             Switch(
                                 checked = settings.notifyMessages,
-                                onCheckedChange = onNotifyMessagesChange,
+                                onCheckedChange = null,
                                 enabled = enabled,
                             )
                         },
@@ -232,9 +249,11 @@ fun NotificationSettingsScreen(
                     onClick = onOpenTelegram,
                     leading = { Icon(NodeSeekIcons.Send, contentDescription = null) },
                     trailing = {
-                        TextButton(onClick = onOpenTelegram) {
-                            Text(stringResource(R.string.notify_telegram_action))
-                        }
+                        Text(
+                            stringResource(R.string.notify_telegram_action),
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     },
                 )
             }

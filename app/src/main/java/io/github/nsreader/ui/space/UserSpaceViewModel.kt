@@ -5,18 +5,25 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
+import androidx.paging.cachedIn
 import io.github.nsreader.core.AppClock
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.ProfileRepository
 import io.github.nsreader.data.SpaceComment
-import io.github.nsreader.data.SpacePage
 import io.github.nsreader.data.SpacePost
 import io.github.nsreader.data.UserProfile
 import io.github.nsreader.data.UserSpaceRepository
 import io.github.nsreader.di.AppContainer
 import io.github.nsreader.ui.postlist.toNodeSeekError
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -65,9 +72,6 @@ data class UserSpaceUiState(
     val topicCount: Int? = null,
     val commentCount: Int? = null,
     val selectedTab: SpaceTab = SpaceTab.GENERAL,
-    val topics: SpaceListState<SpacePost> = SpaceListState(),
-    val comments: SpaceListState<SpaceComment> = SpaceListState(),
-    val collections: SpaceListState<SpacePost> = SpaceListState(),
 ) {
     /** Others have no 收藏 tab: the site publishes nobody else's collections. */
     val tabs: List<SpaceTab>
@@ -79,15 +83,6 @@ data class UserSpaceUiState(
             }
 
     val hasProfile: Boolean get() = name.isNotBlank()
-
-    /** `null` for 概况, which has no list of its own. */
-    fun listFor(tab: SpaceTab): SpaceListState<*>? =
-        when (tab) {
-            SpaceTab.GENERAL -> null
-            SpaceTab.TOPICS -> topics
-            SpaceTab.COMMENTS -> comments
-            SpaceTab.COLLECTIONS -> collections
-        }
 }
 
 /**
@@ -107,13 +102,17 @@ class UserSpaceViewModel(
     private val _uiState = MutableStateFlow(UserSpaceUiState(uid = uid, isSelf = isSelf))
     val uiState: StateFlow<UserSpaceUiState> = _uiState.asStateFlow()
 
+    val topics: Flow<PagingData<SpacePost>> =
+        spacePager { page -> spaceRepository.topics(uid, page) }.cachedIn(viewModelScope)
+    val comments: Flow<PagingData<SpaceComment>> =
+        spacePager { page -> spaceRepository.comments(uid, page) }.cachedIn(viewModelScope)
+    val collections: Flow<PagingData<SpacePost>> =
+        spacePager { page -> spaceRepository.collections(page) }.cachedIn(viewModelScope)
+
     private var profileJob: Job? = null
-    private val tabJobs = mutableMapOf<SpaceTab, Job>()
 
     init {
         refreshProfile()
-        // Your own space opens on 主题帖 — you know who you are; a stranger's opens on 概况, which is
-        // the reason to be there. Either way the first tab starts loading immediately.
         selectTab(if (isSelf) SpaceTab.TOPICS else SpaceTab.GENERAL)
     }
 
@@ -134,89 +133,6 @@ class UserSpaceViewModel(
 
     fun selectTab(tab: SpaceTab) {
         _uiState.update { it.copy(selectedTab = tab) }
-        val list = _uiState.value.listFor(tab) ?: return
-        if (!list.loaded && !list.isLoading) load(tab, page = 1)
-    }
-
-    fun loadMore(tab: SpaceTab) {
-        val list = _uiState.value.listFor(tab) ?: return
-        if (list.isLoading || !list.hasNextPage) return
-        load(tab, page = list.page + 1)
-    }
-
-    fun retryTab(tab: SpaceTab) = load(tab, page = 1)
-
-    private fun load(tab: SpaceTab, page: Int) {
-        tabJobs[tab]?.cancel()
-        tabJobs[tab] =
-            viewModelScope.launch {
-                when (tab) {
-                    SpaceTab.GENERAL -> Unit
-
-                    SpaceTab.TOPICS ->
-                        loadInto(
-                            page = page,
-                            read = { topics },
-                            write = { copy(topics = it) },
-                            fetch = { spaceRepository.topics(uid, page) },
-                        )
-
-                    SpaceTab.COMMENTS ->
-                        loadInto(
-                            page = page,
-                            read = { comments },
-                            write = { copy(comments = it) },
-                            fetch = { spaceRepository.comments(uid, page) },
-                        )
-
-                    SpaceTab.COLLECTIONS ->
-                        loadInto(
-                            page = page,
-                            read = { collections },
-                            write = { copy(collections = it) },
-                            fetch = { spaceRepository.collections(page) },
-                        )
-                }
-            }
-    }
-
-    /**
-     * The one load routine, given a lens onto whichever list is being filled.
-     *
-     * Passing the accessors rather than switching on the tab inside is what keeps the item type real:
-     * casting a shared list field to make one function fit three types is how a comment ends up in the
-     * topics tab after a refactor.
-     */
-    private suspend fun <T> loadInto(
-        page: Int,
-        read: UserSpaceUiState.() -> SpaceListState<T>,
-        write: UserSpaceUiState.(SpaceListState<T>) -> UserSpaceUiState,
-        fetch: suspend () -> SpacePage<T>,
-    ) {
-        _uiState.update { it.write(it.read().copy(isLoading = true, error = null)) }
-        runCatchingExceptCancellation { fetch() }
-            .onSuccess { result ->
-                _uiState.update { state ->
-                    val current = state.read()
-                    state.write(
-                        current.copy(
-                            // Page 1 replaces rather than appends, so a retry cannot double every row.
-                            items = if (page == 1) result.items else current.items + result.items,
-                            isLoading = false,
-                            error = null,
-                            page = page,
-                            hasNextPage = result.hasNextPage,
-                            loaded = true,
-                        ),
-                    )
-                }
-            }.onFailure { throwable ->
-                _uiState.update { state ->
-                    state.write(
-                        state.read().copy(isLoading = false, error = throwable.toNodeSeekError()),
-                    )
-                }
-            }
     }
 
     private fun UserSpaceUiState.withProfile(profile: UserProfile): UserSpaceUiState =
@@ -253,6 +169,38 @@ class UserSpaceViewModel(
             }
     }
 }
+
+private fun <T : Any> spacePager(fetch: suspend (Int) -> io.github.nsreader.data.SpacePage<T>): Flow<PagingData<T>> =
+    Pager(PagingConfig(pageSize = SPACE_PAGE_SIZE, initialLoadSize = SPACE_PAGE_SIZE)) {
+        UserSpacePagingSource(fetch)
+    }.flow
+
+internal class UserSpacePagingSource<T : Any>(
+    private val fetch: suspend (Int) -> io.github.nsreader.data.SpacePage<T>,
+) : PagingSource<Int, T>() {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, T> =
+        try {
+            val page = params.key ?: 1
+            val result = fetch(page)
+            LoadResult.Page(
+                data = result.items,
+                prevKey = if (result.page > 1) result.page - 1 else null,
+                nextKey = if (result.hasNextPage) result.page + 1 else null,
+            )
+        } catch (throwable: Throwable) {
+            if (throwable is CancellationException) throw throwable
+            LoadResult.Error(throwable)
+        }
+
+    override fun getRefreshKey(state: PagingState<Int, T>): Int? =
+        state.anchorPosition?.let { position ->
+            state.closestPageToPosition(position)?.let { page ->
+                page.prevKey?.plus(1) ?: page.nextKey?.minus(1)
+            }
+        }
+}
+
+private const val SPACE_PAGE_SIZE = 20
 
 /**
  * Days since registration, which is the site's own headline statistic for an account.

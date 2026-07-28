@@ -5,24 +5,24 @@ import android.content.ClipboardManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
+import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
+import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,14 +31,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
@@ -109,9 +109,11 @@ import io.github.nsreader.ui.viewer.ImageViewerScreen
 import io.github.nsreader.ui.viewer.ImageViewerViewModel
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun MainNavigation(
     container: AppContainer,
+    modifier: Modifier = Modifier,
     initialTab: TopLevelDestination = TopLevelDestination.HOME,
 ) {
     val signInUrl = NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH
@@ -163,9 +165,29 @@ fun MainNavigation(
             TopLevelDestination.PROFILE -> profileStack
         }
 
+    val windowAdaptiveInfo = currentWindowAdaptiveInfoV2()
+    val paneDirective = remember(windowAdaptiveInfo) {
+        calculatePaneScaffoldDirective(windowAdaptiveInfo).copy(horizontalPartitionSpacerSize = 0.dp)
+    }
+    val isListDetailExpanded = paneDirective.maxHorizontalPartitions > 1
+    val currentListDetailExpanded by rememberUpdatedState(isListDetailExpanded)
+    val listDetailSceneStrategy =
+        rememberListDetailSceneStrategy<NavKey>(directive = paneDirective)
+
     // The bar belongs to the top-level destinations only. A thread, the image viewer and the web
     // view are full-screen by design — showing a tab bar under them would invite leaving mid-read.
     val atTabRoot = TopLevelDestination.forKey(backStack.lastOrNull()) != null
+    val showNavigationSuite =
+        (atTabRoot && (!feedNavigationBarHidden || isListDetailExpanded)) ||
+            (
+                currentTab == TopLevelDestination.HOME &&
+                    isListDetailExpanded &&
+                    backStack.lastOrNull() is PostDetailKey
+                )
+    val navigationSuiteState = rememberNavigationSuiteScaffoldState()
+    LaunchedEffect(showNavigationSuite) {
+        if (showNavigationSuite) navigationSuiteState.show() else navigationSuiteState.hide()
+    }
 
     // Content links only: our own post/space/mention URLs stay in the app; everything else leaves
     // it. Explicit "open in browser" actions keep openExternalUrl, or they would loop back here.
@@ -206,6 +228,606 @@ fun MainNavigation(
         currentTab = TopLevelDestination.HOME
     }
 
+    fun destinationProvider(backStack: NavBackStack<NavKey>) =
+        entryProvider<NavKey> {
+            entry<PostListKey>(
+                metadata =
+                ListDetailSceneStrategy.listPane(
+                    detailPlaceholder = { EmptyDetailPane() },
+                ),
+            ) {
+                val viewModel: PostListViewModel =
+                    viewModel(factory = PostListViewModel.factory(container))
+                PostListRoute(
+                    viewModel = viewModel,
+                    onPostClick = { backStack.add(PostDetailKey(it)) },
+                    onCreatePost = { backStack.add(PostComposerKey) },
+                    onSignIn = {
+                        backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
+                    },
+                    onVerify = {
+                        backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE))
+                    },
+                    onNavigationBarHiddenChanged = { hidden ->
+                        if (!currentListDetailExpanded) feedNavigationBarHidden = hidden
+                    },
+                )
+            }
+
+            entry<SearchKey> {
+                val viewModel: SearchViewModel =
+                    viewModel(factory = SearchViewModel.factory(container))
+                SearchRoute(
+                    viewModel = viewModel,
+                    onPostClick = { backStack.add(PostDetailKey(it)) },
+                    // A user result now has a screen of its own, so it stays in the app. Finding
+                    // yourself in search must open the same self-shaped space 我的 opens.
+                    onUserClick = { uid ->
+                        backStack.add(
+                            UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid),
+                        )
+                    },
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
+                )
+            }
+
+            entry<NotificationsKey> {
+                NotificationsRoute(
+                    viewModel = notificationsViewModel,
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
+                        )
+                    },
+                    onNotificationClick = { notification ->
+                        notification.postId?.let {
+                            backStack.add(PostDetailKey(it, notification.floor))
+                        }
+                    },
+                    onOpenThread = { uid, name ->
+                        backStack.add(MessageThreadKey(uid, name))
+                    },
+                )
+            }
+
+            entry<MessageThreadKey> { key ->
+                val viewModel: MessageThreadViewModel =
+                    viewModel(
+                        key = "message-${key.uid}",
+                        factory =
+                        MessageThreadViewModel.factory(container, key.uid, key.userName),
+                    )
+                MessageThreadRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.NOTIFICATION_PATH,
+                                siteTitle,
+                                WebViewGoal.CHALLENGE,
+                            ),
+                        )
+                    },
+                    onOpenBrowser = openExternalUrl,
+                    onLinkClick = openContentUrl,
+                )
+            }
+
+            entry<ProfileKey> {
+                val viewModel: ProfileViewModel =
+                    viewModel(factory = ProfileViewModel.factory(container))
+                ProfileRoute(
+                    viewModel = viewModel,
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSettings = { backStack.add(SettingsKey) },
+                    onAccountSettings = { backStack.add(AccountSettingsKey) },
+                    onOpenWebsite = { openExternalUrl(NodeSeekSite.BASE_URL) },
+                    onOpenSpace = { uid -> backStack.add(UserSpaceKey(uid, isSelf = true)) },
+                    onAssets = { backStack.add(AssetsKey) },
+                    onFollow = { backStack.add(FollowKey) },
+                    onTools = { backStack.add(CommunityToolsKey) },
+                )
+            }
+
+            entry<SettingsKey> {
+                val viewModel: SettingsViewModel =
+                    viewModel(factory = SettingsViewModel.factory(container))
+                SettingsRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenNotifications = { backStack.add(NotificationSettingsKey) },
+                    onOpenAbout = { backStack.add(AboutCommunityKey) },
+                    onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
+                )
+            }
+
+            entry<NotificationSettingsKey> {
+                val viewModel: NotificationSettingsViewModel =
+                    viewModel(factory = NotificationSettingsViewModel.factory(container))
+                NotificationSettingsRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    // 绑定 Telegram lives on 联系方式 (d6 3/4), the site's own binding entry.
+                    onOpenTelegram = { backStack.add(AccountContactKey) },
+                )
+            }
+
+            entry<AboutCommunityKey> {
+                val context = LocalContext.current
+                val packageInfo =
+                    remember(context) {
+                        context.packageManager.getPackageInfo(context.packageName, 0)
+                    }
+                AboutCommunityScreen(
+                    versionName = packageInfo.versionName.orEmpty().ifBlank { "—" },
+                    versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        packageInfo.longVersionCode
+                    } else {
+                        @Suppress("DEPRECATION")
+                        packageInfo.versionCode.toLong()
+                    },
+                    updateStatus = AppUpdateStatus.Unknown,
+                    onBack = { backStack.removeLastOrNull() },
+                    onCheckUpdates = { openExternalUrl(CommunityLinks.RELEASES) },
+                    onOpenAboutSite = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.ABOUT_PATH,
+                                aboutSiteTitle,
+                                WebViewGoal.MANAGE,
+                            ),
+                        )
+                    },
+                    onOpenPrivacy = { backStack.add(PrivacyKey) },
+                    onOpenChangelog = { backStack.add(ChangelogKey) },
+                    onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
+                    onOpenUri = { uri ->
+                        if (NodeSeekSite.isExternalWebUrl(uri)) {
+                            openExternalUrl(uri)
+                        } else if (uri == CommunityLinks.EMAIL) {
+                            runCatching { uriHandler.openUri(uri) }
+                        }
+                    },
+                    onCopyRss = {
+                        context
+                            .getSystemService(ClipboardManager::class.java)
+                            ?.setPrimaryClip(
+                                ClipData.newPlainText(
+                                    rssLabel,
+                                    CommunityLinks.RSS,
+                                ),
+                            )
+                    },
+                )
+            }
+
+            entry<PrivacyKey> {
+                val privacyViewModel: PrivacyViewModel =
+                    viewModel(factory = PrivacyViewModel.factory(container))
+                PrivacyRoute(
+                    viewModel = privacyViewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenOriginal = {
+                        openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH)
+                    },
+                    onOpenWebFallback = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH,
+                                privacyTitle,
+                                WebViewGoal.MANAGE,
+                            ),
+                        )
+                    },
+                )
+            }
+
+            entry<ChangelogKey> {
+                val context = LocalContext.current
+                val versionName = remember(context) {
+                    context.packageManager.getPackageInfo(context.packageName, 0)
+                        .versionName.orEmpty().ifBlank { "—" }
+                }
+                ChangelogScreen(
+                    versionName = versionName,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenReleases = { openExternalUrl(CommunityLinks.RELEASES) },
+                )
+            }
+
+            entry<OpenSourceLicensesKey> {
+                OpenSourceLicensesScreen(
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenUri = openExternalUrl,
+                )
+            }
+
+            entry<UserSpaceKey> { key ->
+                val viewModel: UserSpaceViewModel =
+                    viewModel(
+                        key = "space-${key.uid}",
+                        factory = UserSpaceViewModel.factory(container, key.uid, key.isSelf),
+                    )
+                UserSpaceRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onPostClick = { postId, floor -> backStack.add(PostDetailKey(postId, floor)) },
+                    // 私信 is the site's own conversation page: authenticated, and with a Markdown
+                    // composer we have not reimplemented, so it opens in the session's web view.
+                    onMessage = { uid ->
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.messagePath(uid),
+                                siteTitle,
+                                WebViewGoal.MANAGE,
+                            ),
+                        )
+                    },
+                    onEditProfile = { backStack.add(AccountSettingsKey) },
+                    onOpenBrowser = openExternalUrl,
+                    onLinkClick = openContentUrl,
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                )
+            }
+
+            entry<FollowKey> {
+                val viewModel: FollowViewModel =
+                    viewModel(factory = FollowViewModel.factory(container))
+                FollowRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onUserClick = { uid ->
+                        backStack.add(
+                            UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid),
+                        )
+                    },
+                    // `/fans` only exists for the signed-in user, so it follows the app's rule for
+                    // authenticated pages: the session's own web view, never the system browser.
+                    onOpenBrowser = { url ->
+                        backStack.add(WebKey(url, siteTitle, WebViewGoal.MANAGE))
+                    },
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                )
+            }
+
+            entry<AssetsKey> {
+                val viewModel: AssetsViewModel =
+                    viewModel(factory = AssetsViewModel.factory(container))
+                AssetsRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    // The chicken ledger has no board of its own in this batch and no endpoint
+                    // behind it; the site's table is the honest destination.
+                    onChickenLedger = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH,
+                                siteTitle,
+                                WebViewGoal.MANAGE,
+                            ),
+                        )
+                    },
+                    onStardust = { backStack.add(StardustKey) },
+                    // In-app, not the system browser: a Cloudflare pass earned out there lands in
+                    // Chrome's cookie store, and the app's own retry keeps failing forever.
+                    onOpenBrowser = {
+                        backStack.add(
+                            WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
+                        )
+                    },
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                )
+            }
+
+            entry<StardustKey> {
+                val viewModel: StardustViewModel =
+                    viewModel(factory = StardustViewModel.factory(container))
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                // The ledger URL is per-member, so it exists only once the profile call has said
+                // who we are. The screen keeps the transfer entry off until then — landing a
+                // just-confirmed transfer on the home page would silently drop the typed form.
+                val ledgerUrl = state.uid?.let { NodeSeekSite.BASE_URL + NodeSeekSite.stardustPath(it) }
+                val openLedger = {
+                    backStack.add(
+                        WebKey(ledgerUrl ?: NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.MANAGE),
+                    )
+                    Unit
+                }
+                StardustRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    // The ledger needs the session's cookies, so it opens in-app like every other
+                    // authenticated page rather than in the cookie-less system browser.
+                    onOpenBrowser = openLedger,
+                    // Confirmed in the app, submitted on the site: sending stardust is irreversible
+                    // and the endpoint is undocumented, so the last step stays where it works.
+                    onTransferOnSite = openLedger,
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                )
+            }
+
+            entry<AccountSettingsKey> {
+                val viewModel: AccountSettingsViewModel =
+                    viewModel(factory = AccountSettingsViewModel.factory(container))
+                AccountSettingsRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenProfileFields = { backStack.add(AccountProfileFieldsKey) },
+                    onOpenSecurity = { backStack.add(AccountSecurityKey) },
+                    onOpenContact = { backStack.add(AccountContactKey) },
+                    onOpenBlockList = { backStack.add(AccountBlockListKey) },
+                    // 常用偏好 and 首页版块 share one page (d6 5/5): three of their rows are the
+                    // same account-side switches, and splitting them would leave two stub screens.
+                    onOpenPreferences = { backStack.add(AccountPreferencesKey) },
+                )
+            }
+
+            entry<AccountProfileFieldsKey> {
+                val viewModel: ProfileFieldsViewModel =
+                    viewModel(factory = ProfileFieldsViewModel.factory(container))
+                ProfileFieldsRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                )
+            }
+
+            entry<AccountSecurityKey> {
+                val viewModel: SecurityViewModel =
+                    viewModel(factory = SecurityViewModel.factory(container))
+                SecurityRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    // `otpauth://` belongs to whichever authenticator app registered for it, so it
+                    // leaves the app rather than being rendered here — the app never holds the
+                    // secret. Returns false when nothing claims the scheme, so the screen can say so
+                    // instead of appearing to do nothing.
+                    onOpenEnrolmentUri = { uri ->
+                        runCatching { uriHandler.openUri(uri) }.isSuccess
+                    },
+                )
+            }
+
+            entry<AccountContactKey> {
+                val viewModel: ContactViewModel =
+                    viewModel(factory = ContactViewModel.factory(container))
+                ContactRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    // The bind link belongs to Telegram (t.me / tg://), so it leaves the app for
+                    // whatever owns the scheme — the Telegram app, or the browser's web version.
+                    // Never the in-app web view, whose cookie jar is for nodeseek.com only.
+                    onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
+                )
+            }
+
+            entry<AccountBlockListKey> {
+                val viewModel: BlockListViewModel =
+                    viewModel(factory = BlockListViewModel.factory(container))
+                BlockListRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                )
+            }
+
+            entry<AccountPreferencesKey> {
+                val viewModel: PreferencesViewModel =
+                    viewModel(factory = PreferencesViewModel.factory(container))
+                PreferencesRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                )
+            }
+
+            entry<CommunityToolsKey> {
+                CommunityToolsScreen(
+                    onBack = { backStack.removeLastOrNull() },
+                    onAward = { backStack.add(AwardKey) },
+                    onProviders = { openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.PROVIDERS_PATH) },
+                    onFriends = { openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.FRIENDS_PATH) },
+                    onLucky = { backStack.add(LuckyKey) },
+                    onInvite = { backStack.add(InviteKey) },
+                    onRuling = { backStack.add(RulingKey) },
+                    onAbout = { backStack.add(AboutCommunityKey) },
+                )
+            }
+
+            entry<AwardKey> {
+                val viewModel: AwardViewModel =
+                    viewModel(factory = AwardViewModel.factory(container))
+                AwardRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onPostClick = { backStack.add(PostDetailKey(it)) },
+                    onOpenBrowser = openExternalUrl,
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                )
+            }
+
+            entry<LuckyKey> {
+                val viewModel: LuckyViewModel =
+                    viewModel(factory = LuckyViewModel.factory(container))
+                LuckyRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenBrowser = openExternalUrl,
+                )
+            }
+
+            entry<InviteKey> {
+                val viewModel: InviteViewModel =
+                    viewModel(factory = InviteViewModel.factory(container))
+                InviteRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onBuyOnSite = { backStack.add(inviteWebKey(siteTitle)) },
+                )
+            }
+
+            entry<RulingKey> {
+                val viewModel: RulingViewModel =
+                    viewModel(factory = RulingViewModel.factory(container))
+                RulingRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenBrowser = openExternalUrl,
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                )
+            }
+
+            entry<ImageViewerKey> { key ->
+                val context = LocalContext.current
+                val viewModel: ImageViewerViewModel =
+                    viewModel(factory = ImageViewerViewModel.factory(container, context))
+                val saveOutcome by viewModel.saveOutcome.collectAsStateWithLifecycle()
+                ImageViewerScreen(
+                    urls = key.urls,
+                    initialIndex = key.index,
+                    onClose = { backStack.removeLastOrNull() },
+                    onOpenBrowser = openExternalUrl,
+                    saveOutcome = saveOutcome,
+                    onSave = viewModel::save,
+                )
+            }
+
+            entry<PostDetailKey>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) { key ->
+                // Keyed so navigating to a different post builds a fresh ViewModel.
+                val viewModel: PostDetailViewModel =
+                    viewModel(
+                        key = "post-${key.postId}",
+                        factory = PostDetailViewModel.factory(container, key.postId),
+                    )
+                // Its own ViewModel, keyed the same way: an unsent reply belongs to one thread
+                // and has to outlive the sheet that shows it.
+                val replyViewModel: ReplyComposerViewModel =
+                    viewModel(
+                        key = "reply-${key.postId}",
+                        factory = ReplyComposerViewModel.factory(container, key.postId),
+                    )
+                PostDetailRoute(
+                    viewModel = viewModel,
+                    replyViewModel = replyViewModel,
+                    initialFloor = key.floor,
+                    showBackButton =
+                    !(currentListDetailExpanded && backStack.firstOrNull() == PostListKey),
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenBrowser = openExternalUrl,
+                    onLinkClick = openContentUrl,
+                    onAuthorClick = openSpace,
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
+                    onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
+                )
+            }
+
+            entry<PostComposerKey> {
+                val viewModel: PostComposerViewModel =
+                    viewModel(factory = PostComposerViewModel.factory(container))
+                PostComposerRoute(
+                    viewModel = viewModel,
+                    onClose = { backStack.removeLastOrNull() },
+                    onSignIn = {
+                        backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
+                    },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH,
+                                siteTitle,
+                                WebViewGoal.CHALLENGE,
+                            ),
+                        )
+                    },
+                    onPublished = { postId ->
+                        backStack.removeLastOrNull()
+                        postId?.let { backStack.add(PostDetailKey(it)) }
+                    },
+                )
+            }
+
+            entry<WebKey> { key ->
+                WebViewRoute(
+                    url = key.url,
+                    title = key.title,
+                    goal = key.goal,
+                    session = container.sessionRepository,
+                    userAgent = container.userAgent,
+                    onOpenExternal = openExternalUrl,
+                    onClose = { backStack.removeLastOrNull() },
+                )
+            }
+        }
+
+    val viewModelDecorator = rememberViewModelStoreNavEntryDecorator<NavKey>()
+    val homeEntries =
+        rememberDecoratedNavEntries(
+            backStack = homeStack,
+            entryDecorators =
+            listOf(
+                rememberSaveableStateHolderNavEntryDecorator(),
+                viewModelDecorator,
+            ),
+            entryProvider =
+            stackScopedEntryProvider(
+                TopLevelDestination.HOME,
+                destinationProvider(homeStack),
+            ),
+        )
+    val searchEntries =
+        rememberDecoratedNavEntries(
+            backStack = searchStack,
+            entryDecorators =
+            listOf(
+                rememberSaveableStateHolderNavEntryDecorator(),
+                viewModelDecorator,
+            ),
+            entryProvider =
+            stackScopedEntryProvider(
+                TopLevelDestination.SEARCH,
+                destinationProvider(searchStack),
+            ),
+        )
+    val notificationEntries =
+        rememberDecoratedNavEntries(
+            backStack = notificationsStack,
+            entryDecorators =
+            listOf(
+                rememberSaveableStateHolderNavEntryDecorator(),
+                viewModelDecorator,
+            ),
+            entryProvider =
+            stackScopedEntryProvider(
+                TopLevelDestination.NOTIFICATIONS,
+                destinationProvider(notificationsStack),
+            ),
+        )
+    val profileEntries =
+        rememberDecoratedNavEntries(
+            backStack = profileStack,
+            entryDecorators =
+            listOf(
+                rememberSaveableStateHolderNavEntryDecorator(),
+                viewModelDecorator,
+            ),
+            entryProvider =
+            stackScopedEntryProvider(
+                TopLevelDestination.PROFILE,
+                destinationProvider(profileStack),
+            ),
+        )
+    val entries =
+        when (currentTab) {
+            TopLevelDestination.HOME -> homeEntries
+            TopLevelDestination.SEARCH -> searchEntries
+            TopLevelDestination.NOTIFICATIONS -> notificationEntries
+            TopLevelDestination.PROFILE -> profileEntries
+        }
+
     NavigationSuiteScaffold(
         navigationItems = {
             NodeSeekNavigationItems(
@@ -214,560 +836,15 @@ fun MainNavigation(
                 unreadCount = notificationsState.counts.all,
             )
         },
-        /*
-         * `None` is how this component hides: the layout stops reserving space for navigation
-         * instead of drawing an empty bar. Everywhere else the type comes from the real window,
-         * so the bar becomes a rail on a tablet or an unfolded foldable — which targetSdk 36 makes
-         * a requirement rather than a nicety, since large screens can no longer be told to stay
-         * phone-shaped.
-         */
+        modifier = modifier,
         navigationSuiteType =
-        if (atTabRoot && !feedNavigationBarHidden) {
-            NavigationSuiteScaffoldDefaults.navigationSuiteType(currentWindowAdaptiveInfo())
-        } else {
-            NavigationSuiteType.None
-        },
+        NavigationSuiteScaffoldDefaults.navigationSuiteType(windowAdaptiveInfo),
+        state = navigationSuiteState,
     ) {
         NavDisplay(
-            backStack = backStack,
+            entries = entries,
             onBack = { backStack.removeLastOrNull() },
-            /*
-             * The default is `listOf(rememberSaveableStateHolderNavEntryDecorator())` and nothing
-             * else, which leaves `viewModel()` resolving against the Activity's store: every
-             * PostDetailViewModel ever opened stays alive for the life of the process, each one
-             * holding a parsed comment tree, and `onCleared` never runs. The ViewModel decorator is
-             * what scopes them to the entry — note that naming it replaces the default, so the
-             * SaveableStateHolder one has to be listed again or the scroll positions go with it.
-             */
-            entryDecorators =
-            listOf(
-                rememberSaveableStateHolderNavEntryDecorator(),
-                rememberViewModelStoreNavEntryDecorator(),
-            ),
-            entryProvider =
-            entryProvider {
-                entry<PostListKey> {
-                    val viewModel: PostListViewModel =
-                        viewModel(factory = PostListViewModel.factory(container))
-                    HomePane(
-                        container = container,
-                        listViewModel = viewModel,
-                        onOpenPostFullScreen = { backStack.add(PostDetailKey(it)) },
-                        onCreatePost = { backStack.add(PostComposerKey) },
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                        onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
-                        onOpenBrowser = openExternalUrl,
-                        onLinkClick = openContentUrl,
-                        onAuthorClick = openSpace,
-                        onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
-                        onFeedNavigationBarHiddenChanged = { feedNavigationBarHidden = it },
-                    )
-                }
-
-                entry<SearchKey> {
-                    val viewModel: SearchViewModel =
-                        viewModel(factory = SearchViewModel.factory(container))
-                    SearchRoute(
-                        viewModel = viewModel,
-                        onPostClick = { backStack.add(PostDetailKey(it)) },
-                        // A user result now has a screen of its own, so it stays in the app. Finding
-                        // yourself in search must open the same self-shaped space 我的 opens.
-                        onUserClick = { uid ->
-                            backStack.add(
-                                UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid),
-                            )
-                        },
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                        onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
-                    )
-                }
-
-                entry<NotificationsKey> {
-                    NotificationsRoute(
-                        viewModel = notificationsViewModel,
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                        onVerify = {
-                            backStack.add(
-                                WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
-                            )
-                        },
-                        onNotificationClick = { notification ->
-                            notification.postId?.let {
-                                backStack.add(PostDetailKey(it, notification.floor))
-                            }
-                        },
-                        onOpenThread = { uid, name ->
-                            backStack.add(MessageThreadKey(uid, name))
-                        },
-                    )
-                }
-
-                entry<MessageThreadKey> { key ->
-                    val viewModel: MessageThreadViewModel =
-                        viewModel(
-                            key = "message-${key.uid}",
-                            factory =
-                            MessageThreadViewModel.factory(container, key.uid, key.userName),
-                        )
-                    MessageThreadRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                        onVerify = {
-                            backStack.add(
-                                WebKey(
-                                    NodeSeekSite.BASE_URL + NodeSeekSite.NOTIFICATION_PATH,
-                                    siteTitle,
-                                    WebViewGoal.CHALLENGE,
-                                ),
-                            )
-                        },
-                        onOpenBrowser = openExternalUrl,
-                        onLinkClick = openContentUrl,
-                    )
-                }
-
-                entry<ProfileKey> {
-                    val viewModel: ProfileViewModel =
-                        viewModel(factory = ProfileViewModel.factory(container))
-                    ProfileRoute(
-                        viewModel = viewModel,
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                        onSettings = { backStack.add(SettingsKey) },
-                        onAccountSettings = { backStack.add(AccountSettingsKey) },
-                        onOpenWebsite = { openExternalUrl(NodeSeekSite.BASE_URL) },
-                        onOpenSpace = { uid -> backStack.add(UserSpaceKey(uid, isSelf = true)) },
-                        onAssets = { backStack.add(AssetsKey) },
-                        onFollow = { backStack.add(FollowKey) },
-                        onTools = { backStack.add(CommunityToolsKey) },
-                    )
-                }
-
-                entry<SettingsKey> {
-                    val viewModel: SettingsViewModel =
-                        viewModel(factory = SettingsViewModel.factory(container))
-                    SettingsRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        onOpenNotifications = { backStack.add(NotificationSettingsKey) },
-                        onOpenAbout = { backStack.add(AboutCommunityKey) },
-                        onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
-                    )
-                }
-
-                entry<NotificationSettingsKey> {
-                    val viewModel: NotificationSettingsViewModel =
-                        viewModel(factory = NotificationSettingsViewModel.factory(container))
-                    NotificationSettingsRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        // 绑定 Telegram lives on 联系方式 (d6 3/4), the site's own binding entry.
-                        onOpenTelegram = { backStack.add(AccountContactKey) },
-                    )
-                }
-
-                entry<AboutCommunityKey> {
-                    val context = LocalContext.current
-                    val packageInfo =
-                        remember(context) {
-                            context.packageManager.getPackageInfo(context.packageName, 0)
-                        }
-                    AboutCommunityScreen(
-                        versionName = packageInfo.versionName.orEmpty().ifBlank { "—" },
-                        versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                            packageInfo.longVersionCode
-                        } else {
-                            @Suppress("DEPRECATION")
-                            packageInfo.versionCode.toLong()
-                        },
-                        updateStatus = AppUpdateStatus.Unknown,
-                        onBack = { backStack.removeLastOrNull() },
-                        onCheckUpdates = { openExternalUrl(CommunityLinks.RELEASES) },
-                        onOpenAboutSite = {
-                            backStack.add(
-                                WebKey(
-                                    NodeSeekSite.BASE_URL + NodeSeekSite.ABOUT_PATH,
-                                    aboutSiteTitle,
-                                    WebViewGoal.MANAGE,
-                                ),
-                            )
-                        },
-                        onOpenPrivacy = { backStack.add(PrivacyKey) },
-                        onOpenChangelog = { backStack.add(ChangelogKey) },
-                        onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
-                        onOpenUri = { uri ->
-                            if (NodeSeekSite.isExternalWebUrl(uri)) {
-                                openExternalUrl(uri)
-                            } else if (uri == CommunityLinks.EMAIL) {
-                                runCatching { uriHandler.openUri(uri) }
-                            }
-                        },
-                        onCopyRss = {
-                            context
-                                .getSystemService(ClipboardManager::class.java)
-                                ?.setPrimaryClip(
-                                    ClipData.newPlainText(
-                                        rssLabel,
-                                        CommunityLinks.RSS,
-                                    ),
-                                )
-                        },
-                    )
-                }
-
-                entry<PrivacyKey> {
-                    val privacyViewModel: PrivacyViewModel =
-                        viewModel(factory = PrivacyViewModel.factory(container))
-                    PrivacyRoute(
-                        viewModel = privacyViewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        onOpenOriginal = {
-                            openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH)
-                        },
-                        onOpenWebFallback = {
-                            backStack.add(
-                                WebKey(
-                                    NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH,
-                                    privacyTitle,
-                                    WebViewGoal.MANAGE,
-                                ),
-                            )
-                        },
-                    )
-                }
-
-                entry<ChangelogKey> {
-                    val context = LocalContext.current
-                    val versionName = remember(context) {
-                        context.packageManager.getPackageInfo(context.packageName, 0)
-                            .versionName.orEmpty().ifBlank { "—" }
-                    }
-                    ChangelogScreen(
-                        versionName = versionName,
-                        onBack = { backStack.removeLastOrNull() },
-                        onOpenReleases = { openExternalUrl(CommunityLinks.RELEASES) },
-                    )
-                }
-
-                entry<OpenSourceLicensesKey> {
-                    OpenSourceLicensesScreen(
-                        onBack = { backStack.removeLastOrNull() },
-                        onOpenUri = openExternalUrl,
-                    )
-                }
-
-                entry<UserSpaceKey> { key ->
-                    val viewModel: UserSpaceViewModel =
-                        viewModel(
-                            key = "space-${key.uid}",
-                            factory = UserSpaceViewModel.factory(container, key.uid, key.isSelf),
-                        )
-                    UserSpaceRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        onPostClick = { postId, floor -> backStack.add(PostDetailKey(postId, floor)) },
-                        // 私信 is the site's own conversation page: authenticated, and with a Markdown
-                        // composer we have not reimplemented, so it opens in the session's web view.
-                        onMessage = { uid ->
-                            backStack.add(
-                                WebKey(
-                                    NodeSeekSite.BASE_URL + NodeSeekSite.messagePath(uid),
-                                    siteTitle,
-                                    WebViewGoal.MANAGE,
-                                ),
-                            )
-                        },
-                        onEditProfile = { backStack.add(AccountSettingsKey) },
-                        onOpenBrowser = openExternalUrl,
-                        onLinkClick = openContentUrl,
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                    )
-                }
-
-                entry<FollowKey> {
-                    val viewModel: FollowViewModel =
-                        viewModel(factory = FollowViewModel.factory(container))
-                    FollowRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        onUserClick = { uid ->
-                            backStack.add(
-                                UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid),
-                            )
-                        },
-                        // `/fans` only exists for the signed-in user, so it follows the app's rule for
-                        // authenticated pages: the session's own web view, never the system browser.
-                        onOpenBrowser = { url ->
-                            backStack.add(WebKey(url, siteTitle, WebViewGoal.MANAGE))
-                        },
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                    )
-                }
-
-                entry<AssetsKey> {
-                    val viewModel: AssetsViewModel =
-                        viewModel(factory = AssetsViewModel.factory(container))
-                    AssetsRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        // The chicken ledger has no board of its own in this batch and no endpoint
-                        // behind it; the site's table is the honest destination.
-                        onChickenLedger = {
-                            backStack.add(
-                                WebKey(
-                                    NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH,
-                                    siteTitle,
-                                    WebViewGoal.MANAGE,
-                                ),
-                            )
-                        },
-                        onStardust = { backStack.add(StardustKey) },
-                        // In-app, not the system browser: a Cloudflare pass earned out there lands in
-                        // Chrome's cookie store, and the app's own retry keeps failing forever.
-                        onOpenBrowser = {
-                            backStack.add(
-                                WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
-                            )
-                        },
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                    )
-                }
-
-                entry<StardustKey> {
-                    val viewModel: StardustViewModel =
-                        viewModel(factory = StardustViewModel.factory(container))
-                    val state by viewModel.uiState.collectAsStateWithLifecycle()
-                    // The ledger URL is per-member, so it exists only once the profile call has said
-                    // who we are. The screen keeps the transfer entry off until then — landing a
-                    // just-confirmed transfer on the home page would silently drop the typed form.
-                    val ledgerUrl = state.uid?.let { NodeSeekSite.BASE_URL + NodeSeekSite.stardustPath(it) }
-                    val openLedger = {
-                        backStack.add(
-                            WebKey(ledgerUrl ?: NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.MANAGE),
-                        )
-                        Unit
-                    }
-                    StardustRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        // The ledger needs the session's cookies, so it opens in-app like every other
-                        // authenticated page rather than in the cookie-less system browser.
-                        onOpenBrowser = openLedger,
-                        // Confirmed in the app, submitted on the site: sending stardust is irreversible
-                        // and the endpoint is undocumented, so the last step stays where it works.
-                        onTransferOnSite = openLedger,
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                    )
-                }
-
-                entry<AccountSettingsKey> {
-                    val viewModel: AccountSettingsViewModel =
-                        viewModel(factory = AccountSettingsViewModel.factory(container))
-                    AccountSettingsRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        onOpenProfileFields = { backStack.add(AccountProfileFieldsKey) },
-                        onOpenSecurity = { backStack.add(AccountSecurityKey) },
-                        onOpenContact = { backStack.add(AccountContactKey) },
-                        onOpenBlockList = { backStack.add(AccountBlockListKey) },
-                        // 常用偏好 and 首页版块 share one page (d6 5/5): three of their rows are the
-                        // same account-side switches, and splitting them would leave two stub screens.
-                        onOpenPreferences = { backStack.add(AccountPreferencesKey) },
-                    )
-                }
-
-                entry<AccountProfileFieldsKey> {
-                    val viewModel: ProfileFieldsViewModel =
-                        viewModel(factory = ProfileFieldsViewModel.factory(container))
-                    ProfileFieldsRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                    )
-                }
-
-                entry<AccountSecurityKey> {
-                    val viewModel: SecurityViewModel =
-                        viewModel(factory = SecurityViewModel.factory(container))
-                    SecurityRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        // `otpauth://` belongs to whichever authenticator app registered for it, so it
-                        // leaves the app rather than being rendered here — the app never holds the
-                        // secret. Returns false when nothing claims the scheme, so the screen can say so
-                        // instead of appearing to do nothing.
-                        onOpenEnrolmentUri = { uri ->
-                            runCatching { uriHandler.openUri(uri) }.isSuccess
-                        },
-                    )
-                }
-
-                entry<AccountContactKey> {
-                    val viewModel: ContactViewModel =
-                        viewModel(factory = ContactViewModel.factory(container))
-                    ContactRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        // The bind link belongs to Telegram (t.me / tg://), so it leaves the app for
-                        // whatever owns the scheme — the Telegram app, or the browser's web version.
-                        // Never the in-app web view, whose cookie jar is for nodeseek.com only.
-                        onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
-                    )
-                }
-
-                entry<AccountBlockListKey> {
-                    val viewModel: BlockListViewModel =
-                        viewModel(factory = BlockListViewModel.factory(container))
-                    BlockListRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                    )
-                }
-
-                entry<AccountPreferencesKey> {
-                    val viewModel: PreferencesViewModel =
-                        viewModel(factory = PreferencesViewModel.factory(container))
-                    PreferencesRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                    )
-                }
-
-                entry<CommunityToolsKey> {
-                    CommunityToolsScreen(
-                        onBack = { backStack.removeLastOrNull() },
-                        onAward = { backStack.add(AwardKey) },
-                        onProviders = { openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.PROVIDERS_PATH) },
-                        onFriends = { openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.FRIENDS_PATH) },
-                        onLucky = { backStack.add(LuckyKey) },
-                        onInvite = { backStack.add(InviteKey) },
-                        onRuling = { backStack.add(RulingKey) },
-                        onAbout = { backStack.add(AboutCommunityKey) },
-                    )
-                }
-
-                entry<AwardKey> {
-                    val viewModel: AwardViewModel =
-                        viewModel(factory = AwardViewModel.factory(container))
-                    AwardRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        onPostClick = { backStack.add(PostDetailKey(it)) },
-                        onOpenBrowser = openExternalUrl,
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                    )
-                }
-
-                entry<LuckyKey> {
-                    val viewModel: LuckyViewModel =
-                        viewModel(factory = LuckyViewModel.factory(container))
-                    LuckyRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        onOpenBrowser = openExternalUrl,
-                    )
-                }
-
-                entry<InviteKey> {
-                    val viewModel: InviteViewModel =
-                        viewModel(factory = InviteViewModel.factory(container))
-                    InviteRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        onBuyOnSite = { backStack.add(inviteWebKey(siteTitle)) },
-                    )
-                }
-
-                entry<RulingKey> {
-                    val viewModel: RulingViewModel =
-                        viewModel(factory = RulingViewModel.factory(container))
-                    RulingRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                        onOpenBrowser = openExternalUrl,
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                    )
-                }
-
-                entry<ImageViewerKey> { key ->
-                    val context = LocalContext.current
-                    val viewModel: ImageViewerViewModel =
-                        viewModel(factory = ImageViewerViewModel.factory(container, context))
-                    val saveOutcome by viewModel.saveOutcome.collectAsStateWithLifecycle()
-                    ImageViewerScreen(
-                        urls = key.urls,
-                        initialIndex = key.index,
-                        onClose = { backStack.removeLastOrNull() },
-                        onOpenBrowser = openExternalUrl,
-                        saveOutcome = saveOutcome,
-                        onSave = viewModel::save,
-                    )
-                }
-
-                entry<PostDetailKey> { key ->
-                    // Keyed so navigating to a different post builds a fresh ViewModel.
-                    val viewModel: PostDetailViewModel =
-                        viewModel(
-                            key = "post-${key.postId}",
-                            factory = PostDetailViewModel.factory(container, key.postId),
-                        )
-                    // Its own ViewModel, keyed the same way: an unsent reply belongs to one thread
-                    // and has to outlive the sheet that shows it.
-                    val replyViewModel: ReplyComposerViewModel =
-                        viewModel(
-                            key = "reply-${key.postId}",
-                            factory = ReplyComposerViewModel.factory(container, key.postId),
-                        )
-                    PostDetailRoute(
-                        viewModel = viewModel,
-                        replyViewModel = replyViewModel,
-                        initialFloor = key.floor,
-                        onBack = { backStack.removeLastOrNull() },
-                        onOpenBrowser = openExternalUrl,
-                        onLinkClick = openContentUrl,
-                        onAuthorClick = openSpace,
-                        onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
-                        onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
-                        onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
-                    )
-                }
-
-                entry<PostComposerKey> {
-                    val viewModel: PostComposerViewModel =
-                        viewModel(factory = PostComposerViewModel.factory(container))
-                    PostComposerRoute(
-                        viewModel = viewModel,
-                        onClose = { backStack.removeLastOrNull() },
-                        onSignIn = {
-                            backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
-                        },
-                        onVerify = {
-                            backStack.add(
-                                WebKey(
-                                    NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH,
-                                    siteTitle,
-                                    WebViewGoal.CHALLENGE,
-                                ),
-                            )
-                        },
-                        onPublished = { postId ->
-                            backStack.removeLastOrNull()
-                            postId?.let { backStack.add(PostDetailKey(it)) }
-                        },
-                    )
-                }
-
-                entry<WebKey> { key ->
-                    WebViewRoute(
-                        url = key.url,
-                        title = key.title,
-                        goal = key.goal,
-                        session = container.sessionRepository,
-                        userAgent = container.userAgent,
-                        onOpenExternal = openExternalUrl,
-                        onClose = { backStack.removeLastOrNull() },
-                    )
-                }
-            },
+            sceneStrategies = listOf(listDetailSceneStrategy),
         )
     }
 }
@@ -787,119 +864,6 @@ internal suspend fun resolveMemberLink(
     if (uid != null) onResolved(uid) else onFailure()
 }
 
-/**
- * The home tab: one column on a phone, list and thread side by side once the window can hold both.
- *
- * Above 600dp the thread stops being a separate destination and becomes the right pane, which is what
- * makes a tablet or an unfolded foldable worth the extra width — you keep your place in the list while
- * reading, and the rail stays reachable. Below it, nothing changes: tapping a row pushes the full-screen
- * thread exactly as before.
- *
- * The width is read from the actual space this pane was given rather than from the window, so it is
- * still correct in multi-window and in a preview.
- */
-@Composable
-private fun HomePane(
-    container: AppContainer,
-    listViewModel: PostListViewModel,
-    onOpenPostFullScreen: (Long) -> Unit,
-    onCreatePost: () -> Unit,
-    onSignIn: () -> Unit,
-    onVerify: (String) -> Unit,
-    onOpenBrowser: (String) -> Unit,
-    onImageClick: (List<String>, String) -> Unit,
-    onLinkClick: (String) -> Unit = onOpenBrowser,
-    onAuthorClick: (Long) -> Unit = {},
-    /** Phone layout only: the tablet's rail sits beside the list, not under the thumb. */
-    onFeedNavigationBarHiddenChanged: (Boolean) -> Unit = {},
-) {
-    BoxWithConstraints {
-        val twoPane = maxWidth >= TWO_PANE_MIN_WIDTH
-        val listPaneWidth = if (maxWidth >= WIDE_WINDOW_WIDTH) WIDE_LIST_PANE_WIDTH else LIST_PANE_WIDTH
-
-        // Survives rotation, and survives switching tabs and coming back, because the whole entry does.
-        var selectedPostId by rememberSaveable { mutableStateOf<Long?>(null) }
-
-        if (!twoPane) {
-            /*
-             * A selection made in the two-pane layout follows the user through a rotation as a pushed
-             * full-screen thread — the alternative was losing their place mid-read. Migrating rather
-             * than rendering it here also consumes the selection, so widening the window hours later
-             * cannot resurrect a thread the user finished with.
-             */
-            val orphanedSelection = selectedPostId
-            LaunchedEffect(orphanedSelection) {
-                if (orphanedSelection != null) {
-                    selectedPostId = null
-                    onOpenPostFullScreen(orphanedSelection)
-                }
-            }
-            PostListRoute(
-                viewModel = listViewModel,
-                onPostClick = onOpenPostFullScreen,
-                onCreatePost = onCreatePost,
-                onSignIn = onSignIn,
-                onVerify = onVerify,
-                onNavigationBarHiddenChanged = onFeedNavigationBarHiddenChanged,
-            )
-            return@BoxWithConstraints
-        }
-
-        // Back closes the thread rather than leaving the tab: the pane is where the user's attention is.
-        BackHandler(enabled = selectedPostId != null) { selectedPostId = null }
-
-        Row(Modifier.fillMaxSize()) {
-            PostListRoute(
-                viewModel = listViewModel,
-                onPostClick = { postId -> selectedPostId = postId },
-                onCreatePost = onCreatePost,
-                onSignIn = onSignIn,
-                onVerify = onVerify,
-                modifier = Modifier.width(listPaneWidth),
-            )
-            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Box(Modifier.weight(1f)) {
-                val postId = selectedPostId
-                if (postId == null) {
-                    EmptyDetailPane()
-                } else {
-                    /*
-                     * One disposable store per selection: switching threads clears the previous
-                     * ViewModel instead of parking it in the entry's store forever. Entry-keyed
-                     * ViewModels looked cheaper, but a long tablet session left every thread ever
-                     * opened — full comment tree and all — alive until the entry itself died.
-                     */
-                    val storeOwner = remember(postId) { PaneViewModelStoreOwner() }
-                    DisposableEffect(storeOwner) {
-                        onDispose { storeOwner.viewModelStore.clear() }
-                    }
-                    val detailViewModel: PostDetailViewModel =
-                        viewModel(
-                            viewModelStoreOwner = storeOwner,
-                            factory = PostDetailViewModel.factory(container, postId),
-                        )
-                    val replyViewModel: ReplyComposerViewModel =
-                        viewModel(
-                            viewModelStoreOwner = storeOwner,
-                            factory = ReplyComposerViewModel.factory(container, postId),
-                        )
-                    PostDetailRoute(
-                        viewModel = detailViewModel,
-                        replyViewModel = replyViewModel,
-                        onBack = { selectedPostId = null },
-                        onOpenBrowser = onOpenBrowser,
-                        onLinkClick = onLinkClick,
-                        onAuthorClick = onAuthorClick,
-                        onSignIn = onSignIn,
-                        onVerify = onVerify,
-                        onImageClick = onImageClick,
-                    )
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun EmptyDetailPane() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -911,9 +875,18 @@ private fun EmptyDetailPane() {
     }
 }
 
-/** A ViewModel store the detail pane can discard wholesale when the selection moves on. */
-private class PaneViewModelStoreOwner : ViewModelStoreOwner {
-    override val viewModelStore = ViewModelStore()
+private fun stackScopedEntryProvider(
+    destination: TopLevelDestination,
+    provider: (NavKey) -> NavEntry<NavKey>,
+): (NavKey) -> NavEntry<NavKey> = { key ->
+    val entry = provider(key)
+    NavEntry(
+        key = key,
+        contentKey = "${destination.name}:${entry.contentKey}",
+        metadata = entry.metadata,
+    ) {
+        entry.Content()
+    }
 }
 
 /** Buying an invite code is a site-side spend; the app only confirms it. */
@@ -922,8 +895,3 @@ private fun inviteWebKey(title: String): WebKey =
 
 private fun imageViewerKeyFor(urls: List<String>, url: String): ImageViewerKey =
     ImageViewerKey(urls = urls, index = urls.indexOf(url).coerceAtLeast(0))
-
-private val TWO_PANE_MIN_WIDTH = 600.dp
-private val WIDE_WINDOW_WIDTH = 840.dp
-private val LIST_PANE_WIDTH = 260.dp
-private val WIDE_LIST_PANE_WIDTH = 320.dp

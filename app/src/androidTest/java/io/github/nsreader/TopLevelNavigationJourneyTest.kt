@@ -3,10 +3,13 @@ package io.github.nsreader
 import androidx.annotation.StringRes
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
@@ -30,6 +33,17 @@ class TopLevelNavigationJourneyTest {
             composeRule.activity.onBackPressedDispatcher.onBackPressed()
         }
         navigationItem(R.string.tab_home).assertIsSelected()
+    }
+
+    @Test
+    fun searchStateSurvivesSwitchingTopLevelDestinations() {
+        navigationItem(R.string.tab_search).performClick()
+        composeRule.onNode(hasSetTextAction()).performTextInput("保留搜索内容")
+
+        navigationItem(R.string.tab_home).performClick()
+        navigationItem(R.string.tab_search).performClick()
+
+        composeRule.onNode(hasSetTextAction()).assertTextContains("保留搜索内容")
     }
 
     private fun navigationItem(@StringRes label: Int): SemanticsNodeInteraction =

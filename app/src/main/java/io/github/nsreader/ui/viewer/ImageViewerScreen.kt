@@ -55,6 +55,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -75,7 +76,7 @@ import kotlin.math.abs
  * an OLED's true black a dark screenshot has no visible edge, and the gesture surface stops being legible.
  *
  * Three gestures, in the order they are checked: pinch to zoom, double-tap to toggle 2.5×, and — only
- * while unzoomed — a downward drag to dismiss. Paging is disabled while zoomed, or a pan across a
+ * while unzoomed — a vertical drag in either direction to dismiss. Paging is disabled while zoomed, or a pan across a
  * magnified screenshot would flick to the next image instead.
  */
 @Composable
@@ -289,6 +290,7 @@ private fun ZoomableImage(
     var offset by remember(url) { mutableStateOf(Offset.Zero) }
     var dragY by remember(url) { mutableFloatStateOf(0f) }
     var retryToken by remember(url) { mutableIntStateOf(0) }
+    val dismissDragThresholdPx = with(LocalDensity.current) { DISMISS_DRAG_THRESHOLD.toPx() }
 
     val animatedScale by animateFloatAsState(targetValue = scale, label = "viewer-scale")
 
@@ -329,7 +331,7 @@ private fun ZoomableImage(
                 if (scale > 1f) return@pointerInput
                 detectVerticalDragGestures(
                     onDragEnd = {
-                        if (abs(dragY) > DISMISS_DRAG_PX) onDismiss() else dragY = 0f
+                        if (abs(dragY) > dismissDragThresholdPx) onDismiss() else dragY = 0f
                     },
                     onDragCancel = { dragY = 0f },
                 ) { _, delta -> dragY += delta }
@@ -426,7 +428,7 @@ private val VIEWER_WARNING = Color(0xFFF2B8B5)
 
 private const val DOUBLE_TAP_SCALE = 2.5f
 private const val MAX_SCALE = 5f
-private const val DISMISS_DRAG_PX = 220f
+private val DISMISS_DRAG_THRESHOLD = 120.dp
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8h 图片查看器")
 @Composable

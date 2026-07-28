@@ -565,7 +565,6 @@
     <string name="space_empty_topics">还没有发过主题帖</string>
     <string name="space_empty_comments">还没有发过评论</string>
     <string name="space_empty_collections">收藏夹是空的</string>
-    <string name="space_load_more">加载更多</string>
     <string name="space_comment_in">回复于 %1$s</string>
 
     <!-- Assets and growth (8d) -->

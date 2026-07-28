@@ -246,10 +246,10 @@ internal fun AccountBottomBar(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Surface(color = MaterialTheme.colorScheme.surface) {
+    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surface) {
         Row(
             modifier =
-            modifier
+            Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(horizontal = Spacing.lg, vertical = Spacing.md),

@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -44,8 +44,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,12 +51,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nsreader.R
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.data.Board
@@ -73,6 +75,7 @@ import io.github.nsreader.ui.common.NodeSeekErrorState
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.postlist.PostRow
+import io.github.nsreader.ui.postlist.toNodeSeekError
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.Spacing
 import io.github.nsreader.ui.theme.readableWidth
@@ -87,8 +90,10 @@ fun SearchRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val postResults = viewModel.postResults.collectAsLazyPagingItems()
     SearchScreen(
         state = state,
+        postResults = postResults,
         onQueryChange = viewModel::updateQuery,
         onSearch = viewModel::submitSearch,
         onTargetChange = viewModel::selectTarget,
@@ -99,8 +104,7 @@ fun SearchRoute(
         onSortChange = viewModel::selectSort,
         onPostClick = onPostClick,
         onUserClick = onUserClick,
-        onLoadMorePosts = viewModel::loadMorePosts,
-        onRetry = viewModel::retry,
+        onRetry = viewModel::retryUsers,
         onSignIn = onSignIn,
         onVerify = { onVerify(viewModel.challengeUrl()) },
         modifier = modifier,
@@ -123,9 +127,9 @@ fun SearchScreen(
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
     modifier: Modifier = Modifier,
+    postResults: LazyPagingItems<FeedPost>? = null,
     onBoardsChange: (Set<String>) -> Unit = {},
     onSortChange: (SearchSort) -> Unit = {},
-    onLoadMorePosts: () -> Unit = {},
 ) {
     var showBoardSheet by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
@@ -168,7 +172,10 @@ fun SearchScreen(
                 SearchTab(
                     selected = state.target == SearchTarget.POSTS,
                     title = stringResource(R.string.search_posts_tab),
-                    count = state.postResults.size.takeIf { state.postLoadState == SearchLoadState.Success },
+                    count =
+                    postResults
+                        ?.itemCount
+                        ?.takeIf { postResults.loadState.refresh is LoadState.NotLoading },
                     onClick = { onTargetChange(SearchTarget.POSTS) },
                 )
                 SearchTab(
@@ -198,7 +205,7 @@ fun SearchScreen(
                         },
                         trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, contentDescription = null) },
                     )
-                    if (state.postLoadState == SearchLoadState.Success) {
+                    if (state.submittedQuery != null) {
                         Box {
                             AssistChip(
                                 onClick = { showSortMenu = true },
@@ -232,7 +239,7 @@ fun SearchScreen(
                 onClearHistory = onClearHistory,
                 onPostClick = onPostClick,
                 onUserClick = onUserClick,
-                onLoadMorePosts = onLoadMorePosts,
+                postResults = postResults,
                 onRetry = onRetry,
                 onSignIn = onSignIn,
                 onVerify = onVerify,
@@ -277,7 +284,7 @@ private fun SearchContent(
     onClearHistory: () -> Unit,
     onPostClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
-    onLoadMorePosts: () -> Unit,
+    postResults: LazyPagingItems<FeedPost>?,
     onRetry: () -> Unit,
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
@@ -293,44 +300,50 @@ private fun SearchContent(
         return
     }
 
-    when (val loadState = state.currentLoadState) {
-        SearchLoadState.Idle,
-        SearchLoadState.Loading,
-        -> LoadingState()
+    if (state.target == SearchTarget.USERS) {
+        when (val loadState = state.userLoadState) {
+            SearchLoadState.Idle,
+            SearchLoadState.Loading,
+            -> LoadingState()
 
-        is SearchLoadState.Error ->
-            NodeSeekErrorState(
-                error = loadState.error,
-                onRetry = onRetry,
-                onOpenBrowser = onVerify,
-                onSignIn = onSignIn,
-                onVerify = onVerify,
-            )
+            is SearchLoadState.Error ->
+                NodeSeekErrorState(
+                    error = loadState.error,
+                    onRetry = onRetry,
+                    onOpenBrowser = onVerify,
+                    onSignIn = onSignIn,
+                    onVerify = onVerify,
+                )
 
-        SearchLoadState.Success -> {
-            if (state.target == SearchTarget.USERS) {
+            SearchLoadState.Success -> {
                 if (state.userResults.isEmpty()) {
                     Box(Modifier.fillMaxSize()) { NoSearchResultsState(onClearQuery = { onQueryChange("") }) }
                 } else {
                     UserResults(users = state.userResults, onUserClick = onUserClick)
                 }
-            } else if (state.postResults.isEmpty()) {
-                if (state.postHasNext) {
-                    // A multi-board range filters each server page locally, so the first page can
-                    // come back empty while matches sit further in — keep paging, not "no results".
-                    LaunchedEffect(state.postPage) { onLoadMorePosts() }
-                    LoadingState()
-                } else {
-                    Box(Modifier.fillMaxSize()) { NoSearchResultsState(onClearQuery = { onQueryChange("") }) }
-                }
+            }
+        }
+        return
+    }
+
+    val posts = postResults ?: return LoadingState()
+    when (val refresh = posts.loadState.refresh) {
+        LoadState.Loading -> LoadingState()
+
+        is LoadState.Error ->
+            NodeSeekErrorState(
+                error = refresh.error.toNodeSeekError(),
+                onRetry = posts::retry,
+                onOpenBrowser = onVerify,
+                onSignIn = onSignIn,
+                onVerify = onVerify,
+            )
+
+        is LoadState.NotLoading -> {
+            if (posts.itemCount == 0) {
+                Box(Modifier.fillMaxSize()) { NoSearchResultsState(onClearQuery = { onQueryChange("") }) }
             } else {
-                PostResults(
-                    posts = state.postResults,
-                    appending = state.isAppendingPosts,
-                    appendFailed = state.postAppendFailed,
-                    onPostClick = onPostClick,
-                    onLoadMore = onLoadMorePosts,
-                )
+                PostResults(posts = posts, onPostClick = onPostClick)
             }
         }
     }
@@ -338,44 +351,42 @@ private fun SearchContent(
 
 @Composable
 private fun PostResults(
-    posts: List<FeedPost>,
-    appending: Boolean,
-    appendFailed: Boolean,
+    posts: LazyPagingItems<FeedPost>,
     onPostClick: (Long) -> Unit,
-    onLoadMore: () -> Unit,
 ) {
-    val listState = rememberLazyListState()
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= listState.layoutInfo.totalItemsCount - 4
-        }
-    }
-    LaunchedEffect(shouldLoadMore, posts.size) { if (shouldLoadMore) onLoadMore() }
-    LazyColumn(state = listState) {
-        items(posts, key = { it.summary.postId }) { post ->
-            PostRow(post = post, onClick = { onPostClick(post.summary.postId) })
-        }
-        if (appending) {
-            item("appending") {
-                Box(Modifier.fillMaxWidth().padding(Spacing.lg), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(24.dp))
-                }
+    LazyColumn {
+        items(
+            count = posts.itemCount,
+            key = { index -> posts.peek(index)?.summary?.postId ?: index },
+        ) { index ->
+            posts[index]?.let { post ->
+                PostRow(post = post, onClick = { onPostClick(post.summary.postId) })
             }
-        } else if (appendFailed) {
-            item("append-failed") {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(Spacing.md),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.search_load_more_failed),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    TextButton(onClick = onLoadMore) { Text(stringResource(R.string.action_retry)) }
+        }
+        when (posts.loadState.append) {
+            LoadState.Loading ->
+                item("appending") {
+                    Box(Modifier.fillMaxWidth().padding(Spacing.lg), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(Modifier.size(24.dp))
+                    }
                 }
-            }
+
+            is LoadState.Error ->
+                item("append-failed") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(R.string.search_load_more_failed),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(onClick = posts::retry) { Text(stringResource(R.string.action_retry)) }
+                    }
+                }
+
+            is LoadState.NotLoading -> Unit
         }
     }
 }
@@ -607,8 +618,16 @@ private fun BoardCheckboxRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+    Row(
+        modifier =
+        modifier.toggleable(
+            value = checked,
+            role = Role.Checkbox,
+            onValueChange = onCheckedChange,
+        ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null)
         Text(
             board.title,
             maxLines = 1,

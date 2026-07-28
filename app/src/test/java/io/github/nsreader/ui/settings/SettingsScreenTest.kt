@@ -4,11 +4,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
@@ -22,6 +25,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.math.abs
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -49,6 +53,51 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("跟随系统").assertIsSelected()
         composeRule.onNodeWithText("深色").performClick()
         composeRule.onNodeWithText("深色").assertIsSelected()
+    }
+
+    @Test
+    fun `theme choices fill the row with equal segments`() {
+        composeRule.setContent {
+            NodeSeekTheme {
+                SettingsScreen(
+                    state = SettingsUiState(UserSettings()),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onClearCache = {},
+                )
+            }
+        }
+
+        val bounds =
+            listOf("跟随系统", "浅色", "深色").map { label ->
+                composeRule.onNodeWithText(label).fetchSemanticsNode().boundsInRoot
+            }
+        val rootWidth = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.width
+        val groupWidth = bounds.last().right - bounds.first().left
+
+        assertTrue(groupWidth > rootWidth * 0.7f)
+        assertTrue(bounds.zipWithNext().all { (left, right) -> abs(left.width - right.width) <= 2f })
+    }
+
+    @Test
+    fun `wifi image setting toggles from the whole row`() {
+        composeRule.setContent {
+            var wifiOnly by remember { mutableStateOf(false) }
+            NodeSeekTheme {
+                SettingsScreen(
+                    state = SettingsUiState(UserSettings(imagesOnWifiOnly = wifiOnly)),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onImagesOnWifiOnlyChange = { wifiOnly = it },
+                    onClearCache = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("仅 Wi-Fi 下加载图片").assertIsOff().performClick().assertIsOn()
     }
 
     @Test

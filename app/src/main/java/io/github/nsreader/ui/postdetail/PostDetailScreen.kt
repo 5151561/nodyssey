@@ -115,6 +115,7 @@ fun PostDetailRoute(
     onImageClick: (List<String>, String) -> Unit,
     modifier: Modifier = Modifier,
     initialFloor: String? = null,
+    showBackButton: Boolean = true,
     /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
     onLinkClick: (String) -> Unit = onOpenBrowser,
     /** Opens the tapped author's space. */
@@ -141,6 +142,7 @@ fun PostDetailRoute(
         onLoadMore = viewModel::loadNextPage,
         onLoadPage = viewModel::loadPage,
         onPageScrollHandled = viewModel::onPageScrollHandled,
+        showBackButton = showBackButton,
         // Replying needs an account; sending an anonymous reply into the void is the one outcome
         // the editor must not produce, so the sign-in page comes first.
         onReply = { quote -> if (state.isSignedIn) replyViewModel.open(quote) else onSignIn() },
@@ -177,6 +179,7 @@ fun PostDetailScreen(
     onLoadPage: (Int) -> Unit = { onLoadMore() },
     onPageScrollHandled: () -> Unit = {},
     initialFloor: String? = null,
+    showBackButton: Boolean = true,
     /** Opens the sign-in page. Separate from [onOpenBrowser] because "登录" is not "看看网页版". */
     onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
     /** Clears a Cloudflare challenge on this thread's own URL. */
@@ -287,6 +290,7 @@ fun PostDetailScreen(
                 postUrl = postUrl,
                 onBack = onBack,
                 onOpenInBrowser = { onOpenBrowser(postUrl) },
+                showBackButton = showBackButton,
             )
         },
     ) { padding ->
@@ -520,6 +524,7 @@ private fun DetailTopBar(
     postUrl: String,
     onBack: () -> Unit,
     onOpenInBrowser: () -> Unit,
+    showBackButton: Boolean,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -537,11 +542,13 @@ private fun DetailTopBar(
             )
         },
         navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                )
+            if (showBackButton) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.action_back),
+                    )
+                }
             }
         },
         actions = {

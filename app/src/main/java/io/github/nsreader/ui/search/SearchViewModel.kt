@@ -5,6 +5,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
+import androidx.paging.cachedIn
 import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.data.Board
@@ -14,21 +20,24 @@ import io.github.nsreader.data.SearchRepository
 import io.github.nsreader.data.UserSearchResult
 import io.github.nsreader.data.settings.SettingsRepository
 import io.github.nsreader.di.AppContainer
-import io.github.nsreader.model.PostSummary
 import io.github.nsreader.model.SearchHistoryEntry
 import io.github.nsreader.model.SearchSort
 import io.github.nsreader.model.SearchTarget
 import io.github.nsreader.ui.postlist.toNodeSeekError
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModel(
     private val searchRepository: SearchRepository,
     private val categoryRepository: CategoryRepository,
@@ -37,9 +46,21 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    // One job per target: paging posts must not cancel a user lookup, and vice versa.
-    private var postJob: Job? = null
+    private val postRequest = MutableStateFlow<PostSearchRequest?>(null)
+    val postResults: kotlinx.coroutines.flow.Flow<PagingData<FeedPost>> =
+        postRequest
+            .flatMapLatest { request ->
+                if (request == null) {
+                    flowOf(PagingData.empty())
+                } else {
+                    Pager(PagingConfig(pageSize = POST_PAGE_SIZE, initialLoadSize = POST_PAGE_SIZE)) {
+                        SearchPostsPagingSource(searchRepository, request)
+                    }.flow
+                }
+            }.cachedIn(viewModelScope)
+
     private var userJob: Job? = null
+    private var postRequestGeneration = 0
 
     init {
         categoryRepository.boards
@@ -64,7 +85,6 @@ class SearchViewModel(
                 it.copy(
                     query = value,
                     submittedQuery = null,
-                    postLoadState = SearchLoadState.Idle,
                     userLoadState = SearchLoadState.Idle,
                 )
             } else {
@@ -72,7 +92,7 @@ class SearchViewModel(
             }
         }
         if (invalidatesSubmittedSearch) {
-            postJob?.cancel()
+            postRequest.value = null
             userJob?.cancel()
         }
     }
@@ -83,8 +103,11 @@ class SearchViewModel(
         // API call (and the reverse) for a tab the user may never open.
         val state = _uiState.value
         val submitted = state.submittedQuery ?: return
-        val loadState = if (target == SearchTarget.POSTS) state.postLoadState else state.userLoadState
-        if (loadState == SearchLoadState.Idle) startSearch(target, submitted)
+        if (target == SearchTarget.POSTS) {
+            if (postRequest.value?.query != submitted) startPostSearch(submitted)
+        } else if (state.userLoadState == SearchLoadState.Idle) {
+            startUserSearch(submitted)
+        }
     }
 
     fun submitSearch() {
@@ -134,12 +157,9 @@ class SearchViewModel(
         rerunSubmittedSearch()
     }
 
-    fun retry() {
+    fun retryUsers() {
         val state = _uiState.value
-        executeSearch(
-            query = state.submittedQuery ?: state.query,
-            historyEntry = null,
-        )
+        startUserSearch(state.submittedQuery ?: state.query)
     }
 
     fun challengeUrl(): String =
@@ -165,189 +185,67 @@ class SearchViewModel(
         )
     }
 
-    /** Appends the next batch of post results; a no-op while one is already on its way. */
-    fun loadMorePosts() {
-        val state = _uiState.value
-        val submitted = state.submittedQuery ?: return
-        if (!state.postHasNext || state.isAppendingPosts) return
-        if (state.postLoadState != SearchLoadState.Success) return
-        _uiState.update { it.copy(isAppendingPosts = true, postAppendFailed = false) }
-        postJob =
-            viewModelScope.launch {
-                try {
-                    val batch =
-                        fetchPostBatch(
-                            query = submitted,
-                            startPage = state.postPage + 1,
-                            existingIds = state.postResults.map { it.summary.postId }.toSet(),
-                            boards = state.selectedBoards,
-                            sort = state.sort,
-                        )
-                    _uiState.update { current ->
-                        current.copy(
-                            postResults =
-                            current.postResults +
-                                batch.added.map { FeedPost(it, isRead = false, newCommentCount = 0) },
-                            postPage = batch.page,
-                            postTotalPages = batch.totalPages,
-                            postHasNext = batch.hasNext,
-                            isAppendingPosts = false,
-                            postAppendFailed = false,
-                        )
-                    }
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (throwable: Throwable) {
-                    _uiState.update {
-                        if (it.postResults.isEmpty()) {
-                            // Nothing on screen worth keeping — fail loudly on the standard error
-                            // surface, whose retry restarts the search.
-                            it.copy(
-                                isAppendingPosts = false,
-                                postLoadState = SearchLoadState.Error(throwable.toNodeSeekError()),
-                            )
-                        } else {
-                            // The loaded prefix stays useful; the list's tail row offers a retry.
-                            it.copy(isAppendingPosts = false, postAppendFailed = true)
-                        }
-                    }
-                }
-            }
-    }
-
-    private class PostBatch(
-        val added: List<PostSummary>,
-        val page: Int,
-        val totalPages: Int,
-        val hasNext: Boolean,
-    )
-
-    /*
-     * Fetches server pages one at a time until at least one new row turns up, the results run out,
-     * or MAX_PAGES_PER_BATCH is reached. The cap matters for a multi-board range, which searches
-     * globally and filters each page locally: a long empty stretch must not turn one tap into an
-     * unbounded page-by-page crawl of the whole result set — past the cap, continuing is an
-     * explicit user action.
-     */
-    private suspend fun fetchPostBatch(
-        query: String,
-        startPage: Int,
-        existingIds: Set<Long>,
-        boards: Set<String>,
-        sort: SearchSort,
-    ): PostBatch {
-        val added = mutableListOf<PostSummary>()
-        var nextPage = startPage
-        var lastPage = startPage - 1
-        var totalPages = lastPage
-        var hasNext = true
-        var fetched = 0
-        do {
-            val result = searchRepository.searchPosts(query, nextPage, boards, sort)
-            added += result.posts.filter { post -> post.postId !in existingIds }
-            lastPage = result.page
-            totalPages = result.totalPages
-            hasNext = result.hasNextPage
-            nextPage = result.page + 1
-            fetched++
-        } while (added.isEmpty() && hasNext && fetched < MAX_PAGES_PER_BATCH)
-        return PostBatch(
-            added = added.distinctBy { it.postId },
-            page = lastPage,
-            totalPages = totalPages,
-            hasNext = hasNext,
-        )
-    }
-
     private fun executeSearch(
         query: String,
         historyEntry: SearchHistoryEntry?,
     ) {
         val normalized = query.trim()
         if (normalized.isEmpty()) return
-        postJob?.cancel()
+        postRequest.value = null
         userJob?.cancel()
         _uiState.update {
             it.copy(
                 query = normalized,
                 submittedQuery = normalized,
-                postResults = emptyList(),
                 userResults = emptyList(),
-                postPage = 1,
-                postTotalPages = 1,
-                postHasNext = false,
-                isAppendingPosts = false,
-                postAppendFailed = false,
-                postLoadState = SearchLoadState.Idle,
                 userLoadState = SearchLoadState.Idle,
             )
         }
         historyEntry?.copy(query = normalized)?.let { entry ->
             viewModelScope.launch { settings.addSearchHistory(entry) }
         }
-        startSearch(_uiState.value.target, normalized)
-    }
-
-    private fun startSearch(target: SearchTarget, query: String) {
-        when (target) {
-            SearchTarget.POSTS -> {
-                val selectedBoards = _uiState.value.selectedBoards
-                val sort = _uiState.value.sort
-                _uiState.update { it.copy(postLoadState = SearchLoadState.Loading) }
-                postJob =
-                    viewModelScope.launch {
-                        try {
-                            val results =
-                                searchRepository.searchPosts(
-                                    query = query,
-                                    page = 1,
-                                    categorySlugs = selectedBoards,
-                                    sort = sort,
-                                )
-                            _uiState.update {
-                                it.copy(
-                                    postResults =
-                                    results.posts.map { summary ->
-                                        FeedPost(summary, isRead = false, newCommentCount = 0)
-                                    },
-                                    postPage = results.page,
-                                    postTotalPages = results.totalPages,
-                                    postHasNext = results.hasNextPage,
-                                    postLoadState = SearchLoadState.Success,
-                                )
-                            }
-                        } catch (exception: CancellationException) {
-                            throw exception
-                        } catch (throwable: Throwable) {
-                            _uiState.update { it.copy(postLoadState = SearchLoadState.Error(throwable.toNodeSeekError())) }
-                        }
-                    }
-            }
-
-            SearchTarget.USERS -> {
-                _uiState.update { it.copy(userLoadState = SearchLoadState.Loading) }
-                userJob =
-                    viewModelScope.launch {
-                        try {
-                            val users = searchRepository.searchUsers(query)
-                            _uiState.update {
-                                it.copy(
-                                    userResults = users,
-                                    userLoadState = SearchLoadState.Success,
-                                )
-                            }
-                        } catch (exception: CancellationException) {
-                            throw exception
-                        } catch (throwable: Throwable) {
-                            _uiState.update { it.copy(userLoadState = SearchLoadState.Error(throwable.toNodeSeekError())) }
-                        }
-                    }
-            }
+        if (_uiState.value.target == SearchTarget.POSTS) {
+            startPostSearch(normalized)
+        } else {
+            startUserSearch(normalized)
         }
     }
 
+    private fun startPostSearch(query: String) {
+        val state = _uiState.value
+        postRequest.value =
+            PostSearchRequest(
+                query = query,
+                boards = state.selectedBoards,
+                sort = state.sort,
+                generation = ++postRequestGeneration,
+            )
+    }
+
+    private fun startUserSearch(query: String) {
+        userJob?.cancel()
+        _uiState.update { it.copy(userLoadState = SearchLoadState.Loading) }
+        userJob =
+            viewModelScope.launch {
+                try {
+                    val users = searchRepository.searchUsers(query)
+                    _uiState.update {
+                        it.copy(
+                            userResults = users,
+                            userLoadState = SearchLoadState.Success,
+                        )
+                    }
+                } catch (exception: CancellationException) {
+                    throw exception
+                } catch (throwable: Throwable) {
+                    _uiState.update { it.copy(userLoadState = SearchLoadState.Error(throwable.toNodeSeekError())) }
+                }
+            }
+    }
+
     companion object {
-        internal const val MAX_PAGES_PER_BATCH = 3
+        internal const val MAX_PAGES_PER_LOAD = 3
+        private const val POST_PAGE_SIZE = 20
 
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
@@ -381,16 +279,62 @@ data class SearchUiState(
     val boards: List<Board> = emptyList(),
     val selectedBoards: Set<String> = emptySet(),
     val sort: SearchSort = SearchSort.RELEVANCE,
-    val postResults: List<FeedPost> = emptyList(),
     val userResults: List<UserSearchResult> = emptyList(),
-    val postPage: Int = 1,
-    val postTotalPages: Int = 1,
-    val postHasNext: Boolean = false,
-    val isAppendingPosts: Boolean = false,
-    val postAppendFailed: Boolean = false,
-    val postLoadState: SearchLoadState = SearchLoadState.Idle,
     val userLoadState: SearchLoadState = SearchLoadState.Idle,
-) {
-    val currentLoadState: SearchLoadState
-        get() = if (target == SearchTarget.POSTS) postLoadState else userLoadState
+)
+
+internal data class PostSearchRequest(
+    val query: String,
+    val boards: Set<String>,
+    val sort: SearchSort,
+    val generation: Int,
+)
+
+internal class SearchPostsPagingSource(
+    private val repository: SearchRepository,
+    private val request: PostSearchRequest,
+) : PagingSource<Int, FeedPost>() {
+    private val seenPostIds = mutableSetOf<Long>()
+
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, FeedPost> =
+        try {
+            val startPage = params.key ?: 1
+            val knownIds = seenPostIds.toSet()
+            val summaries = mutableListOf<io.github.nsreader.model.PostSummary>()
+            var currentPage = startPage
+            var lastLoadedPage = startPage
+            var hasNext = true
+            var fetchedPages = 0
+            do {
+                val result =
+                    repository.searchPosts(
+                        query = request.query,
+                        page = currentPage,
+                        categorySlugs = request.boards,
+                        sort = request.sort,
+                    )
+                summaries += result.posts.filter { it.postId !in knownIds }
+                lastLoadedPage = result.page
+                hasNext = result.hasNextPage
+                fetchedPages++
+                if (summaries.isEmpty() && hasNext) currentPage = result.page + 1
+            } while (
+                summaries.isEmpty() &&
+                hasNext &&
+                fetchedPages < SearchViewModel.MAX_PAGES_PER_LOAD
+            )
+
+            val unique = summaries.distinctBy { it.postId }
+            seenPostIds += unique.map { it.postId }
+            LoadResult.Page(
+                data = unique.map { FeedPost(it, isRead = false, newCommentCount = 0) },
+                prevKey = null,
+                nextKey = if (hasNext) lastLoadedPage + 1 else null,
+            )
+        } catch (throwable: Throwable) {
+            if (throwable is CancellationException) throw throwable
+            LoadResult.Error(throwable)
+        }
+
+    override fun getRefreshKey(state: PagingState<Int, FeedPost>): Int? = null
 }
