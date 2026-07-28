@@ -20,7 +20,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -106,7 +106,7 @@ fun EmojiPanel(
     groups: List<EmojiGroup> = NodeSeekEmojiGroups,
 ) {
     // Opens on the first group that has anything in it, so the panel is useful the moment it shows.
-    var selectedIndex by rememberSaveable { mutableStateOf(groups.indexOfFirst { it.entries.isNotEmpty() }.coerceAtLeast(0)) }
+    var selectedIndex by rememberSaveable { mutableIntStateOf(groups.indexOfFirst { it.entries.isNotEmpty() }.coerceAtLeast(0)) }
     val group = groups.getOrNull(selectedIndex) ?: groups.first()
 
     fun insert(text: String) {

@@ -91,7 +91,7 @@ class NodeSeekJsonClient(
             val response = execute(xhrRequest(path, referer).build())
 
             response.use {
-                val body = it.body?.string().orEmpty()
+                val body = it.body.string()
                 throwIfChallenge(it.header("cf-mitigated"), body)
                 // Session-scoped endpoints answer 500, not 401, when the cookie is missing or stale.
                 // "服务器错误" with a retry button would hide the one action that fixes it: signing in.
@@ -112,7 +112,7 @@ class NodeSeekJsonClient(
             val response = execute(request)
 
             response.use {
-                val body = it.body?.string().orEmpty()
+                val body = it.body.string()
                 throwIfChallenge(it.header("cf-mitigated"), body)
                 JsonPostResponse(code = it.code, body = body)
             }
@@ -166,7 +166,7 @@ class NodeSeekJsonClient(
             val response = execute(request)
 
             response.use {
-                val payload = it.body?.string().orEmpty()
+                val payload = it.body.string()
                 throwIfChallenge(it.header("cf-mitigated"), payload)
                 if (it.code == 401 || it.code == 403) {
                     throw NodeSeekException(NodeSeekError.LoginRequired)
@@ -206,7 +206,7 @@ class NodeSeekJsonClient(
             val response = execute(request)
 
             response.use {
-                val payload = it.body?.string().orEmpty()
+                val payload = it.body.string()
                 throwIfChallenge(it.header("cf-mitigated"), payload)
                 if (it.code == 401 || it.code == 403) {
                     throw NodeSeekException(NodeSeekError.LoginRequired)

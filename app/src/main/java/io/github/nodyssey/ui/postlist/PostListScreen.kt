@@ -2,8 +2,6 @@ package io.github.nodyssey.ui.postlist
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -414,13 +412,9 @@ private fun BoardStrip(
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
 
-    // A spring rather than the default tween: this genuinely moves — the strip grows a second row
-    // and pushes the list down — and a spring is the difference between the rows arriving and the
-    // rows merely appearing. Spelled out here because `MaterialTheme.motionScheme`, which would
-    // own this value, is internal until material3 1.5.0. See `NodysseyTheme`.
     Column(
         Modifier.animateContentSize(
-            spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium),
+            animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
         ),
     ) {
         Row(

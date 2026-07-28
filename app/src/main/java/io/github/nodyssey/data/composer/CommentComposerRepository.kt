@@ -134,7 +134,7 @@ class DefaultCommentComposerRepository(
             throw NodeSeekException(NodeSeekError.Network, error)
         }
         response.use {
-            val body = it.body?.string().orEmpty()
+            val body = it.body.string()
             // Cloudflare answers a blocked write with 403 plus challenge HTML, so this runs before
             // the status check: "please verify" and "please sign in" are different recoveries.
             val isChallenge =

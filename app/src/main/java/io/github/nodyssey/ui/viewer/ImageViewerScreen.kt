@@ -307,7 +307,11 @@ private fun ZoomableImage(
         }
     val dismissDragThresholdPx = with(LocalDensity.current) { DISMISS_DRAG_THRESHOLD.toPx() }
 
-    val animatedScale by animateFloatAsState(targetValue = scale, label = "viewer-scale")
+    val animatedScale by animateFloatAsState(
+        targetValue = scale,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "viewer-scale",
+    )
 
     Box(
         modifier = Modifier

@@ -42,7 +42,7 @@ class NodeSeekClient(
         }
 
         response.use {
-            val body = it.body?.string().orEmpty()
+            val body = it.body.string()
             val headers = it.headers.toMultimap().mapValues { entry -> entry.value.joinToString(",") }
             ChallengeDetector.detect(body, it.code, headers)?.let { error ->
                 throw NodeSeekException(error)

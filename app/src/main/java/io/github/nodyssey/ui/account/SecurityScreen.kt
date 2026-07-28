@@ -351,6 +351,7 @@ private fun StrengthMeter(strength: PasswordStrength) {
                     } else {
                         MaterialTheme.colorScheme.surfaceContainerHighest
                     },
+                    animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                     label = "strength_bar_$index",
                 )
                 Box(

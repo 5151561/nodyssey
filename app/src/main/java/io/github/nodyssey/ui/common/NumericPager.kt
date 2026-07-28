@@ -84,7 +84,7 @@ internal fun pageWindow(page: Int, totalPages: Int): List<Int?> {
     return buildList {
         var previous: Int? = null
         numbers.forEach { number ->
-            if (previous != null && number - previous!! > 1) add(null)
+            previous?.let { if (number - it > 1) add(null) }
             add(number)
             previous = number
         }

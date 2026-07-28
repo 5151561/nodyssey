@@ -24,6 +24,8 @@
 
 ### 改进
 
+- 升级 Kotlin、Compose、Lifecycle、WorkManager、DataStore、网络与图片依赖；根主题正式接入
+  `MaterialExpressiveTheme` 和 Expressive motion，加载页使用 M3 Expressive 形变指示器。
 - “我的”未登录页按 c7 设计稿重做：增加登录权益说明、WebView 登录隐私提示，并保留游客可用的设置与社区工具入口。
 - 搜索结果支持追加分页、追加失败提示与重试，避免翻页失败覆盖首屏结果。
 - 通知后台轮询支持 15/30/60 分钟、仅 Wi-Fi 与免打扰时段。

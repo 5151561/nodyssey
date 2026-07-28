@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!--
+      The legacy round launcher bitmaps intentionally share the same artwork as the standard icon.
+      API 26+ applies the launcher mask to the adaptive icon, and minSdk is 26; keeping the aliases
+      still accommodates launchers that consult android:roundIcon.
+    -->
+    <issue id="IconDuplicates">
+        <ignore regexp="mipmap-.*/ic_launcher_round\.webp" />
+    </issue>
+</lint>

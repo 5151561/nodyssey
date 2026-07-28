@@ -18,7 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -122,7 +122,7 @@ fun StardustScreen(
             if (state.uid != null) {
                 ExtendedFloatingActionButton(
                     onClick = onOpenTransfer,
-                    icon = { Icon(Icons.Default.Send, contentDescription = null) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null) },
                     text = { Text(stringResource(R.string.transfer_action)) },
                 )
             }

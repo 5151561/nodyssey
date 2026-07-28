@@ -123,7 +123,7 @@ class DefaultPostComposerRepository(
             throw NodeSeekException(NodeSeekError.Network, error)
         }
         response.use {
-            val body = it.body?.string().orEmpty()
+            val body = it.body.string()
             // Cloudflare answers a blocked request with 403 plus challenge HTML, so the challenge
             // check must run before the status check — "please verify" and "please sign in" send the
             // user down entirely different recovery paths.
@@ -195,7 +195,7 @@ class DefaultPostComposerRepository(
                 ?: return null
         return response.use {
             if (!it.isSuccessful) return@use null
-            val html = it.body?.string().orEmpty()
+            val html = it.body.string()
             runCatching {
                 PostListParser.parse(html, page = 1).posts.firstOrNull { post ->
                     post.title == submission.title.trim() && post.categorySlug == submission.boardSlug

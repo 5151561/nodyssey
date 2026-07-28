@@ -124,8 +124,9 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 [docs/implementation-status.md](docs/implementation-status.md)，已核对画板到代码的映射见
 [docs/design-implementation.md](docs/design-implementation.md)。
 
-> “Expressive”指 M3 Expressive 的 token 与版式方向：配色、字阶、形状、tonal 色块和状态变化。
-> 当前没有为了动效使用 alpha 版 `MaterialExpressiveTheme` / `MotionScheme` API。
+> “Expressive”指 M3 Expressive 的完整主题方向：配色、字阶、形状、tonal 色块和状态变化。
+> 根主题使用 `MaterialExpressiveTheme` 与 `MotionScheme.expressive()`；Material 3 仍固定在提供这些
+> 新 API 的 1.5 Alpha，因此每次升级都必须跑完整 UI、Lint 与 release 构建门禁。
 
 - **Token**：`ui/theme/` 中的 light / dark M3 配色、字阶、形状与间距；品牌色为「石墨青」。
 - **首页 / 详情**：密集分割线列表、版块 tonal 标签、已读态、连续评论与原生富文本。

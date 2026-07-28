@@ -68,9 +68,9 @@
 **为什么不用 Hilt**：不是技术上不能，是不值得。手工构造器注入同样满足"依赖显式、可替换、作用域正确"，
 官方架构指南也明确接受；当前仍是单模块和一个 `AppContainer`，Hilt 换来的主要是注解与生成代码开销。
 
-> **KSP 的阻塞条件已经解除。** 原先的判断是"KSP 最新版 `2.2.21-2.0.5` 不支持 Kotlin 2.3.20"，
-> 这个判断当时对、现在不对了：KSP 已经**放弃了 `<kotlin 版本>-<ksp 版本>` 的坐标格式**，
-> 改成独立版本号，`2.3.10` 就是针对 Kotlin 2.3.20 编译的。所以 Room 在阶段二直接用上了 KSP。
+> **KSP 的阻塞条件已经解除。** 原先的判断是 KSP 版本必须与 Kotlin 版本逐段绑定，
+> 但 KSP2 已经**放弃了 `<kotlin 版本>-<ksp 版本>` 的坐标格式**并独立发布。
+> 因此 Room 可以继续使用 KSP；升级 Kotlin 时应验证 KSP 与 Room 的实际构建，而不是比较版本字符串。
 >
 > 也就是说 Hilt 现在随时可以接。之所以没接，是上面那条"不值得"，而不是技术阻塞——
 > 别再把"等 KSP"写进任何待办里。真要迁移的话，把 `AppContainer` 的各 `by lazy` 换成
@@ -283,8 +283,7 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
   `post_comments` / `post_read_marks` / `cache_session`。schema 随代码入库（`app/schemas/`），CI 校验一致性。
 - 列表改 Paging 3 + `FeedRemoteMediator`。mediator 只往 Room 写，Room 失效 PagingSource，UI 自己更新。
 - 已读标记 + "N 条新回复"角标；已读帖子标题变灰。
-- **原先写的阻塞条件（等 KSP）已不存在**：KSP 改用独立版本号，`2.3.10` 就是针对 Kotlin 2.3.20 的。
-  Room 直接用 KSP，没引入 kapt。
+- **原先写的阻塞条件（等 KSP）已不存在**：KSP2 改用独立版本号；Room 直接用 KSP，没引入 kapt。
 
 **验收**（在模拟器上实测，不是推演）：
 - 飞行模式冷启动，版块条和 98 条帖子全部从 Room 渲染，没有白屏。

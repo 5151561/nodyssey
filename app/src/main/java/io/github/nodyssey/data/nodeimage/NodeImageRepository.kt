@@ -286,7 +286,7 @@ class DefaultNodeImageRepository(
             throw NodeImageException(NodeImageError.Network, cause = error)
         }
         return response.use {
-            val payload = it.body?.string().orEmpty()
+            val payload = it.body.string()
             // Runs first, and before the status check: Cloudflare wraps its interstitial in a 403,
             // which is the same status the host uses for a bad key. Reading the challenge as a bad
             // key would send the user off to regenerate a key that was never the problem.

@@ -6,7 +6,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -31,8 +30,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -113,15 +112,17 @@ fun ReplyComposerHost(
     val launchPicker = {
         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
+    val motionScheme = MaterialTheme.motionScheme
 
     Box(modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = state.previewing,
             // Shared axis Y: the preview rises out of the sheet and sinks back into it, so the two
             // read as one surface changing state rather than two screens swapping.
-            enter = fadeIn(spring(stiffness = SPRING_STIFFNESS)) +
-                slideInVertically(spring(stiffness = SPRING_STIFFNESS)) { it / SLIDE_FRACTION },
-            exit = fadeOut() + slideOutVertically { it / SLIDE_FRACTION },
+            enter = fadeIn(motionScheme.defaultEffectsSpec()) +
+                slideInVertically(motionScheme.defaultSpatialSpec()) { it / SLIDE_FRACTION },
+            exit = fadeOut(motionScheme.fastEffectsSpec()) +
+                slideOutVertically(motionScheme.fastSpatialSpec()) { it / SLIDE_FRACTION },
         ) {
             ReplyPreviewScreen(
                 state = state,
@@ -534,7 +535,7 @@ private fun PublishReplyButton(
                 color = MaterialTheme.colorScheme.onPrimary,
             )
         } else {
-            Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(18.dp))
         }
         Text(
             text = stringResource(if (isPublishing) R.string.composer_publishing else R.string.action_publish),
@@ -579,4 +580,3 @@ private val MIN_EDITOR_HEIGHT = 96.dp
 private val MAX_EDITOR_HEIGHT = 260.dp
 private const val MAX_IMAGES_PER_PICK = 9
 private const val SLIDE_FRACTION = 6
-private const val SPRING_STIFFNESS = 400f
