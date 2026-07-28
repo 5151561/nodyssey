@@ -324,36 +324,17 @@
 
     <!-- Account settings (8g): the seven groups NodeSeek's own /setting page is split into -->
     <string name="account_title">账号设置</string>
-    <string name="account_group_introduction">个人信息</string>
-    <string name="account_group_security">安全</string>
-    <string name="account_group_2fa">双因素验证</string>
-    <string name="account_group_contact">联系方式</string>
-    <string name="account_group_block">屏蔽用户</string>
     <string name="account_group_preference">常用偏好</string>
     <string name="account_group_homepage">首页版块</string>
-    <string name="account_group_image_host">图床</string>
 
-    <string name="account_avatar">头像</string>
     <string name="account_bio">Bio</string>
     <string name="account_signature">签名</string>
     <string name="account_readme">Readme</string>
     <string name="account_change_password">修改密码</string>
-    <string name="account_two_factor">两步验证（2FA）</string>
-    <string name="account_two_factor_on">已开启</string>
-    <string name="account_two_factor_off">未开启</string>
-    <string name="account_email">邮箱</string>
-    <string name="account_blocked_list">已屏蔽列表</string>
     <string name="account_blocked_count">%1$d 人</string>
-    <string name="account_display_preferences">偏好与首页版块</string>
-    <string name="account_home_boards">首页显示的版块</string>
-    <string name="account_home_boards_hidden">已隐藏 %1$d 个</string>
-    <string name="account_home_boards_all_shown">全部显示</string>
 
     <!-- Current-value subtitles. App additions: the site's own page is a plain list of group links. -->
     <string name="account_value_unknown">—</string>
-    <string name="account_bio_empty">未填写</string>
-    <string name="account_signature_lines">%1$d 行 · Markdown</string>
-    <string name="account_readme_chars">%1$d 字</string>
 
     <!-- 个人信息 (d6 1/4) -->
     <string name="account_profile_title">个人信息</string>
@@ -466,8 +447,6 @@
     <string name="account_preferences_summary">节日主题、夜间模式与首页版块</string>
     <string name="account_holiday_theme">启用节日主题</string>
     <string name="account_holiday_theme_hint">节日期间使用节日配色，跟随账号同步</string>
-    <string name="account_holiday_theme_on">节日主题已开启</string>
-    <string name="account_holiday_theme_off">节日主题已关闭</string>
     <string name="account_auto_night">自动夜间模式</string>
     <string name="account_auto_night_hint">按下方依据自动切换深浅色</string>
     <string name="account_night_basis">夜间模式依据</string>
