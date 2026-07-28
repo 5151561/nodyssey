@@ -22,8 +22,8 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 - “关于 NSReader”和“关于 · 社区”是两个独立页面，分别位于软件设置与社区工具。
 - App 身份区包含非对称圆角 NS 标识、版本名与 version code、检查更新入口。
 - 非官方声明使用 tonal card；项目主页、问题反馈为系统外链，更新日志与开源许可为 App 内页面。
-- 社区段包含统计卡、关于本站、隐私协议、RSS 复制、电报频道、电报群组、邮箱与 DeepFlood。
-- 统计卡每次进入页面时请求 NodeSeek 首页并解析服务端“用户数目”面板；加载失败只显示重试，不回退到静态人数。
+- 社区段包含关于本站、隐私协议、RSS 复制、电报频道、电报群组、邮箱与 DeepFlood。
+- 论坛统计卡暂时隐藏；解析、Repository、ViewModel 和卡片代码保留，等待可靠数据源后再接回，不展示静态人数或失败占位。
 - LowEndTalk、LowEndSpirit、HostLoc、ServerHunter 使用 chips；没有设计稿之外的 Telegram 客服行。
 - 颜色、字阶与明暗模式来自 `MaterialTheme` token，不把画板 hex 复制进 Compose。
 

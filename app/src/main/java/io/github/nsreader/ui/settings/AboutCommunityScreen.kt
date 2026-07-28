@@ -76,13 +76,13 @@ fun AboutCommunityRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutCommunityScreen(
-    statsState: CommunityStatsUiState,
     onBack: () -> Unit,
     onOpenAboutSite: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenUri: (String) -> Unit,
     onCopyRss: () -> Unit,
-    onRetryStats: () -> Unit,
+    statsState: CommunityStatsUiState? = null,
+    onRetryStats: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -119,10 +119,12 @@ fun AboutCommunityScreen(
                 .padding(horizontal = Spacing.lg),
         ) {
             SectionLabel(stringResource(R.string.about_community))
-            CommunityStats(
-                state = statsState,
-                onRetry = onRetryStats,
-            )
+            statsState?.let { state ->
+                CommunityStats(
+                    state = state,
+                    onRetry = onRetryStats,
+                )
+            }
             AboutActionRow(
                 title = stringResource(R.string.about_site),
                 subtitle = stringResource(R.string.about_site_hint),
@@ -300,13 +302,11 @@ internal object CommunityLinks {
 private fun AboutCommunityPreview() {
     NodeSeekTheme {
         AboutCommunityScreen(
-            statsState = CommunityStatsUiState.Content(64_902),
             onBack = {},
             onOpenAboutSite = {},
             onOpenPrivacy = {},
             onOpenUri = {},
             onCopyRss = {},
-            onRetryStats = {},
         )
     }
 }

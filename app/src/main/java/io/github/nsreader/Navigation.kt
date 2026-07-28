@@ -84,8 +84,7 @@ import io.github.nsreader.ui.profile.ProfileViewModel
 import io.github.nsreader.ui.search.SearchRoute
 import io.github.nsreader.ui.search.SearchViewModel
 import io.github.nsreader.ui.settings.AboutAppScreen
-import io.github.nsreader.ui.settings.AboutCommunityRoute
-import io.github.nsreader.ui.settings.AboutCommunityViewModel
+import io.github.nsreader.ui.settings.AboutCommunityScreen
 import io.github.nsreader.ui.settings.AppLinks
 import io.github.nsreader.ui.settings.AppUpdateStatus
 import io.github.nsreader.ui.settings.ChangelogScreen
@@ -388,10 +387,7 @@ fun MainNavigation(
 
             entry<AboutCommunityKey> {
                 val context = LocalContext.current
-                val viewModel: AboutCommunityViewModel =
-                    viewModel(factory = AboutCommunityViewModel.factory(container))
-                AboutCommunityRoute(
-                    viewModel = viewModel,
+                AboutCommunityScreen(
                     onBack = { backStack.removeLastOrNull() },
                     onOpenAboutSite = {
                         backStack.add(

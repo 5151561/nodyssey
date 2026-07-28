@@ -80,13 +80,11 @@ class AboutCommunityScreenTest {
         composeRule.setContent {
             NodeSeekTheme {
                 AboutCommunityScreen(
-                    statsState = CommunityStatsUiState.Loading,
                     onBack = {},
                     onOpenAboutSite = {},
                     onOpenPrivacy = {},
                     onOpenUri = {},
                     onCopyRss = {},
-                    onRetryStats = {},
                 )
             }
         }
@@ -95,6 +93,8 @@ class AboutCommunityScreenTest {
         composeRule.onNodeWithText("NodeSeek 客户端").assertDoesNotExist()
         composeRule.onNodeWithText("项目主页").assertDoesNotExist()
         composeRule.onNodeWithText("开源许可").assertDoesNotExist()
+        composeRule.onNodeWithText("正在读取论坛人数…").assertDoesNotExist()
+        composeRule.onNodeWithText("论坛人数加载失败").assertDoesNotExist()
     }
 
     @Test
