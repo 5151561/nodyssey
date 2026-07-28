@@ -4,6 +4,9 @@
     <!-- Actions -->
     <string name="action_back">返回</string>
     <string name="action_close">关闭</string>
+    <string name="action_expand">展开</string>
+    <string name="action_collapse">收起</string>
+    <string name="report_show_source">查看原始报告</string>
     <string name="action_retry">重试</string>
     <string name="action_refresh">刷新</string>
     <string name="search_load_more_failed">加载更多失败</string>

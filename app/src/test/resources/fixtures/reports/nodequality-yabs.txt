@@ -1,0 +1,50 @@
+########################################################################
+                  bash <(curl -sL https://run.NodeQuality.com)
+                   https://github.com/LloydAsp/NodeQuality
+        报告时间：2025-03-24 10:39:57 CST  脚本版本：v0.0.1
+        频道: https://t.me/nodeselect 网站：https://NodeQuality.com
+########################################################################
+Basic System Information:
+---------------------------------
+Uptime     : 4 days, 12 hours, 34 minutes
+Processor  : Intel Xeon Processor (SierraForest)
+CPU cores  : 2 @ 2699.998 MHz
+AES-NI     : ✔ Enabled
+VM-x/AMD-V : ❌ Disabled
+RAM        : 2.0 GiB
+Swap       : 1024.0 MiB
+Disk       : 40.0 GiB
+Distro     : Debian GNU/Linux 12 (bookworm)
+Kernel     : 5.10.0-8-amd64
+VM Type    : KVM
+IPv4/IPv6  : ✔ Online / ❌ Offline
+IPv4 Network Information:
+---------------------------------
+ISP        : IT7 Networks Inc
+ASN        : AS25820 IT7 Networks Inc
+Host       : IT7 Networks Inc
+Location   : Hong Kong, Kowloon ()
+Country    : Hong Kong
+fio Disk Speed Tests (Mixed R/W 50/50) (Partition -):
+---------------------------------
+Block Size | 4k            (IOPS) | 64k           (IOPS)
+  ------   | ---            ----  | ----           ---- 
+Read       | 74.48 MB/s   (18.6k) | 905.08 MB/s  (14.1k)
+Write      | 74.68 MB/s   (18.6k) | 909.84 MB/s  (14.2k)
+Total      | 149.17 MB/s  (37.2k) | 1.81 GB/s    (28.3k)
+           |                      |                     
+Block Size | 512k          (IOPS) | 1m            (IOPS)
+  ------   | ---            ----  | ----           ---- 
+Read       | 1.29 GB/s     (2.5k) | 1.48 GB/s     (1.4k)
+Write      | 1.35 GB/s     (2.6k) | 1.58 GB/s     (1.5k)
+Total      | 2.65 GB/s     (5.1k) | 3.06 GB/s     (2.9k)
+iperf3 Network Speed Tests (IPv4):
+---------------------------------
+Provider        | Location (Link)           | Send Speed      | Recv Speed      | Ping           
+-----           | -----                     | ----            | ----            | ----           
+Clouvider       | London, UK (10G)          | 872 Mbits/sec   | 920 Mbits/sec   | 186 ms         
+Eranium         | Amsterdam, NL (100G)      | 858 Mbits/sec   | 783 Mbits/sec   | 213 ms         
+Uztelecom       | Tashkent, UZ (10G)        | 1.05 Gbits/sec  | 111 Mbits/sec   | 181 ms         
+Leaseweb        | Singapore, SG (10G)       | 1.04 Gbits/sec  | 992 Mbits/sec   | 182 ms         
+Clouvider       | Los Angeles, CA, US (10G) | 1.12 Gbits/sec  | 1.02 Gbits/sec  | 157 ms         
+Leaseweb        | NYC, NY, US (10G)         | 890 Mbits/sec   | 833 Mbits/sec   | 207 ms         

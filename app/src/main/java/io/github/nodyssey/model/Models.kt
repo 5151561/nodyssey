@@ -137,6 +137,20 @@ sealed interface RichNode {
     data class CodeBlock(
         val code: String,
         val language: String?,
+        /**
+         * Colour runs recovered from `language-ansi` output, empty for ordinary code.
+         *
+         * Index ranges into [code] rather than a pre-built annotated string, because the palette
+         * these indices resolve against belongs to the renderer, not to the cache.
+         */
+        val spans: List<AnsiSpan> = emptyList(),
+        /**
+         * Width of the longest line in terminal columns, counting CJK and emoji as two.
+         *
+         * A benchmark report is 80 columns of aligned ASCII art that cannot be reflowed, so this is
+         * what decides whether the block can be shown in the thread at all or has to open elsewhere.
+         */
+        val columns: Int = 0,
     ) : RichNode
 
     @Serializable
@@ -144,6 +158,25 @@ sealed interface RichNode {
     data class Quote(
         val children: List<RichNode>,
     ) : RichNode
+
+    /**
+     * NodeSeek's own `nsk-magic-tabs` Markdown extension, which the review board uses to file the
+     * four halves of a NodeQuality report behind one tab each.
+     *
+     * Flattening it — which is what happens when the parser does not recognise the wrapper — puts
+     * all four reports on screen at once, so the group has to survive parsing as a group.
+     */
+    @Serializable
+    @SerialName("tabs")
+    data class Tabs(
+        val tabs: List<Tab>,
+    ) : RichNode {
+        @Serializable
+        data class Tab(
+            val title: String,
+            val children: List<RichNode>,
+        )
+    }
 
     @Serializable
     @SerialName("list")
@@ -163,6 +196,23 @@ sealed interface RichNode {
     @SerialName("hr")
     data object Divider : RichNode
 }
+
+/**
+ * One run of SGR-styled text inside a [RichNode.CodeBlock], as a half-open range into its code.
+ *
+ * [fg] and [bg] are palette indices 0–15 (the eight ANSI colours then their bright variants), not
+ * packed colours: the report's `✔ 解锁` green has to become the *theme's* green, and only the
+ * renderer knows what that is.
+ */
+@Serializable
+data class AnsiSpan(
+    val start: Int,
+    val end: Int,
+    val fg: Int? = null,
+    val bg: Int? = null,
+    val bold: Boolean = false,
+    val underline: Boolean = false,
+)
 
 /** Inline pieces inside a paragraph. */
 @Serializable

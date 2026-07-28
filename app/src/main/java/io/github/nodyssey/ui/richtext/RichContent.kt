@@ -25,6 +25,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +34,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +61,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -67,6 +71,7 @@ import coil3.request.ImageRequest
 import io.github.nodyssey.R
 import io.github.nodyssey.core.image.ImagesDeferredException
 import io.github.nodyssey.core.image.allowMeteredImage
+import io.github.nodyssey.core.report.QualityReportParser
 import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.InlineStyle
 import io.github.nodyssey.model.RichNode
@@ -147,7 +152,7 @@ private fun RichBlock(
 
         is RichNode.BlockImage -> BlockImage(node = node, onImageClick = onImageClick)
 
-        is RichNode.CodeBlock -> CodeBlock(node)
+        is RichNode.CodeBlock -> CodeOrReport(node)
 
         is RichNode.Quote ->
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -210,11 +215,87 @@ private fun RichBlock(
 
         is RichNode.Table -> DataTable(node, textStyle)
 
+        is RichNode.Tabs ->
+            TabGroup(
+                node = node,
+                onLinkClick = onLinkClick,
+                onImageClick = onImageClick,
+                onQuoteRefClick = onQuoteRefClick,
+                textStyle = textStyle,
+            )
+
         RichNode.Divider ->
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.xs),
             )
+    }
+}
+
+/**
+ * NodeSeek's own tab group, which on the review board holds the four halves of a benchmark report.
+ *
+ * Showing one tab at a time is the whole point of the node: a NodeQuality post carries four reports
+ * of a couple of hundred lines each, and the site files them behind tabs for the same reason. The
+ * strip scrolls rather than wrapping or squeezing — four labels do not fit across 360dp.
+ */
+@Composable
+private fun TabGroup(
+    node: RichNode.Tabs,
+    onLinkClick: (String) -> Unit,
+    onImageClick: (String) -> Unit,
+    onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
+    textStyle: TextStyle,
+) {
+    if (node.tabs.isEmpty()) return
+
+    var selected by rememberSaveable { mutableIntStateOf(0) }
+    // Re-parsing a thread can change the tab count, and the saved index outlives the old node.
+    val index = selected.coerceIn(0, node.tabs.lastIndex)
+
+    Column(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        SecondaryScrollableTabRow(
+            selectedTabIndex = index,
+            containerColor = Color.Transparent,
+            edgePadding = Spacing.sm,
+            divider = {},
+        ) {
+            node.tabs.forEachIndexed { position, tab ->
+                Tab(
+                    selected = position == index,
+                    onClick = { selected = position },
+                    text = {
+                        Text(
+                            text = tab.title,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                )
+            }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Column(
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            node.tabs[index].children.forEach { child ->
+                RichBlock(
+                    node = child,
+                    onLinkClick = onLinkClick,
+                    onImageClick = onImageClick,
+                    onQuoteRefClick = onQuoteRefClick,
+                    textStyle = textStyle,
+                )
+            }
+        }
     }
 }
 
@@ -386,6 +467,36 @@ private fun InlineImageError(onRetry: () -> Unit) {
 private enum class InlineImagePhase { Loading, Success, Deferred, Error }
 
 private val INLINE_IMAGE_LOADING_HEIGHT = 132.dp
+
+/**
+ * Draws a benchmark report as a report and everything else as code.
+ *
+ * The test is whether [QualityReportParser] can make sense of the text, not what language the site
+ * tagged it with: `language-ansi` is also how an unrelated coloured terminal paste arrives, and that
+ * is not a report. Parsing is cheap next to the layout it feeds and is remembered on the node, so a
+ * scroll past a thread of them does not repeat it.
+ */
+@Composable
+private fun CodeOrReport(node: RichNode.CodeBlock) {
+    val report = remember(node) { QualityReportParser.parse(node.code, node.spans) }
+    if (report == null) {
+        CodeBlock(node)
+        return
+    }
+
+    var showingSource by rememberSaveable(node.code) { mutableStateOf(false) }
+
+    ReportCard(report = report, onShowSource = { showingSource = true })
+
+    if (showingSource) {
+        ReportSourceDialog(
+            title = report.title,
+            source = node.code,
+            columns = node.columns,
+            onDismiss = { showingSource = false },
+        )
+    }
+}
 
 @Composable
 private fun CodeBlock(node: RichNode.CodeBlock) {

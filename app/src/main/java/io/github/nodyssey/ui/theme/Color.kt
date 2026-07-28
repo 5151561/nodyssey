@@ -174,29 +174,39 @@ internal val NodysseyDarkColorScheme =
     )
 
 /**
- * The one tonal pair Material 3 has no role for.
+ * The tonal pairs Material 3 has no role for.
  *
  * Board tags are grouped into four colour families (see `BoardTag`), and the fourth — the boards
  * that carry a warning ("曝光", "内版") — needs a warm amber that is neither `error` nor any of the
  * three brand tones. Keeping it in a [staticCompositionLocalOf] rather than a top-level `val` is
  * what lets it flip with the theme like every other token.
+ *
+ * `success` joins it for the benchmark reports: those mark a check as passed or failed, and Material
+ * gives a role to only half of that pair. Green rather than a brand tone because the reports are
+ * read as a verdict — `error` opposite `primary` would read as "bad" opposite "branded".
  */
 @Immutable
 data class NodysseyExtraColors(
     val warningContainer: Color,
     val onWarningContainer: Color,
+    val successContainer: Color,
+    val onSuccessContainer: Color,
 )
 
 internal val LightExtraColors =
     NodysseyExtraColors(
         warningContainer = Color(0xFFF7E3A6),
         onWarningContainer = Color(0xFF4E3D00),
+        successContainer = Color(0xFFBFE9C8),
+        onSuccessContainer = Color(0xFF0A2E15),
     )
 
 internal val DarkExtraColors =
     NodysseyExtraColors(
         warningContainer = Color(0xFF4E4426),
         onWarningContainer = Color(0xFFF7E3A6),
+        successContainer = Color(0xFF244A2F),
+        onSuccessContainer = Color(0xFFBFE9C8),
     )
 
 val LocalNodysseyExtraColors = staticCompositionLocalOf { LightExtraColors }

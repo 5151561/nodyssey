@@ -1,0 +1,46 @@
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                          硬件质量体检报告：86.53.*.*
+                    https://github.com/xykt/HardwareQuality
+                    bash <(curl -sL https://Check.Place) -H
+            报告时间：2026-07-28 12:14:43 CST  脚本版本：v2026-05-21
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+一、操作系统信息
+容器/虚拟化：          KVM 虚拟机
+架构：                 x86_64
+操作系统/内核：        Debian GNU/Linux 12 (bookworm) 5.10.0-14-cloud-amd64
+运行时间：             0 天 7 小时 57 分钟
+负载：                 0.80, 0.36, 0.14
+进程：                 3 用户，87 进程，12/121 活跃/总服务
+区域设置：             C, UTF-8, Etc/UTC UTC +0000
+二、主板信息
+BIOS：    SeaBIOS, 版本1.16.0-1.module_el8.7.0+1140+ff0772f9
+芯片组：  Intel 82371SB PIIX3 ISA [Natoma/Triton II]
+          Intel 440FX - 82441FX PMC [Natoma]
+网卡：    Red Hat, Inc. Virtio network device
+三、CPU测评
+CPU：     AMD EPYC 7K62 48-Core Processor 步进0 (23代) 32/64-bit
+           ╚═ 2核心, 2线程, 2595.124MHz, 利用率2%               
+缓存：    L1d 64 KiB, L1i 64 KiB, L2 1 MiB, L3 384 MiB
+指令集：   ✘ VT-x/AMD-V    ✔ AES-NI    ✔ AVX2    ✔ BMI1/2    ✘ EPT/NPT 
+Sysbench：单线程 1471.21     多线程 2882.59
+GB5基准： J1900 N5105 N100 6700K 9900K 5900X 12900K 14900K 7713 7995WX
+GB5单核：      |945
+GB5多核：          |1832
+详细结果：https://browser.geekbench.com/v5/cpu/24484722
+五、内存测评
+内存：    总容量 3.8 GB,  已用 0.2 GB(6%),  可用 3.6 GB(94%)
+超开指标： ✔ 气球回收     ✘ KSM 复用 
+Sysbench：读取 43989.9 MB/s    写入 19808.9 MB/s    延迟 169 ns
+六、硬盘测评
+硬盘：    数量 1,  总容量 30G,  已用容量 2.3G(7%),  可用容量 26G(93%)
+测试设备：vda1(/r**t) -> DISK
+Fio测试： RND4K/Q1    IOPS||RND4K/Q32   IOPS||SEQ1M/Q1    IOPS||SEQ1M/Q8    IOPS
+读取：    37.9MB/s    9.7k||222MB/s      57k||2719MB/s    2.7k||5270MB/s    5.3k
+写入：    37.3MB/s    9.6k||163MB/s      42k||1494MB/s    1.5k||556MB/s      556
+七、HQ硬件加权评分
+项目：      总 分          CPU           GPU          内 存         硬 盘  
+分数：      42832    =    21839    +     N/A     +    18168    +    2825   
+排名：      13.9%         19.8%          N/A          15.7%         10.7%  
+================================================================================
+今日硬件检测量：215；总检测量：131861。感谢使用xy系列脚本！ 
+报告链接：https://Report.Check.Place/hardware/YKCFLFS1L.svg
