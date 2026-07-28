@@ -8,7 +8,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nsreader.R
 import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.account.AccountSettingsRepository
-import io.github.nsreader.data.account.EndpointNotVerifiedException
 import io.github.nsreader.data.settings.OPTIONAL_HOME_BOARD_SLUGS
 import io.github.nsreader.data.settings.SettingsRepository
 import io.github.nsreader.data.settings.ThemeMode
@@ -31,9 +30,8 @@ import kotlinx.coroutines.launch
  *   [SettingsRepository] and never touch the network.
  * - **Remote** (this account, server): 启用节日主题 and the three 首页版块 switches. The account is
  *   the authority; DataStore only *mirrors* them so the feed and theme work offline. A toggle writes
- *   the mirror first — the app must obey the user immediately — and then tells the server. While the
- *   `/setting` endpoints are still stubbed ([EndpointNotVerifiedException]), the screen carries the
- *   standing pending banner instead of failing every toggle with a toast.
+ *   the mirror first — the app must obey the user immediately — and then tells the server, and says
+ *   so when the server refuses.
  */
 class PreferencesViewModel(
     private val settings: SettingsRepository,
@@ -48,7 +46,6 @@ class PreferencesViewModel(
                 autoNight = values.themeMode == ThemeMode.SYSTEM || values.themeMode == ThemeMode.TIMED,
                 nightBasisTimed = values.themeMode == ThemeMode.TIMED,
                 hiddenBoards = values.hiddenHomeBoards,
-                endpointPending = remoteState.endpointPending,
                 message = remoteState.message,
             )
         }.stateIn(
@@ -70,17 +67,7 @@ class PreferencesViewModel(
                         if (hidden != (slug in mirrored)) settings.setHomeBoardHidden(slug, hidden)
                     }
                 }.onFailure { throwable ->
-                    remote.update {
-                        it.copy(
-                            endpointPending = throwable is EndpointNotVerifiedException,
-                            message =
-                            if (throwable is EndpointNotVerifiedException) {
-                                null
-                            } else {
-                                throwable.toAccountMessage(R.string.account_preferences_title)
-                            },
-                        )
-                    }
+                    remote.update { it.copy(message = throwable.toAccountMessage()) }
                 }
         }
     }
@@ -117,20 +104,16 @@ class PreferencesViewModel(
     fun consumeMessage() = remote.update { it.copy(message = null) }
 
     /**
-     * The sync-up half of the mirror contract. A pending endpoint raises the banner once and is
-     * otherwise silent — the mirror already took the change, so from the user's side the toggle
-     * worked; the banner is what says "…but only on this device, for now".
+     * The sync-up half of the mirror contract.
+     *
+     * A failure here is worth saying out loud rather than swallowing: the mirror already took the
+     * change so the app obeys the user either way, but the account did not, and the next device they
+     * sign in on will disagree with this one.
      */
     private suspend fun pushRemote(write: suspend () -> Unit) {
         runCatchingExceptCancellation { write() }
             .onFailure { throwable ->
-                if (throwable is EndpointNotVerifiedException) {
-                    remote.update { it.copy(endpointPending = true) }
-                } else {
-                    remote.update {
-                        it.copy(message = throwable.toAccountMessage(R.string.account_preferences_title))
-                    }
-                }
+                remote.update { it.copy(message = throwable.toAccountMessage()) }
             }
     }
 
@@ -150,7 +133,6 @@ class PreferencesViewModel(
 }
 
 private data class RemotePreferencesState(
-    val endpointPending: Boolean = false,
     val message: AccountMessage? = null,
 )
 
@@ -159,6 +141,5 @@ data class PreferencesUiState(
     val autoNight: Boolean = true,
     val nightBasisTimed: Boolean = false,
     val hiddenBoards: Set<String> = emptySet(),
-    val endpointPending: Boolean = false,
     val message: AccountMessage? = null,
 )

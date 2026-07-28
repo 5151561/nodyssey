@@ -18,9 +18,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import org.jsoup.Jsoup
-import java.nio.charset.StandardCharsets
-import java.util.Base64
 
 data class UserProfile(
     val uid: Long,
@@ -166,26 +163,9 @@ class NetworkProfileRepository(
         return raw.copy(uid = raw.uid ?: uid).toProfile()
     }
 
-    internal fun parseProfilePage(html: String): RawProfile {
-        val encoded =
-            Jsoup.parse(html)
-                .getElementById(PROFILE_BOOTSTRAP_ELEMENT_ID)
-                ?.data()
-                ?.trim()
-                .orEmpty()
-        // No bootstrap element at all is how the home page looks to a signed-out visitor, not how a
-        // redesign would look — a redesign would still carry *something* where the profile was.
-        if (encoded.isEmpty()) throw NodeSeekException(NodeSeekError.LoginRequired)
-
-        val decoded =
-            try {
-                String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8)
-            } catch (exception: IllegalArgumentException) {
-                throw NodeSeekException(NodeSeekError.Unparsable, exception)
-            }
-        return parseProfileJson(decoded)
+    internal fun parseProfilePage(html: String): RawProfile =
+        parseProfileJson(SiteBootstrap.decode(html))
             ?: throw NodeSeekException(NodeSeekError.Unparsable)
-    }
 
     internal fun parseProfileJson(body: String): RawProfile? {
         val root =
@@ -234,10 +214,6 @@ class NetworkProfileRepository(
             topicCount = topicCount,
             commentCount = commentCount,
         )
-    }
-
-    private companion object {
-        const val PROFILE_BOOTSTRAP_ELEMENT_ID = "temp-script"
     }
 }
 

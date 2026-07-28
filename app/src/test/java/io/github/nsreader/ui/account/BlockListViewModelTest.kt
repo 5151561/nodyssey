@@ -103,13 +103,12 @@ class BlockListViewModelTest {
         }
 
     @Test
-    fun `a pending endpoint shows the banner without a snackbar`() =
+    fun `a failed list load reports the error rather than an empty list`() =
         runTest(dispatcher) {
-            val vm = viewModel(FakeAccountSettingsRepository.pendingEndpoints())
+            val vm = viewModel(FakeAccountSettingsRepository.failing())
             collectState(vm)
             advanceUntilIdle()
 
-            assertTrue(vm.uiState.value.endpointPending)
-            assertEquals(null, vm.uiState.value.message)
+            assertTrue(vm.uiState.value.message is AccountMessage.Failure)
         }
 }

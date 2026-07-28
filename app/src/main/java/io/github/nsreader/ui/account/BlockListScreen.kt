@@ -121,8 +121,6 @@ fun BlockListScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            if (state.endpointPending) EndpointPendingBanner()
-
             ShowBlockedSwitchCard(
                 checked = state.showBlockedContent,
                 onCheckedChange = onShowBlockedChange,

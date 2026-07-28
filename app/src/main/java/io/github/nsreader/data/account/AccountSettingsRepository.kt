@@ -1,5 +1,25 @@
 package io.github.nsreader.data.account
 
+import io.github.nsreader.core.NodeSeekSite
+import io.github.nsreader.core.net.HtmlSource
+import io.github.nsreader.core.net.JsonApi
+import io.github.nsreader.core.net.MultipartWriteSource
+import io.github.nsreader.core.net.NodeSeekError
+import io.github.nsreader.core.net.NodeSeekException
+import io.github.nsreader.core.net.NodeSeekJsonClient
+import io.github.nsreader.data.ProfileRepository
+import io.github.nsreader.data.SiteBootstrap
+import io.github.nsreader.data.bool
+import io.github.nsreader.data.findObjectArray
+import io.github.nsreader.data.long
+import io.github.nsreader.data.obj
+import io.github.nsreader.data.settings.OPTIONAL_HOME_BOARD_SLUGS
+import io.github.nsreader.data.text
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+
 /** 个人信息 · `/setting#introduction`. Every field is Markdown except [bio], which is one plain line. */
 data class AccountProfileFields(
     val bio: String = "",
@@ -12,6 +32,10 @@ data class AccountProfileFields(
  *
  * One address only. v1 invented a backup address; the 2026-07-27 recheck (additions.md §1.1) found
  * the site has no such field, so it is gone rather than kept "for later".
+ *
+ * [emailVerified] is derived, not reported: the site stores no verified flag anywhere, and it does
+ * not need one — an address can only be set by typing back a code mailed to it, at registration and
+ * again at every change. A present address is therefore verified by construction.
  */
 data class AccountContact(
     val email: String = "",
@@ -21,18 +45,16 @@ data class AccountContact(
 /**
  * Telegram 提醒 · `/setting#contact`.
  *
- * The site's only off-site notification channel. Only the unbound state has been observed on a real
- * account (additions.md §1.1: "暂未绑定telegram…" + 「立即绑定」); the bound shape — a username and,
- * ideally, when it was bound — is the design's assumption from f3 and must be corrected against the
- * real payload when the endpoint is captured.
- *
- * [boundAtDisplay] is whatever date string the site reports, uninterpreted. Parsing it into a real
- * timestamp before the format has ever been seen would be invention twice over.
+ * The site's only off-site notification channel. Bound-ness comes from the page bootstrap's
+ * `telegram_id`; the rest is whatever Telegram's login widget handed the site at bind time and the
+ * site kept — of which its own settings page displays exactly three fields, the two names and the
+ * photo. There is no bound-at date to show: nothing in the payload carries one.
  */
 data class TelegramBinding(
     val bound: Boolean = false,
-    val username: String? = null,
-    val boundAtDisplay: String? = null,
+    /** First and last name as Telegram reported them; absent for a binding the detail call missed. */
+    val displayName: String? = null,
+    val avatarUrl: String? = null,
 )
 
 /** 双因素验证 · `/setting#2fa`. TOTP is the only second factor the site offers. */
@@ -95,38 +117,34 @@ interface AccountSettingsRepository {
 
     suspend fun saveProfileFields(fields: AccountProfileFields)
 
+    /**
+     * Replaces the avatar. There is no counterpart: the site's settings page offers 设置头像 and
+     * nothing else, so an account cannot go back to having no avatar once it has one.
+     */
     suspend fun uploadAvatar(upload: AvatarUpload)
-
-    suspend fun removeAvatar()
 
     suspend fun changePassword(currentPassword: String, newPassword: String)
 
     suspend fun twoFactor(): TwoFactorState
 
-    /** Starts TOTP enrolment; returns the `otpauth://` URI the authenticator app scans. */
-    suspend fun beginTwoFactorEnrolment(): String
+    /**
+     * Starts TOTP enrolment; returns the `otpauth://` URI the authenticator app scans.
+     *
+     * The password is the site's requirement, not a precaution of ours — enrolment is one endpoint
+     * that takes `{action, password}`, and it refuses without it.
+     */
+    suspend fun beginTwoFactorEnrolment(password: String): String
 
     suspend fun contact(): AccountContact
 
     /**
-     * Step ① + ② of the site's change-email flow: password check, then a code to the new address.
-     * The site sends the code only after the password is accepted, so the two travel together.
+     * Whether Telegram is bound, and who to.
+     *
+     * There is no counterpart that *binds*: the site does it through telegram.org's login widget, a
+     * script that needs a real browser and hands its callback object straight to the server. The app
+     * opens `/setting#contact` for that and calls this again on the way back.
      */
-    suspend fun sendEmailChangeCode(password: String, newEmail: String)
-
-    /** Step ② 「确定」: the 6-digit code from the new mailbox commits the change. */
-    suspend fun confirmEmailChange(password: String, newEmail: String, code: String)
-
     suspend fun telegramBinding(): TelegramBinding
-
-    /**
-     * What 「立即绑定」 does: returns the URL the app should open — assumed to be a `t.me` bot deep
-     * link carrying a one-time token. **The mechanism is unverified** (f3 is explicit about this):
-     * nobody has pressed the real button on a signed-in session, because pressing it may bind the
-     * tester's own account. Capture the click on a device and correct this signature if the site
-     * turns out to navigate, POST first, or embed the token differently.
-     */
-    suspend fun beginTelegramBinding(): String
 
     suspend fun unbindTelegram()
 
@@ -143,107 +161,320 @@ interface AccountSettingsRepository {
 }
 
 /**
- * Thrown for every operation whose NodeSeek endpoint has not been observed yet.
+ * The production implementation.
  *
- * NodeSeek has no public API and `/setting` is a client-rendered page whose writes go out as XHRs, so
- * the request shapes cannot be read off the HTML the way the list and detail parsers were written.
- * They have to be captured from a signed-in session on a device — this sandbox gets a Cloudflare 403
- * for anything authenticated.
+ * Every request here was read off the site's own settings bundle
+ * (`/assets/index-*.js`, the `/setting` chunk) rather than guessed. That mattered: `/api/account/…`
+ * is plausible enough that a wrong guess would most likely return a cheerful `{"success":false}`
+ * that reads as "saved" to a caller which only checks for exceptions, and these operations include
+ * changing a password — where silently doing nothing costs the user their account.
  *
- * Guessing was the alternative and was rejected: `/api/account/…` is plausible enough that a wrong
- * guess would most likely return a cheerful `{"success":false}` that reads as "saved" to a caller
- * that only checks for exceptions, and the operations here include changing a password and an email
- * address — the two places where silently doing nothing, or silently doing the wrong thing, costs the
- * user their account.
- *
- * Filling this in is one file's work. The probe checklist is in the KDoc of each
- * [NetworkAccountSettingsRepository] member.
+ * The full contract, including the two flows that cannot be native, is in `docs/private/api-notes.md`.
  */
-class EndpointNotVerifiedException(
-    val operation: String,
-) : Exception("NodeSeek endpoint for `$operation` has not been verified yet")
+class NetworkAccountSettingsRepository(
+    private val jsonApi: JsonApi,
+    private val multipartWriteSource: MultipartWriteSource,
+    private val htmlSource: HtmlSource,
+    private val profileRepository: ProfileRepository,
+) : AccountSettingsRepository {
+    private val json = Json { ignoreUnknownKeys = true }
 
-/**
- * The real implementation, pending endpoint capture.
- *
- * Every member documents what to look for in the network log of a signed-in `/setting` session, so
- * the person holding the device does not have to re-derive the list. Replace a `notVerified` call
- * with the request as soon as its shape is known; the screens need no change, and the pending banner
- * they show is driven by this exception, so it disappears on its own.
- */
-class NetworkAccountSettingsRepository : AccountSettingsRepository {
+    override suspend fun profileFields(): AccountProfileFields {
+        val uid = profileRepository.profile().uid
+        val root =
+            getObject(
+                path = NodeSeekJsonClient.accountSettingsInfoPath(uid),
+                operation = "profileFields",
+            )
+        val detail = root.obj("detail", "data", "account", "result")
+            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        return AccountProfileFields(
+            bio = detail.text("bio", "introduction").orEmpty(),
+            signature = detail.text("signature_markdown", "signature", "signatureMarkdown").orEmpty(),
+            readme = detail.text("readme", "readMe", "read_me").orEmpty(),
+        )
+    }
 
-    /** Probe: open `/setting#introduction` — the page must GET bio/signature/readme from somewhere. */
-    override suspend fun profileFields(): AccountProfileFields = notVerified("profileFields")
+    override suspend fun saveProfileFields(fields: AccountProfileFields) {
+        postObject(
+            path = NodeSeekJsonClient.PATH_ACCOUNT_INTRODUCTION,
+            body =
+            JsonObject(
+                mapOf(
+                    "bio" to JsonPrimitive(fields.bio),
+                    "signature" to JsonPrimitive(fields.signature),
+                    "readme" to JsonPrimitive(fields.readme),
+                ),
+            ),
+            operation = "saveProfileFields",
+        )
+    }
 
-    /** Probe: edit Bio and press save; expect one POST carrying all three fields. */
-    override suspend fun saveProfileFields(fields: AccountProfileFields): Unit =
-        notVerified("saveProfileFields")
+    override suspend fun uploadAvatar(upload: AvatarUpload) {
+        val extension =
+            when (upload.mimeType.lowercase()) {
+                "image/png" -> "png"
+                "image/gif" -> "gif"
+                else -> "jpg"
+            }
+        val body =
+            multipartWriteSource.postMultipart(
+                path = NodeSeekJsonClient.PATH_AVATAR_UPLOAD,
+                fields = mapOf("token" to "123456798", "name" to "avatar"),
+                fileField = "img",
+                fileName = "img.$extension",
+                fileBytes = upload.bytes,
+                fileMimeType = upload.mimeType,
+                headers = mapOf("x-csrf-challenge" to "simple-token"),
+                referer = SETTINGS_REFERER,
+            )
+        parseObject(body, "uploadAvatar")
+    }
 
-    /** Probe: upload an avatar; expect `multipart/form-data`. Note the field name and any size cap. */
-    override suspend fun uploadAvatar(upload: AvatarUpload): Unit = notVerified("uploadAvatar")
+    override suspend fun changePassword(currentPassword: String, newPassword: String) {
+        postObject(
+            path = NodeSeekJsonClient.PATH_ACCOUNT_CHANGE_PASSWORD,
+            body =
+            JsonObject(
+                mapOf(
+                    "oldPassword" to JsonPrimitive(currentPassword),
+                    "password" to JsonPrimitive(newPassword),
+                ),
+            ),
+            operation = "changePassword",
+        )
+    }
 
-    override suspend fun removeAvatar(): Unit = notVerified("removeAvatar")
+    override suspend fun twoFactor(): TwoFactorState {
+        val root =
+            getObject(
+                path = NodeSeekJsonClient.PATH_ACCOUNT_OTP_STATUS,
+                operation = "twoFactor",
+            )
+        val enabled = root.bool("enabled") ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        return TwoFactorState(enabled)
+    }
 
-    /** Probe: `/setting#security`. Watch for a 2FA code field appearing once TOTP is bound. */
-    override suspend fun changePassword(currentPassword: String, newPassword: String): Unit =
-        notVerified("changePassword")
+    override suspend fun beginTwoFactorEnrolment(password: String): String {
+        val root =
+            postObject(
+                path = NodeSeekJsonClient.PATH_ACCOUNT_OTP,
+                body =
+                JsonObject(
+                    mapOf(
+                        "action" to JsonPrimitive("create"),
+                        "password" to JsonPrimitive(password),
+                    ),
+                ),
+                operation = "beginTwoFactorEnrolment",
+            )
+        // The response also carries the bare `secret` the site prints as a backup code. It is not
+        // read here: the app hands the URI to an authenticator and keeps no copy of either.
+        return root.text("uri") ?: throw NodeSeekException(NodeSeekError.Unparsable)
+    }
 
-    /** Probe: `/setting#2fa` on load. */
-    override suspend fun twoFactor(): TwoFactorState = notVerified("twoFactor")
+    override suspend fun contact(): AccountContact {
+        val email = settingsUser().text("email").orEmpty()
+        return AccountContact(email = email, emailVerified = email.isNotEmpty())
+    }
 
-    /** Probe: press 绑定验证器; the response should carry the secret or a full `otpauth://` URI. */
-    override suspend fun beginTwoFactorEnrolment(): String = notVerified("beginTwoFactorEnrolment")
+    override suspend fun telegramBinding(): TelegramBinding {
+        // The bootstrap is what the site itself checks before it will even ask for the detail.
+        if (settingsUser().text("telegram_id") == null) return TelegramBinding(bound = false)
 
-    /** Probe: `/setting#contact` on load; note how the verified flag is spelled. */
-    override suspend fun contact(): AccountContact = notVerified("contact")
+        val detail =
+            getObject(
+                path = NodeSeekJsonClient.PATH_ACCOUNT_TELEGRAM,
+                operation = "telegramBinding",
+            ).obj("telegramDetail")
+        return TelegramBinding(
+            bound = true,
+            displayName =
+            listOfNotNull(detail?.text("first_name"), detail?.text("last_name"))
+                .joinToString(" ")
+                .takeIf(String::isNotBlank),
+            avatarUrl = detail?.text("photo_url"),
+        )
+    }
+
+    override suspend fun unbindTelegram() {
+        // The site sends this one with no body at all, so it goes out the same way.
+        val response =
+            jsonApi.postJson(
+                path = NodeSeekJsonClient.PATH_ACCOUNT_UNBIND_TELEGRAM,
+                referer = SETTINGS_REFERER,
+            )
+        if (response.code == HTTP_UNAUTHORIZED || response.code == HTTP_FORBIDDEN) {
+            throw NodeSeekException(NodeSeekError.LoginRequired)
+        }
+        // Body first: a refusal arrives as JSON carrying the sentence to show, whatever the status.
+        parseObject(response.body, "unbindTelegram")
+        if (!response.isSuccessful) throw NodeSeekException(NodeSeekError.Http(response.code))
+    }
+
+    override suspend fun remotePreferences(): RemoteAccountPreferences {
+        val preference =
+            postObject(
+                path = NodeSeekJsonClient.PATH_PREFERENCE_LIST,
+                body =
+                JsonObject(
+                    mapOf(
+                        "keys" to
+                            JsonArray(
+                                listOf(JsonPrimitive(REMOTE_HOLIDAY_THEME_KEY)),
+                            ),
+                    ),
+                ),
+                operation = "remotePreferences",
+            )
+        val holidayTheme =
+            preference.obj("data")?.bool(REMOTE_HOLIDAY_THEME_KEY)
+                ?: throw NodeSeekException(NodeSeekError.Unparsable)
+
+        val homepage =
+            getObject(
+                path = NodeSeekJsonClient.PATH_HOMEPAGE,
+                operation = "remotePreferences",
+            )
+        val rows = homepage.findObjectArray("data")
+            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        val hiddenBoards =
+            rows.mapNotNullTo(mutableSetOf()) { row ->
+                val slug = row.text("category") ?: return@mapNotNullTo null
+                if (slug !in OPTIONAL_HOME_BOARD_SLUGS) return@mapNotNullTo null
+                val shown = row.bool("showInIndex", "show_in_index") ?: return@mapNotNullTo null
+                slug.takeUnless { shown }
+            }
+        return RemoteAccountPreferences(
+            holidayTheme = holidayTheme,
+            hiddenBoards = hiddenBoards,
+        )
+    }
+
+    override suspend fun setHolidayTheme(enabled: Boolean) {
+        postObject(
+            path = NodeSeekJsonClient.PATH_PREFERENCE_SET,
+            body = JsonObject(mapOf(REMOTE_HOLIDAY_THEME_KEY to JsonPrimitive(enabled))),
+            operation = "setHolidayTheme",
+        )
+    }
+
+    override suspend fun setHomeBoardHidden(slug: String, hidden: Boolean) {
+        require(slug in OPTIONAL_HOME_BOARD_SLUGS) { "Unsupported home board: $slug" }
+        postObject(
+            path = NodeSeekJsonClient.PATH_HOMEPAGE,
+            body =
+            JsonObject(
+                mapOf(
+                    "data" to
+                        JsonArray(
+                            listOf(
+                                JsonObject(
+                                    mapOf(
+                                        "category" to JsonPrimitive(slug),
+                                        "showInIndex" to JsonPrimitive(!hidden),
+                                    ),
+                                ),
+                            ),
+                        ),
+                ),
+            ),
+            operation = "setHomeBoardHidden",
+        )
+    }
+
+    override suspend fun blockedUsers(): List<BlockedUser> {
+        val root =
+            getObject(
+                path = NodeSeekJsonClient.PATH_BLOCK_LIST,
+                operation = "blockedUsers",
+            )
+        val rows = root.findObjectArray("data", "list", "blocked", "blockList")
+            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        val users =
+            rows.mapNotNull { row ->
+                val uid = row.long("member_id", "uid", "user_id", "blocked_id") ?: return@mapNotNull null
+                val name = row.text("member_name", "username", "name") ?: return@mapNotNull null
+                BlockedUser(
+                    uid = uid,
+                    name = name,
+                    avatarUrl =
+                    NodeSeekSite.absoluteUrl(
+                        row.text("avatar", "avatarUrl", "avatar_url") ?: "/avatar/$uid.png",
+                    ),
+                )
+            }
+        if (rows.isNotEmpty() && users.isEmpty()) throw NodeSeekException(NodeSeekError.Unparsable)
+        return users
+    }
+
+    override suspend fun unblock(uid: Long) {
+        postObject(
+            path = NodeSeekJsonClient.PATH_BLOCK_DELETE,
+            body = JsonObject(mapOf("block_member_id" to JsonPrimitive(uid))),
+            operation = "unblock",
+        )
+    }
 
     /**
-     * Probe: 修改邮箱 → type the password → 「发送验证码」. Expect one request carrying the password
-     * (its rejection is what surfaces a wrong password) and one that fires the mail; they may be the
-     * same request.
+     * The `user` half of the page bootstrap.
+     *
+     * Deliberately uncached and re-fetched per call: the two values read from it — the email address
+     * and whether Telegram is bound — are exactly the two the user comes back to this screen to
+     * re-check after finishing something on the site, and a cache would answer with the state they
+     * just changed.
      */
-    override suspend fun sendEmailChangeCode(password: String, newEmail: String): Unit =
-        notVerified("sendEmailChangeCode")
+    private suspend fun settingsUser(): JsonObject {
+        val bootstrap = SiteBootstrap.decode(htmlSource.getHtml(SETTINGS_PATH))
+        val root =
+            try {
+                json.parseToJsonElement(bootstrap) as? JsonObject
+            } catch (exception: IllegalArgumentException) {
+                throw NodeSeekException(NodeSeekError.Unparsable, exception)
+            } ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        return root.obj("user") ?: throw NodeSeekException(NodeSeekError.LoginRequired)
+    }
 
-    /** Probe: 「确定」 with the 6-digit code. Note how an expired or wrong code comes back. */
-    override suspend fun confirmEmailChange(password: String, newEmail: String, code: String): Unit =
-        notVerified("confirmEmailChange")
+    private suspend fun getObject(path: String, operation: String): JsonObject {
+        val body = jsonApi.getJson(path = path, referer = SETTINGS_REFERER)
+        return parseObject(body, operation)
+    }
 
-    /**
-     * Probe: `/setting#contact` on load, on an account that has bound TG if at all possible — the
-     * bound payload (username? chat id? bound-at?) decides [TelegramBinding]'s real shape.
-     */
-    override suspend fun telegramBinding(): TelegramBinding = notVerified("telegramBinding")
+    private suspend fun postObject(
+        path: String,
+        body: JsonObject,
+        operation: String,
+    ): JsonObject {
+        val response =
+            jsonApi.postJson(
+                path = path,
+                body = body.toString(),
+                referer = SETTINGS_REFERER,
+            )
+        return parseObject(response, operation)
+    }
 
-    /**
-     * Probe: press 「立即绑定」 **on a throwaway account** and watch both the network log and where
-     * the tab goes. Expected: either a direct `t.me/<bot>?start=<token>` navigation or an XHR that
-     * returns such a link. Whatever it is, return the URL to open from here.
-     */
-    override suspend fun beginTelegramBinding(): String = notVerified("beginTelegramBinding")
+    private fun parseObject(body: String, operation: String): JsonObject {
+        val root =
+            try {
+                json.parseToJsonElement(body) as? JsonObject
+            } catch (exception: IllegalArgumentException) {
+                throw NodeSeekException(NodeSeekError.Unparsable, exception)
+            } ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        if (root.bool("success") == false) {
+            throw NodeSeekException(
+                error = NodeSeekError.Unknown,
+                detail = root.text("message", "error", "detail") ?: operation,
+            )
+        }
+        return root
+    }
 
-    /** Probe: the bound card's 解绑 control, again on a throwaway account. */
-    override suspend fun unbindTelegram(): Unit = notVerified("unbindTelegram")
-
-    /**
-     * Probe: `/setting#preference` and `/setting#homepage` on load. 启用节日主题 and the three
-     * 首页版块 switches are the Remote rows; note whether they arrive with the page or via XHR.
-     */
-    override suspend fun remotePreferences(): RemoteAccountPreferences =
-        notVerified("remotePreferences")
-
-    /** Probe: flip 启用节日主题 and capture the write. */
-    override suspend fun setHolidayTheme(enabled: Boolean): Unit = notVerified("setHolidayTheme")
-
-    /** Probe: flip 交易/生活/贴图 under `/setting#homepage` and capture the write. */
-    override suspend fun setHomeBoardHidden(slug: String, hidden: Boolean): Unit =
-        notVerified("setHomeBoardHidden")
-
-    /** Probe: `/setting#block` on load; check whether it pages once the list is long. */
-    override suspend fun blockedUsers(): List<BlockedUser> = notVerified("blockedUsers")
-
-    override suspend fun unblock(uid: Long): Unit = notVerified("unblock")
-
-    private fun notVerified(operation: String): Nothing = throw EndpointNotVerifiedException(operation)
+    private companion object {
+        const val SETTINGS_PATH = "/setting"
+        const val SETTINGS_REFERER = NodeSeekSite.BASE_URL + SETTINGS_PATH
+        const val REMOTE_HOLIDAY_THEME_KEY = "enable_festivous_style"
+        const val HTTP_UNAUTHORIZED = 401
+        const val HTTP_FORBIDDEN = 403
+    }
 }

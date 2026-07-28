@@ -5,6 +5,7 @@ import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.html.Selectors
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -65,10 +66,25 @@ interface JsonApi :
     JsonSource,
     JsonWriteSource
 
+/** Multipart writes used by the setting page's image cropper. */
+interface MultipartWriteSource {
+    suspend fun postMultipart(
+        path: String,
+        fields: Map<String, String>,
+        fileField: String,
+        fileName: String,
+        fileBytes: ByteArray,
+        fileMimeType: String,
+        headers: Map<String, String> = emptyMap(),
+        referer: String = NodeSeekSite.BASE_URL + "/",
+    ): String
+}
+
 class NodeSeekJsonClient(
     private val okHttpClient: OkHttpClient,
     private val dispatchers: AppDispatchers,
-) : JsonApi {
+) : JsonApi,
+    MultipartWriteSource {
 
     override suspend fun getJson(path: String, referer: String): String =
         withContext(dispatchers.io) {
@@ -160,6 +176,46 @@ class NodeSeekJsonClient(
             }
         }
 
+    override suspend fun postMultipart(
+        path: String,
+        fields: Map<String, String>,
+        fileField: String,
+        fileName: String,
+        fileBytes: ByteArray,
+        fileMimeType: String,
+        headers: Map<String, String>,
+        referer: String,
+    ): String =
+        withContext(dispatchers.io) {
+            val multipart =
+                MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .apply {
+                        fields.forEach { (name, value) -> addFormDataPart(name, value) }
+                    }.addFormDataPart(
+                        fileField,
+                        fileName,
+                        fileBytes.toRequestBody(fileMimeType.toMediaType()),
+                    ).build()
+            val request =
+                xhrRequest(path, referer)
+                    .header("Origin", NodeSeekSite.BASE_URL)
+                    .apply { headers.forEach { (name, value) -> header(name, value) } }
+                    .post(multipart)
+                    .build()
+            val response = execute(request)
+
+            response.use {
+                val payload = it.body?.string().orEmpty()
+                throwIfChallenge(it.header("cf-mitigated"), payload)
+                if (it.code == 401 || it.code == 403) {
+                    throw NodeSeekException(NodeSeekError.LoginRequired)
+                }
+                if (!it.isSuccessful) throw NodeSeekException(NodeSeekError.Http(it.code))
+                payload
+            }
+        }
+
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
@@ -170,6 +226,25 @@ class NodeSeekJsonClient(
             "/api/notification/$type/list?page=$page"
 
         fun accountInfoPath(uid: Long) = "/api/account/getInfo/$uid"
+
+        /** The setting page requests these flags to include the editable Markdown fields. */
+        fun accountSettingsInfoPath(uid: Long) =
+            "/api/account/getInfo/$uid?readme=1&signature=1&phone=1"
+
+        const val PATH_ACCOUNT_INTRODUCTION = "/api/account/introduction"
+        const val PATH_AVATAR_UPLOAD = "/api/avatar/upload"
+        const val PATH_ACCOUNT_CHANGE_PASSWORD = "/api/account/changePassword"
+        const val PATH_ACCOUNT_OTP_STATUS = "/api/account/otp-status"
+
+        /** Both halves of TOTP enrolment; the body's `action` is `create` or `remove`. */
+        const val PATH_ACCOUNT_OTP = "/api/account/otp"
+        const val PATH_ACCOUNT_TELEGRAM = "/api/account/telegram"
+        const val PATH_ACCOUNT_UNBIND_TELEGRAM = "/api/account/unbind-telegram"
+        const val PATH_PREFERENCE_LIST = "/api/preference/list"
+        const val PATH_PREFERENCE_SET = "/api/preference/set"
+        const val PATH_HOMEPAGE = "/api/homepage"
+        const val PATH_BLOCK_LIST = "/api/block-list/list"
+        const val PATH_BLOCK_DELETE = "/api/block-list/del"
 
         fun discussionListPath(uid: Long, page: Int = 1) =
             "/api/content/list-discussions?uid=$uid&page=${page.coerceAtLeast(1)}"

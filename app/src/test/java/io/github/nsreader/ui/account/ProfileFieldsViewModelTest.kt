@@ -146,7 +146,7 @@ class ProfileFieldsViewModelTest {
     @Test
     fun `a failed avatar upload stops the save and keeps the avatar pending`() =
         runTest(dispatcher) {
-            val repository = FakeAccountSettingsRepository.pendingEndpoints()
+            val repository = FakeAccountSettingsRepository.failing()
             val vm = viewModel(repository)
             advanceUntilIdle()
 
@@ -159,7 +159,7 @@ class ProfileFieldsViewModelTest {
                 "text fields must not be written after the avatar failed",
                 repository.calls.contains("saveProfileFields"),
             )
-            assertTrue(vm.uiState.value.message is AccountMessage.EndpointPending)
+            assertTrue(vm.uiState.value.message is AccountMessage.Failure)
             assertTrue("the picked image is still worth keeping", vm.uiState.value.pendingAvatar != null)
         }
 
@@ -178,12 +178,12 @@ class ProfileFieldsViewModelTest {
         }
 
     @Test
-    fun `a pending endpoint shows the banner without a snackbar`() =
+    fun `a failed load reports the error`() =
         runTest(dispatcher) {
-            val vm = viewModel(FakeAccountSettingsRepository.pendingEndpoints())
+            val vm = viewModel(FakeAccountSettingsRepository.failing())
             advanceUntilIdle()
 
-            assertTrue(vm.uiState.value.endpointPending)
-            assertNull(vm.uiState.value.message)
+            assertFalse(vm.uiState.value.isLoading)
+            assertTrue(vm.uiState.value.message is AccountMessage.Failure)
         }
 }

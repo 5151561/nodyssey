@@ -97,12 +97,12 @@ class AccountSettingsScreenTest {
     }
 
     @Test
-    fun `a bound telegram row shows the username`() {
+    fun `a bound telegram row shows who it is bound to`() {
         setContent(
-            populated.copy(telegram = TelegramBinding(bound = true, username = "@hikari_zhg")),
+            populated.copy(telegram = TelegramBinding(bound = true, displayName = "Hikari Zhg")),
         )
 
-        composeRule.onNodeWithText("@hikari_zhg").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Hikari Zhg").performScrollTo().assertExists()
     }
 
     @Test

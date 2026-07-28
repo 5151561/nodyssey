@@ -118,11 +118,11 @@ object NodeSeekSite {
     }
 
     /**
-     * Account settings, one hash per group.
+     * Account settings, one hash per group — the site routes its own tabs off `location.hash`.
      *
-     * Every one of these opens in the WebView rather than in a native form: they change credentials,
-     * two-factor enrolment and block lists, and the site exposes no API for any of it. Guessing the
-     * form fields would mean submitting credential changes we cannot verify.
+     * Most groups are native screens now. Two are not, and cannot be: sending an email verification
+     * code needs a Cloudflare Turnstile token, and binding Telegram runs telegram.org's login widget.
+     * Both need a browser, so [SETTING_CONTACT] is where the app hands those two off.
      */
     fun settingPath(group: String): String = "/setting#$group"
 

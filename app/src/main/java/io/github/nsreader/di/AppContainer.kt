@@ -186,7 +186,12 @@ class DefaultAppContainer(
     }
 
     override val accountSettingsRepository: AccountSettingsRepository by lazy {
-        NetworkAccountSettingsRepository()
+        NetworkAccountSettingsRepository(
+            jsonApi = jsonClient,
+            multipartWriteSource = jsonClient,
+            htmlSource = htmlClient,
+            profileRepository = profileRepository,
+        )
     }
 
     override val userSpaceRepository: UserSpaceRepository by lazy {

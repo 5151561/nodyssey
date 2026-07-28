@@ -1,11 +1,12 @@
 package io.github.nsreader.ui.account
 
+import io.github.nsreader.core.net.NodeSeekError
+import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.data.account.AccountContact
 import io.github.nsreader.data.account.AccountProfileFields
 import io.github.nsreader.data.account.AccountSettingsRepository
 import io.github.nsreader.data.account.AvatarUpload
 import io.github.nsreader.data.account.BlockedUser
-import io.github.nsreader.data.account.EndpointNotVerifiedException
 import io.github.nsreader.data.account.RemoteAccountPreferences
 import io.github.nsreader.data.account.TelegramBinding
 import io.github.nsreader.data.account.TwoFactorState
@@ -13,12 +14,10 @@ import io.github.nsreader.data.account.TwoFactorState
 /**
  * An [AccountSettingsRepository] whose reads are canned and whose writes are recorded.
  *
- * Exists so the ViewModel logic can be tested *now*, while the real implementation still throws
- * [EndpointNotVerifiedException] for everything. That timing is the point: once the endpoints are
- * captured, the only file that changes is the network repository, and nobody will think to come back
- * and cover the ordering and revocation rules these tests pin down.
+ * The ordering contracts are what these tests are for — avatar before text fields, no write before a
+ * confirmation — and those live in the ViewModels, not in the requests.
  *
- * [failWith] makes every call throw, which is how the pending-endpoint and error paths are exercised.
+ * [failWith] makes every call throw, which is how the error paths are exercised.
  */
 internal class FakeAccountSettingsRepository(
     var fields: AccountProfileFields = AccountProfileFields(),
@@ -34,15 +33,13 @@ internal class FakeAccountSettingsRepository(
     val calls = mutableListOf<String>()
 
     var savedFields: AccountProfileFields? = null
-    var sentEmailChangeCode: Pair<String, String>? = null
-    var confirmedEmailChange: Triple<String, String, String>? = null
     var changedPassword: Pair<String, String>? = null
     var uploadedAvatar: AvatarUpload? = null
     var unblocked = mutableListOf<Long>()
     var holidayThemeWrites = mutableListOf<Boolean>()
     var boardHiddenWrites = mutableListOf<Pair<String, Boolean>>()
     var enrolmentUri: String = "otpauth://totp/NodeSeek:tester?secret=ABC"
-    var bindUrl: String = "https://t.me/nodeseek_bot?start=test-token"
+    var enrolmentPassword: String? = null
 
     private fun record(name: String) {
         calls += name
@@ -64,8 +61,6 @@ internal class FakeAccountSettingsRepository(
         uploadedAvatar = upload
     }
 
-    override suspend fun removeAvatar() = record("removeAvatar")
-
     override suspend fun changePassword(currentPassword: String, newPassword: String) {
         record("changePassword")
         changedPassword = currentPassword to newPassword
@@ -76,8 +71,9 @@ internal class FakeAccountSettingsRepository(
         return twoFactor
     }
 
-    override suspend fun beginTwoFactorEnrolment(): String {
+    override suspend fun beginTwoFactorEnrolment(password: String): String {
         record("beginTwoFactorEnrolment")
+        enrolmentPassword = password
         return enrolmentUri
     }
 
@@ -86,24 +82,9 @@ internal class FakeAccountSettingsRepository(
         return contact
     }
 
-    override suspend fun sendEmailChangeCode(password: String, newEmail: String) {
-        record("sendEmailChangeCode")
-        sentEmailChangeCode = password to newEmail
-    }
-
-    override suspend fun confirmEmailChange(password: String, newEmail: String, code: String) {
-        record("confirmEmailChange")
-        confirmedEmailChange = Triple(password, newEmail, code)
-    }
-
     override suspend fun telegramBinding(): TelegramBinding {
         record("telegramBinding")
         return telegram
-    }
-
-    override suspend fun beginTelegramBinding(): String {
-        record("beginTelegramBinding")
-        return bindUrl
     }
 
     override suspend fun unbindTelegram() = record("unbindTelegram")
@@ -134,8 +115,10 @@ internal class FakeAccountSettingsRepository(
     }
 
     companion object {
-        /** The state the app ships in today: nothing about `/setting` has been wired up. */
-        fun pendingEndpoints() =
-            FakeAccountSettingsRepository(failWith = { EndpointNotVerifiedException("test") })
+        /** Every call fails the way a dropped connection would — the shared unhappy path. */
+        fun failing() =
+            FakeAccountSettingsRepository(
+                failWith = { NodeSeekException(NodeSeekError.Network) },
+            )
     }
 }

@@ -10,7 +10,6 @@ import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.ProfileRepository
 import io.github.nsreader.data.account.AccountProfileFields
 import io.github.nsreader.data.account.AccountSettingsRepository
-import io.github.nsreader.data.account.EndpointNotVerifiedException
 import io.github.nsreader.di.AppContainer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,8 +22,8 @@ import kotlinx.coroutines.launch
  * State holder for 个人信息 (d6 1/4) — avatar, Bio, 签名 and Readme.
  *
  * The three text fields are one form with one save button because the site treats them as one group,
- * and splitting them would mean three chances to half-save. The avatar is separate: it is uploaded as
- * its own request and removed as its own request, so it gets its own confirmation and its own result.
+ * and splitting them would mean three chances to half-save. The avatar is separate: it goes out as its
+ * own request, so it gets its own result. There is no removing it — the site offers upload only.
  */
 class ProfileFieldsViewModel(
     private val account: AccountSettingsRepository,
@@ -56,20 +55,8 @@ class ProfileFieldsViewModel(
                         )
                     }
                 }.onFailure { throwable ->
-                    // A pending endpoint is stated once, by the banner. Raising a snackbar for it as
-                    // well would fire on every entry to the screen and say the same thing worse.
-                    val pending = throwable is EndpointNotVerifiedException
                     _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            endpointPending = pending,
-                            message =
-                            if (pending) {
-                                null
-                            } else {
-                                throwable.toAccountMessage(R.string.account_profile_title)
-                            },
-                        )
+                        it.copy(isLoading = false, message = throwable.toAccountMessage())
                     }
                 }
         }
@@ -89,19 +76,6 @@ class ProfileFieldsViewModel(
 
     fun reportAvatarFailure() =
         _uiState.update { it.copy(message = AccountMessage.Info(R.string.account_avatar_failed)) }
-
-    fun removeAvatar() {
-        viewModelScope.launch {
-            runCatchingExceptCancellation { account.removeAvatar() }
-                .onSuccess {
-                    _uiState.update { it.copy(pendingAvatar = null, avatarUrl = null) }
-                }.onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(message = throwable.toAccountMessage(R.string.account_avatar_remove))
-                    }
-                }
-        }
-    }
 
     fun save() {
         if (saveJob?.isActive == true) return
@@ -128,7 +102,7 @@ class ProfileFieldsViewModel(
                             isSaving = false,
                             message =
                             avatarResult.exceptionOrNull()!!
-                                .toAccountMessage(R.string.account_avatar_change),
+                                .toAccountMessage(),
                         )
                     }
                     return@launch
@@ -148,7 +122,7 @@ class ProfileFieldsViewModel(
                         _uiState.update {
                             it.copy(
                                 isSaving = false,
-                                message = throwable.toAccountMessage(R.string.account_profile_title),
+                                message = throwable.toAccountMessage(),
                             )
                         }
                     }
@@ -173,7 +147,6 @@ class ProfileFieldsViewModel(
 data class ProfileFieldsUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
-    val endpointPending: Boolean = false,
     val avatarUrl: String? = null,
     val displayName: String = "",
     val pendingAvatar: PendingAvatar? = null,

@@ -86,7 +86,6 @@ fun ProfileFieldsRoute(
         onReadmeChange = viewModel::updateReadme,
         onAvatarPicked = viewModel::setPendingAvatar,
         onAvatarFailed = viewModel::reportAvatarFailure,
-        onAvatarRemove = viewModel::removeAvatar,
         onSave = viewModel::save,
         modifier = modifier,
     )
@@ -111,12 +110,9 @@ fun ProfileFieldsScreen(
     onReadmeChange: (String) -> Unit,
     onAvatarPicked: (PendingAvatar) -> Unit,
     onAvatarFailed: () -> Unit,
-    onAvatarRemove: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var confirmingAvatarRemoval by remember { mutableStateOf(false) }
-
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -153,13 +149,10 @@ fun ProfileFieldsScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            if (state.endpointPending) EndpointPendingBanner()
-
             AvatarEditor(
                 state = state,
                 onPicked = onAvatarPicked,
                 onFailed = onAvatarFailed,
-                onRemoveRequested = { confirmingAvatarRemoval = true },
             )
 
             OutlinedTextField(
@@ -196,35 +189,20 @@ fun ProfileFieldsScreen(
             }
         }
     }
-
-    if (confirmingAvatarRemoval) {
-        HighRiskDialog(
-            icon = Icons.Default.Delete,
-            title = stringResource(R.string.account_confirm_avatar_remove_title),
-            body = stringResource(R.string.account_confirm_avatar_remove_body),
-            confirmLabel = stringResource(R.string.account_confirm_avatar_remove_action),
-            destructive = true,
-            onConfirm = {
-                confirmingAvatarRemoval = false
-                onAvatarRemove()
-            },
-            onDismiss = { confirmingAvatarRemoval = false },
-        )
-    }
 }
 
 /**
  * The avatar, its camera badge, and the menu the badge opens.
  *
- * A menu rather than a bottom sheet: three items, one of which is destructive, anchored to the thing
- * they act on. A sheet would cover the avatar the user is trying to change.
+ * A menu rather than a bottom sheet: two items, anchored to the thing they act on. A sheet would
+ * cover the avatar the user is trying to change. There is no 移除 item because the site has no such
+ * operation — an account that has an avatar cannot go back to not having one.
  */
 @Composable
 private fun AvatarEditor(
     state: ProfileFieldsUiState,
     onPicked: (PendingAvatar) -> Unit,
     onFailed: () -> Unit,
-    onRemoveRequested: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val picker = rememberAvatarPicker(onPicked = onPicked, onFailed = onFailed)
@@ -287,25 +265,6 @@ private fun AvatarEditor(
                         onClick = {
                             menuOpen = false
                             picker.pickImage()
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(R.string.account_avatar_remove),
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                        onClick = {
-                            menuOpen = false
-                            onRemoveRequested()
                         },
                     )
                 }
@@ -423,7 +382,6 @@ private fun ProfileFieldsPreview() {
             state =
             ProfileFieldsUiState(
                 isLoading = false,
-                endpointPending = true,
                 displayName = "花间一壶酒",
                 bio = "常驻杭州",
                 signature = "**出杭州腾讯云轻量** · 长期收闲置小鸡 · 交易走 [星辰担保](https://ns.run/dan)",
@@ -436,7 +394,6 @@ private fun ProfileFieldsPreview() {
             onReadmeChange = {},
             onAvatarPicked = {},
             onAvatarFailed = {},
-            onAvatarRemove = {},
             onSave = {},
         )
     }

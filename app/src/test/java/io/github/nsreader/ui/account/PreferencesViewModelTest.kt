@@ -68,11 +68,12 @@ class PreferencesViewModelTest {
             assertEquals(listOf("trade" to true), repository.boardHiddenWrites)
         }
 
+    /** The app obeys the user even when the account write fails — and says the account disagrees. */
     @Test
-    fun `a stubbed account endpoint still lets the mirror obey the toggle`() =
+    fun `a rejected account write still lets the mirror obey the toggle`() =
         runTest(dispatcher) {
             val settings = testSettingsRepository(backgroundScope)
-            val vm = viewModel(FakeAccountSettingsRepository.pendingEndpoints(), settings)
+            val vm = viewModel(FakeAccountSettingsRepository.failing(), settings)
             collectState(vm)
             advanceUntilIdle()
 
@@ -80,8 +81,7 @@ class PreferencesViewModelTest {
             advanceUntilIdle()
 
             settings.awaitHiddenBoards(setOf("life"))
-            assertTrue(vm.uiState.value.endpointPending)
-            assertEquals(null, vm.uiState.value.message)
+            assertTrue(vm.uiState.value.message is AccountMessage.Failure)
         }
 
     @Test

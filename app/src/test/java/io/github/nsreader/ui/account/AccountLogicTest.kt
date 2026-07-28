@@ -72,19 +72,4 @@ class AccountLogicTest {
             assertTrue(strength.filledBars in 1..PasswordStrength.TOTAL_BARS)
         }
     }
-
-    @Test
-    fun `email validation accepts ordinary addresses`() {
-        assertTrue(isEmailAddress("hikari.zhg@gmail.com"))
-        assertTrue(isEmailAddress("ns+tag@outlook.co.uk"))
-    }
-
-    @Test
-    fun `email validation rejects the mistakes it exists to catch`() {
-        assertFalse(isEmailAddress("hikari.zhg"))
-        assertFalse(isEmailAddress("@gmail.com"))
-        assertFalse(isEmailAddress("a@b"))
-        assertFalse(isEmailAddress("two@at@signs.com"))
-        assertFalse(isEmailAddress("trailing@dot."))
-    }
 }

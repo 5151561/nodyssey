@@ -9,7 +9,6 @@ import io.github.nsreader.R
 import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.account.AccountSettingsRepository
 import io.github.nsreader.data.account.BlockedUser
-import io.github.nsreader.data.account.EndpointNotVerifiedException
 import io.github.nsreader.data.settings.SettingsRepository
 import io.github.nsreader.di.AppContainer
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +37,6 @@ class BlockListViewModel(
         combine(local, settings.showBlockedContent) { state, showBlocked ->
             BlockListUiState(
                 isLoading = state.isLoading,
-                endpointPending = state.endpointPending,
                 blocked = state.blocked,
                 unblocking = state.unblocking,
                 showBlockedContent = showBlocked,
@@ -56,14 +54,8 @@ class BlockListViewModel(
                 .onSuccess { blocked ->
                     local.update { it.copy(isLoading = false, blocked = blocked) }
                 }.onFailure { throwable ->
-                    val pending = throwable is EndpointNotVerifiedException
                     local.update {
-                        it.copy(
-                            isLoading = false,
-                            endpointPending = pending,
-                            message =
-                            if (pending) null else throwable.toAccountMessage(R.string.account_block_section),
-                        )
+                        it.copy(isLoading = false, message = throwable.toAccountMessage())
                     }
                 }
         }
@@ -86,7 +78,7 @@ class BlockListViewModel(
                     }
                 }.onFailure { throwable ->
                     local.update {
-                        it.copy(message = throwable.toAccountMessage(R.string.account_block_unblock))
+                        it.copy(message = throwable.toAccountMessage())
                     }
                 }
         }
@@ -112,7 +104,6 @@ class BlockListViewModel(
 /** The half of the state this ViewModel owns; the show-blocked flag joins in from settings. */
 private data class BlockListLocalState(
     val isLoading: Boolean = true,
-    val endpointPending: Boolean = false,
     val blocked: List<BlockedUser> = emptyList(),
     val unblocking: BlockedUser? = null,
     val message: AccountMessage? = null,
@@ -120,7 +111,6 @@ private data class BlockListLocalState(
 
 data class BlockListUiState(
     val isLoading: Boolean = true,
-    val endpointPending: Boolean = false,
     val blocked: List<BlockedUser> = emptyList(),
     val unblocking: BlockedUser? = null,
     val showBlockedContent: Boolean = false,

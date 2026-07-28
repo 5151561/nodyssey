@@ -15,7 +15,6 @@
     <string name="action_share">分享</string>
     <string name="action_more">更多</string>
     <string name="action_cancel">取消</string>
-    <string name="action_confirm">确定</string>
     <string name="action_done">确定</string>
     <string name="action_sort">排序方式</string>
     <string name="action_show_all_boards">全部版块</string>
@@ -347,11 +346,6 @@
     <string name="account_signature_lines">%1$d 行 · Markdown</string>
     <string name="account_readme_chars">%1$d 字</string>
 
-    <!-- The endpoint seam. Shown wherever a group's requests have not been captured from a device yet. -->
-    <string name="account_endpoint_pending_title">这一组还没接入站点接口</string>
-    <string name="account_endpoint_pending_body">NodeSeek 没有公开 API，/setting 的读写请求要在真机登录后抓一遍才能对接。表单可以照常填，但读不到当前值、保存也不会生效。</string>
-    <string name="account_endpoint_pending_toast">「%1$s」的站点接口尚未接入，本次未保存</string>
-
     <!-- 个人信息 (d6 1/4) -->
     <string name="account_profile_title">个人信息</string>
     <string name="account_action_save">保存</string>
@@ -359,7 +353,6 @@
     <string name="account_avatar_change">更换头像</string>
     <string name="account_avatar_take_photo">拍照</string>
     <string name="account_avatar_pick">从相册选择</string>
-    <string name="account_avatar_remove">移除头像</string>
     <string name="account_avatar_pending">新头像待保存</string>
     <string name="account_avatar_failed">读取图片失败，换一张试试</string>
     <string name="account_bio_hint">请用一句话介绍自己</string>
@@ -407,53 +400,39 @@
     <string name="account_confirm_2fa_title">确认绑定验证器？</string>
     <string name="account_confirm_2fa_body">绑定后每次登录都需要验证器动态码。请先确保验证器 App 已装好，并妥善保存恢复码。</string>
     <string name="account_confirm_2fa_action">开始绑定</string>
-    <string name="account_confirm_avatar_remove_title">移除头像？</string>
-    <string name="account_confirm_avatar_remove_body">移除后将显示默认头像，之前上传的图片无法恢复。</string>
-    <string name="account_confirm_avatar_remove_action">移除</string>
     <string name="account_confirm_unblock_title">解除对 %1$s 的屏蔽？</string>
     <string name="account_confirm_unblock_body">解除后你会重新看到 TA 的帖子与评论。</string>
     <string name="account_confirm_unblock_action">解除屏蔽</string>
 
     <!-- 联系方式 (d6 3/5)，站点文案照抄 -->
     <string name="account_contact_title">联系方式</string>
-    <string name="account_contact_section">联系方式</string>
     <string name="account_email_section">邮箱</string>
     <string name="account_email_current">当前邮箱</string>
-    <string name="account_email_change">修改</string>
+    <string name="account_email_change">在网页中修改</string>
     <string name="account_email_verified">已验证</string>
-    <string name="account_email_invalid">邮箱格式不正确</string>
-    <string name="account_email_step_password">① 为确保是用户本人，请输入密码</string>
-    <string name="account_email_step_verify">② 邮箱验证</string>
-    <string name="account_email_new">新邮箱</string>
-    <string name="account_email_code">验证码</string>
-    <string name="account_email_code_hint">6 位数字</string>
-    <string name="account_email_send_code">发送验证码</string>
-    <string name="account_email_code_sent">验证码已发送至新邮箱 · 10 分钟内有效</string>
-    <string name="account_email_changed">邮箱已更新</string>
-    <string name="account_email_change_confirm">修改邮箱</string>
+    <string name="account_email_change_on_site">修改邮箱需要通过站点的人机验证后才能收到验证码，因此这一步在 NodeSeek 网页上完成。</string>
     <string name="account_phone_section">手机</string>
     <string name="account_phone_add">添加手机</string>
     <string name="account_phone_disabled_reason">手机短信验证API暂不可用</string>
     <string name="account_phone_unavailable">暂不可用</string>
 
-    <!-- Telegram 绑定 (f3)。未绑定文案为站点原文；已绑定态是设计假设，待真机校准 -->
+    <!-- Telegram 绑定 (f3)。未绑定文案为站点原文；绑定本身只能在网页完成 -->
     <string name="account_telegram_section">Telegram</string>
     <string name="account_telegram_title">Telegram 提醒</string>
     <string name="account_telegram_unbound">暂未绑定 telegram</string>
     <string name="account_telegram_bound">已绑定</string>
-    <string name="account_telegram_bound_at">%1$s 绑定</string>
     <string name="account_telegram_bind">立即绑定</string>
     <string name="account_telegram_bind_hint">绑定 telegram 后可以及时提醒未读消息，@我、回复与私信都会转发到你的 Telegram。</string>
     <string name="account_telegram_bound_hint">未读的 @我、回复与私信会转发到你的 Telegram；已读消息不重复提醒。</string>
     <string name="account_telegram_unbind">解绑</string>
     <string name="account_telegram_open_bot">打开 Bot 会话</string>
-    <string name="account_telegram_dialog_title">在 Telegram 中完成绑定</string>
-    <string name="account_telegram_dialog_body">即将打开 Telegram 的 NodeSeek 绑定会话。在 Bot 中确认后，@我、回复与私信的未读提醒将转发到你的 Telegram。</string>
-    <string name="account_telegram_dialog_note">未安装 Telegram 时将打开网页版；绑定不会向对方暴露你的手机号。</string>
-    <string name="account_telegram_open">打开 Telegram</string>
-    <string name="account_telegram_done_question">已在 Telegram 完成绑定？</string>
+    <string name="account_telegram_dialog_title">在网页中完成绑定</string>
+    <string name="account_telegram_dialog_body">即将打开 NodeSeek 的联系方式设置页。绑定要用 Telegram 官方的登录挂件完成，只能在网页里进行；确认后 @我、回复与私信的未读提醒将转发到你的 Telegram。</string>
+    <string name="account_telegram_dialog_note">网页会跳转到 Telegram 授权，返回本页后绑定状态会自动刷新。</string>
+    <string name="account_telegram_open">打开网页</string>
+    <string name="account_telegram_done_question">已在网页完成绑定？</string>
     <string name="account_telegram_refresh">刷新绑定状态</string>
-    <string name="account_telegram_still_unbound">还未检测到绑定，在 Bot 中完成后再刷新试试</string>
+    <string name="account_telegram_still_unbound">还未检测到绑定，在网页完成后再刷新试试</string>
     <string name="account_telegram_bound_toast">已绑定 Telegram，未读提醒将同步过去</string>
     <string name="account_telegram_unbound_toast">已解除 Telegram 绑定</string>
     <string name="account_telegram_unbind_title">解除 Telegram 绑定？</string>

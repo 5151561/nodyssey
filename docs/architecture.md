@@ -4,8 +4,8 @@
 
 这份文档记录**架构约定**和**为什么这么定**。改架构前先读这里；新增代码违反这里的约定，要么改代码，要么先改这份文档。
 
-当前状态：阶段一至三已完成，阶段四的大部分页面与批次 F（f1–f4）已经落地。`dffdc7e` 基线有
-371 个 JVM/Robolectric 测试；Room/Paging 离线优先、WorkManager 通知轮询和 CI 门禁均已接入。
+当前状态：阶段一至三已完成，阶段四的大部分页面与批次 F（f1–f4）已经落地。当前工作区有
+409 个 JVM/Robolectric 测试；Room/Paging 离线优先、WorkManager 通知轮询和 CI 门禁均已接入。
 下一步是评论发布、NodeImage、帖子互动等真实写操作，以及仍缺可靠数据源的动态站点页面。
 
 功能是否真的可用以 [`implementation-status.md`](implementation-status.md) 为准；设计画板完成度不作为实现证据。
@@ -194,7 +194,7 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 | 4 | 数据、同步、后台任务 | 适用 | **3**（1） | 高 | Room + Paging 3 离线优先；WorkManager 轮询未读并按设置投递系统通知 |
 | 5 | UI、Compose、导航、设计系统 | 适用 | **3** | 高 | Compose + M3 + Nav3；批次 F 与主要一、二级页已落地，部分写操作仍待接入 |
 | 6 | 自适应、无障碍、本地化 | 适用 | **2** | 中 | 字符串外置、语义标题/按钮与自适应导航已覆盖；仍需真机验证 200% 字号和 TalkBack |
-| 7 | 测试、静态质量、CI | 适用 | **4**（2） | 高 | `dffdc7e` 有 371 个 JVM/Robolectric 测试；CI + spotless + lint 门禁齐全 |
+| 7 | 测试、静态质量、CI | 适用 | **4**（2） | 高 | 当前工作区有 409 个 JVM/Robolectric 测试；CI + spotless + lint 门禁齐全 |
 | 8 | 性能、可靠性、可观测性 | 适用 | **1** | 中 | 无 baseline profile、无 benchmark、无崩溃上报 |
 | 9 | 工具链、构建、依赖治理 | 适用 | **3**（2） | 高 | version catalog + `gradle.lockfile` 锁定传递依赖 + CI 复现构建 |
 | 10 | 安全、隐私、发布完整性 | 适用 | **3**（2） | 中 | 会话缓存隔离；认证 WebView 域白名单；Cookie/Room 缓存不进入备份 |
@@ -236,10 +236,12 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 | 严重度 | 问题 | 计划 |
 |---|---|---|
 | **P2** | 单模块，没有编译期约束防止 `ui/` 直连 `core/net` | 拆 `:core` / `:data` / `:feature:*`，或先上 lint 的依赖规则 |
-| **P1** | 评论发布、NodeImage、点赞/反对/收藏/投喂尚未接真实写端点 | 逐项确认站点契约，先补回归测试，再接 Repository；禁止 UI 假成功 |
+| **P1** | 评论发布、NodeImage、点赞/反对/投喂尚未接真实写端点 | 逐项确认站点契约，先补回归测试，再接 Repository；禁止 UI 假成功。当前详情页没有收藏控件，不把收藏误报为“界面已完成” |
+| **P2** | 修改邮箱与绑定 Telegram 只能转网页（Turnstile 与 Telegram 登录挂件） | 想原生化就得在 WebView 里跑挂件并把令牌回传；在此之前保持明确交接，不做能提交却必然失败的表单 |
 | **P2** | 关注/粉丝、星辰流水、管理记录缺可靠动态数据源 | 保持明确“尚未接入”与网页降级，不用空列表冒充无数据 |
+| **P2** | 今日额度只有已确认上限，社区注册人数仍是静态快照 | 为 `/progress` 确认可读数据源；社区人数接可靠接口或移除“每日更新”表述，禁止把快照伪装成实时数据 |
 | **P3** | 未验证字号缩放 200% 与 TalkBack | 用真实设备和至少一台大屏设备做发布前验收 |
-| **P3** | 检查更新尚未接可靠版本接口 | 接 GitHub Releases API 或带签名的发布元数据；接入前只打开 Releases 核对 |
+| **P3** | 鸡腿流水、星辰转账、邀请码购买和检查更新只有网页闭环 | 有可靠契约后逐项原生化；接入前保留明确网页交接，其中检查更新只打开 Releases 核对 |
 | **P3** | 无 baseline profile / macrobenchmark | 有真实卡顿反馈后再做，不预先优化 |
 | **P3** | 无崩溃上报 | 发布前再定，涉及隐私取舍 |
 
@@ -283,7 +285,7 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
   五道都是硬门禁。锁文件不单列一步：locking 是 STRICT 模式，上面任何一步解析类路径时都会因
   "not part of the dependency lock state" 直接失败。
 - spotless + ktlint（版本在 version catalog 里钉住）。
-- Compose UI 测试持续扩展，`dffdc7e` 时 JVM/Robolectric 总计 371 条，覆盖列表→详情、
+- Compose UI 测试持续扩展，当前工作区 JVM/Robolectric 总计 409 条，覆盖列表→详情、
   各类错误态、账号二级页和 f1/f2 关键动作。
   **跑在 Robolectric 上，所以 CI 不需要模拟器。**
 - `gradle.lockfile` 用 STRICT 模式锁定 6 条类路径上的 272 个模块；
@@ -313,8 +315,13 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 图片查看器，以及批次 F 的 Telegram、通知设置、关于与隐私。f1/f2 的逐项映射见
 [`design-implementation.md`](design-implementation.md)。
 
-尚未完成：评论发布、NodeImage、点赞/反对/收藏/投喂的真实写端点；关注/粉丝、星辰流水和管理记录的
-可靠数据源；200% 字号、TalkBack 与大屏的发布级真机验收。界面存在不等于功能接入，边界以
+账号设置已经接完：15 个 `/setting` 请求全部来自站点前端分块里的真实契约（记录在不提交的
+`docs/private/api-notes.md`），其中修改邮箱与绑定 Telegram 因 Turnstile 和 Telegram 登录挂件只能转网页。
+
+尚未完成：评论发布、NodeImage、点赞/反对/投喂的真实写端点；
+关注/粉丝、星辰流水、管理记录与今日额度的可靠数据源；社区注册人数和检查更新的动态数据；
+鸡腿流水、星辰转账、邀请码购买的原生闭环；200% 字号、TalkBack 与大屏的发布级真机验收。
+当前详情页没有收藏操作控件。界面存在不等于功能接入，完整边界以
 [`implementation-status.md`](implementation-status.md) 为准。
 
 ---

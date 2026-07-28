@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -90,6 +92,7 @@ fun SecurityRoute(
         onToggleConfirmVisible = viewModel::toggleConfirmVisible,
         onRequestPasswordChange = viewModel::requestPasswordChange,
         onRequestTwoFactor = viewModel::requestTwoFactorEnrolment,
+        onTwoFactorPasswordChange = viewModel::updateTwoFactorPassword,
         onDismissConfirmation = viewModel::dismissConfirmation,
         onConfirmPasswordChange = viewModel::confirmPasswordChange,
         onConfirmTwoFactor = viewModel::confirmTwoFactorEnrolment,
@@ -118,6 +121,7 @@ fun SecurityScreen(
     onToggleConfirmVisible: () -> Unit,
     onRequestPasswordChange: () -> Unit,
     onRequestTwoFactor: () -> Unit,
+    onTwoFactorPasswordChange: (String) -> Unit,
     onDismissConfirmation: () -> Unit,
     onConfirmPasswordChange: () -> Unit,
     onConfirmTwoFactor: () -> Unit,
@@ -153,8 +157,6 @@ fun SecurityScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            if (state.endpointPending) EndpointPendingBanner()
-
             AccountSectionLabel(stringResource(R.string.account_change_password))
 
             PasswordField(
@@ -228,17 +230,67 @@ fun SecurityScreen(
             )
 
         SecurityConfirmation.TwoFactor ->
-            HighRiskDialog(
-                icon = NodeSeekIcons.Shield,
-                title = stringResource(R.string.account_confirm_2fa_title),
-                body = stringResource(R.string.account_confirm_2fa_body),
-                confirmLabel = stringResource(R.string.account_confirm_2fa_action),
+            TwoFactorDialog(
+                password = state.twoFactorPassword,
+                onPasswordChange = onTwoFactorPasswordChange,
                 onConfirm = onConfirmTwoFactor,
                 onDismiss = onDismissConfirmation,
             )
 
         null -> Unit
     }
+}
+
+/**
+ * d6 2/4's 绑定验证器 confirmation, with the password the site's enrolment endpoint requires.
+ *
+ * [HighRiskDialog] cannot hold an input, and the password belongs here rather than on the form
+ * above: that form's 当前密码 is part of a *password change*, and borrowing it would make starting
+ * 2FA look like the first step of changing the password.
+ *
+ * Not covered by `SecurityScreenTest`: a text field inside an `AlertDialog` never reaches idle under
+ * Robolectric, so `composeRule.setContent` times out before a single assertion runs. The rule that
+ * matters — no enrolment request without a password — is pinned in `SecurityViewModelTest` instead.
+ */
+@Composable
+private fun TwoFactorDialog(
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(NodeSeekIcons.Shield, contentDescription = null) },
+        title = { Text(stringResource(R.string.account_confirm_2fa_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                Text(
+                    stringResource(R.string.account_confirm_2fa_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = onPasswordChange,
+                    label = { Text(stringResource(R.string.account_password_current)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    visualTransformation = PasswordVisualTransformation(),
+                    shape = AccountFieldShape,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = password.isNotEmpty()) {
+                Text(stringResource(R.string.account_confirm_2fa_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+        shape = MaterialTheme.shapes.extraLarge,
+    )
 }
 
 @Composable
@@ -400,7 +452,6 @@ private fun SecurityPreview() {
             state =
             SecurityUiState(
                 isLoading = false,
-                endpointPending = true,
                 twoFactorEnabled = false,
                 currentPassword = "hunter2hunter2",
                 newPassword = "Correct-Horse-9",
@@ -416,6 +467,7 @@ private fun SecurityPreview() {
             onToggleConfirmVisible = {},
             onRequestPasswordChange = {},
             onRequestTwoFactor = {},
+            onTwoFactorPasswordChange = {},
             onDismissConfirmation = {},
             onConfirmPasswordChange = {},
             onConfirmTwoFactor = {},

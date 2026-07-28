@@ -73,15 +73,15 @@ fun ContactRoute(
         viewModel.consumeMessage()
     }
 
-    // The bot link is opened from here rather than the ViewModel — leaving the app is a UI concern.
-    LaunchedEffect(state.bindUrlToOpen) {
-        state.bindUrlToOpen?.let { url ->
-            viewModel.consumeBindUrl()
+    // The site link is opened from here rather than the ViewModel — leaving the app is a UI concern.
+    LaunchedEffect(state.urlToOpen) {
+        state.urlToOpen?.let { url ->
+            viewModel.consumeUrl()
             onOpenUrl(url)
         }
     }
 
-    // Coming back from Telegram is the moment the user wants the answer; see onResumed.
+    // Coming back from the website is the moment the user wants the answer; see onResumed.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.onResumed()
     }
@@ -90,12 +90,7 @@ fun ContactRoute(
         state = state,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
-        onToggleEmailChange = viewModel::toggleEmailChange,
-        onPasswordChange = viewModel::updatePassword,
-        onNewEmailChange = viewModel::updateNewEmail,
-        onCodeChange = viewModel::updateCode,
-        onSendCode = viewModel::sendCode,
-        onConfirmEmailChange = viewModel::confirmEmailChange,
+        onChangeEmail = viewModel::changeEmailOnSite,
         onRequestBind = viewModel::requestBind,
         onDismissBind = viewModel::dismissBind,
         onConfirmBind = viewModel::confirmBind,
@@ -109,8 +104,12 @@ fun ContactRoute(
 }
 
 /**
- * 联系方式 (d6 3/5): the email with its two-step change flow, the phone block the site itself has
- * disabled, and the Telegram card whose full flow is f3.
+ * 联系方式 (d6 3/5): the email address, the phone block the site itself has disabled, and the
+ * Telegram card whose full flow is f3.
+ *
+ * The two changes this screen cannot make itself — a new email address, a new Telegram binding — say
+ * so and open the website, because the site gates both behind browser-only challenges. Drawing a
+ * native form for either would be a form that can never submit.
  *
  * The phone card is drawn disabled rather than omitted because its caption is the site's own words —
  * "手机短信验证API暂不可用" — and a user who saw a phone field on the website would otherwise go
@@ -122,12 +121,7 @@ fun ContactScreen(
     state: ContactUiState,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
-    onToggleEmailChange: () -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onNewEmailChange: (String) -> Unit,
-    onCodeChange: (String) -> Unit,
-    onSendCode: () -> Unit,
-    onConfirmEmailChange: () -> Unit,
+    onChangeEmail: () -> Unit,
     onRequestBind: () -> Unit,
     onDismissBind: () -> Unit,
     onConfirmBind: () -> Unit,
@@ -162,30 +156,16 @@ fun ContactScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                // Without this the keyboard hides the code field at the bottom of the change flow.
-                .imePadding()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            if (state.endpointPending) EndpointPendingBanner()
-
             AccountSectionLabel(stringResource(R.string.account_email_section))
             CurrentEmailRow(
                 email = state.email,
                 verified = state.emailVerified,
-                changeExpanded = state.changeExpanded,
-                onToggleChange = onToggleEmailChange,
+                onChange = onChangeEmail,
             )
-            if (state.changeExpanded) {
-                EmailChangeFlow(
-                    state = state,
-                    onPasswordChange = onPasswordChange,
-                    onNewEmailChange = onNewEmailChange,
-                    onCodeChange = onCodeChange,
-                    onSendCode = onSendCode,
-                    onConfirm = onConfirmEmailChange,
-                )
-            }
+            AccountFieldHelper(stringResource(R.string.account_email_change_on_site))
 
             AccountSectionLabel(
                 stringResource(R.string.account_phone_section),
@@ -222,7 +202,7 @@ fun ContactScreen(
             body =
             stringResource(
                 R.string.account_telegram_unbind_body,
-                state.telegram?.username ?: stringResource(R.string.account_value_unknown),
+                state.telegram?.displayName ?: stringResource(R.string.account_value_unknown),
             ),
             confirmLabel = stringResource(R.string.account_telegram_unbind_confirm),
             onConfirm = onConfirmUnbind,
@@ -236,8 +216,7 @@ fun ContactScreen(
 private fun CurrentEmailRow(
     email: String,
     verified: Boolean,
-    changeExpanded: Boolean,
-    onToggleChange: () -> Unit,
+    onChange: () -> Unit,
 ) {
     OutlinedTextField(
         value = email.ifEmpty { stringResource(R.string.account_value_unknown) },
@@ -256,112 +235,21 @@ private fun CurrentEmailRow(
                         modifier = Modifier.size(18.dp),
                     )
                 }
-                TextButton(onClick = onToggleChange) {
+                TextButton(onClick = onChange) {
+                    Icon(
+                        NodeSeekIcons.OpenInNew,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
                     Text(
-                        stringResource(
-                            if (changeExpanded) R.string.action_cancel else R.string.account_email_change,
-                        ),
+                        stringResource(R.string.account_email_change),
+                        modifier = Modifier.padding(start = Spacing.xs),
                     )
                 }
             }
         },
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-/** The site's own two-step ritual, drawn as one card so it reads as a single transaction. */
-@Composable
-private fun EmailChangeFlow(
-    state: ContactUiState,
-    onPasswordChange: (String) -> Unit,
-    onNewEmailChange: (String) -> Unit,
-    onCodeChange: (String) -> Unit,
-    onSendCode: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    Surface(
-        shape = AccountFieldShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            Text(
-                stringResource(R.string.account_email_step_password),
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-            )
-            OutlinedTextField(
-                value = state.password,
-                onValueChange = onPasswordChange,
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                label = { Text(stringResource(R.string.account_password_current)) },
-                shape = AccountFieldShape,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Text(
-                stringResource(R.string.account_email_step_verify),
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(top = Spacing.xs),
-            )
-            OutlinedTextField(
-                value = state.newEmail,
-                onValueChange = onNewEmailChange,
-                singleLine = true,
-                isError = state.isNewEmailMalformed,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                label = { Text(stringResource(R.string.account_email_new)) },
-                supportingText =
-                if (state.isNewEmailMalformed) {
-                    { Text(stringResource(R.string.account_email_invalid)) }
-                } else {
-                    null
-                },
-                shape = AccountFieldShape,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                OutlinedTextField(
-                    value = state.code,
-                    onValueChange = onCodeChange,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    label = { Text(stringResource(R.string.account_email_code)) },
-                    placeholder = { Text(stringResource(R.string.account_email_code_hint)) },
-                    shape = AccountFieldShape,
-                    modifier = Modifier.weight(1f),
-                )
-                FilledTonalButton(onClick = onSendCode, enabled = state.canSendCode) {
-                    if (state.isSendingCode) {
-                        CircularProgressIndicator(Modifier.size(18.dp))
-                    } else {
-                        Text(stringResource(R.string.account_email_send_code))
-                    }
-                }
-            }
-            if (state.codeSent) {
-                AccountFieldHelper(stringResource(R.string.account_email_code_sent))
-            }
-            Button(
-                onClick = onConfirm,
-                enabled = state.canConfirmChange,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (state.isConfirming) {
-                    CircularProgressIndicator(Modifier.size(18.dp))
-                } else {
-                    Text(stringResource(R.string.action_confirm))
-                }
-            }
-        }
-    }
 }
 
 /** 添加手机, drawn at the site's own state: disabled, with its exact wording. */
@@ -453,13 +341,11 @@ private fun TelegramCard(
                         when {
                             binding == null -> stringResource(R.string.account_value_unknown)
 
+                            // A binding whose detail call did not answer is still a binding; saying
+                            // 未绑定 because a name is missing would be the wrong half to guess.
                             binding.bound ->
-                                listOfNotNull(
-                                    binding.username,
-                                    binding.boundAtDisplay?.let {
-                                        stringResource(R.string.account_telegram_bound_at, it)
-                                    },
-                                ).joinToString(" · ")
+                                binding.displayName
+                                    ?: stringResource(R.string.account_telegram_bound)
 
                             else -> stringResource(R.string.account_telegram_unbound)
                         },
@@ -537,11 +423,11 @@ private fun BoundChip() {
 }
 
 /**
- * f3 1/2: the confirmation before leaving for Telegram.
+ * f3 1/2: the confirmation before leaving for the website.
  *
  * Built by hand rather than with [HighRiskDialog] because it carries two things that dialog cannot
- * hold: the info strip about the web fallback, and the 「刷新绑定状态」 footer that serves people who
- * already finished in Telegram before ever seeing this dialog.
+ * hold: the strip explaining why this one leaves the app, and the 「刷新绑定状态」 footer that serves
+ * people who already finished on the site before ever seeing this dialog.
  */
 @Composable
 private fun TelegramBindDialog(
@@ -621,9 +507,11 @@ private fun TelegramBindDialog(
 private const val DISABLED_CARD_ALPHA = 0.55f
 
 /**
- * The bot conversation 「打开 Bot 会话」 reopens. `t.me/nodeseek` is the support bot the site's footer
- * links to; whether the *binding* bot is the same account is part of what the on-device probe of
- * 「立即绑定」 has to answer (see `NetworkAccountSettingsRepository.beginTelegramBinding`).
+ * The bot conversation 「打开 Bot 会话」 reopens — `t.me/nodeseek`, the bot the site's footer links to.
+ *
+ * The account this opens is not necessarily the one the login widget binds: the widget is handed a
+ * `botId` from `/api/telegram/botid` at bind time, and that id is not published anywhere the app can
+ * read. This is a convenience link, not a claim about which bot holds the binding.
  */
 internal const val TELEGRAM_BOT_CHAT_URL = "https://t.me/nodeseek"
 
@@ -637,19 +525,11 @@ private fun ContactPreviewUnbound() {
                 isLoading = false,
                 email = "hikari.zhg@gmail.com",
                 emailVerified = true,
-                changeExpanded = true,
-                newEmail = "ns.hikari@outlook.com",
-                codeSent = true,
                 telegram = TelegramBinding(bound = false),
             ),
             snackbarHostState = remember { SnackbarHostState() },
             onBack = {},
-            onToggleEmailChange = {},
-            onPasswordChange = {},
-            onNewEmailChange = {},
-            onCodeChange = {},
-            onSendCode = {},
-            onConfirmEmailChange = {},
+            onChangeEmail = {},
             onRequestBind = {},
             onDismissBind = {},
             onConfirmBind = {},
@@ -675,18 +555,13 @@ private fun ContactPreviewBound() {
                 telegram =
                 TelegramBinding(
                     bound = true,
-                    username = "@hikari_zhg",
-                    boundAtDisplay = "2026/7/27",
+                    displayName = "Hikari Zhg",
+                    avatarUrl = "https://t.me/i/userpic/320/hikari.jpg",
                 ),
             ),
             snackbarHostState = remember { SnackbarHostState() },
             onBack = {},
-            onToggleEmailChange = {},
-            onPasswordChange = {},
-            onNewEmailChange = {},
-            onCodeChange = {},
-            onSendCode = {},
-            onConfirmEmailChange = {},
+            onChangeEmail = {},
             onRequestBind = {},
             onDismissBind = {},
             onConfirmBind = {},

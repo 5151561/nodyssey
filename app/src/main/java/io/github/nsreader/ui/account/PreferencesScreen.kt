@@ -121,10 +121,6 @@ fun PreferencesScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            if (state.endpointPending) {
-                EndpointPendingBanner(Modifier.padding(bottom = Spacing.sm))
-            }
-
             AccountSectionLabel(stringResource(R.string.account_group_preference))
 
             PreferenceSwitchRow(

@@ -96,7 +96,7 @@ class SecurityViewModelTest {
     @Test
     fun `a failed change keeps what was typed`() =
         runTest(dispatcher) {
-            val vm = readyViewModel(FakeAccountSettingsRepository.pendingEndpoints())
+            val vm = readyViewModel(FakeAccountSettingsRepository.failing())
             advanceUntilIdle()
 
             vm.confirmPasswordChange()
@@ -105,7 +105,7 @@ class SecurityViewModelTest {
             val state = vm.uiState.value
             assertEquals("old-password", state.currentPassword)
             assertEquals("Correct-Horse-9", state.newPassword)
-            assertTrue(state.message is AccountMessage.EndpointPending)
+            assertTrue(state.message is AccountMessage.Failure)
         }
 
     @Test
@@ -155,10 +155,33 @@ class SecurityViewModelTest {
             assertEquals(SecurityConfirmation.TwoFactor, vm.uiState.value.confirming)
             assertFalse(repository.calls.contains("beginTwoFactorEnrolment"))
 
+            // The site's enrolment endpoint takes the account password, so the dialog collects one.
+            vm.updateTwoFactorPassword("hunter2!")
             vm.confirmTwoFactorEnrolment()
             advanceUntilIdle()
 
             assertEquals(repository.enrolmentUri, vm.uiState.value.enrolmentUri)
+            assertEquals("hunter2!", repository.enrolmentPassword)
+            assertEquals("the password is not parked in state", "", vm.uiState.value.twoFactorPassword)
+        }
+
+    /**
+     * The dialog disables its confirm without a password, but the guard lives here too: this is the
+     * only place the rule can be tested, since a text field in a dialog never idles under Robolectric.
+     */
+    @Test
+    fun `enrolment without a password never reaches the site`() =
+        runTest(dispatcher) {
+            val repository = FakeAccountSettingsRepository()
+            val vm = SecurityViewModel(repository)
+            advanceUntilIdle()
+
+            vm.requestTwoFactorEnrolment()
+            vm.confirmTwoFactorEnrolment()
+            advanceUntilIdle()
+
+            assertFalse(repository.calls.contains("beginTwoFactorEnrolment"))
+            assertNull(vm.uiState.value.enrolmentUri)
         }
 
     /** The URI is handed over once; keeping it would re-launch the authenticator on every recomposition. */
@@ -167,6 +190,7 @@ class SecurityViewModelTest {
         runTest(dispatcher) {
             val vm = SecurityViewModel(FakeAccountSettingsRepository())
             advanceUntilIdle()
+            vm.updateTwoFactorPassword("hunter2!")
             vm.confirmTwoFactorEnrolment()
             advanceUntilIdle()
 

@@ -214,7 +214,7 @@ fun AccountSettingsScreen(
                     subtitle =
                     state.telegram?.let { binding ->
                         if (binding.bound) {
-                            binding.username
+                            binding.displayName
                                 ?: stringResource(R.string.account_telegram_bound)
                         } else {
                             stringResource(R.string.account_telegram_unbound)

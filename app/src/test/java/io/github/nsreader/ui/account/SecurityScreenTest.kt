@@ -57,6 +57,7 @@ class SecurityScreenTest {
                     onToggleConfirmVisible = {},
                     onRequestPasswordChange = onRequestPasswordChange,
                     onRequestTwoFactor = {},
+                    onTwoFactorPasswordChange = {},
                     onDismissConfirmation = onDismissConfirmation,
                     onConfirmPasswordChange = onConfirmPasswordChange,
                     onConfirmTwoFactor = {},
@@ -126,13 +127,5 @@ class SecurityScreenTest {
         setContent(ready)
 
         composeRule.onNodeWithText("更新密码").performScrollTo().assertIsEnabled()
-    }
-
-    /** The banner has to be visible before the user types a password, not after they submit one. */
-    @Test
-    fun `a pending endpoint is stated at the top of the screen`() {
-        setContent(ready.copy(endpointPending = true))
-
-        composeRule.onNodeWithText("这一组还没接入站点接口").assertExists()
     }
 }

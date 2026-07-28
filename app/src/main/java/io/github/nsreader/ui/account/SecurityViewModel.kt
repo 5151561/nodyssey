@@ -8,7 +8,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nsreader.R
 import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.account.AccountSettingsRepository
-import io.github.nsreader.data.account.EndpointNotVerifiedException
 import io.github.nsreader.di.AppContainer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,17 +36,10 @@ class SecurityViewModel(
                 .onSuccess { two ->
                     _uiState.update { it.copy(isLoading = false, twoFactorEnabled = two.enabled) }
                 }.onFailure { throwable ->
-                    val pending = throwable is EndpointNotVerifiedException
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            endpointPending = pending,
-                            message =
-                            if (pending) {
-                                null
-                            } else {
-                                throwable.toAccountMessage(R.string.account_security_title)
-                            },
+                            message = throwable.toAccountMessage(),
                         )
                     }
                 }
@@ -70,7 +62,10 @@ class SecurityViewModel(
 
     fun requestTwoFactorEnrolment() = _uiState.update { it.copy(confirming = SecurityConfirmation.TwoFactor) }
 
-    fun dismissConfirmation() = _uiState.update { it.copy(confirming = null) }
+    fun updateTwoFactorPassword(value: String) = _uiState.update { it.copy(twoFactorPassword = value) }
+
+    /** Leaving the dialog abandons the password it collected rather than parking it in state. */
+    fun dismissConfirmation() = _uiState.update { it.copy(confirming = null, twoFactorPassword = "") }
 
     fun confirmPasswordChange() {
         if (submitJob?.isActive == true) return
@@ -97,7 +92,7 @@ class SecurityViewModel(
                     _uiState.update {
                         it.copy(
                             isSubmitting = false,
-                            message = throwable.toAccountMessage(R.string.account_change_password),
+                            message = throwable.toAccountMessage(),
                         )
                     }
                 }
@@ -106,17 +101,21 @@ class SecurityViewModel(
 
     fun confirmTwoFactorEnrolment() {
         if (submitJob?.isActive == true) return
+        val password = _uiState.value.twoFactorPassword
+        if (password.isEmpty()) return
         submitJob =
             viewModelScope.launch {
-                _uiState.update { it.copy(confirming = null, isSubmitting = true, message = null) }
-                runCatchingExceptCancellation { account.beginTwoFactorEnrolment() }
+                _uiState.update {
+                    it.copy(confirming = null, twoFactorPassword = "", isSubmitting = true, message = null)
+                }
+                runCatchingExceptCancellation { account.beginTwoFactorEnrolment(password) }
                     .onSuccess { uri ->
                         _uiState.update { it.copy(isSubmitting = false, enrolmentUri = uri) }
                     }.onFailure { throwable ->
                         _uiState.update {
                             it.copy(
                                 isSubmitting = false,
-                                message = throwable.toAccountMessage(R.string.account_two_factor_bind),
+                                message = throwable.toAccountMessage(),
                             )
                         }
                     }
@@ -152,7 +151,6 @@ enum class SecurityConfirmation { Password, TwoFactor }
 data class SecurityUiState(
     val isLoading: Boolean = true,
     val isSubmitting: Boolean = false,
-    val endpointPending: Boolean = false,
     val twoFactorEnabled: Boolean? = null,
     val currentPassword: String = "",
     val newPassword: String = "",
@@ -161,6 +159,11 @@ data class SecurityUiState(
     val newVisible: Boolean = false,
     val confirmVisible: Boolean = false,
     val confirming: SecurityConfirmation? = null,
+    /**
+     * Collected inside the 2FA dialog, not on the form above it: enrolment is its own endpoint and
+     * the site demands the account password for it, independently of any password change.
+     */
+    val twoFactorPassword: String = "",
     /** The `otpauth://` URI returned by enrolment, handed to whatever authenticator app claims it. */
     val enrolmentUri: String? = null,
     val message: AccountMessage? = null,

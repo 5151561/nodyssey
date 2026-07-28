@@ -1,5 +1,6 @@
 package io.github.nsreader.ui.account
 
+import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.data.account.AccountContact
 import io.github.nsreader.data.account.TelegramBinding
 import kotlinx.coroutines.Dispatchers
@@ -19,8 +20,11 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * The two flows that can cost the user their notifications or their account access: the site's
- * two-step email change, and the Telegram bind whose second half happens in another app entirely.
+ * The seams around the two actions this screen hands to the website.
+ *
+ * Both leave the app, so what is worth pinning down is what happens on the way out and on the way
+ * back: which URL is published, that the bind waits for an answer, and that 解绑 — the one Telegram
+ * write the app can make itself — never fires without its dialog.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ContactViewModelTest {
@@ -40,7 +44,7 @@ class ContactViewModelTest {
             val repository =
                 FakeAccountSettingsRepository(
                     contact = verified,
-                    telegram = TelegramBinding(bound = true, username = "@hikari_zhg"),
+                    telegram = TelegramBinding(bound = true, displayName = "Hikari Zhg"),
                 )
             val vm = ContactViewModel(repository)
             advanceUntilIdle()
@@ -52,103 +56,32 @@ class ContactViewModelTest {
             assertEquals(true, state.telegram?.bound)
         }
 
+    /** 修改邮箱 opens the site's own contact tab; nothing is submitted from here. */
     @Test
-    fun `the code cannot be sent without a password and a well-formed new address`() =
-        runTest(dispatcher) {
-            val vm = ContactViewModel(FakeAccountSettingsRepository(contact = verified))
-            advanceUntilIdle()
-            vm.toggleEmailChange()
-
-            assertFalse(vm.uiState.value.canSendCode)
-            vm.updatePassword("hunter2!")
-            vm.updateNewEmail("not-an-address")
-            assertFalse(vm.uiState.value.canSendCode)
-
-            vm.updateNewEmail("ns.hikari@outlook.com")
-            assertTrue(vm.uiState.value.canSendCode)
-        }
-
-    @Test
-    fun `confirming needs a sent code of the full six digits`() =
+    fun `changing the address hands off to the site contact tab`() =
         runTest(dispatcher) {
             val repository = FakeAccountSettingsRepository(contact = verified)
             val vm = ContactViewModel(repository)
             advanceUntilIdle()
-            vm.toggleEmailChange()
-            vm.updatePassword("hunter2!")
-            vm.updateNewEmail("ns.hikari@outlook.com")
-            vm.sendCode()
-            advanceUntilIdle()
 
-            assertEquals("hunter2!" to "ns.hikari@outlook.com", repository.sentEmailChangeCode)
-            vm.updateCode("123")
-            assertFalse(vm.uiState.value.canConfirmChange)
-            vm.updateCode("123456")
-            assertTrue(vm.uiState.value.canConfirmChange)
-        }
-
-    /** Typing a different target address invalidates a code mailed to the previous one. */
-    @Test
-    fun `changing the new address after sending resets the code step`() =
-        runTest(dispatcher) {
-            val vm = ContactViewModel(FakeAccountSettingsRepository(contact = verified))
-            advanceUntilIdle()
-            vm.toggleEmailChange()
-            vm.updatePassword("hunter2!")
-            vm.updateNewEmail("ns.hikari@outlook.com")
-            vm.sendCode()
-            advanceUntilIdle()
-            assertTrue(vm.uiState.value.codeSent)
-
-            vm.updateNewEmail("other@outlook.com")
-
-            assertFalse(vm.uiState.value.codeSent)
-            assertEquals("", vm.uiState.value.code)
-        }
-
-    @Test
-    fun `a confirmed change updates the address and collapses the flow`() =
-        runTest(dispatcher) {
-            val repository = FakeAccountSettingsRepository(contact = verified)
-            val vm = ContactViewModel(repository)
-            advanceUntilIdle()
-            vm.toggleEmailChange()
-            vm.updatePassword("hunter2!")
-            vm.updateNewEmail("ns.hikari@outlook.com")
-            vm.sendCode()
-            advanceUntilIdle()
-            vm.updateCode("123456")
-            vm.confirmEmailChange()
-            advanceUntilIdle()
+            vm.changeEmailOnSite()
 
             assertEquals(
-                Triple("hunter2!", "ns.hikari@outlook.com", "123456"),
-                repository.confirmedEmailChange,
+                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_CONTACT),
+                vm.uiState.value.urlToOpen,
             )
-            val state = vm.uiState.value
-            assertEquals("ns.hikari@outlook.com", state.email)
-            // The code came from the new mailbox; the address is verified by construction.
-            assertTrue(state.emailVerified)
-            assertFalse(state.changeExpanded)
-            assertEquals("", state.password)
+            assertEquals(
+                "reading is all this screen does to the address",
+                listOf("contact", "telegramBinding"),
+                repository.calls,
+            )
+
+            vm.consumeUrl()
+            assertNull(vm.uiState.value.urlToOpen)
         }
 
     @Test
-    fun `collapsing the change flow abandons the typed password`() =
-        runTest(dispatcher) {
-            val vm = ContactViewModel(FakeAccountSettingsRepository(contact = verified))
-            advanceUntilIdle()
-            vm.toggleEmailChange()
-            vm.updatePassword("hunter2!")
-
-            vm.toggleEmailChange()
-            vm.toggleEmailChange()
-
-            assertEquals("", vm.uiState.value.password)
-        }
-
-    @Test
-    fun `confirming the bind dialog surfaces the bot link and starts waiting`() =
+    fun `confirming the bind dialog opens the site and starts waiting`() =
         runTest(dispatcher) {
             val repository = FakeAccountSettingsRepository(contact = verified)
             val vm = ContactViewModel(repository)
@@ -161,14 +94,17 @@ class ContactViewModelTest {
 
             val state = vm.uiState.value
             assertFalse(state.showBindDialog)
-            assertEquals(repository.bindUrl, state.bindUrlToOpen)
+            assertEquals(
+                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_CONTACT),
+                state.urlToOpen,
+            )
             assertTrue(state.awaitingBinding)
 
-            vm.consumeBindUrl()
-            assertNull(vm.uiState.value.bindUrlToOpen)
+            vm.consumeUrl()
+            assertNull(vm.uiState.value.urlToOpen)
         }
 
-    /** The seam the whole f3 flow exists for: coming back from Telegram polls until bound. */
+    /** The seam the whole f3 flow exists for: coming back from the site polls until bound. */
     @Test
     fun `returning from telegram polls until the binding lands`() =
         runTest(dispatcher) {
@@ -182,8 +118,8 @@ class ContactViewModelTest {
             advanceTimeBy(ContactViewModel.BIND_POLL_INTERVAL_MILLIS + 1)
             assertTrue(vm.uiState.value.awaitingBinding)
 
-            // The bot finishes its half while the app is polling.
-            repository.telegram = TelegramBinding(bound = true, username = "@hikari_zhg")
+            // The binding lands on the website while the app is polling.
+            repository.telegram = TelegramBinding(bound = true, displayName = "Hikari Zhg")
             advanceTimeBy(ContactViewModel.BIND_POLL_INTERVAL_MILLIS + 1)
 
             val state = vm.uiState.value
@@ -204,7 +140,7 @@ class ContactViewModelTest {
             advanceUntilIdle()
             assertTrue(vm.uiState.value.awaitingBinding)
 
-            repository.telegram = TelegramBinding(bound = true, username = "@hikari_zhg")
+            repository.telegram = TelegramBinding(bound = true, displayName = "Hikari Zhg")
             vm.refreshBinding()
             advanceUntilIdle()
 
@@ -218,7 +154,7 @@ class ContactViewModelTest {
             val repository =
                 FakeAccountSettingsRepository(
                     contact = verified,
-                    telegram = TelegramBinding(bound = true, username = "@hikari_zhg"),
+                    telegram = TelegramBinding(bound = true, displayName = "Hikari Zhg"),
                 )
             val vm = ContactViewModel(repository)
             advanceUntilIdle()
@@ -237,12 +173,14 @@ class ContactViewModelTest {
         }
 
     @Test
-    fun `pending endpoints raise the banner and never a snackbar`() =
+    fun `a failed load says so instead of showing an empty address`() =
         runTest(dispatcher) {
-            val vm = ContactViewModel(FakeAccountSettingsRepository.pendingEndpoints())
+            val vm = ContactViewModel(FakeAccountSettingsRepository.failing())
             advanceUntilIdle()
 
-            assertTrue(vm.uiState.value.endpointPending)
-            assertNull(vm.uiState.value.message)
+            val state = vm.uiState.value
+            assertFalse(state.isLoading)
+            assertTrue(state.message is AccountMessage.Failure)
+            assertEquals("", state.email)
         }
 }

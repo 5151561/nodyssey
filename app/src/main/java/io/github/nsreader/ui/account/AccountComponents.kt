@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.nsreader.R
 import io.github.nsreader.core.net.NodeSeekError
-import io.github.nsreader.data.account.EndpointNotVerifiedException
 import io.github.nsreader.ui.postlist.toNodeSeekError
 import io.github.nsreader.ui.theme.Spacing
 
@@ -37,35 +36,20 @@ internal val AccountFieldShape = RoundedCornerShape(14.dp)
 
 /**
  * Something a sub-page needs to tell the user once, in a snackbar.
- *
- * [EndpointPending] carries a string resource rather than the repository's operation name: that name
- * is a Kotlin identifier meant for whoever fills the endpoint in, and putting `saveProfileFields` in
- * front of a reader is worse than saying nothing.
  */
 sealed interface AccountMessage {
-    data class EndpointPending(@StringRes val labelRes: Int) : AccountMessage
-
     data class Info(@StringRes val textRes: Int) : AccountMessage
 
     data class Failure(val error: NodeSeekError) : AccountMessage
 }
 
-/** Turns a thrown load/save failure into either the pending seam or a real network error. */
-fun Throwable.toAccountMessage(@StringRes labelRes: Int): AccountMessage =
-    if (this is EndpointNotVerifiedException) {
-        AccountMessage.EndpointPending(labelRes)
-    } else {
-        AccountMessage.Failure(toNodeSeekError())
-    }
+/** Turns a thrown load/save failure into something sayable. */
+fun Throwable.toAccountMessage(): AccountMessage = AccountMessage.Failure(toNodeSeekError())
 
 @Composable
 internal fun accountMessageText(message: AccountMessage): String =
     when (message) {
-        is AccountMessage.EndpointPending ->
-            stringResource(R.string.account_endpoint_pending_toast, stringResource(message.labelRes))
-
         is AccountMessage.Info -> stringResource(message.textRes)
-
         is AccountMessage.Failure -> stringResource(message.error.messageRes())
     }
 
@@ -79,40 +63,6 @@ private fun NodeSeekError.messageRes(): Int =
         NodeSeekError.NotWired -> R.string.status_not_wired_title
         is NodeSeekError.Http, NodeSeekError.Unknown -> R.string.status_unknown_title
     }
-
-/**
- * Says out loud that a group's site plumbing is not connected yet.
- *
- * A banner rather than an error state, because the screen is not broken — the layout, validation and
- * confirmations all work and are worth showing. What does not work is the one request at the end, and
- * the honest thing is to say so before the user types a new password rather than after.
- */
-@Composable
-internal fun EndpointPendingBanner(modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = AccountFieldShape,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    ) {
-        Row(
-            modifier = Modifier.padding(Spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(20.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    stringResource(R.string.account_endpoint_pending_title),
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                )
-                Text(
-                    stringResource(R.string.account_endpoint_pending_body),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-    }
-}
 
 /**
  * The Local / Remote storage badge d6 puts beside every preference row.
