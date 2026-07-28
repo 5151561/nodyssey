@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -48,7 +49,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -74,7 +74,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -674,6 +676,22 @@ private fun ThreadList(
 }
 
 @OptIn(ExperimentalLayoutApi::class)
+/**
+ * Full-width opening punctuation draws its ink in the right half of the em box, so a title like
+ * 「【出】92折出SG落地机」 starts a good half character right of everything under it. That gap was
+ * invisible while the opening post sat in its own container — the title and the container were on
+ * different left edges anyway — and became the most obvious misalignment on the screen once they
+ * shared one. Hanging the first line out by half an em puts the bracket's ink back on the margin.
+ */
+private val HANGING_PUNCTUATION = setOf('【', '「', '『', '《', '〈', '（', '〔', '“', '‘')
+
+private fun TextStyle.hangLeadingPunctuation(text: String): TextStyle =
+    if (text.firstOrNull() in HANGING_PUNCTUATION) {
+        copy(textIndent = TextIndent(firstLine = fontSize * -0.5f))
+    } else {
+        this
+    }
+
 @Composable
 private fun ThreadHeader(
     title: String,
@@ -689,7 +707,7 @@ private fun ThreadHeader(
     ) {
         Text(
             text = title,
-            style = PostTitle,
+            style = PostTitle.hangLeadingPunctuation(title),
             color = MaterialTheme.colorScheme.onSurface,
         )
         FlowRow(
@@ -704,6 +722,13 @@ private fun ThreadHeader(
     }
 }
 
+/**
+ * The opening post, laid out flat like every other floor.
+ *
+ * It used to sit in a rounded container, which cost two levels of horizontal inset and boxed in the
+ * long bodies this forum is full of. The larger avatar, the bodyLarge text and the comments header
+ * below already mark it as the opening post, so the container was only spending width.
+ */
 @Composable
 private fun OriginalPost(
     body: PostContent,
@@ -713,81 +738,80 @@ private fun OriginalPost(
     onChickenClick: () -> Unit,
     onAuthorClick: (Long) -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.padding(horizontal = Spacing.lg),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(24.dp),
+    Column(
+        modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = 12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.lg, bottom = 12.dp),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
+            // The identity block opens the author's space; the floor label stays outside it.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                modifier = Modifier
+                    .weight(1f)
+                    .authorClickable(body.authorUid, onAuthorClick),
             ) {
-                // The identity block opens the author's space; the floor label stays outside it.
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    modifier = Modifier
-                        .weight(1f)
-                        .authorClickable(body.authorUid, onAuthorClick),
-                ) {
-                    UserAvatar(
-                        url = body.avatarUrl,
-                        name = body.authorName,
-                        size = Sizes.avatarOriginalPost,
-                    )
-                    Column(Modifier.weight(1f)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            Text(
-                                text = body.authorName,
-                                style = MaterialTheme.typography.titleSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false),
-                            )
-                            FloorBadges(body)
-                        }
-                        FloorTimeLine(body)
+                UserAvatar(
+                    url = body.avatarUrl,
+                    name = body.authorName,
+                    size = Sizes.avatarOriginalPost,
+                )
+                Column(Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = body.authorName,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        FloorBadges(body)
                     }
+                    FloorTimeLine(body)
                 }
-                body.floor?.let { FloorLabel(it) }
             }
-
-            if (body.nodes.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.post_body_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = Spacing.md),
-                )
-            } else {
-                RichContent(
-                    nodes = body.nodes,
-                    onLinkClick = onOpenBrowser,
-                    onImageClick = onImageClick,
-                    onQuoteRefClick = { onJumpToFloor(it.floor) },
-                    textStyle = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(top = Spacing.md),
-                )
-            }
-            UserSignature(
-                nodes = body.signatureNodes,
-                onOpenBrowser = onOpenBrowser,
-                onImageClick = onImageClick,
-                onJumpToFloor = onJumpToFloor,
-            )
-            ReactionRow(onChickenClick = onChickenClick)
+            body.floor?.let { FloorLabel(it) }
         }
+
+        if (body.nodes.isEmpty()) {
+            Text(
+                text = stringResource(R.string.post_body_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Spacing.md),
+            )
+        } else {
+            RichContent(
+                nodes = body.nodes,
+                onLinkClick = onOpenBrowser,
+                onImageClick = onImageClick,
+                onQuoteRefClick = { onJumpToFloor(it.floor) },
+                textStyle = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(top = Spacing.md),
+            )
+        }
+        UserSignature(
+            nodes = body.signatureNodes,
+            onOpenBrowser = onOpenBrowser,
+            onImageClick = onImageClick,
+            onJumpToFloor = onJumpToFloor,
+        )
+        ReactionRow(onChickenClick = onChickenClick)
     }
 }
 
 @Composable
 private fun CommentsHeader(count: Int) {
+    // Without the opening post's container, this line is what separates it from the replies.
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant,
+        modifier = Modifier.padding(horizontal = Spacing.lg),
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -932,6 +956,9 @@ private fun UserSignature(
 private fun Modifier.authorClickable(uid: Long?, onAuthorClick: (Long) -> Unit): Modifier =
     if (uid == null) this else clickable { onAuthorClick(uid) }
 
+/** `ButtonDefaults.TextButtonContentPadding`'s horizontal inset. */
+private val TEXT_BUTTON_CONTENT_INSET = 12.dp
+
 @Composable
 private fun ReactionRow(
     onChickenClick: () -> Unit,
@@ -939,7 +966,13 @@ private fun ReactionRow(
     onReply: (() -> Unit)? = null,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(top = Spacing.sm),
+        // Every reaction is a TextButton, which keeps 12dp of content padding inside its own bounds.
+        // Laid out honestly the last icon stops 12dp short of the margin the floor label and the
+        // body text sit on; shifting the row out by exactly that much lines the ink up instead.
+        modifier = modifier
+            .fillMaxWidth()
+            .offset(x = TEXT_BUTTON_CONTENT_INSET)
+            .padding(top = Spacing.sm),
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
