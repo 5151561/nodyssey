@@ -119,7 +119,6 @@ data object FollowKey : NavKey
 @Serializable
 data class AssetsKey(
     val openAttendanceChooser: Boolean = false,
-    val openAttendanceBoard: Boolean = false,
 ) : NavKey
 
 @Serializable

@@ -333,7 +333,6 @@ fun MainNavigation(
                     onOpenSpace = { uid -> backStack.add(UserSpaceKey(uid, isSelf = true)) },
                     onAssets = { backStack.add(AssetsKey()) },
                     onAttendance = { backStack.add(AssetsKey(openAttendanceChooser = true)) },
-                    onAttendanceBoard = { backStack.add(AssetsKey(openAttendanceBoard = true)) },
                     onFollow = { backStack.add(FollowKey) },
                     onTools = { backStack.add(CommunityToolsKey) },
                 )
@@ -514,7 +513,6 @@ fun MainNavigation(
                 AssetsRoute(
                     viewModel = viewModel,
                     openAttendanceChooser = key.openAttendanceChooser,
-                    openAttendanceBoard = key.openAttendanceBoard,
                     onBack = { backStack.removeLastOrNull() },
                     // The full ledger UI is not part of this batch. Its JSON is used internally to
                     // detect today's attendance, while the site's table remains the full destination.

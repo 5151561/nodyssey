@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.AssetsRepository
+import io.github.nsreader.data.AttendanceBoardEntry
 import io.github.nsreader.data.AttendanceStatus
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.ProfileRepository
@@ -43,6 +44,7 @@ class ProfileViewModel(
     private var loadJob: Job? = null
     private var profileJob: Job? = null
     private var attendanceJob: Job? = null
+    private var attendanceBoardJob: Job? = null
     private var attendanceCheckedUid: Long? = null
     private val _uiState =
         MutableStateFlow(
@@ -68,6 +70,7 @@ class ProfileViewModel(
                     loadJob?.cancel()
                     profileJob?.cancel()
                     attendanceJob?.cancel()
+                    attendanceBoardJob?.cancel()
                     attendanceCheckedUid = null
                     _uiState.value = ProfileUiState()
                 }
@@ -88,6 +91,7 @@ class ProfileViewModel(
         loadJob?.cancel()
         profileJob?.cancel()
         attendanceJob?.cancel()
+        attendanceBoardJob?.cancel()
         attendanceCheckedUid = null
         _uiState.value = ProfileUiState(isSignedIn = true, isLoading = true)
         profileJob =
@@ -105,6 +109,11 @@ class ProfileViewModel(
                             current.hasSignedInToday.takeIf { current.uid == profile.uid } ?: false,
                             attendanceGain =
                             current.attendanceGain.takeIf { current.uid == profile.uid },
+                            boardOpen = current.boardOpen.takeIf { current.uid == profile.uid } ?: false,
+                            isLoadingBoard =
+                            current.isLoadingBoard.takeIf { current.uid == profile.uid } ?: false,
+                            board = current.board.takeIf { current.uid == profile.uid }.orEmpty(),
+                            boardError = current.boardError.takeIf { current.uid == profile.uid },
                         )
                     }
                     if (attendanceCheckedUid != profile.uid) refreshAttendance(profile.uid)
@@ -128,6 +137,10 @@ class ProfileViewModel(
                             isCheckingAttendance = current.isCheckingAttendance,
                             hasSignedInToday = current.hasSignedInToday,
                             attendanceGain = current.attendanceGain,
+                            boardOpen = current.boardOpen,
+                            isLoadingBoard = current.isLoadingBoard,
+                            board = current.board,
+                            boardError = current.boardError,
                         )
                     }
                 }
@@ -169,6 +182,39 @@ class ProfileViewModel(
                 )
             }
         }
+    }
+
+    fun openAttendanceBoard() {
+        _uiState.update { it.copy(boardOpen = true) }
+        if (_uiState.value.board.isEmpty()) loadAttendanceBoard()
+    }
+
+    fun dismissAttendanceBoard() {
+        _uiState.update { it.copy(boardOpen = false) }
+    }
+
+    fun loadAttendanceBoard() {
+        attendanceBoardJob?.cancel()
+        attendanceBoardJob =
+            viewModelScope.launch {
+                _uiState.update { it.copy(isLoadingBoard = true, boardError = null) }
+                runCatchingExceptCancellation { assetsRepository.attendanceBoard() }
+                    .onSuccess { entries ->
+                        _uiState.update {
+                            it.copy(
+                                isLoadingBoard = false,
+                                board = entries,
+                            )
+                        }
+                    }.onFailure { throwable ->
+                        _uiState.update {
+                            it.copy(
+                                isLoadingBoard = false,
+                                boardError = throwable.toNodeSeekError(),
+                            )
+                        }
+                    }
+            }
     }
 
     fun signOut() {
@@ -236,6 +282,10 @@ data class ProfileUiState(
     val isCheckingAttendance: Boolean = false,
     val hasSignedInToday: Boolean = false,
     val attendanceGain: Int? = null,
+    val boardOpen: Boolean = false,
+    val isLoadingBoard: Boolean = false,
+    val board: List<AttendanceBoardEntry> = emptyList(),
+    val boardError: NodeSeekError? = null,
 ) {
     val hasProfile: Boolean
         get() = uid != null && displayName.isNotBlank()

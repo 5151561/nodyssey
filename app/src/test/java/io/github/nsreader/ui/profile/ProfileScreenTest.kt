@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import io.github.nsreader.data.AttendanceBoardEntry
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import org.junit.Rule
 import org.junit.Test
@@ -173,5 +174,48 @@ class ProfileScreenTest {
         composeRule.onNodeWithText("今日签到 · 领鸡腿").performClick()
 
         check(attendanceOpened)
+    }
+
+    @Test
+    fun `attendance board is rendered over the profile screen`() {
+        composeRule.setContent {
+            NodeSeekTheme {
+                ProfileScreen(
+                    state =
+                    ProfileUiState(
+                        isSignedIn = true,
+                        displayName = "nsreader_dev",
+                        hasSignedInToday = true,
+                        attendanceGain = 7,
+                        boardOpen = true,
+                        board =
+                        listOf(
+                            AttendanceBoardEntry(
+                                uid = 31037,
+                                name = "缭雾",
+                                gain = 7,
+                                timeText = "刚刚",
+                            ),
+                        ),
+                    ),
+                    onSignIn = {},
+                    onSignOut = {},
+                    onRetry = {},
+                    onSettings = {},
+                    onAccountSettings = {},
+                    onOpenWebsite = {},
+                    onOpenSpace = {},
+                    onAssets = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
+                    onFollow = {},
+                    onTools = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("今日签到榜").assertIsDisplayed()
+        composeRule.onNodeWithText("缭雾").assertIsDisplayed()
+        composeRule.onNodeWithText("+7").assertIsDisplayed()
     }
 }

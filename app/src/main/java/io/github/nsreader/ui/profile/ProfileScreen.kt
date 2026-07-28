@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.R
 import io.github.nsreader.core.net.NodeSeekError
+import io.github.nsreader.ui.common.AttendanceBoardDialog
 import io.github.nsreader.ui.common.GroupedColumn
 import io.github.nsreader.ui.common.GroupedRow
 import io.github.nsreader.ui.common.LoadingState
@@ -67,7 +68,6 @@ fun ProfileRoute(
     onOpenSpace: (Long) -> Unit,
     onAssets: () -> Unit,
     onAttendance: () -> Unit,
-    onAttendanceBoard: () -> Unit,
     onFollow: () -> Unit,
     onTools: () -> Unit,
     modifier: Modifier = Modifier,
@@ -87,7 +87,9 @@ fun ProfileRoute(
         onOpenSpace = { state.uid?.let(onOpenSpace) },
         onAssets = onAssets,
         onAttendance = onAttendance,
-        onAttendanceBoard = onAttendanceBoard,
+        onAttendanceBoard = viewModel::openAttendanceBoard,
+        onDismissAttendanceBoard = viewModel::dismissAttendanceBoard,
+        onRetryAttendanceBoard = viewModel::loadAttendanceBoard,
         onFollow = onFollow,
         onTools = onTools,
         modifier = modifier,
@@ -107,6 +109,8 @@ fun ProfileScreen(
     onAssets: () -> Unit,
     onAttendance: () -> Unit,
     onAttendanceBoard: () -> Unit,
+    onDismissAttendanceBoard: () -> Unit = {},
+    onRetryAttendanceBoard: () -> Unit = {},
     onFollow: () -> Unit,
     onTools: () -> Unit,
     modifier: Modifier = Modifier,
@@ -232,6 +236,16 @@ fun ProfileScreen(
                 }
             }
         }
+    }
+
+    if (state.boardOpen) {
+        AttendanceBoardDialog(
+            isLoading = state.isLoadingBoard,
+            entries = state.board,
+            error = state.boardError,
+            onRetry = onRetryAttendanceBoard,
+            onDismiss = onDismissAttendanceBoard,
+        )
     }
 }
 

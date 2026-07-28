@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,7 +44,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,6 +52,7 @@ import io.github.nsreader.R
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.data.AttendanceMode
 import io.github.nsreader.data.DailyQuota
+import io.github.nsreader.ui.common.AttendanceBoardDialog
 import io.github.nsreader.ui.common.GroupedRow
 import io.github.nsreader.ui.common.LoadingState
 import io.github.nsreader.ui.common.NodeSeekErrorState
@@ -73,7 +71,6 @@ const val INVITE_CODE_CHICKEN_COST = 1_000
 fun AssetsRoute(
     viewModel: AssetsViewModel,
     openAttendanceChooser: Boolean,
-    openAttendanceBoard: Boolean,
     onBack: () -> Unit,
     onChickenLedger: () -> Unit,
     onStardust: () -> Unit,
@@ -82,11 +79,8 @@ fun AssetsRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(openAttendanceChooser, openAttendanceBoard) {
-        when {
-            openAttendanceBoard -> viewModel.openBoard()
-            openAttendanceChooser -> viewModel.requestAttendance()
-        }
+    LaunchedEffect(openAttendanceChooser) {
+        if (openAttendanceChooser) viewModel.requestAttendance()
     }
     AssetsScreen(
         state = state,
@@ -210,7 +204,9 @@ fun AssetsScreen(
 
     if (state.boardOpen) {
         AttendanceBoardDialog(
-            state = state,
+            isLoading = state.isLoadingBoard,
+            entries = state.board,
+            error = state.boardError,
             onRetry = onRetryBoard,
             onDismiss = onDismissBoard,
         )
@@ -265,86 +261,6 @@ private fun AttendanceModeDialog(
         },
     )
 }
-
-/** 今日签到榜 — who signed in and what they rolled, straight off `/api/attendance/board`. */
-@Composable
-private fun AttendanceBoardDialog(
-    state: AssetsUiState,
-    onRetry: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.assets_board)) },
-        text = {
-            when {
-                state.isLoadingBoard ->
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(160.dp),
-                        contentAlignment = Alignment.Center,
-                    ) { CircularProgressIndicator(Modifier.size(24.dp)) }
-
-                state.boardError != null ->
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        Text(
-                            stringResource(R.string.assets_board_failed),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        TextButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
-                    }
-
-                else ->
-                    LazyColumn(Modifier.height(BOARD_LIST_HEIGHT)) {
-                        items(count = state.board.size, key = { it }) { index ->
-                            val entry = state.board[index]
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 7.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                            ) {
-                                Text(
-                                    text = (index + 1).toString(),
-                                    style =
-                                    MaterialTheme.typography.labelMedium.copy(
-                                        fontFeatureSettings = TABULAR_FIGURES,
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.width(22.dp),
-                                )
-                                Text(
-                                    text = entry.name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                entry.gain?.let {
-                                    Text(
-                                        text = stringResource(R.string.assets_board_gain, it),
-                                        style =
-                                        MaterialTheme.typography.labelLarge.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            fontFeatureSettings = TABULAR_FIGURES,
-                                        ),
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                            }
-                        }
-                    }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
-        },
-    )
-}
-
-private val BOARD_LIST_HEIGHT = 360.dp
 
 /**
  * Buying an invite code, confirmed the same way as every other spend.

@@ -176,10 +176,47 @@ class ProfileViewModelTest {
             assertEquals(7, viewModel.uiState.value.attendanceGain)
             assertFalse(viewModel.uiState.value.isCheckingAttendance)
         }
+
+    @Test
+    fun `opens attendance board in the profile state without navigation`() =
+        runTest(dispatcher) {
+            val entries =
+                listOf(
+                    AttendanceBoardEntry(
+                        uid = 31037,
+                        name = "缭雾",
+                        gain = 7,
+                        timeText = "刚刚",
+                    ),
+                )
+            val viewModel =
+                ProfileViewModel(
+                    session = SessionRepository(WebViewCookieJar(cookieManager)),
+                    postRepository = NoOpPostRepository,
+                    profileRepository =
+                    FakeProfileRepository(
+                        UserProfile(
+                            uid = 31037,
+                            name = "缭雾",
+                            avatarUrl = "https://www.nodeseek.com/avatar/31037.png",
+                        ),
+                    ),
+                    assetsRepository = FakeAssetsRepository(gain = 7, board = entries),
+                )
+            advanceUntilIdle()
+
+            viewModel.openAttendanceBoard()
+            advanceUntilIdle()
+
+            assertEquals(true, viewModel.uiState.value.boardOpen)
+            assertEquals(entries, viewModel.uiState.value.board)
+            assertFalse(viewModel.uiState.value.isLoadingBoard)
+        }
 }
 
 private class FakeAssetsRepository(
     private val gain: Int? = null,
+    private val board: List<AttendanceBoardEntry> = emptyList(),
 ) : AssetsRepository {
     private val status = MutableStateFlow<AttendanceStatus?>(null)
 
@@ -196,7 +233,7 @@ private class FakeAssetsRepository(
 
     override suspend fun signInForToday(mode: AttendanceMode): AttendanceResult = error("Not used")
 
-    override suspend fun attendanceBoard(page: Int): List<AttendanceBoardEntry> = error("Not used")
+    override suspend fun attendanceBoard(page: Int): List<AttendanceBoardEntry> = board
 }
 
 private class FakeProfileRepository(
