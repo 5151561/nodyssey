@@ -488,6 +488,21 @@
     <string name="status_signed_out_title">登录后解锁完整体验</string>
     <string name="status_signed_out_body">收藏、通知、签到都在登录之后。</string>
 
+    <!-- Profile signed-out state (c7) -->
+    <string name="profile_signed_out_title">登录 NodeSeek，解锁完整体验</string>
+    <string name="profile_signed_out_body">游客只能看帖，登录后才能参与社区。</string>
+    <string name="profile_guest_benefit_post">发帖回复</string>
+    <string name="profile_guest_benefit_post_hint">参与讨论</string>
+    <string name="profile_guest_benefit_messages">通知私信</string>
+    <string name="profile_guest_benefit_messages_hint">@我即时达</string>
+    <string name="profile_guest_benefit_attendance">签到鸡腿</string>
+    <string name="profile_guest_benefit_attendance_hint">每日 6–7 个</string>
+    <string name="profile_sign_in">登录 NodeSeek</string>
+    <string name="profile_sign_in_hint">在内置浏览器中完成，应用不保存你的密码</string>
+    <string name="profile_guest_section">游客也可以用</string>
+    <string name="profile_guest_settings_hint">主题模式、字号、浏览偏好</string>
+    <string name="profile_guest_tools_hint">推荐阅读、合作商家、友站</string>
+
     <string name="status_signed_in_title">已登录 NodeSeek</string>
     <string name="status_signed_in_body">应用现在会带着你的登录状态请求内容，内版这类版块可以直接看了。收藏、通知和签到还在做。</string>
 

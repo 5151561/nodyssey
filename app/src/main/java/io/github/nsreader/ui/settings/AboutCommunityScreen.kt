@@ -81,9 +81,9 @@ fun AboutCommunityScreen(
     onOpenPrivacy: () -> Unit,
     onOpenUri: (String) -> Unit,
     onCopyRss: () -> Unit,
+    modifier: Modifier = Modifier,
     statsState: CommunityStatsUiState? = null,
     onRetryStats: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

@@ -18,6 +18,44 @@ import androidx.compose.ui.unit.dp
  * editor's format toolbar uses the same text glyphs the post composer already does.
  */
 object NodeSeekIcons {
+    /** Decorative welcome glyph used by the signed-out profile illustration (board c7). */
+    val WavingHand: ImageVector by lazy {
+        materialIcon(
+            name = "WavingHand",
+            pathData =
+            "M23,17c0,3.31 -2.69,6 -6,6v-1.5c2.48,0 4.5,-2.02 4.5,-4.5H23z" +
+                "M1,7c0,-3.31 2.69,-6 6,-6v1.5C4.52,2.5 2.5,4.52 2.5,7H1z" +
+                "M8.01,4.32l-4.6,4.6c-3.22,3.22 -3.22,8.45 0,11.67s8.45,3.22 11.67,0l7.07,-7.07" +
+                "c0.49,-0.49 0.49,-1.28 0,-1.77s-1.28,-0.49 -1.77,0l-4.42,4.42 -0.71,-0.71" +
+                "l6.54,-6.54c0.49,-0.49 0.49,-1.28 0,-1.77s-1.28,-0.49 -1.77,0l-5.83,5.83 -0.71,-0.71" +
+                "l6.89,-6.89c0.49,-0.49 0.49,-1.28 0,-1.77s-1.28,-0.49 -1.77,0l-6.89,6.89 -0.71,-0.71" +
+                "l5.48,-5.48c0.49,-0.49 0.49,-1.28 0,-1.77s-1.28,-0.49 -1.77,0l-7.62,7.62" +
+                "c1.22,1.57 1.11,3.84 -0.33,5.28l-0.71,-0.71c1.17,-1.17 1.17,-3.07 0,-4.24" +
+                "l-0.35,-0.35 4.07,-4.07c0.49,-0.49 0.49,-1.28 0,-1.77s-1.29,-0.48 -1.78,0.01z",
+        )
+    }
+
+    /** Entering the authenticated session, kept distinct from the existing sign-out glyph. */
+    val Login: ImageVector by lazy {
+        materialIcon(
+            name = "Login",
+            pathData =
+            "M11,7L9.6,8.4 12.2,11H2v2h10.2l-2.6,2.6L11,17l5,-5 -5,-5z" +
+                "M20,19h-8v2h8c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2h-8v2h8v14z",
+        )
+    }
+
+    /** Calendar check used for the daily chicken-leg benefit in the signed-out profile. */
+    val EventAvailable: ImageVector by lazy {
+        materialIcon(
+            name = "EventAvailable",
+            pathData =
+            "M16.53,11.06L15.47,10l-4.88,4.88 -2.12,-2.12 -1.06,1.06L10.59,17l5.94,-5.94z" +
+                "M19,3h-1V1h-2v2H8V1H6v2H5C3.89,3 3.01,3.9 3.01,5L3,19c0,1.1 0.89,2 2,2h14" +
+                "c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2zM19,19H5V8h14v11z",
+        )
+    }
+
     val History: ImageVector by lazy {
         materialIcon(
             name = "History",

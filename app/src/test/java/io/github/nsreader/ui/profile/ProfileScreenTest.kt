@@ -24,6 +24,69 @@ class ProfileScreenTest {
     val composeRule = createComposeRule()
 
     @Test
+    fun `signed out profile renders c7 and starts sign in`() {
+        var signInOpened = false
+        composeRule.setContent {
+            NodeSeekTheme {
+                ProfileScreen(
+                    state = ProfileUiState(),
+                    onSignIn = { signInOpened = true },
+                    onSignOut = {},
+                    onRetry = {},
+                    onSettings = {},
+                    onAccountSettings = {},
+                    onOpenWebsite = {},
+                    onOpenSpace = {},
+                    onAssets = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
+                    onFollow = {},
+                    onTools = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("登录 NodeSeek，解锁完整体验").assertIsDisplayed()
+        composeRule.onNodeWithText("发帖回复").assertIsDisplayed()
+        composeRule.onNodeWithText("通知私信").assertIsDisplayed()
+        composeRule.onNodeWithText("签到鸡腿").assertIsDisplayed()
+        composeRule.onNodeWithText("登录 NodeSeek").performClick()
+
+        check(signInOpened)
+    }
+
+    @Test
+    fun `signed out profile keeps guest destinations available`() {
+        var settingsOpened = false
+        var toolsOpened = false
+        composeRule.setContent {
+            NodeSeekTheme {
+                ProfileScreen(
+                    state = ProfileUiState(),
+                    onSignIn = {},
+                    onSignOut = {},
+                    onRetry = {},
+                    onSettings = { settingsOpened = true },
+                    onAccountSettings = {},
+                    onOpenWebsite = {},
+                    onOpenSpace = {},
+                    onAssets = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
+                    onFollow = {},
+                    onTools = { toolsOpened = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("设置").performClick()
+        composeRule.onNodeWithText("社区工具").performClick()
+
+        check(settingsOpened)
+        check(toolsOpened)
+    }
+
+    @Test
     fun `signed in profile shows unknown level in the resource cards`() {
         composeRule.setContent {
             NodeSeekTheme {

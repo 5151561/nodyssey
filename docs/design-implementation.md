@@ -6,6 +6,12 @@
 App 的总体真实状态以 [`implementation-status.md`](implementation-status.md) 为准；
 本文记录已完成核对的画板与代码入口，防止实现脱离设计稿。
 
+## 批次 C
+
+| 画板 | 实现状态 | 主要代码 | 仍需注意 |
+|---|---|---|---|
+| c7 我的 · 未登录 v2 | 已按稿实现 | `ui/profile/ProfileScreen.kt`、`ui/common/NodeSeekIcons.kt` | 登录继续使用受限 WebView 并共享 Cookie；设置与社区工具是未登录可用入口，页面不伪造账号数据 |
+
 ## 批次 F
 
 | 画板 | 实现状态 | 主要代码 | 仍需注意 |

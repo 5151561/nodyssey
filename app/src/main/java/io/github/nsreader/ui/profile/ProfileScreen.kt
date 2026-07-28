@@ -1,14 +1,20 @@
 package io.github.nsreader.ui.profile
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,7 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -36,6 +42,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -50,7 +59,7 @@ import io.github.nsreader.ui.common.GroupedRow
 import io.github.nsreader.ui.common.LoadingState
 import io.github.nsreader.ui.common.NodeSeekErrorState
 import io.github.nsreader.ui.common.NodeSeekIcons
-import io.github.nsreader.ui.common.SignedOutState
+import io.github.nsreader.ui.common.SectionLabel
 import io.github.nsreader.ui.common.UserAvatar
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import io.github.nsreader.ui.theme.Sizes
@@ -109,15 +118,20 @@ fun ProfileScreen(
     onAssets: () -> Unit,
     onAttendance: () -> Unit,
     onAttendanceBoard: () -> Unit,
-    onDismissAttendanceBoard: () -> Unit = {},
-    onRetryAttendanceBoard: () -> Unit = {},
     onFollow: () -> Unit,
     onTools: () -> Unit,
     modifier: Modifier = Modifier,
+    onDismissAttendanceBoard: () -> Unit = {},
+    onRetryAttendanceBoard: () -> Unit = {},
 ) {
     Scaffold(modifier = modifier) { padding ->
         if (!state.isSignedIn) {
-            SignedOutState(onSignIn = onSignIn, modifier = Modifier.padding(padding))
+            SignedOutProfile(
+                onSignIn = onSignIn,
+                onSettings = onSettings,
+                onTools = onTools,
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
 
@@ -246,6 +260,190 @@ fun ProfileScreen(
             onRetry = onRetryAttendanceBoard,
             onDismiss = onDismissAttendanceBoard,
         )
+    }
+}
+
+/** Board c7: the useful signed-out version of 我的, including the two guest-safe destinations. */
+@Composable
+private fun SignedOutProfile(
+    onSignIn: () -> Unit,
+    onSettings: () -> Unit,
+    onTools: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize().readableWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = Spacing.lg),
+    ) {
+        item(key = "welcome-illustration") {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                SignedOutIllustration()
+            }
+        }
+        item(key = "welcome-copy") {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Text(
+                    text = stringResource(R.string.profile_signed_out_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { heading() },
+                )
+                Text(
+                    text = stringResource(R.string.profile_signed_out_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        item(key = "benefits") {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                SignedOutBenefit(
+                    icon = Icons.Default.Create,
+                    title = stringResource(R.string.profile_guest_benefit_post),
+                    subtitle = stringResource(R.string.profile_guest_benefit_post_hint),
+                    shape = RoundedCornerShape(18.dp, 5.dp, 5.dp, 18.dp),
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
+                SignedOutBenefit(
+                    icon = NodeSeekIcons.ChatBubble,
+                    title = stringResource(R.string.profile_guest_benefit_messages),
+                    subtitle = stringResource(R.string.profile_guest_benefit_messages_hint),
+                    shape = RoundedCornerShape(5.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
+                SignedOutBenefit(
+                    icon = NodeSeekIcons.EventAvailable,
+                    title = stringResource(R.string.profile_guest_benefit_attendance),
+                    subtitle = stringResource(R.string.profile_guest_benefit_attendance_hint),
+                    shape = RoundedCornerShape(5.dp, 18.dp, 18.dp, 5.dp),
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        item(key = "sign-in") {
+            Button(
+                onClick = onSignIn,
+                modifier = Modifier.fillMaxWidth().padding(top = 20.dp).height(Sizes.minTouchTarget),
+                shape = CircleShape,
+            ) {
+                Icon(NodeSeekIcons.Login, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(
+                    text = stringResource(R.string.profile_sign_in),
+                    modifier = Modifier.padding(start = Spacing.sm),
+                )
+            }
+            Text(
+                text = stringResource(R.string.profile_sign_in_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            )
+        }
+        item(key = "guest-menu") {
+            Column(modifier = Modifier.padding(top = 18.dp)) {
+                SectionLabel(stringResource(R.string.profile_guest_section))
+                GroupedColumn {
+                    GroupedRow(
+                        title = stringResource(R.string.settings_title),
+                        subtitle = stringResource(R.string.profile_guest_settings_hint),
+                        first = true,
+                        icon = Icons.Default.Settings,
+                        onClick = onSettings,
+                    )
+                    GroupedRow(
+                        title = stringResource(R.string.profile_tools),
+                        subtitle = stringResource(R.string.profile_guest_tools_hint),
+                        last = true,
+                        icon = NodeSeekIcons.DashboardCustomize,
+                        onClick = onTools,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The only custom node in c7: a decorative illustration with no input or navigation semantics. */
+@Composable
+private fun SignedOutIllustration(modifier: Modifier = Modifier) {
+    Box(modifier.width(216.dp).height(148.dp)) {
+        Surface(
+            modifier = Modifier.offset(x = 50.dp, y = 12.dp).size(118.dp),
+            shape = StatusShapes.Welcome,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = NodeSeekIcons.WavingHand,
+                    contentDescription = null,
+                    modifier = Modifier.size(52.dp),
+                )
+            }
+        }
+        Surface(
+            modifier = Modifier.offset(x = 154.dp).size(56.dp),
+            shape = StatusShapes.NetworkError,
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+        ) {}
+        Surface(
+            modifier = Modifier.offset(x = 8.dp, y = 96.dp).size(42.dp),
+            shape = StatusShapes.Empty,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+        ) {}
+        Surface(
+            modifier = Modifier.offset(x = 160.dp, y = 124.dp).size(22.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+        ) {}
+        Surface(
+            modifier = Modifier.offset(x = 26.dp).size(14.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+        ) {}
+    }
+}
+
+@Composable
+private fun SignedOutBenefit(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    shape: RoundedCornerShape,
+    containerColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = containerColor,
+        contentColor = contentColor,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.md),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+            Text(text = title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            Text(text = subtitle, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        }
     }
 }
 
@@ -407,7 +605,14 @@ private fun ProfileSignedInPreview() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "c7 我的 · 未登录")
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+    name = "c7 我的 · 未登录 · dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
 @Composable
 private fun ProfileSignedOutPreview() {
     NodeSeekTheme {
