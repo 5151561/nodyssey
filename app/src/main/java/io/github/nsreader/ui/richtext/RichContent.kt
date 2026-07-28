@@ -40,6 +40,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -59,11 +60,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import io.github.nsreader.R
+import io.github.nsreader.core.image.ImagesDeferredException
+import io.github.nsreader.core.image.allowMeteredImage
 import io.github.nsreader.model.InlineNode
 import io.github.nsreader.model.InlineStyle
 import io.github.nsreader.model.RichNode
 import io.github.nsreader.ui.common.NodeSeekIcons
+import io.github.nsreader.ui.common.SkippedImagePlaceholder
 import io.github.nsreader.ui.common.rememberClipboardCopy
 import io.github.nsreader.ui.theme.CodeStyle
 import io.github.nsreader.ui.theme.NodeSeekTheme
@@ -216,6 +221,10 @@ private fun RichBlock(
  * Screenshots of benchmark output are the single most common attachment on this forum and are often
  * three screens tall; letting one push the whole thread out of view is worse than cropping it. The
  * crop keeps the top — where the interesting part always is — and says so.
+ *
+ * When 仅 Wi-Fi 加载图片 skips the image it is replaced by [SkippedImagePlaceholder] rather than by
+ * nothing, and a tap on that placeholder re-requests the image with the preference waived for this
+ * one image — see [allowMeteredImage].
  */
 @Composable
 private fun BlockImage(
@@ -223,6 +232,25 @@ private fun BlockImage(
     onImageClick: (String) -> Unit,
 ) {
     var cropped by remember(node.url) { mutableStateOf(false) }
+    var allowMetered by remember(node.url) { mutableStateOf(false) }
+    // Reset with the request: once the user waives the preference the placeholder must give way
+    // even before the new request reports back, or the tap looks like it did nothing.
+    var skipped by remember(node.url, allowMetered) { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val request =
+        remember(node.url, allowMetered) {
+            ImageRequest
+                .Builder(context)
+                .data(node.url)
+                .allowMeteredImage(allowMetered)
+                .build()
+        }
+
+    if (skipped) {
+        SkippedImagePlaceholder(onLoad = { allowMetered = true })
+        return
+    }
 
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val availableWidth = maxWidth
@@ -234,7 +262,7 @@ private fun BlockImage(
                 .clickable { onImageClick(node.url) },
         ) {
             AsyncImage(
-                model = node.url,
+                model = request,
                 contentDescription = node.alt,
                 contentScale = ContentScale.FillWidth,
                 alignment = Alignment.TopCenter,
@@ -244,6 +272,9 @@ private fun BlockImage(
                         val scaled = availableWidth * (image.height.toFloat() / image.width.toFloat())
                         cropped = scaled > Sizes.maxInlineImageHeight
                     }
+                },
+                onError = { error ->
+                    skipped = error.result.throwable is ImagesDeferredException
                 },
                 modifier =
                 Modifier

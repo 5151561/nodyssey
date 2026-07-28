@@ -73,6 +73,7 @@ import io.github.nsreader.data.Board
 import io.github.nsreader.data.composer.ImageAttachment
 import io.github.nsreader.data.composer.PostDraft
 import io.github.nsreader.data.composer.PostPermission
+import io.github.nsreader.data.composer.UploadFailure
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.theme.PostBody
 import io.github.nsreader.ui.theme.Spacing
@@ -104,6 +105,8 @@ fun PostComposerRoute(
     )
     UploadErrorSnackbar(
         failedCount = state.failedUploadCount,
+        failure = state.uploadFailure,
+        detail = state.uploadErrorDetail,
         snackbarHostState = snackbarHostState,
         onRetry = viewModel::retryFailedUploads,
     )
@@ -173,12 +176,14 @@ private fun PublishErrorSnackbar(
 @Composable
 private fun UploadErrorSnackbar(
     failedCount: Int,
+    failure: UploadFailure?,
+    detail: String?,
     snackbarHostState: SnackbarHostState,
     onRetry: () -> Unit,
 ) {
-    val message = stringResource(R.string.composer_image_failed_count, failedCount)
+    val message = uploadFailureText(failedCount, failure, detail)
     val retry = stringResource(R.string.action_retry)
-    LaunchedEffect(failedCount) {
+    LaunchedEffect(failedCount, message) {
         if (failedCount == 0) return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
             message = message,

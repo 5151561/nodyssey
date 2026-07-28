@@ -62,7 +62,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
 import io.github.nsreader.R
+import io.github.nsreader.core.image.ImagesDeferredException
+import io.github.nsreader.core.image.allowMeteredImage
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.theme.Spacing
 import io.github.nsreader.ui.theme.TABULAR_FIGURES
@@ -290,6 +293,18 @@ private fun ZoomableImage(
     var offset by remember(url) { mutableStateOf(Offset.Zero) }
     var dragY by remember(url) { mutableFloatStateOf(0f) }
     var retryToken by remember(url) { mutableIntStateOf(0) }
+    // Opening the viewer is already a deliberate act, but a skipped image is skipped here too — the
+    // user has to say so once, and only then does this one image get to use mobile data.
+    var allowMetered by remember(url) { mutableStateOf(false) }
+    val context = LocalContext.current
+    val request =
+        remember(url, allowMetered) {
+            ImageRequest
+                .Builder(context)
+                .data(url)
+                .allowMeteredImage(allowMetered)
+                .build()
+        }
     val dismissDragThresholdPx = with(LocalDensity.current) { DISMISS_DRAG_THRESHOLD.toPx() }
 
     val animatedScale by animateFloatAsState(targetValue = scale, label = "viewer-scale")
@@ -338,12 +353,24 @@ private fun ZoomableImage(
             },
         contentAlignment = Alignment.Center,
     ) {
-        key(retryToken) {
-            val painter = rememberAsyncImagePainter(model = url)
+        key(retryToken, allowMetered) {
+            val painter = rememberAsyncImagePainter(model = request)
             val state by painter.state.collectAsState()
 
             when (state) {
-                is AsyncImagePainter.State.Error -> ImageFailure(url = url, onRetry = { retryToken++ })
+                is AsyncImagePainter.State.Error -> {
+                    // Not a failure at all when the app declined on purpose — see
+                    // [ImagesDeferredException]. Naming the switch is what helps, and the action
+                    // then has to be one that works: fetching it anyway, not retrying a request the
+                    // app will decline again.
+                    val deferred = (state as AsyncImagePainter.State.Error)
+                        .result.throwable is ImagesDeferredException
+                    ImageFailure(
+                        url = url,
+                        deferred = deferred,
+                        onRetry = { if (deferred) allowMetered = true else retryToken++ },
+                    )
+                }
 
                 else ->
                     Image(
@@ -368,6 +395,7 @@ private fun ZoomableImage(
 @Composable
 private fun ImageFailure(
     url: String,
+    deferred: Boolean,
     onRetry: () -> Unit,
 ) {
     Surface(
@@ -389,7 +417,9 @@ private fun ImageFailure(
             )
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    stringResource(R.string.viewer_load_failed),
+                    stringResource(
+                        if (deferred) R.string.viewer_deferred_wifi_only else R.string.viewer_load_failed,
+                    ),
                     style = MaterialTheme.typography.labelLarge,
                 )
                 Text(
@@ -405,7 +435,9 @@ private fun ImageFailure(
                 shape = RoundedCornerShape(17.dp),
             ) {
                 Text(
-                    stringResource(R.string.action_retry),
+                    stringResource(
+                        if (deferred) R.string.action_load_anyway else R.string.action_retry,
+                    ),
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                 )

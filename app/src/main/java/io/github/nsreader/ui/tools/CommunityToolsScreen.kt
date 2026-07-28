@@ -51,7 +51,7 @@ fun CommunityToolsScreen(
     onLucky: () -> Unit,
     onInvite: () -> Unit,
     onRuling: () -> Unit,
-    onAbout: () -> Unit,
+    onAboutCommunity: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -144,12 +144,12 @@ fun CommunityToolsScreen(
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             )
             GroupedRow(
-                title = stringResource(R.string.settings_about_app),
-                subtitle = stringResource(R.string.about_licenses_hint),
+                title = stringResource(R.string.about_community_title),
+                subtitle = stringResource(R.string.about_community_hint),
                 icon = Icons.Default.Info,
                 first = true,
                 last = true,
-                onClick = onAbout,
+                onClick = onAboutCommunity,
             )
         }
     }
@@ -167,7 +167,7 @@ private fun CommunityToolsPreview() {
             onLucky = {},
             onInvite = {},
             onRuling = {},
-            onAbout = {},
+            onAboutCommunity = {},
         )
     }
 }
@@ -184,7 +184,7 @@ private fun CommunityToolsDarkPreview() {
             onLucky = {},
             onInvite = {},
             onRuling = {},
-            onAbout = {},
+            onAboutCommunity = {},
         )
     }
 }

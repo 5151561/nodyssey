@@ -1,11 +1,11 @@
 package io.github.nsreader.ui.account
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import io.github.nsreader.data.account.AccountProfileFields
-import io.github.nsreader.data.account.TelegramBinding
 import io.github.nsreader.ui.theme.NodeSeekTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,18 +25,8 @@ class AccountSettingsScreenTest {
 
     private val populated =
         AccountSettingsUiState(
-            displayName = "花间一壶酒",
-            fields =
-            AccountProfileFields(
-                bio = "常驻杭州",
-                signature = "第一行\n第二行",
-                readme = "1234567890",
-            ),
-            twoFactorEnabled = false,
-            email = "hikari.zhg@gmail.com",
-            telegram = TelegramBinding(bound = false),
             blockedCount = 3,
-            hiddenBoardCount = 2,
+            imageHostConnected = true,
         )
 
     private fun setContent(
@@ -46,6 +36,7 @@ class AccountSettingsScreenTest {
         onOpenContact: () -> Unit = {},
         onOpenBlockList: () -> Unit = {},
         onOpenPreferences: () -> Unit = {},
+        onOpenNodeImage: () -> Unit = {},
         onSignOut: () -> Unit = {},
     ) {
         composeRule.setContent {
@@ -58,6 +49,7 @@ class AccountSettingsScreenTest {
                     onOpenContact = onOpenContact,
                     onOpenBlockList = onOpenBlockList,
                     onOpenPreferences = onOpenPreferences,
+                    onOpenNodeImage = onOpenNodeImage,
                     onSignOut = onSignOut,
                 )
             }
@@ -65,64 +57,47 @@ class AccountSettingsScreenTest {
     }
 
     @Test
-    fun `shows all seven groups from the site's own settings page`() {
+    fun `shows exactly one entry for each destination`() {
         setContent()
 
-        listOf("个人信息", "安全", "双因素验证", "联系方式", "屏蔽用户", "常用偏好", "首页版块").forEach { group ->
-            composeRule.onNodeWithText(group).performScrollTo().assertExists()
+        listOf("个人信息", "安全", "联系方式", "屏蔽用户", "偏好与首页版块", "NodeImage 图床")
+            .forEach { destination ->
+                composeRule.onAllNodesWithText(destination).assertCountEquals(1)
+            }
+    }
+
+    @Test
+    fun `does not expose page sections as separate routes`() {
+        setContent()
+
+        listOf(
+            "头像",
+            "Bio",
+            "签名",
+            "Readme",
+            "修改密码",
+            "两步验证（2FA）",
+            "邮箱",
+            "Telegram 提醒",
+            "首页显示的版块",
+        ).forEach { section ->
+            composeRule.onNodeWithText(section).assertDoesNotExist()
         }
     }
 
-    /** The subtitles are the reason this screen exists rather than a link to `/setting` in a browser. */
     @Test
-    fun `each row summarises its current value`() {
+    fun `destination summaries explain what each page contains`() {
         setContent()
 
-        composeRule.onNodeWithText("常驻杭州").assertExists()
-        composeRule.onNodeWithText("2 行 · Markdown").assertExists()
-        composeRule.onNodeWithText("10 字").assertExists()
-        composeRule.onNodeWithText("未开启").assertExists()
-        composeRule.onNodeWithText("暂未绑定 telegram").performScrollTo().assertExists()
+        composeRule.onNodeWithText("头像、Bio、签名与 Readme").assertExists()
+        composeRule.onNodeWithText("修改密码与两步验证").assertExists()
+        composeRule.onNodeWithText("邮箱、手机与 Telegram").assertExists()
         composeRule.onNodeWithText("3 人").performScrollTo().assertExists()
-        composeRule.onNodeWithText("已隐藏 2 个").performScrollTo().assertExists()
-    }
-
-    /** An address on a screen that gets screenshotted; the sub-page shows it in full. */
-    @Test
-    fun `the email row is masked`() {
-        setContent()
-
-        composeRule.onNodeWithText("h***@gmail.com").performScrollTo().assertExists()
-        composeRule.onNodeWithText("hikari.zhg@gmail.com").assertDoesNotExist()
+        composeRule.onNodeWithText("节日主题、夜间模式与首页版块").performScrollTo().assertExists()
     }
 
     @Test
-    fun `a bound telegram row shows who it is bound to`() {
-        setContent(
-            populated.copy(telegram = TelegramBinding(bound = true, displayName = "Hikari Zhg")),
-        )
-
-        composeRule.onNodeWithText("Hikari Zhg").performScrollTo().assertExists()
-    }
-
-    @Test
-    fun `an untouched home-board preference reads as everything shown`() {
-        setContent(populated.copy(hiddenBoardCount = 0))
-
-        composeRule.onNodeWithText("全部显示").performScrollTo().assertExists()
-    }
-
-    /** Values the site has not answered for yet are left blank, never guessed at. */
-    @Test
-    fun `rows carry no subtitle before the account has loaded`() {
-        setContent(AccountSettingsUiState())
-
-        composeRule.onNodeWithText("未开启").assertDoesNotExist()
-        composeRule.onNodeWithText("暂未绑定 telegram").assertDoesNotExist()
-    }
-
-    @Test
-    fun `every group routes somewhere`() {
+    fun `each destination routes exactly once`() {
         val opened = mutableListOf<String>()
         setContent(
             onOpenProfileFields = { opened += "profile" },
@@ -130,18 +105,18 @@ class AccountSettingsScreenTest {
             onOpenContact = { opened += "contact" },
             onOpenBlockList = { opened += "block" },
             onOpenPreferences = { opened += "preferences" },
+            onOpenNodeImage = { opened += "nodeimage" },
         )
 
-        composeRule.onNodeWithText("Bio").performScrollTo().performClick()
-        composeRule.onNodeWithText("修改密码").performScrollTo().performClick()
-        composeRule.onNodeWithText("两步验证（2FA）").performScrollTo().performClick()
-        composeRule.onNodeWithText("Telegram 提醒").performScrollTo().performClick()
-        composeRule.onNodeWithText("已屏蔽列表").performScrollTo().performClick()
+        composeRule.onNodeWithText("个人信息").performScrollTo().performClick()
+        composeRule.onNodeWithText("安全").performScrollTo().performClick()
+        composeRule.onNodeWithText("联系方式").performScrollTo().performClick()
+        composeRule.onNodeWithText("屏蔽用户").performScrollTo().performClick()
         composeRule.onNodeWithText("偏好与首页版块").performScrollTo().performClick()
-        composeRule.onNodeWithText("首页显示的版块").performScrollTo().performClick()
+        composeRule.onNodeWithText("NodeImage 图床").performScrollTo().performClick()
 
         assertEquals(
-            listOf("profile", "security", "security", "contact", "block", "preferences", "preferences"),
+            listOf("profile", "security", "contact", "block", "preferences", "nodeimage"),
             opened,
         )
     }

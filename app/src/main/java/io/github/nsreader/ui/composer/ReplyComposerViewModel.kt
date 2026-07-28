@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nsreader.core.AppClock
+import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.core.runCatchingExceptCancellation
@@ -16,6 +17,7 @@ import io.github.nsreader.data.composer.ImageAttachment
 import io.github.nsreader.data.composer.ImageUploadQueue
 import io.github.nsreader.data.composer.ImageUploader
 import io.github.nsreader.data.composer.PickedImage
+import io.github.nsreader.data.composer.UploadFailure
 import io.github.nsreader.data.composer.UploadStatus
 import io.github.nsreader.di.AppContainer
 import kotlinx.coroutines.Job
@@ -34,6 +36,8 @@ data class ReplyQuote(
     val floor: Int,
     val author: String,
     val excerpt: String,
+    /** The floor's own timestamp, reproduced in the quote header the way the site's does. */
+    val postedAt: String? = null,
 )
 
 /**
@@ -49,7 +53,7 @@ class ReplyComposerViewModel(
     private val clock: AppClock,
     uploader: ImageUploader,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(ReplyComposerUiState())
+    private val _uiState = MutableStateFlow(ReplyComposerUiState(postId = postId))
     val uiState: StateFlow<ReplyComposerUiState> = _uiState.asStateFlow()
 
     private val uploads = ImageUploadQueue(viewModelScope, uploader)
@@ -132,7 +136,7 @@ class ReplyComposerViewModel(
             }.onSuccess { floor ->
                 saveJob?.cancel()
                 repository.deleteDraft(postId)
-                _uiState.value = ReplyComposerUiState()
+                _uiState.value = ReplyComposerUiState(postId = postId)
                 uploads.clear()
                 onPublished(floor)
             }.onFailure { throwable ->
@@ -188,6 +192,8 @@ class ReplyComposerViewModel(
 }
 
 data class ReplyComposerUiState(
+    /** Fixed for the lifetime of the editor; [submissionBody] needs it to link the quoted floor. */
+    val postId: Long = 0L,
     val visible: Boolean = false,
     val previewing: Boolean = false,
     val body: String = "",
@@ -200,6 +206,13 @@ data class ReplyComposerUiState(
 ) {
     val failedUploadCount: Int get() = attachments.count { it.status == UploadStatus.FAILED }
 
+    /** The first failure's reason, for the error strip; retrying clears it along with the status. */
+    val uploadFailure: UploadFailure?
+        get() = attachments.firstOrNull { it.status == UploadStatus.FAILED }?.failure
+
+    val uploadErrorDetail: String?
+        get() = attachments.firstOrNull { it.status == UploadStatus.FAILED }?.errorDetail
+
     val canPublish: Boolean
         get() = body.isNotBlank() &&
             !isPublishing &&
@@ -208,15 +221,24 @@ data class ReplyComposerUiState(
     /**
      * What actually gets sent: the quote is a chip in the editor but a Markdown blockquote on the
      * wire, because that is how the site's own quote button leaves it in the comment source.
+     *
+     * The shape is copied from a captured quote rather than invented (sandbox thread, 2026-07-28):
+     * a header line naming the author and linking the floor, the quoted text as further blockquote
+     * lines, a blank line, then the reply. Getting the order wrong is not cosmetic — the site renders
+     * `@name` at the *end* of a blockquote as part of the quotation, so the previous shape read as
+     * though the quoted author had signed the reply.
      */
     val submissionBody: String
         get() = quote?.let { quote ->
             buildString {
-                append("> ")
-                append(quote.excerpt.replace("\n", "\n> "))
-                append("\n\n@")
-                append(quote.author)
-                append(' ')
+                append("> @").append(quote.author)
+                append(" [#").append(quote.floor).append(']')
+                append('(').append(NodeSeekSite.BASE_URL)
+                append(NodeSeekSite.postPath(postId)).append('#').append(quote.floor).append(')')
+                quote.postedAt?.takeIf(String::isNotBlank)?.let { append(" 发布于").append(it) }
+                append('\n')
+                append("> ").append(quote.excerpt.replace("\n", "\n> "))
+                append("\n\n")
             }
         }.orEmpty() + body
 }

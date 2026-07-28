@@ -1,6 +1,7 @@
 package io.github.nsreader.data.composer
 
 import io.github.nsreader.core.runCatchingExceptCancellation
+import io.github.nsreader.data.nodeimage.NodeImageException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -66,7 +67,12 @@ class ImageUploadQueue(
         _attachments.update { current ->
             current.map { attachment ->
                 if (attachment.id == id && attachment.status == UploadStatus.FAILED) {
-                    attachment.copy(status = UploadStatus.WAITING, progress = 0f)
+                    attachment.copy(
+                        status = UploadStatus.WAITING,
+                        progress = 0f,
+                        failure = null,
+                        errorDetail = null,
+                    )
                 } else {
                     attachment
                 }
@@ -79,7 +85,12 @@ class ImageUploadQueue(
         _attachments.update { current ->
             current.map { attachment ->
                 if (attachment.status == UploadStatus.FAILED) {
-                    attachment.copy(status = UploadStatus.WAITING, progress = 0f)
+                    attachment.copy(
+                        status = UploadStatus.WAITING,
+                        progress = 0f,
+                        failure = null,
+                        errorDetail = null,
+                    )
                 } else {
                     attachment
                 }
@@ -113,8 +124,14 @@ class ImageUploadQueue(
                             it.copy(status = UploadStatus.UPLOADED, progress = 1f, remoteUrl = url)
                         }
                         _attachments.value.firstOrNull { it.id == next.id }?.let { _uploaded.emit(it) }
-                    }.onFailure {
-                        mutate(next.id) { it.copy(status = UploadStatus.FAILED) }
+                    }.onFailure { throwable ->
+                        mutate(next.id) {
+                            it.copy(
+                                status = UploadStatus.FAILED,
+                                failure = throwable.toUploadFailure(),
+                                errorDetail = (throwable as? NodeImageException)?.detail,
+                            )
+                        }
                     }
             }
         }

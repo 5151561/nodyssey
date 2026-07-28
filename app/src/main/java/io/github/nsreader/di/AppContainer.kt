@@ -16,10 +16,12 @@ import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.AssetsRepository
 import io.github.nsreader.data.AwardRepository
 import io.github.nsreader.data.CategoryRepository
+import io.github.nsreader.data.CommunityRepository
 import io.github.nsreader.data.FollowRepository
 import io.github.nsreader.data.MessageRepository
 import io.github.nsreader.data.NetworkAssetsRepository
 import io.github.nsreader.data.NetworkAwardRepository
+import io.github.nsreader.data.NetworkCommunityRepository
 import io.github.nsreader.data.NetworkMessageRepository
 import io.github.nsreader.data.NetworkPostDataSource
 import io.github.nsreader.data.NetworkProfileRepository
@@ -41,12 +43,15 @@ import io.github.nsreader.data.UserSpaceRepository
 import io.github.nsreader.data.account.AccountSettingsRepository
 import io.github.nsreader.data.account.NetworkAccountSettingsRepository
 import io.github.nsreader.data.composer.CommentComposerRepository
+import io.github.nsreader.data.composer.DefaultCommentComposerRepository
+import io.github.nsreader.data.composer.DefaultImagePreparer
 import io.github.nsreader.data.composer.DefaultPostComposerRepository
 import io.github.nsreader.data.composer.ImageUploader
-import io.github.nsreader.data.composer.LocalCommentComposerRepository
 import io.github.nsreader.data.composer.NodeImageUploader
 import io.github.nsreader.data.composer.PostComposerRepository
 import io.github.nsreader.data.local.NodeSeekDatabase
+import io.github.nsreader.data.nodeimage.DefaultNodeImageRepository
+import io.github.nsreader.data.nodeimage.NodeImageRepository
 import io.github.nsreader.data.session.SessionRepository
 import io.github.nsreader.data.settings.SettingsRepository
 import okhttp3.OkHttpClient
@@ -77,10 +82,14 @@ interface AppContainer {
     val accountSettingsRepository: AccountSettingsRepository
     val commentComposerRepository: CommentComposerRepository
     val imageUploader: ImageUploader
+
+    /** nodeimage.com — a service of its own, with its own credential. See [NodeImageRepository]. */
+    val nodeImageRepository: NodeImageRepository
     val sessionRepository: SessionRepository
     val userSpaceRepository: UserSpaceRepository
     val assetsRepository: AssetsRepository
     val awardRepository: AwardRepository
+    val communityRepository: CommunityRepository
     val termsRepository: TermsRepository
 
     /*
@@ -206,6 +215,10 @@ class DefaultAppContainer(
         NetworkAwardRepository(htmlClient, dispatchers)
     }
 
+    override val communityRepository: CommunityRepository by lazy {
+        NetworkCommunityRepository(htmlClient, dispatchers)
+    }
+
     override val termsRepository: TermsRepository by lazy {
         NetworkTermsRepository(htmlClient)
     }
@@ -217,10 +230,53 @@ class DefaultAppContainer(
     override val rulingRepository: RulingRepository by lazy { SiteOnlyRulingRepository() }
 
     override val commentComposerRepository: CommentComposerRepository by lazy {
-        LocalCommentComposerRepository(appContext, clock)
+        DefaultCommentComposerRepository(appContext, okHttpClient, dispatchers, clock)
     }
 
-    override val imageUploader: ImageUploader by lazy { NodeImageUploader() }
+    /**
+     * A client of its own for the image host, sharing nothing with [okHttpClient].
+     *
+     * That client carries the WebView cookie jar and stamps `Referer: nodeseek.com` on anything
+     * without one. Neither is appropriate for a third-party host we hand an API key to: the key is
+     * the credential, the cookies are not its business, and the referrer would tell nodeimage.com
+     * about a browsing session it has no part in. The connection pool is shared because pooling is
+     * per-host anyway, so nothing crosses between them.
+     */
+    private val nodeImageClient: OkHttpClient by lazy {
+        OkHttpClient
+            .Builder()
+            .connectionPool(okHttpClient.connectionPool)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            // Uploads are the slow call here, and a photo on a weak connection takes longer than a
+            // page read ever does.
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            // The UA is shared but the cookie jar is not. `api.nodeimage.com` is behind a Cloudflare
+            // managed challenge, and OkHttp's default `okhttp/4.x` is the single most reliable way
+            // to be served the interstitial instead of JSON. The device's real browser UA is what
+            // the challenge expects to see; no cookie or referrer rides along with it.
+            .addInterceptor { chain ->
+                val request = chain.request()
+                chain.proceed(
+                    if (request.header("User-Agent") != null) {
+                        request
+                    } else {
+                        request.newBuilder().header("User-Agent", userAgent.value).build()
+                    },
+                )
+            }.build()
+    }
+
+    override val nodeImageRepository: NodeImageRepository by lazy {
+        DefaultNodeImageRepository(appContext, nodeImageClient, dispatchers)
+    }
+
+    override val imageUploader: ImageUploader by lazy {
+        NodeImageUploader(
+            repository = nodeImageRepository,
+            preparer = DefaultImagePreparer(appContext, dispatchers),
+        )
+    }
 
     /**
      * Shares the cookie jar rather than owning a store of its own: the cookies OkHttp sends and the

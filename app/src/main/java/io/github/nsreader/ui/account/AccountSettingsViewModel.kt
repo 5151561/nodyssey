@@ -8,11 +8,9 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nsreader.core.runCatchingExceptCancellation
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.ProfileRepository
-import io.github.nsreader.data.account.AccountProfileFields
 import io.github.nsreader.data.account.AccountSettingsRepository
-import io.github.nsreader.data.account.TelegramBinding
+import io.github.nsreader.data.nodeimage.NodeImageRepository
 import io.github.nsreader.data.session.SessionRepository
-import io.github.nsreader.data.settings.SettingsRepository
 import io.github.nsreader.di.AppContainer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,20 +24,19 @@ import kotlinx.coroutines.launch
 /**
  * State holder for 账号设置 (8g).
  *
- * The screen is a hub, and the only thing that makes it more than a list of links is the current-value
- * subtitle on each row. Those come from three different places — the forum profile, the site's setting
- * page, and the app's own preferences — so the merge happens here rather than in the composable.
+ * The screen is a destination hub. Page-level summaries are static; only the blocked-user count and
+ * NodeImage connection state are live values, so opening the hub does not prefetch data owned by its
+ * profile, security, contact, and preference destinations.
  *
- * A failure to read the site half is not an error state. The rows still navigate, and 8g showing an
- * error screen because the blocked-user count could not be fetched would block access to 首页版块,
- * which is entirely local and always works.
+ * A failure to read the blocked-user count is not an error state. The row still navigates, because a
+ * summary failure must not block access to the destination itself.
  */
 class AccountSettingsViewModel(
     private val account: AccountSettingsRepository,
     private val profiles: ProfileRepository,
-    private val settings: SettingsRepository,
     private val posts: PostRepository,
     private val session: SessionRepository,
+    nodeImage: NodeImageRepository,
 ) : ViewModel() {
     private val remote = MutableStateFlow(RemoteAccountState())
     private val signedOut = MutableStateFlow(false)
@@ -49,20 +46,13 @@ class AccountSettingsViewModel(
     val uiState: StateFlow<AccountSettingsUiState> =
         combine(
             remote,
-            settings.settings,
             signedOut,
-        ) { site, preferences, isSignedOut ->
+            nodeImage.apiKey,
+        ) { site, isSignedOut, imageHostKey ->
             AccountSettingsUiState(
-                avatarUrl = site.avatarUrl,
-                displayName = site.displayName,
-                fields = site.fields,
-                twoFactorEnabled = site.twoFactorEnabled,
-                email = site.email,
-                telegram = site.telegram,
                 blockedCount = site.blockedCount,
-                hiddenBoardCount = preferences.hiddenHomeBoards.size,
-                holidayTheme = preferences.holidayTheme,
                 signedOut = isSignedOut,
+                imageHostConnected = imageHostKey != null,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -78,20 +68,6 @@ class AccountSettingsViewModel(
         loadJob?.cancel()
         loadJob =
             viewModelScope.launch {
-                // The forum profile is the half that works today, so it is read on its own rather than
-                // inside the same runCatching as the settings-page calls that are still stubbed out.
-                runCatchingExceptCancellation { profiles.profile() }
-                    .onSuccess { profile ->
-                        remote.update { it.copy(avatarUrl = profile.avatarUrl, displayName = profile.name) }
-                    }
-                runCatchingExceptCancellation { account.profileFields() }
-                    .onSuccess { fields -> remote.update { it.copy(fields = fields) } }
-                runCatchingExceptCancellation { account.twoFactor() }
-                    .onSuccess { state -> remote.update { it.copy(twoFactorEnabled = state.enabled) } }
-                runCatchingExceptCancellation { account.contact() }
-                    .onSuccess { contact -> remote.update { it.copy(email = contact.email) } }
-                runCatchingExceptCancellation { account.telegramBinding() }
-                    .onSuccess { binding -> remote.update { it.copy(telegram = binding) } }
                 runCatchingExceptCancellation { account.blockedUsers() }
                     .onSuccess { blocked -> remote.update { it.copy(blockedCount = blocked.size) } }
             }
@@ -126,38 +102,24 @@ class AccountSettingsViewModel(
                     AccountSettingsViewModel(
                         account = container.accountSettingsRepository,
                         profiles = container.profileRepository,
-                        settings = container.settingsRepository,
                         posts = container.postRepository,
                         session = container.sessionRepository,
+                        nodeImage = container.nodeImageRepository,
                     )
                 }
             }
     }
 }
 
-/** Everything 8g reads off the network, kept apart from the preferences it merges with. */
+/** The only remote summary rendered by the destination hub. */
 private data class RemoteAccountState(
-    val avatarUrl: String? = null,
-    val displayName: String = "",
-    val fields: AccountProfileFields? = null,
-    val twoFactorEnabled: Boolean? = null,
-    val email: String? = null,
-    val telegram: TelegramBinding? = null,
     val blockedCount: Int? = null,
 )
 
 data class AccountSettingsUiState(
-    val avatarUrl: String? = null,
-    val displayName: String = "",
-    val fields: AccountProfileFields? = null,
-    val twoFactorEnabled: Boolean? = null,
-    val email: String? = null,
-    /** null until the (stubbed) endpoint answers; the row shows no guess. */
-    val telegram: TelegramBinding? = null,
     val blockedCount: Int? = null,
-    /** How many of the three optional home boards are switched off; 0 means the feed shows everything. */
-    val hiddenBoardCount: Int = 0,
-    val holidayTheme: Boolean = false,
     /** Set once sign-out has committed; the screen pops itself on it. See `signOut`. */
     val signedOut: Boolean = false,
+    /** Whether a NodeImage API key is stored — the 图床 row's subtitle, and nothing more of it. */
+    val imageHostConnected: Boolean = false,
 )

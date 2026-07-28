@@ -82,10 +82,23 @@ class ReplyComposerViewModelTest {
         assertEquals("", second.uiState.value.body)
     }
 
+    /**
+     * The exact shape matters, and it is not ours: it was read off a quote the site's own editor
+     * produced (sandbox thread, 2026-07-28). The header line names the author and links the floor,
+     * the quoted text follows as blockquote lines, and the reply starts after a blank line —
+     * `@name` at the *end* of the blockquote would render as part of the quotation instead.
+     */
     @Test
     fun `replying to a floor quotes it, and the quote is sent as a blockquote`() = runTest(dispatcher) {
-        val viewModel = viewModel()
-        viewModel.open(ReplyQuote(floor = 12, author = "nssk", excerpt = "还没有这个功能"))
+        val viewModel = viewModel(postId = 841108L)
+        viewModel.open(
+            ReplyQuote(
+                floor = 12,
+                author = "nssk",
+                excerpt = "还没有这个功能",
+                postedAt = "2026/7/28 12:01:29",
+            ),
+        )
         advanceUntilIdle()
         viewModel.updateBody("赞成用星辰兑换改名")
         advanceUntilIdle()
@@ -95,7 +108,31 @@ class ReplyComposerViewModelTest {
 
         val submission = repository.submission
         assertEquals(12, submission?.quotedFloor)
-        assertEquals("> 还没有这个功能\n\n@nssk 赞成用星辰兑换改名", submission?.body)
+        assertEquals(
+            "> @nssk [#12](https://www.nodeseek.com/post-841108-1#12) 发布于2026/7/28 12:01:29\n" +
+                "> 还没有这个功能\n" +
+                "\n" +
+                "赞成用星辰兑换改名",
+            submission?.body,
+        )
+    }
+
+    /** Most floors carry a timestamp; a comment parsed without one must not print "发布于null". */
+    @Test
+    fun `a quote with no timestamp omits the 发布于 clause`() = runTest(dispatcher) {
+        val viewModel = viewModel(postId = 7L)
+        viewModel.open(ReplyQuote(floor = 3, author = "nssk", excerpt = "占位"))
+        advanceUntilIdle()
+        viewModel.updateBody("好")
+        advanceUntilIdle()
+
+        viewModel.publish {}
+        advanceUntilIdle()
+
+        assertEquals(
+            "> @nssk [#3](https://www.nodeseek.com/post-7-1#3)\n> 占位\n\n好",
+            repository.submission?.body,
+        )
     }
 
     @Test

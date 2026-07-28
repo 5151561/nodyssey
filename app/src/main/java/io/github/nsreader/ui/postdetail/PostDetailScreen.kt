@@ -1048,7 +1048,13 @@ private fun EditedMarker(fullText: String?) {
  */
 private fun PostContent.toReplyQuote(): ReplyQuote? {
     val number = floor?.trimStart('#')?.toIntOrNull() ?: return null
-    return ReplyQuote(floor = number, author = authorName, excerpt = nodes.excerpt())
+    return ReplyQuote(
+        floor = number,
+        author = authorName,
+        excerpt = nodes.excerpt(),
+        // The absolute timestamp, not the "3小时前" one: the quote outlives the moment it was written.
+        postedAt = createdAtTitle,
+    )
 }
 
 /**

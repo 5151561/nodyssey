@@ -25,6 +25,9 @@ data object SettingsKey : NavKey
 data object NotificationSettingsKey : NavKey
 
 @Serializable
+data object AboutAppKey : NavKey
+
+@Serializable
 data object AboutCommunityKey : NavKey
 
 @Serializable
@@ -63,6 +66,15 @@ data object AccountBlockListKey : NavKey
 /** 偏好与首页版块 (d6 5/5). */
 @Serializable
 data object AccountPreferencesKey : NavKey
+
+/**
+ * 图床 — the nodeimage.com connection.
+ *
+ * Under 账号设置 rather than the app's own [SettingsKey] because it is a credential for an account,
+ * not a display preference; it sits beside 联系方式 for the same reason those do.
+ */
+@Serializable
+data object AccountNodeImageKey : NavKey
 
 @Serializable
 data object PostComposerKey : NavKey

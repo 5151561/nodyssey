@@ -145,6 +145,19 @@ object NodeSeekSite {
     const val NEW_DISCUSSION_PATH = "/new-discussion"
     const val NEW_DISCUSSION_API_PATH = "/api/content/new-discussion"
 
+    /**
+     * Posting a reply. Captured from a signed-in session on the sandbox thread (2026-07-28) rather
+     * than guessed: the editor sends `{content, mode:"new-comment", postId}` and answers
+     * `{"success":true,"redirect":"/post-841108-1","redirectHash":"#3"}` — the floor number only
+     * exists in that hash, which is why [parseFloorHash] is here and not in the parser package.
+     */
+    const val NEW_COMMENT_API_PATH = "/api/content/new-comment"
+
+    const val NEW_COMMENT_MODE = "new-comment"
+
+    /** `"#3"` → `3`. Anything else is a shape we did not expect, and the caller falls back to null. */
+    fun parseFloorHash(hash: String?): Int? = hash?.trimStart('#')?.trim()?.toIntOrNull()
+
     fun postSearchPath(
         query: String,
         page: Int = 1,

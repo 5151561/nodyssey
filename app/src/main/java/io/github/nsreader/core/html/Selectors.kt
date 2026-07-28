@@ -28,6 +28,10 @@ object Selectors {
     const val LIST_PAGER_NEXT = "a.pager-next[href]"
     const val LIST_PAGER_POSITIONS = "[aria-label=pagination] .pager-pos"
 
+    /** The server-rendered total in the 首页 sidebar's 用户数目 panel. */
+    const val COMMUNITY_MEMBER_COUNT =
+        "div.nsk-panel:has(h4:containsOwn(用户数目)) > div:containsOwn(目前论坛共有)"
+
     // --- Post detail --------------------------------------------------------
     const val DETAIL_TITLE = "div.post-title a.post-title-link"
     const val DETAIL_TITLE_FALLBACK = "div.post-title h1"

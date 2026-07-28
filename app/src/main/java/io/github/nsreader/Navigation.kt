@@ -52,6 +52,8 @@ import io.github.nsreader.ui.account.BlockListRoute
 import io.github.nsreader.ui.account.BlockListViewModel
 import io.github.nsreader.ui.account.ContactRoute
 import io.github.nsreader.ui.account.ContactViewModel
+import io.github.nsreader.ui.account.NodeImageRoute
+import io.github.nsreader.ui.account.NodeImageViewModel
 import io.github.nsreader.ui.account.PreferencesRoute
 import io.github.nsreader.ui.account.PreferencesViewModel
 import io.github.nsreader.ui.account.ProfileFieldsRoute
@@ -81,7 +83,10 @@ import io.github.nsreader.ui.profile.ProfileRoute
 import io.github.nsreader.ui.profile.ProfileViewModel
 import io.github.nsreader.ui.search.SearchRoute
 import io.github.nsreader.ui.search.SearchViewModel
-import io.github.nsreader.ui.settings.AboutCommunityScreen
+import io.github.nsreader.ui.settings.AboutAppScreen
+import io.github.nsreader.ui.settings.AboutCommunityRoute
+import io.github.nsreader.ui.settings.AboutCommunityViewModel
+import io.github.nsreader.ui.settings.AppLinks
 import io.github.nsreader.ui.settings.AppUpdateStatus
 import io.github.nsreader.ui.settings.ChangelogScreen
 import io.github.nsreader.ui.settings.CommunityLinks
@@ -340,7 +345,7 @@ fun MainNavigation(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
                     onOpenNotifications = { backStack.add(NotificationSettingsKey) },
-                    onOpenAbout = { backStack.add(AboutCommunityKey) },
+                    onOpenAbout = { backStack.add(AboutAppKey) },
                     onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
                 )
             }
@@ -356,13 +361,13 @@ fun MainNavigation(
                 )
             }
 
-            entry<AboutCommunityKey> {
+            entry<AboutAppKey> {
                 val context = LocalContext.current
                 val packageInfo =
                     remember(context) {
                         context.packageManager.getPackageInfo(context.packageName, 0)
                     }
-                AboutCommunityScreen(
+                AboutAppScreen(
                     versionName = packageInfo.versionName.orEmpty().ifBlank { "—" },
                     versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         packageInfo.longVersionCode
@@ -372,7 +377,20 @@ fun MainNavigation(
                     },
                     updateStatus = AppUpdateStatus.Unknown,
                     onBack = { backStack.removeLastOrNull() },
-                    onCheckUpdates = { openExternalUrl(CommunityLinks.RELEASES) },
+                    onCheckUpdates = { openExternalUrl(AppLinks.RELEASES) },
+                    onOpenChangelog = { backStack.add(ChangelogKey) },
+                    onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
+                    onOpenUri = openExternalUrl,
+                )
+            }
+
+            entry<AboutCommunityKey> {
+                val context = LocalContext.current
+                val viewModel: AboutCommunityViewModel =
+                    viewModel(factory = AboutCommunityViewModel.factory(container))
+                AboutCommunityRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
                     onOpenAboutSite = {
                         backStack.add(
                             WebKey(
@@ -383,8 +401,6 @@ fun MainNavigation(
                         )
                     },
                     onOpenPrivacy = { backStack.add(PrivacyKey) },
-                    onOpenChangelog = { backStack.add(ChangelogKey) },
-                    onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
                     onOpenUri = { uri ->
                         if (NodeSeekSite.isExternalWebUrl(uri)) {
                             openExternalUrl(uri)
@@ -435,7 +451,7 @@ fun MainNavigation(
                 ChangelogScreen(
                     versionName = versionName,
                     onBack = { backStack.removeLastOrNull() },
-                    onOpenReleases = { openExternalUrl(CommunityLinks.RELEASES) },
+                    onOpenReleases = { openExternalUrl(AppLinks.RELEASES) },
                 )
             }
 
@@ -563,6 +579,19 @@ fun MainNavigation(
                     // 常用偏好 and 首页版块 share one page (d6 5/5): three of their rows are the
                     // same account-side switches, and splitting them would leave two stub screens.
                     onOpenPreferences = { backStack.add(AccountPreferencesKey) },
+                    onOpenNodeImage = { backStack.add(AccountNodeImageKey) },
+                )
+            }
+
+            entry<AccountNodeImageKey> {
+                val viewModel: NodeImageViewModel =
+                    viewModel(factory = NodeImageViewModel.factory(container))
+                NodeImageRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    // nodeimage.com is a different site with a different session; the in-app web view
+                    // exists to carry NodeSeek's cookies and has no business holding these.
+                    onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
                 )
             }
 
@@ -631,7 +660,7 @@ fun MainNavigation(
                     onLucky = { backStack.add(LuckyKey) },
                     onInvite = { backStack.add(InviteKey) },
                     onRuling = { backStack.add(RulingKey) },
-                    onAbout = { backStack.add(AboutCommunityKey) },
+                    onAboutCommunity = { backStack.add(AboutCommunityKey) },
                 )
             }
 

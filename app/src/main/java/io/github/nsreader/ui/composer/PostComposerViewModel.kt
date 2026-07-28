@@ -19,6 +19,7 @@ import io.github.nsreader.data.composer.PostComposerRepository
 import io.github.nsreader.data.composer.PostDraft
 import io.github.nsreader.data.composer.PostPermission
 import io.github.nsreader.data.composer.PostSubmission
+import io.github.nsreader.data.composer.UploadFailure
 import io.github.nsreader.data.composer.UploadStatus
 import io.github.nsreader.data.session.SessionState
 import io.github.nsreader.di.AppContainer
@@ -252,6 +253,13 @@ data class PostComposerUiState(
     val hasContent: Boolean get() = title.isNotBlank() || body.isNotBlank()
 
     val failedUploadCount: Int get() = attachments.count { it.status == UploadStatus.FAILED }
+
+    /** The first failure's reason, for the snackbar; retrying clears it along with the status. */
+    val uploadFailure: UploadFailure?
+        get() = attachments.firstOrNull { it.status == UploadStatus.FAILED }?.failure
+
+    val uploadErrorDetail: String?
+        get() = attachments.firstOrNull { it.status == UploadStatus.FAILED }?.errorDetail
 
     /**
      * Publishing is blocked while an upload is still moving: the Markdown for a pending image is

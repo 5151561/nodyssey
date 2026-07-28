@@ -6,7 +6,7 @@
 
 当前状态：阶段一至三已完成，阶段四的大部分页面与批次 F（f1–f4）已经落地。当前工作区有
 409 个 JVM/Robolectric 测试；Room/Paging 离线优先、WorkManager 通知轮询和 CI 门禁均已接入。
-下一步是评论发布、NodeImage、帖子互动等真实写操作，以及仍缺可靠数据源的动态站点页面。
+下一步是帖子互动（点赞/反对/投喂）等真实写操作，以及仍缺可靠数据源的动态站点页面。
 
 功能是否真的可用以 [`implementation-status.md`](implementation-status.md) 为准；设计画板完成度不作为实现证据。
 
@@ -104,6 +104,7 @@ data/        Repository。隐藏数据源，暴露领域模型
   ├ ProfileRepository       我的资料离线优先：按会话指纹隔离，Room 先显示、网络后刷新
   ├ local/                  Room：实体、DAO、TypeConverter
   ├ session/                共享 cookie store 的读模型（登录态 + 人机验证态）
+  ├ nodeimage/              站外图床 nodeimage.com：API Key + 上传/列表/删除
   └ settings/               DataStore，SSOT
 
 core/        无 Android 依赖的纯逻辑（parser、错误类型、URL 词表、时钟）
@@ -122,6 +123,25 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 - **不许直接读 `System.currentTimeMillis()`。** 注入 `AppClock`。
   缓存新鲜度决定"打开这个屏幕要不要发请求"，那是真逻辑，必须能测；
   而需要真的 sleep 才能测的过期逻辑，等于没人会测。
+
+**站外服务约定（nodeimage.com）**：
+- NodeSeek 自己**没有图床**——帖子里只存 Markdown，图片全是外链，网页版编辑器上那句
+  「NodeImage已就绪」来自浏览器扩展而不是站点。所以图床是一个独立账号的独立服务，
+  URL 词表单独放在 `core/NodeImageSite.kt`，不并进 `NodeSeekSite`。
+- **它用自己的 `OkHttpClient`，不复用 `AppContainer.okHttpClient`。** 后者挂着 WebView 的
+  cookie jar，并且给每个没写 Referer 的请求补上 `Referer: nodeseek.com`。把这两样发给一个
+  我们交了 API Key 的第三方主机，等于白送它一份与它无关的浏览会话信息。
+  连接池是共享的——连接池本来就按 host 分桶，不会串。
+- 错误类型也是分开的（`NodeImageError`，不是 `NodeSeekError`）：NodeSeek 的 401 意思是
+  "去论坛登录"，NodeImage 的 401 意思是"你的 Key 不对"，把后者导去论坛登录页是帮倒忙。
+- **四个端点里只有上传真的认 API Key。** 站点 API 页面把 Key 写成通用凭证，但真机实测
+  （2026-07-28）：同一把刚上传成功的 Key，`GET /api/images` 返回 401
+  `{"error":"未认证，请先通过NodeSeek授权登录"}`。所以 `execute()` 带一个 `keyIsEnough` 参数决定
+  401 的**含义**——上传的 401 是 `InvalidKey`，列表/删除的 401 是 `SessionRequired`，图床页对后者
+  显示"要去网页操作"并给出站点入口，而不是让用户去重新生成一把本来能用的 Key。
+- **上传响应有两种形状，两种都要读。** Key 认证的 `/api/upload` 回 snake_case 且 URL 嵌在
+  `links.direct` 里；网页版 cookie 认证的 `/upload` 回扁平的 `url`。只读后者，就是"图床已经存下了
+  图，App 却报上传失败"那个 bug。
 
 **会话约定**：
 - **不许硬编码 User-Agent。** 用 `resolveUserAgent()` 从 WebView 读，WebView 那边则**一行都不设**。
@@ -236,10 +256,10 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 | 严重度 | 问题 | 计划 |
 |---|---|---|
 | **P2** | 单模块，没有编译期约束防止 `ui/` 直连 `core/net` | 拆 `:core` / `:data` / `:feature:*`，或先上 lint 的依赖规则 |
-| **P1** | 评论发布、NodeImage、点赞/反对/投喂尚未接真实写端点 | 逐项确认站点契约，先补回归测试，再接 Repository；禁止 UI 假成功。当前详情页没有收藏控件，不把收藏误报为“界面已完成” |
+| **P1** | 点赞/反对/投喂尚未接真实写端点 | 逐项确认站点契约，先补回归测试，再接 Repository；禁止 UI 假成功。当前详情页没有收藏控件，不把收藏误报为“界面已完成” |
 | **P2** | 修改邮箱与绑定 Telegram 只能转网页（Turnstile 与 Telegram 登录挂件） | 想原生化就得在 WebView 里跑挂件并把令牌回传；在此之前保持明确交接，不做能提交却必然失败的表单 |
 | **P2** | 关注/粉丝、星辰流水、管理记录缺可靠动态数据源 | 保持明确“尚未接入”与网页降级，不用空列表冒充无数据 |
-| **P2** | 今日额度只有已确认上限，社区注册人数仍是静态快照 | 为 `/progress` 确认可读数据源；社区人数接可靠接口或移除“每日更新”表述，禁止把快照伪装成实时数据 |
+| **P2** | 今日额度只有已确认上限 | 为 `/progress` 确认可读数据源，禁止把未知使用量伪装成实时数据 |
 | **P3** | 未验证字号缩放 200% 与 TalkBack | 用真实设备和至少一台大屏设备做发布前验收 |
 | **P3** | 鸡腿流水、星辰转账、邀请码购买和检查更新只有网页闭环 | 有可靠契约后逐项原生化；接入前保留明确网页交接，其中检查更新只打开 Releases 核对 |
 | **P3** | 无 baseline profile / macrobenchmark | 有真实卡顿反馈后再做，不预先优化 |
@@ -318,8 +338,8 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 账号设置已经接完：15 个 `/setting` 请求全部来自站点前端分块里的真实契约（记录在不提交的
 `docs/private/api-notes.md`），其中修改邮箱与绑定 Telegram 因 Turnstile 和 Telegram 登录挂件只能转网页。
 
-尚未完成：评论发布、NodeImage、点赞/反对/投喂的真实写端点；
-关注/粉丝、星辰流水、管理记录与今日额度的可靠数据源；社区注册人数和检查更新的动态数据；
+尚未完成：点赞/反对/投喂的真实写端点；
+关注/粉丝、星辰流水、管理记录与今日额度的可靠数据源；检查更新的动态数据；
 鸡腿流水、星辰转账、邀请码购买的原生闭环；200% 字号、TalkBack 与大屏的发布级真机验收。
 当前详情页没有收藏操作控件。界面存在不等于功能接入，完整边界以
 [`implementation-status.md`](implementation-status.md) 为准。

@@ -38,10 +38,37 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.nsreader.R
 import io.github.nsreader.data.composer.ImageAttachment
+import io.github.nsreader.data.composer.UploadFailure
 import io.github.nsreader.data.composer.UploadStatus
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.theme.Spacing
 import kotlin.math.roundToInt
+
+/**
+ * "3 张图片上传失败 · 未配置图床，请在 账号设置 › 图床 填写 API Key".
+ *
+ * The count alone was the whole message before uploads were real, and it is not enough now: the two
+ * failures a user actually hits — no API key yet, and a key that has been regenerated on the website
+ * — are both fixed in one screen and neither is fixed by tapping 重试. The host's own sentence wins
+ * over ours when it sent one, because it is the only source that knows *this* file was too large.
+ */
+@Composable
+internal fun uploadFailureText(
+    failedCount: Int,
+    failure: UploadFailure?,
+    detail: String?,
+): String {
+    val count = stringResource(R.string.composer_image_failed_count, failedCount)
+    val reason = detail?.takeIf(String::isNotBlank) ?: when (failure) {
+        UploadFailure.NOT_CONFIGURED -> stringResource(R.string.composer_upload_not_configured)
+        UploadFailure.INVALID_KEY -> stringResource(R.string.composer_upload_invalid_key)
+        UploadFailure.REJECTED -> stringResource(R.string.composer_upload_rejected)
+        UploadFailure.CHALLENGE -> stringResource(R.string.composer_upload_challenge)
+        UploadFailure.NETWORK -> stringResource(R.string.composer_upload_network)
+        UploadFailure.UNKNOWN, null -> return count
+    }
+    return stringResource(R.string.composer_image_failed_reason, count, reason)
+}
 
 /**
  * The attachment strip from C5, shared by both editors.

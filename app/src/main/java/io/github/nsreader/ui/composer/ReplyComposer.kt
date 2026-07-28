@@ -71,6 +71,7 @@ import io.github.nsreader.R
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.data.composer.ImageAttachment
 import io.github.nsreader.data.composer.PickedImage
+import io.github.nsreader.data.composer.UploadFailure
 import io.github.nsreader.ui.common.NodeSeekIcons
 import io.github.nsreader.ui.theme.CommentBody
 import io.github.nsreader.ui.theme.Spacing
@@ -267,6 +268,8 @@ private fun ReplyEditorSheet(
                 error = state.publishError,
                 detail = state.publishErrorDetail,
                 failedUploads = state.failedUploadCount,
+                uploadFailure = state.uploadFailure,
+                uploadErrorDetail = state.uploadErrorDetail,
                 onRetryPublish = onPublish,
                 onRetryUploads = onRetryFailedUploads,
                 onDismiss = onClearError,
@@ -360,6 +363,8 @@ private fun ReplyPreviewScreen(
                 error = state.publishError,
                 detail = state.publishErrorDetail,
                 failedUploads = 0,
+                uploadFailure = null,
+                uploadErrorDetail = null,
                 onRetryPublish = onPublish,
                 onRetryUploads = {},
                 onDismiss = onClearError,
@@ -469,6 +474,8 @@ private fun ComposerErrorStrip(
     error: NodeSeekError?,
     detail: String?,
     failedUploads: Int,
+    uploadFailure: UploadFailure?,
+    uploadErrorDetail: String?,
     onRetryPublish: () -> Unit,
     onRetryUploads: () -> Unit,
     onDismiss: () -> Unit,
@@ -476,7 +483,7 @@ private fun ComposerErrorStrip(
 ) {
     val message = when {
         error != null -> stringResource(R.string.post_reply_publish_failed, replyErrorReason(error, detail))
-        failedUploads > 0 -> stringResource(R.string.composer_image_failed_count, failedUploads)
+        failedUploads > 0 -> uploadFailureText(failedUploads, uploadFailure, uploadErrorDetail)
         else -> return
     }
     Surface(
@@ -540,9 +547,18 @@ private fun PublishReplyButton(
 @Composable
 private fun replyErrorReason(error: NodeSeekError, detail: String?): String = when (error) {
     NodeSeekError.Network -> stringResource(R.string.composer_publish_network_failed)
+
     NodeSeekError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
+
     NodeSeekError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
-    is NodeSeekError.Http -> stringResource(R.string.composer_publish_http, error.statusCode)
+
+    // The site's own sentence beats a status code whenever it sent one: a rejected reply comes back
+    // as a 400 carrying "内容不能为空" or the duplicate-post refusal, and "服务器返回 HTTP 400"
+    // would tell the user nothing they can act on.
+    is NodeSeekError.Http ->
+        detail?.takeIf { it.isNotBlank() }
+            ?: stringResource(R.string.composer_publish_http, error.statusCode)
+
     else -> detail?.takeIf { it.isNotBlank() } ?: stringResource(R.string.post_reply_publish_unavailable)
 }
 
