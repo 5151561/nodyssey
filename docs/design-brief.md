@@ -1,4 +1,4 @@
-# NodeSeek Android — 设计需求文档
+# Nodyssey — 设计需求文档
 
 > **历史文档。** 这是第一轮视觉设计输入，保留用于追溯早期取舍；其中“v1 只读”、页面清单和当前状态
 > 已经过期。现行设计总纲见 [`design-requirements.md`](design-requirements.md)，真实实现见

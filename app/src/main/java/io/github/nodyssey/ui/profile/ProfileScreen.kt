@@ -1,0 +1,635 @@
+package io.github.nodyssey.ui.profile
+
+import android.content.res.Configuration
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.R
+import io.github.nodyssey.core.net.NodeSeekError
+import io.github.nodyssey.ui.common.AttendanceBoardDialog
+import io.github.nodyssey.ui.common.GroupedColumn
+import io.github.nodyssey.ui.common.GroupedRow
+import io.github.nodyssey.ui.common.LoadingState
+import io.github.nodyssey.ui.common.NodeSeekErrorState
+import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.SectionLabel
+import io.github.nodyssey.ui.common.UserAvatar
+import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.nodyssey.ui.theme.Sizes
+import io.github.nodyssey.ui.theme.Spacing
+import io.github.nodyssey.ui.theme.StatusShapes
+import io.github.nodyssey.ui.theme.readableWidth
+
+@Composable
+fun ProfileRoute(
+    viewModel: ProfileViewModel,
+    onSignIn: () -> Unit,
+    onSettings: () -> Unit,
+    onAccountSettings: () -> Unit,
+    onOpenWebsite: () -> Unit,
+    onOpenSpace: (Long) -> Unit,
+    onAssets: () -> Unit,
+    onAttendance: () -> Unit,
+    onFollow: () -> Unit,
+    onTools: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshAttendance()
+    }
+    ProfileScreen(
+        state = state,
+        onSignIn = onSignIn,
+        onSignOut = viewModel::signOut,
+        onRetry = viewModel::refresh,
+        onSettings = onSettings,
+        onAccountSettings = onAccountSettings,
+        onOpenWebsite = onOpenWebsite,
+        onOpenSpace = { state.uid?.let(onOpenSpace) },
+        onAssets = onAssets,
+        onAttendance = onAttendance,
+        onAttendanceBoard = viewModel::openAttendanceBoard,
+        onDismissAttendanceBoard = viewModel::dismissAttendanceBoard,
+        onRetryAttendanceBoard = viewModel::loadAttendanceBoard,
+        onFollow = onFollow,
+        onTools = onTools,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun ProfileScreen(
+    state: ProfileUiState,
+    onSignIn: () -> Unit,
+    onSignOut: () -> Unit,
+    onRetry: () -> Unit,
+    onSettings: () -> Unit,
+    onAccountSettings: () -> Unit,
+    onOpenWebsite: () -> Unit,
+    onOpenSpace: () -> Unit,
+    onAssets: () -> Unit,
+    onAttendance: () -> Unit,
+    onAttendanceBoard: () -> Unit,
+    onFollow: () -> Unit,
+    onTools: () -> Unit,
+    modifier: Modifier = Modifier,
+    onDismissAttendanceBoard: () -> Unit = {},
+    onRetryAttendanceBoard: () -> Unit = {},
+) {
+    Scaffold(modifier = modifier) { padding ->
+        if (!state.isSignedIn) {
+            SignedOutProfile(
+                onSignIn = onSignIn,
+                onSettings = onSettings,
+                onTools = onTools,
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+
+        if (state.isLoading && !state.hasProfile) {
+            LoadingState(modifier = Modifier.padding(padding))
+            return@Scaffold
+        }
+
+        if (state.error != null && !state.hasProfile) {
+            NodeSeekErrorState(
+                error = state.error,
+                onRetry = onRetry,
+                onOpenBrowser = onOpenWebsite,
+                onSignIn = onSignIn,
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+
+        LazyColumn(
+            modifier =
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .readableWidth(),
+            contentPadding =
+            androidx.compose.foundation.layout.PaddingValues(
+                horizontal = Spacing.lg,
+                vertical = Spacing.lg,
+            ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+        ) {
+            item(key = "profile-header") {
+                ProfileHeader(state, onOpenSpace)
+            }
+            item(key = "resources") {
+                ResourceCards(state, onAssets)
+            }
+            item(key = "attendance") {
+                Button(
+                    onClick = if (state.hasSignedInToday) onAttendanceBoard else onAttendance,
+                    enabled = !state.isCheckingAttendance,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors =
+                    if (state.hasSignedInToday) {
+                        ButtonDefaults.filledTonalButtonColors()
+                    } else {
+                        ButtonDefaults.buttonColors()
+                    },
+                ) {
+                    when {
+                        state.isCheckingAttendance -> {
+                            CircularProgressIndicator(Modifier.size(18.dp))
+                            Text(
+                                stringResource(R.string.profile_attendance_checking),
+                                modifier = Modifier.padding(start = Spacing.sm),
+                            )
+                        }
+
+                        state.hasSignedInToday -> {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null)
+                            Text(
+                                text =
+                                state.attendanceGain?.let {
+                                    stringResource(R.string.assets_signed_in, it)
+                                } ?: stringResource(R.string.profile_attendance_done),
+                                modifier = Modifier.padding(start = Spacing.sm),
+                            )
+                        }
+
+                        else -> {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                            Text(
+                                stringResource(R.string.profile_attendance),
+                                modifier = Modifier.padding(start = Spacing.sm),
+                            )
+                        }
+                    }
+                }
+            }
+            // The content menu now points at real screens. 主题帖 / 评论 / 收藏 are the space page's own
+            // tabs, so they open it on the right one rather than opening three near-identical screens.
+            item(key = "content-menu") {
+                ProfileMenuGroup(
+                    items =
+                    listOf(
+                        ProfileMenuItem(R.string.profile_space, Icons.Default.Person, onOpenSpace),
+                        ProfileMenuItem(R.string.profile_follow, NodysseyIcons.Group, onFollow),
+                        ProfileMenuItem(R.string.profile_assets, NodysseyIcons.Wallet, onAssets),
+                        ProfileMenuItem(R.string.profile_tools, NodysseyIcons.MenuBook, onTools),
+                    ),
+                )
+            }
+            item(key = "settings-menu") {
+                ProfileMenuGroup(
+                    items =
+                    listOf(
+                        ProfileMenuItem(
+                            R.string.profile_account_settings,
+                            NodysseyIcons.Badge,
+                            onAccountSettings,
+                        ),
+                        ProfileMenuItem(R.string.settings_title, Icons.Default.Settings, onSettings),
+                        ProfileMenuItem(
+                            R.string.profile_open_web,
+                            Icons.AutoMirrored.Filled.ExitToApp,
+                            onOpenWebsite,
+                        ),
+                    ),
+                )
+            }
+            item(key = "sign-out") {
+                TextButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.action_sign_out))
+                }
+            }
+        }
+    }
+
+    if (state.boardOpen) {
+        AttendanceBoardDialog(
+            isLoading = state.isLoadingBoard,
+            entries = state.board,
+            error = state.boardError,
+            onRetry = onRetryAttendanceBoard,
+            onDismiss = onDismissAttendanceBoard,
+        )
+    }
+}
+
+/** Board c7: the useful signed-out version of 我的, including the two guest-safe destinations. */
+@Composable
+private fun SignedOutProfile(
+    onSignIn: () -> Unit,
+    onSettings: () -> Unit,
+    onTools: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize().readableWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = Spacing.lg),
+    ) {
+        item(key = "welcome-illustration") {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                SignedOutIllustration()
+            }
+        }
+        item(key = "welcome-copy") {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Text(
+                    text = stringResource(R.string.profile_signed_out_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { heading() },
+                )
+                Text(
+                    text = stringResource(R.string.profile_signed_out_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        item(key = "benefits") {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                SignedOutBenefit(
+                    icon = Icons.Default.Create,
+                    title = stringResource(R.string.profile_guest_benefit_post),
+                    subtitle = stringResource(R.string.profile_guest_benefit_post_hint),
+                    shape = RoundedCornerShape(18.dp, 5.dp, 5.dp, 18.dp),
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
+                SignedOutBenefit(
+                    icon = NodysseyIcons.ChatBubble,
+                    title = stringResource(R.string.profile_guest_benefit_messages),
+                    subtitle = stringResource(R.string.profile_guest_benefit_messages_hint),
+                    shape = RoundedCornerShape(5.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
+                SignedOutBenefit(
+                    icon = NodysseyIcons.EventAvailable,
+                    title = stringResource(R.string.profile_guest_benefit_attendance),
+                    subtitle = stringResource(R.string.profile_guest_benefit_attendance_hint),
+                    shape = RoundedCornerShape(5.dp, 18.dp, 18.dp, 5.dp),
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        item(key = "sign-in") {
+            Button(
+                onClick = onSignIn,
+                modifier = Modifier.fillMaxWidth().padding(top = 20.dp).height(Sizes.minTouchTarget),
+                shape = CircleShape,
+            ) {
+                Icon(NodysseyIcons.Login, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(
+                    text = stringResource(R.string.profile_sign_in),
+                    modifier = Modifier.padding(start = Spacing.sm),
+                )
+            }
+            Text(
+                text = stringResource(R.string.profile_sign_in_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            )
+        }
+        item(key = "guest-menu") {
+            Column(modifier = Modifier.padding(top = 18.dp)) {
+                SectionLabel(stringResource(R.string.profile_guest_section))
+                GroupedColumn {
+                    GroupedRow(
+                        title = stringResource(R.string.settings_title),
+                        subtitle = stringResource(R.string.profile_guest_settings_hint),
+                        first = true,
+                        icon = Icons.Default.Settings,
+                        onClick = onSettings,
+                    )
+                    GroupedRow(
+                        title = stringResource(R.string.profile_tools),
+                        subtitle = stringResource(R.string.profile_guest_tools_hint),
+                        last = true,
+                        icon = NodysseyIcons.DashboardCustomize,
+                        onClick = onTools,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The only custom node in c7: a decorative illustration with no input or navigation semantics. */
+@Composable
+private fun SignedOutIllustration(modifier: Modifier = Modifier) {
+    Box(modifier.width(216.dp).height(148.dp)) {
+        Surface(
+            modifier = Modifier.offset(x = 50.dp, y = 12.dp).size(118.dp),
+            shape = StatusShapes.Welcome,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = NodysseyIcons.WavingHand,
+                    contentDescription = null,
+                    modifier = Modifier.size(52.dp),
+                )
+            }
+        }
+        Surface(
+            modifier = Modifier.offset(x = 154.dp).size(56.dp),
+            shape = StatusShapes.NetworkError,
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+        ) {}
+        Surface(
+            modifier = Modifier.offset(x = 8.dp, y = 96.dp).size(42.dp),
+            shape = StatusShapes.Empty,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+        ) {}
+        Surface(
+            modifier = Modifier.offset(x = 160.dp, y = 124.dp).size(22.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+        ) {}
+        Surface(
+            modifier = Modifier.offset(x = 26.dp).size(14.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+        ) {}
+    }
+}
+
+@Composable
+private fun SignedOutBenefit(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    shape: RoundedCornerShape,
+    containerColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = containerColor,
+        contentColor = contentColor,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.md),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+            Text(text = title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            Text(text = subtitle, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun ProfileHeader(
+    state: ProfileUiState,
+    onOpenSpace: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+    ) {
+        UserAvatar(
+            url = state.avatarUrl,
+            name = state.displayName,
+            size = Sizes.avatarProfile,
+            shape = StatusShapes.Welcome,
+        )
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Text(
+                text = state.displayName,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = state.memberSince ?: stringResource(R.string.profile_session_active),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(
+            onClick = onOpenSpace,
+            modifier =
+            Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainer),
+        ) {
+            Icon(
+                imageVector = NodysseyIcons.Edit,
+                contentDescription = stringResource(R.string.profile_space),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ResourceCards(
+    state: ProfileUiState,
+    onAssets: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        ResourceCard(
+            value = state.chickenCount?.toString() ?: "—",
+            label = stringResource(R.string.profile_chicken),
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(18.dp, 5.dp, 5.dp, 18.dp),
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            onClick = onAssets,
+        )
+        ResourceCard(
+            value = state.starCount?.toString() ?: "—",
+            label = stringResource(R.string.profile_stars),
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(5.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            onClick = onAssets,
+        )
+        ResourceCard(
+            value = state.level ?: stringResource(R.string.profile_level_unknown),
+            label = stringResource(R.string.profile_level),
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(5.dp, 18.dp, 18.dp, 5.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            onClick = onAssets,
+        )
+    }
+}
+
+@Composable
+private fun ResourceCard(
+    value: String,
+    label: String,
+    shape: RoundedCornerShape,
+    color: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = shape,
+        color = color,
+        contentColor = contentColor,
+    ) {
+        Column(Modifier.padding(horizontal = Spacing.lg, vertical = 14.dp)) {
+            Text(value, style = MaterialTheme.typography.titleLarge)
+            Text(label, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+private data class ProfileMenuItem(
+    val title: Int,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+)
+
+/** Renders through the shared grouped-list components so 我的 matches the screens it links to. */
+@Composable
+private fun ProfileMenuGroup(items: List<ProfileMenuItem>) {
+    GroupedColumn {
+        items.forEachIndexed { index, item ->
+            GroupedRow(
+                title = stringResource(item.title),
+                first = index == 0,
+                last = index == items.lastIndex,
+                icon = item.icon,
+                onClick = item.onClick,
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ProfileSignedInPreview() {
+    NodysseyTheme {
+        ProfileScreen(
+            state =
+            ProfileUiState(
+                isSignedIn = true,
+                displayName = "nodyssey_dev",
+                level = "Lv 3",
+                memberSince = "2023年5月 注册 · UID 88423",
+                chickenCount = 1_284,
+                starCount = 356,
+            ),
+            onSignIn = {},
+            onSignOut = {},
+            onRetry = {},
+            onSettings = {},
+            onAccountSettings = {},
+            onOpenWebsite = {},
+            onOpenSpace = {},
+            onAssets = {},
+            onAttendance = {},
+            onAttendanceBoard = {},
+            onFollow = {},
+            onTools = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "c7 我的 · 未登录")
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+    name = "c7 我的 · 未登录 · dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
+@Composable
+private fun ProfileSignedOutPreview() {
+    NodysseyTheme {
+        ProfileScreen(
+            state = ProfileUiState(),
+            onSignIn = {},
+            onSignOut = {},
+            onRetry = {},
+            onSettings = {},
+            onAccountSettings = {},
+            onOpenWebsite = {},
+            onOpenSpace = {},
+            onAssets = {},
+            onAttendance = {},
+            onAttendanceBoard = {},
+            onFollow = {},
+            onTools = {},
+        )
+    }
+}

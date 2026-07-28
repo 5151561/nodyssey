@@ -1,4 +1,4 @@
-# NodeSeek Android 设计需求补遗(v3 · 2026-07-27 Chrome 登录态复核)
+# Nodyssey 设计需求补遗(v3 · 2026-07-27 Chrome 登录态复核)
 
 > 交付对象:Claude Design。前置文档:`design-requirements.md`(总纲)与
 > `design-requirements-remaining.md`(v2 实测词典 + 批次 A–E,除批次 A 暗色外均已出稿)。

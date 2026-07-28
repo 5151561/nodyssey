@@ -15,7 +15,7 @@
         See res/xml/backup_rules.xml and res/xml/data_extraction_rules.xml.
     -->
     <application
-        android:name=".NodeSeekApp"
+        android:name=".NodysseyApp"
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -24,7 +24,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:windowSoftInputMode="adjustResize"
-        android:theme="@style/Theme.NodeSeek">
+        android:theme="@style/Theme.Nodyssey">
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -34,7 +34,7 @@
             </intent-filter>
         </activity>
 
-        <!-- WorkManager initializes on demand via NodeSeekApp (Configuration.Provider). -->
+        <!-- WorkManager initializes on demand via NodysseyApp (Configuration.Provider). -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

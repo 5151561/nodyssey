@@ -4,13 +4,13 @@
     {
       "name": "ds-bundle-static",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8642", "--directory", "/Users/changlepan/Claude/Projects/nodeseek-android/ds-bundle"],
+      "runtimeArgs": ["-m", "http.server", "8642", "--directory", "ds-bundle"],
       "port": 8642
     },
     {
       "name": "ns-bundle-static",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8643", "--directory", "/Users/changlepan/Claude/Projects/nodeseek-android/ns-bundle"],
+      "runtimeArgs": ["-m", "http.server", "8643", "--directory", "ns-bundle"],
       "port": 8643
     }
   ]

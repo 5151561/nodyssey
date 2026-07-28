@@ -10,7 +10,7 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 
 | 画板 | 实现状态 | 主要代码 | 仍需注意 |
 |---|---|---|---|
-| c7 我的 · 未登录 v2 | 已按稿实现 | `ui/profile/ProfileScreen.kt`、`ui/common/NodeSeekIcons.kt` | 登录继续使用受限 WebView 并共享 Cookie；设置与社区工具是未登录可用入口，页面不伪造账号数据 |
+| c7 我的 · 未登录 v2 | 已按稿实现 | `ui/profile/ProfileScreen.kt`、`ui/common/NodysseyIcons.kt` | 登录继续使用受限 WebView 并共享 Cookie；设置与社区工具是未登录可用入口，页面不伪造账号数据 |
 
 ## 批次 F
 
@@ -21,11 +21,11 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 | f3 Telegram 绑定 | 已接入账号联系方式流程 | `ui/account/ContactScreen.kt`、`ContactViewModel.kt`、`data/account/AccountSettingsRepository.kt` | 绑定本身在网页完成（站点用 telegram.org 登录挂件），确认弹窗打开 `/setting#contact`，返回后轮询状态；绑定状态读取与解绑是原生请求 |
 | f4 App 通知设置 | 已接入 | `ui/settings/NotificationSettingsScreen.kt`、`NotificationSettingsViewModel.kt`、`notifications/` | WorkManager 是周期轮询，不承诺即时推送；系统省电策略可能延后执行 |
 
-以上代码路径均相对于 `app/src/main/java/io/github/nsreader/`。
+以上代码路径均相对于 `app/src/main/java/io/github/nodyssey/`。
 
 ## f1 验收对照
 
-- “关于 NSReader”和“关于 · 社区”是两个独立页面，分别位于软件设置与社区工具。
+- “关于 Nodyssey”和“关于 · 社区”是两个独立页面，分别位于软件设置与社区工具。
 - App 身份区包含非对称圆角 NS 标识、版本名与 version code、检查更新入口。
 - 非官方声明使用 tonal card；项目主页、问题反馈为系统外链，更新日志与开源许可为 App 内页面。
 - 社区段包含关于本站、隐私协议、RSS 复制、电报频道、电报群组、邮箱与 DeepFlood。

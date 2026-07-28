@@ -1,4 +1,4 @@
-# NodeSeek Android 新版界面设计需求
+# Nodyssey 新版界面设计需求
 
 > 交付对象：open-design / UI 设计师。本文是旧版 `docs/design-brief.md` 的更新版，按当前代码和 2026-07-26 登录态论坛核对结果整理。设计先覆盖手机 compact 尺寸，再验证大屏；不要求一次实现所有功能，但所有 P0 页面都要有可落地的视觉方案。
 >

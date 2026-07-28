@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">NodeSeek</string>
+    <string name="app_name">Nodyssey</string>
 
     <!-- Actions -->
     <string name="action_back">返回</string>
@@ -241,15 +241,15 @@
     <string name="settings_wifi_images_hint">移动网络显示占位图</string>
     <string name="settings_clear_cache">清除缓存</string>
     <string name="settings_about">关于</string>
-    <string name="settings_about_app">关于 NSReader</string>
+    <string name="settings_about_app">关于 Nodyssey</string>
     <string name="settings_version">v1.0</string>
     <string name="settings_licenses">开源许可</string>
 
     <!-- About & community (board f1). -->
-    <string name="about_title">关于 NSReader</string>
+    <string name="about_title">关于 Nodyssey</string>
     <string name="about_community_title">关于 · 社区</string>
     <string name="about_community_hint">论坛信息、联络方式与友站</string>
-    <string name="about_app_name">NodeSeek 客户端</string>
+    <string name="about_app_name">Nodyssey</string>
     <string name="about_version">版本 %1$s (%2$d)</string>
     <string name="about_check_updates">检查更新</string>
     <string name="about_update_unknown">前往 GitHub 检查 ↗</string>
@@ -295,7 +295,7 @@
     <string name="changelog_summary">当前构建尚未附带结构化更新记录。完整提交与发行说明以项目 Releases 页面为准。</string>
     <string name="changelog_all_releases">查看全部 Releases ↗</string>
 
-    <string name="licenses_summary">NSReader 是 GPL-3.0 开源软件，并使用下列主要开源组件。点击条目可查看对应源码与许可信息。</string>
+    <string name="licenses_summary">Nodyssey 是 GPL-3.0 开源软件，并使用下列主要开源组件。点击条目可查看对应源码与许可信息。</string>
     <string name="licenses_app_section">本应用</string>
     <string name="licenses_dependencies_section">主要运行时依赖</string>
     <string name="licenses_lockfile_note">完整且精确的传递依赖版本以源码仓库中的 app/gradle.lockfile 为准。</string>

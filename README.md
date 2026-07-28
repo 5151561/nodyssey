@@ -1,11 +1,15 @@
-# NodeSeek Android
+# Nodyssey
 
-An unofficial, open-source Android client for [NodeSeek](https://www.nodeseek.com/), built with
-Kotlin and Jetpack Compose.
+Nodyssey is an unofficial, open-source Android client for
+[NodeSeek](https://www.nodeseek.com/), built with Kotlin and Jetpack Compose.
 
-NodeSeek has an iOS client but no official Android client. This app renders posts and comments as
+NodeSeek has an iOS client but no official Android client. Nodyssey renders posts and comments as
 **native Compose content**—there is no WebView in the normal reading path—so text is selectable,
 scrolling stays in one list, and the UI follows the system theme.
+
+源码、问题反馈与版本发布：[GitHub](https://github.com/5151561/nodyssey) ·
+[Issues](https://github.com/5151561/nodyssey/issues) ·
+[Releases](https://github.com/5151561/nodyssey/releases)
 
 > 中文说明见下方。
 
@@ -38,7 +42,7 @@ HTML. Everything sits behind Cloudflare, so requests have to look like a real mo
 carry cookies obtained from a WebView.
 
 ```text
-app/src/main/java/io/github/nsreader/
+app/src/main/java/io/github/nodyssey/
 ├── core/
 │   ├── NodeSeekSite.kt          URL vocabulary and route parsing
 │   ├── html/

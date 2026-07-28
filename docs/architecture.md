@@ -27,7 +27,7 @@
 | 帖子详情 | `post_details` + `post_comments` 表 → `PostRepository.thread()` | ViewModel `onEach` 镜像进 UiState |
 | 已读状态 | `post_read_marks` 表 | 在 SQL 里 join 进列表行，UI 不再单独查 |
 | 我的资料 | `self_profile` 表 → `ProfileRepository.observeProfile()` | 先回放同会话缓存，再后台刷新写回 Room |
-| App 设置与通知轮询配置 | `SettingsRepository`（DataStore） | UI 与 `NodeSeekApp` 分别 collect 同一设置流 |
+| App 设置与通知轮询配置 | `SettingsRepository`（DataStore） | UI 与 `NodysseyApp` 分别 collect 同一设置流 |
 | 隐私协议文档 | `TermsRepository` 的单次结果 | `PrivacyViewModel` 持有当前加载状态；失败不写入伪造正文 |
 
 **需要离线持久化的内容以 Room 为 SSOT，设置以 DataStore 为 SSOT；一次性远程文档由对应 Repository
@@ -60,7 +60,7 @@
 
 ### 1.3 依赖显式且可替换
 
-依赖走**构造器注入**，由 `AppContainer` 组装，`NodeSeekApp` 创建并向下传递。
+依赖走**构造器注入**，由 `AppContainer` 组装，`NodysseyApp` 创建并向下传递。
 
 **没有全局单例。** 早期版本用过 `object ServiceLocator`，后果是 ViewModel 无法测试——
 没有任何办法塞进一个假的 Repository。现在 `AppContainer` 是接口，测试可以整体替换。

@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This is a single-module Android application. Production Kotlin lives under `app/src/main/java/io/github/nsreader/`: `core/` contains networking, parsing, and shared utilities; `data/` owns repositories and Room persistence; `model/` defines domain types; and `ui/` contains Compose screens, view models, navigation, and theme code. Android resources are in `app/src/main/res`. JVM and Robolectric tests mirror production packages under `app/src/test/java`, with captured HTML in `app/src/test/resources/fixtures`. Instrumented tests belong in `app/src/androidTest`. Room schemas are versioned in `app/schemas`; architecture and design context lives in `docs/`.
+This is a single-module Android application. Production Kotlin lives under `app/src/main/java/io/github/nodyssey/`: `core/` contains networking, parsing, and shared utilities; `data/` owns repositories and Room persistence; `model/` defines domain types; and `ui/` contains Compose screens, view models, navigation, and theme code. Android resources are in `app/src/main/res`. JVM and Robolectric tests mirror production packages under `app/src/test/java`, with captured HTML in `app/src/test/resources/fixtures`. Instrumented tests belong in `app/src/androidTest`. Room schemas are versioned in `app/schemas`; architecture and design context lives in `docs/`.
 
 ## Build, Test, and Development Commands
 
