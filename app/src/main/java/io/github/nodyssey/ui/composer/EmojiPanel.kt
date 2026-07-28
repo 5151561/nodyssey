@@ -9,10 +9,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -32,6 +35,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import io.github.nodyssey.R
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.theme.Spacing
@@ -39,10 +43,10 @@ import io.github.nodyssey.ui.theme.Spacing
 /**
  * One of the five groups NodeSeek's own editor offers.
  *
- * The first three are image stickers hosted by the site. Their asset URLs have never been captured
- * — the sandbox cannot reach nodeseek.com — and inserting a guessed URL would publish a broken
- * image into a real thread, so those groups carry no entries and say so. Filling them in is a change
- * to this list alone: give the group its [EmojiEntry.Sticker] items and the panel starts working.
+ * The first three are NodeSeek's image stickers. Their previews ship in `assets/stickers`, while the
+ * editor inserts the site's native shortcode (`:ac01:` etc.). Keeping those two concerns separate
+ * means opening this panel never spends mobile data and published posts still use NodeSeek's own
+ * renderer instead of a guessed Markdown image URL.
  */
 data class EmojiGroup(
     @param:StringRes val titleRes: Int,
@@ -53,20 +57,23 @@ sealed interface EmojiEntry {
     /** Inserted as-is. Fluent and App are plain Unicode, which is why they work today. */
     data class Unicode(val character: String) : EmojiEntry
 
-    /** Inserted as a Markdown image, the way the site stores stickers. */
-    data class Sticker(val name: String, val url: String) : EmojiEntry
+    data class Sticker(
+        val name: String,
+        val shortcode: String,
+        val assetPath: String,
+    ) : EmojiEntry
 }
 
 val EmojiEntry.insertion: String
     get() = when (this) {
         is EmojiEntry.Unicode -> character
-        is EmojiEntry.Sticker -> "![$name]($url)"
+        is EmojiEntry.Sticker -> shortcode
     }
 
 val NodeSeekEmojiGroups = listOf(
-    EmojiGroup(R.string.composer_emoji_group_acn, emptyList()),
-    EmojiGroup(R.string.composer_emoji_group_onion, emptyList()),
-    EmojiGroup(R.string.composer_emoji_group_chick, emptyList()),
+    EmojiGroup(R.string.composer_emoji_group_acn, acStickers()),
+    EmojiGroup(R.string.composer_emoji_group_onion, yctStickers()),
+    EmojiGroup(R.string.composer_emoji_group_chick, xhjStickers()),
     EmojiGroup(
         R.string.composer_emoji_group_fluent,
         listOf(
@@ -83,6 +90,39 @@ val NodeSeekEmojiGroups = listOf(
             "🎯", "⚡", "🧪", "📌", "🔒", "🧵",
         ).map(EmojiEntry::Unicode),
     ),
+)
+
+private fun acStickers(): List<EmojiEntry.Sticker> =
+    (
+        (1..54).map { it.toString().padStart(2, '0') } +
+            (1001..1040).map(Int::toString) +
+            (2001..2055).map(Int::toString)
+        )
+        .map { siteSticker(group = "ac", code = it, extension = "png") }
+
+private fun yctStickers(): List<EmojiEntry.Sticker> =
+    (1..22)
+        .map { it.toString().padStart(3, '0') }
+        .map { siteSticker(group = "yct", code = it, extension = "gif") }
+
+private fun xhjStickers(): List<EmojiEntry.Sticker> =
+    (1..32).map { number ->
+        val code = number.toString().padStart(3, '0')
+        val extension = when (number) {
+            1, 2, 3, 5, 6, 7, 11, 22, 24, 25, 31, 32 -> "png"
+            else -> "gif"
+        }
+        siteSticker(group = "xhj", code = code, extension = extension)
+    }
+
+private fun siteSticker(
+    group: String,
+    code: String,
+    extension: String,
+) = EmojiEntry.Sticker(
+    name = group + code,
+    shortcode = " :$group$code: ",
+    assetPath = "file:///android_asset/stickers/$group/$code.$extension",
 )
 
 /**
@@ -108,6 +148,9 @@ fun EmojiPanel(
     // Opens on the first group that has anything in it, so the panel is useful the moment it shows.
     var selectedIndex by rememberSaveable { mutableIntStateOf(groups.indexOfFirst { it.entries.isNotEmpty() }.coerceAtLeast(0)) }
     val group = groups.getOrNull(selectedIndex) ?: groups.first()
+    val entriesByInsertion = remember(groups) {
+        groups.flatMap(EmojiGroup::entries).associateBy(EmojiEntry::insertion)
+    }
 
     fun insert(text: String) {
         onInsert(text)
@@ -130,7 +173,7 @@ fun EmojiPanel(
                     )
                 }
             }
-            Box(Modifier.fillMaxWidth().heightIn(min = GRID_MIN_HEIGHT)) {
+            Box(Modifier.fillMaxWidth().height(GRID_HEIGHT)) {
                 if (group.entries.isEmpty()) {
                     Text(
                         text = stringResource(R.string.composer_emoji_stickers_pending),
@@ -140,11 +183,20 @@ fun EmojiPanel(
                         modifier = Modifier.align(Alignment.Center).padding(horizontal = Spacing.xl),
                     )
                 } else {
-                    EmojiGrid(entries = group.entries, onSelect = { insert(it.insertion) })
+                    EmojiGrid(
+                        entries = group.entries,
+                        onSelect = { insert(it.insertion) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RecentRow(recent = recent, onSelect = ::insert, modifier = Modifier.weight(1f))
+                RecentRow(
+                    recent = recent,
+                    entriesByInsertion = entriesByInsertion,
+                    onSelect = ::insert,
+                    modifier = Modifier.weight(1f),
+                )
                 BackspaceKey(onClick = onBackspace)
             }
         }
@@ -177,16 +229,16 @@ private fun GroupPill(
 private fun EmojiGrid(
     entries: List<EmojiEntry>,
     onSelect: (EmojiEntry) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        entries.chunked(COLUMNS).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.fillMaxWidth()) {
-                row.forEach { entry ->
-                    EmojiCell(entry = entry, onClick = { onSelect(entry) }, modifier = Modifier.weight(1f))
-                }
-                // Keeps the last, partly filled row aligned with the ones above it.
-                repeat(COLUMNS - row.size) { Box(Modifier.weight(1f)) }
-            }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(COLUMNS),
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        items(entries, key = { it.insertion }) { entry ->
+            EmojiCell(entry = entry, onClick = { onSelect(entry) })
         }
     }
 }
@@ -212,10 +264,10 @@ private fun EmojiCell(
         when (entry) {
             is EmojiEntry.Unicode -> Text(entry.character, fontSize = 24.sp)
 
-            is EmojiEntry.Sticker -> Text(
-                text = entry.name,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            is EmojiEntry.Sticker -> AsyncImage(
+                model = entry.assetPath,
+                contentDescription = null,
+                modifier = Modifier.size(STICKER_SIZE),
             )
         }
     }
@@ -224,6 +276,7 @@ private fun EmojiCell(
 @Composable
 private fun RecentRow(
     recent: List<String>,
+    entriesByInsertion: Map<String, EmojiEntry>,
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -240,15 +293,27 @@ private fun RecentRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = Spacing.xs, end = Spacing.sm),
         )
-        recent.forEach { entry ->
+        recent.forEach { insertion ->
+            val entry = entriesByInsertion[insertion]
             Box(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable { onSelect(entry) },
+                    .clickable { onSelect(insertion) },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(entry, fontSize = 18.sp)
+                when (entry) {
+                    is EmojiEntry.Sticker ->
+                        AsyncImage(
+                            model = entry.assetPath,
+                            contentDescription = entry.name,
+                            modifier = Modifier.size(RECENT_STICKER_SIZE),
+                        )
+
+                    is EmojiEntry.Unicode -> Text(entry.character, fontSize = 18.sp)
+
+                    null -> Text(insertion, fontSize = 18.sp)
+                }
             }
         }
     }
@@ -278,4 +343,6 @@ private fun BackspaceKey(onClick: () -> Unit) {
 
 private const val COLUMNS = 6
 private const val RECENT_LIMIT = 6
-private val GRID_MIN_HEIGHT = 162.dp
+private val GRID_HEIGHT = 162.dp
+private val STICKER_SIZE = 36.dp
+private val RECENT_STICKER_SIZE = 26.dp

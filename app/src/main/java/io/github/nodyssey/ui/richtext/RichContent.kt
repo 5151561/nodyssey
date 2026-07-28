@@ -21,12 +21,15 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -233,13 +236,14 @@ private fun BlockImage(
 ) {
     var cropped by remember(node.url) { mutableStateOf(false) }
     var allowMetered by remember(node.url) { mutableStateOf(false) }
-    // Reset with the request: once the user waives the preference the placeholder must give way
-    // even before the new request reports back, or the tap looks like it did nothing.
-    var skipped by remember(node.url, allowMetered) { mutableStateOf(false) }
+    var retryToken by remember(node.url) { mutableIntStateOf(0) }
+    var phase by remember(node.url, allowMetered, retryToken) {
+        mutableStateOf(InlineImagePhase.Loading)
+    }
 
     val context = LocalContext.current
     val request =
-        remember(node.url, allowMetered) {
+        remember(node.url, allowMetered, retryToken) {
             ImageRequest
                 .Builder(context)
                 .data(node.url)
@@ -247,9 +251,18 @@ private fun BlockImage(
                 .build()
         }
 
-    if (skipped) {
-        SkippedImagePlaceholder(onLoad = { allowMetered = true })
-        return
+    when (phase) {
+        InlineImagePhase.Deferred -> {
+            SkippedImagePlaceholder(onLoad = { allowMetered = true })
+            return
+        }
+
+        InlineImagePhase.Error -> {
+            InlineImageError(onRetry = { retryToken++ })
+            return
+        }
+
+        else -> Unit
     }
 
     BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -261,26 +274,60 @@ private fun BlockImage(
                 .clip(MaterialTheme.shapes.medium)
                 .clickable { onImageClick(node.url) },
         ) {
-            AsyncImage(
-                model = request,
-                contentDescription = node.alt,
-                contentScale = ContentScale.FillWidth,
-                alignment = Alignment.TopCenter,
-                onSuccess = { success ->
-                    val image = success.result.image
-                    if (image.width > 0) {
-                        val scaled = availableWidth * (image.height.toFloat() / image.width.toFloat())
-                        cropped = scaled > Sizes.maxInlineImageHeight
+            key(request) {
+                AsyncImage(
+                    model = request,
+                    contentDescription = node.alt,
+                    contentScale = ContentScale.FillWidth,
+                    alignment = Alignment.TopCenter,
+                    onSuccess = { success ->
+                        phase = InlineImagePhase.Success
+                        val image = success.result.image
+                        if (image.width > 0) {
+                            val scaled = availableWidth * (image.height.toFloat() / image.width.toFloat())
+                            cropped = scaled > Sizes.maxInlineImageHeight
+                        }
+                    },
+                    onError = { error ->
+                        phase = if (error.result.throwable is ImagesDeferredException) {
+                            InlineImagePhase.Deferred
+                        } else {
+                            InlineImagePhase.Error
+                        }
+                    },
+                    modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (phase == InlineImagePhase.Loading) {
+                                Modifier.height(INLINE_IMAGE_LOADING_HEIGHT)
+                            } else {
+                                Modifier
+                            },
+                        ).heightIn(max = Sizes.maxInlineImageHeight),
+                )
+            }
+            if (phase == InlineImagePhase.Loading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(INLINE_IMAGE_LOADING_HEIGHT)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                        Text(
+                            text = stringResource(R.string.image_loading),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
-                },
-                onError = { error ->
-                    skipped = error.result.throwable is ImagesDeferredException
-                },
-                modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = Sizes.maxInlineImageHeight),
-            )
+                }
+            }
             if (cropped) {
                 Box(
                     modifier =
@@ -306,6 +353,39 @@ private fun BlockImage(
         }
     }
 }
+
+@Composable
+private fun InlineImageError(onRetry: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(INLINE_IMAGE_LOADING_HEIGHT)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onRetry),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Text(
+                text = stringResource(R.string.viewer_load_failed),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.action_retry),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+private enum class InlineImagePhase { Loading, Success, Deferred, Error }
+
+private val INLINE_IMAGE_LOADING_HEIGHT = 132.dp
 
 @Composable
 private fun CodeBlock(node: RichNode.CodeBlock) {

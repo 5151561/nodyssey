@@ -53,6 +53,7 @@ object Selectors {
     const val CONTENT_CATEGORY = "span.content-category a"
     const val CONTENT_FLOOR = "a.floor-link"
     const val CONTENT_ARTICLE = "article.post-content"
+    const val CONTENT_SIGNATURE = "div.signature"
 
     // --- Page-level state ---------------------------------------------------
 

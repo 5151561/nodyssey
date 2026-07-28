@@ -66,6 +66,19 @@ class PostDetailParserTest {
     }
 
     @Test
+    fun `parses public signatures below comments`() {
+        assertTrue(body.signatureNodes.isEmpty())
+
+        val signature = detail.comments.first { it.authorName == "ggbeng" }.signatureNodes
+        val links = signature
+            .filterIsInstance<RichNode.Paragraph>()
+            .flatMap { it.inlines }
+            .filterIsInstance<InlineNode.Link>()
+
+        assertTrue(links.any { it.text == "个人博客" && it.url == "https://ggbeng.tech" })
+    }
+
+    @Test
     fun `reads the header badges`() {
         assertEquals(listOf("楼主"), body.badges)
 

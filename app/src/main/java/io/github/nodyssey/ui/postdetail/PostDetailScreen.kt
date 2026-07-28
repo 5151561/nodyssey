@@ -775,6 +775,12 @@ private fun OriginalPost(
                     modifier = Modifier.padding(top = Spacing.md),
                 )
             }
+            UserSignature(
+                nodes = body.signatureNodes,
+                onOpenBrowser = onOpenBrowser,
+                onImageClick = onImageClick,
+                onJumpToFloor = onJumpToFloor,
+            )
             ReactionRow(onChickenClick = onChickenClick)
         }
     }
@@ -887,8 +893,39 @@ private fun CommentRow(
             textStyle = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = Spacing.sm),
         )
+        UserSignature(
+            nodes = comment.signatureNodes,
+            onOpenBrowser = onOpenBrowser,
+            onImageClick = onImageClick,
+            onJumpToFloor = onJumpToFloor,
+        )
         ReactionRow(onChickenClick = onChickenClick, onReply = onReply)
     }
+}
+
+/** NodeSeek's public Markdown signature, visually separated from the floor's actual content. */
+@Composable
+private fun UserSignature(
+    nodes: List<RichNode>,
+    onOpenBrowser: (String) -> Unit,
+    onImageClick: (String) -> Unit,
+    onJumpToFloor: (String) -> Unit,
+) {
+    if (nodes.isEmpty()) return
+
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant,
+        modifier = Modifier.padding(top = Spacing.md, bottom = Spacing.sm),
+    )
+    RichContent(
+        nodes = nodes,
+        onLinkClick = onOpenBrowser,
+        onImageClick = onImageClick,
+        onQuoteRefClick = { onJumpToFloor(it.floor) },
+        textStyle = MaterialTheme.typography.labelMedium.copy(
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+    )
 }
 
 /** Tappable only when the uid was actually parsed; a dead ripple would promise a screen we cannot open. */

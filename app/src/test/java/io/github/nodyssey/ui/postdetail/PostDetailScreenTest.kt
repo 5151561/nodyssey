@@ -32,6 +32,7 @@ class PostDetailScreenTest {
     private fun content(
         text: String,
         author: String = "tester",
+        signature: List<RichNode> = emptyList(),
     ) = PostContent(
         commentId = text.hashCode().toLong(),
         floor = null,
@@ -44,6 +45,7 @@ class PostDetailScreenTest {
         createdAtTitle = null,
         categoryTitle = null,
         nodes = listOf(RichNode.Paragraph(listOf(InlineNode.Text(text)))),
+        signatureNodes = signature,
     )
 
     private fun setScreen(
@@ -82,6 +84,27 @@ class PostDetailScreenTest {
         composeRule.onNodeWithText("the opening post").assertIsDisplayed()
         composeRule.onNodeWithText("first reply").assertIsDisplayed()
         composeRule.onNodeWithText("second reply").assertIsDisplayed()
+    }
+
+    @Test
+    fun `renders the public signature and opens its link`() {
+        var opened: String? = null
+        val signature = listOf(
+            RichNode.Paragraph(
+                listOf(InlineNode.Link(text = "个人博客", url = "https://example.com")),
+            ),
+        )
+        setScreen(
+            PostDetailUiState(
+                title = "t",
+                body = content("body", author = "op", signature = signature),
+            ),
+            onOpenBrowser = { opened = it },
+        )
+
+        composeRule.onNodeWithText("个人博客").assertIsDisplayed().performClick()
+
+        assert(opened == "https://example.com")
     }
 
     @Test

@@ -520,6 +520,7 @@
     <string name="status_not_wired_body">NodeSeek 这一页是网页端渲染的，没有可读的接口，App 不会拿猜出来的数据糊弄你。先到网页里看，接口对上就会补进来。</string>
 
     <string name="image_description_sticker">表情</string>
+    <string name="image_loading">图片加载中…</string>
 
     <!-- Two-pane home on tablets and unfolded foldables -->
     <string name="home_pane_empty">选一个帖子，正文会显示在这里</string>

@@ -78,6 +78,7 @@ object PostDetailParser {
             nodes = RichContentParser.parse(element.selectFirst(Selectors.CONTENT_ARTICLE)),
             isEdited = editedText != null,
             editedAtText = editedText,
+            signatureNodes = RichContentParser.parse(element.selectFirst(Selectors.CONTENT_SIGNATURE)),
         )
     }
 

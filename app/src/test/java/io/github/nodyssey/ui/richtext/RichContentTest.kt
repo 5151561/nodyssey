@@ -23,6 +23,7 @@ import io.github.nodyssey.core.image.ImagesDeferredException
 import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Sizes
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -128,6 +129,21 @@ class RichContentTest {
         assertTrue("expected a request that waives the preference", interceptor.sawAllowedRequest)
     }
 
+    @Test
+    fun `tapping the placeholder keeps a visible loading surface until the image arrives`() {
+        val allowedRequest = CompletableDeferred<Unit>()
+        val interceptor = DeferringInterceptor(allowedRequest)
+        setContent(
+            nodes = listOf(RichNode.BlockImage(url = IMAGE_URL, alt = null)),
+            imageLoader = imageLoader(interceptor),
+        )
+
+        composeRule.onNodeWithText("点按加载这张图").performClick()
+
+        composeRule.onNodeWithText("图片加载中…").assertIsDisplayed()
+        allowedRequest.complete(Unit)
+    }
+
     private fun imageLoader(interceptor: Interceptor): ImageLoader =
         ImageLoader
             .Builder(ApplicationProvider.getApplicationContext<Context>())
@@ -138,13 +154,16 @@ class RichContentTest {
      * Stands in for [io.github.nodyssey.core.image.ImageNetworkPolicyInterceptor] on a metered
      * network: everything is skipped until a request says the user asked for it by hand.
      */
-    private class DeferringInterceptor : Interceptor {
+    private class DeferringInterceptor(
+        private val allowedRequest: CompletableDeferred<Unit>? = null,
+    ) : Interceptor {
         var sawAllowedRequest = false
             private set
 
         override suspend fun intercept(chain: Interceptor.Chain): ImageResult =
             if (chain.request.getExtra(AllowMeteredImage)) {
                 sawAllowedRequest = true
+                allowedRequest?.await()
                 SuccessResult(
                     image = ColorImage(width = 100, height = 100),
                     request = chain.request,
