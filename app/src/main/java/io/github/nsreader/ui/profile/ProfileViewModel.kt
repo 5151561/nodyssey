@@ -142,7 +142,6 @@ private fun UserProfile.toUiState(): ProfileUiState =
         memberSince = memberSinceLabel(),
         chickenCount = chickenCount,
         starCount = starCount,
-        streakDays = streakDays,
     )
 
 private fun UserProfile.memberSinceLabel(): String {
@@ -167,7 +166,6 @@ data class ProfileUiState(
     val memberSince: String? = null,
     val chickenCount: Int? = null,
     val starCount: Int? = null,
-    val streakDays: Int? = null,
 ) {
     val hasProfile: Boolean
         get() = uid != null && displayName.isNotBlank()

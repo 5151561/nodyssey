@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -209,27 +208,12 @@ private fun ProfileHeader(
             shape = StatusShapes.Welcome,
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = state.displayName,
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.padding(start = Spacing.sm),
-                ) {
-                    Text(
-                        state.level ?: stringResource(R.string.profile_level_unknown),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp),
-                    )
-                }
-            }
+            Text(
+                text = state.displayName,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             Text(
                 text = state.memberSince ?: stringResource(R.string.profile_session_active),
                 style = MaterialTheme.typography.labelSmall,
@@ -279,8 +263,8 @@ private fun ResourceCards(
             onClick = onAssets,
         )
         ResourceCard(
-            value = state.streakDays?.toString() ?: "—",
-            label = stringResource(R.string.profile_streak),
+            value = state.level ?: stringResource(R.string.profile_level_unknown),
+            label = stringResource(R.string.profile_level),
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(5.dp, 18.dp, 18.dp, 5.dp),
             color = MaterialTheme.colorScheme.secondaryContainer,
@@ -348,7 +332,6 @@ private fun ProfileSignedInPreview() {
                 memberSince = "2023年5月 注册 · UID 88423",
                 chickenCount = 1_284,
                 starCount = 356,
-                streakDays = 27,
             ),
             onSignIn = {},
             onSignOut = {},

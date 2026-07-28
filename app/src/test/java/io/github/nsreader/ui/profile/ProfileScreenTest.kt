@@ -1,7 +1,9 @@
 package io.github.nsreader.ui.profile
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -21,7 +23,7 @@ class ProfileScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun `signed in profile keeps the level badge when level data is unavailable`() {
+    fun `signed in profile shows unknown level in the resource cards`() {
         composeRule.setContent {
             NodeSeekTheme {
                 ProfileScreen(
@@ -46,10 +48,11 @@ class ProfileScreenTest {
         }
 
         composeRule.onNodeWithText("Lv —").assertIsDisplayed()
+        composeRule.onNodeWithText("等级").assertIsDisplayed()
     }
 
     @Test
-    fun `signed in profile displays the provided level`() {
+    fun `signed in profile replaces attendance streak with level`() {
         composeRule.setContent {
             NodeSeekTheme {
                 ProfileScreen(
@@ -73,7 +76,9 @@ class ProfileScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Lv 3").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Lv 3").assertCountEquals(1)
+        composeRule.onNodeWithText("等级").assertIsDisplayed()
+        composeRule.onNodeWithText("连续签到").assertDoesNotExist()
     }
 
     @Test
