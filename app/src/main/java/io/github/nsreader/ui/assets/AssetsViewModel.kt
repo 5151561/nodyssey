@@ -18,6 +18,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -34,10 +37,10 @@ data class AssetsUiState(
     val attendanceQuota: DailyQuota = DailyQuota(null, null),
     val feedingQuota: DailyQuota = DailyQuota(null, null),
     val isSigningIn: Boolean = false,
-    /** Set once today's sign-in has been attempted; the site tells us nothing before that. */
+    /** True when today's board contains the signed-in account or a sign-in just succeeded. */
     val attendanceGain: Int? = null,
     val attendanceMessage: String? = null,
-    val hasSignedInThisSession: Boolean = false,
+    val hasSignedInToday: Boolean = false,
     /** True while the mode chooser (随机 / 固定 5 个) is on screen. */
     val choosingAttendanceMode: Boolean = false,
     val boardOpen: Boolean = false,
@@ -80,6 +83,17 @@ class AssetsViewModel(
     private var signInJob: Job? = null
 
     init {
+        repository
+            .observeAttendanceStatus()
+            .filterNotNull()
+            .onEach { status ->
+                _uiState.update {
+                    it.copy(
+                        hasSignedInToday = status.hasSignedIn,
+                        attendanceGain = status.gain,
+                    )
+                }
+            }.launchIn(viewModelScope)
         refresh()
     }
 
@@ -116,8 +130,8 @@ class AssetsViewModel(
                         _uiState.update {
                             it.copy(
                                 isSigningIn = false,
-                                hasSignedInThisSession = true,
-                                attendanceGain = result.gain,
+                                hasSignedInToday = true,
+                                attendanceGain = result.gain ?: it.attendanceGain,
                                 attendanceMessage = result.message,
                             )
                         }

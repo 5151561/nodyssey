@@ -208,7 +208,7 @@ class DefaultAppContainer(
     }
 
     override val assetsRepository: AssetsRepository by lazy {
-        NetworkAssetsRepository(profileRepository, jsonClient, dispatchers)
+        NetworkAssetsRepository(profileRepository, jsonClient, dispatchers, clock)
     }
 
     override val awardRepository: AwardRepository by lazy {

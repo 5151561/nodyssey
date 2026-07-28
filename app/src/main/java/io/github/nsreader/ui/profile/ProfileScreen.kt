@@ -15,10 +15,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +39,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nsreader.R
 import io.github.nsreader.core.net.NodeSeekError
@@ -61,11 +66,16 @@ fun ProfileRoute(
     onOpenWebsite: () -> Unit,
     onOpenSpace: (Long) -> Unit,
     onAssets: () -> Unit,
+    onAttendance: () -> Unit,
+    onAttendanceBoard: () -> Unit,
     onFollow: () -> Unit,
     onTools: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshAttendance()
+    }
     ProfileScreen(
         state = state,
         onSignIn = onSignIn,
@@ -76,6 +86,8 @@ fun ProfileRoute(
         onOpenWebsite = onOpenWebsite,
         onOpenSpace = { state.uid?.let(onOpenSpace) },
         onAssets = onAssets,
+        onAttendance = onAttendance,
+        onAttendanceBoard = onAttendanceBoard,
         onFollow = onFollow,
         onTools = onTools,
         modifier = modifier,
@@ -93,6 +105,8 @@ fun ProfileScreen(
     onOpenWebsite: () -> Unit,
     onOpenSpace: () -> Unit,
     onAssets: () -> Unit,
+    onAttendance: () -> Unit,
+    onAttendanceBoard: () -> Unit,
     onFollow: () -> Unit,
     onTools: () -> Unit,
     modifier: Modifier = Modifier,
@@ -140,15 +154,45 @@ fun ProfileScreen(
             }
             item(key = "attendance") {
                 Button(
-                    onClick = onAssets,
+                    onClick = if (state.hasSignedInToday) onAttendanceBoard else onAttendance,
+                    enabled = !state.isCheckingAttendance,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
+                    colors =
+                    if (state.hasSignedInToday) {
+                        ButtonDefaults.filledTonalButtonColors()
+                    } else {
+                        ButtonDefaults.buttonColors()
+                    },
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = null)
-                    Text(
-                        stringResource(R.string.profile_attendance),
-                        modifier = Modifier.padding(start = Spacing.sm),
-                    )
+                    when {
+                        state.isCheckingAttendance -> {
+                            CircularProgressIndicator(Modifier.size(18.dp))
+                            Text(
+                                stringResource(R.string.profile_attendance_checking),
+                                modifier = Modifier.padding(start = Spacing.sm),
+                            )
+                        }
+
+                        state.hasSignedInToday -> {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null)
+                            Text(
+                                text =
+                                state.attendanceGain?.let {
+                                    stringResource(R.string.assets_signed_in, it)
+                                } ?: stringResource(R.string.profile_attendance_done),
+                                modifier = Modifier.padding(start = Spacing.sm),
+                            )
+                        }
+
+                        else -> {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                            Text(
+                                stringResource(R.string.profile_attendance),
+                                modifier = Modifier.padding(start = Spacing.sm),
+                            )
+                        }
+                    }
                 }
             }
             // The content menu now points at real screens. 主题帖 / 评论 / 收藏 are the space page's own
@@ -341,6 +385,8 @@ private fun ProfileSignedInPreview() {
             onOpenWebsite = {},
             onOpenSpace = {},
             onAssets = {},
+            onAttendance = {},
+            onAttendanceBoard = {},
             onFollow = {},
             onTools = {},
         )
@@ -361,6 +407,8 @@ private fun ProfileSignedOutPreview() {
             onOpenWebsite = {},
             onOpenSpace = {},
             onAssets = {},
+            onAttendance = {},
+            onAttendanceBoard = {},
             onFollow = {},
             onTools = {},
         )

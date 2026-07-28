@@ -117,7 +117,10 @@ data class UserSpaceKey(
 data object FollowKey : NavKey
 
 @Serializable
-data object AssetsKey : NavKey
+data class AssetsKey(
+    val openAttendanceChooser: Boolean = false,
+    val openAttendanceBoard: Boolean = false,
+) : NavKey
 
 @Serializable
 data object StardustKey : NavKey

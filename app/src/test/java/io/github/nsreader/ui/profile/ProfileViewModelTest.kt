@@ -6,7 +6,13 @@ import io.github.nsreader.core.NodeSeekSite
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.core.net.WebViewCookieJar
+import io.github.nsreader.data.AssetsRepository
+import io.github.nsreader.data.AttendanceBoardEntry
+import io.github.nsreader.data.AttendanceMode
+import io.github.nsreader.data.AttendanceResult
+import io.github.nsreader.data.AttendanceStatus
 import io.github.nsreader.data.FeedPost
+import io.github.nsreader.data.GrowthSnapshot
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.ProfileRepository
 import io.github.nsreader.data.UserProfile
@@ -18,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -71,6 +78,7 @@ class ProfileViewModelTest {
                             starCount = 7,
                         ),
                     ),
+                    assetsRepository = FakeAssetsRepository(),
                 )
 
             advanceUntilIdle()
@@ -96,6 +104,7 @@ class ProfileViewModelTest {
                     FakeProfileRepository(
                         error = NodeSeekException(NodeSeekError.Network),
                     ),
+                    assetsRepository = FakeAssetsRepository(),
                 )
 
             advanceUntilIdle()
@@ -126,6 +135,7 @@ class ProfileViewModelTest {
                         cachedProfile = cached,
                         refreshGate = gate,
                     ),
+                    assetsRepository = FakeAssetsRepository(),
                 )
 
             runCurrent()
@@ -141,6 +151,52 @@ class ProfileViewModelTest {
             assertEquals(305, viewModel.uiState.value.chickenCount)
             assertFalse(viewModel.uiState.value.isLoading)
         }
+
+    @Test
+    fun `publishes today's attendance gain from the board`() =
+        runTest(dispatcher) {
+            val viewModel =
+                ProfileViewModel(
+                    session = SessionRepository(WebViewCookieJar(cookieManager)),
+                    postRepository = NoOpPostRepository,
+                    profileRepository =
+                    FakeProfileRepository(
+                        UserProfile(
+                            uid = 31037,
+                            name = "缭雾",
+                            avatarUrl = "https://www.nodeseek.com/avatar/31037.png",
+                        ),
+                    ),
+                    assetsRepository = FakeAssetsRepository(gain = 7),
+                )
+
+            advanceUntilIdle()
+
+            assertEquals(true, viewModel.uiState.value.hasSignedInToday)
+            assertEquals(7, viewModel.uiState.value.attendanceGain)
+            assertFalse(viewModel.uiState.value.isCheckingAttendance)
+        }
+}
+
+private class FakeAssetsRepository(
+    private val gain: Int? = null,
+) : AssetsRepository {
+    private val status = MutableStateFlow<AttendanceStatus?>(null)
+
+    override fun observeAttendanceStatus(): StateFlow<AttendanceStatus?> = status
+
+    override suspend fun growth(): GrowthSnapshot = error("Not used")
+
+    override suspend fun refreshAttendanceStatus(uid: Long): AttendanceStatus =
+        AttendanceStatus(
+            uid = uid,
+            hasSignedIn = gain != null,
+            gain = gain,
+        ).also { status.value = it }
+
+    override suspend fun signInForToday(mode: AttendanceMode): AttendanceResult = error("Not used")
+
+    override suspend fun attendanceBoard(page: Int): List<AttendanceBoardEntry> = error("Not used")
 }
 
 private class FakeProfileRepository(

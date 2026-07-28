@@ -262,6 +262,9 @@ class NodeSeekJsonClient(
         fun attendanceBoardPath(page: Int = 1) =
             "/api/attendance/board?page=${page.coerceAtLeast(1)}"
 
+        /** Session-scoped chicken ledger; rows are `[change, balance, reason, createdAt]`. */
+        fun creditLedgerPath(page: Int = 1) = "/api/account/credit/page-${page.coerceAtLeast(1)}"
+
         /** `?all=true` with an empty body; the per-item form takes a JSON array we do not need. */
         fun markAllViewedPath(type: String) = "/api/notification/$type/markViewed?all=true"
 

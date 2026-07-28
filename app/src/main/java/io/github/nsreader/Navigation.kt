@@ -332,7 +332,9 @@ fun MainNavigation(
                     onAccountSettings = { backStack.add(AccountSettingsKey) },
                     onOpenWebsite = { openExternalUrl(NodeSeekSite.BASE_URL) },
                     onOpenSpace = { uid -> backStack.add(UserSpaceKey(uid, isSelf = true)) },
-                    onAssets = { backStack.add(AssetsKey) },
+                    onAssets = { backStack.add(AssetsKey()) },
+                    onAttendance = { backStack.add(AssetsKey(openAttendanceChooser = true)) },
+                    onAttendanceBoard = { backStack.add(AssetsKey(openAttendanceBoard = true)) },
                     onFollow = { backStack.add(FollowKey) },
                     onTools = { backStack.add(CommunityToolsKey) },
                 )
@@ -510,14 +512,16 @@ fun MainNavigation(
                 )
             }
 
-            entry<AssetsKey> {
+            entry<AssetsKey> { key ->
                 val viewModel: AssetsViewModel =
                     viewModel(factory = AssetsViewModel.factory(container))
                 AssetsRoute(
                     viewModel = viewModel,
+                    openAttendanceChooser = key.openAttendanceChooser,
+                    openAttendanceBoard = key.openAttendanceBoard,
                     onBack = { backStack.removeLastOrNull() },
-                    // The chicken ledger has no board of its own in this batch and no endpoint
-                    // behind it; the site's table is the honest destination.
+                    // The full ledger UI is not part of this batch. Its JSON is used internally to
+                    // detect today's attendance, while the site's table remains the full destination.
                     onChickenLedger = {
                         backStack.add(
                             WebKey(

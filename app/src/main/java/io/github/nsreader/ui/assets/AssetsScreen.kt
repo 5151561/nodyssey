@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +72,8 @@ const val INVITE_CODE_CHICKEN_COST = 1_000
 @Composable
 fun AssetsRoute(
     viewModel: AssetsViewModel,
+    openAttendanceChooser: Boolean,
+    openAttendanceBoard: Boolean,
     onBack: () -> Unit,
     onChickenLedger: () -> Unit,
     onStardust: () -> Unit,
@@ -79,6 +82,12 @@ fun AssetsRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(openAttendanceChooser, openAttendanceBoard) {
+        when {
+            openAttendanceBoard -> viewModel.openBoard()
+            openAttendanceChooser -> viewModel.requestAttendance()
+        }
+    }
     AssetsScreen(
         state = state,
         onBack = onBack,
@@ -175,7 +184,11 @@ fun AssetsScreen(
                     onClick = onStardust,
                 )
             }
-            AttendanceButton(state = state, onRequestAttendance = onRequestAttendance)
+            AttendanceButton(
+                state = state,
+                onRequestAttendance = onRequestAttendance,
+                onOpenBoard = onOpenBoard,
+            )
             // 邀请购码住在社区工具里，和站点的入口位置一致；这里不再重复一份。
             GroupedRow(
                 title = stringResource(R.string.assets_board),
@@ -558,19 +571,19 @@ private fun RowScope.BalanceCard(
 /**
  * Sign-in, which is the only write this screen performs.
  *
- * The site does not say whether today is already signed until the request is made, so the button starts
- * enabled and becomes a tonal, disabled receipt afterwards — including when the answer was "已经签到过
- * 了", which is the site's own sentence and more use than a generic error.
+ * Before signing in this opens the site's mode chooser. Afterwards it becomes a tonal receipt which
+ * remains actionable: tapping it again opens today's board.
  */
 @Composable
 private fun AttendanceButton(
     state: AssetsUiState,
     onRequestAttendance: () -> Unit,
+    onOpenBoard: () -> Unit,
 ) {
-    val done = state.hasSignedInThisSession
+    val done = state.hasSignedInToday
     Button(
-        onClick = onRequestAttendance,
-        enabled = !done && !state.isSigningIn,
+        onClick = if (done) onOpenBoard else onRequestAttendance,
+        enabled = !state.isSigningIn,
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp),
@@ -646,7 +659,7 @@ private val previewState =
         commentQuota = DailyQuota(3, 20),
         attendanceQuota = DailyQuota(7, 7),
         feedingQuota = DailyQuota(0, 0),
-        hasSignedInThisSession = true,
+        hasSignedInToday = true,
         attendanceGain = 7,
     )
 
@@ -666,7 +679,7 @@ private fun AssetsUnknownQuotaPreview() {
                 commentQuota = DailyQuota(null, 20),
                 attendanceQuota = DailyQuota(null, null),
                 feedingQuota = DailyQuota(null, null),
-                hasSignedInThisSession = false,
+                hasSignedInToday = false,
                 attendanceGain = null,
             ),
         )

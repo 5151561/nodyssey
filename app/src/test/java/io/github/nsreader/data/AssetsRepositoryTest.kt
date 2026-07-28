@@ -1,5 +1,6 @@
 package io.github.nsreader.data
 
+import io.github.nsreader.core.AppClock
 import io.github.nsreader.core.AppDispatchers
 import io.github.nsreader.core.net.JsonPostResponse
 import io.github.nsreader.core.net.JsonSource
@@ -7,6 +8,7 @@ import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.core.net.NodeSeekJsonClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -22,7 +24,12 @@ class AssetsRepositoryTest {
         AppDispatchers(io = Dispatchers.Unconfined, default = Dispatchers.Unconfined)
 
     private fun repository(source: JsonSource) =
-        NetworkAssetsRepository(UnusedProfileRepository, source, dispatchers)
+        NetworkAssetsRepository(
+            UnusedProfileRepository,
+            source,
+            dispatchers,
+            AppClock { 1_753_718_400_000L }, // 2025-07-29T00:00:00+08:00
+        )
 
     @Test
     fun `parses a successful sign-in and requests the chosen mode`() =
@@ -95,6 +102,54 @@ class AssetsRepositoryTest {
 
             assertEquals(NodeSeekError.LoginRequired, (exception as? NodeSeekException)?.error)
         }
+
+    @Test
+    fun `detects today's gain from the signed in account ledger`() =
+        runTest {
+            val source =
+                FakeCreditJsonSource(
+                    """{"success":true,"data":[[7,344,"签到收益7个鸡腿","2025-07-28T16:30:00.000Z"]]}""",
+                )
+            val repository = repository(source)
+
+            val status = repository.refreshAttendanceStatus(uid = 31037)
+
+            assertEquals(true, status.hasSignedIn)
+            assertEquals(7, status.gain)
+            assertEquals(NodeSeekJsonClient.creditLedgerPath(1), source.requestedPath)
+            assertEquals(status, repository.observeAttendanceStatus().first())
+        }
+
+    @Test
+    fun `reports unsigned when today's ledger has no attendance income`() =
+        runTest {
+            val repository =
+                repository(
+                    FakeCreditJsonSource(
+                        """{"success":true,"data":[[1,337,"回帖奖励","2025-07-28T17:00:00.000Z"],[5,336,"签到收益5个鸡腿","2025-07-27T03:00:00.000Z"]]}""",
+                    ),
+                )
+
+            val status = repository.refreshAttendanceStatus(uid = 31037)
+
+            assertEquals(false, status.hasSignedIn)
+            assertNull(status.gain)
+        }
+}
+
+private class FakeCreditJsonSource(
+    private val body: String,
+) : JsonSource {
+    var requestedPath: String? = null
+        private set
+
+    override suspend fun getJson(path: String, referer: String): String {
+        requestedPath = path
+        return body
+    }
+
+    override suspend fun postJson(path: String, referer: String): JsonPostResponse =
+        error("These tests only GET")
 }
 
 private class FakePostJsonSource(

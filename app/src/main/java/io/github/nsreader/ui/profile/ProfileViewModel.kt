@@ -7,6 +7,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.runCatchingExceptCancellation
+import io.github.nsreader.data.AssetsRepository
+import io.github.nsreader.data.AttendanceStatus
 import io.github.nsreader.data.PostRepository
 import io.github.nsreader.data.ProfileRepository
 import io.github.nsreader.data.UserProfile
@@ -35,10 +37,13 @@ class ProfileViewModel(
     private val session: SessionRepository,
     private val postRepository: PostRepository,
     private val profileRepository: ProfileRepository,
+    private val assetsRepository: AssetsRepository,
 ) : ViewModel() {
     private var signOutJob: Job? = null
     private var loadJob: Job? = null
     private var profileJob: Job? = null
+    private var attendanceJob: Job? = null
+    private var attendanceCheckedUid: Long? = null
     private val _uiState =
         MutableStateFlow(
             ProfileUiState(
@@ -49,6 +54,11 @@ class ProfileViewModel(
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     init {
+        assetsRepository
+            .observeAttendanceStatus()
+            .filterNotNull()
+            .onEach(::applyAttendanceStatus)
+            .launchIn(viewModelScope)
         session.state
             .distinctUntilChangedBy { it.generation }
             .onEach { value ->
@@ -57,6 +67,8 @@ class ProfileViewModel(
                 } else {
                     loadJob?.cancel()
                     profileJob?.cancel()
+                    attendanceJob?.cancel()
+                    attendanceCheckedUid = null
                     _uiState.value = ProfileUiState()
                 }
             }.launchIn(viewModelScope)
@@ -67,9 +79,16 @@ class ProfileViewModel(
         refresh(session.state.value.fingerprint)
     }
 
+    /** Re-checks today's receipt when the retained profile tab becomes active again. */
+    fun refreshAttendance() {
+        _uiState.value.uid?.let(::refreshAttendance)
+    }
+
     private fun observeAndRefresh(sessionFingerprint: Int) {
         loadJob?.cancel()
         profileJob?.cancel()
+        attendanceJob?.cancel()
+        attendanceCheckedUid = null
         _uiState.value = ProfileUiState(isSignedIn = true, isLoading = true)
         profileJob =
             profileRepository
@@ -80,8 +99,15 @@ class ProfileViewModel(
                         profile.toUiState().copy(
                             isLoading = current.isLoading,
                             error = current.error,
+                            isCheckingAttendance =
+                            current.isCheckingAttendance.takeIf { current.uid == profile.uid } ?: false,
+                            hasSignedInToday =
+                            current.hasSignedInToday.takeIf { current.uid == profile.uid } ?: false,
+                            attendanceGain =
+                            current.attendanceGain.takeIf { current.uid == profile.uid },
                         )
                     }
+                    if (attendanceCheckedUid != profile.uid) refreshAttendance(profile.uid)
                 }.launchIn(viewModelScope)
         refresh(sessionFingerprint)
     }
@@ -96,13 +122,53 @@ class ProfileViewModel(
                     // The write above is complete, but Room delivers invalidations asynchronously.
                     // Read the same SSOT flow before clearing loading so an empty frame cannot appear.
                     profileRepository.observeProfile(sessionFingerprint).filterNotNull().first()
-                }.onSuccess { profile -> _uiState.value = profile.toUiState() }
+                }.onSuccess { profile ->
+                    _uiState.update { current ->
+                        profile.toUiState().copy(
+                            isCheckingAttendance = current.isCheckingAttendance,
+                            hasSignedInToday = current.hasSignedInToday,
+                            attendanceGain = current.attendanceGain,
+                        )
+                    }
+                }
                     .onFailure { throwable ->
                         _uiState.update {
                             it.copy(isLoading = false, error = throwable.toNodeSeekError())
                         }
                     }
             }
+    }
+
+    private fun refreshAttendance(uid: Long) {
+        attendanceJob?.cancel()
+        attendanceCheckedUid = uid
+        attendanceJob =
+            viewModelScope.launch {
+                _uiState.update { current ->
+                    if (current.uid == uid) current.copy(isCheckingAttendance = true) else current
+                }
+                runCatchingExceptCancellation { assetsRepository.refreshAttendanceStatus(uid) }
+                    .onSuccess(::applyAttendanceStatus)
+                    .onFailure {
+                        _uiState.update { current ->
+                            if (current.uid == uid) current.copy(isCheckingAttendance = false) else current
+                        }
+                    }
+            }
+    }
+
+    private fun applyAttendanceStatus(status: AttendanceStatus) {
+        _uiState.update { current ->
+            if (current.uid != status.uid) {
+                current
+            } else {
+                current.copy(
+                    isCheckingAttendance = false,
+                    hasSignedInToday = status.hasSignedIn,
+                    attendanceGain = status.gain,
+                )
+            }
+        }
     }
 
     fun signOut() {
@@ -126,6 +192,7 @@ class ProfileViewModel(
                         session = container.sessionRepository,
                         postRepository = container.postRepository,
                         profileRepository = container.profileRepository,
+                        assetsRepository = container.assetsRepository,
                     )
                 }
             }
@@ -166,6 +233,9 @@ data class ProfileUiState(
     val memberSince: String? = null,
     val chickenCount: Int? = null,
     val starCount: Int? = null,
+    val isCheckingAttendance: Boolean = false,
+    val hasSignedInToday: Boolean = false,
+    val attendanceGain: Int? = null,
 ) {
     val hasProfile: Boolean
         get() = uid != null && displayName.isNotBlank()

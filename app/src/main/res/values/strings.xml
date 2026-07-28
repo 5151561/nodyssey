@@ -221,6 +221,8 @@
     <string name="profile_stars">星辰</string>
     <string name="profile_level">等级</string>
     <string name="profile_attendance">今日签到 · 领鸡腿</string>
+    <string name="profile_attendance_checking">正在检查今日签到…</string>
+    <string name="profile_attendance_done">今日已签到 · 查看签到榜</string>
     <string name="profile_open_web">在网页中打开个人主页</string>
     <string name="profile_account_settings">账号设置</string>
 

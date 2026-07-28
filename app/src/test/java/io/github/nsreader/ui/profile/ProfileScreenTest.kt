@@ -41,6 +41,8 @@ class ProfileScreenTest {
                     onOpenWebsite = {},
                     onOpenSpace = {},
                     onAssets = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
                     onFollow = {},
                     onTools = {},
                 )
@@ -70,6 +72,8 @@ class ProfileScreenTest {
                     onOpenWebsite = {},
                     onOpenSpace = {},
                     onAssets = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
                     onFollow = {},
                     onTools = {},
                 )
@@ -96,6 +100,8 @@ class ProfileScreenTest {
                     onOpenWebsite = {},
                     onOpenSpace = { clicked = true },
                     onAssets = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
                     onFollow = {},
                     onTools = {},
                 )
@@ -105,5 +111,67 @@ class ProfileScreenTest {
         composeRule.onNodeWithContentDescription("我的主页").performClick()
 
         check(clicked)
+    }
+
+    @Test
+    fun `signed attendance shows gain and opens the board`() {
+        var boardOpened = false
+        composeRule.setContent {
+            NodeSeekTheme {
+                ProfileScreen(
+                    state =
+                    ProfileUiState(
+                        isSignedIn = true,
+                        displayName = "nsreader_dev",
+                        hasSignedInToday = true,
+                        attendanceGain = 7,
+                    ),
+                    onSignIn = {},
+                    onSignOut = {},
+                    onRetry = {},
+                    onSettings = {},
+                    onAccountSettings = {},
+                    onOpenWebsite = {},
+                    onOpenSpace = {},
+                    onAssets = {},
+                    onAttendance = {},
+                    onAttendanceBoard = { boardOpened = true },
+                    onFollow = {},
+                    onTools = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("今日已签 +7 鸡腿").performClick()
+
+        check(boardOpened)
+    }
+
+    @Test
+    fun `unsigned attendance opens the sign in flow`() {
+        var attendanceOpened = false
+        composeRule.setContent {
+            NodeSeekTheme {
+                ProfileScreen(
+                    state = ProfileUiState(isSignedIn = true, displayName = "nsreader_dev"),
+                    onSignIn = {},
+                    onSignOut = {},
+                    onRetry = {},
+                    onSettings = {},
+                    onAccountSettings = {},
+                    onOpenWebsite = {},
+                    onOpenSpace = {},
+                    onAssets = {},
+                    onAttendance = { attendanceOpened = true },
+                    onAttendanceBoard = {},
+                    onFollow = {},
+                    onTools = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("今日签到 · 领鸡腿").performClick()
+
+        check(attendanceOpened)
     }
 }
