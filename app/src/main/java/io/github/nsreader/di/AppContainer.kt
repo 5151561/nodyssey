@@ -168,7 +168,13 @@ class DefaultAppContainer(
     }
 
     override val profileRepository: ProfileRepository by lazy {
-        NetworkProfileRepository(htmlClient, jsonClient, clock)
+        NetworkProfileRepository(
+            htmlSource = htmlClient,
+            jsonSource = jsonClient,
+            profileDao = database.profileDao(),
+            currentSessionFingerprint = { sessionRepository.state.value.fingerprint },
+            clock = clock,
+        )
     }
 
     override val searchRepository: SearchRepository by lazy {

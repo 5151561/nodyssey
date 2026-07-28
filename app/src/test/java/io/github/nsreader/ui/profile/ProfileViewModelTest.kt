@@ -13,13 +13,16 @@ import io.github.nsreader.data.UserProfile
 import io.github.nsreader.data.session.SessionRepository
 import io.github.nsreader.model.FeedSort
 import io.github.nsreader.model.ThreadSnapshot
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -100,12 +103,62 @@ class ProfileViewModelTest {
             assertEquals(NodeSeekError.Network, viewModel.uiState.value.error)
             assertFalse(viewModel.uiState.value.isLoading)
         }
+
+    @Test
+    fun `shows the persisted profile while its refresh is still running`() =
+        runTest(dispatcher) {
+            val gate = CompletableDeferred<Unit>()
+            val cached =
+                UserProfile(
+                    uid = 31037,
+                    name = "缓存名字",
+                    avatarUrl = "https://www.nodeseek.com/avatar/31037.png",
+                    chickenCount = 292,
+                )
+            val fresh = cached.copy(name = "网络新名字", chickenCount = 305)
+            val viewModel =
+                ProfileViewModel(
+                    session = SessionRepository(WebViewCookieJar(cookieManager)),
+                    postRepository = NoOpPostRepository,
+                    profileRepository =
+                    FakeProfileRepository(
+                        profile = fresh,
+                        cachedProfile = cached,
+                        refreshGate = gate,
+                    ),
+                )
+
+            runCurrent()
+
+            assertEquals("缓存名字", viewModel.uiState.value.displayName)
+            assertEquals(292, viewModel.uiState.value.chickenCount)
+            assertEquals(true, viewModel.uiState.value.hasProfile)
+
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals("网络新名字", viewModel.uiState.value.displayName)
+            assertEquals(305, viewModel.uiState.value.chickenCount)
+            assertFalse(viewModel.uiState.value.isLoading)
+        }
 }
 
 private class FakeProfileRepository(
     private val profile: UserProfile? = null,
+    cachedProfile: UserProfile? = null,
     private val error: Throwable? = null,
+    private val refreshGate: CompletableDeferred<Unit>? = null,
 ) : ProfileRepository {
+    private val stored = MutableStateFlow(cachedProfile)
+
+    override fun observeProfile(sessionFingerprint: Int): Flow<UserProfile?> = stored
+
+    override suspend fun refreshProfile(sessionFingerprint: Int) {
+        refreshGate?.await()
+        error?.let { throw it }
+        stored.value = requireNotNull(profile)
+    }
+
     override suspend fun profile(refresh: Boolean): UserProfile {
         error?.let { throw it }
         return requireNotNull(profile)

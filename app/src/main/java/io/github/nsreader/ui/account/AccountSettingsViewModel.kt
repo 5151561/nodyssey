@@ -111,6 +111,7 @@ class AccountSettingsViewModel(
                 // Same order as 我的: drop authenticated rows before the signed-out state is published,
                 // or the tabs still holding a Navigation 3 entry keep showing what they already drew.
                 posts.clearSessionData()
+                profiles.clearCachedProfile()
                 session.signOut()
                 signedOut.value = true
             }

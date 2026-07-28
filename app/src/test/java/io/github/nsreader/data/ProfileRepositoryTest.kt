@@ -7,11 +7,31 @@ import io.github.nsreader.core.net.JsonSource
 import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.core.net.NodeSeekJsonClient
+import io.github.nsreader.data.local.NodeSeekDatabase
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class ProfileRepositoryTest {
+    private lateinit var database: NodeSeekDatabase
+
+    @Before
+    fun setUp() {
+        database = inMemoryDatabase()
+    }
+
+    @After
+    fun tearDown() {
+        database.close()
+    }
+
     @Test
     fun `loads the current user and refreshes values from the account endpoint`() =
         runTest {
@@ -27,6 +47,8 @@ class ProfileRepositoryTest {
                 NetworkProfileRepository(
                     htmlSource = FakeProfileHtmlSource(Fixtures.load("page-1.html")),
                     jsonSource = jsonSource,
+                    profileDao = database.profileDao(),
+                    currentSessionFingerprint = { 7 },
                     clock = AppClock { 0L },
                 )
 
@@ -51,6 +73,8 @@ class ProfileRepositoryTest {
                     FakeProfileJsonSource(
                         error = NodeSeekException(NodeSeekError.Http(500)),
                     ),
+                    profileDao = database.profileDao(),
+                    currentSessionFingerprint = { 7 },
                     clock = AppClock { 0L },
                 )
 
@@ -72,6 +96,8 @@ class ProfileRepositoryTest {
                 NetworkProfileRepository(
                     htmlSource = htmlSource,
                     jsonSource = FakeProfileJsonSource(error = NodeSeekException(NodeSeekError.Http(500))),
+                    profileDao = database.profileDao(),
+                    currentSessionFingerprint = { 7 },
                     clock = AppClock { 0L },
                 )
 
@@ -83,12 +109,63 @@ class ProfileRepositoryTest {
             assertEquals(2, htmlSource.callCount)
         }
 
+    @Test
+    fun `restores the signed in profile from Room without a network request`() =
+        runTest {
+            val firstSource = FakeProfileHtmlSource(Fixtures.load("page-1.html"))
+            val firstRepository =
+                NetworkProfileRepository(
+                    htmlSource = firstSource,
+                    jsonSource = FakeProfileJsonSource(error = NodeSeekException(NodeSeekError.Http(500))),
+                    profileDao = database.profileDao(),
+                    currentSessionFingerprint = { 7 },
+                    clock = AppClock { 0L },
+                )
+            firstRepository.refreshProfile(sessionFingerprint = 7)
+
+            val restoredSource = FakeProfileHtmlSource("")
+            val restoredRepository =
+                NetworkProfileRepository(
+                    htmlSource = restoredSource,
+                    jsonSource = FakeProfileJsonSource(error = AssertionError("must not run")),
+                    profileDao = database.profileDao(),
+                    currentSessionFingerprint = { 7 },
+                    clock = AppClock { 0L },
+                )
+
+            val restored = restoredRepository.observeProfile(sessionFingerprint = 7).first()
+
+            assertEquals("缭雾", restored?.name)
+            assertEquals(0, restoredSource.callCount)
+        }
+
+    @Test
+    fun `does not expose a profile to a different session fingerprint`() =
+        runTest {
+            val repository =
+                NetworkProfileRepository(
+                    htmlSource = FakeProfileHtmlSource(Fixtures.load("page-1.html")),
+                    jsonSource = FakeProfileJsonSource(error = NodeSeekException(NodeSeekError.Http(500))),
+                    profileDao = database.profileDao(),
+                    currentSessionFingerprint = { 7 },
+                    clock = AppClock { 0L },
+                )
+            repository.refreshProfile(sessionFingerprint = 7)
+
+            assertNull(repository.observeProfile(sessionFingerprint = 8).first())
+
+            repository.clearCachedProfile()
+            assertNull(repository.observeProfile(sessionFingerprint = 7).first())
+        }
+
     @Test(expected = NodeSeekException::class)
     fun `rejects a page without signed in profile data`() =
         runTest {
             NetworkProfileRepository(
                 htmlSource = FakeProfileHtmlSource("<html><body></body></html>"),
                 jsonSource = FakeProfileJsonSource(response = "{}"),
+                profileDao = database.profileDao(),
+                currentSessionFingerprint = { 7 },
                 clock = AppClock { 0L },
             ).profile()
         }

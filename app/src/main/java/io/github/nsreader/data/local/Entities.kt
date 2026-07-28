@@ -231,3 +231,32 @@ data class CacheSessionEntity(
         const val SINGLETON_ID = 0
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Signed-in profile
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * The last profile fetched for the signed-in account.
+ *
+ * [sessionFingerprint] is deliberately part of the row instead of trusting the last known uid. The
+ * cookie jar is the authority for which account is active, so a profile is readable only while the
+ * same deciding cookies are present. Refresh replaces the whole table and sign-out deletes it.
+ */
+@Entity(tableName = "self_profile")
+data class SelfProfileEntity(
+    @PrimaryKey val sessionFingerprint: Int,
+    val uid: Long,
+    val name: String,
+    val avatarUrl: String,
+    val rank: Int?,
+    val createdAt: String?,
+    val chickenCount: Int?,
+    val starCount: Int?,
+    val streakDays: Int?,
+    val bio: String?,
+    val readme: String?,
+    val topicCount: Int?,
+    val commentCount: Int?,
+    val cachedAtMillis: Long,
+)

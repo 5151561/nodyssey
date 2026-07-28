@@ -121,6 +121,9 @@ android {
         }
     }
 
+    // Robolectric's MigrationTestHelper reads schemas through the debug AssetManager.
+    sourceSets["debug"].assets.directories.add("$projectDir/schemas")
+
     lint {
         // A lint regression must fail the build, not scroll past in a log.
         warningsAsErrors = true

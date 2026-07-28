@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -36,6 +38,7 @@ class ProfileViewModel(
 ) : ViewModel() {
     private var signOutJob: Job? = null
     private var loadJob: Job? = null
+    private var profileJob: Job? = null
     private val _uiState =
         MutableStateFlow(
             ProfileUiState(
@@ -50,10 +53,10 @@ class ProfileViewModel(
             .distinctUntilChangedBy { it.generation }
             .onEach { value ->
                 if (value.isSignedIn) {
-                    _uiState.update { it.copy(isSignedIn = true) }
-                    refresh()
+                    observeAndRefresh(value.fingerprint)
                 } else {
                     loadJob?.cancel()
+                    profileJob?.cancel()
                     _uiState.value = ProfileUiState()
                 }
             }.launchIn(viewModelScope)
@@ -61,12 +64,39 @@ class ProfileViewModel(
 
     fun refresh() {
         if (!session.state.value.isSignedIn) return
+        refresh(session.state.value.fingerprint)
+    }
+
+    private fun observeAndRefresh(sessionFingerprint: Int) {
+        loadJob?.cancel()
+        profileJob?.cancel()
+        _uiState.value = ProfileUiState(isSignedIn = true, isLoading = true)
+        profileJob =
+            profileRepository
+                .observeProfile(sessionFingerprint)
+                .filterNotNull()
+                .onEach { profile ->
+                    _uiState.update { current ->
+                        profile.toUiState().copy(
+                            isLoading = current.isLoading,
+                            error = current.error,
+                        )
+                    }
+                }.launchIn(viewModelScope)
+        refresh(sessionFingerprint)
+    }
+
+    private fun refresh(sessionFingerprint: Int) {
         loadJob?.cancel()
         loadJob =
             viewModelScope.launch {
                 _uiState.update { it.copy(isSignedIn = true, isLoading = true, error = null) }
-                runCatchingExceptCancellation { profileRepository.profile(refresh = true) }
-                    .onSuccess { profile -> _uiState.value = profile.toUiState() }
+                runCatchingExceptCancellation {
+                    profileRepository.refreshProfile(sessionFingerprint)
+                    // The write above is complete, but Room delivers invalidations asynchronously.
+                    // Read the same SSOT flow before clearing loading so an empty frame cannot appear.
+                    profileRepository.observeProfile(sessionFingerprint).filterNotNull().first()
+                }.onSuccess { profile -> _uiState.value = profile.toUiState() }
                     .onFailure { throwable ->
                         _uiState.update {
                             it.copy(isLoading = false, error = throwable.toNodeSeekError())
@@ -83,6 +113,7 @@ class ProfileViewModel(
                 // keep their Navigation 3 entries alive, so clearing cookies alone would leave their
                 // already-rendered private rows readable.
                 postRepository.clearSessionData()
+                profileRepository.clearCachedProfile()
                 session.signOut()
             }
     }

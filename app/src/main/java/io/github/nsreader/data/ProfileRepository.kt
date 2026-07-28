@@ -8,6 +8,11 @@ import io.github.nsreader.core.net.NodeSeekError
 import io.github.nsreader.core.net.NodeSeekException
 import io.github.nsreader.core.net.NodeSeekJsonClient
 import io.github.nsreader.core.runCatchingExceptCancellation
+import io.github.nsreader.data.local.ProfileDao
+import io.github.nsreader.data.local.SelfProfileEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -34,6 +39,17 @@ data class UserProfile(
 )
 
 interface ProfileRepository {
+    /** The persisted SSOT for "我的", scoped to the active cookie fingerprint. */
+    fun observeProfile(sessionFingerprint: Int): Flow<UserProfile?> = flowOf(null)
+
+    /** Fetches the signed-in profile and writes it into [observeProfile]'s backing store. */
+    suspend fun refreshProfile(sessionFingerprint: Int) {
+        profile(refresh = true)
+    }
+
+    /** Removes account-scoped profile data before the session is published as signed out. */
+    suspend fun clearCachedProfile() = Unit
+
     /**
      * The signed-in account.
      *
@@ -52,7 +68,7 @@ interface ProfileRepository {
     suspend fun profile(uid: Long): UserProfile
 
     /**
-     * The signed-in account's uid, remembered from the last successful [profile] call.
+     * The signed-in account's uid, remembered from the last successful load or persisted emission.
      *
      * Null until a profile has loaded once this process. Callers that navigate to a user's space use
      * it to decide `isSelf` — a null simply means "not known to be self", never "known not to be".
@@ -71,6 +87,8 @@ interface ProfileRepository {
 class NetworkProfileRepository(
     private val htmlSource: HtmlSource,
     private val jsonSource: JsonSource,
+    private val profileDao: ProfileDao,
+    private val currentSessionFingerprint: () -> Int,
     private val clock: AppClock,
 ) : ProfileRepository {
     private val json = Json { ignoreUnknownKeys = true }
@@ -80,22 +98,42 @@ class NetworkProfileRepository(
         private set
 
     private val cacheLock = Mutex()
-    private var cachedProfile: UserProfile? = null
-    private var cachedAtMillis = 0L
+
+    override fun observeProfile(sessionFingerprint: Int): Flow<UserProfile?> =
+        profileDao.observe(sessionFingerprint).map { entity ->
+            entity?.toProfile()?.also { selfUid = it.uid }
+        }
+
+    override suspend fun refreshProfile(sessionFingerprint: Int) {
+        cacheLock.withLock { fetchAndStore(sessionFingerprint) }
+    }
+
+    override suspend fun clearCachedProfile() {
+        cacheLock.withLock {
+            profileDao.deleteAll()
+            selfUid = null
+        }
+    }
 
     override suspend fun profile(refresh: Boolean): UserProfile =
         // The lock also serializes concurrent callers, so two screens opening at once cost one
         // fetch, not two racing ones.
         cacheLock.withLock {
+            val fingerprint = currentSessionFingerprint()
             if (!refresh) {
-                cachedProfile
-                    ?.takeIf { clock.nowMillis() - cachedAtMillis < PROFILE_CACHE_TTL_MILLIS }
+                profileDao
+                    .find(fingerprint)
+                    ?.takeIf { clock.nowMillis() - it.cachedAtMillis < PROFILE_CACHE_TTL_MILLIS }
+                    ?.toProfile()
+                    ?.also { selfUid = it.uid }
                     ?.let { return@withLock it }
             }
-            fetchProfile().also {
-                cachedProfile = it
-                cachedAtMillis = clock.nowMillis()
-            }
+            fetchAndStore(fingerprint)
+        }
+
+    private suspend fun fetchAndStore(sessionFingerprint: Int): UserProfile =
+        fetchProfile().also { profile ->
+            profileDao.replace(profile.toEntity(sessionFingerprint, clock.nowMillis()))
         }
 
     private suspend fun fetchProfile(): UserProfile {
@@ -202,6 +240,43 @@ class NetworkProfileRepository(
         const val PROFILE_BOOTSTRAP_ELEMENT_ID = "temp-script"
     }
 }
+
+private fun SelfProfileEntity.toProfile(): UserProfile =
+    UserProfile(
+        uid = uid,
+        name = name,
+        avatarUrl = avatarUrl,
+        rank = rank,
+        createdAt = createdAt,
+        chickenCount = chickenCount,
+        starCount = starCount,
+        streakDays = streakDays,
+        bio = bio,
+        readme = readme,
+        topicCount = topicCount,
+        commentCount = commentCount,
+    )
+
+private fun UserProfile.toEntity(
+    sessionFingerprint: Int,
+    cachedAtMillis: Long,
+): SelfProfileEntity =
+    SelfProfileEntity(
+        sessionFingerprint = sessionFingerprint,
+        uid = uid,
+        name = name,
+        avatarUrl = avatarUrl,
+        rank = rank,
+        createdAt = createdAt,
+        chickenCount = chickenCount,
+        starCount = starCount,
+        streakDays = streakDays,
+        bio = bio,
+        readme = readme,
+        topicCount = topicCount,
+        commentCount = commentCount,
+        cachedAtMillis = cachedAtMillis,
+    )
 
 internal data class RawProfile(
     val uid: Long? = null,

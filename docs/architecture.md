@@ -26,6 +26,7 @@
 | 帖子列表 | `posts` + `feed_positions` 表 → `PostRepository.feed()` | `collectAsLazyPagingItems()` |
 | 帖子详情 | `post_details` + `post_comments` 表 → `PostRepository.thread()` | ViewModel `onEach` 镜像进 UiState |
 | 已读状态 | `post_read_marks` 表 | 在 SQL 里 join 进列表行，UI 不再单独查 |
+| 我的资料 | `self_profile` 表 → `ProfileRepository.observeProfile()` | 先回放同会话缓存，再后台刷新写回 Room |
 | App 设置与通知轮询配置 | `SettingsRepository`（DataStore） | UI 与 `NodeSeekApp` 分别 collect 同一设置流 |
 | 隐私协议文档 | `TermsRepository` 的单次结果 | `PrivacyViewModel` 持有当前加载状态；失败不写入伪造正文 |
 
@@ -100,6 +101,7 @@ data/        Repository。隐藏数据源，暴露领域模型
   ├ FeedRemoteMediator      把网络页写进 Room，自己不返回数据
   ├ PostRemoteDataSource    只抓取和解析（原来的 NetworkPostRepository）
   ├ CategoryRepository      JSON 接口 → boards 表
+  ├ ProfileRepository       我的资料离线优先：按会话指纹隔离，Room 先显示、网络后刷新
   ├ local/                  Room：实体、DAO、TypeConverter
   ├ session/                共享 cookie store 的读模型（登录态 + 人机验证态）
   └ settings/               DataStore，SSOT
