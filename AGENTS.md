@@ -16,6 +16,37 @@ The project requires JDK 21 and Android SDK 37. Use the checked-in Gradle wrappe
 
 Before submitting, run the same gates as `.github/workflows/ci.yml`. After builds, run `./gradlew --stop` so Gradle daemons do not remain in memory.
 
+## Dependencies & Official APIs
+
+`gradle/libs.versions.toml` is the single source of truth for every version, and it is kept current
+on purpose: AGP 9.2.1 / Kotlin 2.4.10 / Compose BOM 2026.06.00 / Material 3 1.5.0-alpha24 /
+Navigation 3 / OkHttp 5 / Coil 3 / Room 2.8 / Paging 3.5 / coroutines 1.11, on JDK 21, compileSdk 37,
+minSdk 26, targetSdk 36. Never inline a version in a build file, and run
+`./gradlew resolveAndLockAll --write-locks` after any dependency change.
+
+Before writing code against any of these libraries, find out what the **pinned** version actually
+offers — read its release notes or the resolved sources, do not code from memory of an older
+release. Recalled API shapes go stale faster than this catalog does. Prefer the newest supported
+API the pinned version provides over the older one that still compiles, and delete the workarounds a
+version bump makes obsolete instead of leaving them beside the new API.
+
+Implement each feature with the method the official component already provides; do not route around
+it with a hand-rolled equivalent. In practice:
+
+- Theming and motion come from `MaterialExpressiveTheme` with `MotionScheme.expressive()` in
+  `ui/theme/Theme.kt`. Take animation specs from `MaterialTheme.motionScheme`; do not hand-write
+  `tween`/`spring` at call sites.
+- Use Material 3 components and their slot/parameter APIs rather than re-implementing a component
+  out of `Box`/`Row`. Same rule for Navigation 3 back stacks, Paging 3 sources and mediators, Room
+  queries and migrations, DataStore, WorkManager, and Coil loaders.
+- Only hand-roll when the official API genuinely cannot express the requirement. When that happens,
+  say so in a comment at the site: which API was tried, what it could not do, and the condition
+  under which the workaround should be removed.
+
+Material 3 stays on a 1.5 alpha because that is where these APIs are public, and the adaptive
+libraries are on rc. Treat every bump of those as behavioural: run the full UI, lint, and release
+gates before trusting it.
+
 ## Coding Style & Naming Conventions
 
 Use four-space indentation, LF endings, UTF-8, and trailing commas in multiline Kotlin. Spotless with ktlint is authoritative; rule overrides are in the root `build.gradle.kts`. Name classes and Composables in `PascalCase`, functions and properties in `camelCase`, and tests as readable backtick sentences. Preserve the repository’s UDF flow: Repository → ViewModel → immutable `UiState` → Compose. Keep CSS selectors centralized in `core/html/Selectors.kt`, inject dispatchers and clocks, and never swallow coroutine cancellation.
