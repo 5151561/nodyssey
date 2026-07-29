@@ -33,11 +33,13 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -428,25 +430,28 @@ private fun BoardStrip(
                     )
                 }
             }
-            IconButton(onClick = { expanded = !expanded }) {
-                Box(
-                    modifier =
-                    Modifier
-                        .size(width = 40.dp, height = 32.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector =
-                        if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription =
-                        stringResource(
-                            if (expanded) R.string.action_hide_all_boards else R.string.action_show_all_boards,
-                        ),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            // The tonal button *is* the pill, rather than a plain IconButton with one drawn inside
+            // it: same 48dp touch target either way (minimumInteractiveComponentSize expands the
+            // pointer bounds, not the layout), but the ripple is now clipped to the shape it draws
+            // instead of spilling above and below the 32dp pill.
+            FilledTonalIconButton(
+                onClick = { expanded = !expanded },
+                modifier = Modifier.size(width = 40.dp, height = 32.dp),
+                shape = CircleShape,
+                colors =
+                IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) {
+                Icon(
+                    imageVector =
+                    if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription =
+                    stringResource(
+                        if (expanded) R.string.action_hide_all_boards else R.string.action_show_all_boards,
+                    ),
+                )
             }
         }
 
