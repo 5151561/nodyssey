@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -166,7 +167,20 @@ fun SearchScreen(
                     ),
                 )
             },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            // Expanded, the full-screen bar covers the navigation bar, so the leading slot has to be
+            // the way out — a magnifier there is decoration on a screen with no other exit.
+            leadingIcon = {
+                if (searchBarState.currentValue == SearchBarValue.Expanded) {
+                    IconButton(onClick = { scope.launch { searchBarState.animateToCollapsed() } }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
+                    }
+                } else {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                }
+            },
             trailingIcon = {
                 if (queryState.text.isNotEmpty()) {
                     IconButton(onClick = { queryState.clearText() }) {
@@ -317,8 +331,20 @@ private fun SearchContent(
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
 ) {
-    // Nothing submitted yet means the expanded bar is showing its history over this area.
-    if (state.submittedQuery == null) return
+    // Collapsed with nothing submitted is a real state — the bar can be collapsed from the expanded
+    // history, or the query cleared from a result list — and it used to show the history. Leaving it
+    // blank was measured on device: an empty screen under an empty search box, with the history only
+    // reachable by tapping the bar again.
+    if (state.submittedQuery == null) {
+        SearchHistory(
+            searches = state.searchHistory.filter { it.target == state.target },
+            boards = state.boards,
+            onHistoryClick = onHistoryClick,
+            onRemoveHistory = onRemoveHistory,
+            onClearHistory = onClearHistory,
+        )
+        return
+    }
 
     if (state.target == SearchTarget.USERS) {
         when (val loadState = state.userLoadState) {
