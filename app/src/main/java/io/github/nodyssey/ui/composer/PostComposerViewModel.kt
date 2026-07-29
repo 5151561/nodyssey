@@ -1,5 +1,8 @@
 package io.github.nodyssey.ui.composer
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.placeCursorAtEnd
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -23,6 +26,9 @@ import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.common.appendBlock
+import io.github.nodyssey.ui.common.editFromViewModel
+import io.github.nodyssey.ui.common.removeBlock
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -46,6 +52,17 @@ class PostComposerViewModel(
     private val _uiState = MutableStateFlow(PostComposerUiState())
     val uiState: StateFlow<PostComposerUiState> = _uiState.asStateFlow()
 
+    /**
+     * The editor's own text and selection, owned here so an upload landing mid-sentence can splice
+     * its Markdown in without disturbing the caret.
+     *
+     * [uiState] still carries `title`/`body` as plain strings — publish validation, the preview and
+     * the draft all read them — but it mirrors these rather than competing with them. That is the
+     * whole point: one writer, one direction.
+     */
+    val titleState = TextFieldState()
+    val bodyState = TextFieldState()
+
     private val uploads = ImageUploadQueue(viewModelScope, uploader)
 
     private var saveJob: Job? = null
@@ -66,12 +83,20 @@ class PostComposerViewModel(
             .onEach { attachments -> _uiState.update { it.copy(attachments = attachments) } }
             .launchIn(viewModelScope)
         // An upload lands while typing continues, so its Markdown goes to the end of the body
-        // rather than wherever the caret happens to be sitting.
+        // rather than wherever the caret happens to be sitting — and, because this edits the buffer
+        // instead of replacing the whole string, the caret stays wherever the user left it.
         uploads.uploaded
             .onEach { attachment ->
                 val markdown = attachment.markdown ?: return@onEach
-                mutate { it.copy(body = appendBlock(it.body, markdown)) }
+                bodyState.editFromViewModel { appendBlock(markdown) }
             }.launchIn(viewModelScope)
+
+        snapshotFlow { titleState.text.toString() }
+            .onEach { title -> if (title != _uiState.value.title) mutate { it.copy(title = title) } }
+            .launchIn(viewModelScope)
+        snapshotFlow { bodyState.text.toString() }
+            .onEach { body -> if (body != _uiState.value.body) mutate { it.copy(body = body) } }
+            .launchIn(viewModelScope)
 
         viewModelScope.launch {
             val draft = repository.draft.first()
@@ -88,10 +113,6 @@ class PostComposerViewModel(
         }
     }
 
-    fun updateTitle(title: String) = mutate { it.copy(title = title.take(MAX_TITLE_LENGTH)) }
-
-    fun updateBody(body: String) = mutate { it.copy(body = body) }
-
     fun selectBoard(board: Board) = mutate { it.copy(boardSlug = board.slug, boardTitle = board.title) }
 
     fun selectPermission(permission: PostPermission) = mutate { it.copy(permission = permission) }
@@ -103,6 +124,14 @@ class PostComposerViewModel(
 
     fun continueDraft() {
         val draft = _uiState.value.pendingDraft ?: return
+        titleState.editFromViewModel {
+            replace(0, length, draft.title)
+            placeCursorAtEnd()
+        }
+        bodyState.editFromViewModel {
+            replace(0, length, draft.body)
+            placeCursorAtEnd()
+        }
         _uiState.update {
             it.copy(
                 title = draft.title,
@@ -134,7 +163,7 @@ class PostComposerViewModel(
     fun removeAttachment(attachment: ImageAttachment) {
         val removed = uploads.remove(attachment.id) ?: return
         val markdown = removed.markdown ?: return
-        mutate { it.copy(body = removeBlock(it.body, markdown)) }
+        bodyState.editFromViewModel { removeBlock(markdown) }
     }
 
     // --- Publishing ---------------------------------------------------------
@@ -147,8 +176,10 @@ class PostComposerViewModel(
             runCatchingExceptCancellation {
                 repository.publish(
                     PostSubmission(
-                        title = state.title,
-                        body = state.body,
+                        // Straight from the fields, not from the mirrored copy: the mirror runs a
+                        // frame behind, and what is published must be exactly what is on screen.
+                        title = titleState.text.toString(),
+                        body = bodyState.text.toString(),
                         boardSlug = requireNotNull(state.boardSlug),
                         permission = state.permission,
                     ),

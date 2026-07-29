@@ -157,11 +157,7 @@ fun ProfileScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .readableWidth(),
-            contentPadding =
-            androidx.compose.foundation.layout.PaddingValues(
-                horizontal = Spacing.lg,
-                vertical = Spacing.lg,
-            ),
+            contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             item(key = "profile-header") {

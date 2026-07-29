@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.composer
 
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -34,10 +35,10 @@ class PostComposerScreenTest {
             NodysseyTheme {
                 PostComposerScreen(
                     state = state,
+                    titleState = rememberTextFieldState(state.title),
+                    bodyState = rememberTextFieldState(state.body),
                     snackbarHostState = SnackbarHostState(),
                     onClose = {},
-                    onTitleChange = {},
-                    onBodyChange = {},
                     onBoardSelect = {},
                     onPermissionSelect = {},
                     onViewModeChange = { viewMode = it },

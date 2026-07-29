@@ -12,6 +12,8 @@ import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.PostSubmission
 import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.data.session.SessionState
+import io.github.nodyssey.ui.ViewModels
+import io.github.nodyssey.ui.typeText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +22,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -38,6 +41,7 @@ class PostComposerViewModelTest {
     private val boards = MutableStateFlow(listOf(Board("tech", "技术", null)))
     private val uploader = FakeImageUploader()
     private val session = MutableStateFlow(SessionState(isSignedIn = true))
+    private val viewModels = ViewModels()
 
     @Before
     fun setUp() {
@@ -46,10 +50,12 @@ class PostComposerViewModelTest {
 
     @After
     fun tearDown() {
+        viewModels.clear(dispatcher.scheduler)
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = PostComposerViewModel(repository, boards, session, clock, uploader)
+    private fun viewModel() =
+        viewModels.track(PostComposerViewModel(repository, boards, session, clock, uploader))
 
     @Test
     fun `offers a saved draft and restores every field`() = runTest(dispatcher) {
@@ -78,8 +84,9 @@ class PostComposerViewModelTest {
         val viewModel = viewModel()
         advanceUntilIdle()
 
-        viewModel.updateTitle("新标题")
-        viewModel.updateBody("正文")
+        viewModel.titleState.typeText("新标题")
+        viewModel.bodyState.typeText("正文")
+        runCurrent()
         advanceTimeBy(749)
         assertNull(repository.savedDraft)
 
@@ -95,13 +102,15 @@ class PostComposerViewModelTest {
     fun `clearing the editor deletes the stored draft instead of resurrecting it`() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
-        viewModel.updateTitle("标题")
-        viewModel.updateBody("正文")
+        viewModel.titleState.typeText("标题")
+        viewModel.bodyState.typeText("正文")
+        runCurrent()
         advanceUntilIdle()
         assertEquals("标题", repository.savedDraft?.title)
 
-        viewModel.updateTitle("")
-        viewModel.updateBody("")
+        viewModel.titleState.typeText("")
+        viewModel.bodyState.typeText("")
+        runCurrent()
         advanceUntilIdle()
 
         assertEquals(1, repository.deleteCount)
@@ -113,8 +122,10 @@ class PostComposerViewModelTest {
         repository.publishError = NodeSeekException(NodeSeekError.Network)
         val viewModel = viewModel()
         advanceUntilIdle()
-        viewModel.updateTitle("标题")
-        viewModel.updateBody("正文")
+        viewModel.titleState.typeText("标题")
+        viewModel.bodyState.typeText("正文")
+        runCurrent()
+        advanceUntilIdle()
         viewModel.selectBoard(boards.value.single())
 
         viewModel.publish { error("must not publish") }
@@ -130,8 +141,10 @@ class PostComposerViewModelTest {
     fun `successful retry clears the draft and returns the post id`() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
-        viewModel.updateTitle("标题")
-        viewModel.updateBody("正文")
+        viewModel.titleState.typeText("标题")
+        viewModel.bodyState.typeText("正文")
+        runCurrent()
+        advanceUntilIdle()
         viewModel.selectBoard(boards.value.single())
         var publishedId: Long? = null
 
@@ -148,8 +161,10 @@ class PostComposerViewModelTest {
         repository.publishedId = null
         val viewModel = viewModel()
         advanceUntilIdle()
-        viewModel.updateTitle("标题")
-        viewModel.updateBody("正文")
+        viewModel.titleState.typeText("标题")
+        viewModel.bodyState.typeText("正文")
+        runCurrent()
+        advanceUntilIdle()
         viewModel.selectBoard(boards.value.single())
         var callbackInvoked = false
 
@@ -165,7 +180,9 @@ class PostComposerViewModelTest {
     fun `an uploaded image is appended to the body and removed with its cell`() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
-        viewModel.updateBody("正文")
+        viewModel.bodyState.typeText("正文")
+        runCurrent()
+        advanceUntilIdle()
 
         viewModel.addImages(listOf(PickedImage("content://pick/1", "screenshot.png")))
         advanceUntilIdle()
@@ -186,8 +203,10 @@ class PostComposerViewModelTest {
         uploader.failures = 1
         val viewModel = viewModel()
         advanceUntilIdle()
-        viewModel.updateTitle("标题")
-        viewModel.updateBody("正文")
+        viewModel.titleState.typeText("标题")
+        viewModel.bodyState.typeText("正文")
+        runCurrent()
+        advanceUntilIdle()
         viewModel.selectBoard(boards.value.single())
 
         viewModel.addImages(listOf(PickedImage("content://pick/1", "a.png")))

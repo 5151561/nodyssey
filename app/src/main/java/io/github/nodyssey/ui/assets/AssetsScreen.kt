@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -414,29 +415,27 @@ private fun DailyQuota.progress(): Float? {
     return (current.toFloat() / cap).coerceIn(0f, 1f)
 }
 
-/** A determinate bar when the number is known, an empty track when it is not. Never a guessed fill. */
+/**
+ * A determinate bar when the number is known, an empty track when it is not. Never a guessed fill.
+ *
+ * The gap and the stop indicator Material draws by default are turned off: at 4.dp these bars sit
+ * directly under a quota row and read as one continuous track, and a dot at the far right would look
+ * like a value the site never published.
+ */
 @Composable
 private fun ProgressTrack(
     progress: Float?,
     height: Dp,
 ) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(height)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-    ) {
-        if (progress != null && progress > 0f) {
-            Box(
-                Modifier
-                    .fillMaxWidth(progress)
-                    .height(height)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-            )
-        }
-    }
+    LinearProgressIndicator(
+        progress = { progress ?: 0f },
+        color = MaterialTheme.colorScheme.primary,
+        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        strokeCap = StrokeCap.Round,
+        gapSize = 0.dp,
+        drawStopIndicator = {},
+        modifier = Modifier.fillMaxWidth().height(height),
+    )
 }
 
 @Composable

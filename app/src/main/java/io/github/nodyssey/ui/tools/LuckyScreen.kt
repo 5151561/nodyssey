@@ -31,7 +31,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDialog
+import androidx.compose.material3.TimePickerDialogDefaults
+import androidx.compose.material3.TimePickerDisplayMode
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
@@ -365,10 +369,31 @@ private fun DrawTimePicker(
             initialMinute = current.minute,
             is24Hour = true,
         )
-    AlertDialog(
+    // The mode toggle is the reason this is `TimePickerDialog` and not an `AlertDialog` holding a
+    // `TimePicker`: dragging a dial to 23:59 is slow, and typing the time was simply unreachable.
+    var displayMode by remember { mutableStateOf(TimePickerDisplayMode.Picker) }
+    TimePickerDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.lucky_pick_time)) },
-        text = { TimePicker(state = pickerState) },
+        title = {
+            Text(
+                text = stringResource(R.string.lucky_pick_time),
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(bottom = 20.dp),
+            )
+        },
+        modeToggleButton = {
+            TimePickerDialogDefaults.DisplayModeToggle(
+                onDisplayModeChange = {
+                    displayMode =
+                        if (displayMode == TimePickerDisplayMode.Picker) {
+                            TimePickerDisplayMode.Input
+                        } else {
+                            TimePickerDisplayMode.Picker
+                        }
+                },
+                displayMode = displayMode,
+            )
+        },
         confirmButton = {
             TextButton(onClick = { onPicked(combineTime(millis, pickerState.hour, pickerState.minute)) }) {
                 Text(stringResource(R.string.action_done))
@@ -377,7 +402,13 @@ private fun DrawTimePicker(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
-    )
+    ) {
+        if (displayMode == TimePickerDisplayMode.Input) {
+            TimeInput(state = pickerState)
+        } else {
+            TimePicker(state = pickerState)
+        }
+    }
 }
 
 @Composable

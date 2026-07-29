@@ -1,5 +1,8 @@
 package io.github.nodyssey.ui.composer
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.placeCursorAtEnd
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -20,6 +23,9 @@ import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.common.appendBlock
+import io.github.nodyssey.ui.common.editFromViewModel
+import io.github.nodyssey.ui.common.removeBlock
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +62,9 @@ class ReplyComposerViewModel(
     private val _uiState = MutableStateFlow(ReplyComposerUiState(postId = postId))
     val uiState: StateFlow<ReplyComposerUiState> = _uiState.asStateFlow()
 
+    /** The sheet's text and selection. See `PostComposerViewModel.bodyState` for why it lives here. */
+    val bodyState = TextFieldState()
+
     private val uploads = ImageUploadQueue(viewModelScope, uploader)
 
     private var saveJob: Job? = null
@@ -68,8 +77,11 @@ class ReplyComposerViewModel(
         uploads.uploaded
             .onEach { attachment ->
                 val markdown = attachment.markdown ?: return@onEach
-                mutate { it.copy(body = appendBlock(it.body, markdown)) }
+                bodyState.editFromViewModel { appendBlock(markdown) }
             }.launchIn(viewModelScope)
+        snapshotFlow { bodyState.text.toString() }
+            .onEach { body -> if (body != _uiState.value.body) mutate { it.copy(body = body) } }
+            .launchIn(viewModelScope)
     }
 
     /**
@@ -83,6 +95,10 @@ class ReplyComposerViewModel(
             val stored = repository.draft(postId).first()
             _uiState.update { current ->
                 val restored = if (current.body.isBlank() && stored != null) {
+                    bodyState.editFromViewModel {
+                        replace(0, length, stored.body)
+                        placeCursorAtEnd()
+                    }
                     current.copy(
                         body = stored.body,
                         savedAtMillis = stored.savedAtMillis.takeIf { it > 0 },
@@ -100,8 +116,6 @@ class ReplyComposerViewModel(
         _uiState.update { it.copy(visible = false, previewing = false) }
     }
 
-    fun updateBody(body: String) = mutate { it.copy(body = body) }
-
     fun clearQuote() = mutate { it.copy(quote = null) }
 
     fun setPreviewing(previewing: Boolean) {
@@ -117,7 +131,7 @@ class ReplyComposerViewModel(
     fun removeAttachment(attachment: ImageAttachment) {
         val removed = uploads.remove(attachment.id) ?: return
         val markdown = removed.markdown ?: return
-        mutate { it.copy(body = removeBlock(it.body, markdown)) }
+        bodyState.editFromViewModel { removeBlock(markdown) }
     }
 
     fun publish(onPublished: (Int?) -> Unit) {

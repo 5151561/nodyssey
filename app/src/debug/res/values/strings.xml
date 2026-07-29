@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug-only overrides of the app's own name.
+
+    A build-type resource wins over the same name in `main`, so the launcher entry, the task switcher
+    and the About screen all read Nodyssey·D without the release build knowing this file exists.
+
+    The name is only half of what keeps the two builds apart — the debug build also carries an
+    `applicationIdSuffix`, which is what actually lets a debug-signed and a release-signed copy be
+    installed at the same time. See `app/build.gradle.kts`.
+-->
+<resources>
+    <string name="app_name">Nodyssey·D</string>
+    <string name="about_app_name">Nodyssey·D</string>
+</resources>

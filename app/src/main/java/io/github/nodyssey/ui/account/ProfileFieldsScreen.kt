@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -39,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +50,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -296,22 +299,25 @@ private fun MarkdownField(
     label: String,
     minLines: Int,
 ) {
-    // Held here rather than in the ViewModel: the selection is a property of this text field, and the
-    // formatting buttons are the only thing that reads it.
-    var fieldValue by remember { mutableStateOf(TextFieldValue(value)) }
-    if (fieldValue.text != value) {
-        fieldValue = fieldValue.copy(text = value)
+    // Scoped to the field, not to the ViewModel: unlike the post composer, nothing here edits the
+    // text behind the user's back, so there is no caret to protect from a background write — and a
+    // `TextFieldState` parked in a ViewModel observes the global snapshot for as long as it lives.
+    val fieldState = rememberTextFieldState()
+    // The saved signature arrives from the network after this field is already on screen. Seeding is
+    // one-way and one-time; from then on the field is the writer and the ViewModel the reader, which
+    // is what the old `if (fieldValue.text != value)` assignment during composition got wrong.
+    LaunchedEffect(value) {
+        if (value.isNotEmpty() && fieldState.text.isEmpty()) fieldState.setTextAndPlaceCursorAtEnd(value)
+    }
+    LaunchedEffect(fieldState) {
+        snapshotFlow { fieldState.text.toString() }.collect(onValueChange)
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         OutlinedTextField(
-            value = fieldValue,
-            onValueChange = {
-                fieldValue = it
-                onValueChange(it.text)
-            },
+            state = fieldState,
             label = { Text(label) },
-            minLines = minLines,
+            lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = minLines),
             shape = AccountFieldShape,
             textStyle = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.fillMaxWidth(),
@@ -324,10 +330,7 @@ private fun MarkdownField(
                 SignatureFormat.entries.forEach { format ->
                     val description = stringResource(format.descriptionRes)
                     IconButton(
-                        onClick = {
-                            fieldValue = fieldValue.applyMarkdown(format.insertion)
-                            onValueChange(fieldValue.text)
-                        },
+                        onClick = { fieldState.edit { applyMarkdown(format.insertion) } },
                         modifier = Modifier.semantics { contentDescription = description },
                     ) {
                         Text(format.glyph, style = MaterialTheme.typography.labelLarge)

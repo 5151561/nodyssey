@@ -59,7 +59,6 @@ fun SpendConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = modifier,
-        shape = RoundedCornerShape(28.dp),
         icon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         title = { Text(title, style = MaterialTheme.typography.headlineSmall) },
         text = {

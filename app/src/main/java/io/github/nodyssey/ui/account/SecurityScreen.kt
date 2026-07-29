@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.TextObfuscationMode
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,8 +27,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -39,12 +41,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -82,17 +84,14 @@ fun SecurityRoute(
 
     SecurityScreen(
         state = state,
+        currentPasswordState = viewModel.currentPasswordState,
+        newPasswordState = viewModel.newPasswordState,
+        confirmPasswordState = viewModel.confirmPasswordState,
+        twoFactorPasswordState = viewModel.twoFactorPasswordState,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
-        onCurrentPasswordChange = viewModel::updateCurrentPassword,
-        onNewPasswordChange = viewModel::updateNewPassword,
-        onRepeatPasswordChange = viewModel::updateConfirmPassword,
-        onToggleCurrentVisible = viewModel::toggleCurrentVisible,
-        onToggleNewVisible = viewModel::toggleNewVisible,
-        onToggleConfirmVisible = viewModel::toggleConfirmVisible,
         onRequestPasswordChange = viewModel::requestPasswordChange,
         onRequestTwoFactor = viewModel::requestTwoFactorEnrolment,
-        onTwoFactorPasswordChange = viewModel::updateTwoFactorPassword,
         onDismissConfirmation = viewModel::dismissConfirmation,
         onConfirmPasswordChange = viewModel::confirmPasswordChange,
         onConfirmTwoFactor = viewModel::confirmTwoFactorEnrolment,
@@ -111,17 +110,14 @@ fun SecurityRoute(
 @Composable
 fun SecurityScreen(
     state: SecurityUiState,
+    currentPasswordState: TextFieldState,
+    newPasswordState: TextFieldState,
+    confirmPasswordState: TextFieldState,
+    twoFactorPasswordState: TextFieldState,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
-    onCurrentPasswordChange: (String) -> Unit,
-    onNewPasswordChange: (String) -> Unit,
-    onRepeatPasswordChange: (String) -> Unit,
-    onToggleCurrentVisible: () -> Unit,
-    onToggleNewVisible: () -> Unit,
-    onToggleConfirmVisible: () -> Unit,
     onRequestPasswordChange: () -> Unit,
     onRequestTwoFactor: () -> Unit,
-    onTwoFactorPasswordChange: (String) -> Unit,
     onDismissConfirmation: () -> Unit,
     onConfirmPasswordChange: () -> Unit,
     onConfirmTwoFactor: () -> Unit,
@@ -160,20 +156,16 @@ fun SecurityScreen(
             AccountSectionLabel(stringResource(R.string.account_change_password))
 
             PasswordField(
-                value = state.currentPassword,
-                onValueChange = onCurrentPasswordChange,
+                fieldState = currentPasswordState,
                 label = stringResource(R.string.account_password_current),
-                visible = state.currentVisible,
-                onToggleVisible = onToggleCurrentVisible,
+                contentType = ContentType.Password,
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 PasswordField(
-                    value = state.newPassword,
-                    onValueChange = onNewPasswordChange,
+                    fieldState = newPasswordState,
                     label = stringResource(R.string.account_password_new),
-                    visible = state.newVisible,
-                    onToggleVisible = onToggleNewVisible,
+                    contentType = ContentType.NewPassword,
                     isError = state.isTooShort,
                     supportingText =
                     if (state.isTooShort) {
@@ -186,12 +178,10 @@ fun SecurityScreen(
             }
 
             PasswordField(
-                value = state.confirmPassword,
-                onValueChange = onRepeatPasswordChange,
+                fieldState = confirmPasswordState,
                 label = stringResource(R.string.account_password_confirm),
                 placeholder = stringResource(R.string.account_password_confirm_hint),
-                visible = state.confirmVisible,
-                onToggleVisible = onToggleConfirmVisible,
+                contentType = ContentType.NewPassword,
                 isError = state.isMismatched,
                 supportingText =
                 if (state.isMismatched) stringResource(R.string.account_password_mismatch) else null,
@@ -231,8 +221,8 @@ fun SecurityScreen(
 
         SecurityConfirmation.TwoFactor ->
             TwoFactorDialog(
-                password = state.twoFactorPassword,
-                onPasswordChange = onTwoFactorPasswordChange,
+                passwordState = twoFactorPasswordState,
+                canConfirm = state.twoFactorPassword.isNotEmpty(),
                 onConfirm = onConfirmTwoFactor,
                 onDismiss = onDismissConfirmation,
             )
@@ -254,8 +244,8 @@ fun SecurityScreen(
  */
 @Composable
 private fun TwoFactorDialog(
-    password: String,
-    onPasswordChange: (String) -> Unit,
+    passwordState: TextFieldState,
+    canConfirm: Boolean,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -269,20 +259,20 @@ private fun TwoFactorDialog(
                     stringResource(R.string.account_confirm_2fa_body),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = onPasswordChange,
+                SecureTextField(
+                    state = passwordState,
                     label = { Text(stringResource(R.string.account_password_current)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    visualTransformation = PasswordVisualTransformation(),
+                    textObfuscationMode = TextObfuscationMode.RevealLastTyped,
                     shape = AccountFieldShape,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .semantics { contentType = ContentType.Password },
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, enabled = password.isNotEmpty()) {
+            TextButton(onClick = onConfirm, enabled = canConfirm) {
                 Text(stringResource(R.string.account_confirm_2fa_action))
             }
         },
@@ -293,45 +283,36 @@ private fun TwoFactorDialog(
     )
 }
 
+/**
+ * One password box.
+ *
+ * `SecureTextField` rather than an `OutlinedTextField` carrying a `PasswordVisualTransformation`:
+ * it brings the password keyboard, blocks the field from being copied out, and — the reason the
+ * hand-rolled eye button is gone — obscures with [TextObfuscationMode.RevealLastTyped], which shows
+ * the character just typed and hides it again. That is what the eye was for, without a toggle to
+ * leave switched on and without three booleans in the ViewModel to remember which fields are open.
+ */
 @Composable
 private fun PasswordField(
-    value: String,
-    onValueChange: (String) -> Unit,
+    fieldState: TextFieldState,
     label: String,
-    visible: Boolean,
-    onToggleVisible: () -> Unit,
+    contentType: ContentType,
     placeholder: String? = null,
     isError: Boolean = false,
     supportingText: String? = null,
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
+    SecureTextField(
+        state = fieldState,
         label = { Text(label) },
         placeholder = placeholder?.let { { Text(it) } },
-        singleLine = true,
         isError = isError,
         supportingText = supportingText?.let { { Text(it) } },
-        // `PasswordVisualTransformation` only masks what is drawn. Without the password keyboard type
-        // a third-party IME — which on this forum's audience is essentially everyone — keeps
-        // autocorrecting and learning, so a new password can end up in the IME's personal dictionary
-        // and be suggested elsewhere. That would undo the point of this screen.
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-        visualTransformation =
-        if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+        textObfuscationMode = TextObfuscationMode.RevealLastTyped,
         shape = AccountFieldShape,
-        trailingIcon = {
-            IconButton(onClick = onToggleVisible) {
-                Icon(
-                    imageVector = if (visible) NodysseyIcons.VisibilityOff else NodysseyIcons.Visibility,
-                    contentDescription =
-                    stringResource(
-                        if (visible) R.string.account_password_hide else R.string.account_password_show,
-                    ),
-                )
-            }
-        },
-        modifier = Modifier.fillMaxWidth(),
+        // Naming the field's content type is what lets a password manager recognise this as a change-
+        // password form: `Password` for the credential it already holds, `NewPassword` for the two it
+        // should offer to generate and then save. Without it the manager sees three anonymous boxes.
+        modifier = Modifier.fillMaxWidth().semantics { this.contentType = contentType },
     )
 }
 
@@ -458,17 +439,14 @@ private fun SecurityPreview() {
                 newPassword = "Correct-Horse-9",
                 confirmPassword = "Correct-Horse-9",
             ),
+            currentPasswordState = rememberTextFieldState("hunter2hunter2"),
+            newPasswordState = rememberTextFieldState("Correct-Horse-9"),
+            confirmPasswordState = rememberTextFieldState("Correct-Horse-9"),
+            twoFactorPasswordState = rememberTextFieldState(),
             snackbarHostState = remember { SnackbarHostState() },
             onBack = {},
-            onCurrentPasswordChange = {},
-            onNewPasswordChange = {},
-            onRepeatPasswordChange = {},
-            onToggleCurrentVisible = {},
-            onToggleNewVisible = {},
-            onToggleConfirmVisible = {},
             onRequestPasswordChange = {},
             onRequestTwoFactor = {},
-            onTwoFactorPasswordChange = {},
             onDismissConfirmation = {},
             onConfirmPasswordChange = {},
             onConfirmTwoFactor = {},

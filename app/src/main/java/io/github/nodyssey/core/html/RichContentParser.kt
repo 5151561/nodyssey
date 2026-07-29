@@ -18,6 +18,17 @@ object RichContentParser {
     /** NodeSeek's built-in emoji are `<img class="sticker">` and must stay inline with the text. */
     private const val STICKER_CLASS = "sticker"
 
+    /**
+     * The site's own tab extension, which the review board uses for benchmark reports.
+     *
+     * The titles and the bodies are siblings rather than nested — the site's stylesheet pairs each
+     * title with the body that immediately follows it — so the grouping only exists if the parser
+     * reconstructs it.
+     */
+    private const val MAGIC_TABS_CLASS = "nsk-magic-tabs"
+    private const val TAB_TITLE_CLASS = "nsk-magic-tab-title"
+    private const val TAB_BODY_CLASS = "nsk-magic-tab-body"
+
     fun parse(article: Element?): List<RichNode> {
         if (article == null) return emptyList()
         return parseBlocks(article.childNodes())
@@ -80,10 +91,10 @@ object RichContentParser {
         "table" -> listOf(table(element))
 
         "div" ->
-            if (element.hasClass("quote")) {
-                listOf(RichNode.Quote(parseBlocks(element.childNodes())))
-            } else {
-                paragraphBlocks(element)
+            when {
+                element.hasClass("quote") -> listOf(RichNode.Quote(parseBlocks(element.childNodes())))
+                element.hasClass(MAGIC_TABS_CLASS) -> magicTabs(element)
+                else -> paragraphBlocks(element)
             }
 
         "img" -> if (isSticker(element)) null else listOf(blockImage(element))
@@ -134,15 +145,64 @@ object RichContentParser {
         return RichNode.BlockImage(url = url, alt = element.attr("alt").ifBlank { null })
     }
 
+    /**
+     * Splits a `nsk-magic-tabs` group back into titled tabs.
+     *
+     * Anything that is neither a title nor a body joins the tab being built — the site's own
+     * stylesheet writes off such children as an authoring mistake, and dropping them here would
+     * lose post content over one.
+     */
+    private fun magicTabs(element: Element): List<RichNode> {
+        val tabs = mutableListOf<RichNode.Tabs.Tab>()
+        // Content before the first title belongs to no tab, and is kept ahead of the group.
+        val orphans = mutableListOf<Node>()
+        var title: String? = null
+        val body = mutableListOf<Node>()
+
+        fun flush() {
+            val pending = title ?: return
+            tabs += RichNode.Tabs.Tab(title = pending, children = parseBlocks(body.toList()))
+            title = null
+            body.clear()
+        }
+
+        for (child in element.children()) {
+            when {
+                child.hasClass(TAB_TITLE_CLASS) -> {
+                    flush()
+                    title = child.text().trim()
+                }
+
+                // `add`/`addAll` rather than `+=`: an `Element` is itself iterable, so `+=` reads as
+                // "append its children" to the compiler.
+                child.hasClass(TAB_BODY_CLASS) -> body.addAll(child.childNodes())
+
+                title == null -> orphans.add(child)
+
+                else -> body.add(child)
+            }
+        }
+        flush()
+
+        // A group whose titles the site renamed is still a group of content; falling back to the
+        // old flattening beats rendering an empty tab strip.
+        if (tabs.isEmpty()) return paragraphBlocks(element)
+        return parseBlocks(orphans) + RichNode.Tabs(tabs)
+    }
+
     private fun codeBlock(element: Element): RichNode {
         val code = element.selectFirst("code")
         val language = code?.classNames()
             ?.firstOrNull { it.startsWith("language-") }
             ?.removePrefix("language-")
-        // `wholeText` keeps the original newlines that `text()` would collapse.
+        // Read through [AnsiParser] rather than `wholeText()`: the escapes NodeSeek encodes as empty
+        // elements are invisible to it, which leaves their parameters behind as literal `[36m`.
+        val decoded = AnsiParser.decode(AnsiParser.sourceOf(code ?: element))
         return RichNode.CodeBlock(
-            code = (code ?: element).wholeText().trimEnd(),
+            code = decoded.text,
             language = language,
+            spans = decoded.spans,
+            columns = decoded.columns,
         )
     }
 

@@ -1,5 +1,8 @@
 package io.github.nodyssey.ui.account
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -13,6 +16,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -28,9 +33,26 @@ class SecurityViewModel(
     private val _uiState = MutableStateFlow(SecurityUiState())
     val uiState: StateFlow<SecurityUiState> = _uiState.asStateFlow()
 
+    /**
+     * The four password boxes' own state.
+     *
+     * `SecureTextField` needs a `TextFieldState`, and holding them here keeps clearing-on-success a
+     * one-liner. [uiState] mirrors the text so the validation below — too short, mismatched, ready —
+     * stays where the rest of the screen's rules live.
+     */
+    val currentPasswordState = TextFieldState()
+    val newPasswordState = TextFieldState()
+    val confirmPasswordState = TextFieldState()
+    val twoFactorPasswordState = TextFieldState()
+
     private var submitJob: Job? = null
 
     init {
+        mirror(currentPasswordState) { state, value -> state.copy(currentPassword = value) }
+        mirror(newPasswordState) { state, value -> state.copy(newPassword = value) }
+        mirror(confirmPasswordState) { state, value -> state.copy(confirmPassword = value) }
+        mirror(twoFactorPasswordState) { state, value -> state.copy(twoFactorPassword = value) }
+
         viewModelScope.launch {
             runCatchingExceptCancellation { account.twoFactor() }
                 .onSuccess { two ->
@@ -46,39 +68,35 @@ class SecurityViewModel(
         }
     }
 
-    fun updateCurrentPassword(value: String) = _uiState.update { it.copy(currentPassword = value) }
-
-    fun updateNewPassword(value: String) = _uiState.update { it.copy(newPassword = value) }
-
-    fun updateConfirmPassword(value: String) = _uiState.update { it.copy(confirmPassword = value) }
-
-    fun toggleCurrentVisible() = _uiState.update { it.copy(currentVisible = !it.currentVisible) }
-
-    fun toggleNewVisible() = _uiState.update { it.copy(newVisible = !it.newVisible) }
-
-    fun toggleConfirmVisible() = _uiState.update { it.copy(confirmVisible = !it.confirmVisible) }
-
     fun requestPasswordChange() = _uiState.update { it.copy(confirming = SecurityConfirmation.Password) }
 
     fun requestTwoFactorEnrolment() = _uiState.update { it.copy(confirming = SecurityConfirmation.TwoFactor) }
 
-    fun updateTwoFactorPassword(value: String) = _uiState.update { it.copy(twoFactorPassword = value) }
-
     /** Leaving the dialog abandons the password it collected rather than parking it in state. */
-    fun dismissConfirmation() = _uiState.update { it.copy(confirming = null, twoFactorPassword = "") }
+    fun dismissConfirmation() {
+        twoFactorPasswordState.clearText()
+        _uiState.update { it.copy(confirming = null, twoFactorPassword = "") }
+    }
 
     fun confirmPasswordChange() {
         if (submitJob?.isActive == true) return
         val state = _uiState.value
         if (!state.canSubmitPassword) return
+        // Read straight from the fields rather than from the mirrored copy: the mirror is a frame
+        // behind by construction, and what gets sent to the server must be exactly what is on screen.
+        val currentPassword = currentPasswordState.text.toString()
+        val newPassword = newPasswordState.text.toString()
         submitJob =
             viewModelScope.launch {
                 _uiState.update { it.copy(confirming = null, isSubmitting = true, message = null) }
                 runCatchingExceptCancellation {
-                    account.changePassword(state.currentPassword, state.newPassword)
+                    account.changePassword(currentPassword, newPassword)
                 }.onSuccess {
                     // The fields are cleared on success and only on success: a failed attempt that
                     // wipes what the user typed makes them re-enter three passwords to retry.
+                    currentPasswordState.clearText()
+                    newPasswordState.clearText()
+                    confirmPasswordState.clearText()
                     _uiState.update {
                         it.copy(
                             isSubmitting = false,
@@ -101,10 +119,11 @@ class SecurityViewModel(
 
     fun confirmTwoFactorEnrolment() {
         if (submitJob?.isActive == true) return
-        val password = _uiState.value.twoFactorPassword
+        val password = twoFactorPasswordState.text.toString()
         if (password.isEmpty()) return
         submitJob =
             viewModelScope.launch {
+                twoFactorPasswordState.clearText()
                 _uiState.update {
                     it.copy(confirming = null, twoFactorPassword = "", isSubmitting = true, message = null)
                 }
@@ -137,6 +156,16 @@ class SecurityViewModel(
 
     fun consumeMessage() = _uiState.update { it.copy(message = null) }
 
+    /** Keeps [uiState]'s copy of one field in step with the box the user is typing into. */
+    private fun mirror(
+        field: TextFieldState,
+        write: (SecurityUiState, String) -> SecurityUiState,
+    ) {
+        snapshotFlow { field.text.toString() }
+            .onEach { value -> _uiState.update { state -> write(state, value) } }
+            .launchIn(viewModelScope)
+    }
+
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
@@ -155,9 +184,6 @@ data class SecurityUiState(
     val currentPassword: String = "",
     val newPassword: String = "",
     val confirmPassword: String = "",
-    val currentVisible: Boolean = false,
-    val newVisible: Boolean = false,
-    val confirmVisible: Boolean = false,
     val confirming: SecurityConfirmation? = null,
     /**
      * Collected inside the 2FA dialog, not on the form above it: enrolment is its own endpoint and

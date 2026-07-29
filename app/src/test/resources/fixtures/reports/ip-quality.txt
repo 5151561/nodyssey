@@ -1,0 +1,48 @@
+########################################################################
+                       IP质量体检报告：86.53.*.*
+                   https://github.com/xykt/IPQuality
+                bash <(curl -sL https://Check.Place) -I
+        报告时间：2026-07-28 12:18:38 CST  脚本版本：v2026-03-29
+########################################################################
+一、基础信息（Maxmind 数据库）
+自治系统号：            AS3257
+组织：                  GTT Communications Inc.
+坐标：                  2°59′35″W, 51°35′21″N
+地图：                  https://check.place/51.5893,-2.9931,15,cn
+城市：                  威尔士, 纽波特, NP20
+使用地：                [DE]德国, [EU]欧洲
+注册地：                [GB]英国
+时区：                  Europe/London
+IP类型：                 广播IP 
+二、IP类型属性
+数据库：      IPinfo    ipregistry    ipapi    IP2Location   AbuseIPDB 
+使用类型：     家宽        家宽        家宽        机房        家宽    
+公司类型：     家宽        机房        家宽        机房    
+三、风险评分
+风险等级：      极低         低       中等       高         极高
+IP2Location：   3|低风险
+Scamalytics：      6|低风险
+ipapi：                    0.98%|较高风险
+AbuseIPDB：    0|低风险
+DB-IP：         |低风险
+四、风险因子
+库： IP2Location ipapi ipregistry IPQS Scamalytics ipdata IPinfo DB-IP
+地区：    [DE]    [DE]    [DE]     无     [DE]    [DE]    [DE]    [DE]
+代理：     否      否      否      无      否      否      否      否 
+Tor：      否      否      否      无      否      否      否      无 
+VPN：      否      否      否      无      否      无      否      无 
+服务器：   是      是      是      无      否      否      否      无 
+滥用：     否      否      否      无      否      否      无      否 
+机器人：   否      否      无      无      否      无      无      否 
+五、流媒体及AI服务解锁检测
+服务商：  TikTok   Disney+  Netflix Youtube  AmazonPV  Reddit   ChatGPT 
+状态：     解锁     解锁     解锁     解锁     解锁     解锁     解锁   
+地区：     [DE]     [DE]     [DE]     [DE]     [DE]     []     [DE]   
+方式：     原生     原生     原生     原生     原生     原生     原生   
+六、邮局连通性及黑名单检测
+本地25端口出站：可用
+通信：+Gmail+Outlook+Yahoo+Apple-QQ+MailRU+AOL-GMX-MailCOM+163-Sohu+Sina
+IP地址黑名单数据库：  有效 439   正常 413   已标记 26   黑名单 0
+========================================================================
+今日IP检测量：2081；总检测量：1828680。感谢使用xy系列脚本！ 
+报告链接：https://Report.Check.Place/ip/3D6BHSFPJ.svg

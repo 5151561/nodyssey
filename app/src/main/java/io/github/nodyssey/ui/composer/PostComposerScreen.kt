@@ -19,6 +19,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.maxLength
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -61,9 +65,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,10 +77,11 @@ import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.deleteBackwards
+import io.github.nodyssey.ui.common.insertText
 import io.github.nodyssey.ui.theme.PostBody
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.readableWidth
-import java.text.BreakIterator
 import java.text.DateFormat
 import java.util.Date
 
@@ -117,10 +120,10 @@ fun PostComposerRoute(
 
     PostComposerScreen(
         state = state,
+        titleState = viewModel.titleState,
+        bodyState = viewModel.bodyState,
         snackbarHostState = snackbarHostState,
         onClose = onClose,
-        onTitleChange = viewModel::updateTitle,
-        onBodyChange = viewModel::updateBody,
         onBoardSelect = viewModel::selectBoard,
         onPermissionSelect = viewModel::selectPermission,
         onViewModeChange = viewModel::setViewMode,
@@ -197,10 +200,10 @@ private fun UploadErrorSnackbar(
 @Composable
 fun PostComposerScreen(
     state: PostComposerUiState,
+    titleState: TextFieldState,
+    bodyState: TextFieldState,
     snackbarHostState: SnackbarHostState,
     onClose: () -> Unit,
-    onTitleChange: (String) -> Unit,
-    onBodyChange: (String) -> Unit,
     onBoardSelect: (Board) -> Unit,
     onPermissionSelect: (PostPermission) -> Unit,
     onViewModeChange: (ComposerViewMode) -> Unit,
@@ -237,8 +240,8 @@ fun PostComposerScreen(
         } else {
             EditorContent(
                 state = state,
-                onTitleChange = onTitleChange,
-                onBodyChange = onBodyChange,
+                titleState = titleState,
+                bodyState = bodyState,
                 onBoardSelect = onBoardSelect,
                 onPermissionSelect = onPermissionSelect,
                 onViewModeChange = onViewModeChange,
@@ -333,8 +336,8 @@ private fun PublishButton(
 @Composable
 private fun EditorContent(
     state: PostComposerUiState,
-    onTitleChange: (String) -> Unit,
-    onBodyChange: (String) -> Unit,
+    titleState: TextFieldState,
+    bodyState: TextFieldState,
     onBoardSelect: (Board) -> Unit,
     onPermissionSelect: (PostPermission) -> Unit,
     onViewModeChange: (ComposerViewMode) -> Unit,
@@ -343,31 +346,18 @@ private fun EditorContent(
     onRetryAttachment: (ImageAttachment) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var bodyValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue(state.body, TextRange(state.body.length)))
-    }
     var emojiOpen by rememberSaveable { mutableStateOf(false) }
     // Held here, not in the panel: the panel leaves the composition whenever it closes.
     var recentEmoji by rememberSaveable { mutableStateOf(listOf<String>()) }
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(state.body) {
-        if (state.body != bodyValue.text) {
-            bodyValue = TextFieldValue(state.body, TextRange(state.body.length))
-        }
-    }
-    fun edit(next: TextFieldValue) {
-        bodyValue = next
-        onBodyChange(next.text)
-    }
 
     Column(modifier = modifier.fillMaxSize().imePadding()) {
         ComposerOptions(state = state, onBoardSelect = onBoardSelect, onPermissionSelect = onPermissionSelect)
-        TitleField(title = state.title, onTitleChange = onTitleChange)
+        TitleField(titleState = titleState, length = state.title.length)
         BodyArea(
             state = state,
-            bodyValue = bodyValue,
-            onEdit = ::edit,
+            bodyState = bodyState,
             focusRequester = focusRequester,
             modifier = Modifier.weight(1f),
         )
@@ -390,7 +380,7 @@ private fun EditorContent(
 
                     else -> {
                         emojiOpen = false
-                        edit(applyMarkdown(bodyValue, action))
+                        bodyState.edit { applyMarkdown(action) }
                         focusRequester.requestFocus()
                     }
                 }
@@ -406,8 +396,8 @@ private fun EditorContent(
         )
         if (emojiOpen) {
             EmojiPanel(
-                onInsert = { text -> edit(insertText(bodyValue, text)) },
-                onBackspace = { edit(bodyValue.deleteBackwards()) },
+                onInsert = { text -> bodyState.edit { insertText(text) } },
+                onBackspace = { bodyState.edit { deleteBackwards() } },
                 recent = recentEmoji,
                 onRecentChange = { recentEmoji = it },
             )
@@ -418,19 +408,18 @@ private fun EditorContent(
 @Composable
 private fun BodyArea(
     state: PostComposerUiState,
-    bodyValue: TextFieldValue,
-    onEdit: (TextFieldValue) -> Unit,
+    bodyState: TextFieldState,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
     if (state.viewMode != ComposerViewMode.COMPARE) {
-        BodyField(bodyValue, onEdit, focusRequester, modifier)
+        BodyField(bodyState, focusRequester, modifier)
         return
     }
     // 对照: the site puts the two side by side, which needs a width a phone does not have. Stacked
     // keeps the pairing — edit above, result below — without shrinking either to an unreadable column.
     Column(modifier = modifier) {
-        BodyField(bodyValue, onEdit, focusRequester, Modifier.weight(1f))
+        BodyField(bodyState, focusRequester, Modifier.weight(1f))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         MarkdownPreviewBody(
             markdown = state.body,
@@ -445,23 +434,22 @@ private fun BodyArea(
 
 @Composable
 private fun BodyField(
-    bodyValue: TextFieldValue,
-    onEdit: (TextFieldValue) -> Unit,
+    bodyState: TextFieldState,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
     BasicTextField(
-        value = bodyValue,
-        onValueChange = onEdit,
+        state = bodyState,
         textStyle = PostBody.copy(color = MaterialTheme.colorScheme.onSurface),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        lineLimits = TextFieldLineLimits.MultiLine(),
         modifier = modifier
             .readableWidth()
             .focusRequester(focusRequester)
             .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        decorationBox = { inner ->
+        decorator = { inner ->
             Box(Modifier.fillMaxSize()) {
-                if (bodyValue.text.isEmpty()) {
+                if (bodyState.text.isEmpty()) {
                     Text(
                         text = stringResource(R.string.composer_body_hint),
                         style = PostBody,
@@ -476,13 +464,15 @@ private fun BodyField(
 
 @Composable
 private fun TitleField(
-    title: String,
-    onTitleChange: (String) -> Unit,
+    titleState: TextFieldState,
+    length: Int,
 ) {
     BasicTextField(
-        value = title,
-        onValueChange = onTitleChange,
-        singleLine = true,
+        state = titleState,
+        lineLimits = TextFieldLineLimits.SingleLine,
+        // Enforced at the input layer rather than trimmed afterwards: truncating in the ViewModel
+        // cut composing text out from under the IME, which made the field stutter mid-word.
+        inputTransformation = InputTransformation.maxLength(PostComposerViewModel.MAX_TITLE_LENGTH),
         textStyle = MaterialTheme.typography.titleMedium.copy(
             fontSize = 19.sp,
             lineHeight = 26.sp,
@@ -491,11 +481,11 @@ private fun TitleField(
         ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         modifier = Modifier.readableWidth().padding(horizontal = Spacing.lg),
-        decorationBox = { inner ->
+        decorator = { inner ->
             Column {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Box(Modifier.weight(1f).padding(bottom = Spacing.sm)) {
-                        if (title.isEmpty()) {
+                        if (length == 0) {
                             Text(
                                 text = stringResource(R.string.composer_title_hint),
                                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 19.sp),
@@ -507,7 +497,7 @@ private fun TitleField(
                     Text(
                         text = stringResource(
                             R.string.composer_title_count,
-                            title.length,
+                            length,
                             PostComposerViewModel.MAX_TITLE_LENGTH,
                         ),
                         style = MaterialTheme.typography.labelSmall,
@@ -735,22 +725,6 @@ private val ComposerViewMode.labelRes: Int
         ComposerViewMode.PREVIEW -> R.string.composer_view_preview
         ComposerViewMode.COMPARE -> R.string.composer_view_compare
     }
-
-/** Deletes one character before the caret — the emoji panel's own backspace key. */
-internal fun TextFieldValue.deleteBackwards(): TextFieldValue {
-    val start = selection.min.coerceIn(0, text.length)
-    val end = selection.max.coerceIn(0, text.length)
-    if (start != end) {
-        return TextFieldValue(text.removeRange(start, end), TextRange(start))
-    }
-    if (start == 0) return this
-    // Step back one grapheme cluster, not one code point: the panel's own ❤️ is base + variation
-    // selector, and a code-point step would strip the selector and leave a black text-style heart.
-    val iterator = BreakIterator.getCharacterInstance()
-    iterator.setText(text)
-    val previous = iterator.preceding(start).let { if (it == BreakIterator.DONE) 0 else it }
-    return TextFieldValue(text.removeRange(previous, start), TextRange(previous))
-}
 
 private fun countImages(markdown: String): Int = IMAGE_MARKDOWN.findAll(markdown).count()
 
