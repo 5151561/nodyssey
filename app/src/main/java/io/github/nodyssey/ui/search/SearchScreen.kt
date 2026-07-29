@@ -17,6 +17,9 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -29,6 +32,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,17 +41,22 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SearchBarValue
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopSearchBar
 import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +90,7 @@ import io.github.nodyssey.ui.postlist.toNodeSeekError
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.readableWidth
+import kotlinx.coroutines.launch
 
 @Composable
 fun SearchRoute(
@@ -96,7 +106,7 @@ fun SearchRoute(
     SearchScreen(
         state = state,
         postResults = postResults,
-        onQueryChange = viewModel::updateQuery,
+        queryState = viewModel.query,
         onSearch = viewModel::submitSearch,
         onTargetChange = viewModel::selectTarget,
         onHistoryClick = viewModel::selectHistory,
@@ -117,7 +127,7 @@ fun SearchRoute(
 @Composable
 fun SearchScreen(
     state: SearchUiState,
-    onQueryChange: (String) -> Unit,
+    queryState: TextFieldState,
     onSearch: () -> Unit,
     onTargetChange: (SearchTarget) -> Unit,
     onHistoryClick: (SearchHistoryEntry) -> Unit,
@@ -135,41 +145,57 @@ fun SearchScreen(
 ) {
     var showBoardSheet by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
-    Scaffold(modifier = modifier) { padding ->
+    val scope = rememberCoroutineScope()
+    // Expanded on arrival: you reached this screen in order to type, and the expanded bar is where
+    // the history lives. It used to occupy the results area whenever nothing had been submitted,
+    // which is the same thing said with a hand-written branch.
+    val searchBarState = rememberSearchBarState(initialValue = SearchBarValue.Expanded)
+
+    val inputField = @Composable {
+        SearchBarDefaults.InputField(
+            textFieldState = queryState,
+            searchBarState = searchBarState,
+            onSearch = {
+                onSearch()
+                scope.launch { searchBarState.animateToCollapsed() }
+            },
+            placeholder = {
+                Text(
+                    stringResource(
+                        if (state.target == SearchTarget.USERS) R.string.search_user_hint else R.string.search_hint,
+                    ),
+                )
+            },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = {
+                if (queryState.text.isNotEmpty()) {
+                    IconButton(onClick = { queryState.clearText() }) {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.search_clear_query))
+                    }
+                }
+            },
+        )
+    }
+
+    Scaffold(
+        modifier = modifier,
+        topBar = { TopSearchBar(state = searchBarState, inputField = inputField) },
+    ) { padding ->
+        ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
+            SearchHistory(
+                searches = state.searchHistory.filter { it.target == state.target },
+                boards = state.boards,
+                onHistoryClick = {
+                    onHistoryClick(it)
+                    scope.launch { searchBarState.animateToCollapsed() }
+                },
+                onRemoveHistory = onRemoveHistory,
+                onClearHistory = onClearHistory,
+            )
+        }
         Column(
             modifier = Modifier.padding(padding).fillMaxSize().readableWidth(),
         ) {
-            TextField(
-                value = state.query,
-                onValueChange = onQueryChange,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                placeholder = {
-                    Text(
-                        stringResource(
-                            if (state.target == SearchTarget.USERS) R.string.search_user_hint else R.string.search_hint,
-                        ),
-                    )
-                },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (state.query.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.search_clear_query))
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = CircleShape,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-                colors =
-                TextFieldDefaults.colors(
-                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                ),
-            )
             PrimaryTabRow(selectedTabIndex = state.target.ordinal) {
                 SearchTab(
                     selected = state.target == SearchTarget.POSTS,
@@ -235,7 +261,7 @@ fun SearchScreen(
 
             SearchContent(
                 state = state,
-                onQueryChange = onQueryChange,
+                queryState = queryState,
                 onHistoryClick = onHistoryClick,
                 onRemoveHistory = onRemoveHistory,
                 onClearHistory = onClearHistory,
@@ -280,7 +306,7 @@ private fun SearchTab(
 @Composable
 private fun SearchContent(
     state: SearchUiState,
-    onQueryChange: (String) -> Unit,
+    queryState: TextFieldState,
     onHistoryClick: (SearchHistoryEntry) -> Unit,
     onRemoveHistory: (SearchHistoryEntry) -> Unit,
     onClearHistory: () -> Unit,
@@ -291,16 +317,8 @@ private fun SearchContent(
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
 ) {
-    if (state.submittedQuery == null) {
-        SearchHistory(
-            searches = state.searchHistory.filter { it.target == state.target },
-            boards = state.boards,
-            onHistoryClick = onHistoryClick,
-            onRemoveHistory = onRemoveHistory,
-            onClearHistory = onClearHistory,
-        )
-        return
-    }
+    // Nothing submitted yet means the expanded bar is showing its history over this area.
+    if (state.submittedQuery == null) return
 
     if (state.target == SearchTarget.USERS) {
         when (val loadState = state.userLoadState) {
@@ -319,7 +337,7 @@ private fun SearchContent(
 
             SearchLoadState.Success -> {
                 if (state.userResults.isEmpty()) {
-                    Box(Modifier.fillMaxSize()) { NoSearchResultsState(onClearQuery = { onQueryChange("") }) }
+                    Box(Modifier.fillMaxSize()) { NoSearchResultsState(onClearQuery = { queryState.clearText() }) }
                 } else {
                     UserResults(users = state.userResults, onUserClick = onUserClick)
                 }
@@ -343,7 +361,7 @@ private fun SearchContent(
 
         is LoadState.NotLoading -> {
             if (posts.itemCount == 0) {
-                Box(Modifier.fillMaxSize()) { NoSearchResultsState(onClearQuery = { onQueryChange("") }) }
+                Box(Modifier.fillMaxSize()) { NoSearchResultsState(onClearQuery = { queryState.clearText() }) }
             } else {
                 PostResults(posts = posts, onPostClick = onPostClick)
             }
@@ -657,7 +675,7 @@ private fun SearchPreview() {
                     SearchHistoryEntry("NodeSeek", SearchTarget.USERS),
                 ),
             ),
-            onQueryChange = {},
+            queryState = rememberTextFieldState(),
             onSearch = {},
             onTargetChange = {},
             onHistoryClick = {},

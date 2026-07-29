@@ -1,5 +1,8 @@
 package io.github.nodyssey.ui.search
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -43,6 +46,14 @@ class SearchViewModel(
     private val categoryRepository: CategoryRepository,
     private val settings: SettingsRepository,
 ) : ViewModel() {
+    /**
+     * The search box itself.
+     *
+     * Held here rather than mirrored through the UiState so the screen and the results can never
+     * disagree about what is being searched for, and so the caret survives a history pick.
+     */
+    val query = TextFieldState()
+
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
@@ -63,6 +74,7 @@ class SearchViewModel(
     private var postRequestGeneration = 0
 
     init {
+        observeQuery()
         categoryRepository.boards
             .onEach { boards -> _uiState.update { it.copy(boards = boards.filter { board -> board.slug != null }) } }
             .launchIn(viewModelScope)
@@ -78,22 +90,20 @@ class SearchViewModel(
         viewModelScope.launch { categoryRepository.refreshIfNeeded() }
     }
 
-    fun updateQuery(value: String) {
-        val invalidatesSubmittedSearch = value != _uiState.value.submittedQuery
-        _uiState.update {
-            if (invalidatesSubmittedSearch) {
-                it.copy(
-                    query = value,
-                    submittedQuery = null,
-                    userLoadState = SearchLoadState.Idle,
-                )
-            } else {
-                it.copy(query = value)
+    /**
+     * Editing the box invalidates the results it no longer describes.
+     *
+     * Typing back to exactly the submitted text is not an edit as far as the results go — the list on
+     * screen still answers the question in the box — so that case keeps them.
+     */
+    private fun observeQuery() {
+        viewModelScope.launch {
+            snapshotFlow { query.text.toString() }.collect { value ->
+                if (value == _uiState.value.submittedQuery) return@collect
+                _uiState.update { it.copy(submittedQuery = null, userLoadState = SearchLoadState.Idle) }
+                postRequest.value = null
+                userJob?.cancel()
             }
-        }
-        if (invalidatesSubmittedSearch) {
-            postRequest.value = null
-            userJob?.cancel()
         }
     }
 
@@ -112,11 +122,14 @@ class SearchViewModel(
 
     fun submitSearch() {
         val state = _uiState.value
+        // Straight off the field, not off a mirror: what gets searched has to be what is in the box
+        // at the moment the key was pressed.
+        val typed = query.text.toString()
         executeSearch(
-            query = state.query,
+            query = typed,
             historyEntry =
             SearchHistoryEntry(
-                query = state.query,
+                query = typed,
                 target = state.target,
                 categorySlugs = if (state.target == SearchTarget.POSTS) state.selectedBoards else emptySet(),
                 sort = state.sort,
@@ -125,9 +138,9 @@ class SearchViewModel(
     }
 
     fun selectHistory(entry: SearchHistoryEntry) {
+        query.setTextAndPlaceCursorAtEnd(entry.query)
         _uiState.update {
             it.copy(
-                query = entry.query,
                 target = entry.target,
                 selectedBoards = entry.categorySlugs,
                 sort = entry.sort,
@@ -159,13 +172,13 @@ class SearchViewModel(
 
     fun retryUsers() {
         val state = _uiState.value
-        startUserSearch(state.submittedQuery ?: state.query)
+        startUserSearch(state.submittedQuery ?: query.text.toString())
     }
 
     fun challengeUrl(): String =
         NodeSeekSite.BASE_URL +
             NodeSeekSite.postSearchPath(
-                query = _uiState.value.submittedQuery ?: _uiState.value.query,
+                query = _uiState.value.submittedQuery ?: query.text.toString(),
                 categorySlug = _uiState.value.selectedBoards.singleOrNull(),
                 sort = if (_uiState.value.sort == SearchSort.TIME) io.github.nodyssey.model.FeedSort.POST_TIME else io.github.nodyssey.model.FeedSort.LAST_REPLY,
             )
@@ -191,11 +204,13 @@ class SearchViewModel(
     ) {
         val normalized = query.trim()
         if (normalized.isEmpty()) return
+        // The box is trimmed to what was actually searched, the way it used to be when the UiState
+        // held the text — otherwise a stray space stays visible next to results that ignored it.
+        if (this.query.text.toString() != normalized) this.query.setTextAndPlaceCursorAtEnd(normalized)
         postRequest.value = null
         userJob?.cancel()
         _uiState.update {
             it.copy(
-                query = normalized,
                 submittedQuery = normalized,
                 userResults = emptyList(),
                 userLoadState = SearchLoadState.Idle,
@@ -271,7 +286,7 @@ sealed interface SearchLoadState {
 }
 
 data class SearchUiState(
-    val query: String = "",
+    /** What was actually searched for. Null while the box holds text nobody has submitted yet. */
     val submittedQuery: String? = null,
     val target: SearchTarget = SearchTarget.POSTS,
     val searchHistory: List<SearchHistoryEntry> = emptyList(),
