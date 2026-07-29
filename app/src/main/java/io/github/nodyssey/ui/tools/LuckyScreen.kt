@@ -43,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -113,8 +114,8 @@ fun LuckyScreen(
     onOpenBrowser: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var pickingDate by remember { mutableStateOf(false) }
-    var pickingTime by remember { mutableStateOf(false) }
+    var pickingDate by rememberSaveable { mutableStateOf(false) }
+    var pickingTime by rememberSaveable { mutableStateOf(false) }
     val copy = rememberClipboardCopy()
     val copyLabel = stringResource(R.string.lucky_title)
     val copiedText = stringResource(R.string.lucky_link_copied)

@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
 @Composable
@@ -37,7 +38,9 @@ fun NodysseyTheme(
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
             motionScheme = MotionScheme.expressive(),
-            typography = nodysseyTypography(fontScale),
+            // Remembered rather than rebuilt: the scale only moves when the reading-size setting
+            // does, and each call copies three TextStyles.
+            typography = remember(fontScale) { nodysseyTypography(fontScale) },
             shapes = NodysseyShapes,
             content = content,
         )

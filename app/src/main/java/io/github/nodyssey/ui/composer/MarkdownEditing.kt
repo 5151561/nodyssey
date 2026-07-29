@@ -18,10 +18,6 @@ import io.github.nodyssey.ui.common.toggleLinePrefix
  */
 enum class EditorAction { BOLD, HEADING, CODE, QUOTE, LIST, LINK, MENTION, IMAGE, EMOJI, PREVIEW }
 
-/** True when the action rewrites the body itself, which is what [applyMarkdown] can act on. */
-val EditorAction.isTextTransform: Boolean
-    get() = this !in setOf(EditorAction.IMAGE, EditorAction.EMOJI, EditorAction.PREVIEW)
-
 /**
  * Applies one toolbar action to the current selection.
  *

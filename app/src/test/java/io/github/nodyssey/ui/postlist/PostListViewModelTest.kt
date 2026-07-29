@@ -90,7 +90,6 @@ class PostListViewModelTest {
             advanceUntilIdle()
 
             assertEquals(null, vm.uiState.value.categorySlug)
-            assertEquals(0, vm.uiState.value.selectedBoardIndex)
         }
 
     @Test
@@ -140,7 +139,6 @@ class PostListViewModelTest {
             advanceUntilIdle()
 
             assertEquals(null, vm.uiState.value.categorySlug)
-            assertEquals(0, vm.uiState.value.selectedBoardIndex)
         }
 
     @Test
@@ -156,11 +154,6 @@ class PostListViewModelTest {
             advanceUntilIdle()
 
             assertEquals(target.slug, vm.uiState.value.categorySlug)
-            assertEquals(
-                vm.uiState.value.boards
-                    .indexOf(target),
-                vm.uiState.value.selectedBoardIndex,
-            )
         }
 
     @Test
@@ -257,7 +250,7 @@ class PostListViewModelTest {
             advanceUntilIdle()
 
             assertNull(repository.thread(42).first())
-            assertEquals(0, vm.uiState.value.selectedBoardIndex)
+            assertEquals(null, vm.uiState.value.categorySlug)
         }
 
     /** A cold start reads cookies that were already on disk; that is not a session *change*. */

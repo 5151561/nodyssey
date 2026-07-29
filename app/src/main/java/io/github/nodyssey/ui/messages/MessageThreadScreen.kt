@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
@@ -472,7 +473,7 @@ private fun MessageInputBar(
             modifier = Modifier.size(44.dp),
         ) {
             Icon(
-                NodysseyIcons.Send,
+                Icons.AutoMirrored.Filled.Send,
                 contentDescription = stringResource(R.string.message_send),
                 modifier = Modifier.size(20.dp),
             )

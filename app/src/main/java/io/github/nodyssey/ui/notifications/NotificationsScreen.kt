@@ -161,7 +161,7 @@ fun NotificationsScreen(
                             val count = state.counts.forCategory(category)
                             if (count > 0) {
                                 Text(
-                                    text = count.coerceAtMost(MAX_BADGE).toString(),
+                                    text = unreadLabel(count, MAX_BADGE),
                                     style =
                                     MaterialTheme.typography.labelLarge.copy(
                                         fontFeatureSettings = TABULAR_FIGURES,

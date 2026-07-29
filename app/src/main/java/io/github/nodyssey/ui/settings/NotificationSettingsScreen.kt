@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -251,7 +252,7 @@ fun NotificationSettingsScreen(
                     top = true,
                     bottom = true,
                     onClick = onOpenTelegram,
-                    leading = { Icon(NodysseyIcons.Send, contentDescription = null) },
+                    leading = { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null) },
                     trailing = {
                         Text(
                             stringResource(R.string.notify_telegram_action),
