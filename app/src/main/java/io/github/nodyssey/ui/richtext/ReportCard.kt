@@ -295,66 +295,9 @@ private fun BadgeRow(badges: QualityReport.Block.Badges) {
  */
 @Composable
 private fun ReportTable(table: QualityReport.Block.Table) {
-    if (table.rows.isEmpty()) return
-    val cells = rememberScrollState()
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
-            .background(MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Column {
-            HeaderCell(text = "", width = LABEL_WIDTH)
-            table.rows.forEach { row ->
-                Text(
-                    text = row.label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    modifier = Modifier
-                        .width(LABEL_WIDTH)
-                        .padding(horizontal = Spacing.sm, vertical = 5.dp),
-                )
-            }
-        }
-        Column(modifier = Modifier.horizontalScroll(cells)) {
-            Row { table.columns.forEach { HeaderCell(it) } }
-            table.rows.forEach { row ->
-                Row {
-                    // Padded to the header's length: a row that is short is short at a known column,
-                    // and a blank there is the finding.
-                    List(table.columns.size) { row.cells.getOrElse(it) { "" } }.forEach { cell ->
-                        Text(
-                            text = cell,
-                            style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            modifier = Modifier
-                                .width(CELL_WIDTH)
-                                .padding(horizontal = Spacing.sm, vertical = 5.dp),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HeaderCell(
-    text: String,
-    width: Dp = CELL_WIDTH,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontWeight = FontWeight.SemiBold,
-        maxLines = 1,
-        modifier = Modifier
-            .width(width)
-            .padding(horizontal = Spacing.sm, vertical = 6.dp),
+    SpecTable(
+        columns = table.columns,
+        rows = table.rows.map { SpecRow(label = it.label, cells = it.cells) },
     )
 }
 
@@ -390,12 +333,6 @@ private fun SourceAction(onShowSource: () -> Unit) {
     }
 }
 
-/** Wide enough for `操作系统/内核`, which is the longest label the scripts use. */
-private val LABEL_WIDTH = 92.dp
-
-/** Wide enough for `IP2Location` at 13sp, which is the longest column name. */
-private val CELL_WIDTH = 88.dp
-
 internal val ReportTerminalGround = Color(0xFF282C34)
 
 internal val ReportTerminalInk = Color(0xFFD7DAE0)
@@ -406,3 +343,12 @@ internal val ReportTerminalStyle =
         fontSize = 12.sp,
         lineHeight = 18.sp,
     )
+
+/**
+ * The width a field row reserves for its label before the value starts.
+ *
+ * Same number as [SpecTable]'s pinned column by design — a card reads as one grid whether the block
+ * is a field list or a table — but it is a minimum here and a fixed width there, so the two are not
+ * the same constant.
+ */
+private val LABEL_WIDTH = 92.dp

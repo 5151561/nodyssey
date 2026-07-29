@@ -214,7 +214,7 @@ private fun RichBlock(
                 }
             }
 
-        is RichNode.Table -> DataTable(node, textStyle)
+        is RichNode.Table -> DataTable(node)
 
         is RichNode.Tabs ->
             TabGroup(
@@ -571,55 +571,11 @@ private fun CodeBlock(node: RichNode.CodeBlock) {
  * tabular figures so the numbers line up on their decimal point.
  */
 @Composable
-private fun DataTable(
-    node: RichNode.Table,
-    textStyle: TextStyle,
-) {
-    if (node.rows.isEmpty()) return
-
-    Column(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
-            .horizontalScroll(rememberScrollState()),
-    ) {
-        node.rows.forEachIndexed { rowIndex, row ->
-            if (rowIndex > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Row(
-                modifier =
-                Modifier.background(
-                    if (rowIndex == 0) {
-                        MaterialTheme.colorScheme.surfaceContainerLow
-                    } else {
-                        Color.Transparent
-                    },
-                ),
-            ) {
-                row.forEach { cell ->
-                    Text(
-                        text = cell,
-                        style =
-                        textStyle.copy(
-                            fontSize = 13.sp,
-                            lineHeight = 19.sp,
-                            fontWeight = if (rowIndex == 0) FontWeight.SemiBold else FontWeight.Normal,
-                            fontFeatureSettings = TABULAR_FIGURES,
-                        ),
-                        modifier = Modifier
-                            .width(120.dp)
-                            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-                    )
-                }
-            }
-        }
-    }
+private fun DataTable(node: RichNode.Table) {
+    val (columns, rows) = node.rows.asSpecTable()
+    SpecTable(columns = columns, rows = rows)
 }
 
-/**
- * Builds one [AnnotatedString] per paragraph so text, links, stickers and quote references share a
- * single layout pass and wrap together the way they do on the web.
- */
 @Composable
 private fun InlineText(
     inlines: List<InlineNode>,
