@@ -4,12 +4,10 @@ import android.content.Intent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.calculatePan
-import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -307,6 +305,20 @@ private fun ZoomableImage(
         }
     val dismissDragThresholdPx = with(LocalDensity.current) { DISMISS_DRAG_THRESHOLD.toPx() }
 
+    /*
+     * `canPan` is the whole reason this is not `detectTransformGestures`: that detector consumes every
+     * position change once past touch slop, including a one-finger swipe on an unzoomed image, which
+     * is the pager's page-turn. The predicate says a one-finger drag is only ours once the image is
+     * actually zoomed — which is exactly the rule the hand-rolled detector here used to spell out, and
+     * the reason the comment explaining it is now four lines instead of six.
+     */
+    val transform =
+        rememberTransformableState { zoomChange, panChange, _ ->
+            scale = (scale * zoomChange).coerceIn(1f, MAX_SCALE)
+            offset = if (scale > 1f) offset + panChange else Offset.Zero
+            onZoomChange(scale > 1f)
+        }
+
     val animatedScale by animateFloatAsState(
         targetValue = scale,
         animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
@@ -324,29 +336,8 @@ private fun ZoomableImage(
                         onZoomChange(scale > 1f)
                     },
                 )
-            }.pointerInput(url) {
-                /*
-                 * Hand-rolled rather than detectTransformGestures, because that detector consumes
-                 * every position change once past touch slop — including a one-finger swipe on an
-                 * unzoomed image, which is the pager's page-turn. Consuming only on a second finger
-                 * or on an already-zoomed image is what lets the swipe reach the pager at all.
-                 */
-                awaitEachGesture {
-                    awaitFirstDown(requireUnconsumed = false)
-                    do {
-                        val event = awaitPointerEvent()
-                        val pinching = event.changes.count { it.pressed } > 1
-                        if (pinching || scale > 1f) {
-                            val zoom = event.calculateZoom()
-                            val pan = event.calculatePan()
-                            scale = (scale * zoom).coerceIn(1f, MAX_SCALE)
-                            offset = if (scale > 1f) offset + pan else Offset.Zero
-                            onZoomChange(scale > 1f)
-                            event.changes.forEach { if (it.positionChanged()) it.consume() }
-                        }
-                    } while (event.changes.any { it.pressed })
-                }
-            }.pointerInput(url, scale > 1f) {
+            }.transformable(state = transform, canPan = { scale > 1f })
+            .pointerInput(url, scale > 1f) {
                 if (scale > 1f) return@pointerInput
                 detectVerticalDragGestures(
                     onDragEnd = {
