@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,6 +23,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -76,6 +76,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -87,11 +88,14 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.RichNode
+import io.github.nodyssey.ui.common.AppendSpinner
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.LoadingState
+import io.github.nodyssey.ui.common.MetaText
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.RoleBadgeRow
+import io.github.nodyssey.ui.common.SkeletonBar
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.common.rememberClipboardCopy
 import io.github.nodyssey.ui.composer.ReplyComposerHost
@@ -215,11 +219,11 @@ fun PostDetailScreen(
             lastVisible >= listState.layoutInfo.totalItemsCount - 4
         }
     }
-    val atListTop by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-        }
-    }
+    // `canScrollBackward` is the same predicate, already maintained by LazyListState as plain state —
+    // no derivedStateOf and no per-frame read of the two scroll fields. Its `canScrollForward` twin is
+    // deliberately *not* used for [atListEnd] below: that one becomes true only once the list is
+    // actually scrolled to the bottom, where this reads true as soon as the last item shows its head.
+    val atListTop = !listState.canScrollBackward
     val atListEnd by remember {
         derivedStateOf {
             val totalItems = listState.layoutInfo.totalItemsCount
@@ -464,7 +468,7 @@ private fun PageJumpSheet(
     onDismiss: () -> Unit,
     onGo: (Int) -> Unit,
 ) {
-    var input by remember { mutableStateOf(page.toString()) }
+    var input by rememberSaveable { mutableStateOf(page.toString()) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState =
@@ -488,6 +492,7 @@ private fun PageJumpSheet(
                 onValueChange = { input = it.filter { character -> character.isDigit() } },
                 label = { Text(stringResource(R.string.post_page_input, totalPages)) },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -645,16 +650,7 @@ private fun ThreadList(
         }
 
         if (state.isAppending) {
-            item(key = "appending") {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(Spacing.lg),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(Modifier.size(22.dp))
-                }
-            }
+            item(key = "appending") { AppendSpinner() }
         }
     }
 }
@@ -1025,8 +1021,6 @@ private fun FeedChickenDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
     )
 }
 
@@ -1145,19 +1139,6 @@ private fun FloorLabel(floor: String) {
     )
 }
 
-@Composable
-private fun MetaText(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier,
-    )
-}
-
 /** Items in [ThreadList] before the first comment: title, comments header, and the body when present. */
 private val PostDetailUiState.headerItemCount: Int
     get() = 2 + (if (body != null) 1 else 0)
@@ -1230,20 +1211,6 @@ private fun ThreadSkeleton(modifier: Modifier = Modifier) {
             SkeletonBar(0.85f, 12.dp)
         }
     }
-}
-
-@Composable
-private fun SkeletonBar(
-    fraction: Float,
-    height: Dp,
-) {
-    Box(
-        Modifier
-            .fillMaxWidth(fraction)
-            .height(height)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-    )
 }
 
 // -------------------------------------------------------------------------------------------------

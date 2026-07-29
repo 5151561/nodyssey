@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -121,25 +122,27 @@ fun NotificationsScreen(
     onRecipientClick: (UserSearchResult) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            // `readableWidth` stays on the bar itself: the content column below is constrained the
+            // same way, and a full-bleed bar over a centred list is the one thing this screen has
+            // never done.
+            TopAppBar(
+                modifier = Modifier.readableWidth(),
+                title = { Text(stringResource(R.string.tab_notifications)) },
+                actions = {
+                    TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
+                        Icon(Icons.Default.Check, contentDescription = null)
+                        Text(stringResource(R.string.notifications_mark_all_read))
+                    }
+                },
+            )
+        },
+    ) { padding ->
         Column(
             modifier = Modifier.padding(padding).fillMaxSize().readableWidth(),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 18.dp, end = Spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.tab_notifications),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
-                    Icon(Icons.Default.Check, contentDescription = null)
-                    Text(stringResource(R.string.notifications_mark_all_read))
-                }
-            }
-
             LazyRow(
                 contentPadding = PaddingValues(horizontal = Spacing.lg),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -161,7 +164,7 @@ fun NotificationsScreen(
                             val count = state.counts.forCategory(category)
                             if (count > 0) {
                                 Text(
-                                    text = count.coerceAtMost(MAX_BADGE).toString(),
+                                    text = unreadLabel(count, MAX_BADGE),
                                     style =
                                     MaterialTheme.typography.labelLarge.copy(
                                         fontFeatureSettings = TABULAR_FIGURES,

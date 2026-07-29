@@ -25,6 +25,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.nodyssey.ui.common.GroupSeam
+import io.github.nodyssey.ui.common.groupShape
 import io.github.nodyssey.ui.theme.Spacing
 
 /**
@@ -50,7 +52,7 @@ internal fun SettingsSectionTitle(
 
 @Composable
 internal fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(GROUP_SEAM), content = content)
+    Column(verticalArrangement = Arrangement.spacedBy(GroupSeam), content = content)
 }
 
 /** A row whose control needs its own line — a slider, a segmented button, a preview block. */
@@ -65,7 +67,7 @@ internal fun SettingsBlock(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = expressiveGroupShape(top, bottom),
+        shape = groupShape(first = top, last = bottom),
     ) {
         Column(
             modifier = Modifier.padding(Spacing.lg),
@@ -116,7 +118,7 @@ internal fun SettingsRow(
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = contentColor,
-        shape = expressiveGroupShape(top, bottom),
+        shape = groupShape(first = top, last = bottom),
         modifier = modifier.then(
             when {
                 checked != null && onCheckedChange != null ->
@@ -181,14 +183,3 @@ internal fun ConnectedChoiceButtons(
         }
     }
 }
-
-/** 2dp: wide enough to read as a seam, narrow enough that the group stays one object. */
-private val GROUP_SEAM = 2.dp
-
-internal fun expressiveGroupShape(top: Boolean, bottom: Boolean) =
-    RoundedCornerShape(
-        topStart = if (top) 18.dp else 5.dp,
-        topEnd = if (top) 18.dp else 5.dp,
-        bottomEnd = if (bottom) 18.dp else 5.dp,
-        bottomStart = if (bottom) 18.dp else 5.dp,
-    )

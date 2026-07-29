@@ -15,6 +15,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -51,6 +54,7 @@ import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
+import io.github.nodyssey.ui.common.digitsOnly
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.TABULAR_FIGURES
@@ -68,13 +72,15 @@ fun StardustRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     StardustScreen(
         state = state,
+        amountState = viewModel.amount,
+        recipientState = viewModel.recipientUid,
+        refState = viewModel.refId,
         onBack = onBack,
         onRetry = viewModel::refresh,
         onOpenBrowser = onOpenBrowser,
         onSignIn = onSignIn,
         onOpenTransfer = viewModel::openTransfer,
         onDismissTransfer = viewModel::dismissTransfer,
-        onFormChange = viewModel::updateForm,
         onRequestConfirm = viewModel::requestConfirm,
         onDismissConfirm = viewModel::dismissConfirm,
         onConfirmTransfer = {
@@ -89,13 +95,15 @@ fun StardustRoute(
 @Composable
 fun StardustScreen(
     state: StardustUiState,
+    amountState: TextFieldState,
+    recipientState: TextFieldState,
+    refState: TextFieldState,
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onOpenBrowser: () -> Unit,
     onSignIn: () -> Unit,
     onOpenTransfer: () -> Unit,
     onDismissTransfer: () -> Unit,
-    onFormChange: (TransferForm) -> Unit,
     onRequestConfirm: () -> Unit,
     onDismissConfirm: () -> Unit,
     onConfirmTransfer: () -> Unit,
@@ -148,8 +156,10 @@ fun StardustScreen(
     if (state.transferOpen) {
         TransferDialog(
             state = state,
+            amountState = amountState,
+            recipientState = recipientState,
+            refState = refState,
             onDismiss = onDismissTransfer,
-            onFormChange = onFormChange,
             onRequestConfirm = onRequestConfirm,
         )
     }
@@ -219,7 +229,10 @@ private fun StardustLedger(
 
         else ->
             LazyColumn(modifier) {
-                items(count = state.entries.size, key = { state.entries[it].commentId ?: it.toLong() }) { index ->
+                // The fallback is a String, not the index as a Long: an entry whose commentId is 3
+                // and a null entry at index 3 would otherwise produce the same key, and duplicate
+                // keys make LazyColumn throw.
+                items(count = state.entries.size, key = { state.entries[it].commentId ?: "index-$it" }) { index ->
                     StardustRow(state.entries[index])
                 }
                 item(key = "footer") {
@@ -307,8 +320,10 @@ private fun StardustRow(entry: StardustEntry) {
 @Composable
 private fun TransferDialog(
     state: StardustUiState,
+    amountState: TextFieldState,
+    recipientState: TextFieldState,
+    refState: TextFieldState,
     onDismiss: () -> Unit,
-    onFormChange: (TransferForm) -> Unit,
     onRequestConfirm: () -> Unit,
 ) {
     AlertDialog(
@@ -319,21 +334,9 @@ private fun TransferDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                NumberField(
-                    value = state.form.amount,
-                    label = stringResource(R.string.transfer_amount),
-                    onValueChange = { onFormChange(state.form.copy(amount = it)) },
-                )
-                NumberField(
-                    value = state.form.recipientUid,
-                    label = stringResource(R.string.transfer_recipient),
-                    onValueChange = { onFormChange(state.form.copy(recipientUid = it)) },
-                )
-                NumberField(
-                    value = state.form.refId,
-                    label = stringResource(R.string.transfer_ref),
-                    onValueChange = { onFormChange(state.form.copy(refId = it)) },
-                )
+                NumberField(amountState, stringResource(R.string.transfer_amount))
+                NumberField(recipientState, stringResource(R.string.transfer_recipient))
+                NumberField(refState, stringResource(R.string.transfer_ref))
                 Text(
                     text = stringResource(R.string.transfer_hint),
                     style = MaterialTheme.typography.labelMedium,
@@ -354,21 +357,18 @@ private fun TransferDialog(
 
 @Composable
 private fun NumberField(
-    value: String,
+    state: TextFieldState,
     label: String,
-    onValueChange: (String) -> Unit,
 ) {
     OutlinedTextField(
-        value = value,
-        onValueChange = { input -> onValueChange(input.filter(Char::isDigit).take(MAX_NUMBER_LENGTH)) },
+        state = state,
         label = { Text(label) },
-        singleLine = true,
+        lineLimits = TextFieldLineLimits.SingleLine,
+        inputTransformation = digitsOnly(StardustViewModel.MAX_FIELD_LENGTH),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
     )
 }
-
-private const val MAX_NUMBER_LENGTH = 12
 
 @Composable
 private fun TransferConfirmDialog(
@@ -450,13 +450,15 @@ private fun StardustNotWiredPreview() {
 private fun PreviewScreen(state: StardustUiState) {
     StardustScreen(
         state = state,
+        amountState = rememberTextFieldState(),
+        recipientState = rememberTextFieldState(),
+        refState = rememberTextFieldState(),
         onBack = {},
         onRetry = {},
         onOpenBrowser = {},
         onSignIn = {},
         onOpenTransfer = {},
         onDismissTransfer = {},
-        onFormChange = {},
         onRequestConfirm = {},
         onDismissConfirm = {},
         onConfirmTransfer = {},

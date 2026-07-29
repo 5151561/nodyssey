@@ -1,9 +1,8 @@
 package io.github.nodyssey.ui.richtext
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,8 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -127,8 +124,9 @@ fun ReportSourceDialog(
  * scrollable to its new edges — a scaled layer keeps the size it was laid out at, so half the report
  * would end up somewhere the scroll could not reach.
  *
- * Only a second finger drives it. A one-finger drag has to stay with the scroll containers, or the
- * report becomes unscrollable the moment it is readable.
+ * Only a second finger drives it. `canPan = { false }` is exactly that rule: a one-finger drag is
+ * never consumed here, so it reaches the scroll containers below and the report stays scrollable the
+ * moment it is readable.
  */
 @Composable
 private fun BoxWithFit(
@@ -137,21 +135,18 @@ private fun BoxWithFit(
     onZoom: (Float) -> Unit,
     content: @Composable (Float) -> Unit,
 ) {
+    // `TransformableState` accumulates the gesture itself and `rememberTransformableState` keeps the
+    // callback current, so the multiplication always reads today's [zoom]. The hand-rolled detector
+    // this replaces captured `zoom` by value inside `pointerInput(Unit)`, whose coroutine never
+    // restarts — it multiplied every event against the initial 1f, and since calculateZoom returns a
+    // per-event delta of a percent or two, the pinch could never actually reach a larger size.
+    val transform = rememberTransformableState { zoomChange, _, _ ->
+        onZoom((zoom * zoomChange).coerceIn(MIN_ZOOM, MAX_ZOOM))
+    }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    awaitFirstDown(requireUnconsumed = false)
-                    do {
-                        val event = awaitPointerEvent()
-                        if (event.changes.count { it.pressed } > 1) {
-                            onZoom((zoom * event.calculateZoom()).coerceIn(MIN_ZOOM, MAX_ZOOM))
-                            event.changes.forEach { if (it.positionChanged()) it.consume() }
-                        }
-                    } while (event.changes.any { it.pressed })
-                }
-            },
+            .transformable(state = transform, canPan = { false }),
     ) {
         val available = maxWidth - Spacing.lg * 2
         // The advance of a monospace glyph is about six tenths of its size, so this is the size at

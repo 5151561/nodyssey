@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -54,7 +55,6 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.ui.common.BoardTag
@@ -147,7 +147,7 @@ fun UserSpaceScreen(
                     if (state.isSelf) {
                         IconButton(onClick = onEditProfile) {
                             Icon(
-                                NodysseyIcons.Edit,
+                                Icons.Filled.Edit,
                                 contentDescription = stringResource(R.string.profile_edit),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),

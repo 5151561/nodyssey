@@ -85,16 +85,6 @@ object NodysseyIcons {
         )
     }
 
-    /** Edit action used by the profile header without pulling in material-icons-extended. */
-    val Edit: ImageVector by lazy {
-        materialIcon(
-            name = "Edit",
-            pathData =
-            "M3,17.25V21h3.75L17.81,9.94l-3.75,-3.75L3,17.25zM20.71,7.04c0.39,-0.39 0.39,-1.02 0,-1.41l-2.34,-2.34" +
-                "c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z",
-        )
-    }
-
     /** Sort order — the only action in the home app bar. */
     val SwapVert: ImageVector by lazy {
         materialIcon(
@@ -256,14 +246,6 @@ object NodysseyIcons {
                 "M8,13c-2.33,0 -7,1.17 -7,3.5V19h14v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5z" +
                 "M16,13c-0.29,0 -0.62,0.02 -0.97,0.05 1.16,0.84 1.97,1.97 1.97,3.45V19h6v-2.5" +
                 "c0,-2.33 -4.67,-3.5 -7,-3.5z",
-        )
-    }
-
-    /** Sends a direct message (board 7f). */
-    val Send: ImageVector by lazy {
-        materialIcon(
-            name = "Send",
-            pathData = "M2.01,21L23,12 2.01,3 2,10l15,2 -15,2z",
         )
     }
 

@@ -229,7 +229,7 @@ private fun ConversationRow(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                     ) {
-                        Text(conversation.unreadCount.coerceAtMost(MAX_UNREAD).toString())
+                        Text(unreadLabel(conversation.unreadCount, MAX_UNREAD))
                     }
                 }
             }
@@ -359,6 +359,17 @@ private fun NewConversationSheet(
 private val AVATAR = 44.dp
 private val FAB_CLEARANCE = 88.dp
 private const val MAX_UNREAD = 99
+
+/**
+ * An unread count, capped, with the cap made visible.
+ *
+ * Clamping alone renders 150 unread as a bare "99", which reads as an exact figure rather than as
+ * "more than we will draw". Shared by the conversation badges and the category chips so the two
+ * cannot disagree about what a capped count looks like.
+ */
+@Composable
+internal fun unreadLabel(count: Int, cap: Int): String =
+    if (count > cap) stringResource(R.string.unread_count_capped, cap) else count.toString()
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable

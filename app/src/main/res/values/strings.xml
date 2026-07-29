@@ -185,6 +185,8 @@
     <string name="search_remove_recent">删除最近搜索：%1$s</string>
 
     <!-- Notifications: the site has three groups, and 私信 is a conversation list rather than rows -->
+    <!-- Unread counts past the cap. Without the +, a capped 150 reads as an exact 99. -->
+    <string name="unread_count_capped">%1$d+</string>
     <string name="notifications_mark_all_read">全部已读</string>
     <string name="notifications_mentions">@我</string>
     <string name="notifications_replies">回复主题</string>

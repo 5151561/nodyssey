@@ -194,9 +194,6 @@ data class PostListUiState(
     val categorySlug: String? = null,
     val sort: FeedSort = FeedSort.LAST_REPLY,
 ) {
-    val selectedBoardIndex: Int
-        get() = boards.indexOfFirst { it.slug == categorySlug }.coerceAtLeast(0)
-
     /**
      * The selected board's name, or null on the mixed front page.
      *

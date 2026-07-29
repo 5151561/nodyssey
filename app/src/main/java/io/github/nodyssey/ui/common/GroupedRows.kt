@@ -44,6 +44,9 @@ fun groupShape(first: Boolean, last: Boolean): Shape =
 private val GROUP_OUTER_RADIUS = 18.dp
 private val GROUP_SEAM_RADIUS = 5.dp
 
+/** 2dp: wide enough to read as a seam, narrow enough that the group stays one object. */
+val GroupSeam = 2.dp
+
 /** Group heading. Primary-coloured and small: it labels the block without competing with the rows. */
 @Composable
 fun SectionLabel(
@@ -64,7 +67,7 @@ fun GroupedColumn(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp), content = content)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(GroupSeam), content = content)
 }
 
 /**

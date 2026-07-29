@@ -33,11 +33,13 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -76,16 +78,17 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import io.github.nodyssey.R
-import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
+import io.github.nodyssey.ui.common.AppendSpinner
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
+import io.github.nodyssey.ui.common.MetaText
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.SkeletonBar
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Sizes
@@ -257,16 +260,7 @@ fun PostListScreen(
                                     }
                                 }
                                 if (appendState is LoadState.Loading) {
-                                    item(key = "append-spinner") {
-                                        Box(
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .padding(Spacing.lg),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            CircularProgressIndicator(Modifier.size(22.dp))
-                                        }
-                                    }
+                                    item(key = "append-spinner") { AppendSpinner() }
                                 }
                             }
                         }
@@ -436,25 +430,28 @@ private fun BoardStrip(
                     )
                 }
             }
-            IconButton(onClick = { expanded = !expanded }) {
-                Box(
-                    modifier =
-                    Modifier
-                        .size(width = 40.dp, height = 32.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector =
-                        if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription =
-                        stringResource(
-                            if (expanded) R.string.action_hide_all_boards else R.string.action_show_all_boards,
-                        ),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            // The tonal button *is* the pill, rather than a plain IconButton with one drawn inside
+            // it: same 48dp touch target either way (minimumInteractiveComponentSize expands the
+            // pointer bounds, not the layout), but the ripple is now clipped to the shape it draws
+            // instead of spilling above and below the 32dp pill.
+            FilledTonalIconButton(
+                onClick = { expanded = !expanded },
+                modifier = Modifier.size(width = 40.dp, height = 32.dp),
+                shape = CircleShape,
+                colors =
+                IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) {
+                Icon(
+                    imageVector =
+                    if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription =
+                    stringResource(
+                        if (expanded) R.string.action_hide_all_boards else R.string.action_show_all_boards,
+                    ),
+                )
             }
         }
 
@@ -651,15 +648,15 @@ private fun PostMetaRow(post: FeedPost) {
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         BoardTag(title = summary.categoryTitle, slug = summary.categorySlug)
-        MetaText(summary.authorName)
-        if (summary.isPinned) MetaText(stringResource(R.string.post_badge_pinned))
+        MetaText(summary.authorName, singleLine = true)
+        if (summary.isPinned) MetaText(stringResource(R.string.post_badge_pinned), singleLine = true)
         if (post.newCommentCount > 0) {
             NewReplyBadge(post.newCommentCount)
         } else {
-            summary.commentCount?.let { MetaText(stringResource(R.string.post_reply_count, it)) }
+            summary.commentCount?.let { MetaText(stringResource(R.string.post_reply_count, it), singleLine = true) }
         }
-        summary.viewCount?.let { MetaText(stringResource(R.string.post_view_count, it)) }
-        summary.lastActiveText?.let { MetaText(it) }
+        summary.viewCount?.let { MetaText(stringResource(R.string.post_view_count, it), singleLine = true) }
+        summary.lastActiveText?.let { MetaText(it, singleLine = true) }
     }
 }
 
@@ -675,17 +672,6 @@ private fun NewReplyBadge(count: Int) {
             .clip(RoundedCornerShape(6.dp))
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 7.dp, vertical = 1.dp),
-    )
-}
-
-@Composable
-private fun MetaText(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
     )
 }
 
@@ -725,20 +711,6 @@ private fun FeedSkeleton(modifier: Modifier = Modifier) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
     }
-}
-
-@Composable
-private fun SkeletonBar(
-    fraction: Float,
-    height: Dp,
-) {
-    Box(
-        Modifier
-            .fillMaxWidth(fraction)
-            .height(height)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-    )
 }
 
 // -------------------------------------------------------------------------------------------------

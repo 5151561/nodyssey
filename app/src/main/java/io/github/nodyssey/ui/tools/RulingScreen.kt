@@ -92,16 +92,11 @@ fun RulingScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = {
-                    Column {
-                        Text(stringResource(R.string.ruling_title))
-                        Text(
-                            text = stringResource(R.string.ruling_subtitle),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
+                title = { Text(stringResource(R.string.ruling_title)) },
+                // The slot rather than a hand-stacked Column: the subtitle then takes its type and
+                // colour from TopAppBarColors (labelMedium, subtitleContentColor) instead of two
+                // values chosen here, and the bar measures itself for two lines.
+                subtitle = { Text(stringResource(R.string.ruling_subtitle)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
