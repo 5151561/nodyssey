@@ -19,6 +19,16 @@ import io.github.nodyssey.ui.common.toggleLinePrefix
 enum class EditorAction { BOLD, HEADING, CODE, QUOTE, LIST, LINK, MENTION, IMAGE, EMOJI, PREVIEW }
 
 /**
+ * True when the key opens a panel that stays open, rather than performing a one-shot edit.
+ *
+ * The toolbar needs this statically, not just from whichever keys are currently lit: an unlit 表情
+ * key is still a checkbox in the "off" position, while 加粗 is never a checkbox at all, and giving
+ * the latter a toggled role would tell a screen reader something untrue.
+ */
+internal val EditorAction.opensPanel: Boolean
+    get() = this in setOf(EditorAction.IMAGE, EditorAction.EMOJI, EditorAction.PREVIEW)
+
+/**
  * Applies one toolbar action to the current selection.
  *
  * Two shapes, both leaving the caret somewhere useful — an editor that formats correctly but drops

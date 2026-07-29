@@ -13,6 +13,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -81,34 +82,55 @@ fun EditorToolbar(
     }
 }
 
+/**
+ * One key. A panel key is a checkbox; a formatting key is a button.
+ *
+ * Both branches draw identically — 32dp box, `shapes.medium`, lit state in `surfaceContainer` +
+ * `primary`. The split is about semantics: [EditorAction.opensPanel] keys have an on/off state that
+ * colour alone conveys, so they go through `IconToggleButton` and TalkBack announces 表情 as
+ * "已选中"/"未选中". The formatting keys fire and forget, and dressing them as checkboxes would be a
+ * regression, not a fix.
+ */
 @Composable
 private fun ToolbarButton(
     action: EditorAction,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = onClick,
-        // 32dp box, 48dp touch target: `IconButton` keeps the minimum interactive size regardless
-        // of how small the drawn button is, which is what lets the strip match the board's density
-        // without dropping below the accessibility floor.
-        modifier = Modifier.size(32.dp),
-        colors = if (selected) {
-            IconButtonDefaults.iconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                contentColor = MaterialTheme.colorScheme.primary,
-            )
-        } else {
-            IconButtonDefaults.iconButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        shape = MaterialTheme.shapes.medium,
-    ) {
+    // 32dp box, matching the board's density. Both branches take the identical modifier, so the two
+    // key flavours measure the same and the strip stays on one grid.
+    val modifier = Modifier.size(32.dp)
+    val shape = MaterialTheme.shapes.medium
+    val icon: @Composable () -> Unit = {
         Icon(
             imageVector = action.icon,
             contentDescription = stringResource(action.labelRes),
             modifier = Modifier.size(20.dp),
+        )
+    }
+
+    if (action.opensPanel) {
+        IconToggleButton(
+            checked = selected,
+            onCheckedChange = { onClick() },
+            modifier = modifier,
+            colors = IconButtonDefaults.iconToggleButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                checkedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                checkedContentColor = MaterialTheme.colorScheme.primary,
+            ),
+            shape = shape,
+            content = icon,
+        )
+    } else {
+        IconButton(
+            onClick = onClick,
+            modifier = modifier,
+            colors = IconButtonDefaults.iconButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+            shape = shape,
+            content = icon,
         )
     }
 }

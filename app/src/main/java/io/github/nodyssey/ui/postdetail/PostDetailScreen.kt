@@ -216,11 +216,11 @@ fun PostDetailScreen(
             lastVisible >= listState.layoutInfo.totalItemsCount - 4
         }
     }
-    val atListTop by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-        }
-    }
+    // `canScrollBackward` is the same predicate, already maintained by LazyListState as plain state —
+    // no derivedStateOf and no per-frame read of the two scroll fields. Its `canScrollForward` twin is
+    // deliberately *not* used for [atListEnd] below: that one becomes true only once the list is
+    // actually scrolled to the bottom, where this reads true as soon as the last item shows its head.
+    val atListTop = !listState.canScrollBackward
     val atListEnd by remember {
         derivedStateOf {
             val totalItems = listState.layoutInfo.totalItemsCount

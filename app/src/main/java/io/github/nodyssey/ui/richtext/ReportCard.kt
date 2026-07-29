@@ -1,6 +1,7 @@
 package io.github.nodyssey.ui.richtext
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -150,6 +151,13 @@ private fun ReportHeader(
             modifier = Modifier.size(Sizes.minTouchTarget),
             contentAlignment = Alignment.Center,
         ) {
+            // The chevron turns rather than flipping: the card's own expansion is animated, and an
+            // indicator that snaps while the thing it points at slides reads as two separate events.
+            val chevronAngle by animateFloatAsState(
+                targetValue = if (expanded) 180f else 0f,
+                animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                label = "chevron",
+            )
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
                 contentDescription =
@@ -157,7 +165,7 @@ private fun ReportHeader(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .size(20.dp)
-                    .rotate(if (expanded) 180f else 0f),
+                    .rotate(chevronAngle),
             )
         }
     }
