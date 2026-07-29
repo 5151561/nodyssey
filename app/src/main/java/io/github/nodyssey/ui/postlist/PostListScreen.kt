@@ -80,10 +80,13 @@ import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
+import io.github.nodyssey.ui.common.AppendSpinner
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
+import io.github.nodyssey.ui.common.MetaText
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.SkeletonBar
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Sizes
@@ -255,16 +258,7 @@ fun PostListScreen(
                                     }
                                 }
                                 if (appendState is LoadState.Loading) {
-                                    item(key = "append-spinner") {
-                                        Box(
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .padding(Spacing.lg),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            CircularProgressIndicator(Modifier.size(22.dp))
-                                        }
-                                    }
+                                    item(key = "append-spinner") { AppendSpinner() }
                                 }
                             }
                         }
@@ -649,15 +643,15 @@ private fun PostMetaRow(post: FeedPost) {
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         BoardTag(title = summary.categoryTitle, slug = summary.categorySlug)
-        MetaText(summary.authorName)
-        if (summary.isPinned) MetaText(stringResource(R.string.post_badge_pinned))
+        MetaText(summary.authorName, singleLine = true)
+        if (summary.isPinned) MetaText(stringResource(R.string.post_badge_pinned), singleLine = true)
         if (post.newCommentCount > 0) {
             NewReplyBadge(post.newCommentCount)
         } else {
-            summary.commentCount?.let { MetaText(stringResource(R.string.post_reply_count, it)) }
+            summary.commentCount?.let { MetaText(stringResource(R.string.post_reply_count, it), singleLine = true) }
         }
-        summary.viewCount?.let { MetaText(stringResource(R.string.post_view_count, it)) }
-        summary.lastActiveText?.let { MetaText(it) }
+        summary.viewCount?.let { MetaText(stringResource(R.string.post_view_count, it), singleLine = true) }
+        summary.lastActiveText?.let { MetaText(it, singleLine = true) }
     }
 }
 
@@ -673,17 +667,6 @@ private fun NewReplyBadge(count: Int) {
             .clip(RoundedCornerShape(6.dp))
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 7.dp, vertical = 1.dp),
-    )
-}
-
-@Composable
-private fun MetaText(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
     )
 }
 
@@ -723,20 +706,6 @@ private fun FeedSkeleton(modifier: Modifier = Modifier) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
     }
-}
-
-@Composable
-private fun SkeletonBar(
-    fraction: Float,
-    height: Dp,
-) {
-    Box(
-        Modifier
-            .fillMaxWidth(fraction)
-            .height(height)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-    )
 }
 
 // -------------------------------------------------------------------------------------------------

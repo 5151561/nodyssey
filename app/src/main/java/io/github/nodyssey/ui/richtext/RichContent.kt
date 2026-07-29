@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
@@ -652,52 +653,96 @@ private fun InlineText(
         inlines.filterIsInstance<InlineNode.QuoteRef>().associateWith { ref ->
             stringResource(R.string.post_quote_reply, ref.name, ref.floor)
         }
-    val quoteRanges = mutableListOf<IntRange>()
 
-    val text =
-        buildAnnotatedString {
-            inlines.forEach { inline ->
-                when (inline) {
-                    is InlineNode.Text -> withSpan(inline.style, codeBackground) { append(inline.text) }
-
-                    is InlineNode.Link ->
-                        withLink(
-                            LinkAnnotation.Url(
-                                url = inline.url,
-                                styles = linkStyles,
-                                linkInteractionListener = { onLinkClick(inline.url) },
-                            ),
-                        ) {
-                            withSpan(inline.style, codeBackground) { append(inline.text) }
-                        }
-
-                    is InlineNode.Sticker ->
-                        appendInlineContent(
-                            STICKER_PREFIX + inline.url,
-                            inline.alt ?: "[表情]",
-                        )
-
-                    is InlineNode.QuoteRef -> {
-                        val start = length
-                        withLink(
-                            LinkAnnotation.Clickable(
-                                tag = QUOTE_PREFIX + inline.name + inline.floor,
-                                styles = quoteLinkStyles,
-                                linkInteractionListener = { onQuoteRefClick(inline) },
-                            ),
-                        ) {
-                            // Spaces reserve the chip's horizontal padding without introducing a
-                            // separate inline layout whose baseline can drift from this paragraph.
-                            append(QUOTE_HORIZONTAL_SPACE)
-                            append(quoteLabels.getValue(inline).replace(' ', '\u00A0'))
-                            append(QUOTE_HORIZONTAL_SPACE)
-                        }
-                        quoteRanges += start until length
-                    }
-
-                    InlineNode.LineBreak -> append("\n")
-                }
+    /*
+     * One listener per kind, remembered, rather than a fresh lambda per annotation.
+     *
+     * `LinkAnnotation.Url.equals` compares its `linkInteractionListener`, which for a lambda means
+     * reference equality. A listener built inside the loop is a new instance on every composition, so
+     * the whole AnnotatedString compared unequal every time: the `remember(text)` below reset the
+     * layout result to null and the quote chips lost their background for a frame, `Text` could never
+     * skip recomposition, and the string was rebuilt from scratch on every pass.
+     *
+     * Each listener recovers what it needs from the annotation it is handed — the URL sits on the
+     * annotation, and the quote reference comes back through its tag.
+     */
+    val linkListener =
+        remember(onLinkClick) {
+            LinkInteractionListener { link ->
+                if (link is LinkAnnotation.Url) onLinkClick(link.url)
             }
+        }
+    val quotesByTag =
+        remember(inlines) {
+            inlines.filterIsInstance<InlineNode.QuoteRef>()
+                .associateBy { QUOTE_PREFIX + it.name + it.floor }
+        }
+    val quoteListener =
+        remember(quotesByTag, onQuoteRefClick) {
+            LinkInteractionListener { link ->
+                if (link is LinkAnnotation.Clickable) quotesByTag[link.tag]?.let(onQuoteRefClick)
+            }
+        }
+
+    // The ranges are offsets into the string the same pass produces, so the two are remembered
+    // together or not at all.
+    val (text, quoteRanges) =
+        remember(
+            inlines,
+            linkStyles,
+            quoteLinkStyles,
+            codeBackground,
+            quoteLabels,
+            linkListener,
+            quoteListener,
+        ) {
+            val ranges = mutableListOf<IntRange>()
+            val built =
+                buildAnnotatedString {
+                    inlines.forEach { inline ->
+                        when (inline) {
+                            is InlineNode.Text -> withSpan(inline.style, codeBackground) { append(inline.text) }
+
+                            is InlineNode.Link ->
+                                withLink(
+                                    LinkAnnotation.Url(
+                                        url = inline.url,
+                                        styles = linkStyles,
+                                        linkInteractionListener = linkListener,
+                                    ),
+                                ) {
+                                    withSpan(inline.style, codeBackground) { append(inline.text) }
+                                }
+
+                            is InlineNode.Sticker ->
+                                appendInlineContent(
+                                    STICKER_PREFIX + inline.url,
+                                    inline.alt ?: "[表情]",
+                                )
+
+                            is InlineNode.QuoteRef -> {
+                                val start = length
+                                withLink(
+                                    LinkAnnotation.Clickable(
+                                        tag = QUOTE_PREFIX + inline.name + inline.floor,
+                                        styles = quoteLinkStyles,
+                                        linkInteractionListener = quoteListener,
+                                    ),
+                                ) {
+                                    // Spaces reserve the chip's horizontal padding without introducing a
+                                    // separate inline layout whose baseline can drift from this paragraph.
+                                    append(QUOTE_HORIZONTAL_SPACE)
+                                    append(quoteLabels.getValue(inline).replace(' ', '\u00A0'))
+                                    append(QUOTE_HORIZONTAL_SPACE)
+                                }
+                                ranges += start until length
+                            }
+
+                            InlineNode.LineBreak -> append("\n")
+                        }
+                    }
+                }
+            built to ranges.toList()
         }
 
     val stickerContent =

@@ -88,11 +88,14 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.RichNode
+import io.github.nodyssey.ui.common.AppendSpinner
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.LoadingState
+import io.github.nodyssey.ui.common.MetaText
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.RoleBadgeRow
+import io.github.nodyssey.ui.common.SkeletonBar
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.common.rememberClipboardCopy
 import io.github.nodyssey.ui.composer.ReplyComposerHost
@@ -647,16 +650,7 @@ private fun ThreadList(
         }
 
         if (state.isAppending) {
-            item(key = "appending") {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(Spacing.lg),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(Modifier.size(22.dp))
-                }
-            }
+            item(key = "appending") { AppendSpinner() }
         }
     }
 }
@@ -1145,19 +1139,6 @@ private fun FloorLabel(floor: String) {
     )
 }
 
-@Composable
-private fun MetaText(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier,
-    )
-}
-
 /** Items in [ThreadList] before the first comment: title, comments header, and the body when present. */
 private val PostDetailUiState.headerItemCount: Int
     get() = 2 + (if (body != null) 1 else 0)
@@ -1230,20 +1211,6 @@ private fun ThreadSkeleton(modifier: Modifier = Modifier) {
             SkeletonBar(0.85f, 12.dp)
         }
     }
-}
-
-@Composable
-private fun SkeletonBar(
-    fraction: Float,
-    height: Dp,
-) {
-    Box(
-        Modifier
-            .fillMaxWidth(fraction)
-            .height(height)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-    )
 }
 
 // -------------------------------------------------------------------------------------------------
