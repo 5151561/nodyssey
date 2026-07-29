@@ -1,5 +1,8 @@
 package io.github.nodyssey.ui.assets
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -20,20 +23,18 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * The transfer form: amount, recipient uid, reference id.
+ * The transfer form as numbers, mirrored one way out of the fields that hold the text.
  *
- * Three text fields rather than three numbers because a half-typed uid is a real state the user passes
- * through, and [isComplete] is what decides whether the confirmation step may be reached at all.
+ * The text itself lives in [StardustViewModel]'s `TextFieldState`s. Only the parsed values are needed
+ * outside them — to enable 下一步, to work out the shortfall, and to read the transfer back on the
+ * confirmation step — and a half-typed uid simply parses to null, which is the state the form is in
+ * while the user is still typing.
  */
 data class TransferForm(
-    val amount: String = "",
-    val recipientUid: String = "",
-    val refId: String = "",
+    val amountValue: Int? = null,
+    val recipientValue: Long? = null,
+    val refValue: Long? = null,
 ) {
-    val amountValue: Int? get() = amount.trim().toIntOrNull()?.takeIf { it > 0 }
-    val recipientValue: Long? get() = recipientUid.trim().toLongOrNull()?.takeIf { it > 0 }
-    val refValue: Long? get() = refId.trim().toLongOrNull()?.takeIf { it > 0 }
-
     val isComplete: Boolean get() = amountValue != null && recipientValue != null && refValue != null
 }
 
@@ -68,6 +69,10 @@ class StardustViewModel(
     private val profileRepository: ProfileRepository,
     private val stardustRepository: StardustRepository,
 ) : ViewModel() {
+    val amount = TextFieldState()
+    val recipientUid = TextFieldState()
+    val refId = TextFieldState()
+
     private val _uiState = MutableStateFlow(StardustUiState())
     val uiState: StateFlow<StardustUiState> = _uiState.asStateFlow()
 
@@ -75,6 +80,10 @@ class StardustViewModel(
 
     init {
         refresh()
+        // One-way mirror of the parsed numbers, for 下一步's enabled state and the shortfall line.
+        viewModelScope.launch {
+            snapshotFlow { parseForm() }.collect { form -> _uiState.update { it.copy(form = form) } }
+        }
     }
 
     fun refresh() {
@@ -112,20 +121,37 @@ class StardustViewModel(
 
     fun dismissTransfer() = _uiState.update { it.copy(transferOpen = false, confirmOpen = false) }
 
-    fun updateForm(form: TransferForm) = _uiState.update { it.copy(form = form) }
-
     fun requestConfirm() {
-        if (!_uiState.value.form.isComplete) return
-        _uiState.update { it.copy(confirmOpen = true) }
+        // Parsed from the fields rather than read off the mirror: what the confirmation step shows
+        // back has to be what is on screen at the moment 下一步 was tapped, and the mirror is a frame
+        // behind. Writing it alongside `confirmOpen` also means the dialog cannot disagree with the
+        // check that let it open.
+        val form = parseForm()
+        if (!form.isComplete) return
+        _uiState.update { it.copy(form = form, confirmOpen = true) }
     }
 
     fun dismissConfirm() = _uiState.update { it.copy(confirmOpen = false) }
 
     /** Clears the form after the transfer has been handed to the site's own page. */
-    fun transferHandedOff() =
+    fun transferHandedOff() {
+        amount.clearText()
+        recipientUid.clearText()
+        refId.clearText()
         _uiState.update { it.copy(transferOpen = false, confirmOpen = false, form = TransferForm()) }
+    }
+
+    private fun parseForm(): TransferForm =
+        TransferForm(
+            amountValue = amount.text.toString().trim().toIntOrNull()?.takeIf { it > 0 },
+            recipientValue = recipientUid.text.toString().trim().toLongOrNull()?.takeIf { it > 0 },
+            refValue = refId.text.toString().trim().toLongOrNull()?.takeIf { it > 0 },
+        )
 
     companion object {
+        /** The cap every field on this form rejects past. */
+        const val MAX_FIELD_LENGTH = 12
+
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {

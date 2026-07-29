@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -59,6 +62,7 @@ import io.github.nodyssey.R
 import io.github.nodyssey.core.LuckyDraw
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.digitsOnly
 import io.github.nodyssey.ui.common.rememberClipboardCopy
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
@@ -80,11 +84,11 @@ fun LuckyRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LuckyScreen(
         state = state,
+        postIdState = viewModel.postId,
+        prizeCountState = viewModel.prizeCount,
+        startFloorState = viewModel.startFloor,
         onBack = onBack,
-        onPostIdChange = viewModel::setPostId,
         onDrawAtChange = viewModel::setDrawAt,
-        onPrizeCountChange = viewModel::setPrizeCount,
-        onStartFloorChange = viewModel::setStartFloor,
         onDedupeChange = viewModel::setDedupeFloors,
         onGenerate = viewModel::generate,
         onOpenBrowser = onOpenBrowser,
@@ -104,11 +108,11 @@ fun LuckyRoute(
 @Composable
 fun LuckyScreen(
     state: LuckyUiState,
+    postIdState: TextFieldState,
+    prizeCountState: TextFieldState,
+    startFloorState: TextFieldState,
     onBack: () -> Unit,
-    onPostIdChange: (String) -> Unit,
     onDrawAtChange: (Long) -> Unit,
-    onPrizeCountChange: (String) -> Unit,
-    onStartFloorChange: (String) -> Unit,
     onDedupeChange: (Boolean) -> Unit,
     onGenerate: () -> Unit,
     onOpenBrowser: (String) -> Unit,
@@ -158,10 +162,10 @@ fun LuckyScreen(
             }
 
             OutlinedTextField(
-                value = state.postId,
-                onValueChange = onPostIdChange,
+                state = postIdState,
                 label = { Text(stringResource(R.string.lucky_post_id)) },
-                singleLine = true,
+                lineLimits = TextFieldLineLimits.SingleLine,
+                inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -174,18 +178,18 @@ fun LuckyScreen(
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
-                    value = state.prizeCount,
-                    onValueChange = onPrizeCountChange,
+                    state = prizeCountState,
                     label = { Text(stringResource(R.string.lucky_prize_count)) },
-                    singleLine = true,
+                    lineLimits = TextFieldLineLimits.SingleLine,
+                    inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
-                    value = state.startFloor,
-                    onValueChange = onStartFloorChange,
+                    state = startFloorState,
                     label = { Text(stringResource(R.string.lucky_start_floor)) },
-                    singleLine = true,
+                    lineLimits = TextFieldLineLimits.SingleLine,
+                    inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                 )
@@ -509,20 +513,18 @@ private fun LuckyPreview() {
         LuckyScreen(
             state =
             LuckyUiState(
-                postId = "286417",
                 // 2026-07-27 20:00 UTC+8, the sample from the design.
                 drawAtMillis = 1_785_153_600_000L,
-                prizeCount = "3",
-                startFloor = "1",
                 dedupeFloors = true,
+                canGenerate = true,
                 generatedLink =
                 "https://www.nodeseek.com/lucky?post=286417&time=2026-07-27%2020:00&n=3&start=1&unique=1",
             ),
+            postIdState = rememberTextFieldState("286417"),
+            prizeCountState = rememberTextFieldState("3"),
+            startFloorState = rememberTextFieldState("1"),
             onBack = {},
-            onPostIdChange = {},
             onDrawAtChange = {},
-            onPrizeCountChange = {},
-            onStartFloorChange = {},
             onDedupeChange = {},
             onGenerate = {},
             onOpenBrowser = {},

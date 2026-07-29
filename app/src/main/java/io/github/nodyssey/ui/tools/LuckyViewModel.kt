@@ -1,7 +1,10 @@
 package io.github.nodyssey.ui.tools
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.core.AppClock
@@ -12,24 +15,24 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
+/**
+ * What the form shows that is not the text in its own fields.
+ *
+ * The three numbers live in [LuckyViewModel]'s `TextFieldState`s instead of here: a text field's
+ * content and its selection are one thing, and splitting them across a state holder and a UiState is
+ * what forces the round-trip that moves the caret.
+ */
 data class LuckyUiState(
-    val postId: String = "",
     val drawAtMillis: Long = 0L,
-    val prizeCount: String = "1",
-    val startFloor: String = "1",
     val dedupeFloors: Boolean = true,
     val generatedLink: String? = null,
-) {
-    val postIdValue: Long? get() = postId.trim().toLongOrNull()?.takeIf { it > 0 }
-    val prizeCountValue: Int? get() = prizeCount.trim().toIntOrNull()?.takeIf { it in 1..LuckyDraw.MAX_PRIZE_COUNT }
-    val startFloorValue: Int? get() = startFloor.trim().toIntOrNull()?.takeIf { it >= 0 }
-
-    val canGenerate: Boolean get() = postIdValue != null && prizeCountValue != null && startFloorValue != null
-}
+    val canGenerate: Boolean = false,
+)
 
 /**
  * 幸运抽奖 — the T-floor notary form.
@@ -41,51 +44,70 @@ data class LuckyUiState(
 class LuckyViewModel(
     clock: AppClock,
 ) : ViewModel() {
+    val postId = TextFieldState()
+    val prizeCount = TextFieldState("1")
+    val startFloor = TextFieldState("1")
+
     private val _uiState =
         MutableStateFlow(LuckyUiState(drawAtMillis = defaultDrawTime(clock.nowMillis())))
     val uiState: StateFlow<LuckyUiState> = _uiState.asStateFlow()
 
-    fun setPostId(value: String) = update { copy(postId = value.digitsOnly()) }
-
-    fun setDrawAt(millis: Long) = update { copy(drawAtMillis = millis) }
-
-    fun setPrizeCount(value: String) = update { copy(prizeCount = value.digitsOnly()) }
-
-    fun setStartFloor(value: String) = update { copy(startFloor = value.digitsOnly()) }
-
-    fun setDedupeFloors(value: Boolean) = update { copy(dedupeFloors = value) }
-
-    fun generate() {
-        val state = _uiState.value
-        val postId = state.postIdValue ?: return
-        val link =
-            LuckyDraw.link(
-                LuckyDrawParams(
-                    postId = postId,
-                    drawAtMillis = state.drawAtMillis,
-                    prizeCount = state.prizeCountValue ?: 1,
-                    startFloor = state.startFloorValue ?: 1,
-                    dedupeFloors = state.dedupeFloors,
-                ),
-            )
-        _uiState.update { it.copy(generatedLink = link) }
+    init {
+        // Mirrors the fields one way, for the two things the screen needs that are not the text
+        // itself: whether 生成 is enabled, and invalidating a link the numbers no longer describe.
+        viewModelScope.launch {
+            snapshotFlow { Triple(postId.text, prizeCount.text, startFloor.text) }
+                .collect {
+                    _uiState.update { state ->
+                        state.copy(generatedLink = null, canGenerate = parameters() != null)
+                    }
+                }
+        }
     }
 
-    /** Any edit invalidates the generated link, so a stale URL can never be pasted into a thread. */
-    private fun update(transform: LuckyUiState.() -> LuckyUiState) =
-        _uiState.update { state -> state.transform().copy(generatedLink = null) }
+    fun setDrawAt(millis: Long) =
+        _uiState.update { it.copy(drawAtMillis = millis, generatedLink = null) }
+
+    fun setDedupeFloors(value: Boolean) =
+        _uiState.update { it.copy(dedupeFloors = value, generatedLink = null) }
+
+    fun generate() {
+        // Reads the fields, not the mirror above: the mirror is a frame behind, and what gets
+        // published has to be what is on screen at the moment 生成 was tapped.
+        val params = parameters() ?: return
+        _uiState.update { it.copy(generatedLink = LuckyDraw.link(params)) }
+    }
+
+    /** The form as [LuckyDrawParams], or null while any field is empty or out of range. */
+    private fun parameters(): LuckyDrawParams? {
+        val post = postId.text.toString().trim().toLongOrNull()?.takeIf { it > 0 } ?: return null
+        val prizes =
+            prizeCount.text
+                .toString()
+                .trim()
+                .toIntOrNull()
+                ?.takeIf { it in 1..LuckyDraw.MAX_PRIZE_COUNT }
+                ?: return null
+        val floor = startFloor.text.toString().trim().toIntOrNull()?.takeIf { it >= 0 } ?: return null
+        return LuckyDrawParams(
+            postId = post,
+            drawAtMillis = _uiState.value.drawAtMillis,
+            prizeCount = prizes,
+            startFloor = floor,
+            dedupeFloors = _uiState.value.dedupeFloors,
+        )
+    }
 
     companion object {
+        /** Matches the site's own field width; also the cap the fields reject past. */
+        const val MAX_FIELD_LENGTH = 12
+
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer { LuckyViewModel(container.clock) }
             }
     }
 }
-
-private fun String.digitsOnly(): String = filter(Char::isDigit).take(MAX_FIELD_LENGTH)
-
-private const val MAX_FIELD_LENGTH = 12
 
 /** Tomorrow, on the hour. A draw closing in the past is the one default that is always wrong. */
 private fun defaultDrawTime(nowMillis: Long): Long =
