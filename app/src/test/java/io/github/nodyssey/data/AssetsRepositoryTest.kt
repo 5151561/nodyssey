@@ -23,9 +23,12 @@ class AssetsRepositoryTest {
     private val dispatchers =
         AppDispatchers(io = Dispatchers.Unconfined, default = Dispatchers.Unconfined)
 
+    // The real CreditRepository rather than a fake one, deliberately: the attendance check reads the
+    // chicken ledger, so these tests are also what pins that the two agree about the wire format.
     private fun repository(source: JsonSource) =
         NetworkAssetsRepository(
             UnusedProfileRepository,
+            NetworkCreditRepository(source, dispatchers),
             source,
             dispatchers,
             AppClock { 1_753_718_400_000L }, // 2025-07-29T00:00:00+08:00

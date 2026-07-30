@@ -332,6 +332,26 @@ fun EmptyFeedState(
     )
 }
 
+/**
+ * A ledger with no rows yet, which is a real state rather than a failure.
+ *
+ * A brand-new account has never earned a chicken, and plenty of accounts have never been given a
+ * single stardust. Both would otherwise land on the generic feed empty state, whose copy invites the
+ * reader to go browse another board — advice that has nothing to do with why this list is empty.
+ */
+@Composable
+fun NoLedgerEntriesState(modifier: Modifier = Modifier) {
+    StatusView(
+        icon = NodysseyIcons.Wallet,
+        shape = StatusShapes.Empty,
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        title = stringResource(R.string.status_empty_ledger_title),
+        description = stringResource(R.string.status_empty_ledger_body),
+        modifier = modifier,
+    )
+}
+
 @Composable
 fun DeletedContentState(
     onBack: () -> Unit,

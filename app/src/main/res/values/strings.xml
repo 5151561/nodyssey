@@ -467,6 +467,8 @@
     <string name="status_empty_feed_title">这里还没有帖子</string>
     <string name="status_empty_feed_body">这个版块暂时是空的，去别的版块看看</string>
     <string name="status_empty_feed_action">换个版块</string>
+    <string name="status_empty_ledger_title">还没有流水</string>
+    <string name="status_empty_ledger_body">等有了收支，这里就会按时间列出来</string>
 
     <string name="status_network_title">网络开小差了</string>
     <string name="status_network_body">连不上 NodeSeek，检查一下网络后再试一次。</string>
@@ -588,15 +590,34 @@
     <string name="assets_signed_in">今日已签 +%1$d 鸡腿</string>
     <string name="assets_signing_in">签到中…</string>
 
+    <!-- Shared by both ledgers (d3 / 8e) -->
+    <string name="ledger_amount_gain">+%1$d</string>
+    <!-- U+2212 MINUS SIGN, not a hyphen: a hyphen reads as a dash between the two numbers. -->
+    <string name="ledger_amount_spend">−%1$d</string>
+    <string name="ledger_end">没有更多记录了</string>
+    <string name="ledger_load_more_failed">加载更多失败</string>
+
+    <!-- Chicken ledger (d3) -->
+    <string name="credit_title">鸡腿流水</string>
+    <string name="credit_balance">当前鸡腿</string>
+    <string name="credit_level">Lv%1$d</string>
+    <string name="credit_level_progress">Lv%1$d 进度 %2$d / %3$d</string>
+    <string name="credit_entry_total">总计 %1$d</string>
+
     <!-- Stardust ledger and transfer (8e / 8f) -->
     <string name="stardust_title">星辰</string>
     <string name="stardust_balance">当前余额</string>
-    <string name="stardust_balance_hint">唯一来源：评论被点赞（+1 / 次）· 唯一用途：转账</string>
-    <string name="stardust_entry_title">点赞 · 评论被点赞</string>
+    <string name="stardust_balance_hint">来源：点赞 / 转账 / 系统 / 管理 · 用途：转账 / 购码</string>
+    <string name="stardust_type_upvote">点赞</string>
+    <string name="stardust_type_transfer">转账</string>
+    <string name="stardust_type_buy_code">购买邀请码</string>
+    <string name="stardust_type_system">系统</string>
+    <string name="stardust_type_admin">管理</string>
+    <string name="stardust_type_unknown">其他</string>
     <string name="stardust_entry_balance">余额 %1$d</string>
-    <string name="stardust_entry_comment">Comment %1$d</string>
-    <string name="stardust_entry_amount">+%1$d</string>
-    <string name="stardust_end">没有更多记录了</string>
+    <string name="stardust_entry_comment">评论 %1$d</string>
+    <string name="stardust_entry_peer">uid %1$d</string>
+    <string name="stardust_entry_ref">Ref %1$d</string>
     <string name="transfer_action">转账</string>
     <string name="transfer_title">转账星辰</string>
     <string name="transfer_amount">数额</string>

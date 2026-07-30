@@ -121,6 +121,10 @@ data class AssetsKey(
     val openAttendanceChooser: Boolean = false,
 ) : NavKey
 
+/** 鸡腿流水. Session-scoped like [StardustKey]: the site publishes no one else's ledger. */
+@Serializable
+data object CreditKey : NavKey
+
 @Serializable
 data object StardustKey : NavKey
 

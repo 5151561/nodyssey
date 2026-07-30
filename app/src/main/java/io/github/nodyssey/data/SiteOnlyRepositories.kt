@@ -6,15 +6,18 @@ import io.github.nodyssey.core.net.NodeSeekException
 /*
  * The pages NodeSeek renders entirely in the browser.
  *
- * `/fans`, `/stardust/list` and `/ruling` return an empty shell to a plain GET and build their tables
- * from XHRs that are not part of any documented contract; we could not observe them without a signed-in
- * browser session. Rather than ship a parser written against a guessed payload — which would fail
- * silently and look like "you have no followers" — each repository here declares its shape, and the
- * default implementation answers [NodeSeekError.NotWired].
+ * `/fans` and `/ruling` return an empty shell to a plain GET and build their tables from XHRs whose
+ * payloads we have not been able to observe. Rather than ship a parser written against a guessed
+ * payload — which would fail silently and look like "you have no followers" — each repository here
+ * declares its shape, and the default implementation answers [NodeSeekError.NotWired].
  *
  * That keeps three things true at once: the screens are finished and render real rows the moment an
  * implementation exists, the UiState contracts are already the ones the site's fields imply, and the
  * user is told the truth instead of being shown a plausible empty list.
+ *
+ * `/stardust/list` used to be the third page here. It left on 2026-07-30, once its contract was read
+ * out of the site's own bundle instead of guessed — see [NetworkStardustRepository]. That is the
+ * intended exit route for the two below as well.
  */
 
 /** A row of 我的关注 / 我的粉丝. No relationship button: the site has no follow action to offer. */
@@ -28,23 +31,6 @@ interface FollowRepository {
     suspend fun following(page: Int = 1): List<FollowUser>
 
     suspend fun followers(page: Int = 1): List<FollowUser>
-}
-
-/**
- * One stardust movement.
- *
- * Stardust has exactly one source — a comment of yours being liked, +1 a time — and exactly one use,
- * transfer. So a row is the amount, the balance it left behind, and which comment earned it.
- */
-data class StardustEntry(
-    val amount: Int,
-    val balanceAfter: Int?,
-    val commentId: Long?,
-    val timestampText: String?,
-)
-
-interface StardustRepository {
-    suspend fun entries(page: Int = 1): List<StardustEntry>
 }
 
 /** What a moderation entry did. Drives the leading icon, which is the only scannable part of the row. */
@@ -91,10 +77,6 @@ class SiteOnlyFollowRepository : FollowRepository {
     override suspend fun following(page: Int): List<FollowUser> = notWired()
 
     override suspend fun followers(page: Int): List<FollowUser> = notWired()
-}
-
-class SiteOnlyStardustRepository : StardustRepository {
-    override suspend fun entries(page: Int): List<StardustEntry> = notWired()
 }
 
 class SiteOnlyRulingRepository : RulingRepository {
