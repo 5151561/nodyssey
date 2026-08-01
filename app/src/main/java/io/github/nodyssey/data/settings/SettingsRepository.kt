@@ -58,6 +58,8 @@ class SettingsRepository(
                     // store (a renamed slug, a bad write) must not silently thin out the feed.
                     .filter { it in OPTIONAL_HOME_BOARD_SLUGS }
                     .toSet(),
+                homeBoardOrder = decodeValues(preferences[KEY_HOME_BOARD_ORDER]),
+                disabledHomeBoards = decodeValues(preferences[KEY_DISABLED_HOME_BOARDS]).toSet(),
                 notificationsEnabled = preferences[KEY_NOTIFICATIONS_ENABLED] ?: false,
                 notificationPollMinutes =
                 (preferences[KEY_NOTIFICATION_POLL_MINUTES] ?: DEFAULT_POLL_MINUTES)
@@ -178,6 +180,38 @@ class SettingsRepository(
         }
     }
 
+    /**
+     * The home strip's own arrangement: what order the pills sit in, and which ones the user parked.
+     *
+     * Written as one pair because they are one edit. Splitting them into two `edit` calls would let
+     * the flow emit an order that has already moved a board to the tail while it is still marked
+     * enabled — a frame where the strip is visibly wrong, for no benefit.
+     *
+     * This is *not* the site's 首页版块 preference ([setHomeBoardHidden]). That one is the account's
+     * and can only touch three boards; this one is local, covers every board, and is reversible from
+     * the strip itself. The two narrow the list independently and on purpose.
+     */
+    suspend fun setHomeBoardArrangement(
+        order: List<String>,
+        disabled: Set<String>,
+    ) {
+        dataStore.edit { preferences ->
+            if (order.isEmpty()) {
+                preferences.remove(KEY_HOME_BOARD_ORDER)
+            } else {
+                preferences[KEY_HOME_BOARD_ORDER] = encodeValues(order, MAX_HOME_BOARDS)
+            }
+            // Only slugs the order still knows about; a disabled board with no rank would come back
+            // as a fresh board on the next read and silently re-enable itself.
+            val ranked = disabled.filter { it in order }
+            if (ranked.isEmpty()) {
+                preferences.remove(KEY_DISABLED_HOME_BOARDS)
+            } else {
+                preferences[KEY_DISABLED_HOME_BOARDS] = encodeValues(ranked, MAX_HOME_BOARDS)
+            }
+        }
+    }
+
     /** Local mirror of the site's Remote 启用节日主题 switch; the sync authority is the account. */
     suspend fun setHolidayTheme(enabled: Boolean) = edit { it[KEY_HOLIDAY_THEME] = enabled }
 
@@ -238,6 +272,8 @@ class SettingsRepository(
         private val KEY_SEARCH_HISTORY = stringPreferencesKey("search_history_v3")
         private val KEY_RECENT_BOARDS = stringPreferencesKey("recent_boards")
         private val KEY_HIDDEN_HOME_BOARDS = stringPreferencesKey("hidden_home_boards")
+        private val KEY_HOME_BOARD_ORDER = stringPreferencesKey("home_board_order")
+        private val KEY_DISABLED_HOME_BOARDS = stringPreferencesKey("disabled_home_boards")
         private val KEY_HOLIDAY_THEME = booleanPreferencesKey("holiday_theme")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         private val KEY_NOTIFICATION_POLL_MINUTES = intPreferencesKey("notification_poll_minutes")
@@ -253,6 +289,9 @@ class SettingsRepository(
         private const val RECENT_SEARCH_SEPARATOR = '\u001F'
         private const val MAX_RECENT_SEARCHES = 8
         private const val MAX_RECENT_BOARDS = 6
+
+        /** The site has fifteen boards. The cap is only here so a corrupt write cannot grow forever. */
+        private const val MAX_HOME_BOARDS = 64
 
         private fun decodeRecentSearches(value: String?): List<String> =
             value.orEmpty().split(RECENT_SEARCH_SEPARATOR).filter(String::isNotBlank)
@@ -307,6 +346,13 @@ data class UserSettings(
     val recentBoards: List<String> = emptyList(),
     /** Boards switched off the home feed. Empty — the default — hides nothing; see `setHomeBoardHidden`. */
     val hiddenHomeBoards: Set<String> = emptySet(),
+    /**
+     * The strip's arrangement, as edited by long-pressing it. Empty means "never customised": the
+     * boards keep the order the API returned them in and none of them are parked.
+     */
+    val homeBoardOrder: List<String> = emptyList(),
+    /** Boards parked at the tail of the strip. A subset of [homeBoardOrder]; see `setHomeBoardArrangement`. */
+    val disabledHomeBoards: Set<String> = emptySet(),
     /*
      * App notification polling (board f4). Off by default: polling costs battery and needs the
      * POST_NOTIFICATIONS runtime permission, so it starts only when the user asks for it.

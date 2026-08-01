@@ -34,6 +34,13 @@
     <!-- Screen-reader description for the lock on a board only admins can open -->
     <string name="board_admin_only">仅管理员可见</string>
 
+    <!-- Rearranging the home strip: long-press it open, drag to reorder, park what you never read -->
+    <string name="action_finish_editing_boards">完成排序</string>
+    <string name="board_edit_hint">拖动排序，点角标移出或加回</string>
+    <string name="board_park">移出首页</string>
+    <string name="board_restore">加回首页</string>
+    <string name="board_parked">已移出首页</string>
+
     <!-- The four kinds every board falls into; the tag colour and the picker's headings share them -->
     <string name="board_family_everyday">日常类</string>
     <string name="board_family_technical">技术类</string>

@@ -17,6 +17,7 @@ import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.settings.homeBoardArrangement
 import io.github.nodyssey.data.settings.visibleHomeBoards
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.model.FeedSort
@@ -49,7 +50,7 @@ import kotlinx.coroutines.launch
 class PostListViewModel(
     private val repository: PostRepository,
     private val categoryRepository: CategoryRepository,
-    settingsRepository: SettingsRepository,
+    private val settingsRepository: SettingsRepository,
     session: StateFlow<SessionState> = MutableStateFlow(SessionState()),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostListUiState())
@@ -85,24 +86,36 @@ class PostListViewModel(
     init {
         /*
          * Boards are owned by the repository; the ViewModel mirrors them into UiState but never
-         * becomes their source of truth. The 首页版块 preference narrows what the strip shows without
-         * touching that list — 综合 is always kept, since it is the front page rather than a board.
+         * becomes their source of truth. Two independent preferences then narrow that list, in this
+         * order, because they mean different things:
          *
-         * Hiding the board the user is currently reading would leave a selected pill with no pill,
-         * so the selection falls back to the front page when its board goes away.
+         *  1. The account's 首页版块 switches remove a board outright — it is not on the strip at all,
+         *     in either half, and only 账号设置 can bring it back.
+         *  2. The strip's own arrangement reorders what is left and parks some of it at the tail,
+         *     where it stays visible and one tap from coming back.
+         *
+         * 综合 survives both: it is the front page rather than a board, so it is split off first and
+         * prepended, always first and never parked.
+         *
+         * Losing the board the user is currently reading — to either mechanism — would leave a
+         * selection with no pill, so it falls back to the front page.
          */
         combine(
             categoryRepository.boards,
-            settingsRepository.settings.map { it.hiddenHomeBoards }.distinctUntilChanged(),
-        ) { boards, hiddenBoards ->
+            settingsRepository.settings
+                .map { Triple(it.hiddenHomeBoards, it.homeBoardOrder, it.disabledHomeBoards) }
+                .distinctUntilChanged(),
+        ) { boards, (hiddenBoards, order, parkedSlugs) ->
             val (frontPage, real) = boards.partition { it.slug == null }
-            frontPage + visibleHomeBoards(real, hiddenBoards)
-        }.onEach { visible ->
+            homeBoardArrangement(visibleHomeBoards(real, hiddenBoards), order, parkedSlugs)
+                .let { it.copy(enabled = frontPage + it.enabled) }
+        }.onEach { arrangement ->
             _uiState.update { state ->
-                val stillVisible = visible.any { it.slug == state.categorySlug }
+                val stillSelectable = arrangement.enabled.any { it.slug == state.categorySlug }
                 state.copy(
-                    boards = visible,
-                    categorySlug = if (stillVisible) state.categorySlug else null,
+                    boards = arrangement.enabled,
+                    parkedBoards = arrangement.parked,
+                    categorySlug = if (stillSelectable) state.categorySlug else null,
                 )
             }
         }.launchIn(viewModelScope)
@@ -151,6 +164,24 @@ class PostListViewModel(
         _uiState.update { it.copy(sort = sort) }
     }
 
+    /**
+     * Commits an edit made on the strip itself: the new left-to-right order, and which boards are
+     * parked at the tail.
+     *
+     * The strip sends whole lists rather than "moved X to 3" or "parked Y" because a drag is already
+     * a whole-list operation by the time the finger lifts, and a parked board is also a move. One
+     * write per gesture, and the flow above turns it back into two halves.
+     *
+     * 综合 is filtered out on the way in. It is not a board, so it has no slug to rank, and the strip
+     * pins it in front regardless.
+     */
+    fun saveBoardArrangement(
+        order: List<String>,
+        parked: Set<String>,
+    ) {
+        viewModelScope.launch { settingsRepository.setHomeBoardArrangement(order, parked) }
+    }
+
     /** The URL a WebView should open to clear the current error. */
     fun challengeUrl(): String =
         NodeSeekSite.BASE_URL +
@@ -191,6 +222,13 @@ private data class FeedKey(
  */
 data class PostListUiState(
     val boards: List<Board> = listOf(CategoryRepository.FRONT_PAGE),
+    /**
+     * Boards the user parked at the tail of the strip.
+     *
+     * Separate from [boards] rather than a flag on them: nothing outside the strip may treat these as
+     * selectable, and a list the feed can page through is exactly what [boards] is.
+     */
+    val parkedBoards: List<Board> = emptyList(),
     val categorySlug: String? = null,
     val sort: FeedSort = FeedSort.LAST_REPLY,
 ) {
