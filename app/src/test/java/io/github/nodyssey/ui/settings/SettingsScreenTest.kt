@@ -45,6 +45,7 @@ class SettingsScreenTest {
                     onThemeModeChange = { mode = it },
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
                     onClearCache = {},
                 )
             }
@@ -65,6 +66,7 @@ class SettingsScreenTest {
                     onThemeModeChange = {},
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
                     onClearCache = {},
                 )
             }
@@ -92,12 +94,35 @@ class SettingsScreenTest {
                     onThemeModeChange = {},
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = { wifiOnly = it },
+                    onExternalLinkTargetChange = {},
                     onClearCache = {},
                 )
             }
         }
 
         composeRule.onNodeWithText("仅 Wi-Fi 下加载图片").assertIsOff().performClick().assertIsOn()
+    }
+
+    @Test
+    fun `external link target defaults to the in-app tab and can be switched`() {
+        composeRule.setContent {
+            var target by remember { mutableStateOf(UserSettings().externalLinkTarget) }
+            NodysseyTheme {
+                SettingsScreen(
+                    state = SettingsUiState(UserSettings(externalLinkTarget = target)),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = { target = it },
+                    onClearCache = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("应用内浏览").assertIsSelected()
+        composeRule.onNodeWithText("系统浏览器").performClick()
+        composeRule.onNodeWithText("系统浏览器").assertIsSelected()
     }
 
     @Test
@@ -111,6 +136,7 @@ class SettingsScreenTest {
                     onThemeModeChange = {},
                     onFontScaleChange = { appliedScale = it },
                     onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
                     onClearCache = {},
                 )
             }
@@ -140,6 +166,7 @@ class SettingsScreenTest {
                     onThemeModeChange = {},
                     onFontScaleChange = { appliedScale = it },
                     onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
                     onClearCache = {},
                 )
             }

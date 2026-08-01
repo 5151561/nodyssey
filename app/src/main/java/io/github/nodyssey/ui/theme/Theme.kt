@@ -9,7 +9,18 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
+
+/**
+ * Whether the app is currently drawing dark.
+ *
+ * `isSystemInDarkTheme()` is not the same question: 深色 and 定时 both make the app dark while the
+ * system stays light. Anything that has to tell a surface *outside* the Compose tree which way the
+ * app is leaning — the Custom Tab toolbar, so far — reads this instead of re-deriving the setting
+ * and getting a different answer.
+ */
+val LocalNodysseyDarkTheme = staticCompositionLocalOf { false }
 
 @Composable
 fun NodysseyTheme(
@@ -34,6 +45,7 @@ fun NodysseyTheme(
     // being read from a global — otherwise it would not follow the theme.
     CompositionLocalProvider(
         LocalNodysseyExtraColors provides if (darkTheme) DarkExtraColors else LightExtraColors,
+        LocalNodysseyDarkTheme provides darkTheme,
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
