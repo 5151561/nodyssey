@@ -3,7 +3,6 @@ package io.github.nodyssey.data
 import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.core.net.JsonSource
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
@@ -14,11 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -104,6 +99,7 @@ interface AssetsRepository {
 
 class NetworkAssetsRepository(
     private val profileRepository: ProfileRepository,
+    private val creditRepository: CreditRepository,
     private val jsonSource: JsonSource,
     private val dispatchers: AppDispatchers,
     private val clock: AppClock,
@@ -193,44 +189,19 @@ class NetworkAssetsRepository(
     private suspend fun attendanceGainToday(): Int? {
         val today = clock.nowMillis().toDate()
         for (page in 1..MAX_ATTENDANCE_LEDGER_PAGES) {
-            val entries = creditEntries(page)
+            val entries = creditRepository.page(page).entries
             entries
                 .firstOrNull { entry ->
-                    entry.date == today &&
+                    entry.dateInNodeSeekZone() == today &&
                         ATTENDANCE_REASON in entry.reason &&
                         CHICKEN_REASON in entry.reason
                 }?.let { return it.change }
             if (entries.isEmpty()) return null
-            val oldestDate = entries.mapNotNull(CreditEntry::date).minOrNull() ?: return null
+            val oldestDate =
+                entries.mapNotNull(CreditEntry::dateInNodeSeekZone).minOrNull() ?: return null
             if (oldestDate < today) return null
         }
         return null
-    }
-
-    private suspend fun creditEntries(page: Int): List<CreditEntry> {
-        val body =
-            jsonSource.getJson(
-                path = NodeSeekJsonClient.creditLedgerPath(page),
-                referer = NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH,
-            )
-        return withContext(dispatchers.default) {
-            val root =
-                runCatching { json.parseToJsonElement(body) as? JsonObject }
-                    .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
-                    ?: throw NodeSeekException(NodeSeekError.Unparsable)
-            val rows = root["data"] as? JsonArray ?: throw NodeSeekException(NodeSeekError.Unparsable)
-            rows.mapNotNull { element ->
-                val row = element as? JsonArray ?: return@mapNotNull null
-                CreditEntry(
-                    change = row.getOrNull(0).intValue() ?: return@mapNotNull null,
-                    reason = row.getOrNull(2).textValue() ?: return@mapNotNull null,
-                    date =
-                    TimeFormat
-                        .parseTimestamp(row.getOrNull(3).textValue(), NODESEEK_ZONE)
-                        ?.toDate(),
-                )
-            }
-        }
     }
 
     override suspend fun attendanceBoard(page: Int): List<AttendanceBoardEntry> {
@@ -268,19 +239,16 @@ class NetworkAssetsRepository(
     }
 }
 
-private data class CreditEntry(
-    val change: Int,
-    val reason: String,
-    val date: LocalDate?,
-)
-
-private fun kotlinx.serialization.json.JsonElement?.intValue(): Int? {
-    val primitive = this as? JsonPrimitive ?: return null
-    return primitive.intOrNull ?: primitive.contentOrNull?.removePrefix("+")?.toIntOrNull()
-}
-
-private fun kotlinx.serialization.json.JsonElement?.textValue(): String? =
-    (this as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotBlank)
+/**
+ * Which NodeSeek day a ledger row belongs to.
+ *
+ * Asia/Shanghai rather than the device's zone, and that is the whole point of this helper: "已签到"
+ * is a fact about the site's calendar day, so a phone in UTC−7 must not decide the streak reset
+ * happened seven hours early. The ledger *screen* deliberately does the opposite and formats in the
+ * reader's zone — see [CreditEntry].
+ */
+private fun CreditEntry.dateInNodeSeekZone(): LocalDate? =
+    createdAtMillis?.let { Instant.ofEpochMilli(it).atZone(NODESEEK_ZONE).toLocalDate() }
 
 private fun Long.toDate(): LocalDate = Instant.ofEpochMilli(this).atZone(NODESEEK_ZONE).toLocalDate()
 

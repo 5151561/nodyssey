@@ -8,17 +8,30 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
+import androidx.paging.cachedIn
 import io.github.nodyssey.core.net.NodeSeekError
+import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.StardustEntry
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.postlist.toNodeSeekError
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -39,12 +52,18 @@ data class TransferForm(
 }
 
 data class StardustUiState(
-    val isLoading: Boolean = true,
+    /** The profile call only. The ledger is a `PagingData` stream and reports its own load state. */
+    val isLoadingBalance: Boolean = true,
+    /**
+     * A profile failure, which is why it does not blank the list.
+     *
+     * It still has to be visible somewhere: without a uid the ledger cannot be requested at all, so
+     * this is the error the screen shows when there are no rows to show instead.
+     */
     val error: NodeSeekError? = null,
-    /** Needed to reach the site's own ledger, whose URL is per-member. */
+    /** Needed to request the ledger, and to reach the site's own page, whose URL is per-member. */
     val uid: Long? = null,
     val balance: Int? = null,
-    val entries: List<StardustEntry> = emptyList(),
     val transferOpen: Boolean = false,
     val confirmOpen: Boolean = false,
     val form: TransferForm = TransferForm(),
@@ -61,9 +80,13 @@ data class StardustUiState(
 /**
  * State holder for 星辰.
  *
- * The balance comes from the account endpoint, which does publish it; the ledger comes from a page the
- * site renders client-side, which does not. So the balance card is real and the list says it is not
- * wired — a distinction worth keeping visible, since the balance is what a transfer depends on.
+ * Both halves are real now. The balance comes from the account endpoint; the ledger comes from
+ * `/api/stardust/list`, whose contract was read out of the site's own bundle on 2026-07-30 — until
+ * then this screen's list deliberately said "not wired" rather than guess. What has not moved into the
+ * app is the *write*: sending stardust is irreversible, so the last step still happens on the site.
+ *
+ * The ledger cannot be requested before the profile call answers, because the endpoint is per-member
+ * and there is no "me" form of it. So the pager hangs off the uid rather than starting in `init`.
  */
 class StardustViewModel(
     private val profileRepository: ProfileRepository,
@@ -76,7 +99,24 @@ class StardustViewModel(
     private val _uiState = MutableStateFlow(StardustUiState())
     val uiState: StateFlow<StardustUiState> = _uiState.asStateFlow()
 
-    private var loadJob: Job? = null
+    /** Bumped on retry so the pager restarts even when the uid it depends on has not changed. */
+    private val ledgerKey = MutableStateFlow<LedgerKey?>(null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val entries: Flow<PagingData<StardustEntry>> =
+        ledgerKey
+            .filterNotNull()
+            .distinctUntilChanged()
+            .flatMapLatest { key ->
+                Pager(
+                    PagingConfig(
+                        pageSize = NodeSeekJsonClient.STARDUST_PAGE_SIZE,
+                        initialLoadSize = NodeSeekJsonClient.STARDUST_PAGE_SIZE,
+                    ),
+                ) { StardustPagingSource(stardustRepository, key.uid) }.flow
+            }.cachedIn(viewModelScope)
+
+    private var profileJob: Job? = null
 
     init {
         refresh()
@@ -87,31 +127,26 @@ class StardustViewModel(
     }
 
     fun refresh() {
-        loadJob?.cancel()
-        loadJob =
+        profileJob?.cancel()
+        profileJob =
             viewModelScope.launch {
-                _uiState.update { it.copy(isLoading = true, error = null) }
-                val profile =
-                    runCatchingExceptCancellation { profileRepository.profile() }.getOrNull()
-                runCatchingExceptCancellation { stardustRepository.entries() }
-                    .onSuccess { entries ->
+                _uiState.update { it.copy(isLoadingBalance = true, error = null) }
+                runCatchingExceptCancellation { profileRepository.profile() }
+                    .onSuccess { profile ->
                         _uiState.update {
                             it.copy(
-                                isLoading = false,
+                                isLoadingBalance = false,
                                 error = null,
-                                uid = profile?.uid,
-                                balance = profile?.starCount,
-                                entries = entries,
+                                uid = profile.uid,
+                                balance = profile.starCount,
                             )
+                        }
+                        ledgerKey.update { previous ->
+                            LedgerKey(profile.uid, (previous?.attempt ?: 0) + 1)
                         }
                     }.onFailure { throwable ->
                         _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                uid = profile?.uid,
-                                balance = profile?.starCount,
-                                error = throwable.toNodeSeekError(),
-                            )
+                            it.copy(isLoadingBalance = false, error = throwable.toNodeSeekError())
                         }
                     }
             }
@@ -148,6 +183,11 @@ class StardustViewModel(
             refValue = refId.text.toString().trim().toLongOrNull()?.takeIf { it > 0 },
         )
 
+    private data class LedgerKey(
+        val uid: Long,
+        val attempt: Int,
+    )
+
     companion object {
         /** The cap every field on this form rejects past. */
         const val MAX_FIELD_LENGTH = 12
@@ -162,4 +202,34 @@ class StardustViewModel(
                 }
             }
     }
+}
+
+/**
+ * Cursor paging, keyed on the id of the last row of the previous page.
+ *
+ * `before_id` is exclusive, so handing back the page's own last id is correct and cannot repeat a row.
+ * `prevKey` is null because the endpoint's `after_id` would page *towards* newer rows and Paging would
+ * use it to re-fetch pages it dropped — on an append-only ledger the head is the only thing that moves,
+ * and refresh already starts there.
+ */
+internal class StardustPagingSource(
+    private val repository: StardustRepository,
+    private val memberId: Long,
+) : PagingSource<Long, StardustEntry>() {
+    override suspend fun load(params: LoadParams<Long>): LoadResult<Long, StardustEntry> =
+        try {
+            val page = repository.entries(memberId, beforeId = params.key)
+            LoadResult.Page(
+                data = page.entries,
+                prevKey = null,
+                // A "more" flag with no cursor to act on would loop on the same page forever, so both
+                // have to be present for there to be a next key at all.
+                nextKey = page.cursor.takeIf { page.hasMore && page.entries.isNotEmpty() },
+            )
+        } catch (throwable: Throwable) {
+            if (throwable is CancellationException) throw throwable
+            LoadResult.Error(throwable)
+        }
+
+    override fun getRefreshKey(state: PagingState<Long, StardustEntry>): Long? = null
 }

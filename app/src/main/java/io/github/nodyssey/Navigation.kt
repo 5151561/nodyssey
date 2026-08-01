@@ -62,6 +62,8 @@ import io.github.nodyssey.ui.account.SecurityRoute
 import io.github.nodyssey.ui.account.SecurityViewModel
 import io.github.nodyssey.ui.assets.AssetsRoute
 import io.github.nodyssey.ui.assets.AssetsViewModel
+import io.github.nodyssey.ui.assets.CreditRoute
+import io.github.nodyssey.ui.assets.CreditViewModel
 import io.github.nodyssey.ui.assets.StardustRoute
 import io.github.nodyssey.ui.assets.StardustViewModel
 import io.github.nodyssey.ui.composer.PostComposerRoute
@@ -514,23 +516,36 @@ fun MainNavigation(
                     viewModel = viewModel,
                     openAttendanceChooser = key.openAttendanceChooser,
                     onBack = { backStack.removeLastOrNull() },
-                    // The full ledger UI is not part of this batch. Its JSON is used internally to
-                    // detect today's attendance, while the site's table remains the full destination.
-                    onChickenLedger = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH,
-                                siteTitle,
-                                WebViewGoal.MANAGE,
-                            ),
-                        )
-                    },
+                    onChickenLedger = { backStack.add(CreditKey) },
                     onStardust = { backStack.add(StardustKey) },
                     // In-app, not the system browser: a Cloudflare pass earned out there lands in
                     // Chrome's cookie store, and the app's own retry keeps failing forever.
                     onOpenBrowser = {
                         backStack.add(
                             WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
+                        )
+                    },
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                )
+            }
+
+            entry<CreditKey> {
+                val viewModel: CreditViewModel =
+                    viewModel(factory = CreditViewModel.factory(container))
+                CreditRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    // `/credit` needs the session's cookies, so it opens in the app's own web view
+                    // like every other authenticated page. It is now the fallback rather than the
+                    // destination: the native list above is the ledger, and this is where a
+                    // Cloudflare challenge gets solved so the native list can load.
+                    onOpenBrowser = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH,
+                                siteTitle,
+                                WebViewGoal.MANAGE,
+                            ),
                         )
                     },
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },

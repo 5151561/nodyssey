@@ -262,8 +262,40 @@ class NodeSeekJsonClient(
         fun attendanceBoardPath(page: Int = 1) =
             "/api/attendance/board?page=${page.coerceAtLeast(1)}"
 
-        /** Session-scoped chicken ledger; rows are `[change, balance, reason, createdAt]`. */
+        /**
+         * Session-scoped chicken ledger; rows are `[change, balance, reason, createdAt]`.
+         *
+         * Twenty rows a page, and the payload's `total` is a row count rather than a page count —
+         * the site's own page bar is `min(100, ceil(total / 20))`, so page 101 is unreachable there
+         * too. Both numbers live in [CREDIT_PAGE_SIZE] and [CREDIT_MAX_PAGES].
+         */
         fun creditLedgerPath(page: Int = 1) = "/api/account/credit/page-${page.coerceAtLeast(1)}"
+
+        const val CREDIT_PAGE_SIZE = 20
+
+        /** Not our cap: the site's own pager stops here, so asking past it buys nothing. */
+        const val CREDIT_MAX_PAGES = 100
+
+        /**
+         * The stardust ledger, paged by cursor rather than by page number.
+         *
+         * The server rejects any parameter outside its whitelist with **HTTP 422** rather than
+         * ignoring it (`"cursor" is not allowed` — the response's own `cursor` field is *not* a
+         * query parameter). The accepted names are `id`, `member_id`, `peer_id`, `comment_id`,
+         * `type`, `after_id`, `after_time`, `before_id`, `before_time`, `count` and `ref_id`;
+         * [beforeId] takes the previous page's `cursor`, and the bound is exclusive.
+         */
+        fun stardustListPath(
+            memberId: Long,
+            beforeId: Long? = null,
+            count: Int = STARDUST_PAGE_SIZE,
+        ): String {
+            val query = StringBuilder("/api/stardust/list?member_id=$memberId&count=${count.coerceAtLeast(1)}")
+            beforeId?.let { query.append("&before_id=$it") }
+            return query.toString()
+        }
+
+        const val STARDUST_PAGE_SIZE = 20
 
         /** `?all=true` with an empty body; the per-item form takes a JSON array we do not need. */
         fun markAllViewedPath(type: String) = "/api/notification/$type/markViewed?all=true"

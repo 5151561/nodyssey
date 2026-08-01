@@ -17,15 +17,18 @@ import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.CommunityRepository
+import io.github.nodyssey.data.CreditRepository
 import io.github.nodyssey.data.FollowRepository
 import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.NetworkAssetsRepository
 import io.github.nodyssey.data.NetworkAwardRepository
 import io.github.nodyssey.data.NetworkCommunityRepository
+import io.github.nodyssey.data.NetworkCreditRepository
 import io.github.nodyssey.data.NetworkMessageRepository
 import io.github.nodyssey.data.NetworkPostDataSource
 import io.github.nodyssey.data.NetworkProfileRepository
 import io.github.nodyssey.data.NetworkSearchRepository
+import io.github.nodyssey.data.NetworkStardustRepository
 import io.github.nodyssey.data.NetworkTermsRepository
 import io.github.nodyssey.data.NetworkUserSpaceRepository
 import io.github.nodyssey.data.NotificationRepository
@@ -36,7 +39,6 @@ import io.github.nodyssey.data.RulingRepository
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.SiteOnlyFollowRepository
 import io.github.nodyssey.data.SiteOnlyRulingRepository
-import io.github.nodyssey.data.SiteOnlyStardustRepository
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.data.TermsRepository
 import io.github.nodyssey.data.UserSpaceRepository
@@ -88,16 +90,17 @@ interface AppContainer {
     val sessionRepository: SessionRepository
     val userSpaceRepository: UserSpaceRepository
     val assetsRepository: AssetsRepository
+    val creditRepository: CreditRepository
+    val stardustRepository: StardustRepository
     val awardRepository: AwardRepository
     val communityRepository: CommunityRepository
     val termsRepository: TermsRepository
 
     /*
-     * The three site-only pages. Typed here rather than left out so that wiring one up later is a
+     * The two site-only pages left. Typed here rather than left out so that wiring one up later is a
      * single constructor swap — see `SiteOnlyRepositories.kt` for why they answer NotWired today.
      */
     val followRepository: FollowRepository
-    val stardustRepository: StardustRepository
     val rulingRepository: RulingRepository
 
     /**
@@ -208,7 +211,15 @@ class DefaultAppContainer(
     }
 
     override val assetsRepository: AssetsRepository by lazy {
-        NetworkAssetsRepository(profileRepository, jsonClient, dispatchers, clock)
+        NetworkAssetsRepository(profileRepository, creditRepository, jsonClient, dispatchers, clock)
+    }
+
+    override val creditRepository: CreditRepository by lazy {
+        NetworkCreditRepository(jsonClient, dispatchers)
+    }
+
+    override val stardustRepository: StardustRepository by lazy {
+        NetworkStardustRepository(jsonClient, dispatchers)
     }
 
     override val awardRepository: AwardRepository by lazy {
@@ -224,8 +235,6 @@ class DefaultAppContainer(
     }
 
     override val followRepository: FollowRepository by lazy { SiteOnlyFollowRepository() }
-
-    override val stardustRepository: StardustRepository by lazy { SiteOnlyStardustRepository() }
 
     override val rulingRepository: RulingRepository by lazy { SiteOnlyRulingRepository() }
 
