@@ -225,7 +225,12 @@ class NodeSeekJsonClient(
         fun notificationListPath(type: String, page: Int = 1) =
             "/api/notification/$type/list?page=$page"
 
-        fun accountInfoPath(uid: Long) = "/api/account/getInfo/$uid"
+        /**
+         * The endpoint drops `readme` from the payload unless the flag asks for it, so the space
+         * page has to opt in the way the site's own space page does — without it every profile
+         * renders the "没有找到readme" empty state.
+         */
+        fun accountInfoPath(uid: Long) = "/api/account/getInfo/$uid?readme=1"
 
         /** The setting page requests these flags to include the editable Markdown fields. */
         fun accountSettingsInfoPath(uid: Long) =

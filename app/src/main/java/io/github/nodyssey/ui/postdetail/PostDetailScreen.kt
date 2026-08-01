@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -89,6 +88,7 @@ import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.common.AppendSpinner
+import io.github.nodyssey.ui.common.AvatarShape
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.MetaText
@@ -1180,7 +1180,7 @@ private fun ThreadSkeleton(modifier: Modifier = Modifier) {
             Box(
                 Modifier
                     .size(Sizes.avatarOriginalPost)
-                    .clip(CircleShape)
+                    .clip(AvatarShape)
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             )
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1203,7 +1203,7 @@ private fun ThreadSkeleton(modifier: Modifier = Modifier) {
                 Box(
                     Modifier
                         .size(Sizes.avatarComment)
-                        .clip(CircleShape)
+                        .clip(AvatarShape)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 )
                 SkeletonBar(0.5f, 12.dp)

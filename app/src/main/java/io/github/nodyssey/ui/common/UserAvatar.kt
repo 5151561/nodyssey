@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,8 +21,17 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 
 /**
- * Many NodeSeek accounts never upload an avatar, so `/avatar/<uid>.png` 404s. Falling back to an
- * initial on a stable per-user color reads far better than a row of empty grey circles.
+ * The site's own avatar shape: `border-radius: 15%` on every list and thread avatar.
+ *
+ * A percentage rather than a Dp so the corner keeps its proportion from the 30dp avatar in a comment
+ * row up to the 60dp one on a space page — which is also how the site's CSS states it.
+ */
+val AvatarShape: Shape = RoundedCornerShape(percent = 15)
+
+/**
+ * An account with no uploaded picture is still served an image — a cartoon the site generates from
+ * the uid — so the initial below is a last resort for the rare uid whose `/avatar/<uid>.png` 404s,
+ * not the common case. It reads better than an empty grey square either way.
  */
 @Composable
 fun UserAvatar(
@@ -30,7 +39,7 @@ fun UserAvatar(
     name: String,
     size: Dp,
     modifier: Modifier = Modifier,
-    shape: Shape = CircleShape,
+    shape: Shape = AvatarShape,
     fontSize: TextUnit = (size.value * 0.42f).sp,
 ) {
     val fallback: @Composable (Modifier) -> Unit = { avatarModifier ->

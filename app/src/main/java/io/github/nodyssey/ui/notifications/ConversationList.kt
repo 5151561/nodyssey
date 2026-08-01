@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -49,6 +48,7 @@ import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.RichNode
+import io.github.nodyssey.ui.common.AvatarShape
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.common.shortMessage
@@ -145,7 +145,7 @@ private fun ConversationRow(
             Box(
                 Modifier
                     .size(AVATAR)
-                    .clip(CircleShape)
+                    .clip(AvatarShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {

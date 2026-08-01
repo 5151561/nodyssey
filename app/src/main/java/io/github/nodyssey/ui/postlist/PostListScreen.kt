@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -67,6 +68,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -83,6 +85,7 @@ import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.common.AppendSpinner
+import io.github.nodyssey.ui.common.AvatarShape
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
 import io.github.nodyssey.ui.common.MetaText
@@ -271,6 +274,16 @@ fun PostListScreen(
 }
 
 private val NavigationDirectionThreshold = 16.dp
+
+/**
+ * Drops the avatar onto the title's cap line.
+ *
+ * Even with the first line's leading trimmed, a 15sp line box still starts a few pixels above the
+ * tallest glyph — ascent is not cap height — so a top-aligned avatar reads as floating higher than
+ * the title next to it. Measured at 15sp on the row as built. An offset rather than padding so the
+ * row keeps its height and the list still fits nine of them on a 800dp screen.
+ */
+private val AvatarCapOffset = 5.dp
 
 /**
  * Turns deliberate user scroll direction into a sticky navigation-bar state.
@@ -566,8 +579,9 @@ internal fun PostRow(
             Box(
                 modifier =
                 Modifier
+                    .offset(y = AvatarCapOffset)
                     .size(Sizes.avatarList)
-                    .clip(CircleShape)
+                    .clip(AvatarShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
@@ -583,6 +597,7 @@ internal fun PostRow(
                 url = summary.avatarUrl,
                 name = summary.authorName,
                 size = Sizes.avatarList,
+                modifier = Modifier.offset(y = AvatarCapOffset),
             )
         }
 
@@ -590,7 +605,17 @@ internal fun PostRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = summary.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    // Trimmed at the top so the glyphs start at the row's top edge instead of 3sp
+                    // below it: 15/21 leaves leading above the first line, and against a 40dp avatar
+                    // that gap read as the avatar sitting higher than the title beside it.
+                    style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        lineHeightStyle =
+                        LineHeightStyle(
+                            alignment = LineHeightStyle.Alignment.Proportional,
+                            trim = LineHeightStyle.Trim.FirstLineTop,
+                        ),
+                    ),
                     // A read thread is dimmed rather than hidden — the list is still the user's
                     // history, and the drop in both weight and contrast is legible at a glance
                     // without adding a badge that would cost a row's worth of space.
@@ -697,7 +722,7 @@ private fun FeedSkeleton(modifier: Modifier = Modifier) {
                 Box(
                     Modifier
                         .size(Sizes.avatarList)
-                        .clip(CircleShape)
+                        .clip(AvatarShape)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 )
                 Column(
