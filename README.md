@@ -15,43 +15,50 @@ scrolling stays in one list, and the UI follows the system theme.
 
 ## 状态
 
-**开发中，但已不再是“只读 v1”。** 当前实现总表见
+**已发布 1.0.1，仍在持续开发。** 读和写都已不再是“只读 v1”，当前实现总表见
 [docs/implementation-status.md](docs/implementation-status.md)，主要可用能力包括：
 
 - 版块列表、排序、Paging 无限滚动、下拉刷新和 Room 离线缓存
 - 帖子详情与评论连续分页；段落、图片、表情、代码、引用、列表、表格和行内链接原生渲染
 - WebView 登录 / Cloudflare 验证，Cookie 与 OkHttp 共享
-- 帖子 / 用户远程搜索、最近搜索、按需分页与追加失败重试
+- 帖子 / 用户搜索与论坛列表共享同一条管线，因此结果行有一致的已读态与新回复角标
 - @我 / 回复主题 / 私信三组通知、未读数、楼层跳转、私信会话与发送
-- 原生发帖编辑器、Markdown 预览、表情、阅读权限和本地草稿
-- 用户空间、账号设置二级页、Telegram 流程、成长 / 签到与社区工具
+- 原生发帖编辑器、Markdown 预览、表情、阅读权限和本地草稿；发帖与回复都走站点接口
+- NodeImage 图床：图片按最长边 2048 转 WebP 后上传，API Key 只存本机
+- 用户空间、账号设置二级页（资料、头像、密码、2FA、绑定状态、偏好、屏蔽列表）与 Telegram 流程
+- 等级、鸡腿与星辰余额，鸡腿流水与星辰流水两条真实分页流水，签到 / 签到榜与社区工具
 - WorkManager 通知轮询、Android 通知渠道与免打扰设置
 - f1 关于与社区页；f2 隐私协议原生长文页，WebView 仅作失败降级
 - 图片查看、缩放、保存与分享
 
-仍未接入的关键写操作包括评论发布、NodeImage 上传、点赞 / 反对 / 投喂 / 收藏。关注 / 粉丝、
-星辰流水和管理记录依赖尚未确认的动态站点数据源，当前会明确提示并提供网页降级，不会伪装为空数据。
+仍未接入的写操作是点赞 / 反对 / 投喂鸡腿——按钮禁用或只关闭弹窗，不发假请求。关注 / 粉丝列表、
+管理记录和今日额度依赖尚未确认的站点数据源，界面会明确提示并提供网页降级，不会伪装为空数据。
+修改邮箱、绑定 Telegram、星辰转账、邀请码购买没有原生闭环，会带用户到真实站点完成。
+逐项清单见 [docs/implementation-status.md](docs/implementation-status.md)。
 
-尚未发布的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)。
+各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，当前版本 1.0.1。
 
 ## Architecture
 
 NodeSeek has no public API. A few JSON endpoints exist (`/api/statistics/*`, `/api/notification/*`,
-`/api/content/list-comments`), but list, detail, search and terms pages also depend on server-rendered
-HTML. Everything sits behind Cloudflare, so requests have to look like a real mobile browser and
+`/api/content/list-comments`, `/api/content/new-comment`, and the `/setting` writes), but list, detail,
+search and terms pages also depend on server-rendered HTML. Everything sits behind Cloudflare, so requests have to look like a real mobile browser and
 carry cookies obtained from a WebView.
 
 ```text
 app/src/main/java/io/github/nodyssey/
 ├── core/
 │   ├── NodeSeekSite.kt          URL vocabulary and route parsing
+│   ├── NodeImageSite.kt         NodeImage upload host (off-site, user API key)
 │   ├── html/
 │   │   ├── Selectors.kt         shared site selectors
 │   │   ├── PostListParser.kt    topic list → PostListPage
 │   │   ├── PostDetailParser.kt  post page → PostDetail
+│   │   ├── SearchParser.kt      search results → the same list model
 │   │   ├── RichContentParser.kt post HTML → block/inline tree
 │   │   └── TermsParser.kt       terms article → native reading blocks
-│   └── net/                     OkHttp, JSON, cookies and challenge detection
+│   ├── net/                     OkHttp, JSON, cookies, rate gate, challenge detection
+│   └── report/                  NodeQuality report parsing
 ├── model/                       Android-free domain types
 ├── data/                        repositories, Room, DataStore and composers
 ├── notifications/               WorkManager polling and Android notifications
@@ -74,6 +81,8 @@ Requires JDK 21 and the Android SDK (compileSdk 37, minSdk 26).
 ./gradlew --stop
 ```
 
+Debug and release builds use different application IDs and labels, so both can sit on one device.
+
 Full verification matches CI:
 
 ```bash
@@ -92,17 +101,19 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 ## Roadmap
 
 - [x] 原生发帖、Markdown 编辑 / 预览、表情与草稿
-- [ ] 接入评论发布与 NodeImage 上传端点
-- [ ] 接入点赞 / 反对 / 收藏 / 投喂
+- [x] 评论发布（`/api/content/new-comment`）与 NodeImage 图床上传
+- [ ] 接入点赞 / 反对 / 投喂鸡腿
 - [x] 消息通知、未读数、私信列表 / 会话 / 发送
 - [x] 每日签到（`/api/attendance`）
-- [x] 帖子 / 用户远程搜索与追加分页
-- [x] 用户空间与账号设置二级页
+- [x] 帖子 / 用户搜索，与论坛列表共用管线
+- [x] 用户空间与账号设置二级页（`/setting` 契约全量接入）
+- [x] 鸡腿流水与星辰流水的真实分页数据
 - [x] Room 离线缓存 + 已读标记
 - [x] 图片全屏预览、保存与分享
 - [x] WorkManager 通知轮询与系统渠道
 - [x] f1 关于与社区、f2 隐私协议原生阅读
-- [ ] 接入关注 / 粉丝、星辰流水、管理记录的真实数据源
+- [ ] 接入关注 / 粉丝列表、管理记录与今日额度的真实数据源
+- [ ] 星辰转账原生化（站点有 `payment-prepare` / `send`，目前仍转网页）
 
 ## 架构
 
@@ -129,8 +140,10 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 > 新 API 的 1.5 Alpha，因此每次升级都必须跑完整 UI、Lint 与 release 构建门禁。
 
 - **Token**：`ui/theme/` 中的 light / dark M3 配色、字阶、形状与间距；品牌色为「石墨青」。
-- **首页 / 详情**：密集分割线列表、版块 tonal 标签、已读态、连续评论与原生富文本。
-- **搜索 / 通知 / 我的 / 设置**：远程搜索、私信、账号二级页、后台通知设置和 M3E 分组列表。
+- **首页 / 详情**：密集分割线列表、就地展开的版块栏、已读态、连续评论与原生富文本；正文启用平台
+  最优断行与汉字 / 西文间隙，表格首列钉住，NodeQuality 报告为独立卡片。
+- **搜索 / 通知 / 我的 / 设置**：Material 3 搜索栏（进屏即展开并显示历史）、私信、账号二级页、
+  后台通知设置和 M3E 分组列表。
 - **关于 / 隐私**：f1 的两屏滚动节奏；f2 的原生协议排版和失败降级。
 - **自适应导航**：4 个 tab；宽窗口由 `NavigationSuiteScaffold` 切换为侧边 rail，每个 tab 保留独立返回栈。
 
