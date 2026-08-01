@@ -1,9 +1,12 @@
 package io.github.nodyssey.data
 
+import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.PostDetailParser
 import io.github.nodyssey.core.html.PostListParser
+import io.github.nodyssey.core.html.SearchParser
+import io.github.nodyssey.core.net.MinIntervalGate
 import io.github.nodyssey.core.net.NodeSeekClient
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostDetail
@@ -24,6 +27,17 @@ interface PostRemoteDataSource {
         sort: FeedSort,
     ): PostListPage
 
+    /**
+     * One page of `/search?q=…`, which is a board listing at a different route — same markup, same
+     * parser, same one-request-per-page contract as [loadList].
+     */
+    suspend fun loadSearch(
+        query: String,
+        page: Int,
+        categorySlug: String?,
+        sort: FeedSort,
+    ): PostListPage
+
     suspend fun loadDetail(
         postId: Long,
         page: Int,
@@ -33,7 +47,16 @@ interface PostRemoteDataSource {
 class NetworkPostDataSource(
     private val client: NodeSeekClient,
     private val dispatchers: AppDispatchers,
+    clock: AppClock = AppClock.System,
 ) : PostRemoteDataSource {
+    /**
+     * The site's published throttle, honoured on our side instead of discovered as a 429.
+     *
+     * Only search is gated. Board and post pages have never answered 429, and spacing them would
+     * slow ordinary scrolling for a limit that does not apply to them.
+     */
+    private val searchGate = MinIntervalGate(SEARCH_MIN_INTERVAL_MILLIS, clock)
+
     override suspend fun loadList(
         categorySlug: String?,
         page: Int,
@@ -44,11 +67,29 @@ class NetworkPostDataSource(
         return withContext(dispatchers.default) { PostListParser.parse(html, page) }
     }
 
+    override suspend fun loadSearch(
+        query: String,
+        page: Int,
+        categorySlug: String?,
+        sort: FeedSort,
+    ): PostListPage {
+        val html =
+            searchGate.spaced {
+                client.getHtml(NodeSeekSite.postSearchPath(query.trim(), page, categorySlug, sort))
+            }
+        return withContext(dispatchers.default) { SearchParser.parsePosts(html, page) }
+    }
+
     override suspend fun loadDetail(
         postId: Long,
         page: Int,
     ): PostDetail {
         val html = client.getHtml(NodeSeekSite.postPath(postId, page))
         return withContext(dispatchers.default) { PostDetailParser.parse(html, postId, page) }
+    }
+
+    companion object {
+        /** `/search` answers a second request inside two seconds with 429; see [MinIntervalGate]. */
+        const val SEARCH_MIN_INTERVAL_MILLIS = 2_000L
     }
 }

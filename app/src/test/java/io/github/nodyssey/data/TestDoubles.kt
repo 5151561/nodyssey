@@ -80,9 +80,21 @@ internal class FakePostRemoteDataSource : PostRemoteDataSource {
     /** When set, both loaders suspend until it completes. */
     var gate: CompletableDeferred<Unit>? = null
 
+    /** Search answers with [listResult] too, unless a test overrides it. */
+    var searchResult: ((SearchRequest) -> PostListPage)? = null
+
     val listRequests = mutableListOf<Pair<String?, Int>>()
     val sortRequests = mutableListOf<FeedSort>()
+    val searchRequests = mutableListOf<SearchRequest>()
     val detailRequests = mutableListOf<Pair<Long, Int>>()
+
+    /** What one `/search` call was asked for, so a test can assert the whole shape at once. */
+    data class SearchRequest(
+        val query: String,
+        val page: Int,
+        val categorySlug: String?,
+        val sort: FeedSort,
+    )
 
     override suspend fun loadList(
         categorySlug: String?,
@@ -94,6 +106,19 @@ internal class FakePostRemoteDataSource : PostRemoteDataSource {
         gate?.await()
         listError?.let { throw it }
         return listResult(categorySlug, page)
+    }
+
+    override suspend fun loadSearch(
+        query: String,
+        page: Int,
+        categorySlug: String?,
+        sort: FeedSort,
+    ): PostListPage {
+        val request = SearchRequest(query, page, categorySlug, sort)
+        searchRequests += request
+        gate?.await()
+        listError?.let { throw it }
+        return searchResult?.invoke(request) ?: listResult(categorySlug, page)
     }
 
     override suspend fun loadDetail(

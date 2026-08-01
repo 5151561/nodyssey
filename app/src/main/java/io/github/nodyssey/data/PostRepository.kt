@@ -1,6 +1,8 @@
 package io.github.nodyssey.data
 
 import androidx.paging.ExperimentalPagingApi
+import androidx.paging.LoadState
+import androidx.paging.LoadStates
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
@@ -14,9 +16,11 @@ import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.toSnapshot
 import io.github.nodyssey.data.local.toSummary
 import io.github.nodyssey.model.FeedSort
+import io.github.nodyssey.model.PostListPage
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.model.ThreadSnapshot
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /**
@@ -33,6 +37,23 @@ data class FeedPost(
 )
 
 /**
+ * No results, and finished looking.
+ *
+ * A bare `PagingData.empty()` carries no load states, so every consumer sits in `Loading` forever —
+ * a spinner for a search nobody has run. Spelling the terminal states out is what lets the screen
+ * draw its empty state instead, and what stops `asSnapshot` in tests waiting for a page that is
+ * never coming.
+ */
+internal fun emptyLoadedPagingData(): PagingData<FeedPost> =
+    PagingData.empty(
+        LoadStates(
+            refresh = LoadState.NotLoading(endOfPaginationReached = true),
+            prepend = LoadState.NotLoading(endOfPaginationReached = true),
+            append = LoadState.NotLoading(endOfPaginationReached = true),
+        ),
+    )
+
+/**
  * The offline-first post repository.
  *
  * Reads come from Room and only from Room; the network's only role is to write into it. Callers get a
@@ -42,6 +63,23 @@ data class FeedPost(
 interface PostRepository {
     /** A pager backed by the database, refilled from the network by [FeedRemoteMediator]. */
     fun feed(
+        categorySlug: String?,
+        sort: FeedSort,
+    ): Flow<PagingData<FeedPost>>
+
+    /**
+     * The site's own `/search?q=…`, read exactly like a board feed.
+     *
+     * Deliberately the same return type, the same pager and the same mediator as [feed]: search is
+     * a list of NodeSeek posts served from a different route, and the moment it had a pipeline of
+     * its own it grew a second, worse one — several requests per load, nothing cached, and a pager
+     * that never admitted the end. Rows arrive with read state and reply badges for free, because
+     * they come out of the same table.
+     *
+     * @param categorySlug one board or none; the site accepts exactly one and filters server-side.
+     */
+    fun searchFeed(
+        query: String,
         categorySlug: String?,
         sort: FeedSort,
     ): Flow<PagingData<FeedPost>>
@@ -115,7 +153,37 @@ class OfflineFirstPostRepository(
         sort: FeedSort,
     ): Flow<PagingData<FeedPost>> {
         val feedKey = feedKeyFor(categorySlug, sort)
-        return Pager(
+        return pagedFeed(feedKey) { page -> remote.loadList(categorySlug, page, sort) }
+    }
+
+    override fun searchFeed(
+        query: String,
+        categorySlug: String?,
+        sort: FeedSort,
+    ): Flow<PagingData<FeedPost>> {
+        val normalized = query.trim()
+        if (normalized.isEmpty()) return flowOf(emptyLoadedPagingData())
+        val feedKey = searchFeedKeyFor(normalized, categorySlug, sort)
+        return pagedFeed(feedKey) { page ->
+            // Swept on the first page only, which is where a refresh always starts: appends have
+            // nothing to sweep, and doing it here rather than at submit time keeps it on the
+            // mediator's dispatcher, inside the load that is about to write the replacement.
+            if (page == FeedRemoteMediator.FIRST_PAGE) {
+                database.withTransaction {
+                    database.feedDao().clearOtherSearchFeeds(SEARCH_FEED_KEY_PREFIX, feedKey)
+                    database.feedDao().clearOtherSearchRemoteKeys(SEARCH_FEED_KEY_PREFIX, feedKey)
+                }
+            }
+            remote.loadSearch(normalized, page, categorySlug, sort)
+        }
+    }
+
+    /** One pager shape for every list of posts, so a feed and a search can never drift apart. */
+    private fun pagedFeed(
+        feedKey: String,
+        loadPage: suspend (page: Int) -> PostListPage,
+    ): Flow<PagingData<FeedPost>> =
+        Pager(
             config =
             PagingConfig(
                 pageSize = NETWORK_PAGE_SIZE,
@@ -127,19 +195,16 @@ class OfflineFirstPostRepository(
             remoteMediator =
             FeedRemoteMediator(
                 feedKey = feedKey,
-                categorySlug = categorySlug,
-                sort = sort,
                 database = database,
-                remote = remote,
                 clock = clock,
+                loadPage = loadPage,
             ),
             pagingSourceFactory = { database.feedDao().pagingSource(feedKey) },
         ).flow.map { pagingData -> pagingData.map(FeedPostRow::toFeedPost) }
-    }
 
     override fun search(query: String): Flow<List<FeedPost>> {
         val escaped = query.trim().escapeLikePattern()
-        if (escaped.isEmpty()) return kotlinx.coroutines.flow.flowOf(emptyList())
+        if (escaped.isEmpty()) return flowOf(emptyList())
         return database.feedDao().search(escaped).map { rows -> rows.map(FeedPostRow::toFeedPost) }
     }
 

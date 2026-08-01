@@ -3,27 +3,30 @@ package io.github.nodyssey.core.html
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
-import io.github.nodyssey.model.PostSummary
+import io.github.nodyssey.model.PostListPage
 import org.jsoup.Jsoup
 
-data class PostSearchPage(
-    val posts: List<PostSummary>,
-    val totalPages: Int,
-    val hasNextPage: Boolean,
-)
-
 object SearchParser {
-    fun parsePosts(html: String, page: Int): PostSearchPage {
+    /**
+     * Reads `/search?q=…` with the board list's parser, then corrects the one thing it cannot know.
+     *
+     * The search pager lies past the end of the results: `/search?q=android&page=99` returns zero
+     * rows and *still* renders `pager-next` as an `<a>` pointing at page 2 (verified live
+     * 2026-08-01). Trusting it is what turned "scrolled to the bottom" into an endless walk —
+     * every empty page claimed another page followed, so Paging asked for one more, forever, at a
+     * rate the site's two-second throttle answers with 429 and Cloudflare eventually answers with a
+     * challenge.
+     *
+     * So an empty page ends the search, whatever the pager says. On a genuine last page the site
+     * renders `pager-next` as a disabled `<span>` and the ordinary rule already applies.
+     */
+    fun parsePosts(html: String, page: Int): PostListPage {
         val document = Jsoup.parse(html, NodeSeekSite.BASE_URL)
         if (document.getElementById("nsk-frame") == null) {
             throw NodeSeekException(NodeSeekError.LoginRequired)
         }
         // The list parser already reads the pager, "..100"-style elided totals included.
         val parsed = PostListParser.parse(html, page)
-        return PostSearchPage(
-            posts = parsed.posts,
-            totalPages = parsed.totalPages,
-            hasNextPage = parsed.hasNextPage,
-        )
+        return parsed.copy(hasNextPage = parsed.posts.isNotEmpty() && parsed.hasNextPage)
     }
 }

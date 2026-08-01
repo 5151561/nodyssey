@@ -158,6 +158,21 @@ object NodeSeekSite {
     /** `"#3"` → `3`. Anything else is a shape we did not expect, and the caller falls back to null. */
     fun parseFloorHash(hash: String?): Int? = hash?.trimStart('#')?.trim()?.toIntOrNull()
 
+    /**
+     * Post search. The same server-rendered list the boards serve, at a different route.
+     *
+     * Verified against the live site on 2026-08-01, because the app used to treat this route as if
+     * it were something special:
+     * - the response is one plain document — no XHR, no search API — carrying `#nsk-frame`,
+     *   `.post-list-item` **fifty to a page** and the ordinary `pager-next`, so [listPath]'s parser
+     *   reads it unchanged;
+     * - `category` is honoured **server-side**, and exactly one is accepted;
+     * - `sortBy=postTime` is honoured; its absence is the site's own relevance-ish ordering;
+     * - asking for a page past the end returns zero rows **but still renders `pager-next` as a
+     *   link**, so "are there more pages" cannot be read from the pager alone here — see
+     *   [io.github.nodyssey.core.html.SearchParser];
+     * - the route is throttled to one request per two seconds, answering 429 beyond that.
+     */
     fun postSearchPath(
         query: String,
         page: Int = 1,

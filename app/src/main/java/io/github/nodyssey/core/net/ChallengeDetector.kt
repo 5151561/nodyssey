@@ -22,6 +22,13 @@ object ChallengeDetector {
         if (normalized["cf-mitigated"]?.lowercase() == "challenge") return NodeSeekError.Cloudflare
         if (Selectors.CLOUDFLARE_MARKERS.any { html.contains(it) }) return NodeSeekError.Cloudflare
 
+        // After the Cloudflare checks, before the generic status handling: a 429 that carried a
+        // challenge is Cloudflare's, everything else is the site's own two-second throttle, and
+        // "HTTP 429" as a screen title tells the reader nothing they can act on.
+        if (statusCode == 429 || Selectors.RATE_LIMIT_MARKERS.any { html.contains(it) }) {
+            return NodeSeekError.RateLimited
+        }
+
         if (statusCode !in 200..299) return NodeSeekError.Http(statusCode)
 
         return NodeSeekError.Unparsable

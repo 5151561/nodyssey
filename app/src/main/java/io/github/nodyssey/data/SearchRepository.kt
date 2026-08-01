@@ -2,14 +2,9 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.html.SearchParser
-import io.github.nodyssey.core.net.HtmlSource
 import io.github.nodyssey.core.net.JsonSource
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
-import io.github.nodyssey.model.FeedSort
-import io.github.nodyssey.model.PostSummary
-import io.github.nodyssey.model.SearchSort
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -26,63 +21,23 @@ data class UserSearchResult(
     val commentCount: Int?,
 )
 
-/** One server page of post results, so the caller can page on demand instead of prefetching. */
-data class PostSearchResults(
-    val posts: List<PostSummary>,
-    val page: Int,
-    val totalPages: Int,
-    val hasNextPage: Boolean,
-)
-
+/**
+ * Member lookup, and only member lookup.
+ *
+ * Post search used to live here too, with a fetch-and-page implementation of its own. It is now
+ * [PostRepository.searchFeed] — `/search?q=…` is a board listing at another route, so it belongs on
+ * the pipeline that already knows how to read one. This half stays separate because it genuinely is
+ * different: `/api/account/find/…` is real JSON, unpaged, and answers in one request.
+ */
 interface SearchRepository {
-    suspend fun searchPosts(
-        query: String,
-        page: Int,
-        categorySlugs: Set<String>,
-        sort: SearchSort,
-    ): PostSearchResults
-
     suspend fun searchUsers(query: String): List<UserSearchResult>
 }
 
 class NetworkSearchRepository(
-    private val htmlSource: HtmlSource,
     private val jsonSource: JsonSource,
     private val dispatchers: AppDispatchers,
 ) : SearchRepository {
     private val json = Json { ignoreUnknownKeys = true }
-
-    /*
-     * Exactly one request per call, exactly the site's own search route. Prefetching every result
-     * page in parallel was what tripped Cloudflare's rate limiting: a popular keyword turned one
-     * search into dozens of simultaneous requests. Ordering is the server's — its relevance ranking
-     * for RELEVANCE, `sortBy=postTime` for TIME — so pages append without reshuffling.
-     */
-    override suspend fun searchPosts(
-        query: String,
-        page: Int,
-        categorySlugs: Set<String>,
-        sort: SearchSort,
-    ): PostSearchResults {
-        val feedSort = if (sort == SearchSort.TIME) FeedSort.POST_TIME else FeedSort.LAST_REPLY
-        // NodeSeek accepts one category per request. A single selected board goes to the server;
-        // a multi-board range searches globally and filters each page locally as it arrives.
-        val serverCategory = categorySlugs.singleOrNull()
-        val html =
-            htmlSource.getHtml(
-                NodeSeekSite.postSearchPath(query.trim(), page, serverCategory, feedSort),
-            )
-        val parsed = withContext(dispatchers.default) { SearchParser.parsePosts(html, page) }
-        return PostSearchResults(
-            posts =
-            parsed.posts
-                .filter { post -> categorySlugs.size < 2 || post.categorySlug in categorySlugs }
-                .distinctBy(PostSummary::postId),
-            page = page,
-            totalPages = parsed.totalPages,
-            hasNextPage = parsed.hasNextPage,
-        )
-    }
 
     override suspend fun searchUsers(query: String): List<UserSearchResult> {
         val normalized = query.trim()

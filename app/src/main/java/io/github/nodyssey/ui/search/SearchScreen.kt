@@ -13,7 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,7 +30,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -39,8 +39,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SearchBarValue
@@ -113,7 +113,7 @@ fun SearchRoute(
         onHistoryClick = viewModel::selectHistory,
         onRemoveHistory = viewModel::removeHistory,
         onClearHistory = viewModel::clearHistory,
-        onBoardsChange = viewModel::setBoards,
+        onBoardChange = viewModel::selectBoard,
         onSortChange = viewModel::selectSort,
         onPostClick = onPostClick,
         onUserClick = onUserClick,
@@ -141,7 +141,7 @@ fun SearchScreen(
     onVerify: () -> Unit,
     modifier: Modifier = Modifier,
     postResults: LazyPagingItems<FeedPost>? = null,
-    onBoardsChange: (Set<String>) -> Unit = {},
+    onBoardChange: (String?) -> Unit = {},
     onSortChange: (SearchSort) -> Unit = {},
 ) {
     var showBoardSheet by remember { mutableStateOf(false) }
@@ -238,11 +238,9 @@ fun SearchScreen(
                         onClick = { showBoardSheet = true },
                         label = {
                             Text(
-                                if (state.selectedBoards.isEmpty()) {
-                                    stringResource(R.string.search_all_boards)
-                                } else {
-                                    stringResource(R.string.search_selected_boards, state.selectedBoards.size)
-                                },
+                                state.selectedBoard
+                                    ?.let { slug -> state.boards.firstOrNull { it.slug == slug }?.title ?: slug }
+                                    ?: stringResource(R.string.search_all_boards),
                             )
                         },
                         trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, contentDescription = null) },
@@ -292,11 +290,11 @@ fun SearchScreen(
     if (showBoardSheet) {
         BoardRangeSheet(
             boards = state.boards,
-            selected = state.selectedBoards,
+            selected = state.selectedBoard,
             recentBoards = state.recentBoards,
             onDismiss = { showBoardSheet = false },
             onApply = {
-                onBoardsChange(it)
+                onBoardChange(it)
                 showBoardSheet = false
             },
         )
@@ -523,9 +521,9 @@ private fun historyScope(
     boards: List<Board>,
 ): String {
     if (entry.target == SearchTarget.USERS) return stringResource(R.string.search_user_history_scope)
-    if (entry.categorySlugs.isEmpty()) return stringResource(R.string.search_history_scope)
-    val names = entry.categorySlugs.map { slug -> boards.firstOrNull { it.slug == slug }?.title ?: slug }
-    return stringResource(R.string.search_history_board_scope, names.joinToString("、"))
+    val slug = entry.categorySlug ?: return stringResource(R.string.search_history_scope)
+    val name = boards.firstOrNull { it.slug == slug }?.title ?: slug
+    return stringResource(R.string.search_history_board_scope, name)
 }
 
 @Composable
@@ -572,16 +570,25 @@ private fun userDetail(user: UserSearchResult): String =
         if (user.bio == null) user.joinedText?.let { add("加入 $it") }
     }.joinToString(" · ")
 
+/**
+ * Picks the one board the search is scoped to.
+ *
+ * Single choice because `/search` takes a single `category` and applies it itself. The checkbox
+ * version of this sheet could only pretend to filter by several: it searched the whole site and
+ * dropped the rows that did not match, so a board with few hits made the app walk page after page
+ * looking for something to show. 全部版块 is a real option here, not an empty selection — it is what
+ * the site does when the parameter is absent.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BoardRangeSheet(
     boards: List<Board>,
-    selected: Set<String>,
+    selected: String?,
     recentBoards: List<String>,
     onDismiss: () -> Unit,
-    onApply: (Set<String>) -> Unit,
+    onApply: (String?) -> Unit,
 ) {
-    var checked by remember(selected) { mutableStateOf(selected) }
+    var picked by remember(selected) { mutableStateOf(selected) }
     val recent = recentBoards.mapNotNull { slug -> boards.firstOrNull { it.slug == slug } }
     val remaining = boards.filterNot { board -> recent.any { it.slug == board.slug } }
     ModalBottomSheet(
@@ -592,9 +599,6 @@ private fun BoardRangeSheet(
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
     ) {
-        val toggle: (Board, Boolean) -> Unit = { board, isChecked ->
-            board.slug?.let { slug -> checked = if (isChecked) checked + slug else checked - slug }
-        }
         Column(
             Modifier.fillMaxWidth().padding(horizontal = Spacing.xl, vertical = Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -605,55 +609,56 @@ private fun BoardRangeSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            // The board list scrolls on its own so the reset/apply row below stays reachable even
-            // on a short window; the buttons are the whole point of opening the sheet.
+            // The board list scrolls on its own so the apply row below stays reachable even on a
+            // short window; the button is the whole point of opening the sheet.
             Column(
                 Modifier
                     .weight(1f, fill = false)
+                    .selectableGroup()
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
+                BoardRadioRow(
+                    title = stringResource(R.string.search_all_boards),
+                    selected = picked == null,
+                    onSelect = { picked = null },
+                )
                 if (recent.isNotEmpty()) {
                     Text(
                         stringResource(R.string.search_recent_boards),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    BoardCheckboxGrid(recent, checked, toggle)
+                    BoardRadioGrid(recent, picked) { picked = it }
                 }
                 Text(
-                    stringResource(R.string.search_all_boards),
+                    stringResource(R.string.search_board_all_boards_heading),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                BoardCheckboxGrid(remaining, checked, toggle)
+                BoardRadioGrid(remaining, picked) { picked = it }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                OutlinedButton(onClick = { checked = emptySet() }, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.search_reset))
-                }
-                Button(onClick = { onApply(checked) }, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.search_apply_boards, checked.size))
-                }
+            Button(onClick = { onApply(picked) }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.search_apply_board))
             }
         }
     }
 }
 
-/** Two columns: fourteen boards in seven rows fit a phone screen without a scroll to the buttons. */
+/** Two columns: fourteen boards in seven rows fit a phone screen without a scroll to the button. */
 @Composable
-private fun BoardCheckboxGrid(
+private fun BoardRadioGrid(
     boards: List<Board>,
-    checked: Set<String>,
-    onToggle: (Board, Boolean) -> Unit,
+    selected: String?,
+    onSelect: (String?) -> Unit,
 ) {
     boards.chunked(2).forEach { row ->
         Row(Modifier.fillMaxWidth()) {
             row.forEach { board ->
-                BoardCheckboxRow(
-                    board = board,
-                    checked = board.slug in checked,
-                    onCheckedChange = { onToggle(board, it) },
+                BoardRadioRow(
+                    title = board.title,
+                    selected = board.slug != null && board.slug == selected,
+                    onSelect = { onSelect(board.slug) },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -663,24 +668,24 @@ private fun BoardCheckboxGrid(
 }
 
 @Composable
-private fun BoardCheckboxRow(
-    board: Board,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+private fun BoardRadioRow(
+    title: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier =
-        modifier.toggleable(
-            value = checked,
-            role = Role.Checkbox,
-            onValueChange = onCheckedChange,
+        modifier.selectable(
+            selected = selected,
+            role = Role.RadioButton,
+            onClick = onSelect,
         ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = checked, onCheckedChange = null)
+        RadioButton(selected = selected, onClick = null)
         Text(
-            board.title,
+            title,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),

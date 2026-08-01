@@ -186,6 +186,7 @@ fun NodeSeekError.shortMessage(): String =
         NodeSeekError.LoginRequired -> stringResource(R.string.status_sign_in_title)
         NodeSeekError.Network -> stringResource(R.string.status_network_title)
         NodeSeekError.Unparsable -> stringResource(R.string.status_unparsable_title)
+        NodeSeekError.RateLimited -> stringResource(R.string.status_rate_limited_title)
         is NodeSeekError.Http -> stringResource(R.string.status_http_title, statusCode)
         NodeSeekError.NotWired -> stringResource(R.string.status_not_wired_title)
         NodeSeekError.Unknown -> stringResource(R.string.status_unknown_title)
@@ -278,6 +279,20 @@ fun NodeSeekErrorState(
                 primaryAction =
                 StatusAction(stringResource(R.string.action_open_in_browser), onOpenBrowser),
                 secondaryAction = retry,
+                modifier = modifier,
+            )
+
+        // The site's own throttle, not Cloudflare's — so no verify button. Waiting is the whole fix,
+        // and offering the web page would just spend another request against the same limit.
+        NodeSeekError.RateLimited ->
+            StatusView(
+                icon = Icons.Default.Info,
+                shape = StatusShapes.NetworkError,
+                containerColor = extra.warningContainer,
+                iconColor = extra.onWarningContainer,
+                title = stringResource(R.string.status_rate_limited_title),
+                description = stringResource(R.string.status_rate_limited_body),
+                primaryAction = retry,
                 modifier = modifier,
             )
 
