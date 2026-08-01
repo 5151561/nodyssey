@@ -130,6 +130,7 @@ fun PostListRoute(
         onPostClick = onPostClick,
         onCreatePost = onCreatePost,
         onBoardClick = viewModel::selectCategory,
+        onArrangementChange = viewModel::saveBoardArrangement,
         onSortChange = viewModel::selectSort,
         onSignInClick = onSignIn,
         // The challenge is cleared on the URL that failed, so the WebView loads the same list page the
@@ -158,6 +159,8 @@ fun PostListScreen(
     onSignInClick: () -> Unit,
     onRecoverInBrowser: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Commits an edit made on the board strip itself: the pill order, and which boards are parked. */
+    onArrangementChange: (order: List<String>, parked: Set<String>) -> Unit = { _, _ -> },
     onCreatePost: () -> Unit = {},
     /** Keeps the host navigation bar hidden until the user deliberately scrolls toward the list start. */
     onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
@@ -196,8 +199,10 @@ fun PostListScreen(
                 HomeTopBar(sort = state.sort, onSortChange = onSortChange)
                 BoardStrip(
                     boards = state.boards,
+                    parkedBoards = state.parkedBoards,
                     selectedSlug = state.categorySlug,
                     onBoardClick = onBoardClick,
+                    onArrangementChange = onArrangementChange,
                 )
             }
         },
@@ -408,167 +413,6 @@ private fun SortMenuItem(
                 )
             }
         },
-    )
-}
-
-/**
- * Fifteen boards do not fit on a 360dp strip, and a bottom sheet was the other candidate.
- *
- * This is the inline version: the strip *is* the picker. Collapsed it scrolls sideways through the
- * same pills; expanded it wraps them onto as many rows as they need, in place. One list drawn once —
- * an earlier version dropped a second panel underneath and simply repeated the strip's contents.
- *
- * It costs vertical space while open, but the finger never leaves the top of the screen and the list
- * underneath stays visible — which a sheet cannot claim.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun BoardStrip(
-    boards: List<Board>,
-    selectedSlug: String?,
-    onBoardClick: (String?) -> Unit,
-) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val rowState = rememberLazyListState()
-
-    // Collapsing back to one row must not hide the board the user just picked behind the fold.
-    val selectedIndex = boards.indexOfFirst { it.slug == selectedSlug }
-    LaunchedEffect(expanded, selectedIndex) {
-        if (!expanded && selectedIndex > 0) rowState.animateScrollToItem(selectedIndex)
-    }
-
-    Column(
-        Modifier.animateContentSize(
-            animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-        ),
-    ) {
-        Row(
-            // No state-dependent padding anywhere in here: the first row of pills has to sit at the
-            // same y whether the block is open or shut, or opening it reads as a jump rather than as
-            // growth. Every pill already carries 8dp of its own touch band above and below.
-            modifier = Modifier.fillMaxWidth(),
-            // Top rather than centre so the toggle keeps sitting on the first row of pills once the
-            // block grows downwards instead of drifting to the middle of it.
-            verticalAlignment = Alignment.Top,
-        ) {
-            if (expanded) {
-                FlowRow(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = Spacing.lg),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    // Zero, not sm. Each pill is a 32dp shape centred in a 48dp touch band, so the
-                    // rows already clear each other by 16dp; adding sm on top would space them 24dp
-                    // apart and the block would read as a list rather than a grid of chips.
-                    verticalArrangement = Arrangement.spacedBy(0.dp),
-                ) {
-                    boards.forEach { board ->
-                        BoardPill(
-                            board = board,
-                            selected = board.slug == selectedSlug,
-                            onClick = {
-                                onBoardClick(board.slug)
-                                expanded = false
-                            },
-                        )
-                    }
-                }
-            } else {
-                LazyRow(
-                    state = rowState,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = Spacing.lg),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    items(count = boards.size, key = { boards[it].slug ?: "front" }) { index ->
-                        val board = boards[index]
-                        BoardPill(
-                            board = board,
-                            selected = board.slug == selectedSlug,
-                            onClick = { onBoardClick(board.slug) },
-                        )
-                    }
-                }
-            }
-            // The band a pill occupies is 48dp — a 32dp shape centred inside the touch target Material
-            // reserves for it — while this button is pinned to 32dp and would otherwise hang 8dp above
-            // the first row of pills it is supposed to sit on. Giving it the same band, from the same
-            // composition local the pills read, aligns the two shapes by construction rather than by a
-            // hardcoded offset that a theme could invalidate.
-            Box(
-                modifier = Modifier.heightIn(min = LocalMinimumInteractiveComponentSize.current),
-                contentAlignment = Alignment.Center,
-            ) {
-                // The tonal button *is* the pill, rather than a plain IconButton with one drawn inside
-                // it: the ripple is clipped to the shape it draws instead of spilling above and below
-                // the 32dp pill.
-                FilledTonalIconButton(
-                    onClick = { expanded = !expanded },
-                    modifier = Modifier.size(width = 40.dp, height = 32.dp),
-                    shape = CircleShape,
-                    colors =
-                    IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                ) {
-                    Icon(
-                        imageVector =
-                        if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription =
-                        stringResource(
-                            if (expanded) R.string.action_hide_all_boards else R.string.action_show_all_boards,
-                        ),
-                    )
-                }
-            }
-        }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-    }
-}
-
-@Composable
-private fun BoardPill(
-    board: Board,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = {
-            Text(
-                text = board.title,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-            )
-        },
-        // Boards the site refuses to anyone signed out are worth flagging before the tap, not after.
-        // Described rather than decorative: the warning is the whole point of the icon, and it is
-        // nowhere else in the chip, so leaving it null hides the restriction from TalkBack.
-        trailingIcon =
-        if (board.adminOnly) {
-            {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = stringResource(R.string.board_admin_only),
-                    modifier = Modifier.size(14.dp),
-                )
-            }
-        } else {
-            null
-        },
-        shape = CircleShape,
-        colors =
-        FilterChipDefaults.filterChipColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            selectedContainerColor = MaterialTheme.colorScheme.primary,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-            selectedTrailingIconColor = MaterialTheme.colorScheme.onPrimary,
-        ),
-        border = null,
     )
 }
 

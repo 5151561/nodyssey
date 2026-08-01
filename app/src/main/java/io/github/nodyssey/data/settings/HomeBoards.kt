@@ -28,3 +28,45 @@ fun visibleHomeBoards(boards: List<Board>, hidden: Set<String>): List<Board> {
     if (effective.isEmpty()) return boards
     return boards.filterNot { it.slug in effective }
 }
+
+/**
+ * The strip split in two: the pills that are on, and the pills parked behind them.
+ *
+ * Two lists rather than one list plus a predicate because that is what the strip draws — the parked
+ * boards are always the tail, greyed, and the boundary between the halves is the thing the edit mode
+ * moves pills across.
+ */
+data class HomeBoardArrangement(
+    val enabled: List<Board>,
+    val parked: List<Board>,
+)
+
+/**
+ * Applies the user's saved strip arrangement to the boards the site currently has.
+ *
+ * The stored order is a *ranking*, not a list of boards: it can name slugs the API has since dropped,
+ * and the API can return boards it has never heard of. Neither is an error, and neither may lose a
+ * board — so ranked-and-still-real boards come first in their saved order, and anything the ranking
+ * has no opinion about is appended, enabled, in the order the API gave it. A board added to the site
+ * next month therefore shows up rather than silently going missing.
+ *
+ * [boards] is the real boards only, already narrowed by [visibleHomeBoards]: the site's own 首页版块
+ * switches and this arrangement are separate mechanisms, and a board the account switched off is gone
+ * from the strip entirely rather than parked in it. 综合 is not a board, has no slug, and is prepended
+ * by whoever draws the strip — it is never reordered and never parked.
+ */
+fun homeBoardArrangement(
+    boards: List<Board>,
+    order: List<String>,
+    parked: Set<String>,
+): HomeBoardArrangement {
+    if (order.isEmpty() && parked.isEmpty()) return HomeBoardArrangement(boards, emptyList())
+    val bySlug = boards.associateBy { it.slug }
+    val ranked = order.mapNotNull { bySlug[it] }
+    val rankedSlugs = order.toSet()
+    val unranked = boards.filterNot { it.slug in rankedSlugs }
+    // `partition` keeps relative order within each half, so freshly discovered boards land at the end
+    // of the enabled half rather than jumping to the front of it.
+    val (off, on) = (ranked + unranked).partition { it.slug in parked }
+    return HomeBoardArrangement(enabled = on, parked = off)
+}
