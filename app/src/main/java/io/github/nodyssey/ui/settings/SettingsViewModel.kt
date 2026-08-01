@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.session.SessionRepository
+import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
@@ -44,6 +45,10 @@ class SettingsViewModel(
 
     fun setImagesOnWifiOnly(value: Boolean) {
         viewModelScope.launch { settings.setImagesOnWifiOnly(value) }
+    }
+
+    fun setExternalLinkTarget(value: ExternalLinkTarget) {
+        viewModelScope.launch { settings.setExternalLinkTarget(value) }
     }
 
     fun clearCache() {

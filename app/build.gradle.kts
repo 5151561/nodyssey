@@ -288,6 +288,10 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.compose)
 
+    // Custom Tabs: forum posts are full of outbound links, and handing each one to the system
+    // browser puts a task switch between the reader and the thread they were in.
+    implementation(libs.androidx.browser)
+
     // Images: avatars, inline stickers and post attachments.
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)

@@ -46,6 +46,9 @@ class SettingsRepository(
                 dynamicColor = preferences[KEY_DYNAMIC_COLOR] ?: false,
                 fontScale = preferences[KEY_FONT_SCALE] ?: 1f,
                 imagesOnWifiOnly = preferences[KEY_IMAGES_WIFI_ONLY] ?: false,
+                externalLinkTarget = preferences[KEY_EXTERNAL_LINK_TARGET]
+                    ?.let { runCatching { ExternalLinkTarget.valueOf(it) }.getOrNull() }
+                    ?: ExternalLinkTarget.CUSTOM_TAB,
                 holidayTheme = preferences[KEY_HOLIDAY_THEME] ?: false,
                 searchHistory = decodeSearchHistory(preferences),
                 recentBoards = decodeValues(preferences[KEY_RECENT_BOARDS]),
@@ -90,6 +93,9 @@ class SettingsRepository(
         edit { it[KEY_FONT_SCALE] = scale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE) }
 
     suspend fun setImagesOnWifiOnly(enabled: Boolean) = edit { it[KEY_IMAGES_WIFI_ONLY] = enabled }
+
+    suspend fun setExternalLinkTarget(target: ExternalLinkTarget) =
+        edit { it[KEY_EXTERNAL_LINK_TARGET] = target.name }
 
     suspend fun setNotificationsEnabled(enabled: Boolean) =
         edit { it[KEY_NOTIFICATIONS_ENABLED] = enabled }
@@ -227,6 +233,7 @@ class SettingsRepository(
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
         private val KEY_IMAGES_WIFI_ONLY = booleanPreferencesKey("images_on_wifi_only")
+        private val KEY_EXTERNAL_LINK_TARGET = stringPreferencesKey("external_link_target")
         private val KEY_RECENT_SEARCHES = stringPreferencesKey("recent_searches")
         private val KEY_SEARCH_HISTORY = stringPreferencesKey("search_history_v3")
         private val KEY_RECENT_BOARDS = stringPreferencesKey("recent_boards")
@@ -293,6 +300,7 @@ data class UserSettings(
     val dynamicColor: Boolean = false,
     val fontScale: Float = 1f,
     val imagesOnWifiOnly: Boolean = false,
+    val externalLinkTarget: ExternalLinkTarget = ExternalLinkTarget.CUSTOM_TAB,
     /** Local mirror of the account's Remote 启用节日主题 switch. */
     val holidayTheme: Boolean = false,
     val searchHistory: List<SearchHistoryEntry> = emptyList(),
@@ -319,6 +327,21 @@ data class UserSettings(
  * addition and the default.
  */
 enum class ThemeMode { SYSTEM, LIGHT, DARK, TIMED }
+
+/**
+ * Where a link that leaves the app goes.
+ *
+ * [CUSTOM_TAB] is the default because a thread is mostly other people's links: handing every one of
+ * them to the browser as a separate task is what turns "glance at what they linked" into "find your
+ * way back to the app". A Custom Tab keeps the back gesture pointing at the thread, and — unlike the
+ * in-app WebView, which exists to carry the NodeSeek session and must never hold a stranger's page —
+ * it is the browser's own process, with the browser's origin bar and its cookies, not ours.
+ *
+ * [BROWSER] is the escape hatch for anyone who wants their links in the browser they already have
+ * signed in, with their extensions and their tab list. It is also what runs when no installed
+ * browser supports Custom Tabs, whatever this setting says.
+ */
+enum class ExternalLinkTarget { CUSTOM_TAB, BROWSER }
 
 /**
  * Whether the 定时 night window covers this hour.

@@ -39,8 +39,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
+import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
+import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.readableWidth
@@ -62,6 +64,7 @@ fun SettingsRoute(
         onThemeModeChange = viewModel::setThemeMode,
         onFontScaleChange = viewModel::setFontScale,
         onImagesOnWifiOnlyChange = viewModel::setImagesOnWifiOnly,
+        onExternalLinkTargetChange = viewModel::setExternalLinkTarget,
         onClearCache = viewModel::clearCache,
         onOpenNotifications = onOpenNotifications,
         onOpenAbout = onOpenAbout,
@@ -78,6 +81,7 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onFontScaleChange: (Float) -> Unit,
     onImagesOnWifiOnlyChange: (Boolean) -> Unit,
+    onExternalLinkTargetChange: (ExternalLinkTarget) -> Unit,
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenNotifications: () -> Unit = {},
@@ -162,10 +166,20 @@ fun SettingsScreen(
 
             SettingsSectionTitle(stringResource(R.string.settings_content))
             SettingsGroup {
+                SettingsBlock(
+                    icon = { Icon(NodysseyIcons.OpenInNew, contentDescription = null) },
+                    title = stringResource(R.string.settings_external_link),
+                    subtitle = stringResource(R.string.settings_external_link_hint),
+                    top = true,
+                ) {
+                    ConnectedExternalLinkButtons(
+                        selected = state.settings.externalLinkTarget,
+                        onSelected = onExternalLinkTargetChange,
+                    )
+                }
                 SettingsRow(
                     title = stringResource(R.string.settings_wifi_images),
                     subtitle = stringResource(R.string.settings_wifi_images_hint),
-                    top = true,
                     checked = state.settings.imagesOnWifiOnly,
                     onCheckedChange = onImagesOnWifiOnlyChange,
                     trailing = {
@@ -220,6 +234,24 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun ConnectedExternalLinkButtons(
+    selected: ExternalLinkTarget,
+    onSelected: (ExternalLinkTarget) -> Unit,
+) {
+    val choices =
+        listOf(
+            ExternalLinkTarget.CUSTOM_TAB to
+                stringResource(R.string.settings_external_link_custom_tab),
+            ExternalLinkTarget.BROWSER to stringResource(R.string.settings_external_link_browser),
+        )
+    ConnectedChoiceButtons(
+        labels = choices.map { it.second },
+        selectedIndex = choices.indexOfFirst { it.first == selected },
+        onSelect = { onSelected(choices[it].first) },
+    )
+}
+
+@Composable
 private fun ConnectedThemeButtons(
     selected: ThemeMode,
     onSelected: (ThemeMode) -> Unit,
@@ -262,6 +294,7 @@ private fun SettingsPreview() {
             onThemeModeChange = {},
             onFontScaleChange = {},
             onImagesOnWifiOnlyChange = {},
+            onExternalLinkTargetChange = {},
             onClearCache = {},
         )
     }

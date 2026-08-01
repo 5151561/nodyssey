@@ -9,13 +9,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.data.settings.isTimedNightHour
+import io.github.nodyssey.ui.common.rememberExternalUriHandler
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import kotlinx.coroutines.delay
@@ -54,11 +57,20 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = settings.dynamicColor,
                 fontScale = settings.fontScale,
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
+                // Every link that leaves the app goes through LocalUriHandler — the explicit
+                // `openUri` calls in Navigation and the ones Compose resolves for a link inside post
+                // text alike. Overriding it here, inside the theme so the tab can match the colours
+                // on screen, is what makes 外部链接打开方式 apply everywhere at once.
+                CompositionLocalProvider(
+                    LocalUriHandler provides
+                        rememberExternalUriHandler(settings.externalLinkTarget),
                 ) {
-                    MainNavigation(container = container, initialTab = initialTab)
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        MainNavigation(container = container, initialTab = initialTab)
+                    }
                 }
             }
         }

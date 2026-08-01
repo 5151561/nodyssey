@@ -104,7 +104,8 @@ App 按“地址只能靠收验证码设置”推导）。前者的按钮与确�
 - 登录与 Cloudflare 验证必须使用 WebView，以取得与 OkHttp 共用的 Cookie。
 - NodeSeek 站内尚未原生化的页面，以及上方 3 项原生接口未闭环能力，可作为明确降级打开。
 - 帖子、评论、搜索结果和隐私协议正常路径均为原生 Compose。
-- 普通站外链接交给系统浏览器；内置 WebView 只允许 HTTPS 的 `nodeseek.com` 域名。
+- 普通站外链接默认走 Chrome Custom Tab（设置 › 内容 › 站外链接可改成系统浏览器）；内置 WebView 只允许
+  HTTPS 的 `nodeseek.com` 域名。Custom Tab 是浏览器自己的进程和 Cookie，不碰 App 的会话。
 
 ## 验证基线
 

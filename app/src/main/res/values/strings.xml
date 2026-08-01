@@ -247,6 +247,10 @@
     <string name="settings_body_size_value">%1$dsp</string>
     <string name="settings_text_preview">预览：中文长文的阅读体验。</string>
     <string name="settings_content">内容</string>
+    <string name="settings_external_link">站外链接</string>
+    <string name="settings_external_link_hint">帖子里指向别的网站的链接怎么打开</string>
+    <string name="settings_external_link_custom_tab">应用内浏览</string>
+    <string name="settings_external_link_browser">系统浏览器</string>
     <string name="settings_wifi_images">仅 Wi-Fi 下加载图片</string>
     <string name="settings_wifi_images_hint">移动网络显示占位图</string>
     <string name="settings_clear_cache">清除缓存</string>

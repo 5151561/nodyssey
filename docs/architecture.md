@@ -172,6 +172,13 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
   帖子列表、详情和已读标记在一个事务中清除，版块与设置保留。这样进程恢复也不会先闪出旧账号内容。
 - **内置 WebView 不是通用浏览器。** 只允许 HTTPS 的 `nodeseek.com` / `www.nodeseek.com` 主页面；
   帖子外链、图片和跨域跳转交给系统 URI handler。WebView 显式关闭 file/content 访问和混合内容。
+- **站外链接走 Custom Tab，靠替换 `LocalUriHandler` 实现。** `MainActivity` 在主题内部把
+  `CustomTabUriHandler`（`ui/common/ExternalLinks.kt`）提供给整棵树，所以显式的 `openUri` 调用和
+  Compose 自己解析的正文链接注解走同一条路，不会漏掉一处。只接 http(s)：`mailto:` / `tg://` /
+  `otpauth://` 原样落回平台 handler，并保留它「无人接收就抛异常」的语义——两步验证页靠这个失败告诉
+  用户没装验证器。工具栏取当前 `MaterialTheme` 配色，`setColorScheme` 用 App 自己解析的深浅色而不是
+  `COLOR_SCHEME_SYSTEM`（深色和定时会让 App 变深而系统不变）。设置 › 内容 › 站外链接可切回系统浏览器；
+  没有浏览器支持 Custom Tab 时，多余的 extras 被忽略，等同于普通 `ACTION_VIEW`。
 
 **导航约定**：
 - **`NavDisplay` 必须显式传 `entryDecorators`。** 它的默认值是
