@@ -3,7 +3,12 @@ package io.github.nodyssey.data
 import androidx.paging.testing.asSnapshot
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.model.FeedSort
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -20,8 +25,17 @@ import org.robolectric.RobolectricTestRunner
  * filtered locally, a cache window that makes coming back free, and a stored search that does not
  * accumulate one entry per query ever typed.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class SearchFeedTest {
+    /*
+     * Every other test that drives a real Pager hands this dispatcher to Room as well, and this one
+     * has to do the same. Left on Room's own background executors, the write the mediator makes and
+     * the invalidation Paging waits for happen on threads the test scheduler does not know about, so
+     * `asSnapshot` is free to settle on the still-empty table — an assertion that reads
+     * `expected:<[100, 101, 102]> but was:<[]>` and passes on the next run.
+     */
+    private val dispatcher = StandardTestDispatcher()
     private lateinit var database: NodeSeekDatabase
     private val remote = FakePostRemoteDataSource()
     private val clock = MutableClock()
@@ -29,12 +43,14 @@ class SearchFeedTest {
 
     @Before
     fun setUp() {
-        database = inMemoryDatabase()
+        Dispatchers.setMain(dispatcher)
+        database = inMemoryDatabase(dispatcher)
         repository = OfflineFirstPostRepository(database, remote, clock)
     }
 
     @After
     fun tearDown() {
+        Dispatchers.resetMain()
         database.close()
     }
 
