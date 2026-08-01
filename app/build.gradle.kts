@@ -79,6 +79,24 @@ tasks.register("resolveAndLockAll") {
     }
 }
 
+/*
+ * Release signing, supplied by the environment.
+ *
+ * The keystore is not in the repository and neither is its password, so a clone without them still
+ * builds: with nothing set, `assembleRelease` produces the unsigned APK it always did and signing
+ * stays a manual apksigner step. `.github/workflows/release.yml` is what fills these in — it decodes
+ * the keystore from a secret into a file on the runner and points this at it.
+ *
+ * Read through `providers` rather than `System.getenv` so the configuration cache records them as
+ * inputs instead of baking today's values into a cache entry that outlives them.
+ */
+val keystoreFile = providers.environmentVariable("NODYSSEY_KEYSTORE_FILE").orNull?.let(::File)?.takeIf { it.isFile }
+val keystorePassword = providers.environmentVariable("NODYSSEY_KEYSTORE_PASSWORD").orNull
+val keystoreKeyAlias = providers.environmentVariable("NODYSSEY_KEY_ALIAS").orNull
+val keystoreKeyPassword = providers.environmentVariable("NODYSSEY_KEY_PASSWORD").orNull
+val hasReleaseSigning =
+    keystoreFile != null && keystorePassword != null && keystoreKeyAlias != null && keystoreKeyPassword != null
+
 android {
     namespace = "io.github.nodyssey"
     compileSdk = 37
@@ -88,6 +106,23 @@ android {
         targetSdk = 36
         versionCode = 2
         versionName = "1.0.1"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = keystoreFile
+                storePassword = keystorePassword
+                keyAlias = keystoreKeyAlias
+                keyPassword = keystoreKeyPassword
+                // Stated rather than inherited, so the shipped APK carries the same schemes as every
+                // version before it: minSdk 26 has no use for v1 JAR signing, v2 and v3 are what the
+                // v1.0.0 and v1.0.1 downloads verify with.
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
     }
 
     buildTypes {
@@ -111,6 +146,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Null without the environment above, which leaves the release APK unsigned — the state
+            // this project shipped 1.0.0 and 1.0.1 from.
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {

@@ -1,0 +1,161 @@
+name: Release
+
+# Pushing a `v*` tag is the whole trigger: it builds that tag, signs it, and publishes the release.
+# Nothing here reads the working tree of `main`, so a tag can be cut from any commit that deserves one.
+on:
+  push:
+    tags: ['v*']
+  # Re-running a release by hand, for when the tag is already pushed and something below needed a fix.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release, e.g. v1.0.2'
+        required: true
+
+concurrency:
+  # Two runs publishing the same tag would race on the release itself.
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  # Creating the release and uploading the APK to it.
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          # The release body ends in a compare link, and `gh` needs the tags to resolve it.
+          fetch-depth: 0
+
+      - name: Resolve the version under release
+        id: version
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag (version $version)"
+
+      # A tag that disagrees with the APK it would contain is worth failing over: the store listing,
+      # the in-app "about" screen and the download name all read the version from different places,
+      # and this is the one moment they can be compared.
+      - name: Check versionName matches the tag
+        run: |
+          declared=$(grep -oE 'versionName = "[^"]+"' app/build.gradle.kts | head -1 | cut -d'"' -f2)
+          if [ "$declared" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::Tag ${{ steps.version.outputs.tag }} wants versionName ${{ steps.version.outputs.version }}, but app/build.gradle.kts declares $declared." >&2
+            exit 1
+          fi
+          echo "versionName $declared matches the tag."
+
+      # Written before anything is built, so a missing changelog section fails in seconds rather than
+      # after a full release build. An empty section is treated as missing on purpose: publishing a
+      # release with no notes is the failure this is meant to prevent.
+      - name: Take the release notes from CHANGELOG.md
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          awk -v v="$version" '
+            $0 ~ "^## " v "( |$)" { inside = 1; next }
+            inside && /^## / { exit }
+            inside { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ] || ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::CHANGELOG.md has no content under a '## $version' heading." >&2
+            exit 1
+          fi
+          previous=$(git tag -l 'v*' --sort=-v:refname | grep -Fxv "${{ steps.version.outputs.tag }}" | head -1)
+          if [ -n "$previous" ]; then
+            {
+              echo
+              echo "**Full Changelog**: ${{ github.server_url }}/${{ github.repository }}/compare/$previous...${{ steps.version.outputs.tag }}"
+            } >> release-notes.md
+          fi
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # A release must never be the thing that writes the shared cache.
+          cache-read-only: true
+
+      # The same gates ci.yml runs, repeated here rather than assumed: a tag can point at a commit CI
+      # never saw, and "it was green on main" is not a statement about this tag. The emulator journey
+      # is left to ci.yml — it needs a device and it is not what signing can get wrong.
+      - name: Check formatting
+        run: ./gradlew spotlessCheck
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
+      - name: Android lint
+        run: ./gradlew :app:lintDebug
+
+      - name: Decode the signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::The KEYSTORE_BASE64 secret is not set, so this release would be unsigned." >&2
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build the signed release APK
+        env:
+          NODYSSEY_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          NODYSSEY_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          NODYSSEY_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          NODYSSEY_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease
+
+      # Android refuses to replace an installed app with one signed by a different key, so a release
+      # signed with the wrong keystore does not fail here — it fails on the phone of every existing
+      # user, as "app not installed", with no way to fix it after the fact. Hence the pinned digest.
+      - name: Verify the signature is the key users already trust
+        env:
+          EXPECTED_SHA256: '84f527d3a966f435cd32d889b8e0e267aa08b564a10df774c5159cef11e7fc6d'
+        run: |
+          apksigner="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          apk=app/build/outputs/apk/release/app-release.apk
+          "$apksigner" verify --print-certs --verbose "$apk"
+          actual=$("$apksigner" verify --print-certs "$apk" | grep -m1 -oE 'certificate SHA-256 digest: [0-9a-f]+' | awk '{print $NF}')
+          if [ "$actual" != "$EXPECTED_SHA256" ]; then
+            echo "::error::Signed with $actual, but existing installs only accept $EXPECTED_SHA256." >&2
+            exit 1
+          fi
+          echo "Signing certificate matches the published one."
+
+      - name: Name the APK after the release
+        id: apk
+        run: |
+          name="nodyssey-${{ steps.version.outputs.tag }}.apk"
+          mv app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/$name"
+          echo "path=$RUNNER_TEMP/$name" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            # A re-run after a fix: replace the notes and the asset rather than failing on the
+            # release that already exists.
+            gh release edit "$tag" --title "Nodyssey $tag" --notes-file release-notes.md
+            gh release upload "$tag" "${{ steps.apk.outputs.path }}" --clobber
+          else
+            gh release create "$tag" \
+              --title "Nodyssey $tag" \
+              --notes-file release-notes.md \
+              "${{ steps.apk.outputs.path }}"
+          fi
