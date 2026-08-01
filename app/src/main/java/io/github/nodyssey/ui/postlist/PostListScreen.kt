@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -41,6 +42,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -407,9 +409,12 @@ private fun SortMenuItem(
 /**
  * Fifteen boards do not fit on a 360dp strip, and a bottom sheet was the other candidate.
  *
- * This is the inline version: the strip scrolls, and the button at its end drops a second row in
- * place. It costs vertical space while open, but the finger never leaves the top of the screen and
- * the list underneath stays visible — which a sheet cannot claim.
+ * This is the inline version: the strip *is* the picker. Collapsed it scrolls sideways through the
+ * same pills; expanded it wraps them onto as many rows as they need, in place. One list drawn once —
+ * an earlier version dropped a second panel underneath and simply repeated the strip's contents.
+ *
+ * It costs vertical space while open, but the finger never leaves the top of the screen and the list
+ * underneath stays visible — which a sheet cannot claim.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -419,6 +424,13 @@ private fun BoardStrip(
     onBoardClick: (String?) -> Unit,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    val rowState = rememberLazyListState()
+
+    // Collapsing back to one row must not hide the board the user just picked behind the fold.
+    val selectedIndex = boards.indexOfFirst { it.slug == selectedSlug }
+    LaunchedEffect(expanded, selectedIndex) {
+        if (!expanded && selectedIndex > 0) rowState.animateScrollToItem(selectedIndex)
+    }
 
     Column(
         Modifier.animateContentSize(
@@ -426,69 +438,82 @@ private fun BoardStrip(
         ),
     ) {
         Row(
+            // No state-dependent padding anywhere in here: the first row of pills has to sit at the
+            // same y whether the block is open or shut, or opening it reads as a jump rather than as
+            // growth. Every pill already carries 8dp of its own touch band above and below.
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            // Top rather than centre so the toggle keeps sitting on the first row of pills once the
+            // block grows downwards instead of drifting to the middle of it.
+            verticalAlignment = Alignment.Top,
         ) {
-            LazyRow(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = Spacing.lg),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                items(count = boards.size, key = { boards[it].slug ?: "front" }) { index ->
-                    val board = boards[index]
-                    BoardPill(
-                        board = board,
-                        selected = board.slug == selectedSlug,
-                        onClick = { onBoardClick(board.slug) },
-                    )
+            if (expanded) {
+                FlowRow(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = Spacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    // Zero, not sm. Each pill is a 32dp shape centred in a 48dp touch band, so the
+                    // rows already clear each other by 16dp; adding sm on top would space them 24dp
+                    // apart and the block would read as a list rather than a grid of chips.
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                ) {
+                    boards.forEach { board ->
+                        BoardPill(
+                            board = board,
+                            selected = board.slug == selectedSlug,
+                            onClick = {
+                                onBoardClick(board.slug)
+                                expanded = false
+                            },
+                        )
+                    }
+                }
+            } else {
+                LazyRow(
+                    state = rowState,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = Spacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    items(count = boards.size, key = { boards[it].slug ?: "front" }) { index ->
+                        val board = boards[index]
+                        BoardPill(
+                            board = board,
+                            selected = board.slug == selectedSlug,
+                            onClick = { onBoardClick(board.slug) },
+                        )
+                    }
                 }
             }
-            // The tonal button *is* the pill, rather than a plain IconButton with one drawn inside
-            // it: same 48dp touch target either way (minimumInteractiveComponentSize expands the
-            // pointer bounds, not the layout), but the ripple is now clipped to the shape it draws
-            // instead of spilling above and below the 32dp pill.
-            FilledTonalIconButton(
-                onClick = { expanded = !expanded },
-                modifier = Modifier.size(width = 40.dp, height = 32.dp),
-                shape = CircleShape,
-                colors =
-                IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
+            // The band a pill occupies is 48dp — a 32dp shape centred inside the touch target Material
+            // reserves for it — while this button is pinned to 32dp and would otherwise hang 8dp above
+            // the first row of pills it is supposed to sit on. Giving it the same band, from the same
+            // composition local the pills read, aligns the two shapes by construction rather than by a
+            // hardcoded offset that a theme could invalidate.
+            Box(
+                modifier = Modifier.heightIn(min = LocalMinimumInteractiveComponentSize.current),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector =
-                    if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription =
-                    stringResource(
-                        if (expanded) R.string.action_hide_all_boards else R.string.action_show_all_boards,
+                // The tonal button *is* the pill, rather than a plain IconButton with one drawn inside
+                // it: the ripple is clipped to the shape it draws instead of spilling above and below
+                // the 32dp pill.
+                FilledTonalIconButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.size(width = 40.dp, height = 32.dp),
+                    shape = CircleShape,
+                    colors =
+                    IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     ),
-                )
-            }
-        }
-
-        if (expanded) {
-            FlowRow(
-                modifier =
-                Modifier
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                    .padding(Spacing.md),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                boards.forEach { board ->
-                    BoardPill(
-                        board = board,
-                        selected = board.slug == selectedSlug,
-                        onClick = {
-                            onBoardClick(board.slug)
-                            expanded = false
-                        },
-                        onSurface = true,
+                ) {
+                    Icon(
+                        imageVector =
+                        if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription =
+                        stringResource(
+                            if (expanded) R.string.action_hide_all_boards else R.string.action_show_all_boards,
+                        ),
                     )
                 }
             }
@@ -502,7 +527,6 @@ private fun BoardPill(
     board: Board,
     selected: Boolean,
     onClick: () -> Unit,
-    onSurface: Boolean = false,
 ) {
     FilterChip(
         selected = selected,
@@ -532,12 +556,7 @@ private fun BoardPill(
         shape = CircleShape,
         colors =
         FilterChipDefaults.filterChipColors(
-            containerColor =
-            if (onSurface) {
-                MaterialTheme.colorScheme.surface
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
             selectedContainerColor = MaterialTheme.colorScheme.primary,
