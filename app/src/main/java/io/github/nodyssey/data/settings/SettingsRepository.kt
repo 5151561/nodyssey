@@ -266,16 +266,25 @@ class SettingsRepository(
                 .joinToString(RECENT_SEARCH_SEPARATOR.toString())
     }
 
+    /**
+     * Deduplicated because decoding is lossy: a stored row's board list collapses to its first
+     * board and the retired sorts fold into [SearchSort.RELEVANCE], so two rows written by an older
+     * build can land on one domain entry. The list is read straight into a LazyColumn keyed on
+     * [SearchHistoryEntry.key], which throws the moment a key repeats — and the first write after
+     * this drops the collapsed twin from disk for good.
+     */
     private fun decodeSearchHistory(preferences: Preferences): List<SearchHistoryEntry> {
         val stored =
             preferences[KEY_SEARCH_HISTORY]?.let { encoded ->
                 runCatching { json.decodeFromString<List<StoredSearchHistory>>(encoded) }.getOrNull()
             }
-        if (stored != null) return stored.mapNotNull(StoredSearchHistory::toDomain)
-
-        return decodeRecentSearches(preferences[KEY_RECENT_SEARCHES]).map { query ->
-            SearchHistoryEntry(query = query, target = SearchTarget.POSTS)
+        if (stored != null) {
+            return stored.mapNotNull(StoredSearchHistory::toDomain).distinctBy(SearchHistoryEntry::key)
         }
+
+        return decodeRecentSearches(preferences[KEY_RECENT_SEARCHES])
+            .map { query -> SearchHistoryEntry(query = query, target = SearchTarget.POSTS) }
+            .distinctBy(SearchHistoryEntry::key)
     }
 }
 
