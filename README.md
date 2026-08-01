@@ -28,12 +28,12 @@ scrolling stays in one list, and the UI follows the system theme.
 - NodeImage 图床：图片按最长边 2048 转 WebP 后上传，API Key 只存本机
 - 用户空间、账号设置二级页（资料、头像、密码、2FA、绑定状态、偏好、屏蔽列表）与 Telegram 流程
 - 关注 / 粉丝两份列表，以及公开用户页上的关注 / 取关按钮
-- 等级、鸡腿与星辰余额，鸡腿流水与星辰流水两条真实分页流水，签到 / 签到榜与社区工具
+- 等级进度与今日四项额度、鸡腿与星辰余额，鸡腿流水与星辰流水两条真实分页流水，签到 / 签到榜与社区工具
 - WorkManager 通知轮询、Android 通知渠道与免打扰设置
 - f1 关于与社区页；f2 隐私协议原生长文页，WebView 仅作失败降级
 - 图片查看、缩放、保存与分享
 
-管理记录和今日额度依赖尚未确认的站点数据源，界面会明确提示并提供网页降级，
+管理记录依赖尚未确认的站点数据源，界面会明确提示并提供网页降级，
 不会伪装为空数据。
 修改邮箱、绑定 Telegram、星辰转账、邀请码购买没有原生闭环，会带用户到真实站点完成。
 逐项清单见 [docs/implementation-status.md](docs/implementation-status.md)。
@@ -117,7 +117,8 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 - [x] WorkManager 通知轮询与系统渠道
 - [x] f1 关于与社区、f2 隐私协议原生阅读
 - [x] 关注 / 粉丝列表与关注 / 取关（`/api/fans/{follow,fans,add,del}`）
-- [ ] 接入管理记录与今日额度
+- [x] 等级进度与今日四项额度（`/api/progress/today`）
+- [ ] 接入管理记录
 - [ ] 星辰转账原生化（站点有 `payment-prepare` / `send`，目前仍转网页）
 
 ## 架构

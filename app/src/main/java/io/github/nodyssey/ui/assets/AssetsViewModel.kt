@@ -30,8 +30,11 @@ data class AssetsUiState(
     val level: Int? = null,
     val chickenCount: Int? = null,
     val starCount: Int? = null,
-    /** Null on every level but Lv 1, whose 400-chicken threshold is the only published one. */
+    /** Where the current level began — the level bar's zero, which is not the account's. */
+    val levelFloorChicken: Int? = null,
     val nextLevelChicken: Int? = null,
+    /** The level the bar is drawn for; differs from [level] only above Lv5, where the site clamps. */
+    val levelBarRank: Int? = null,
     val postQuota: DailyQuota = DailyQuota(null, null),
     val commentQuota: DailyQuota = DailyQuota(null, null),
     val attendanceQuota: DailyQuota = DailyQuota(null, null),
@@ -58,11 +61,19 @@ data class AssetsUiState(
             return (target - current).takeIf { it > 0 }
         }
 
+    /**
+     * How far through the *current* level the count sits — not how far through all of levelling.
+     *
+     * A Lv2 account with 410 chicken legs is 2% into 400 → 900, and drawing it against 0 → 900 would
+     * show 46%: a bar that looks nearly half done when the level just started.
+     */
     val levelProgress: Float?
         get() {
-            val target = nextLevelChicken?.takeIf { it > 0 } ?: return null
+            val target = nextLevelChicken ?: return null
+            val floor = levelFloorChicken ?: return null
+            val span = (target - floor).takeIf { it > 0 } ?: return null
             val current = chickenCount ?: return null
-            return (current.toFloat() / target).coerceIn(0f, 1f)
+            return ((current - floor).toFloat() / span).coerceIn(0f, 1f)
         }
 }
 
@@ -70,8 +81,8 @@ data class AssetsUiState(
  * State holder for 账户与成长.
  *
  * Levelling on NodeSeek is chicken-based — the progress bar *is* the chicken count — so this screen has
- * no separate growth number to fetch. What it cannot get is today's four allowances: they live on a
- * client-rendered page, and the UiState carries them as unknown rather than as zero.
+ * no separate growth number to fetch. Today's four allowances do come from the site, but a failed
+ * allowance lookup is not a failed screen: the UiState carries those as unknown rather than as zero.
  */
 class AssetsViewModel(
     private val repository: AssetsRepository,
@@ -178,7 +189,9 @@ class AssetsViewModel(
             level = snapshot.level,
             chickenCount = snapshot.chickenCount,
             starCount = snapshot.starCount,
+            levelFloorChicken = snapshot.levelFloorChicken,
             nextLevelChicken = snapshot.nextLevelChicken,
+            levelBarRank = snapshot.levelBarRank,
             postQuota = snapshot.postQuota,
             commentQuota = snapshot.commentQuota,
             attendanceQuota = snapshot.attendanceQuota,

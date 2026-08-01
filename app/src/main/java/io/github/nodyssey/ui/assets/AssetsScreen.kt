@@ -306,8 +306,8 @@ fun InviteConfirmDialog(
 /**
  * The level card, whose bar is the chicken count itself.
  *
- * Only Lv 1 → Lv 2 has a published threshold (400). Above that the card shows the count and says the
- * threshold is not public, rather than drawing a bar against a number we made up.
+ * The bar spans the current level rather than starting at zero — Lv2 runs 400 → 900 — because that
+ * is the span the site's own `/progress` bar draws. See `NodeSeekSite.levelChickenSpan`.
  */
 @Composable
 private fun LevelCard(state: AssetsUiState) {
@@ -335,7 +335,11 @@ private fun LevelCard(state: AssetsUiState) {
         Text(
             text =
             state.chickenToNextLevel?.let { remaining ->
-                stringResource(R.string.assets_level_remaining, remaining, (state.level ?: 1) + 1)
+                stringResource(
+                    R.string.assets_level_remaining,
+                    remaining,
+                    (state.levelBarRank ?: state.level ?: 1) + 1,
+                )
             } ?: stringResource(R.string.assets_level_no_threshold),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -569,7 +573,9 @@ private val previewState =
         level = 1,
         chickenCount = 344,
         starCount = 4,
+        levelFloorChicken = 100,
         nextLevelChicken = 400,
+        levelBarRank = 1,
         postQuota = DailyQuota(0, 20),
         commentQuota = DailyQuota(3, 20),
         attendanceQuota = DailyQuota(7, 7),
@@ -584,7 +590,7 @@ private fun AssetsPreview() {
     NodysseyTheme { PreviewScreen(previewState) }
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8d 额度未接入 · dark")
+@Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8d 额度读不到 · dark")
 @Composable
 private fun AssetsUnknownQuotaPreview() {
     NodysseyTheme(darkTheme = true) {

@@ -573,8 +573,8 @@
     <string name="assets_title">账户与成长</string>
     <string name="assets_level">Lv %1$d</string>
     <string name="assets_level_progress">鸡腿 %1$d / %2$d</string>
-    <string name="assets_level_remaining">还差 %1$d 鸡腿到 Lv %2$d · 等级进度即鸡腿总数</string>
-    <string name="assets_level_no_threshold">站点只公开了 Lv 1 → Lv 2 的门槛（400 鸡腿）</string>
+    <string name="assets_level_remaining">还差 %1$d 鸡腿到 Lv %2$d</string>
+    <string name="assets_level_no_threshold">等级进度即鸡腿总数</string>
     <string name="assets_daily_title">今日额度</string>
     <string name="assets_quota_post">今日发帖可得鸡腿</string>
     <string name="assets_quota_comment">今日评论可得鸡腿</string>
@@ -583,7 +583,7 @@
     <string name="assets_quota_value">%1$d / %2$d</string>
     <string name="assets_quota_value_unknown">— / %1$d</string>
     <string name="assets_chicken_count">鸡腿 %1$d</string>
-    <string name="assets_quota_hint">今日额度来自 /progress，那一页是网页端渲染的，App 暂时只能显示上限。</string>
+    <string name="assets_quota_hint">今日额度这次没读到，只剩上限是准的。</string>
     <string name="assets_chicken">鸡腿</string>
     <string name="assets_stars">星辰</string>
     <string name="assets_ledger">流水</string>

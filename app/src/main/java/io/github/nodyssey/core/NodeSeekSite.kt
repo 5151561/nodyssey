@@ -174,8 +174,57 @@ object NodeSeekSite {
      */
     fun reactionApiPath(action: String): String = "/api/statistics/$action"
 
-    /** `{maxFreeLike, freeLikeUsed}` — how many 加鸡腿 are still free today. */
-    const val FREE_LIKE_QUOTA_API_PATH = "/api/progress/today?scope=freelike"
+    /**
+     * Today's four allowances, all of them, in one request.
+     *
+     * Verified against the live site on 2026-08-02 by reading `/static/js/progress.*.js` — the bundle
+     * behind `/progress`, which is a client-rendered page and was long assumed to have no endpoint
+     * behind it. It has this one, and **unscoped it answers with every field at once**:
+     * `{success, postBonusCount, maxPostBonusCount, commentBonusCount, maxCommentBonusCount,
+     * freeLikeUsed, maxFreeLike}`.
+     *
+     * Units differ between the two bonus pairs, and that is the trap: the site multiplies the *post*
+     * pair by five to draw its bar (a post pays five chicken legs, `maxPostBonusCount` is 4 → the
+     * `0 / 20` on the design), while the comment pair is already counted in chicken legs. Rendering
+     * both raw would show today's posting allowance as `0 / 4`.
+     *
+     * The fourth allowance — 今日签到 — is not here; the same page reads it from
+     * [io.github.nodyssey.core.net.NodeSeekJsonClient.attendanceBoardPath]'s `record`.
+     */
+    const val PROGRESS_TODAY_API_PATH = "/api/progress/today"
+
+    /**
+     * The 免费投喂 half of [PROGRESS_TODAY_API_PATH], `{maxFreeLike, freeLikeUsed}`.
+     *
+     * Kept scoped for the reaction path: a reader about to spend a chicken leg is waiting on this
+     * lookup, and there is no reason to make them wait for four allowances to answer one question.
+     */
+    const val FREE_LIKE_QUOTA_API_PATH = "$PROGRESS_TODAY_API_PATH?scope=freelike"
+
+    /**
+     * The chicken-leg span of one level: `[rank² × 100, (rank+1)² × 100)`.
+     *
+     * The same `/progress` bundle draws its level bar from this, and it is a published formula rather
+     * than a guessed curve — the 400 that used to be treated as the only known threshold is just this
+     * at `rank = 1`. Lv2 runs 400–900, Lv3 900–1600, Lv4 1600–2500.
+     *
+     * `rank` is clamped at 5 exactly as the site clamps it (`Math.min(user.rank, 5)`), which means a
+     * higher-ranked account keeps being drawn against the Lv5 → Lv6 span with a full bar. That is the
+     * site's own behaviour and not an extrapolation; nothing is published beyond it.
+     */
+    fun levelChickenSpan(rank: Int): LevelSpan {
+        val clamped = rank.coerceIn(1, LEVEL_BAR_MAX_RANK)
+        return LevelSpan(
+            barRank = clamped,
+            floor = clamped * clamped * LEVEL_CHICKEN_UNIT,
+            next = (clamped + 1) * (clamped + 1) * LEVEL_CHICKEN_UNIT,
+        )
+    }
+
+    private const val LEVEL_CHICKEN_UNIT = 100
+
+    /** `Math.min(user.rank, 5)` on the site: the bar stops advancing past Lv5. */
+    private const val LEVEL_BAR_MAX_RANK = 5
 
     /**
      * Post search. The same server-rendered list the boards serve, at a different route.
@@ -314,3 +363,15 @@ object NodeSeekSite {
     private fun String.urlEncode(): String =
         URLEncoder.encode(this, StandardCharsets.UTF_8.toString()).replace("+", "%20")
 }
+
+/**
+ * One level's chicken-leg span; see [NodeSeekSite.levelChickenSpan].
+ *
+ * [barRank] is the level the bar is drawn for, which is [NodeSeekSite.levelChickenSpan]'s clamped
+ * rank rather than the account's — they differ only above Lv5, where the site stops advancing.
+ */
+data class LevelSpan(
+    val barRank: Int,
+    val floor: Int,
+    val next: Int,
+)

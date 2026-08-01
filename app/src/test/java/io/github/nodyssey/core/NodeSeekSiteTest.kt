@@ -37,4 +37,25 @@ class NodeSeekSiteTest {
         assertFalse(NodeSeekSite.isExternalWebUrl("file:///data/data/io.github.nodyssey/file"))
         assertFalse(NodeSeekSite.isExternalWebUrl("content://example.provider/item"))
     }
+
+    /**
+     * `rank² × 100`, read off the site's own `/progress` bundle — the 400 that used to be treated as
+     * the only published threshold is just this at Lv1.
+     */
+    @Test
+    fun `level spans follow the site's published squares`() {
+        assertEquals(LevelSpan(barRank = 1, floor = 100, next = 400), NodeSeekSite.levelChickenSpan(1))
+        assertEquals(LevelSpan(barRank = 2, floor = 400, next = 900), NodeSeekSite.levelChickenSpan(2))
+        assertEquals(LevelSpan(barRank = 3, floor = 900, next = 1600), NodeSeekSite.levelChickenSpan(3))
+        assertEquals(LevelSpan(barRank = 4, floor = 1600, next = 2500), NodeSeekSite.levelChickenSpan(4))
+    }
+
+    /** The site clamps its bar at Lv5 (`Math.min(user.rank, 5)`); nothing beyond it is published. */
+    @Test
+    fun `level spans stop advancing past Lv5`() {
+        val fifth = LevelSpan(barRank = 5, floor = 2500, next = 3600)
+        assertEquals(fifth, NodeSeekSite.levelChickenSpan(5))
+        assertEquals(fifth, NodeSeekSite.levelChickenSpan(6))
+        assertEquals(fifth, NodeSeekSite.levelChickenSpan(99))
+    }
 }

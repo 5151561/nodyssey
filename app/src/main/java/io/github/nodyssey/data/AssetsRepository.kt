@@ -8,6 +8,8 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.core.runCatchingExceptCancellation
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,9 +23,9 @@ import java.time.ZoneId
 /**
  * A daily allowance, as `/progress` shows it: how much of today's cap has been earned.
  *
- * Both halves are nullable because the page that carries them renders client-side. A quota we cannot
- * read has to be distinguishable from a quota that is genuinely zero — Lv1's free feeding allowance
- * really is `0 / 0`, and showing that as "unknown" would be as wrong as the reverse.
+ * Both halves stay nullable now that the numbers are real, because a lookup that fails still has to
+ * be distinguishable from a quota that is genuinely zero — an allowance spent down to `0 / 0` is a
+ * fact, and showing it as "unknown" would be as wrong as the reverse.
  */
 data class DailyQuota(
     val used: Int?,
@@ -35,15 +37,19 @@ data class DailyQuota(
 /**
  * Everything the 账户与成长 screen needs.
  *
- * Levelling is chicken-based: the progress bar *is* the chicken count, and Lv1 becomes Lv2 at 400.
- * Only that one threshold is published, so [nextLevelChicken] is null on every other level rather
- * than extrapolated from a curve nobody has stated.
+ * Levelling is chicken-based, and the thresholds are a published formula rather than the single
+ * 400 they were once taken for — see [NodeSeekSite.levelChickenSpan]. The bar runs
+ * [levelFloorChicken] → [nextLevelChicken], both null only when the account's level is unknown.
  */
 data class GrowthSnapshot(
     val level: Int?,
     val chickenCount: Int?,
     val starCount: Int?,
+    /** Where the current level began; the bar's zero, not the account's. */
+    val levelFloorChicken: Int?,
     val nextLevelChicken: Int?,
+    /** The level the bar is drawn for — the account's, except above Lv5 where the site clamps. */
+    val levelBarRank: Int?,
     val postQuota: DailyQuota,
     val commentQuota: DailyQuota,
     val attendanceQuota: DailyQuota,
@@ -109,20 +115,108 @@ class NetworkAssetsRepository(
 
     override fun observeAttendanceStatus(): Flow<AttendanceStatus?> = attendanceStatus.asStateFlow()
 
-    override suspend fun growth(): GrowthSnapshot {
+    /**
+     * The account, plus today's four allowances.
+     *
+     * The three that `/api/progress/today` carries are fetched together with the profile, and their
+     * failure is swallowed on purpose: an allowance we could not read is worth strictly less than the
+     * balance and level next to it, so it degrades to "unknown" instead of failing the whole screen.
+     */
+    override suspend fun growth(): GrowthSnapshot = coroutineScope {
+        val progressAsync = async { runCatchingExceptCancellation { progressToday() }.getOrNull() }
+        val attendanceAsync = async { runCatchingExceptCancellation { attendanceQuotaToday() }.getOrNull() }
         val profile = profileRepository.profile()
-        return GrowthSnapshot(
+        val progress = progressAsync.await()
+        val span = profile.rank?.let(NodeSeekSite::levelChickenSpan)
+        GrowthSnapshot(
             level = profile.rank,
             chickenCount = profile.chickenCount,
             starCount = profile.starCount,
-            nextLevelChicken = LEVEL_TWO_CHICKEN.takeIf { profile.rank == 1 },
-            // `/progress` is a client-rendered page with no endpoint behind it, so today's four
-            // allowances are unknown rather than zero. The card renders them as such.
-            postQuota = DailyQuota(null, POST_QUOTA_TOTAL),
-            commentQuota = DailyQuota(null, COMMENT_QUOTA_TOTAL),
-            attendanceQuota = DailyQuota(null, null),
-            feedingQuota = DailyQuota(null, null),
+            levelFloorChicken = span?.floor,
+            nextLevelChicken = span?.next,
+            levelBarRank = span?.barRank,
+            // Posts are counted in posts on the wire and in chicken legs on screen; comments are
+            // already chicken legs. See [NodeSeekSite.PROGRESS_TODAY_API_PATH].
+            postQuota =
+            DailyQuota(
+                used = progress?.postCount?.let { it * CHICKEN_PER_POST },
+                total = progress?.postCap?.let { it * CHICKEN_PER_POST } ?: POST_QUOTA_TOTAL,
+            ),
+            commentQuota =
+            DailyQuota(
+                used = progress?.commentCount,
+                total = progress?.commentCap ?: COMMENT_QUOTA_TOTAL,
+            ),
+            attendanceQuota = attendanceAsync.await() ?: DailyQuota(null, null),
+            feedingQuota = DailyQuota(used = progress?.freeLikeUsed, total = progress?.freeLikeCap),
         )
+    }
+
+    /** The three allowances the site publishes as one payload; see [NodeSeekSite.PROGRESS_TODAY_API_PATH]. */
+    private suspend fun progressToday(): ProgressToday {
+        val body =
+            jsonSource.getJson(
+                path = NodeSeekSite.PROGRESS_TODAY_API_PATH,
+                referer = NodeSeekSite.BASE_URL + "/progress",
+            )
+        return withContext(dispatchers.default) {
+            val root =
+                runCatching { json.parseToJsonElement(body) as? JsonObject }.getOrNull()
+                    ?: throw NodeSeekException(NodeSeekError.Unparsable)
+            if (root.bool("success") == false) throw NodeSeekException(NodeSeekError.Unparsable)
+            ProgressToday(
+                postCount = root.int("postBonusCount"),
+                postCap = root.int("maxPostBonusCount"),
+                commentCount = root.int("commentBonusCount"),
+                commentCap = root.int("maxCommentBonusCount"),
+                freeLikeUsed = root.int("freeLikeUsed"),
+                freeLikeCap = root.int("maxFreeLike"),
+            )
+        }
+    }
+
+    /**
+     * Today's sign-in allowance, which the site draws as a bar that is either empty or full.
+     *
+     * There is no cap to fill towards: signing in pays a variable roll, so the site fills the bar to
+     * whatever was earned and shows a nominal 20 while unsigned. That is reproduced here rather than
+     * invented — `gain / gain` after signing in, `0 / 20` before.
+     *
+     * The record is also the cheap answer to "did I sign in today" — one request against the ten
+     * [attendanceGainToday] may spend — so the shared attendance state is updated from it in passing.
+     * A silent record is not taken as proof of an unsigned day, though: only `record: null` on an
+     * unsigned account has been seen live, so the ledger scan still gets to disagree.
+     */
+    private suspend fun attendanceQuotaToday(): DailyQuota {
+        val gain = attendanceRecordToday() ?: attendanceGainToday()
+        profileRepository.selfUid?.let { uid ->
+            attendanceStatus.value =
+                AttendanceStatus(uid = uid, hasSignedIn = gain != null, gain = gain)
+        }
+        return if (gain != null) {
+            DailyQuota(used = gain, total = gain)
+        } else {
+            DailyQuota(used = 0, total = ATTENDANCE_QUOTA_NOMINAL)
+        }
+    }
+
+    /**
+     * Today's own sign-in, from the board payload's `record` — the account's row rather than the page
+     * of rows, which is what `/progress` reads and why the board is requested at all here.
+     *
+     * `record: null` is the site's unsigned answer (verified live on 2026-08-02, against an account
+     * that had not signed in).
+     */
+    private suspend fun attendanceRecordToday(): Int? {
+        val body =
+            jsonSource.getJson(
+                path = NodeSeekJsonClient.attendanceBoardPath(1),
+                referer = NodeSeekSite.BASE_URL + "/board",
+            )
+        return withContext(dispatchers.default) {
+            val root = runCatching { json.parseToJsonElement(body) as? JsonObject }.getOrNull()
+            (root?.get("record") as? JsonObject)?.int("gain", "amount")
+        }
     }
 
     override suspend fun signInForToday(mode: AttendanceMode): AttendanceResult {
@@ -229,10 +323,25 @@ class NetworkAssetsRepository(
         }
     }
 
+    /** `/api/progress/today` verbatim, before the post pair is converted to chicken legs. */
+    private data class ProgressToday(
+        val postCount: Int?,
+        val postCap: Int?,
+        val commentCount: Int?,
+        val commentCap: Int?,
+        val freeLikeUsed: Int?,
+        val freeLikeCap: Int?,
+    )
+
     private companion object {
-        const val LEVEL_TWO_CHICKEN = 400
+        const val CHICKEN_PER_POST = 5
+
+        /** Only the fallback for a lookup that failed; the live caps come from the payload. */
         const val POST_QUOTA_TOTAL = 20
         const val COMMENT_QUOTA_TOTAL = 20
+
+        /** What the site's own bar shows for an unsigned day — a placeholder, not a real cap. */
+        const val ATTENDANCE_QUOTA_NOMINAL = 20
         const val MAX_ATTENDANCE_LEDGER_PAGES = 10
         const val ATTENDANCE_REASON = "签到收益"
         const val CHICKEN_REASON = "鸡腿"
