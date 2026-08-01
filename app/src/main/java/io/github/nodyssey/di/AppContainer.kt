@@ -153,7 +153,7 @@ class DefaultAppContainer(
     /** The offline-first SSOT. Everything below reads from it; only the data sources write to it. */
     private val database by lazy { NodeSeekDatabase.create(appContext) }
 
-    private val remotePosts by lazy { NetworkPostDataSource(htmlClient, dispatchers) }
+    private val remotePosts by lazy { NetworkPostDataSource(htmlClient, dispatchers, clock) }
 
     override val postRepository: PostRepository by lazy {
         OfflineFirstPostRepository(database, remotePosts, clock)
@@ -190,7 +190,7 @@ class DefaultAppContainer(
     }
 
     override val searchRepository: SearchRepository by lazy {
-        NetworkSearchRepository(htmlClient, jsonClient, dispatchers)
+        NetworkSearchRepository(jsonClient, dispatchers)
     }
 
     override val postComposerRepository: PostComposerRepository by lazy {

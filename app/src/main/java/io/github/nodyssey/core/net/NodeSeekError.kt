@@ -14,6 +14,16 @@ sealed interface NodeSeekError {
     /** The board or post requires a signed-in account. */
     data object LoginRequired : NodeSeekError
 
+    /**
+     * NodeSeek's own throttle, not Cloudflare's.
+     *
+     * `/search` answers a second request inside two seconds with **HTTP 429** and the body
+     * `{"success":false,"message":"每隔2秒可以操作一次"}` (verified live 2026-08-01). Kept apart from
+     * [Http] because the recovery is "wait a moment", not "retry now" — and apart from [Cloudflare]
+     * because opening a WebView solves nothing.
+     */
+    data object RateLimited : NodeSeekError
+
     /** An HTTP status we cannot use. */
     data class Http(val statusCode: Int) : NodeSeekError
 

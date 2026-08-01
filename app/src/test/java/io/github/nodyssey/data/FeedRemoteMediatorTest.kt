@@ -46,12 +46,9 @@ class FeedRemoteMediatorTest {
     private fun mediator(slug: String? = null) =
         FeedRemoteMediator(
             feedKey = feedKeyFor(slug),
-            categorySlug = slug,
-            sort = FeedSort.LAST_REPLY,
             database = database,
-            remote = remote,
             clock = clock,
-        )
+        ) { page -> remote.loadList(slug, page, FeedSort.LAST_REPLY) }
 
     private fun emptyPagingState() =
         PagingState<Int, FeedPostRow>(

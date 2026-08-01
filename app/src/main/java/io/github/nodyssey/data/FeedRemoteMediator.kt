@@ -12,6 +12,7 @@ import io.github.nodyssey.data.local.FeedRemoteKeyEntity
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.model.FeedSort
+import io.github.nodyssey.model.PostListPage
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -28,11 +29,17 @@ import kotlinx.coroutines.CancellationException
 @OptIn(ExperimentalPagingApi::class)
 class FeedRemoteMediator(
     private val feedKey: String,
-    private val categorySlug: String?,
-    private val sort: FeedSort,
     private val database: NodeSeekDatabase,
-    private val remote: PostRemoteDataSource,
     private val clock: AppClock,
+    /**
+     * How one page of this feed is fetched.
+     *
+     * A lambda rather than a `categorySlug` + `sort` pair because search is the same feed read from
+     * a different route: `/search?q=…` serves the same markup, pages the same way and must obey the
+     * same "one request per page, then write it to Room" rule. Everything below is about the
+     * database and applies unchanged to both.
+     */
+    private val loadPage: suspend (page: Int) -> PostListPage,
 ) : RemoteMediator<Int, FeedPostRow>() {
     /**
      * Decides whether opening the screen hits the network at all.
@@ -78,7 +85,7 @@ class FeedRemoteMediator(
             }
 
         return try {
-            val result = remote.loadList(categorySlug, page, sort)
+            val result = loadPage(page)
             val now = clock.nowMillis()
 
             database.withTransaction {
@@ -160,3 +167,31 @@ internal fun feedKeyFor(
 
 /** Empty string is safe as a key because NodeSeek slugs are never blank. */
 internal const val FRONT_PAGE_FEED_KEY = ""
+
+/**
+ * The key under which one search's results are stored.
+ *
+ * Prefixed so [SEARCH_FEED_KEY_PREFIX] can sweep them: a board feed is one of fifteen and worth
+ * keeping, while a search feed is one per query typed and would otherwise accumulate forever.
+ * Everything the query means is in the key — text, board, order — so changing any of them is a
+ * different feed rather than an append onto the previous answer.
+ */
+internal fun searchFeedKeyFor(
+    query: String,
+    categorySlug: String?,
+    sort: FeedSort,
+): String =
+    SEARCH_FEED_KEY_PREFIX +
+        listOf(
+            if (sort == FeedSort.POST_TIME) "postTime" else "",
+            categorySlug.orEmpty(),
+            query.trim(),
+        ).joinToString("|")
+
+/**
+ * `:` cannot appear in a board slug, so no board feed key can begin with this.
+ *
+ * Not `"search|"`: board keys are `slug` or `slug|postTime`, so a board actually called `search`
+ * would produce `search|postTime` and get swept along with the searches.
+ */
+internal const val SEARCH_FEED_KEY_PREFIX = "search:"

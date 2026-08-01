@@ -1,0 +1,24 @@
+<!--
+  /search?q=android&page=99 as the live site served it on 2026-08-01.
+
+  Note the pager: zero results, yet `pager-next` is still an <a href> pointing at page 2, because
+  the pager renders as though the current page were unknown. Trusting it is what turned the end of
+  a search into an endless walk.
+-->
+<!doctype html>
+<html>
+<body>
+<section id="nsk-frame">
+  <div id="nsk-body">
+    <div role="navigation" aria-label="pagination">
+      <a class="pager-pos" href="/search?q=android&amp;page=1">1</a>
+      <a class="pager-pos" href="/search?q=android&amp;page=2">2</a>
+      <a class="pager-pos" href="/search?q=android&amp;page=3">3</a>
+      <a class="pager-pos" href="/search?q=android&amp;page=4">4</a>
+      <a class="pager-next" href="/search?q=android&amp;page=2" rel="next"><div class="triangle-right"></div></a>
+    </div>
+    <div>未找到有效帖子，请更换搜索词后重试</div>
+  </div>
+</section>
+</body>
+</html>

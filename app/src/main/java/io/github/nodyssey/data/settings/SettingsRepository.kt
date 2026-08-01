@@ -175,12 +175,13 @@ class SettingsRepository(
     /** Local mirror of the site's Remote 启用节日主题 switch; the sync authority is the account. */
     suspend fun setHolidayTheme(enabled: Boolean) = edit { it[KEY_HOLIDAY_THEME] = enabled }
 
-    suspend fun recordRecentBoards(boards: Set<String>) {
-        if (boards.isEmpty()) return
+    /** Most-recently-scoped board, kept at the top of the range sheet. Null — the whole site — is not a board. */
+    suspend fun recordRecentBoard(slug: String?) {
+        if (slug.isNullOrBlank()) return
         dataStore.edit { preferences ->
             val recent = decodeValues(preferences[KEY_RECENT_BOARDS])
             preferences[KEY_RECENT_BOARDS] =
-                encodeValues(boards.toList() + recent.filterNot(boards::contains), MAX_RECENT_BOARDS)
+                encodeValues(listOf(slug) + recent.filterNot { it == slug }, MAX_RECENT_BOARDS)
         }
     }
 
@@ -323,6 +324,13 @@ fun isTimedNightHour(hourOfDay: Int): Boolean =
 const val TIMED_NIGHT_START_HOUR = 19
 const val TIMED_NIGHT_END_HOUR = 7
 
+/**
+ * The stored field stays a list even though the domain now holds one board.
+ *
+ * Records written by the multi-select build are already on disk; keeping the shape means they still
+ * decode, taking their first board as the scope, rather than every user losing their history to a
+ * silent parse failure.
+ */
 @Serializable
 private data class StoredSearchHistory(
     val query: String,
@@ -338,8 +346,12 @@ private data class StoredSearchHistory(
                 "LAST_REPLY" -> SearchSort.RELEVANCE
                 else -> runCatching { SearchSort.valueOf(sort) }.getOrDefault(SearchSort.RELEVANCE)
             }
-        return SearchHistoryEntry(query.trim(), resolvedTarget, categorySlugs.toSet(), resolvedSort)
-            .takeIf { it.query.isNotEmpty() }
+        return SearchHistoryEntry(
+            query = query.trim(),
+            target = resolvedTarget,
+            categorySlug = categorySlugs.sorted().firstOrNull()?.ifBlank { null },
+            sort = resolvedSort,
+        ).takeIf { it.query.isNotEmpty() }
     }
 }
 
@@ -347,6 +359,6 @@ private fun SearchHistoryEntry.toStored() =
     StoredSearchHistory(
         query = query,
         target = target.name,
-        categorySlugs = categorySlugs.sorted(),
+        categorySlugs = listOfNotNull(categorySlug),
         sort = sort.name,
     )

@@ -49,6 +49,7 @@ private fun NodeSeekError.messageRes(): Int =
         NodeSeekError.Network -> R.string.status_network_title
         NodeSeekError.Unparsable -> R.string.status_unparsable_title
         NodeSeekError.NotWired -> R.string.status_not_wired_title
+        NodeSeekError.RateLimited -> R.string.status_rate_limited_title
         is NodeSeekError.Http, NodeSeekError.Unknown -> R.string.status_unknown_title
     }
 

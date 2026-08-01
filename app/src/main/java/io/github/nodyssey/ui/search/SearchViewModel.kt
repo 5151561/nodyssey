@@ -8,21 +8,20 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import androidx.paging.PagingSource
-import androidx.paging.PagingState
 import androidx.paging.cachedIn
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.FeedPost
+import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.UserSearchResult
+import io.github.nodyssey.data.emptyLoadedPagingData
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.SearchHistoryEntry
 import io.github.nodyssey.model.SearchSort
 import io.github.nodyssey.model.SearchTarget
@@ -30,6 +29,7 @@ import io.github.nodyssey.ui.postlist.toNodeSeekError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModel(
+    private val postRepository: PostRepository,
     private val searchRepository: SearchRepository,
     private val categoryRepository: CategoryRepository,
     private val settings: SettingsRepository,
@@ -57,21 +58,34 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
+    /**
+     * Post results, straight off the forum's own pipeline.
+     *
+     * There is no search-specific pager, paging source or cache here any more. A request describes
+     * a feed; [PostRepository.searchFeed] turns it into the same Room-backed, mediator-filled pager
+     * a board gets, which is what makes one page cost one request, returning to the screen cost
+     * none, and the results carry read state.
+     *
+     * A [MutableStateFlow] rather than a channel because it conflates: assigning a request equal to
+     * the current one emits nothing, so re-submitting the same search keeps the pager it already has
+     * instead of rebuilding it and spending a refresh proving the answer has not changed.
+     */
     private val postRequest = MutableStateFlow<PostSearchRequest?>(null)
-    val postResults: kotlinx.coroutines.flow.Flow<PagingData<FeedPost>> =
+    val postResults: Flow<PagingData<FeedPost>> =
         postRequest
             .flatMapLatest { request ->
                 if (request == null) {
-                    flowOf(PagingData.empty())
+                    flowOf(emptyLoadedPagingData())
                 } else {
-                    Pager(PagingConfig(pageSize = POST_PAGE_SIZE, initialLoadSize = POST_PAGE_SIZE)) {
-                        SearchPostsPagingSource(searchRepository, request)
-                    }.flow
+                    postRepository.searchFeed(
+                        query = request.query,
+                        categorySlug = request.board,
+                        sort = request.sort.toFeedSort(),
+                    )
                 }
             }.cachedIn(viewModelScope)
 
     private var userJob: Job? = null
-    private var postRequestGeneration = 0
 
     init {
         observeQuery()
@@ -114,7 +128,10 @@ class SearchViewModel(
         val state = _uiState.value
         val submitted = state.submittedQuery ?: return
         if (target == SearchTarget.POSTS) {
-            if (postRequest.value?.query != submitted) startPostSearch(submitted)
+            // Unconditional now that the request conflates: asking for the feed already on screen
+            // emits nothing, and the old "only if the query changed" guard missed a board or order
+            // picked while the users tab was in front.
+            startPostSearch(submitted)
         } else if (state.userLoadState == SearchLoadState.Idle) {
             startUserSearch(submitted)
         }
@@ -131,7 +148,7 @@ class SearchViewModel(
             SearchHistoryEntry(
                 query = typed,
                 target = state.target,
-                categorySlugs = if (state.target == SearchTarget.POSTS) state.selectedBoards else emptySet(),
+                categorySlug = if (state.target == SearchTarget.POSTS) state.selectedBoard else null,
                 sort = state.sort,
             ),
         )
@@ -142,7 +159,7 @@ class SearchViewModel(
         _uiState.update {
             it.copy(
                 target = entry.target,
-                selectedBoards = entry.categorySlugs,
+                selectedBoard = entry.categorySlug,
                 sort = entry.sort,
             )
         }
@@ -158,9 +175,11 @@ class SearchViewModel(
         viewModelScope.launch { settings.clearSearchHistory(target) }
     }
 
-    fun setBoards(boards: Set<String>) {
-        _uiState.update { it.copy(selectedBoards = boards) }
-        viewModelScope.launch { settings.recordRecentBoards(boards) }
+    /** Null scopes the search to the whole site, which is what the site does without a `category`. */
+    fun selectBoard(slug: String?) {
+        if (_uiState.value.selectedBoard == slug) return
+        _uiState.update { it.copy(selectedBoard = slug) }
+        viewModelScope.launch { settings.recordRecentBoard(slug) }
         rerunSubmittedSearch()
     }
 
@@ -175,13 +194,15 @@ class SearchViewModel(
         startUserSearch(state.submittedQuery ?: query.text.toString())
     }
 
-    fun challengeUrl(): String =
-        NodeSeekSite.BASE_URL +
+    fun challengeUrl(): String {
+        val state = _uiState.value
+        return NodeSeekSite.BASE_URL +
             NodeSeekSite.postSearchPath(
-                query = _uiState.value.submittedQuery ?: query.text.toString(),
-                categorySlug = _uiState.value.selectedBoards.singleOrNull(),
-                sort = if (_uiState.value.sort == SearchSort.TIME) io.github.nodyssey.model.FeedSort.POST_TIME else io.github.nodyssey.model.FeedSort.LAST_REPLY,
+                query = state.submittedQuery ?: query.text.toString(),
+                categorySlug = state.selectedBoard,
+                sort = state.sort.toFeedSort(),
             )
+    }
 
     private fun rerunSubmittedSearch() {
         val state = _uiState.value
@@ -192,7 +213,7 @@ class SearchViewModel(
             SearchHistoryEntry(
                 query = state.submittedQuery,
                 target = SearchTarget.POSTS,
-                categorySlugs = state.selectedBoards,
+                categorySlug = state.selectedBoard,
                 sort = state.sort,
             ),
         )
@@ -207,7 +228,6 @@ class SearchViewModel(
         // The box is trimmed to what was actually searched, the way it used to be when the UiState
         // held the text — otherwise a stray space stays visible next to results that ignored it.
         if (this.query.text.toString() != normalized) this.query.setTextAndPlaceCursorAtEnd(normalized)
-        postRequest.value = null
         userJob?.cancel()
         _uiState.update {
             it.copy(
@@ -222,19 +242,21 @@ class SearchViewModel(
         if (_uiState.value.target == SearchTarget.POSTS) {
             startPostSearch(normalized)
         } else {
+            postRequest.value = null
             startUserSearch(normalized)
         }
     }
 
+    /**
+     * Re-submitting the same search does *not* clear the request first.
+     *
+     * Dropping to null and back used to be how the results were reset, but it tears down the pager
+     * and rebuilds it, and the rebuild re-requests page one. Emitting the request as-is lets
+     * [distinctUntilChanged] recognise it, keep the pager, and serve the cached page.
+     */
     private fun startPostSearch(query: String) {
         val state = _uiState.value
-        postRequest.value =
-            PostSearchRequest(
-                query = query,
-                boards = state.selectedBoards,
-                sort = state.sort,
-                generation = ++postRequestGeneration,
-            )
+        postRequest.value = PostSearchRequest(query = query, board = state.selectedBoard, sort = state.sort)
     }
 
     private fun startUserSearch(query: String) {
@@ -259,13 +281,11 @@ class SearchViewModel(
     }
 
     companion object {
-        internal const val MAX_PAGES_PER_LOAD = 3
-        private const val POST_PAGE_SIZE = 20
-
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
                     SearchViewModel(
+                        postRepository = container.postRepository,
                         searchRepository = container.searchRepository,
                         categoryRepository = container.categoryRepository,
                         settings = container.settingsRepository,
@@ -274,6 +294,10 @@ class SearchViewModel(
             }
     }
 }
+
+/** The site expresses both orders with the one `sortBy` parameter the boards use. */
+internal fun SearchSort.toFeedSort(): FeedSort =
+    if (this == SearchSort.TIME) FeedSort.POST_TIME else FeedSort.LAST_REPLY
 
 sealed interface SearchLoadState {
     data object Idle : SearchLoadState
@@ -292,64 +316,16 @@ data class SearchUiState(
     val searchHistory: List<SearchHistoryEntry> = emptyList(),
     val recentBoards: List<String> = emptyList(),
     val boards: List<Board> = emptyList(),
-    val selectedBoards: Set<String> = emptySet(),
+    /** One board, or null for the whole site — the only two scopes `/search` can express. */
+    val selectedBoard: String? = null,
     val sort: SearchSort = SearchSort.RELEVANCE,
     val userResults: List<UserSearchResult> = emptyList(),
     val userLoadState: SearchLoadState = SearchLoadState.Idle,
 )
 
+/** Everything that names one search feed. Equality is what decides whether the pager is rebuilt. */
 internal data class PostSearchRequest(
     val query: String,
-    val boards: Set<String>,
+    val board: String?,
     val sort: SearchSort,
-    val generation: Int,
 )
-
-internal class SearchPostsPagingSource(
-    private val repository: SearchRepository,
-    private val request: PostSearchRequest,
-) : PagingSource<Int, FeedPost>() {
-    private val seenPostIds = mutableSetOf<Long>()
-
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, FeedPost> =
-        try {
-            val startPage = params.key ?: 1
-            val knownIds = seenPostIds.toSet()
-            val summaries = mutableListOf<io.github.nodyssey.model.PostSummary>()
-            var currentPage = startPage
-            var lastLoadedPage = startPage
-            var hasNext = true
-            var fetchedPages = 0
-            do {
-                val result =
-                    repository.searchPosts(
-                        query = request.query,
-                        page = currentPage,
-                        categorySlugs = request.boards,
-                        sort = request.sort,
-                    )
-                summaries += result.posts.filter { it.postId !in knownIds }
-                lastLoadedPage = result.page
-                hasNext = result.hasNextPage
-                fetchedPages++
-                if (summaries.isEmpty() && hasNext) currentPage = result.page + 1
-            } while (
-                summaries.isEmpty() &&
-                hasNext &&
-                fetchedPages < SearchViewModel.MAX_PAGES_PER_LOAD
-            )
-
-            val unique = summaries.distinctBy { it.postId }
-            seenPostIds += unique.map { it.postId }
-            LoadResult.Page(
-                data = unique.map { FeedPost(it, isRead = false, newCommentCount = 0) },
-                prevKey = null,
-                nextKey = if (hasNext) lastLoadedPage + 1 else null,
-            )
-        } catch (throwable: Throwable) {
-            if (throwable is CancellationException) throw throwable
-            LoadResult.Error(throwable)
-        }
-
-    override fun getRefreshKey(state: PagingState<Int, FeedPost>): Int? = null
-}

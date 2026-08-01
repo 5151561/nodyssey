@@ -74,4 +74,14 @@ object Selectors {
         "Just a moment...",
         "Checking your browser before accessing",
     )
+
+    /**
+     * NodeSeek's own throttle sentence, served as a JSON body on an HTML route.
+     *
+     * Captured live from `/search?q=…` on 2026-08-01: two requests inside two seconds and the second
+     * comes back `429 {"success":false,"message":"每隔2秒可以操作一次"}`. The status alone would be
+     * enough today, but the sentence is what makes the classification legible if the status ever
+     * softens to a 200.
+     */
+    val RATE_LIMIT_MARKERS = listOf("每隔2秒可以操作一次")
 }

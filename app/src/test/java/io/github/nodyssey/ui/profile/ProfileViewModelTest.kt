@@ -263,6 +263,12 @@ private class FakeProfileRepository(
 private object NoOpPostRepository : PostRepository {
     override fun feed(categorySlug: String?, sort: FeedSort): Flow<PagingData<FeedPost>> = emptyFlow()
 
+    override fun searchFeed(
+        query: String,
+        categorySlug: String?,
+        sort: FeedSort,
+    ): Flow<PagingData<FeedPost>> = emptyFlow()
+
     override fun search(query: String): Flow<List<FeedPost>> = emptyFlow()
 
     override suspend fun invalidateCaches() = Unit

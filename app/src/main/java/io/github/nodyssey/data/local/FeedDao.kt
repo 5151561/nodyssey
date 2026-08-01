@@ -89,6 +89,20 @@ interface FeedDao {
     @Query("DELETE FROM feed_positions WHERE feedKey = :feedKey")
     suspend fun clearFeed(feedKey: String)
 
+    /**
+     * Drops every stored search except the one being run.
+     *
+     * Board feeds are a fixed set of fifteen and worth keeping; search feeds are one per query the
+     * user has ever typed, so without this the two feed tables grow with the search history. Only
+     * one search is ever on screen, so nothing reachable is lost — and re-running an old query is a
+     * fresh request rather than a stale answer, which is the honest behaviour for a search anyway.
+     */
+    @Query("DELETE FROM feed_positions WHERE feedKey LIKE :prefix || '%' AND feedKey <> :keepFeedKey")
+    suspend fun clearOtherSearchFeeds(prefix: String, keepFeedKey: String)
+
+    @Query("DELETE FROM feed_remote_keys WHERE feedKey LIKE :prefix || '%' AND feedKey <> :keepFeedKey")
+    suspend fun clearOtherSearchRemoteKeys(prefix: String, keepFeedKey: String)
+
     @Query("SELECT * FROM feed_remote_keys WHERE feedKey = :feedKey")
     suspend fun remoteKey(feedKey: String): FeedRemoteKeyEntity?
 
