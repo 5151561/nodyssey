@@ -864,6 +864,9 @@ private fun CommentRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             // The identity block opens the author's space; the floor label stays outside it.
+            // Same shape as the opening post's header: the avatar centres on the name *and* the
+            // timestamp as one block — hanging the timestamp outside on its own indent left the
+            // avatar aligned to nothing.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -877,18 +880,25 @@ private fun CommentRow(
                     name = comment.authorName,
                     size = Sizes.avatarComment,
                 )
-                Text(
-                    text = comment.authorName,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                FloorBadges(comment)
+                Column(Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = comment.authorName,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        FloorBadges(comment)
+                    }
+                    FloorTimeLine(comment)
+                }
             }
             comment.floor?.let { FloorLabel(it) }
         }
-        FloorTimeLine(comment, modifier = Modifier.padding(start = 36.dp, top = 2.dp))
         RichContent(
             nodes = comment.nodes,
             onLinkClick = onOpenBrowser,
