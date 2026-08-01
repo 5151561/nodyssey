@@ -24,6 +24,7 @@ import io.github.nodyssey.data.NetworkAssetsRepository
 import io.github.nodyssey.data.NetworkAwardRepository
 import io.github.nodyssey.data.NetworkCommunityRepository
 import io.github.nodyssey.data.NetworkCreditRepository
+import io.github.nodyssey.data.NetworkFollowRepository
 import io.github.nodyssey.data.NetworkMessageRepository
 import io.github.nodyssey.data.NetworkPostDataSource
 import io.github.nodyssey.data.NetworkProfileRepository
@@ -38,7 +39,6 @@ import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.RulingRepository
 import io.github.nodyssey.data.SearchRepository
-import io.github.nodyssey.data.SiteOnlyFollowRepository
 import io.github.nodyssey.data.SiteOnlyRulingRepository
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.data.TermsRepository
@@ -97,11 +97,12 @@ interface AppContainer {
     val communityRepository: CommunityRepository
     val termsRepository: TermsRepository
 
-    /*
-     * The two site-only pages left. Typed here rather than left out so that wiring one up later is a
-     * single constructor swap — see `SiteOnlyRepositories.kt` for why they answer NotWired today.
-     */
     val followRepository: FollowRepository
+
+    /*
+     * The site-only page left. Typed here rather than left out so that wiring it up later is a single
+     * constructor swap — see `SiteOnlyRepositories.kt` for why it answers NotWired today.
+     */
     val rulingRepository: RulingRepository
 
     /**
@@ -235,7 +236,12 @@ class DefaultAppContainer(
         NetworkTermsRepository(htmlClient)
     }
 
-    override val followRepository: FollowRepository by lazy { SiteOnlyFollowRepository() }
+    override val followRepository: FollowRepository by lazy {
+        // The signed-in check is read off the published session state rather than the cookie store:
+        // `/api/fans/*` answers a signed-out read with an empty list, and this is called on the main
+        // thread. See [NetworkFollowRepository].
+        NetworkFollowRepository(jsonClient, dispatchers) { sessionRepository.state.value.isSignedIn }
+    }
 
     override val rulingRepository: RulingRepository by lazy { SiteOnlyRulingRepository() }
 

@@ -37,9 +37,14 @@ data class FollowUiState(
 /**
  * 我的关注 / 我的粉丝 — the signed-in user's, and only theirs.
  *
- * Both tabs are lists of accounts and nothing else: no follow button, no 互关 badge, no counts. The
- * site has the two lists but exposes no action to change them, so a button here would be a control
- * that cannot work.
+ * Both tabs are the whole list in one shot, because the endpoint behind them is: neither
+ * `/api/fans/follow` nor `/api/fans/fans` takes a page, and the site renders everything it returns.
+ * `hasNextPage` is therefore always false here, and that is a fact about the site rather than a
+ * simplification.
+ *
+ * The rows carry no 关注/取关 button. The site has both writes, but the flag that says which of the two
+ * a row needs is only known for certain from the space page's own payload — so the row is a link there,
+ * where the button can be right rather than probably right.
  */
 class FollowViewModel(
     private val repository: FollowRepository,
