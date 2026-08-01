@@ -10,6 +10,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
+import coil3.svg.SvgDecoder
 import io.github.nodyssey.core.image.ImageNetworkPolicyInterceptor
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.di.DefaultAppContainer
@@ -66,6 +67,10 @@ class NodysseyApp :
             .components {
                 add(ImageNetworkPolicyInterceptor(context, container.settingsRepository.settings))
                 add(OkHttpNetworkFetcherFactory(callFactory = { container.okHttpClient }))
+                // An account that never uploaded a picture is served a generated cartoon *SVG* from
+                // `/avatar/<uid>.png` — the extension lies, the Content-Type does not. Without this
+                // decoder those all failed and every such user wore an initial instead.
+                add(SvgDecoder.Factory())
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     add(AnimatedImageDecoder.Factory())
                 } else {

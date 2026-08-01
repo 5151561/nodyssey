@@ -158,6 +158,29 @@ class ProfileRepositoryTest {
             assertNull(repository.observeProfile(sessionFingerprint = 7).first())
         }
 
+    /** Without the flag the endpoint omits `readme`, and every space page fell back to the empty state. */
+    @Test
+    fun `asks the account endpoint to include another user's readme`() =
+        runTest {
+            val jsonSource =
+                FakeProfileJsonSource(
+                    response = """{"data":{"member_id":42,"member_name":"某人","readme":"# 你好"}}""",
+                )
+            val repository =
+                NetworkProfileRepository(
+                    htmlSource = FakeProfileHtmlSource(""),
+                    jsonSource = jsonSource,
+                    profileDao = database.profileDao(),
+                    currentSessionFingerprint = { 7 },
+                    clock = AppClock { 0L },
+                )
+
+            val profile = repository.profile(uid = 42)
+
+            assertEquals("# 你好", profile.readme)
+            assertEquals("/api/account/getInfo/42?readme=1", jsonSource.requestedPath)
+        }
+
     @Test(expected = NodeSeekException::class)
     fun `rejects a page without signed in profile data`() =
         runTest {

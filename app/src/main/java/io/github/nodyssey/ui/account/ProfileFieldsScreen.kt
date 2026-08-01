@@ -54,6 +54,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
+import io.github.nodyssey.ui.common.AvatarShape
 import io.github.nodyssey.ui.common.MARKDOWN_LINK_CARET
 import io.github.nodyssey.ui.common.MARKDOWN_LINK_SUFFIX
 import io.github.nodyssey.ui.common.MarkdownInsertion
@@ -228,7 +229,7 @@ private fun AvatarEditor(
                     bitmap = pending.preview,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(AVATAR_SIZE).clip(CircleShape),
+                    modifier = Modifier.size(AVATAR_SIZE).clip(AvatarShape),
                 )
             }
             Box(Modifier.offset(x = AVATAR_BADGE_OVERHANG, y = AVATAR_BADGE_OVERHANG)) {
