@@ -45,6 +45,8 @@ import io.github.nodyssey.R
 import io.github.nodyssey.core.report.QualityReport
 import io.github.nodyssey.ui.theme.CodeStyle
 import io.github.nodyssey.ui.theme.LocalNodysseyExtraColors
+import io.github.nodyssey.ui.theme.ReportData
+import io.github.nodyssey.ui.theme.ReportLabel
 import io.github.nodyssey.ui.theme.Sizes
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.TABULAR_FIGURES
@@ -56,8 +58,8 @@ import io.github.nodyssey.ui.theme.TABULAR_FIGURES
  * The report is eighty columns wide and cannot become narrower without becoming unreadable: fitting
  * eighty columns across a phone puts the type near 7sp. So the layout is not reproduced at all. What
  * the padding encoded — this is a label, that is its value, these five belong to one comparison — is
- * recovered by [io.github.nodyssey.core.report.QualityReportParser] and drawn again at 14sp, where a
- * value that no longer fits wraps instead of scrolling off the side.
+ * recovered by [io.github.nodyssey.core.report.QualityReportParser] and drawn again at [ReportData]'s
+ * 13sp, where a value that no longer fits wraps instead of scrolling off the side.
  *
  * The scripts are versioned and their layout moves, so [onShowSource] stays available on every card:
  * whatever this misreads, the original is one tap away and is still the thing that was posted.
@@ -93,7 +95,9 @@ fun ReportCard(
                         top = Spacing.md,
                         bottom = Spacing.sm,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                    // md rather than lg: the sections' own type dropped to 13sp, and the old gap
+                    // read as a break between cards rather than between sections of one card.
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
                     report.sections.forEach { ReportSection(it) }
                     if (report.footnotes.isNotEmpty()) Footnotes(report.footnotes)
@@ -225,7 +229,7 @@ private fun FieldRow(field: QualityReport.Block.Field) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = field.label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = ReportLabel,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .widthIn(min = LABEL_WIDTH)
@@ -238,7 +242,7 @@ private fun FieldRow(field: QualityReport.Block.Field) {
             field.values.forEach { value ->
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
+                    style = ReportData.copy(fontFeatureSettings = TABULAR_FIGURES),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -254,7 +258,7 @@ private fun BadgeRow(badges: QualityReport.Block.Badges) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = badges.label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = ReportLabel,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .widthIn(min = LABEL_WIDTH)
@@ -268,7 +272,9 @@ private fun BadgeRow(badges: QualityReport.Block.Badges) {
             badges.items.forEach { badge ->
                 Text(
                     text = badge.text,
-                    style = MaterialTheme.typography.labelMedium,
+                    // One step under [ReportData] with a little weight back: a chip's fill already
+                    // carries the verdict, the text only has to stay legible.
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
                     color =
                     if (badge.passed) extra.onSuccessContainer else MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier
@@ -279,7 +285,7 @@ private fun BadgeRow(badges: QualityReport.Block.Badges) {
                             } else {
                                 MaterialTheme.colorScheme.errorContainer
                             },
-                        ).padding(horizontal = 7.dp, vertical = 3.dp),
+                        ).padding(horizontal = 6.dp, vertical = 2.dp),
                 )
             }
         }

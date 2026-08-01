@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -60,12 +61,15 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -85,6 +89,7 @@ import io.github.nodyssey.ui.theme.PostBody
 import io.github.nodyssey.ui.theme.Sizes
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.nodyssey.ui.theme.asProse
 
 /**
  * Renders parsed post markup with real Compose text and images — no WebView.
@@ -93,8 +98,10 @@ import io.github.nodyssey.ui.theme.TABULAR_FIGURES
  * own typography and theme instead of the site's stylesheet.
  *
  * The typographic rules here are the ones that decide whether this app is worth opening daily:
- * 16sp on a 27sp line, 10dp between blocks, code that scrolls rather than wraps, and never an
- * italic — Chinese has no italic form and synthesised slant is unreadable at body size.
+ * 16sp on a 27sp line laid out by the platform's optimal (Knuth-Plass family) line breaker, a
+ * hair of air where hanzi meets Latin, block spacing that breathes around headings instead of
+ * metering out a flat 10dp, code that scrolls rather than wraps, and never an italic — Chinese
+ * has no italic form and synthesised slant is unreadable at body size.
  */
 @Composable
 fun RichContent(
@@ -105,19 +112,56 @@ fun RichContent(
     textStyle: TextStyle = PostBody,
     onQuoteRefClick: (InlineNode.QuoteRef) -> Unit = { onLinkClick(it.url) },
 ) {
+    // Reading upgrades happen here, at the display seam, so the same styles stay safe to reuse in
+    // editors — see `TextStyle.asProse` for why an editor must never inherit them.
+    val prose = remember(textStyle) { textStyle.asProse() }
     SelectionContainer(modifier = modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            nodes.forEach { node ->
-                RichBlock(
-                    node = node,
-                    onLinkClick = onLinkClick,
-                    onImageClick = onImageClick,
-                    onQuoteRefClick = onQuoteRefClick,
-                    textStyle = textStyle,
-                )
-            }
+        RichBlockColumn(
+            nodes = nodes,
+            onLinkClick = onLinkClick,
+            onImageClick = onImageClick,
+            onQuoteRefClick = onQuoteRefClick,
+            textStyle = prose,
+        )
+    }
+}
+
+/**
+ * The block sequence with its vertical rhythm.
+ *
+ * Not a flat `spacedBy`: a heading binds to what follows it, so it takes extra air above and sits
+ * tight on its section — the asymmetry is what makes chapters visible in a long post.
+ */
+@Composable
+private fun RichBlockColumn(
+    nodes: List<RichNode>,
+    onLinkClick: (String) -> Unit,
+    onImageClick: (String) -> Unit,
+    onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
+    textStyle: TextStyle,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        nodes.forEachIndexed { index, node ->
+            if (index > 0) Spacer(Modifier.height(blockSpacing(nodes[index - 1], node)))
+            RichBlock(
+                node = node,
+                onLinkClick = onLinkClick,
+                onImageClick = onImageClick,
+                onQuoteRefClick = onQuoteRefClick,
+                textStyle = textStyle,
+            )
         }
     }
+}
+
+private fun blockSpacing(
+    prev: RichNode,
+    current: RichNode,
+): Dp = when {
+    current is RichNode.Heading -> 18.dp
+    prev is RichNode.Heading -> 6.dp
+    else -> 10.dp
 }
 
 @Composable
@@ -146,6 +190,9 @@ private fun RichBlock(
                     // Weight, never size alone: a level-4 heading and body text are two points
                     // apart and would otherwise be indistinguishable in Chinese.
                     fontWeight = FontWeight.Bold,
+                    // Balanced rather than optimal: a two-line heading with one stranded word
+                    // looks worse than two even lines.
+                    lineBreak = LineBreak.Heading,
                 ),
                 onLinkClick = onLinkClick,
                 onQuoteRefClick = onQuoteRefClick,
@@ -161,7 +208,12 @@ private fun RichBlock(
                     Modifier
                         .width(3.dp)
                         .heightIn(min = 20.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp)),
+                        // A washed-out primary rather than outlineVariant: the bar is the one mark
+                        // that says "quoted", and at outline contrast it read as a stray divider.
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                            RoundedCornerShape(2.dp),
+                        ),
                 )
                 Column(
                     modifier = Modifier.padding(start = Spacing.md),
@@ -192,6 +244,9 @@ private fun RichBlock(
                         Text(
                             text = if (node.ordered) "${index + 1}." else "•",
                             style = textStyle.copy(fontFeatureSettings = TABULAR_FIGURES),
+                            // Markers are scaffolding, not content, so they step back one level of
+                            // contrast and let the item text carry the line.
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             // Right-aligned numbers keep "9." and "10." on the same left edge.
                             textAlign = if (node.ordered) TextAlign.End else TextAlign.Center,
                             modifier = Modifier.width(if (node.ordered) 20.dp else 16.dp),
@@ -283,20 +338,14 @@ private fun TabGroup(
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Column(
+        RichBlockColumn(
+            nodes = node.tabs[index].children,
+            onLinkClick = onLinkClick,
+            onImageClick = onImageClick,
+            onQuoteRefClick = onQuoteRefClick,
+            textStyle = textStyle,
             modifier = Modifier.padding(Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            node.tabs[index].children.forEach { child ->
-                RichBlock(
-                    node = child,
-                    onLinkClick = onLinkClick,
-                    onImageClick = onImageClick,
-                    onQuoteRefClick = onQuoteRefClick,
-                    textStyle = textStyle,
-                )
-            }
-        }
+        )
     }
 }
 
@@ -655,26 +704,74 @@ private fun InlineText(
             val ranges = mutableListOf<IntRange>()
             val built =
                 buildAnnotatedString {
+                    // 盘古之白: a hair of air wherever hanzi meets halfwidth letters or digits,
+                    // added by the layout rather than the text, so selection and copy still hand
+                    // back exactly what was posted.
+                    var prevChar = ' '
+                    var prevIsCode = false
+
+                    /**
+                     * Records where the seams fall in [text] before it is appended, then applies
+                     * the spacing spans once the characters exist. Verbatim runs (inline code) are
+                     * left untouched on either side of the seam.
+                     */
+                    fun appendWithPangu(
+                        text: String,
+                        isCode: Boolean,
+                        append: () -> Unit,
+                    ) {
+                        val seams =
+                            if (isCode) {
+                                emptyList()
+                            } else {
+                                buildList {
+                                    text.forEachIndexed { offset, char ->
+                                        val left =
+                                            when {
+                                                offset > 0 -> text[offset - 1]
+                                                prevIsCode -> ' '
+                                                else -> prevChar
+                                            }
+                                        if (isPanguSeam(left, char)) add(length + offset - 1)
+                                    }
+                                }
+                            }
+                        append()
+                        seams.forEach { addStyle(PANGU_SPAN, it, it + 2) }
+                        if (text.isNotEmpty()) {
+                            prevChar = text.last()
+                            prevIsCode = isCode
+                        }
+                    }
+
                     inlines.forEach { inline ->
                         when (inline) {
-                            is InlineNode.Text -> withSpan(inline.style, codeBackground) { append(inline.text) }
-
-                            is InlineNode.Link ->
-                                withLink(
-                                    LinkAnnotation.Url(
-                                        url = inline.url,
-                                        styles = linkStyles,
-                                        linkInteractionListener = linkListener,
-                                    ),
-                                ) {
+                            is InlineNode.Text ->
+                                appendWithPangu(inline.text, inline.style.code) {
                                     withSpan(inline.style, codeBackground) { append(inline.text) }
                                 }
 
-                            is InlineNode.Sticker ->
+                            is InlineNode.Link ->
+                                appendWithPangu(inline.text, inline.style.code) {
+                                    withLink(
+                                        LinkAnnotation.Url(
+                                            url = inline.url,
+                                            styles = linkStyles,
+                                            linkInteractionListener = linkListener,
+                                        ),
+                                    ) {
+                                        withSpan(inline.style, codeBackground) { append(inline.text) }
+                                    }
+                                }
+
+                            is InlineNode.Sticker -> {
                                 appendInlineContent(
                                     STICKER_PREFIX + inline.url,
                                     inline.alt ?: "[表情]",
                                 )
+                                prevChar = ' '
+                                prevIsCode = false
+                            }
 
                             is InlineNode.QuoteRef -> {
                                 val start = length
@@ -692,9 +789,15 @@ private fun InlineText(
                                     append(QUOTE_HORIZONTAL_SPACE)
                                 }
                                 ranges += start until length
+                                prevChar = ' '
+                                prevIsCode = false
                             }
 
-                            InlineNode.LineBreak -> append("\n")
+                            InlineNode.LineBreak -> {
+                                append("\n")
+                                prevChar = ' '
+                                prevIsCode = false
+                            }
                         }
                     }
                 }
@@ -765,6 +868,33 @@ private const val QUOTE_HORIZONTAL_SPACE = "\u00A0\u00A0"
 private const val STICKER_PREFIX = "sticker:"
 private const val QUOTE_PREFIX = "quote:"
 
+/**
+ * The \u76D8\u53E4\u4E4B\u767D spacing span, sized in em so it follows the reading-size preference.
+ *
+ * Android letter spacing puts half the extra advance on each side of every glyph, so the span
+ * covers *both* seam characters: the two inner halves meet at the seam as one full 0.125em
+ * (\u22482sp at body size) gap, and only a subliminal 0.0625em leaks to the outer sides. A narrower
+ * one-character span would put as much space inside the word as at the seam; a real space
+ * character would survive into copied text.
+ */
+private val PANGU_SPAN = SpanStyle(letterSpacing = 0.125.em)
+
+/** A seam is hanzi (or \u3007) touching a halfwidth letter or digit, in either order. */
+private fun isPanguSeam(
+    left: Char,
+    right: Char,
+): Boolean = (isCjkIdeograph(left) && isHalfwidthAlnum(right)) ||
+    (isHalfwidthAlnum(left) && isCjkIdeograph(right))
+
+private fun isCjkIdeograph(char: Char): Boolean =
+    when (char.code) {
+        in 0x4E00..0x9FFF, in 0x3400..0x4DBF, in 0xF900..0xFAFF, 0x3007 -> true
+        else -> false
+    }
+
+private fun isHalfwidthAlnum(char: Char): Boolean =
+    char in '0'..'9' || char in 'A'..'Z' || char in 'a'..'z'
+
 private inline fun AnnotatedString.Builder.withSpan(
     style: InlineStyle,
     codeBackground: Color,
@@ -816,6 +946,18 @@ private fun specNodes(): List<RichNode> =
             listOf(
                 InlineNode.QuoteRef(name = "酒神", floor = "#12", url = "/post-1-1#12"),
                 InlineNode.Text(" 引用回复渲染成可点的 tonal 标识，点击跳到对应楼层，而不是一条普通蓝链接。"),
+            ),
+        ),
+        RichNode.Heading(
+            inlines = listOf(InlineNode.Text("章节标题：上方 18dp、下方 6dp 的不对称节奏")),
+            level = 2,
+        ),
+        RichNode.Paragraph(
+            listOf(
+                InlineNode.Text(
+                    "中西混排如 4C8G 的 VPS 跑 iperf3 得到 2.5Gbps:汉字与字母数字交界处由排版层" +
+                        "补一丝空隙,复制出的文本不含多余字符;整段由最优断行器排布,右缘参差最小化。",
+                ),
             ),
         ),
         RichNode.BlockImage(url = "https://www.nodeseek.com/static/image/demo.png", alt = "示例截图"),
@@ -871,7 +1013,7 @@ private fun RichContentSpec() {
             .padding(Spacing.lg),
     ) {
         Text(
-            text = "正文排版规范 · 16sp / 行高 27 / 字距 +0.2 / 段距 10",
+            text = "正文排版规范 · 16sp / 行高 27 / 最优断行 / 盘古之白 / 段距 10 · 标题前 18",
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = Spacing.md),

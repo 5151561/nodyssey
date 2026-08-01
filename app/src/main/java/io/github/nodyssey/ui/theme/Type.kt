@@ -4,6 +4,9 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.sp
 
 /**
@@ -75,8 +78,62 @@ val PostBody = TextStyle(fontSize = 16.sp, lineHeight = 27.sp, letterSpacing = 0
 /** Replies are shorter and more numerous, so they sit one step tighter than [PostBody]. */
 val CommentBody = TextStyle(fontSize = 15.sp, lineHeight = 25.sp, letterSpacing = 0.2.sp)
 
-/** The full title on the detail screen, where it may wrap to several lines. */
-val PostTitle = TextStyle(fontSize = 20.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold)
+/**
+ * Upgrades a body style for long-form reading. Applied by `RichContent`, never by an editor.
+ *
+ * [LineBreak.Paragraph] turns on the platform's optimal line breaker — the Knuth-Plass family of
+ * algorithms, which minimises raggedness over the whole paragraph instead of greedily filling one
+ * line at a time. Pure Chinese barely changes (every hanzi is a break point), but the mixed
+ * Chinese-Latin lines this forum is made of — model names, bandwidth figures, URLs — stop leaving
+ * one long word stranded on a line of its own. [Hyphens.Auto] lets long Latin words break cleanly
+ * instead of bouncing whole to the next line.
+ *
+ * The centred, untrimmed [LineHeightStyle] replaces the default Proportional + Trim.Both, under
+ * which a paragraph's first and last half-leading were cut off and the gap between two paragraphs
+ * measured barely more than the gap between two lines. Keeping the half-leading makes the space
+ * between blocks read as block spacing *plus* line rhythm, which is what gives long posts their
+ * paragraph structure back.
+ *
+ * This must stay off text *fields*: re-optimising the whole paragraph on every keystroke makes
+ * already-laid-out lines jump while typing, which is why the editors keep [PostBody] as is.
+ */
+fun TextStyle.asProse(): TextStyle =
+    copy(
+        lineBreak = LineBreak.Paragraph,
+        hyphens = Hyphens.Auto,
+        lineHeightStyle =
+        LineHeightStyle(
+            alignment = LineHeightStyle.Alignment.Center,
+            trim = LineHeightStyle.Trim.None,
+        ),
+    )
+
+/**
+ * The full title on the detail screen, where it may wrap to several lines.
+ *
+ * [LineBreak.Heading] balances the wrapped lines instead of filling the first and leaving a couple
+ * of characters widowed on the second.
+ */
+val PostTitle =
+    TextStyle(
+        fontSize = 20.sp,
+        lineHeight = 28.sp,
+        fontWeight = FontWeight.Bold,
+        lineBreak = LineBreak.Heading,
+    )
+
+/**
+ * Benchmark report data, one step denser than any reading style.
+ *
+ * A report card is scanned for a single fact, not read line by line, so it trades the reading
+ * styles' generous leading for the density of the terminal output it replaces. Fixed sizes on
+ * purpose: the card is a data surface like [CodeStyle] and does not follow the reading-size
+ * preference, which keeps an 80-column report's worth of fields on one screen at any setting.
+ */
+val ReportData = TextStyle(fontSize = 13.sp, lineHeight = 19.sp, letterSpacing = 0.1.sp)
+
+/** The label column beside [ReportData] values; same 19sp pitch so wrapped rows stay in step. */
+val ReportLabel = TextStyle(fontSize = 12.sp, lineHeight = 19.sp)
 
 val CodeStyle =
     TextStyle(
