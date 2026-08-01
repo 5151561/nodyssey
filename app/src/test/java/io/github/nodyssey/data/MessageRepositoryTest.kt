@@ -194,6 +194,49 @@ class MessageRepositoryTest {
             assertFalse(thread.messages.last().isMarkdown)
         }
 
+    /**
+     * Reading a thread does not clear it — the ids have to be posted back — so the load has to hand
+     * them over. Only theirs count: our own unread rows are the ones *they* have not read.
+     */
+    @Test
+    fun `thread reports the counterparty's unread messages`() =
+        runTest {
+            val api =
+                FakeJsonApi(
+                    mapOf(
+                        threadPath to
+                            """
+                            {"success":true,
+                             "talkTo":{"member_id":5230,"member_name":"nssk"},
+                             "msgArray":[
+                               {"id":1,"receiver_id":52425,"sender_id":5230,"viewed":0,
+                                "content":"在吗","created_at":"2026-07-24T18:15:47.000Z"},
+                               {"id":2,"receiver_id":52425,"sender_id":5230,"viewed":1,
+                                "content":"读过的","created_at":"2026-07-24T18:16:47.000Z"},
+                               {"id":3,"receiver_id":5230,"sender_id":52425,"viewed":0,
+                                "content":"我发的","created_at":"2026-07-26T14:31:28.000Z"}
+                             ]}
+                            """.trimIndent(),
+                    ),
+                )
+
+            assertEquals(listOf(1L), repository(api).thread(5230).unreadIds)
+        }
+
+    @Test
+    fun `mark read posts the message ids the site's own thread view posts`() =
+        runTest {
+            val api =
+                FakeJsonApi(
+                    posts = mapOf(NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED to """{"success":true}"""),
+                )
+
+            repository(api).markRead(listOf(11L, 12L))
+
+            assertEquals(listOf(NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED), api.postedPaths)
+            assertEquals(listOf("""{"messages":[11,12]}"""), api.postedBodies)
+        }
+
     /** The recipient field is camel-cased here and nowhere else on this API. */
     @Test
     fun `send posts receiverUid`() =

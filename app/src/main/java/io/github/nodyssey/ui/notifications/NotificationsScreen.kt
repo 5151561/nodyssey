@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,6 +40,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -244,8 +246,10 @@ private fun NotificationRow(
             .padding(start = 10.dp, end = Spacing.lg, top = 14.dp, bottom = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // Aligned with the first line of the sentence rather than the top of the row.
-        Box(Modifier.padding(top = 7.dp).size(6.dp)) {
+        // Both markers hang off the sentence's first line, not off the top of the row — see
+        // [AvatarCapOffset]. The dot is smaller than the avatar, so it drops further to centre on
+        // the same line rather than sitting on top of it.
+        Box(Modifier.offset(y = AvatarCapOffset + 2.dp).size(6.dp)) {
             if (item.isUnread) {
                 Box(
                     Modifier
@@ -255,11 +259,25 @@ private fun NotificationRow(
                 )
             }
         }
-        UserAvatar(url = item.avatarUrl, name = item.actorName, size = Sizes.avatarList)
+        UserAvatar(
+            url = item.avatarUrl,
+            name = item.actorName,
+            size = Sizes.avatarList,
+            modifier = Modifier.offset(y = AvatarCapOffset),
+        )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(
                 text = notificationSentence(item),
-                style = MaterialTheme.typography.bodyMedium,
+                // Trimmed at the top so the sentence starts at the row's edge instead of a few
+                // pixels below it, the same pairing the feed's title and avatar use.
+                style =
+                MaterialTheme.typography.bodyMedium.copy(
+                    lineHeightStyle =
+                    LineHeightStyle(
+                        alignment = LineHeightStyle.Alignment.Proportional,
+                        trim = LineHeightStyle.Trim.FirstLineTop,
+                    ),
+                ),
                 color =
                 if (item.isUnread) {
                     MaterialTheme.colorScheme.onSurface
@@ -363,6 +381,15 @@ private fun NotificationCategory.label(): String =
 private val PLACEHOLDER = Regex("""%(\d)[$]s""")
 private const val MAX_BADGE = 99
 
+/**
+ * Drops the avatar onto the sentence's cap line.
+ *
+ * The twin of the feed's own offset — even with the first line's leading trimmed, the line box still
+ * starts at the ascent rather than at the tallest glyph, and a top-aligned avatar next to it reads
+ * as floating. Measured at bodyMedium on the row as built, which is why it is not the feed's number.
+ */
+private val AvatarCapOffset = 3.dp
+
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun NotificationsPreview() {
@@ -377,6 +404,7 @@ private fun NotificationsPreview() {
                 listOf(
                     ForumNotification(
                         id = "1",
+                        viewedId = 1L,
                         category = NotificationCategory.MENTIONS,
                         postId = 1,
                         floor = "#3",
@@ -391,6 +419,7 @@ private fun NotificationsPreview() {
                     ),
                     ForumNotification(
                         id = "2",
+                        viewedId = 2L,
                         category = NotificationCategory.MENTIONS,
                         postId = 2,
                         floor = null,

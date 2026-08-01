@@ -7,20 +7,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -37,9 +38,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
@@ -51,9 +53,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -90,13 +91,13 @@ fun MessageThreadRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     MessageThreadScreen(
         state = state,
+        draftState = viewModel.draftState,
         onBack = onBack,
         onSignIn = onSignIn,
         onVerify = onVerify,
         onOpenBrowser = onOpenBrowser,
         onLinkClick = onLinkClick,
         onRetryLoad = viewModel::refresh,
-        onDraftChange = viewModel::updateDraft,
         onToggleMarkdown = viewModel::toggleMarkdown,
         onSend = viewModel::send,
         onRetrySend = viewModel::retry,
@@ -109,12 +110,12 @@ fun MessageThreadRoute(
 @Composable
 fun MessageThreadScreen(
     state: MessageThreadUiState,
+    draftState: TextFieldState,
     onBack: () -> Unit,
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
     onOpenBrowser: (String) -> Unit,
     onRetryLoad: () -> Unit,
-    onDraftChange: (String) -> Unit,
     onToggleMarkdown: () -> Unit,
     onSend: () -> Unit,
     onRetrySend: (String) -> Unit,
@@ -163,7 +164,7 @@ fun MessageThreadScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize().imePadding()) {
+        Column(Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize().imePadding()) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Box(Modifier.weight(1f)) {
                 when {
@@ -189,12 +190,10 @@ fun MessageThreadScreen(
                     else -> MessageBubbles(state, onLinkClick, onRetrySend)
                 }
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             MessageInputBar(
-                draft = state.draft,
+                draftState = draftState,
                 isMarkdown = state.isMarkdown,
                 canSend = state.canSend,
-                onDraftChange = onDraftChange,
                 onToggleMarkdown = onToggleMarkdown,
                 onSend = onSend,
             )
@@ -216,15 +215,28 @@ private fun MessageBubbles(
      * must always land.
      */
     val rows = remember(state.messages, state.nowMillis) { threadRows(state.messages, state.nowMillis) }
+    /*
+     * Anchored at the bottom rather than scrolled there.
+     *
+     * `reverseLayout` measures from the last row up, so the newest message stays against the message
+     * bar whatever happens to the viewport — which is the answer to the keyboard as much as to a new
+     * message. Scrolling to the end in an effect could not be: the keyboard shrinks the list over
+     * several frames, and a scroll that finished on the first of them left the thread short.
+     *
+     * `asReversed()` is a view, not a copy, and it puts row 0 at the bottom — so the day separators
+     * still read in the order they were built.
+     */
+    val newestFirst = remember(rows) { rows.asReversed() }
     LaunchedEffect(rows.size) {
-        if (rows.isNotEmpty()) listState.animateScrollToItem(rows.lastIndex)
+        if (rows.isNotEmpty()) listState.animateScrollToItem(0)
     }
     LazyColumn(
         state = listState,
+        reverseLayout = true,
         contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        items(rows, key = ThreadRow::key) { row ->
+        items(newestFirst, key = ThreadRow::key) { row ->
             when (row) {
                 is ThreadRow.Day -> DayDivider(row.label)
 
@@ -421,123 +433,131 @@ private fun MessageStatusLine(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The message bar: one pill for the text, a toggle and a send key sitting on its bottom line.
+ *
+ * Built out of a `BasicTextField` and a `Surface` rather than a filled `TextField`, because a filled
+ * field reserves the room a floating label would need and is 56dp tall before it holds anything —
+ * next to a 44dp send key that read as three mismatched blocks. The field grows with the draft up to
+ * [MAX_INPUT_LINES] and the two keys stay on the last line, which is what makes the row settle.
+ */
 @Composable
 private fun MessageInputBar(
-    draft: String,
+    draftState: TextFieldState,
     isMarkdown: Boolean,
     canSend: Boolean,
-    onDraftChange: (String) -> Unit,
     onToggleMarkdown: () -> Unit,
     onSend: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = Spacing.sm, bottom = 14.dp),
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        MarkdownToggle(isMarkdown = isMarkdown, onToggle = onToggleMarkdown)
-        TextField(
-            value = draft,
-            onValueChange = onDraftChange,
-            placeholder = {
-                Text(
-                    stringResource(
-                        if (isMarkdown) {
-                            R.string.message_input_hint_markdown
-                        } else {
-                            R.string.message_input_hint_plain
-                        },
-                    ),
-                )
-            },
-            maxLines = MAX_INPUT_LINES,
-            shape = RoundedCornerShape(22.dp),
-            colors =
-            TextFieldDefaults.colors(
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-            ),
-            modifier = Modifier.weight(1f),
-        )
-        FilledIconButton(
-            onClick = onSend,
-            enabled = canSend,
-            shape = RoundedCornerShape(14.dp),
-            colors =
-            IconButtonDefaults.filledIconButtonColors(
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-            modifier = Modifier.size(44.dp),
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest) {
+        Row(
+            modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Icon(
-                Icons.AutoMirrored.Filled.Send,
-                contentDescription = stringResource(R.string.message_send),
-                modifier = Modifier.size(20.dp),
+            MarkdownToggle(isMarkdown = isMarkdown, onToggle = onToggleMarkdown)
+            MessageDraftField(
+                draftState = draftState,
+                isMarkdown = isMarkdown,
+                modifier = Modifier.weight(1f),
             )
+            FilledIconButton(
+                onClick = onSend,
+                enabled = canSend,
+                colors =
+                IconButtonDefaults.filledIconButtonColors(
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+                modifier = Modifier.size(INPUT_CONTROL_SIZE),
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = stringResource(R.string.message_send),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }
 
+@Composable
+private fun MessageDraftField(
+    draftState: TextFieldState,
+    isMarkdown: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val hint =
+        stringResource(
+            if (isMarkdown) R.string.message_input_hint_markdown else R.string.message_input_hint_plain,
+        )
+    val textStyle =
+        MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
+    BasicTextField(
+        state = draftState,
+        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = MAX_INPUT_LINES),
+        textStyle = textStyle,
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        modifier = modifier,
+        decorator = { inner ->
+            Surface(
+                shape = RoundedCornerShape(INPUT_CONTROL_SIZE / 2),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {
+                Box(
+                    modifier =
+                    Modifier
+                        .heightIn(min = INPUT_CONTROL_SIZE)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (draftState.text.isEmpty()) {
+                        Text(
+                            text = hint,
+                            style = textStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    inner()
+                }
+            }
+        },
+    )
+}
+
 /**
- * The site's MD On/Off switch, drawn small enough to sit in a message bar.
+ * The site's MD On/Off switch, as a Material toggle button rather than a hand-drawn switch.
  *
- * A Material `Switch` is 52×32 before its touch target, which would take the width of two buttons in
- * a row that also has to hold a growing text field.
+ * The previous one was a 48×44 slab holding a 30×16 track and the letters MD — two controls' worth
+ * of furniture for one bit. `ToggleButton` says the same thing in the same square as the send key,
+ * and brings the checked-state shape change and colours with it. "MD" alone tells a screen reader
+ * nothing, so the button still carries the full name.
  */
 @Composable
 private fun MarkdownToggle(
     isMarkdown: Boolean,
     onToggle: () -> Unit,
 ) {
-    val trackColor =
-        if (isMarkdown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-    // "MD" alone tells a screen reader nothing, so the switch carries the full name.
     val label = stringResource(R.string.message_markdown_toggle)
-    Column(
+    ToggleButton(
+        checked = isMarkdown,
+        onCheckedChange = { onToggle() },
+        shapes = ToggleButtonDefaults.shapes(),
+        contentPadding = PaddingValues(0.dp),
         modifier =
         Modifier
-            .minimumInteractiveComponentSize()
-            .width(48.dp)
-            .height(44.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .toggleable(
-                value = isMarkdown,
-                role = Role.Switch,
-                onValueChange = { onToggle() },
-            ).semantics(mergeDescendants = true) { contentDescription = label },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
+            .size(INPUT_CONTROL_SIZE)
+            .semantics { contentDescription = label },
     ) {
-        Box(
-            Modifier
-                .width(30.dp)
-                .height(16.dp)
-                .clip(CircleShape)
-                .background(trackColor)
-                .padding(2.dp),
-            contentAlignment = if (isMarkdown) Alignment.CenterEnd else Alignment.CenterStart,
-        ) {
-            Box(
-                Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface),
-            )
-        }
         Text(
             text = stringResource(R.string.message_markdown_label),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            color =
-            if (isMarkdown) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
         )
     }
 }
@@ -570,6 +590,9 @@ private fun Modifier.wrapContentWidthTo(isMine: Boolean): Modifier =
 
 private const val BUBBLE_MAX_WIDTH = 0.78f
 private const val MAX_INPUT_LINES = 5
+
+/** One height for the MD toggle, the send key and the empty draft pill, so the bar reads as a row. */
+private val INPUT_CONTROL_SIZE = 44.dp
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
@@ -632,12 +655,12 @@ private fun MessageThreadPreview() {
                     ),
                 ),
             ),
+            draftState = remember { TextFieldState() },
             onBack = {},
             onSignIn = {},
             onVerify = {},
             onOpenBrowser = {},
             onRetryLoad = {},
-            onDraftChange = {},
             onToggleMarkdown = {},
             onSend = {},
             onRetrySend = {},

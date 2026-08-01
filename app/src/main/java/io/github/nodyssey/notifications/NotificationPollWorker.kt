@@ -44,7 +44,7 @@ class NotificationPollWorker(
 
         val counts =
             try {
-                container.notificationRepository.unreadCounts()
+                container.notificationRepository.refreshCounts()
             } catch (e: NodeSeekException) {
                 return if (e.error is NodeSeekError.Network) Result.retry() else Result.success()
             }

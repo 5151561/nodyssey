@@ -156,6 +156,7 @@ class NotificationsScreenTest {
     private fun mention() =
         ForumNotification(
             id = "1",
+            viewedId = 1L,
             category = NotificationCategory.MENTIONS,
             postId = 1,
             floor = null,
