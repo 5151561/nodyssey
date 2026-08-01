@@ -168,13 +168,16 @@
     <string name="tab_profile">我的</string>
 
     <!-- Search: authenticated remote results and condition-aware local history -->
-    <string name="search_hint">搜索帖子、用户</string>
+    <string name="search_hint">搜索帖子</string>
+    <string name="search_hint_board">在 %1$s 版块搜帖子</string>
     <string name="search_user_hint">搜索用户名</string>
+    <string name="search_submit">搜索</string>
     <string name="search_posts_tab">帖子</string>
     <string name="search_users_tab">用户</string>
     <string name="search_all_boards">全部版块</string>
-    <string name="search_sort_relevance">相关度</string>
-    <string name="search_sort_time">时间</string>
+    <string name="search_board_section">版块</string>
+    <string name="search_board_single_hint">单选 · 只能指定一个</string>
+    <string name="search_board_chip_all">全部</string>
     <string name="search_history_empty">还没有搜索记录</string>
     <string name="search_history_scope">帖子 · 全部版块</string>
     <string name="search_user_history_scope">用户</string>
@@ -185,9 +188,9 @@
     <string name="search_apply_board">应用</string>
     <string name="search_board_all_boards_heading">全部</string>
     <string name="search_clear_query">清空关键词</string>
-    <string name="search_recent">最近搜索</string>
-    <string name="search_clear_all">全部清除</string>
-    <string name="search_remove_recent">删除最近搜索：%1$s</string>
+    <string name="search_recent">搜索历史</string>
+    <string name="search_clear_all">清除</string>
+    <string name="search_remove_recent">删除搜索历史：%1$s</string>
 
     <!-- Notifications: the site has three groups, and 私信 is a conversation list rather than rows -->
     <!-- Unread counts past the cap. Without the +, a capped 150 reads as an exact 99. -->

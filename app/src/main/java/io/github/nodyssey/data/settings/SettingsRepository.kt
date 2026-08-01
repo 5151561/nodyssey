@@ -8,8 +8,8 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.nodyssey.data.NotificationCounts
+import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.SearchHistoryEntry
-import io.github.nodyssey.model.SearchSort
 import io.github.nodyssey.model.SearchTarget
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -275,7 +275,7 @@ class SettingsRepository(
 
     /**
      * Deduplicated because decoding is lossy: a stored row's board list collapses to its first
-     * board and the retired sorts fold into [SearchSort.RELEVANCE], so two rows written by an older
+     * board and the retired sorts fold into their [FeedSort] equivalents, so two rows written by an older
      * build can land on one domain entry. The list is read straight into a LazyColumn keyed on
      * [SearchHistoryEntry.key], which throws the moment a key repeats — and the first write after
      * this drops the collapsed twin from disk for good.
@@ -368,15 +368,18 @@ private data class StoredSearchHistory(
     val query: String,
     val target: String,
     val categorySlugs: List<String> = emptyList(),
-    val sort: String = SearchSort.RELEVANCE.name,
+    val sort: String = FeedSort.POST_TIME.name,
 ) {
     fun toDomain(): SearchHistoryEntry? {
         val resolvedTarget = runCatching { SearchTarget.valueOf(target) }.getOrNull() ?: return null
         val resolvedSort =
             when (sort) {
-                "POST_TIME" -> SearchSort.TIME
-                "LAST_REPLY" -> SearchSort.RELEVANCE
-                else -> runCatching { SearchSort.valueOf(sort) }.getOrDefault(SearchSort.RELEVANCE)
+                // The retired labels for the same two `sortBy` values the site has always taken.
+                "TIME" -> FeedSort.POST_TIME
+
+                "RELEVANCE" -> FeedSort.LAST_REPLY
+
+                else -> runCatching { FeedSort.valueOf(sort) }.getOrDefault(FeedSort.LAST_REPLY)
             }
         return SearchHistoryEntry(
             query = query.trim(),
