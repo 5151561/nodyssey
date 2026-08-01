@@ -49,8 +49,15 @@ class NotificationsViewModel(
                 _uiState.update {
                     if (value.isSignedIn) it.copy(isSignedIn = true) else NotificationsUiState()
                 }
-                if (value.isSignedIn) refresh()
+                // Signing out has to empty the badge at the source too, or the counts the previous
+                // account was carrying stay in the repository waiting to be re-emitted.
+                if (value.isSignedIn) refresh() else repository.clearCounts()
             }.launchIn(viewModelScope)
+        // The badges are the repository's, not this screen's: a conversation read on board 7f has to
+        // move them too, and that happens while this view model is doing nothing at all.
+        repository.counts
+            .onEach { counts -> _uiState.update { it.copy(counts = counts) } }
+            .launchIn(viewModelScope)
     }
 
     fun selectCategory(category: NotificationCategory) {
@@ -76,7 +83,7 @@ class NotificationsViewModel(
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true, error = null) }
                 runCatchingExceptCancellation {
-                    val counts = repository.unreadCounts()
+                    val counts = repository.refreshCounts()
                     if (category == NotificationCategory.MESSAGES) {
                         Loaded(counts, conversations = messages.conversations())
                     } else {
@@ -108,17 +115,24 @@ class NotificationsViewModel(
      */
     fun markAllRead() {
         val category = _uiState.value.selectedCategory
-        _uiState.update { state ->
-            state.copy(
-                items = state.items.map { it.copy(isUnread = false) },
-                conversations = state.conversations.map { it.copy(unreadCount = 0) },
-                counts = NotificationCounts(),
+        val state = _uiState.value
+        // Only the group the button belongs to. Zeroing the whole `NotificationCounts` used to wipe
+        // all three badges, so 全部已读 on @我 also claimed the unread 私信 had been read.
+        repository.noteRead(
+            category = category,
+            count = state.counts.forCategory(category),
+        )
+        _uiState.update {
+            it.copy(
+                items = it.items.map { item -> item.copy(isUnread = false) },
+                conversations = it.conversations.map { row -> row.copy(unreadCount = 0) },
             )
         }
         viewModelScope.launch {
             runCatchingExceptCancellation {
                 if (category == NotificationCategory.MESSAGES) {
                     messages.markAllRead()
+                    repository.refreshCounts()
                 } else {
                     repository.markAllRead(category)
                 }
@@ -126,13 +140,35 @@ class NotificationsViewModel(
         }
     }
 
+    /**
+     * Opening a row is a read, on the server as well as on screen.
+     *
+     * Only greying the row out locally was the whole of bug 1: the badge is the count endpoint's
+     * answer, the count endpoint had never been told, and so the number that sent the user here
+     * survived being acted on — through a refresh, and through a restart.
+     */
     fun markOpened(id: String) {
+        val item = _uiState.value.items.firstOrNull { it.id == id } ?: return
         _uiState.update { state ->
             state.copy(items = state.items.map { if (it.id == id) it.copy(isUnread = false) else it })
         }
+        if (!item.isUnread) return
+        val viewedId = item.viewedId ?: return
+        viewModelScope.launch {
+            runCatchingExceptCancellation { repository.markViewed(item.category, listOf(viewedId)) }
+        }
     }
 
+    /**
+     * The badge half of opening a conversation; board 7f posts the message ids once it has them.
+     *
+     * The list row knows how many are unread but not which, because `message/list` carries one row
+     * per conversation — so this moves the badge now and the thread settles it against the server a
+     * moment later.
+     */
     fun markConversationOpened(uid: Long) {
+        val conversation = _uiState.value.conversations.firstOrNull { it.uid == uid } ?: return
+        repository.noteRead(NotificationCategory.MESSAGES, conversation.unreadCount)
         _uiState.update { state ->
             state.copy(
                 conversations =

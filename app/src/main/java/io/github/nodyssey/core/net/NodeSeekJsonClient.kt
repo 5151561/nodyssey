@@ -302,8 +302,14 @@ class NodeSeekJsonClient(
 
         const val STARDUST_PAGE_SIZE = 20
 
-        /** `?all=true` with an empty body; the per-item form takes a JSON array we do not need. */
+        /** `?all=true` with an empty body. */
         fun markAllViewedPath(type: String) = "/api/notification/$type/markViewed?all=true"
+
+        /**
+         * The per-row form of the same endpoint: no query, and a JSON body whose one field is named
+         * after the group — see [io.github.nodyssey.data.NotificationCategory.viewedField].
+         */
+        fun markViewedPath(type: String) = "/api/notification/$type/markViewed"
 
         /*
          * Direct messages.
@@ -322,6 +328,7 @@ class NodeSeekJsonClient(
 
         const val PATH_MESSAGE_SEND = "/api/notification/message/send"
         const val PATH_MESSAGE_MARK_VIEWED_ALL = "/api/notification/message/markViewed?all=true"
+        const val PATH_MESSAGE_MARK_VIEWED = "/api/notification/message/markViewed"
 
         /*
          * 关注 / 粉丝, read out of the site's own `fans` bundle on 2026-08-02.

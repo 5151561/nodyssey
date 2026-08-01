@@ -1,5 +1,8 @@
 package io.github.nodyssey.ui.messages
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -11,6 +14,8 @@ import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.DirectMessage
 import io.github.nodyssey.data.MessageRepository
+import io.github.nodyssey.data.NotificationCategory
+import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.postlist.toNodeSeekError
@@ -18,6 +23,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -31,6 +38,7 @@ import kotlinx.coroutines.launch
  */
 class MessageThreadViewModel(
     private val repository: MessageRepository,
+    private val notifications: NotificationRepository,
     private val session: SessionRepository,
     private val clock: AppClock,
     uid: Long,
@@ -38,11 +46,19 @@ class MessageThreadViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MessageThreadUiState(uid = uid, userName = userName))
     val uiState: StateFlow<MessageThreadUiState> = _uiState.asStateFlow()
+
+    /** The composer's text and selection, held here for the same reason the post editor's is. */
+    val draftState = TextFieldState()
     private var loadJob: Job? = null
     private var pendingSeed = 0L
 
     init {
         refresh()
+        // `canSend` is a property of the text, and the text lives in a state object the ViewModel
+        // cannot make a StateFlow out of — so the one derived bit it needs is mirrored across.
+        snapshotFlow { draftState.text.isNotBlank() }
+            .onEach { canSend -> _uiState.update { it.copy(canSend = canSend) } }
+            .launchIn(viewModelScope)
     }
 
     fun refresh() {
@@ -71,6 +87,7 @@ class MessageThreadViewModel(
                                 nowMillis = clock.nowMillis(),
                             )
                         }
+                        markRead(thread.unreadIds)
                     }.onFailure { throwable ->
                         _uiState.update {
                             it.copy(isLoading = false, error = throwable.toNodeSeekError())
@@ -79,8 +96,21 @@ class MessageThreadViewModel(
             }
     }
 
-    fun updateDraft(value: String) {
-        _uiState.update { it.copy(draft = value) }
+    /**
+     * Tells the server the conversation has been read, then re-reads the badge.
+     *
+     * Fetching the history is not what clears it — the site posts the ids back and only then does
+     * `unread-count` drop, which is why the 私信 badge used to outlive reading the message.
+     */
+    private fun markRead(ids: List<Long>) {
+        if (ids.isEmpty()) return
+        notifications.noteRead(NotificationCategory.MESSAGES, ids.size)
+        viewModelScope.launch {
+            runCatchingExceptCancellation {
+                repository.markRead(ids)
+                notifications.refreshCounts()
+            }
+        }
     }
 
     fun toggleMarkdown() {
@@ -88,7 +118,7 @@ class MessageThreadViewModel(
     }
 
     fun send() {
-        val content = _uiState.value.draft.trim()
+        val content = draftState.text.toString().trim()
         if (content.isEmpty()) return
         val bubble =
             MessageBubble(
@@ -100,8 +130,9 @@ class MessageThreadViewModel(
                 sentAtText = null,
                 status = SendStatus.SENDING,
             )
+        draftState.clearText()
         _uiState.update {
-            it.copy(draft = "", messages = it.messages + bubble, nowMillis = clock.nowMillis())
+            it.copy(messages = it.messages + bubble, nowMillis = clock.nowMillis())
         }
         deliver(bubble)
     }
@@ -174,6 +205,7 @@ class MessageThreadViewModel(
                 initializer {
                     MessageThreadViewModel(
                         repository = container.messageRepository,
+                        notifications = container.notificationRepository,
                         session = container.sessionRepository,
                         clock = container.clock,
                         uid = uid,
@@ -211,10 +243,9 @@ data class MessageThreadUiState(
     val messages: List<MessageBubble> = emptyList(),
     val isLoading: Boolean = false,
     val error: NodeSeekError? = null,
-    val draft: String = "",
+    /** Mirrored out of [MessageThreadViewModel.draftState]; the text itself is not UiState. */
+    val canSend: Boolean = false,
     /** The site's own MD On/Off switch; off sends the text verbatim. */
     val isMarkdown: Boolean = true,
     val nowMillis: Long = 0L,
-) {
-    val canSend: Boolean get() = draft.isNotBlank()
-}
+)

@@ -1,14 +1,17 @@
 package io.github.nodyssey.ui.messages
 
 import android.webkit.CookieManager
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.WebViewCookieJar
 import io.github.nodyssey.data.DirectMessage
 import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.MessageThread
+import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.session.SessionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,12 +54,12 @@ class MessageThreadViewModelTest {
             val viewModel = viewModel(repository)
             advanceUntilIdle()
 
-            viewModel.updateDraft("行，我发个投票试试")
+            viewModel.draftState.setTextAndPlaceCursorAtEnd("行，我发个投票试试")
             viewModel.send()
 
             // The bubble is on screen before the network answers, and the field is already clear.
             assertEquals(SendStatus.SENDING, viewModel.uiState.value.messages.last().status)
-            assertEquals("", viewModel.uiState.value.draft)
+            assertEquals("", viewModel.draftState.text.toString())
 
             advanceUntilIdle()
             assertEquals(SendStatus.SENT, viewModel.uiState.value.messages.last().status)
@@ -69,7 +72,7 @@ class MessageThreadViewModelTest {
             val viewModel = viewModel(repository)
             advanceUntilIdle()
 
-            viewModel.updateDraft("顺便问下星辰能转账吗")
+            viewModel.draftState.setTextAndPlaceCursorAtEnd("顺便问下星辰能转账吗")
             viewModel.send()
             advanceUntilIdle()
 
@@ -93,7 +96,7 @@ class MessageThreadViewModelTest {
             val viewModel = viewModel(repository)
             advanceUntilIdle()
 
-            viewModel.updateDraft("在吗")
+            viewModel.draftState.setTextAndPlaceCursorAtEnd("在吗")
             viewModel.send()
             advanceUntilIdle()
 
@@ -113,36 +116,74 @@ class MessageThreadViewModelTest {
             advanceUntilIdle()
 
             viewModel.toggleMarkdown()
-            viewModel.updateDraft("**不要加粗**")
+            viewModel.draftState.setTextAndPlaceCursorAtEnd("**不要加粗**")
             viewModel.send()
             advanceUntilIdle()
 
             assertEquals(false, repository.lastMarkdown)
         }
 
-    private fun viewModel(repository: MessageRepository) =
-        MessageThreadViewModel(
-            repository = repository,
-            session = SessionRepository(WebViewCookieJar(cookieManager)),
-            clock = AppClock { NOW },
-            uid = 4471,
-            userName = "iwil",
-        )
+    /**
+     * Bug: fetching a conversation is not what clears it — the ids have to go back — so the 私信
+     * badge survived reading the message that put it there.
+     */
+    @Test
+    fun `opening a conversation clears its unread messages and the badge`() =
+        runTest(dispatcher) {
+            val repository = FakeMessageRepository(unreadIds = listOf(11L, 12L))
+            val counts = FakeCountsApi(unread = """{"message":0}""")
+            val notifications = NotificationRepository(counts)
+            notifications.refreshCounts()
+            advanceUntilIdle()
+
+            viewModel(repository, notifications)
+            advanceUntilIdle()
+
+            assertEquals(listOf(11L, 12L), repository.markedRead)
+            assertEquals(0, notifications.counts.value.messages)
+        }
+
+    private fun viewModel(
+        repository: MessageRepository,
+        notifications: NotificationRepository = NotificationRepository(FakeCountsApi()),
+    ) = MessageThreadViewModel(
+        repository = repository,
+        notifications = notifications,
+        session = SessionRepository(WebViewCookieJar(cookieManager)),
+        clock = AppClock { NOW },
+        uid = 4471,
+        userName = "iwil",
+    )
 
     private companion object {
         const val NOW = 1_785_000_000_000L
     }
 }
 
+private class FakeCountsApi(
+    private val unread: String = """{"message":0}""",
+) : JsonApi {
+    override suspend fun getJson(path: String, referer: String): String = unread
+
+    override suspend fun postJson(path: String, body: String, referer: String): String =
+        """{"success":true}"""
+}
+
 private class FakeMessageRepository(
     var sendError: Throwable? = null,
+    private val unreadIds: List<Long> = emptyList(),
 ) : MessageRepository {
     var sendCount = 0
     var lastMarkdown: Boolean? = null
+    val markedRead = mutableListOf<Long>()
 
     override suspend fun conversations() = emptyList<io.github.nodyssey.data.MessageConversation>()
 
     override suspend fun markAllRead() = Unit
+
+    override suspend fun markRead(messageIds: List<Long>) {
+        markedRead += messageIds
+    }
 
     override suspend fun thread(uid: Long) =
         MessageThread(
@@ -161,6 +202,7 @@ private class FakeMessageRepository(
                     sentAtText = null,
                 ),
             ),
+            unreadIds = unreadIds,
         )
 
     override suspend fun send(

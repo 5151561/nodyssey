@@ -23,11 +23,17 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:windowSoftInputMode="adjustResize"
         android:theme="@style/Theme.Nodyssey">
+        <!--
+            adjustResize belongs on the activity; on <application> the platform never reads it, so
+            the window fell back to the default pan. Panning slides the whole window out of the top
+            of the screen and reports the keyboard as an inset anyway, which is what made every
+            `imePadding` in the app subtract a second keyboard.
+        -->
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

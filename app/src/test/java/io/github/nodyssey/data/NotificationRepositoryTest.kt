@@ -11,13 +11,16 @@ class NotificationRepositoryTest {
     @Test
     fun `parses unread counts`() =
         runTest {
-            val source = FakeJsonSource(mapOf("/api/notification/unread-count" to """{"reply":2,"atMe":1,"all":3}"""))
+            val source = FakeJsonSource(mapOf(UNREAD_COUNT to """{"reply":2,"atMe":1,"all":3}"""))
+            val repository = NotificationRepository(source)
 
-            val counts = NotificationRepository(source).unreadCounts()
+            val counts = repository.refreshCounts()
 
             assertEquals(2, counts.replies)
             assertEquals(1, counts.mentions)
             assertEquals(3, counts.all)
+            // The badge everyone else reads is the same value, not a copy the caller has to pass on.
+            assertEquals(counts, repository.counts.value)
         }
 
     @Test
@@ -91,11 +94,66 @@ class NotificationRepositoryTest {
     @Test
     fun `mark all read posts to the group's own endpoint`() =
         runTest {
-            val source = FakeJsonSource(emptyMap())
+            val source = FakeJsonSource(mapOf(UNREAD_COUNT to """{"reply":0,"atMe":0}"""))
 
             NotificationRepository(source).markAllRead(NotificationCategory.MENTIONS)
 
             assertEquals(listOf("/api/notification/at-me/markViewed?all=true"), source.postedPaths)
+        }
+
+    /**
+     * Bug: opening a notification greyed the row out and left the badge alone, so the number that
+     * sent the user there outlived being acted on.
+     */
+    @Test
+    fun `opening one notification clears it server-side and re-reads the badge`() =
+        runTest {
+            val source = FakeJsonSource(mapOf(UNREAD_COUNT to """{"reply":0,"atMe":1}"""))
+            val repository = NotificationRepository(source)
+
+            repository.markViewed(NotificationCategory.MENTIONS, listOf(42L))
+
+            assertEquals(listOf("/api/notification/at-me/markViewed"), source.postedPaths)
+            assertEquals(listOf("""{"atMe":[42]}"""), source.postedBodies)
+            // …and the answer to `unread-count` is what the badge ends up showing.
+            assertEquals(1, repository.counts.value.mentions)
+        }
+
+    /** Each group names its id array differently; there is no shared `ids` spelling. */
+    @Test
+    fun `each group posts its own field name`() =
+        runTest {
+            assertEquals("""{"atMe":[1]}""", markViewedBody(NotificationCategory.MENTIONS, listOf(1L)))
+            assertEquals("""{"replys":[1]}""", markViewedBody(NotificationCategory.REPLIES, listOf(1L)))
+            assertEquals("""{"messages":[1]}""", markViewedBody(NotificationCategory.MESSAGES, listOf(1L)))
+        }
+
+    /** The row id `markViewed` wants is `id`, which on the reply endpoint is not `comment_id`. */
+    @Test
+    fun `keeps the row id the mark-viewed call needs`() =
+        runTest {
+            val path = "/api/notification/reply-to-me/list?page=1"
+            val source =
+                FakeJsonSource(mapOf(path to """{"replyList":[{"id":7,"comment_id":42,"post_id":1}]}"""))
+
+            val item = NotificationRepository(source).notifications(NotificationCategory.REPLIES).single()
+
+            assertEquals("42", item.id)
+            assertEquals(7L, item.viewedId)
+        }
+
+    /** The badge has to move in the same frame as the row, not a round trip later. */
+    @Test
+    fun `noting a read drops the badge before the network answers`() =
+        runTest {
+            val source = FakeJsonSource(mapOf(UNREAD_COUNT to """{"reply":0,"atMe":3,"message":2}"""))
+            val repository = NotificationRepository(source)
+            repository.refreshCounts()
+
+            repository.noteRead(NotificationCategory.MESSAGES, 2)
+
+            assertEquals(0, repository.counts.value.messages)
+            assertEquals(3, repository.counts.value.mentions)
         }
 
     @Test
@@ -110,16 +168,20 @@ class NotificationRepositoryTest {
         }
 }
 
+private const val UNREAD_COUNT = "/api/notification/unread-count"
+
 private class FakeJsonSource(
     private val responses: Map<String, String>,
 ) : JsonApi {
     val postedPaths = mutableListOf<String>()
+    val postedBodies = mutableListOf<String>()
 
     override suspend fun getJson(path: String, referer: String): String =
         requireNotNull(responses[path]) { "No response for $path" }
 
     override suspend fun postJson(path: String, body: String, referer: String): String {
         postedPaths += path
+        postedBodies += body
         return """{"success":true}"""
     }
 }

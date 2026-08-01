@@ -58,12 +58,23 @@ data class MessageThread(
     val level: Int?,
     /** Oldest first, which is the order the conversation reads in. */
     val messages: List<DirectMessage>,
+    /**
+     * The ids of the messages this load found still unread, for [MessageRepository.markRead].
+     *
+     * Reading a conversation is not what clears it on NodeSeek — fetching the history leaves every
+     * row unread until the client posts these back, which is why the site's own thread view collects
+     * them the moment it renders.
+     */
+    val unreadIds: List<Long> = emptyList(),
 )
 
 interface MessageRepository {
     suspend fun conversations(): List<MessageConversation>
 
     suspend fun thread(uid: Long): MessageThread
+
+    /** Clears the given messages, which is what opening a conversation is supposed to do. */
+    suspend fun markRead(messageIds: List<Long>)
 
     /** Returns the accepted message so the optimistic bubble can be replaced by the real one. */
     suspend fun send(
@@ -141,6 +152,22 @@ class NetworkMessageRepository(
             avatarUrl = NodeSeekSite.avatarUrl(uid),
             level = header?.get("rank")?.jsonPrimitive?.intOrNull,
             messages = messages.mapIndexed { index, raw -> raw.toDirectMessage(uid, index) },
+            // Theirs and unread. The site tests `receiver_id === me`, which needs our own uid; from
+            // inside one thread "sent by the person we are talking to" says the same thing without
+            // a second round trip to find out who we are.
+            unreadIds =
+            messages.mapNotNull { raw ->
+                raw.id?.toLongOrNull()?.takeIf { !raw.viewed && raw.senderId == uid }
+            },
+        )
+    }
+
+    override suspend fun markRead(messageIds: List<Long>) {
+        if (messageIds.isEmpty()) return
+        jsonApi.postJson(
+            path = NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED,
+            body = markViewedBody(NotificationCategory.MESSAGES, messageIds),
+            referer = REFERER,
         )
     }
 
