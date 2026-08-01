@@ -7,6 +7,7 @@ import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Upsert
 import io.github.nodyssey.model.PostContent
+import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ThreadSnapshot
 import kotlinx.coroutines.flow.Flow
 
@@ -83,6 +84,40 @@ interface PostDetailDao {
         if (page == 1) deleteAllComments(postId) else deleteCommentPage(postId, page)
         upsertComments(comments)
     }
+
+    /**
+     * Applies [transform] to one floor's tallies, in a transaction.
+     *
+     * Read-modify-write rather than a targeted `UPDATE`: a floor is stored as a serialized
+     * [PostContent] blob, so there is no tally column to set and no `commentId` column to match on.
+     * The transaction is what keeps two reactions sent in quick succession from each writing back a
+     * copy of the row they read, dropping whichever landed first.
+     *
+     * The opening post is a floor too — it lives on [PostDetailEntity.body] and carries its own
+     * `commentId`, so it is checked before the comment rows. A [commentId] matching neither is a
+     * no-op: the thread was re-fetched or trimmed while the request was in flight, and the answer we
+     * are holding no longer describes anything on screen.
+     */
+    @Transaction
+    suspend fun updateReactions(
+        postId: Long,
+        commentId: Long,
+        transform: (PostReactions?) -> PostReactions,
+    ) {
+        val detail = findDetail(postId) ?: return
+        val body = detail.body
+        if (body != null && body.commentId == commentId) {
+            upsertDetail(detail.copy(body = body.copy(reactions = transform(body.reactions))))
+            return
+        }
+        val row = findComments(postId).firstOrNull { it.content.commentId == commentId } ?: return
+        upsertComments(
+            listOf(row.copy(content = row.content.copy(reactions = transform(row.content.reactions)))),
+        )
+    }
+
+    @Query("SELECT * FROM post_comments WHERE postId = :postId")
+    suspend fun findComments(postId: Long): List<CommentEntity>
 
     @Upsert
     suspend fun upsertDetail(detail: PostDetailEntity)

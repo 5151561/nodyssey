@@ -8,8 +8,11 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.nodyssey.core.net.NodeSeekError
+import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
+import io.github.nodyssey.model.PostReactions
+import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import org.junit.Rule
@@ -33,6 +36,8 @@ class PostDetailScreenTest {
         text: String,
         author: String = "tester",
         signature: List<RichNode> = emptyList(),
+        /** Null is a page that never carried the tallies, which is what disables the three marks. */
+        reactions: PostReactions? = null,
     ) = PostContent(
         commentId = text.hashCode().toLong(),
         floor = null,
@@ -46,6 +51,7 @@ class PostDetailScreenTest {
         categoryTitle = null,
         nodes = listOf(RichNode.Paragraph(listOf(InlineNode.Text(text)))),
         signatureNodes = signature,
+        reactions = reactions,
     )
 
     private fun setScreen(
@@ -53,6 +59,8 @@ class PostDetailScreenTest {
         onRetry: () -> Unit = {},
         onBack: () -> Unit = {},
         onOpenBrowser: (String) -> Unit = {},
+        onSignIn: () -> Unit = {},
+        onReact: (Long, ReactionAction) -> Unit = { _, _ -> },
     ) {
         composeRule.setContent {
             NodysseyTheme {
@@ -64,6 +72,8 @@ class PostDetailScreenTest {
                     onImageClick = {},
                     onRetry = onRetry,
                     onLoadMore = {},
+                    onSignIn = onSignIn,
+                    onReact = onReact,
                 )
             }
         }
@@ -120,9 +130,16 @@ class PostDetailScreenTest {
         assert(backed)
     }
 
+    private fun signedInState(reactions: PostReactions? = PostReactions()) =
+        PostDetailUiState(
+            title = "t",
+            body = content("body", author = "op", reactions = reactions),
+            isSignedIn = true,
+        )
+
     @Test
     fun `feeding chicken opens the confirmation dialog`() {
-        setScreen(PostDetailUiState(title = "t", body = content("body", author = "op")))
+        setScreen(signedInState())
 
         composeRule.onNodeWithContentDescription("投喂鸡腿").performClick()
 
@@ -130,6 +147,91 @@ class PostDetailScreenTest {
         composeRule.onNodeWithText("是否向 op 投喂鸡腿？这将消耗你一个鸡腿。").assertIsDisplayed()
         composeRule.onNodeWithText("取消").performClick()
         composeRule.onNodeWithText("投喂鸡腿？").assertDoesNotExist()
+    }
+
+    /** Confirming is what sends it; dismissing must not. */
+    @Test
+    fun `confirming the dialog spends the chicken leg`() {
+        val sent = mutableListOf<ReactionAction>()
+        setScreen(signedInState(), onReact = { _, action -> sent += action })
+
+        composeRule.onNodeWithContentDescription("投喂鸡腿").performClick()
+        composeRule.onNodeWithText("取消").performClick()
+        assert(sent.isEmpty())
+
+        composeRule.onNodeWithContentDescription("投喂鸡腿").performClick()
+        composeRule.onNodeWithText("投喂").performClick()
+
+        assert(sent == listOf(ReactionAction.ChickenLeg)) { "sent $sent" }
+    }
+
+    /** 点赞 is free and the site does not confirm it either — the tap is the whole interaction. */
+    @Test
+    fun `upvoting sends straight away without a dialog`() {
+        val sent = mutableListOf<ReactionAction>()
+        setScreen(signedInState(), onReact = { _, action -> sent += action })
+
+        composeRule.onNodeWithContentDescription("点赞").performClick()
+
+        assert(sent == listOf(ReactionAction.Upvote)) { "sent $sent" }
+    }
+
+    /** 反对 costs two chicken legs, and the dialog is the only place that says so. */
+    @Test
+    fun `the dislike confirmation names its price`() {
+        setScreen(signedInState())
+
+        composeRule.onNodeWithContentDescription("点踩").performClick()
+
+        composeRule.onNodeWithText("是否反对该楼层？这将消耗你两个鸡腿，且不能撤销。").assertIsDisplayed()
+    }
+
+    /** Only when the site confirmed the allowance — an unread quota must not promise "免费". */
+    @Test
+    fun `says the feed is free when today's allowance still covers it`() {
+        setScreen(signedInState().copy(freeChickenLegs = FreeChickenLegs(max = 5, used = 2)))
+
+        composeRule.onNodeWithContentDescription("投喂鸡腿").performClick()
+
+        composeRule.onNodeWithText("是否向 op 投喂鸡腿？今日还有 3 次免费投喂，本次不消耗鸡腿。").assertIsDisplayed()
+    }
+
+    @Test
+    fun `shows the tallies the page carried`() {
+        setScreen(signedInState(PostReactions(likeCount = 3, upvoteCount = 1, dislikeCount = 0)))
+
+        composeRule.onNodeWithText("3").assertIsDisplayed()
+    }
+
+    /** Signing in comes before the spend, not after the site has rejected it. */
+    @Test
+    fun `sends a signed-out reader to sign in instead of reacting`() {
+        var signIn = 0
+        val sent = mutableListOf<ReactionAction>()
+        setScreen(
+            PostDetailUiState(title = "t", body = content("body", reactions = PostReactions())),
+            onSignIn = { signIn++ },
+            onReact = { _, action -> sent += action },
+        )
+
+        composeRule.onNodeWithContentDescription("点赞").performClick()
+
+        assert(signIn == 1) { "sign-in asked $signIn times" }
+        assert(sent.isEmpty())
+    }
+
+    /** A mark already spent cannot be spent again — the site has no undo for any of the three. */
+    @Test
+    fun `an already spent mark is not clickable`() {
+        val sent = mutableListOf<ReactionAction>()
+        setScreen(
+            signedInState(PostReactions(upvoteCount = 1, upvoted = true)),
+            onReact = { _, action -> sent += action },
+        )
+
+        composeRule.onNodeWithContentDescription("点赞").performClick()
+
+        assert(sent.isEmpty()) { "sent $sent" }
     }
 
     @Test

@@ -7,11 +7,14 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.NodeSeekError
+import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.runCatchingExceptCancellation
+import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.model.PostContent
+import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.ui.postlist.toNodeSeekError
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -174,6 +177,62 @@ class PostDetailViewModel(
         _uiState.update { it.copy(pendingScrollPage = null) }
     }
 
+    /**
+     * Spends one mark on a floor.
+     *
+     * The new count is never written here: [PostRepository.react] puts it through Room and it arrives
+     * by the same observation as every other change to the thread. All this holds is which floor is
+     * mid-flight, so the row can show it and a second tap cannot double-spend.
+     *
+     * The guard against re-reacting is deliberately kept as well as the site's: theirs answers
+     * "已经进行过加鸡腿操作" *after* a round trip, and a reader whose first tap was slow should not be
+     * able to send a second in the meantime.
+     */
+    fun react(
+        commentId: Long,
+        action: ReactionAction,
+    ) {
+        if (_uiState.value.pendingReaction != null) return
+        _uiState.update { it.copy(pendingReaction = PendingReaction(commentId, action), reactionFailure = null) }
+        viewModelScope.launch {
+            runCatchingExceptCancellation { repository.react(postId, commentId, action) }
+                .onSuccess { _uiState.update { it.copy(pendingReaction = null) } }
+                .onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            pendingReaction = null,
+                            reactionFailure =
+                            ReactionFailure(
+                                error = throwable.toNodeSeekError(),
+                                // The site's own sentence when it sent one — "鸡腿不足" says more
+                                // than any wording of ours could from a status code.
+                                detail = (throwable as? NodeSeekException)?.detail,
+                            ),
+                        )
+                    }
+                }
+        }
+    }
+
+    /** The failure has been shown; stop holding it. */
+    fun onReactionFailureShown() {
+        _uiState.update { it.copy(reactionFailure = null) }
+    }
+
+    /**
+     * Loads today's free 加鸡腿 allowance so the confirmation can say whether this one is free.
+     *
+     * Called when the reader opens that confirmation, not on entering the thread: it is one request
+     * per thread read that only ever changes a sentence, and most reads never open the dialog.
+     */
+    fun loadFreeChickenLegs() {
+        if (_uiState.value.freeChickenLegs != null) return
+        viewModelScope.launch {
+            val quota = runCatchingExceptCancellation { repository.freeChickenLegs() }.getOrNull()
+            _uiState.update { it.copy(freeChickenLegs = quota) }
+        }
+    }
+
     private fun load(
         page: Int,
         append: Boolean,
@@ -233,4 +292,26 @@ data class PostDetailUiState(
     /** A page the screen should scroll to once its comments are in [comments]. */
     val pendingScrollPage: Int? = null,
     val error: NodeSeekError? = null,
+    /** The floor whose reaction is in flight, so its row can show it and refuse a second tap. */
+    val pendingReaction: PendingReaction? = null,
+    /** A refused reaction, held until the screen has shown it once. */
+    val reactionFailure: ReactionFailure? = null,
+    /** Today's free 加鸡腿 allowance; null until [PostDetailViewModel.loadFreeChickenLegs] answers. */
+    val freeChickenLegs: FreeChickenLegs? = null,
+)
+
+data class PendingReaction(
+    val commentId: Long,
+    val action: ReactionAction,
+)
+
+/**
+ * Why a reaction did not land.
+ *
+ * [detail] is the site's own sentence and wins when there is one; [error] is the fallback for the
+ * failures that never reached the site at all.
+ */
+data class ReactionFailure(
+    val error: NodeSeekError,
+    val detail: String?,
 )

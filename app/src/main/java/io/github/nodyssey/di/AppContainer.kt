@@ -33,6 +33,7 @@ import io.github.nodyssey.data.NetworkTermsRepository
 import io.github.nodyssey.data.NetworkUserSpaceRepository
 import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.OfflineFirstPostRepository
+import io.github.nodyssey.data.PostReactionWriter
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.RulingRepository
@@ -156,7 +157,7 @@ class DefaultAppContainer(
     private val remotePosts by lazy { NetworkPostDataSource(htmlClient, dispatchers, clock) }
 
     override val postRepository: PostRepository by lazy {
-        OfflineFirstPostRepository(database, remotePosts, clock)
+        OfflineFirstPostRepository(database, remotePosts, clock, PostReactionWriter(jsonClient))
     }
 
     override val categoryRepository: CategoryRepository by lazy {

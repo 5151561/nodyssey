@@ -159,6 +159,25 @@ object NodeSeekSite {
     fun parseFloorHash(hash: String?): Int? = hash?.trimStart('#')?.trim()?.toIntOrNull()
 
     /**
+     * Reacting to a floor. All three take `{commentId, action:"add"}` and answer
+     * `{success, current, coin, message}`, where `current` is that one tally's new value.
+     *
+     * The names do not mean what they look like, and the mapping is the whole reason this is spelled
+     * out here: the site's `like` is **加鸡腿**, which costs the reader a chicken leg, and its
+     * `dislike` is **反对**, which costs two. The free one that pays the author in stardust is
+     * `upvote`. Wiring a thumb-up icon to `like` would quietly spend the reader's currency.
+     *
+     * There is no remove for any of them; see [io.github.nodyssey.model.PostReactions].
+     *
+     * [action] is [io.github.nodyssey.model.ReactionAction.apiAction], which is where the wire words
+     * are defined — they are not repeated here.
+     */
+    fun reactionApiPath(action: String): String = "/api/statistics/$action"
+
+    /** `{maxFreeLike, freeLikeUsed}` — how many 加鸡腿 are still free today. */
+    const val FREE_LIKE_QUOTA_API_PATH = "/api/progress/today?scope=freelike"
+
+    /**
      * Post search. The same server-rendered list the boards serve, at a different route.
      *
      * Verified against the live site on 2026-08-01, because the app used to treat this route as if

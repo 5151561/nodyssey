@@ -1,6 +1,7 @@
 package io.github.nodyssey.data.account
 
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.html.SiteBootstrap
 import io.github.nodyssey.core.net.HtmlSource
 import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.core.net.MultipartWriteSource
@@ -8,7 +9,6 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.data.ProfileRepository
-import io.github.nodyssey.data.SiteBootstrap
 import io.github.nodyssey.data.bool
 import io.github.nodyssey.data.findObjectArray
 import io.github.nodyssey.data.long

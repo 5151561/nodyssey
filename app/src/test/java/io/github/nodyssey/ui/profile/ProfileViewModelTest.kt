@@ -12,12 +12,14 @@ import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.AttendanceResult
 import io.github.nodyssey.data.AttendanceStatus
 import io.github.nodyssey.data.FeedPost
+import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.GrowthSnapshot
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.UserProfile
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.model.FeedSort
+import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.ThreadSnapshot
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -286,4 +288,8 @@ private object NoOpPostRepository : PostRepository {
     override suspend fun isThreadFresh(postId: Long): Boolean = false
 
     override suspend fun markThreadRead(postId: Long) = Unit
+
+    override suspend fun react(postId: Long, commentId: Long, action: ReactionAction) = Unit
+
+    override suspend fun freeChickenLegs(): FreeChickenLegs? = null
 }

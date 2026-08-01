@@ -153,7 +153,13 @@
     <string name="post_reaction_dislike">点踩</string>
     <string name="chicken_dialog_title">投喂鸡腿？</string>
     <string name="chicken_dialog_body">是否向 %1$s 投喂鸡腿？这将消耗你一个鸡腿。</string>
+    <!-- Only shown when the site confirmed today's allowance still covers it -->
+    <string name="chicken_dialog_body_free">是否向 %1$s 投喂鸡腿？今日还有 %2$d 次免费投喂，本次不消耗鸡腿。</string>
     <string name="chicken_dialog_confirm">投喂</string>
+    <string name="dislike_dialog_title">点踩？</string>
+    <!-- The price is the point: 反对 is the only two-chicken-leg action in the app -->
+    <string name="dislike_dialog_body">是否反对该楼层？这将消耗你两个鸡腿，且不能撤销。</string>
+    <string name="dislike_dialog_confirm">点踩</string>
 
     <!-- Top-level navigation: a bar on a phone, a rail once the window is wide enough -->
     <string name="tab_home">首页</string>

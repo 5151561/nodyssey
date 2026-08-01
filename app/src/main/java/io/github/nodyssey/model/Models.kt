@@ -106,7 +106,67 @@ data class PostContent(
     val editedAtText: String? = null,
     /** The public Markdown signature rendered below this floor, empty when the user has none. */
     val signatureNodes: List<RichNode> = emptyList(),
+    /** Counts and this account's own marks, or null when the page did not carry them. */
+    val reactions: PostReactions? = null,
 )
+
+/**
+ * The three tallies under a floor, plus whether this account has already spent one.
+ *
+ * Null rather than zeroes is the whole point of hanging this off [PostContent] as an object: the
+ * numbers live in the page's `__config__` blob, and a page parsed without it (a signed-out read, or
+ * a template change) knows *nothing* about them. Zero would render as "nobody has upvoted this",
+ * which is a different claim from "we were not told".
+ *
+ * [liked], [disliked] and [upvoted] are one-way. The site has no remove action for them: its own
+ * client refuses a second attempt client-side rather than sending one, so these three latch true and
+ * the controls stay spent for good.
+ */
+@Serializable
+data class PostReactions(
+    /** 加鸡腿 — costs the reader one chicken leg, or nothing while the daily free allowance lasts. */
+    val likeCount: Int = 0,
+    /** 反对 — costs the reader two chicken legs. */
+    val dislikeCount: Int = 0,
+    /** 点赞 — free, and pays the author in stardust rather than chicken legs. */
+    val upvoteCount: Int = 0,
+    val liked: Boolean = false,
+    val disliked: Boolean = false,
+    val upvoted: Boolean = false,
+)
+
+/**
+ * One of the three marks, named for what it does to the reader rather than for the site's wire word.
+ *
+ * The wire words are a trap worth keeping at arm's length: the site's `like` is 加鸡腿 and costs a
+ * chicken leg, while the free approving one is `upvote`. [apiAction] is the only place the two
+ * vocabularies meet.
+ */
+enum class ReactionAction(
+    val apiAction: String,
+    /** Chicken legs this spends. Zero for [Upvote], which pays the author in stardust instead. */
+    val chickenLegCost: Int,
+) {
+    Upvote(apiAction = "upvote", chickenLegCost = 0),
+    ChickenLeg(apiAction = "like", chickenLegCost = 1),
+    Dislike(apiAction = "dislike", chickenLegCost = 2),
+}
+
+/** Whether this account has already spent [action] on the floor. */
+fun PostReactions.hasSpent(action: ReactionAction): Boolean =
+    when (action) {
+        ReactionAction.Upvote -> upvoted
+        ReactionAction.ChickenLeg -> liked
+        ReactionAction.Dislike -> disliked
+    }
+
+/** The tally [action] moves. */
+fun PostReactions.countOf(action: ReactionAction): Int =
+    when (action) {
+        ReactionAction.Upvote -> upvoteCount
+        ReactionAction.ChickenLeg -> likeCount
+        ReactionAction.Dislike -> dislikeCount
+    }
 
 /** Block-level pieces of rendered post markup. */
 @Serializable

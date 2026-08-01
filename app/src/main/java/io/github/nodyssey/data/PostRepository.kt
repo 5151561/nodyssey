@@ -9,6 +9,8 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import androidx.room.withTransaction
 import io.github.nodyssey.core.AppClock
+import io.github.nodyssey.core.net.NodeSeekError
+import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.local.CacheSessionEntity
 import io.github.nodyssey.data.local.CommentEntity
 import io.github.nodyssey.data.local.FeedPostRow
@@ -18,6 +20,7 @@ import io.github.nodyssey.data.local.toSummary
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostListPage
 import io.github.nodyssey.model.PostSummary
+import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.ThreadSnapshot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -140,6 +143,22 @@ interface PostRepository {
      * later compares like with like.
      */
     suspend fun markThreadRead(postId: Long)
+
+    /**
+     * Spends one mark on a floor and writes the site's new tally through Room.
+     *
+     * Throws on refusal, carrying the site's own sentence. Nothing is applied optimistically: these
+     * cost the reader real currency and cannot be taken back, so the count moves only once the site
+     * has said it moved. A dropped connection therefore leaves the floor exactly as it was.
+     */
+    suspend fun react(
+        postId: Long,
+        commentId: Long,
+        action: ReactionAction,
+    )
+
+    /** Today's remaining free 加鸡腿, or null when the site would not say. */
+    suspend fun freeChickenLegs(): FreeChickenLegs?
 }
 
 @OptIn(ExperimentalPagingApi::class)
@@ -147,6 +166,12 @@ class OfflineFirstPostRepository(
     private val database: NodeSeekDatabase,
     private val remote: PostRemoteDataSource,
     private val clock: AppClock,
+    /*
+     * Defaulted to absent so the many read-only tests that build this repository stay as short as
+     * they are. Production always passes one; a build that did not would refuse the write outright
+     * rather than pretend it landed.
+     */
+    private val reactions: PostReactionWriter? = null,
 ) : PostRepository {
     override fun feed(
         categorySlug: String?,
@@ -304,6 +329,20 @@ class OfflineFirstPostRepository(
         val commentCount = database.feedDao().commentCount(postId) ?: 0
         database.readMarkDao().markRead(postId, commentCount, clock.nowMillis())
     }
+
+    override suspend fun react(
+        postId: Long,
+        commentId: Long,
+        action: ReactionAction,
+    ) {
+        val writer = reactions ?: throw NodeSeekException(NodeSeekError.NotWired)
+        val outcome = writer.react(postId = postId, commentId = commentId, action = action)
+        database.postDetailDao().updateReactions(postId, commentId) { previous ->
+            previous.applying(action, outcome)
+        }
+    }
+
+    override suspend fun freeChickenLegs(): FreeChickenLegs? = reactions?.freeChickenLegs()
 
     companion object {
         /**

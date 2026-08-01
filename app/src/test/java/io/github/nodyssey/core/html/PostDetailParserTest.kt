@@ -4,6 +4,7 @@ import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.RichNode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -132,6 +133,52 @@ class PostDetailParserTest {
             """.trimIndent()
         val parsed = PostDetailParser.parse(html, postId = 1L, page = 1)
         assertEquals(37, parsed.totalPages)
+    }
+
+    /**
+     * The tallies are not in the markup — they ride in the page's base64 `__config__` blob, keyed by
+     * the same comment id the floor's `data-comment-id` carries. This floor is a real one from the
+     * captured page, which is why the numbers are uneven: three chicken legs, one upvote, no dislike.
+     */
+    @Test
+    fun `reads reaction tallies out of the page config`() {
+        val floor = detail.comments.first { it.commentId == 9727591L }
+        val reactions = requireNotNull(floor.reactions)
+        assertEquals(3, reactions.likeCount)
+        assertEquals(1, reactions.upvoteCount)
+        assertEquals(0, reactions.dislikeCount)
+        // The capture was taken by an account that had spent nothing on this floor.
+        assertFalse(reactions.liked)
+        assertFalse(reactions.upvoted)
+    }
+
+    /**
+     * The opening post is a floor like any other — NodeSeek keeps it as `comments[0]` with its own
+     * comment id — so it has to come out with tallies too, or the buttons under the post itself
+     * would be the one place in the thread that never works.
+     */
+    @Test
+    fun `gives the opening post its own tallies`() {
+        assertEquals(9727545L, body.commentId)
+        assertEquals(0, requireNotNull(body.reactions).likeCount)
+    }
+
+    /**
+     * A signed-out read has no blob, and zeroes would be a claim the page never made — "nobody has
+     * upvoted this" instead of "we were not told". The article still has to survive it.
+     */
+    @Test
+    fun `reports no tallies at all when the page carries no config`() {
+        val stripped =
+            Fixtures.load("post-703863-1.html")
+                .replace(Regex("""<script id="temp-script"[^>]*>[^<]*</script>"""), "")
+        val parsed = PostDetailParser.parse(stripped, postId = 703863L, page = 1)
+
+        assertNull(requireNotNull(parsed.body).reactions)
+        assertTrue(parsed.comments.isNotEmpty())
+        assertTrue(parsed.comments.all { it.reactions == null })
+        // The point of the null: losing the tallies must not lose the thread.
+        assertTrue(requireNotNull(parsed.body).nodes.isNotEmpty())
     }
 
     @Test

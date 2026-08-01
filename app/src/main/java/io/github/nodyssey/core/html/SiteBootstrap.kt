@@ -1,8 +1,9 @@
-package io.github.nodyssey.data
+package io.github.nodyssey.core.html
 
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
@@ -29,19 +30,35 @@ internal object SiteBootstrap {
      * case is [NodeSeekError.LoginRequired] rather than [NodeSeekError.Unparsable].
      */
     fun decode(html: String): String {
-        val encoded =
-            Jsoup
-                .parse(html)
-                .getElementById(ELEMENT_ID)
-                ?.data()
-                ?.trim()
-                .orEmpty()
+        val encoded = encodedText(Jsoup.parse(html))
         if (encoded.isEmpty()) throw NodeSeekException(NodeSeekError.LoginRequired)
 
         return try {
-            String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8)
+            decodeBase64(encoded)
         } catch (exception: IllegalArgumentException) {
             throw NodeSeekException(NodeSeekError.Unparsable, exception)
         }
     }
+
+    /**
+     * The same payload for callers that can do without it.
+     *
+     * [decode] speaks for pages whose *only* reason to exist is the account — a settings page with no
+     * bootstrap element has failed. A post page has not: it renders for signed-out readers too, and it
+     * carries content worth showing whether or not the blob came with it. Those callers want null,
+     * not an exception that would throw the article away along with the counts.
+     */
+    fun decodeOrNull(document: Document): String? {
+        val encoded = encodedText(document)
+        if (encoded.isEmpty()) return null
+        return try {
+            decodeBase64(encoded)
+        } catch (exception: IllegalArgumentException) {
+            null
+        }
+    }
+
+    private fun encodedText(document: Document): String = document.getElementById(ELEMENT_ID)?.data()?.trim().orEmpty()
+
+    private fun decodeBase64(encoded: String): String = String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8)
 }

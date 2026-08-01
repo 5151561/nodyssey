@@ -2,6 +2,7 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.html.SiteBootstrap
 import io.github.nodyssey.core.net.HtmlSource
 import io.github.nodyssey.core.net.JsonSource
 import io.github.nodyssey.core.net.NodeSeekError

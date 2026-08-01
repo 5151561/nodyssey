@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,6 +49,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -84,9 +87,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.net.NodeSeekError
+import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
+import io.github.nodyssey.model.PostReactions
+import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.RichNode
+import io.github.nodyssey.model.countOf
+import io.github.nodyssey.model.hasSpent
 import io.github.nodyssey.ui.common.AppendSpinner
 import io.github.nodyssey.ui.common.AvatarShape
 import io.github.nodyssey.ui.common.BoardTag
@@ -98,6 +106,7 @@ import io.github.nodyssey.ui.common.RoleBadgeRow
 import io.github.nodyssey.ui.common.SkeletonBar
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.common.rememberClipboardCopy
+import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.ReplyComposerHost
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
 import io.github.nodyssey.ui.composer.ReplyQuote
@@ -152,6 +161,9 @@ fun PostDetailRoute(
         // Replying needs an account; sending an anonymous reply into the void is the one outcome
         // the editor must not produce, so the sign-in page comes first.
         onReply = { quote -> if (state.isSignedIn) replyViewModel.open(quote) else onSignIn() },
+        onReact = viewModel::react,
+        onLoadFreeChickenLegs = viewModel::loadFreeChickenLegs,
+        onReactionFailureShown = viewModel::onReactionFailureShown,
         replyOpen = replyState.visible,
         modifier = modifier,
     )
@@ -192,6 +204,11 @@ fun PostDetailScreen(
     onVerify: () -> Unit = { onOpenBrowser(postUrl) },
     /** `null` opens an empty reply; a quote answers one floor (6d). The editor itself is hosted by the route. */
     onReply: (ReplyQuote?) -> Unit = {},
+    /** Spends one mark on a floor. Confirmation, where the site has one, happens before this. */
+    onReact: (Long, ReactionAction) -> Unit = { _, _ -> },
+    /** Asked for when a 投喂 confirmation opens, so it can say whether this one is free. */
+    onLoadFreeChickenLegs: () -> Unit = {},
+    onReactionFailureShown: () -> Unit = {},
     /** Hides the bottom toolbar while the editor covers it. */
     replyOpen: Boolean = false,
     /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
@@ -201,7 +218,8 @@ fun PostDetailScreen(
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    var chickenTarget by remember { mutableStateOf<PostContent?>(null) }
+    var confirmTarget by remember { mutableStateOf<ReactionConfirm?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
     var showPageSheet by remember { mutableStateOf(false) }
     var pageToolbarExpanded by rememberSaveable { mutableStateOf(true) }
     var hasJumpedToInitialFloor by remember(initialFloor) { mutableStateOf(false) }
@@ -289,6 +307,7 @@ fun PostDetailScreen(
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             DetailTopBar(
                 title = state.title,
@@ -329,7 +348,24 @@ fun PostDetailScreen(
                             val index = state.indexOfFloor(floor)
                             if (index != null) scope.launch { listState.animateScrollToItem(index) }
                         },
-                        onChickenClick = { chickenTarget = it },
+                        onReact = { content, action ->
+                            val commentId = content.commentId
+                            when {
+                                // Same rule as the editor: the account has to exist before the
+                                // action, not after a rejection that also spent the tap.
+                                !state.isSignedIn -> onSignIn()
+
+                                commentId == null -> Unit
+
+                                // 点赞 costs nothing and the site does not confirm it either.
+                                action == ReactionAction.Upvote -> onReact(commentId, action)
+
+                                else -> {
+                                    confirmTarget = ReactionConfirm(content, commentId, action)
+                                    if (action == ReactionAction.ChickenLeg) onLoadFreeChickenLegs()
+                                }
+                            }
+                        },
                         onReplyToFloor = onReply,
                         onAuthorClick = onAuthorClick,
                         modifier =
@@ -359,12 +395,26 @@ fun PostDetailScreen(
         }
     }
 
-    chickenTarget?.let { target ->
-        FeedChickenDialog(
-            onDismiss = { chickenTarget = null },
-            onConfirm = { chickenTarget = null },
-            authorName = target.authorName,
+    confirmTarget?.let { target ->
+        ReactionConfirmDialog(
+            target = target,
+            freeChickenLegs = state.freeChickenLegs,
+            onDismiss = { confirmTarget = null },
+            onConfirm = {
+                confirmTarget = null
+                onReact(target.commentId, target.action)
+            },
         )
+    }
+
+    // The site's own sentence is the whole value here — "鸡腿不足", "已经进行过加鸡腿操作" — so it is
+    // shown verbatim, and our wording only stands in for the failures that never reached the site.
+    val failure = state.reactionFailure
+    val fallback = failure?.error?.shortMessage()
+    LaunchedEffect(failure) {
+        if (failure == null) return@LaunchedEffect
+        snackbarHostState.showSnackbar(failure.detail?.takeIf { it.isNotBlank() } ?: fallback.orEmpty())
+        onReactionFailureShown()
     }
 
     if (showPageSheet) {
@@ -601,7 +651,7 @@ private fun ThreadList(
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
-    onChickenClick: (PostContent) -> Unit,
+    onReact: (PostContent, ReactionAction) -> Unit,
     onReplyToFloor: (ReplyQuote?) -> Unit,
     onAuthorClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -624,7 +674,8 @@ private fun ThreadList(
                     onOpenBrowser = onOpenBrowser,
                     onImageClick = onImageClick,
                     onJumpToFloor = onJumpToFloor,
-                    onChickenClick = { onChickenClick(body) },
+                    pendingReaction = state.pendingReactionFor(body),
+                    onReact = { action -> onReact(body, action) },
                     onAuthorClick = onAuthorClick,
                 )
             }
@@ -643,7 +694,8 @@ private fun ThreadList(
                 onOpenBrowser = onOpenBrowser,
                 onImageClick = onImageClick,
                 onJumpToFloor = onJumpToFloor,
-                onChickenClick = { onChickenClick(comment) },
+                pendingReaction = state.pendingReactionFor(comment),
+                onReact = { action -> onReact(comment, action) },
                 onReply = { onReplyToFloor(comment.toReplyQuote()) },
                 onAuthorClick = onAuthorClick,
             )
@@ -715,7 +767,8 @@ private fun OriginalPost(
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
-    onChickenClick: () -> Unit,
+    pendingReaction: ReactionAction?,
+    onReact: (ReactionAction) -> Unit,
     onAuthorClick: (Long) -> Unit,
 ) {
     Column(
@@ -781,7 +834,11 @@ private fun OriginalPost(
             onImageClick = onImageClick,
             onJumpToFloor = onJumpToFloor,
         )
-        ReactionRow(onChickenClick = onChickenClick)
+        ReactionRow(
+            reactions = body.reactions,
+            pending = pendingReaction,
+            onReact = onReact,
+        )
     }
 }
 
@@ -847,7 +904,8 @@ private fun CommentRow(
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
-    onChickenClick: () -> Unit,
+    pendingReaction: ReactionAction?,
+    onReact: (ReactionAction) -> Unit,
     onReply: () -> Unit,
     onAuthorClick: (Long) -> Unit,
 ) {
@@ -913,7 +971,12 @@ private fun CommentRow(
             onImageClick = onImageClick,
             onJumpToFloor = onJumpToFloor,
         )
-        ReactionRow(onChickenClick = onChickenClick, onReply = onReply)
+        ReactionRow(
+            reactions = comment.reactions,
+            pending = pendingReaction,
+            onReact = onReact,
+            onReply = onReply,
+        )
     }
 }
 
@@ -951,7 +1014,9 @@ private val TEXT_BUTTON_CONTENT_INSET = 12.dp
 
 @Composable
 private fun ReactionRow(
-    onChickenClick: () -> Unit,
+    reactions: PostReactions?,
+    pending: ReactionAction?,
+    onReact: (ReactionAction) -> Unit,
     modifier: Modifier = Modifier,
     onReply: (() -> Unit)? = null,
 ) {
@@ -966,16 +1031,22 @@ private fun ReactionRow(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        QuietReaction(Icons.Default.ThumbUp, R.string.post_reaction_like, "0")
-        QuietReaction(
-            icon = NodysseyIcons.ChickenLeg,
-            label = R.string.post_reaction_chicken,
-            count = "0",
-            onClick = onChickenClick,
-        )
-        QuietReaction(NodysseyIcons.ThumbDown, R.string.post_reaction_dislike, "0")
-        // The one interaction on a floor that is actually wired up. It carries the floor into the
-        // editor as a quote, which is what 6d's "回复 #12 · nssk" header is showing.
+        REACTION_ORDER.forEach { (action, icon) ->
+            QuietReaction(
+                icon = icon,
+                label = action.labelRes(),
+                // No count at all rather than a zero when the page did not carry the tallies: an
+                // unread number and "nobody has done this" are different claims.
+                count = reactions?.countOf(action)?.toString().orEmpty(),
+                spent = reactions?.hasSpent(action) == true,
+                pending = pending == action,
+                // A floor whose tallies we never read is a floor we cannot say is unspent — offering
+                // the button there invites a round trip that ends in "已经进行过".
+                onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
+            )
+        }
+        // Not a reaction, but it has always lived on this row: it carries the floor into the editor
+        // as a quote, which is what 6d's "回复 #12 · nssk" header is showing.
         onReply?.let {
             QuietReaction(
                 icon = NodysseyIcons.Reply,
@@ -987,15 +1058,53 @@ private fun ReactionRow(
     }
 }
 
+/** Left to right as 6d draws them: 点赞, 投喂鸡腿, 点踩. */
+private val REACTION_ORDER =
+    listOf(
+        ReactionAction.Upvote to Icons.Default.ThumbUp,
+        ReactionAction.ChickenLeg to NodysseyIcons.ChickenLeg,
+        ReactionAction.Dislike to NodysseyIcons.ThumbDown,
+    )
+
+private fun ReactionAction.labelRes(): Int =
+    when (this) {
+        ReactionAction.Upvote -> R.string.post_reaction_like
+        ReactionAction.ChickenLeg -> R.string.post_reaction_chicken
+        ReactionAction.Dislike -> R.string.post_reaction_dislike
+    }
+
 @Composable
 private fun QuietReaction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: Int,
     count: String,
     onClick: (() -> Unit)? = null,
+    spent: Boolean = false,
+    pending: Boolean = false,
 ) {
-    TextButton(onClick = onClick ?: {}, enabled = onClick != null) {
-        Icon(icon, contentDescription = stringResource(label), modifier = Modifier.size(18.dp))
+    /*
+     * Spent is drawn, not merely disabled. These three cannot be undone, so the row has to answer
+     * "did I already do this?" at a glance — and it has to answer it in colour rather than by being
+     * greyed, because greyed is also what an unusable button looks like to a signed-out reader.
+     */
+    TextButton(
+        onClick = onClick ?: {},
+        enabled = onClick != null && !spent && !pending,
+        colors =
+        if (spent) {
+            ButtonDefaults.textButtonColors(disabledContentColor = MaterialTheme.colorScheme.primary)
+        } else {
+            ButtonDefaults.textButtonColors()
+        },
+    ) {
+        if (pending) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Icon(icon, contentDescription = stringResource(label), modifier = Modifier.size(18.dp))
+        }
         if (count.isNotEmpty()) {
             Text(
                 text = count,
@@ -1006,27 +1115,72 @@ private fun QuietReaction(
     }
 }
 
+/** The floor a confirmation is asking about, and what it would spend on it. */
+private data class ReactionConfirm(
+    val content: PostContent,
+    val commentId: Long,
+    val action: ReactionAction,
+)
+
+/**
+ * The one gate in front of an irreversible spend.
+ *
+ * Only 加鸡腿 and 反对 get one, matching the site: 点赞 costs nothing and is sent on the tap. The body
+ * has to name the price, because these are the only two places in the app where reading a thread can
+ * cost the reader currency — and 反对 costs *two*, which is the kind of thing a reader discovers
+ * afterwards if the dialog only says "确定吗".
+ */
 @Composable
-private fun FeedChickenDialog(
-    authorName: String,
+private fun ReactionConfirmDialog(
+    target: ReactionConfirm,
+    freeChickenLegs: FreeChickenLegs?,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
+    val isChicken = target.action == ReactionAction.ChickenLeg
+    // Only claim it is free when the site told us so; an unread quota says nothing either way, and
+    // "免费" that turns out to have cost a chicken leg is the worse of the two mistakes.
+    val free = isChicken && freeChickenLegs != null && freeChickenLegs.remaining > 0
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                NodysseyIcons.ChickenLeg,
+                if (isChicken) NodysseyIcons.ChickenLeg else NodysseyIcons.ThumbDown,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
         },
-        title = { Text(stringResource(R.string.chicken_dialog_title)) },
+        title = {
+            Text(
+                stringResource(
+                    if (isChicken) R.string.chicken_dialog_title else R.string.dislike_dialog_title,
+                ),
+            )
+        },
         text = {
-            Text(stringResource(R.string.chicken_dialog_body, authorName))
+            Text(
+                when {
+                    free ->
+                        stringResource(
+                            R.string.chicken_dialog_body_free,
+                            target.content.authorName,
+                            freeChickenLegs.remaining,
+                        )
+
+                    isChicken -> stringResource(R.string.chicken_dialog_body, target.content.authorName)
+
+                    else -> stringResource(R.string.dislike_dialog_body)
+                },
+            )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text(stringResource(R.string.chicken_dialog_confirm)) }
+            TextButton(onClick = onConfirm) {
+                Text(
+                    stringResource(
+                        if (isChicken) R.string.chicken_dialog_confirm else R.string.dislike_dialog_confirm,
+                    ),
+                )
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
@@ -1152,6 +1306,10 @@ private fun FloorLabel(floor: String) {
 /** Items in [ThreadList] before the first comment: title, comments header, and the body when present. */
 private val PostDetailUiState.headerItemCount: Int
     get() = 2 + (if (body != null) 1 else 0)
+
+/** The mark in flight on [content], if any — only one floor at a time can have one. */
+private fun PostDetailUiState.pendingReactionFor(content: PostContent): ReactionAction? =
+    pendingReaction?.takeIf { it.commentId == content.commentId }?.action
 
 /** Mirrors [ThreadList]'s item order so a quote reference can scroll to the floor it points at. */
 private fun PostDetailUiState.indexOfFloor(floor: String): Int? {

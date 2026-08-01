@@ -24,6 +24,7 @@ scrolling stays in one list, and the UI follows the system theme.
 - 帖子 / 用户搜索与论坛列表共享同一条管线，因此结果行有一致的已读态与新回复角标
 - @我 / 回复主题 / 私信三组通知、未读数、楼层跳转、私信会话与发送
 - 原生发帖编辑器、Markdown 预览、表情、阅读权限和本地草稿；发帖与回复都走站点接口
+- 点赞 / 投喂鸡腿 / 点踩，真实计数与「已操作」状态；消耗鸡腿的两个会先说明代价再发
 - NodeImage 图床：图片按最长边 2048 转 WebP 后上传，API Key 只存本机
 - 用户空间、账号设置二级页（资料、头像、密码、2FA、绑定状态、偏好、屏蔽列表）与 Telegram 流程
 - 等级、鸡腿与星辰余额，鸡腿流水与星辰流水两条真实分页流水，签到 / 签到榜与社区工具
@@ -31,8 +32,8 @@ scrolling stays in one list, and the UI follows the system theme.
 - f1 关于与社区页；f2 隐私协议原生长文页，WebView 仅作失败降级
 - 图片查看、缩放、保存与分享
 
-仍未接入的写操作是点赞 / 反对 / 投喂鸡腿——按钮禁用或只关闭弹窗，不发假请求。关注 / 粉丝列表、
-管理记录和今日额度依赖尚未确认的站点数据源，界面会明确提示并提供网页降级，不会伪装为空数据。
+关注 / 粉丝列表、管理记录和今日额度依赖尚未确认的站点数据源，界面会明确提示并提供网页降级，
+不会伪装为空数据。
 修改邮箱、绑定 Telegram、星辰转账、邀请码购买没有原生闭环，会带用户到真实站点完成。
 逐项清单见 [docs/implementation-status.md](docs/implementation-status.md)。
 
@@ -52,6 +53,8 @@ app/src/main/java/io/github/nodyssey/
 │   ├── NodeImageSite.kt         NodeImage upload host (off-site, user API key)
 │   ├── html/
 │   │   ├── Selectors.kt         shared site selectors
+│   │   ├── SiteBootstrap.kt     the base64 `__config__` every page carries
+│   │   ├── PostConfigParser.kt  that blob → reaction tallies, by comment id
 │   │   ├── PostListParser.kt    topic list → PostListPage
 │   │   ├── PostDetailParser.kt  post page → PostDetail
 │   │   ├── SearchParser.kt      search results → the same list model
@@ -102,7 +105,7 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 
 - [x] 原生发帖、Markdown 编辑 / 预览、表情与草稿
 - [x] 评论发布（`/api/content/new-comment`）与 NodeImage 图床上传
-- [ ] 接入点赞 / 反对 / 投喂鸡腿
+- [x] 点赞 / 反对 / 投喂鸡腿（`/api/statistics/{upvote,like,dislike}`）
 - [x] 消息通知、未读数、私信列表 / 会话 / 发送
 - [x] 每日签到（`/api/attendance`）
 - [x] 帖子 / 用户搜索，与论坛列表共用管线
@@ -112,7 +115,7 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 - [x] 图片全屏预览、保存与分享
 - [x] WorkManager 通知轮询与系统渠道
 - [x] f1 关于与社区、f2 隐私协议原生阅读
-- [ ] 接入关注 / 粉丝列表、管理记录与今日额度的真实数据源
+- [ ] 接入关注 / 粉丝列表（`/api/fans/add`、`/api/fans/del` 已定位）、管理记录与今日额度
 - [ ] 星辰转账原生化（站点有 `payment-prepare` / `send`，目前仍转网页）
 
 ## 架构

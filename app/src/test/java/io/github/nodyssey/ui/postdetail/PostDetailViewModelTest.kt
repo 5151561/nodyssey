@@ -5,9 +5,11 @@ import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.FakePostRemoteDataSource
 import io.github.nodyssey.data.MutableClock
 import io.github.nodyssey.data.OfflineFirstPostRepository
+import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.inMemoryDatabase
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.session.SessionState
+import io.github.nodyssey.model.ReactionAction
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -405,4 +407,71 @@ class PostDetailViewModelTest {
 
             assertTrue("got ${vm.postUrl()}", vm.postUrl().endsWith("-2"))
         }
+
+    /**
+     * Two taps on a slow connection must send one request. The site would reject the second with
+     * "已经进行过加鸡腿操作", but only after it had already taken the first one's chicken leg — and on
+     * an unlucky interleaving it would take two.
+     */
+    @Test
+    fun `will not send a second reaction while one is in flight`() =
+        runTest(dispatcher) {
+            val gate = CompletableDeferred<Unit>()
+            val reactions = GatedReactionRepository(repository, gate)
+            val vm = PostDetailViewModel(42, reactions, session)
+            advanceUntilIdle()
+
+            vm.react(commentId = 7L, action = ReactionAction.ChickenLeg)
+            advanceUntilIdle()
+            vm.react(commentId = 7L, action = ReactionAction.ChickenLeg)
+            advanceUntilIdle()
+
+            assertEquals(PendingReaction(7L, ReactionAction.ChickenLeg), vm.uiState.value.pendingReaction)
+            assertEquals(1, reactions.calls)
+
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertNull(vm.uiState.value.pendingReaction)
+        }
+
+    /** The site's own sentence is the message worth showing; ours would only paraphrase a 500. */
+    @Test
+    fun `surfaces the site's refusal and then clears it`() =
+        runTest(dispatcher) {
+            val reactions =
+                GatedReactionRepository(
+                    repository,
+                    failure = NodeSeekException(NodeSeekError.Unknown, detail = "鸡腿不足"),
+                )
+            val vm = PostDetailViewModel(42, reactions, session)
+            advanceUntilIdle()
+
+            vm.react(commentId = 7L, action = ReactionAction.ChickenLeg)
+            advanceUntilIdle()
+
+            assertEquals("鸡腿不足", vm.uiState.value.reactionFailure?.detail)
+            assertNull(vm.uiState.value.pendingReaction)
+
+            vm.onReactionFailureShown()
+            assertNull(vm.uiState.value.reactionFailure)
+        }
+}
+
+/** Delegates the thread to a real repository and only stands in for the write. */
+private class GatedReactionRepository(
+    private val delegate: PostRepository,
+    private val gate: CompletableDeferred<Unit>? = null,
+    private val failure: Throwable? = null,
+) : PostRepository by delegate {
+    var calls = 0
+
+    override suspend fun react(
+        postId: Long,
+        commentId: Long,
+        action: ReactionAction,
+    ) {
+        calls++
+        gate?.await()
+        failure?.let { throw it }
+    }
 }
