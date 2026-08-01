@@ -23,7 +23,6 @@ import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.SearchHistoryEntry
-import io.github.nodyssey.model.SearchSort
 import io.github.nodyssey.model.SearchTarget
 import io.github.nodyssey.ui.postlist.toNodeSeekError
 import kotlinx.coroutines.CancellationException
@@ -80,7 +79,7 @@ class SearchViewModel(
                     postRepository.searchFeed(
                         query = request.query,
                         categorySlug = request.board,
-                        sort = request.sort.toFeedSort(),
+                        sort = request.sort,
                     )
                 }
             }.cachedIn(viewModelScope)
@@ -183,7 +182,7 @@ class SearchViewModel(
         rerunSubmittedSearch()
     }
 
-    fun selectSort(sort: SearchSort) {
+    fun selectSort(sort: FeedSort) {
         if (_uiState.value.sort == sort) return
         _uiState.update { it.copy(sort = sort) }
         rerunSubmittedSearch()
@@ -200,7 +199,7 @@ class SearchViewModel(
             NodeSeekSite.postSearchPath(
                 query = state.submittedQuery ?: query.text.toString(),
                 categorySlug = state.selectedBoard,
-                sort = state.sort.toFeedSort(),
+                sort = state.sort,
             )
     }
 
@@ -295,10 +294,6 @@ class SearchViewModel(
     }
 }
 
-/** The site expresses both orders with the one `sortBy` parameter the boards use. */
-internal fun SearchSort.toFeedSort(): FeedSort =
-    if (this == SearchSort.TIME) FeedSort.POST_TIME else FeedSort.LAST_REPLY
-
 sealed interface SearchLoadState {
     data object Idle : SearchLoadState
 
@@ -318,7 +313,8 @@ data class SearchUiState(
     val boards: List<Board> = emptyList(),
     /** One board, or null for the whole site — the only two scopes `/search` can express. */
     val selectedBoard: String? = null,
-    val sort: SearchSort = SearchSort.RELEVANCE,
+    /** `/search` reads the boards' own `sortBy`, and reads it as 新帖子 when it is absent. */
+    val sort: FeedSort = FeedSort.POST_TIME,
     val userResults: List<UserSearchResult> = emptyList(),
     val userLoadState: SearchLoadState = SearchLoadState.Idle,
 )
@@ -327,5 +323,5 @@ data class SearchUiState(
 internal data class PostSearchRequest(
     val query: String,
     val board: String?,
-    val sort: SearchSort,
+    val sort: FeedSort,
 )

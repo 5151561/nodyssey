@@ -18,7 +18,7 @@ import java.nio.file.Files
  * Search history written by an older build, read by this one.
  *
  * Decoding a stored row is lossy — the multi-select's board list collapses to its first board and
- * the retired sorts fold into `RELEVANCE` — so rows that were distinct on disk can arrive as one
+ * the retired sort labels fold into the two `FeedSort` values — so rows that were distinct on disk can arrive as one
  * entry. The list goes straight into a LazyColumn keyed on [SearchHistoryEntry.key], and a repeated
  * key there is a crash on the next frame, not a cosmetic duplicate: tapping into search with two
  * such rows stored took the app down every time.

@@ -50,13 +50,10 @@ class TopLevelNavigationJourneyTest {
     }
 
     /**
-     * The search screen opens expanded, and an expanded Material 3 search bar keeps two input fields
-     * in the tree at once: the collapsed one still sitting in the top bar, and the full-screen one
-     * drawn over it. Matching on `hasSetTextAction()` alone therefore finds two nodes and fails in
-     * `fetchOneOrThrow` — which surfaces as "Failed to perform text input", naming the wrong cause.
-     *
-     * Focus is what tells them apart, and it is also the honest question to ask: of the two, the
-     * focused one is the field the user is typing into.
+     * The search screen has one field and focuses it on arrival, so waiting for the focused one is
+     * also waiting for the screen to be ready: matching on `hasSetTextAction()` alone can land on
+     * the frame before the field exists, which surfaces as "Failed to perform text input" and names
+     * the wrong cause.
      */
     @OptIn(ExperimentalTestApi::class)
     private fun searchInputField(): SemanticsNodeInteraction {

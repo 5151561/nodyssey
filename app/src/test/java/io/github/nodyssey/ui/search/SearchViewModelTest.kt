@@ -18,7 +18,6 @@ import io.github.nodyssey.data.inMemoryDatabase
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.testSettingsRepository
 import io.github.nodyssey.model.FeedSort
-import io.github.nodyssey.model.SearchSort
 import io.github.nodyssey.model.SearchTarget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -113,7 +112,7 @@ class SearchViewModelTest {
         runTest(dispatcher) {
             val vm = viewModel()
             vm.selectBoard("tech")
-            vm.selectSort(SearchSort.TIME)
+            vm.selectSort(FeedSort.POST_TIME)
             type(vm, "  android  ")
 
             vm.submitSearch()

@@ -62,6 +62,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -69,9 +70,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -578,6 +583,7 @@ private fun BoardPill(
 internal fun PostRow(
     post: FeedPost,
     onClick: () -> Unit,
+    highlight: String? = null,
 ) {
     val summary = post.summary
     Row(
@@ -623,7 +629,7 @@ internal fun PostRow(
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = summary.title,
+                    text = highlighted(summary.title, highlight, MaterialTheme.colorScheme.primary),
                     // Trimmed at the top so the glyphs start at the row's top edge instead of 3sp
                     // below it: 15/21 leaves leading above the first line, and against a 40dp avatar
                     // that gap read as the avatar sitting higher than the title beside it.
@@ -673,6 +679,33 @@ internal fun PostRow(
             }
             PostMetaRow(post)
         }
+    }
+}
+
+/**
+ * The searched-for words picked out of the title.
+ *
+ * Literal and case-insensitive, because that is what the search itself is: the site matches the raw
+ * string, so a cleverer match here would paint a word the results were not chosen for. Returns the
+ * plain title when nothing is being searched, which is every list but the search results.
+ */
+internal fun highlighted(
+    title: String,
+    query: String?,
+    color: Color,
+): AnnotatedString {
+    val needle = query?.trim().orEmpty()
+    if (needle.isEmpty() || !title.contains(needle, ignoreCase = true)) return AnnotatedString(title)
+    return buildAnnotatedString {
+        var cursor = 0
+        while (true) {
+            val match = title.indexOf(needle, cursor, ignoreCase = true)
+            if (match < 0) break
+            append(title, cursor, match)
+            withStyle(SpanStyle(color = color)) { append(title, match, match + needle.length) }
+            cursor = match + needle.length
+        }
+        append(title, cursor, title.length)
     }
 }
 
