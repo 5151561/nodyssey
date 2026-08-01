@@ -4,34 +4,22 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
 
 /*
- * The pages NodeSeek renders entirely in the browser.
+ * The page NodeSeek renders entirely in the browser.
  *
- * `/fans` and `/ruling` return an empty shell to a plain GET and build their tables from XHRs whose
- * payloads we have not been able to observe. Rather than ship a parser written against a guessed
- * payload — which would fail silently and look like "you have no followers" — each repository here
- * declares its shape, and the default implementation answers [NodeSeekError.NotWired].
+ * `/ruling` returns an empty shell to a plain GET and builds its table from XHRs whose payload we have
+ * not been able to observe. Rather than ship a parser written against a guessed payload — which would
+ * fail silently and look like an empty moderation log — the repository here declares its shape, and the
+ * default implementation answers [NodeSeekError.NotWired].
  *
- * That keeps three things true at once: the screens are finished and render real rows the moment an
- * implementation exists, the UiState contracts are already the ones the site's fields imply, and the
- * user is told the truth instead of being shown a plausible empty list.
+ * That keeps three things true at once: the screen is finished and renders real rows the moment an
+ * implementation exists, the UiState contract is already the one the site's fields imply, and the user
+ * is told the truth instead of being shown a plausible empty list.
  *
- * `/stardust/list` used to be the third page here. It left on 2026-07-30, once its contract was read
- * out of the site's own bundle instead of guessed — see [NetworkStardustRepository]. That is the
- * intended exit route for the two below as well.
+ * Two pages used to be here. `/stardust/list` left on 2026-07-30 and `/fans` on 2026-08-02, both once
+ * their contract was read out of the site's own bundle instead of guessed — see
+ * [NetworkStardustRepository] and [NetworkFollowRepository]. That is the intended exit route for the
+ * one below as well.
  */
-
-/** A row of 我的关注 / 我的粉丝. No relationship button: the site has no follow action to offer. */
-data class FollowUser(
-    val uid: Long,
-    val name: String,
-    val avatarUrl: String?,
-)
-
-interface FollowRepository {
-    suspend fun following(page: Int = 1): List<FollowUser>
-
-    suspend fun followers(page: Int = 1): List<FollowUser>
-}
 
 /** What a moderation entry did. Drives the leading icon, which is the only scannable part of the row. */
 enum class RulingKind {
@@ -70,15 +58,6 @@ interface RulingRepository {
     suspend fun records(page: Int = 1): RulingPage
 }
 
-/** The single place that says "not wired yet", so switching one page to real data is one class. */
-private fun notWired(): Nothing = throw NodeSeekException(NodeSeekError.NotWired)
-
-class SiteOnlyFollowRepository : FollowRepository {
-    override suspend fun following(page: Int): List<FollowUser> = notWired()
-
-    override suspend fun followers(page: Int): List<FollowUser> = notWired()
-}
-
 class SiteOnlyRulingRepository : RulingRepository {
-    override suspend fun records(page: Int): RulingPage = notWired()
+    override suspend fun records(page: Int): RulingPage = throw NodeSeekException(NodeSeekError.NotWired)
 }

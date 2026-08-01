@@ -17,8 +17,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -30,12 +33,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +62,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.ui.common.BoardTag
@@ -62,6 +70,7 @@ import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.UserAvatar
+import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.nodyssey.ui.postlist.toNodeSeekError
 import io.github.nodyssey.ui.richtext.RichContent
@@ -101,6 +110,8 @@ fun UserSpaceRoute(
         onPostClick = onPostClick,
         onRetryProfile = viewModel::refreshProfile,
         onMessage = { onMessage(state.uid) },
+        onToggleFollow = viewModel::toggleFollow,
+        onFollowFailureShown = viewModel::onFollowFailureShown,
         onEditProfile = onEditProfile,
         onOpenBrowser = onOpenBrowser,
         onLinkClick = onLinkClick,
@@ -122,6 +133,8 @@ fun UserSpaceScreen(
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
+    onToggleFollow: () -> Unit = {},
+    onFollowFailureShown: () -> Unit = {},
     topics: LazyPagingItems<SpacePost>? = null,
     comments: LazyPagingItems<SpaceComment>? = null,
     collections: LazyPagingItems<SpacePost>? = null,
@@ -129,9 +142,18 @@ fun UserSpaceScreen(
     onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
     val spaceUrl = NodeSeekSite.BASE_URL + NodeSeekSite.spacePath(state.uid)
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    FollowFailureEffect(
+        failure = state.followFailure,
+        snackbarHostState = snackbarHostState,
+        onSignIn = onSignIn,
+        onShown = onFollowFailureShown,
+    )
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {},
@@ -180,7 +202,7 @@ fun UserSpaceScreen(
                 .fillMaxSize()
                 .readableWidth(),
         ) {
-            SpaceHeader(state = state, onMessage = onMessage)
+            SpaceHeader(state = state, onMessage = onMessage, onToggleFollow = onToggleFollow)
             SpaceStatsRow(state)
             PrimaryTabRow(selectedTabIndex = state.tabs.indexOf(state.selectedTab).coerceAtLeast(0)) {
                 state.tabs.forEach { tab ->
@@ -230,10 +252,40 @@ private fun SpaceOverflowMenu(onOpenBrowser: () -> Unit) {
     }
 }
 
+/**
+ * A refused follow, said once.
+ *
+ * The site's own sentence wins when there is one — "对方已屏蔽你" explains itself — and our wording only
+ * stands in for the failures that never reached the site. Being signed out is the exception that gets an
+ * action instead of a sentence, because it is the one failure the reader can clear from here.
+ */
+@Composable
+private fun FollowFailureEffect(
+    failure: FollowFailure?,
+    snackbarHostState: SnackbarHostState,
+    onSignIn: () -> Unit,
+    onShown: () -> Unit,
+) {
+    val fallback = failure?.error?.shortMessage()
+    val signInLabel = stringResource(R.string.action_sign_in)
+    LaunchedEffect(failure) {
+        if (failure == null) return@LaunchedEffect
+        val needsSignIn = failure.error == NodeSeekError.LoginRequired
+        val result =
+            snackbarHostState.showSnackbar(
+                message = failure.detail?.takeIf { it.isNotBlank() } ?: fallback.orEmpty(),
+                actionLabel = signInLabel.takeIf { needsSignIn },
+            )
+        if (result == SnackbarResult.ActionPerformed) onSignIn()
+        onShown()
+    }
+}
+
 @Composable
 private fun SpaceHeader(
     state: UserSpaceUiState,
     onMessage: () -> Unit,
+    onToggleFollow: () -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = 14.dp),
@@ -281,31 +333,68 @@ private fun SpaceHeader(
                 )
             }
         }
-        // The site's only action on someone else's space. There is no follow button to add: the
-        // relationship endpoints exist but nothing on the site exposes them.
+        // The two actions the site offers on someone else's space, in the site's own order.
         if (!state.isSelf) {
-            OutlinedButton(
-                onClick = onMessage,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp),
-            ) {
-                Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(19.dp))
-                Text(
-                    stringResource(R.string.space_message),
-                    modifier = Modifier.padding(start = 6.dp),
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (state.canFollow) {
+                    FollowButton(
+                        followed = state.followed == true,
+                        onClick = onToggleFollow,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                OutlinedButton(
+                    onClick = onMessage,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp),
+                ) {
+                    Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(19.dp))
+                    Text(
+                        stringResource(R.string.space_message),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
             }
         }
     }
 }
 
 /**
+ * 关注 / 已关注, as one button that says what pressing it will do next.
+ *
+ * Filled while unfollowed and outlined once followed, which is the same demotion the site performs by
+ * turning its blue button grey: after the relationship exists, undoing it is not the action this screen
+ * is for. The label is the *current* state rather than the pending action — "已关注" beside an outlined
+ * button reads as a toggle that is on, where "取关" would read as a warning.
+ */
+@Composable
+private fun FollowButton(
+    followed: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val icon = if (followed) Icons.Default.Check else Icons.Default.Add
+    val label = stringResource(if (followed) R.string.space_following else R.string.space_follow)
+    val content: @Composable RowScope.() -> Unit = {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(19.dp))
+        Text(label, modifier = Modifier.padding(start = 6.dp))
+    }
+    val buttonModifier = modifier.height(44.dp)
+
+    if (followed) {
+        OutlinedButton(onClick = onClick, modifier = buttonModifier, content = content)
+    } else {
+        Button(onClick = onClick, modifier = buttonModifier, content = content)
+    }
+}
+
+/**
  * The five statistics the site actually publishes for an account.
  *
- * Not four, not seven: 加入天数 / 等级 / 鸡腿 / 主题帖 / 评论. Follower and like counts were on an
- * earlier draft of this screen and do not exist anywhere on NodeSeek, so a placeholder for them would
- * have been a number we invented.
+ * Not four, not seven: 加入天数 / 等级 / 鸡腿 / 主题帖 / 评论. `getInfo` does also carry `fans` and
+ * `follows`, but a sixth and seventh column would squeeze all of them below the width where the labels
+ * stay readable, and the two lists they count already have a screen of their own (8c 关注与粉丝).
  */
 @Composable
 private fun SpaceStatsRow(state: UserSpaceUiState) {
@@ -716,6 +805,7 @@ private val previewPublicState =
         chickenCount = 2041,
         topicCount = 128,
         commentCount = 1904,
+        followed = false,
         selectedTab = SpaceTab.GENERAL,
     )
 

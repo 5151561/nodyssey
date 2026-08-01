@@ -322,5 +322,24 @@ class NodeSeekJsonClient(
 
         const val PATH_MESSAGE_SEND = "/api/notification/message/send"
         const val PATH_MESSAGE_MARK_VIEWED_ALL = "/api/notification/message/markViewed?all=true"
+
+        /*
+         * 关注 / 粉丝, read out of the site's own `fans` bundle on 2026-08-02.
+         *
+         * The list kind is the **last path segment**, not a query parameter — the web route's
+         * `?type=fans` becomes `/api/fans/fans` here, and `?type=follow` becomes `/api/fans/follow`.
+         * Neither takes a page: the site fetches the whole list in one call and pages nothing, so a
+         * `page` parameter on the repository would have been a knob wired to nothing.
+         *
+         * A signed-out GET answers 200 with an empty `memberList` rather than 401 — see
+         * [io.github.nodyssey.data.NetworkFollowRepository] for why that has to be caught before the
+         * request rather than after it.
+         */
+        fun fansListPath(followers: Boolean): String =
+            if (followers) "/api/fans/fans" else "/api/fans/follow"
+
+        /** Both writes take `{"followed_member_id": <uid>}` and answer `{success, message}`. */
+        const val PATH_FANS_ADD = "/api/fans/add"
+        const val PATH_FANS_DEL = "/api/fans/del"
     }
 }

@@ -34,6 +34,14 @@ data class UserProfile(
     val readme: String? = null,
     val topicCount: Int? = null,
     val commentCount: Int? = null,
+    /**
+     * Whether the signed-in account follows this one.
+     *
+     * Only ever meaningful on someone else's page. Null means "the site did not say" — signed out, or
+     * a payload without the field — and the space screen renders that the same as `false`, because the
+     * button it drives is a request the site will refuse anyway if we are wrong.
+     */
+    val followed: Boolean? = null,
 )
 
 interface ProfileRepository {
@@ -193,6 +201,7 @@ class NetworkProfileRepository(
             readme = newer.readme ?: readme,
             topicCount = newer.topicCount ?: topicCount,
             commentCount = newer.commentCount ?: commentCount,
+            followed = newer.followed ?: followed,
         )
     }
 
@@ -214,6 +223,7 @@ class NetworkProfileRepository(
             readme = readme,
             topicCount = topicCount,
             commentCount = commentCount,
+            followed = followed,
         )
     }
 }
@@ -268,6 +278,7 @@ internal data class RawProfile(
     val readme: String? = null,
     val topicCount: Int? = null,
     val commentCount: Int? = null,
+    val followed: Boolean? = null,
 )
 
 private fun JsonElement.findProfileObject(): JsonObject? {
@@ -297,6 +308,7 @@ private fun JsonObject.toRawProfile(): RawProfile =
         readme = text("readme", "readMe", "read_me"),
         topicCount = int("nPost", "post_count", "postCount", "topicCount", "discussion_count"),
         commentCount = int("nComment", "comment_count", "commentCount"),
+        followed = bool("followed"),
     )
 
 /** Long enough to cover one walk through the profile area, short enough that balances stay honest. */
