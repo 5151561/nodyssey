@@ -22,6 +22,15 @@ docs/private/
 # app/gradle.lockfile is the one that matters and is committed.
 settings-gradle.lockfile
 
+# Kotlin Gradle 插件的会话草稿目录，每次构建都会重新生成
+.kotlin/
+
+# Claude Code 的每机器状态。此前只靠本机的全局 gitignore 和 .git/info/exclude 挡着，
+# 换台机器克隆就漏了，所以规则写进仓库。launch.json 是共用的预览服务器定义，有意提交，
+# 因此单独放行，而不是整个目录一刀切。
+.claude/*
+!.claude/launch.json
+
 # 设计稿与 Claude Design 同步产物，只在本地保留
 /design/
 /ds-bundle/
