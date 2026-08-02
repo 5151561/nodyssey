@@ -307,10 +307,24 @@ object NodeSeekSite {
     }
 
     /** Only these URLs may execute JavaScript inside the authenticated WebView. */
-    fun isTrustedWebViewUrl(url: String): Boolean =
+    fun isTrustedWebViewUrl(url: String): Boolean = isHttpsHost(url, TRUSTED_WEBVIEW_HOSTS)
+
+    /**
+     * Telegram's own authorisation host, the one 绑定 Telegram detours through.
+     *
+     * 联系方式's bind button is the site handing the user to `oauth.telegram.org`, which sends them
+     * back to `/setting` with the widget's result. Both halves have to happen in the same web view:
+     * the return leg is what writes `telegram_id` onto the account, and it only counts if it arrives
+     * with the NodeSeek session — which lives in this app's cookie jar, not the browser's. Kept apart
+     * from [isTrustedWebViewUrl] because sign-in and Cloudflare challenges have no business leaving
+     * nodeseek.com; see the caller in `WebViewRoute`, which admits this host for 管理 pages only.
+     */
+    fun isTelegramOAuthUrl(url: String): Boolean = isHttpsHost(url, TELEGRAM_OAUTH_HOSTS)
+
+    private fun isHttpsHost(url: String, hosts: Set<String>): Boolean =
         parseWebUri(url)?.let { uri ->
             uri.scheme.equals("https", ignoreCase = true) &&
-                uri.host?.lowercase() in TRUSTED_WEBVIEW_HOSTS &&
+                uri.host?.lowercase() in hosts &&
                 (uri.port == -1 || uri.port == 443)
         } == true
 
@@ -332,6 +346,7 @@ object NodeSeekSite {
     private val POST_PATH = Regex("""/post-(\d+)(?:-(\d+))?""")
     private val SPACE_PATH = Regex("""/space/(\d+)""")
     private val TRUSTED_WEBVIEW_HOSTS = setOf("www.nodeseek.com", "nodeseek.com")
+    private val TELEGRAM_OAUTH_HOSTS = setOf("oauth.telegram.org")
 
     /** Extracts the post id (and page, when present) from `/post-703863-2`. */
     fun parsePostRoute(href: String?): PostRoute? {

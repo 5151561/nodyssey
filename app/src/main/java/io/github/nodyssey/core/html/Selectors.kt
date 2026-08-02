@@ -57,13 +57,24 @@ object Selectors {
 
     // --- Page-level state ---------------------------------------------------
 
-    /** Markers that prove we received a real NodeSeek page rather than an interstitial. */
+    /**
+     * Markers that prove we received a real NodeSeek page rather than an interstitial.
+     *
+     * The bootstrap is on this list because Cloudflare inlines its `/cdn-cgi/challenge-platform/`
+     * script into *every* page it serves us, challenge or not — measured on device 2026-08-02, where
+     * the home feed and `/setting` came back 200 with `cf-mitigated` empty and both carrying that
+     * script. The four content markers are what saved the forum pages. `/setting` has none of them:
+     * it is server-rendered without `nsk-body` and its account fields (email, `telegram_id`) live
+     * only in the bootstrap, so 联系方式 read every good response as a challenge until this line
+     * existed. An interstitial is served *instead of* the site and so never carries the bootstrap.
+     */
     val USABLE_PAGE_MARKERS = listOf(
         "id=\"nsk-body\"",
         "class=\"post-list\"",
         "class=\"nsk-post\"",
         "class=\"post-content\"",
         "class=\"comments\"",
+        "id=\"temp-script\"",
     )
 
     val LOGIN_REQUIRED_MARKERS = listOf("需要注册用户才能查看", "权限不足")

@@ -58,6 +58,16 @@ enum class WebViewGoal {
      * when they say so, and auto-closing mid-form would lose what they typed.
      */
     MANAGE,
+
+    /**
+     * 绑定 Telegram: [MANAGE], plus it closes itself once the account actually carries a binding.
+     *
+     * The condition is not a cookie, so unlike the two above it costs a request per poll — which is
+     * why it is its own goal rather than something [MANAGE] always does. It earns that: the errand
+     * ends at Telegram's own confirmation, a screen with no reason to know it should send the user
+     * back to an Android app, so without this the user is left holding a finished web page.
+     */
+    TELEGRAM_BIND,
 }
 
 /**
@@ -77,6 +87,12 @@ fun WebViewRoute(
     onOpenExternal: (String) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Answers "has the binding landed yet?" for [WebViewGoal.TELEGRAM_BIND]. Supplied by the caller
+     * because this screen has no repositories of its own — and left null for every other goal, which
+     * closes on a cookie instead.
+     */
+    isBound: (suspend () -> Boolean)? = null,
 ) {
     if (!NodeSeekSite.isTrustedWebViewUrl(url)) {
         // A restored or malformed navigation key must fail closed. Authentication WebViews are never
@@ -121,6 +137,25 @@ fun WebViewRoute(
             }
 
             WebViewGoal.MANAGE -> null
+
+            WebViewGoal.TELEGRAM_BIND -> isBound
+        },
+        // A poll that costs a request is paced for the server, not for the eye; the cookie goals
+        // above read a local jar and can afford twice a second.
+        pollIntervalMillis =
+        if (goal == WebViewGoal.TELEGRAM_BIND) BINDING_POLL_MILLIS else GOAL_POLL_MILLIS,
+        // 绑定 Telegram is the one errand on these pages that has to leave nodeseek.com and come
+        // back; letting the detour out to the browser strands the return leg in a jar with no
+        // session. Sign-in and challenge pages keep the narrower rule.
+        isInScope =
+        when (goal) {
+            WebViewGoal.MANAGE, WebViewGoal.TELEGRAM_BIND -> {
+                { target ->
+                    NodeSeekSite.isTrustedWebViewUrl(target) || NodeSeekSite.isTelegramOAuthUrl(target)
+                }
+            }
+
+            WebViewGoal.SIGN_IN, WebViewGoal.CHALLENGE -> NodeSeekSite::isTrustedWebViewUrl
         },
         modifier = modifier,
     )
@@ -153,23 +188,35 @@ private fun WebViewScreen(
      * Polling rather than a callback because there is nothing to hook: NodeSeek signs in over an XHR,
      * so no navigation happens, `onPageFinished` never fires, and [CookieManager] has no listener.
      */
-    onCheckGoal: (() -> Boolean)? = null,
+    onCheckGoal: (suspend () -> Boolean)? = null,
+    /** How often [onCheckGoal] is asked. */
+    pollIntervalMillis: Long = GOAL_POLL_MILLIS,
+    /**
+     * Which main-frame navigations belong to this screen. Everything else is a link the user
+     * followed out, and is handed to the browser.
+     */
+    isInScope: (String) -> Boolean = NodeSeekSite::isTrustedWebViewUrl,
 ) {
     var webView by remember { mutableStateOf<WebView?>(null) }
+    var popup by remember { mutableStateOf<WebView?>(null) }
     var loading by remember { mutableStateOf(true) }
     var canGoBack by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = canGoBack) { webView?.goBack() }
+    // Back dismisses the popup first — it is the topmost thing on screen, and the page underneath is
+    // still where the user was.
+    BackHandler(enabled = popup != null) { popup = null }
+    BackHandler(enabled = popup == null && canGoBack) { webView?.goBack() }
 
     val autoReturn = onCheckGoal != null
     val checkGoal by rememberUpdatedState(onCheckGoal)
     val close by rememberUpdatedState(onClose)
     val openExternal by rememberUpdatedState(onOpenExternal)
+    val staysHere by rememberUpdatedState(isInScope)
 
     LaunchedEffect(autoReturn) {
         if (!autoReturn) return@LaunchedEffect
         while (true) {
-            delay(GOAL_POLL_MILLIS)
+            delay(pollIntervalMillis)
             if (checkGoal?.invoke() == true) {
                 // NodeSeek redirects to the front page right after a successful sign-in, and that
                 // navigation carries the rest of the cookies. Waiting a beat also stops the return
@@ -209,46 +256,17 @@ private fun WebViewScreen(
                 modifier = Modifier.fillMaxSize(),
                 factory = { context ->
                     WebView(context).apply {
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.allowFileAccess = false
-                        settings.allowContentAccess = false
-                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-                        settings.safeBrowsingEnabled = true
-                        if (userAgent != null && !userAgent.isWebViewDefault) {
-                            settings.userAgentString = userAgent.value
-                        }
-                        val cookies = CookieManager.getInstance()
-                        cookies.setAcceptCookie(true)
-                        // Turnstile runs in an iframe served from challenges.cloudflare.com, so its
-                        // cookies are third-party ones. Block them and the checkbox never sticks.
-                        cookies.setAcceptThirdPartyCookies(this, true)
-                        // Cloudflare's interactive challenge expects a host that can answer for popups
-                        // and console output. Without one, some challenge variants silently restart.
-                        webChromeClient = WebChromeClient()
-                        webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?,
-                            ): Boolean {
-                                val target = request?.url?.toString() ?: return true
-                                if (!request.isForMainFrame || NodeSeekSite.isTrustedWebViewUrl(target)) {
-                                    return false
-                                }
-                                // User-controlled links and redirects leave the authenticated
-                                // WebView. It retains JavaScript and third-party cookies solely for
-                                // NodeSeek login and Cloudflare challenge pages.
-                                view?.post { openExternal(target) }
-                                return true
-                            }
-
-                            override fun onPageFinished(view: WebView?, url: String?) {
+                        configureForNodeSeek(
+                            userAgent = userAgent,
+                            staysHere = { staysHere(it) },
+                            openExternal = { openExternal(it) },
+                            onPageLoaded = { view ->
                                 loading = false
-                                canGoBack = view?.canGoBack() == true
-                                // Persist immediately: the user may leave right after logging in.
-                                CookieManager.getInstance().flush()
-                            }
-                        }
+                                canGoBack = view.canGoBack()
+                            },
+                            onOpenPopup = { child -> popup = child },
+                            onClosePopup = { popup = null },
+                        )
                         loadUrl(url)
                         webView = this
                     }
@@ -262,6 +280,22 @@ private fun WebViewScreen(
                     view.destroy()
                 },
             )
+            // The popup window, when the page opened one. Telegram's login widget is the reason this
+            // exists: it authorises in a `window.open` child and posts the result back to its opener,
+            // so a WebView that quietly turns that into a same-window navigation loses the opener and
+            // the binding never lands. Drawn over the page it belongs to, and dismissed by the same
+            // `window.close()` the widget already calls.
+            popup?.let { child ->
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { child },
+                    onRelease = { view ->
+                        CookieManager.getInstance().flush()
+                        view.stopLoading()
+                        view.destroy()
+                    },
+                )
+            }
             if (loading) {
                 LinearProgressIndicator(
                     modifier = Modifier
@@ -273,7 +307,99 @@ private fun WebViewScreen(
     }
 }
 
+/**
+ * The one place a WebView on this screen is configured — the page itself and any popup it opens.
+ *
+ * Shared rather than copied because a popup with weaker settings is a security hole and a popup with
+ * different ones is a bug: the Telegram authorisation window needs the same cookie jar, the same user
+ * agent and the same idea of which hosts belong here as the page that opened it.
+ */
+@SuppressLint("SetJavaScriptEnabled")
+private fun WebView.configureForNodeSeek(
+    userAgent: UserAgent?,
+    staysHere: (String) -> Boolean,
+    openExternal: (String) -> Unit,
+    onPageLoaded: (WebView) -> Unit,
+    onOpenPopup: (WebView) -> Unit,
+    onClosePopup: () -> Unit,
+) {
+    settings.javaScriptEnabled = true
+    settings.domStorageEnabled = true
+    settings.allowFileAccess = false
+    settings.allowContentAccess = false
+    settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+    settings.safeBrowsingEnabled = true
+    // Off by default, which makes Android silently rewrite `window.open` into a same-window
+    // navigation. `setJavaScriptCanOpenWindowsAutomatically` stays off: a popup is allowed because
+    // the user tapped something, not because a script felt like it.
+    settings.setSupportMultipleWindows(true)
+    if (userAgent != null && !userAgent.isWebViewDefault) {
+        settings.userAgentString = userAgent.value
+    }
+    val cookies = CookieManager.getInstance()
+    cookies.setAcceptCookie(true)
+    // Turnstile runs in an iframe served from challenges.cloudflare.com, so its cookies are
+    // third-party ones. Block them and the checkbox never sticks.
+    cookies.setAcceptThirdPartyCookies(this, true)
+    // Cloudflare's interactive challenge expects a host that can answer for popups and console
+    // output. Without one, some challenge variants silently restart.
+    webChromeClient = object : WebChromeClient() {
+        override fun onCreateWindow(
+            view: WebView?,
+            isDialog: Boolean,
+            isUserGesture: Boolean,
+            resultMsg: android.os.Message?,
+        ): Boolean {
+            val host = view ?: return false
+            val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
+            val child = WebView(host.context)
+            child.configureForNodeSeek(
+                userAgent = userAgent,
+                staysHere = staysHere,
+                openExternal = openExternal,
+                // A popup carries no progress bar and cannot go back; only the page owns those.
+                onPageLoaded = {},
+                onOpenPopup = onOpenPopup,
+                onClosePopup = onClosePopup,
+            )
+            onOpenPopup(child)
+            transport.webView = child
+            resultMsg.sendToTarget()
+            return true
+        }
+
+        override fun onCloseWindow(window: WebView?) {
+            onClosePopup()
+        }
+    }
+    webViewClient = object : WebViewClient() {
+        override fun shouldOverrideUrlLoading(
+            view: WebView?,
+            request: WebResourceRequest?,
+        ): Boolean {
+            val target = request?.url?.toString() ?: return true
+            if (!request.isForMainFrame || staysHere(target)) {
+                return false
+            }
+            // User-controlled links and redirects leave the authenticated WebView. It retains
+            // JavaScript and third-party cookies solely for NodeSeek login and Cloudflare
+            // challenge pages.
+            view?.post { openExternal(target) }
+            return true
+        }
+
+        override fun onPageFinished(view: WebView?, url: String?) {
+            view?.let(onPageLoaded)
+            // Persist immediately: the user may leave right after logging in.
+            CookieManager.getInstance().flush()
+        }
+    }
+}
+
 /** Fast enough that the return feels immediate, slow enough to be free at 60fps. */
 private const val GOAL_POLL_MILLIS = 500L
+
+/** One `/setting` fetch each; slow enough to sit politely behind a page the user is still reading. */
+private const val BINDING_POLL_MILLIS = 4_000L
 
 private const val GOAL_SETTLE_MILLIS = 500L

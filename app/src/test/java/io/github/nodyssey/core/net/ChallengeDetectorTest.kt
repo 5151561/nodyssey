@@ -13,6 +13,24 @@ class ChallengeDetectorTest {
         assertNull(ChallengeDetector.detect(Fixtures.load("post-703863-1.html"), 200, emptyMap()))
     }
 
+    /**
+     * The shape `/setting` actually comes back as — captured off the device on 2026-08-02: a 200
+     * carrying the bootstrap, no content markup, and Cloudflare's own script inlined into it. It used
+     * to be read as a challenge, which is why 联系方式 could never show an email.
+     */
+    @Test
+    fun `a settings page carrying the bootstrap is not a challenge`() {
+        val html =
+            """
+            <!DOCTYPE html> <html data-server-rendered="true"><head>
+            <script src="/cdn-cgi/challenge-platform/scripts/jsd/main.js"></script>
+            </head><body><div id="app"></div>
+            <script id="temp-script" type="text/json">eyJ1c2VyIjp7fX0=</script>
+            </body></html>
+            """.trimIndent()
+        assertNull(ChallengeDetector.detect(html, 200, emptyMap()))
+    }
+
     @Test
     fun `a cloudflare interstitial is detected`() {
         assertEquals(

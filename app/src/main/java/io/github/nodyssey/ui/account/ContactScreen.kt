@@ -56,7 +56,8 @@ import io.github.nodyssey.ui.theme.readableWidth
 fun ContactRoute(
     viewModel: ContactViewModel,
     onBack: () -> Unit,
-    onOpenUrl: (String) -> Unit,
+    /** The URL, and whether this trip is the Telegram bind — which knows when it is finished. */
+    onOpenSite: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -69,15 +70,25 @@ fun ContactRoute(
         viewModel.consumeMessage()
     }
 
-    // The site link is opened from here rather than the ViewModel — leaving the app is a UI concern.
+    // Opened from here rather than the ViewModel — where a URL goes is a UI concern. Both of this
+    // screen's site errands (修改邮箱, 绑定 Telegram) need the signed-in session, which lives in the
+    // WebView's cookie jar; a Custom Tab is the *browser's* jar and shows 用户未登录 instead.
     LaunchedEffect(state.urlToOpen) {
         state.urlToOpen?.let { url ->
+            val forBinding = state.awaitingBinding
             viewModel.consumeUrl()
-            onOpenUrl(url)
+            onOpenSite(url, forBinding)
         }
     }
 
-    // Coming back from the website is the moment the user wants the answer; see onResumed.
+    // Coming back is the moment the user wants the answer. Two ways to come back, hence two effects:
+    // ON_RESUME for the trip that left the app (the Telegram app, an external browser), and the
+    // recomposition for the in-app web view, which never takes the Activity out of RESUMED.
+    // `onResumed` is a no-op unless a bind is actually in flight, so neither one fires on arrival.
+    LaunchedEffect(Unit) {
+        viewModel.onResumed()
+    }
+
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.onResumed()
     }
@@ -94,7 +105,6 @@ fun ContactRoute(
         onRequestUnbind = viewModel::requestUnbind,
         onDismissUnbind = viewModel::dismissUnbind,
         onConfirmUnbind = viewModel::confirmUnbind,
-        onOpenBotChat = { onOpenUrl(TELEGRAM_BOT_CHAT_URL) },
         modifier = modifier,
     )
 }
@@ -125,7 +135,6 @@ fun ContactScreen(
     onRequestUnbind: () -> Unit,
     onDismissUnbind: () -> Unit,
     onConfirmUnbind: () -> Unit,
-    onOpenBotChat: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -177,7 +186,6 @@ fun ContactScreen(
                 binding = state.telegram,
                 onRequestBind = onRequestBind,
                 onRequestUnbind = onRequestUnbind,
-                onOpenBotChat = onOpenBotChat,
             )
         }
     }
@@ -300,7 +308,6 @@ private fun TelegramCard(
     binding: TelegramBinding?,
     onRequestBind: () -> Unit,
     onRequestUnbind: () -> Unit,
-    onOpenBotChat: () -> Unit,
 ) {
     Surface(
         shape = AccountFieldShape,
@@ -364,25 +371,11 @@ private fun TelegramCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (binding?.bound == true) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onRequestUnbind) {
-                        Text(
-                            stringResource(R.string.account_telegram_unbind),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                    Row(Modifier.weight(1f)) {}
-                    TextButton(onClick = onOpenBotChat) {
-                        Icon(
-                            NodysseyIcons.OpenInNew,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            stringResource(R.string.account_telegram_open_bot),
-                            modifier = Modifier.padding(start = Spacing.xs),
-                        )
-                    }
+                TextButton(onClick = onRequestUnbind) {
+                    Text(
+                        stringResource(R.string.account_telegram_unbind),
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
             } else {
                 Button(onClick = onRequestBind, enabled = binding != null) {
@@ -502,15 +495,6 @@ private fun TelegramBindDialog(
 
 private const val DISABLED_CARD_ALPHA = 0.55f
 
-/**
- * The bot conversation 「打开 Bot 会话」 reopens — `t.me/nodeseek`, the bot the site's footer links to.
- *
- * The account this opens is not necessarily the one the login widget binds: the widget is handed a
- * `botId` from `/api/telegram/botid` at bind time, and that id is not published anywhere the app can
- * read. This is a convenience link, not a claim about which bot holds the binding.
- */
-internal const val TELEGRAM_BOT_CHAT_URL = "https://t.me/nodeseek"
-
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun ContactPreviewUnbound() {
@@ -533,7 +517,6 @@ private fun ContactPreviewUnbound() {
             onRequestUnbind = {},
             onDismissUnbind = {},
             onConfirmUnbind = {},
-            onOpenBotChat = {},
         )
     }
 }
@@ -565,7 +548,6 @@ private fun ContactPreviewBound() {
             onRequestUnbind = {},
             onDismissUnbind = {},
             onConfirmUnbind = {},
-            onOpenBotChat = {},
         )
     }
 }

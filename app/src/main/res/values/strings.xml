@@ -470,7 +470,6 @@
     <string name="account_telegram_bind_hint">绑定 telegram 后可以及时提醒未读消息，@我、回复与私信都会转发到你的 Telegram。</string>
     <string name="account_telegram_bound_hint">未读的 @我、回复与私信会转发到你的 Telegram；已读消息不重复提醒。</string>
     <string name="account_telegram_unbind">解绑</string>
-    <string name="account_telegram_open_bot">打开 Bot 会话</string>
     <string name="account_telegram_dialog_title">在网页中完成绑定</string>
     <string name="account_telegram_dialog_body">即将打开 NodeSeek 的联系方式设置页。绑定要用 Telegram 官方的登录挂件完成，只能在网页里进行；确认后 @我、回复与私信的未读提醒将转发到你的 Telegram。</string>
     <string name="account_telegram_dialog_note">网页会跳转到 Telegram 授权，返回本页后绑定状态会自动刷新。</string>
