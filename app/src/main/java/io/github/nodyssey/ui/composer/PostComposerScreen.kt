@@ -541,7 +541,7 @@ private fun ComposerOptions(
                 onClick = { permissionMenuOpen = true },
             )
             DropdownMenu(expanded = permissionMenuOpen, onDismissRequest = { permissionMenuOpen = false }) {
-                PostPermission.entries.forEach { permission ->
+                state.permissionOptions.forEach { permission ->
                     DropdownMenuItem(
                         text = { Text(permissionLabel(permission)) },
                         onClick = {
@@ -693,13 +693,14 @@ private fun publishErrorMessage(error: NodeSeekError, detail: String?): String {
 
 @Composable
 private fun permissionLabel(permission: PostPermission): String =
-    stringResource(
-        when (permission) {
-            PostPermission.PUBLIC -> R.string.composer_permission_public
-            PostPermission.LEVEL_ONE -> R.string.composer_permission_level_one
-            PostPermission.PRIVATE -> R.string.composer_permission_private
-        },
-    )
+    permission.requiredLevel?.let { level -> stringResource(R.string.composer_permission_level, level) }
+        ?: stringResource(
+            if (permission == PostPermission.PUBLIC) {
+                R.string.composer_permission_public
+            } else {
+                R.string.composer_permission_private
+            },
+        )
 
 private val ComposerViewMode.labelRes: Int
     get() = when (this) {

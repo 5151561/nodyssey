@@ -4,11 +4,14 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.MutableClock
+import io.github.nodyssey.data.ProfileRepository
+import io.github.nodyssey.data.UserProfile
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostDraft
+import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.PostSubmission
 import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.data.session.SessionState
@@ -54,8 +57,45 @@ class PostComposerViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() =
-        viewModels.track(PostComposerViewModel(repository, boards, session, clock, uploader))
+    private fun viewModel(profiles: ProfileRepository? = null) =
+        viewModels.track(PostComposerViewModel(repository, boards, session, clock, uploader, profiles))
+
+    @Test
+    fun `read permission offers every level up to the account's own`() = runTest(dispatcher) {
+        val viewModel = viewModel(FakeProfileRepository(rank = 3))
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(0, 1, 2, 3, 255),
+            viewModel.uiState.value.permissionOptions.map { it.wireValue },
+        )
+    }
+
+    @Test
+    fun `read permission falls back to Lv1 when the profile never arrives`() = runTest(dispatcher) {
+        val viewModel = viewModel(FakeProfileRepository(rank = 3, fails = true))
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(0, 1, 255),
+            viewModel.uiState.value.permissionOptions.map { it.wireValue },
+        )
+    }
+
+    @Test
+    fun `a restored draft keeps a level the account has outgrown the menu`() = runTest(dispatcher) {
+        repository.draftState.value =
+            PostDraft(title = "标题", body = "正文", permission = PostPermission(4))
+        val viewModel = viewModel(FakeProfileRepository(rank = 2))
+        advanceUntilIdle()
+        viewModel.continueDraft()
+
+        assertEquals(PostPermission(4), viewModel.uiState.value.permission)
+        assertEquals(
+            listOf(0, 1, 2, 4, 255),
+            viewModel.uiState.value.permissionOptions.map { it.wireValue },
+        )
+    }
 
     @Test
     fun `offers a saved draft and restores every field`() = runTest(dispatcher) {
@@ -222,6 +262,18 @@ class PostComposerViewModelTest {
         assertEquals(0, viewModel.uiState.value.failedUploadCount)
         assertEquals(UploadStatus.UPLOADED, viewModel.uiState.value.attachments.single().status)
     }
+}
+
+private class FakeProfileRepository(
+    private val rank: Int?,
+    private val fails: Boolean = false,
+) : ProfileRepository {
+    override suspend fun profile(refresh: Boolean): UserProfile {
+        if (fails) throw NodeSeekException(NodeSeekError.Network)
+        return UserProfile(uid = 1L, name = "我", avatarUrl = "", rank = rank)
+    }
+
+    override suspend fun profile(uid: Long): UserProfile = profile(refresh = false)
 }
 
 private class FakeImageUploader : ImageUploader {

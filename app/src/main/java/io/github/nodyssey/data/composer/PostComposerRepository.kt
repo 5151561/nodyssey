@@ -18,10 +18,17 @@ import io.github.nodyssey.model.FeedSort
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
@@ -47,11 +54,61 @@ data class PostDraft(
     val savedAtMillis: Long = 0L,
 )
 
-@Serializable
-enum class PostPermission(val wireValue: Int) {
-    PUBLIC(0),
-    LEVEL_ONE(1),
-    PRIVATE(255),
+/**
+ * 阅读权限, as the site models it: one number, the level a reader needs. `0` lets anyone in, `255`
+ * is the author alone, and everything between is a level floor — the same `rank` the ruling board
+ * reports when a moderator changes a thread's 阅读权限.
+ *
+ * Not a closed set, which is why this is a number and not an enum: an account may hold a thread to
+ * any level up to its own, so the choices depend on who is posting. See [options].
+ */
+@Serializable(with = PostPermissionSerializer::class)
+data class PostPermission(val wireValue: Int) {
+    /** The level a reader needs, or null at either end of the scale (公开 and 私有). */
+    val requiredLevel: Int? get() = wireValue.takeIf { it in 1..<PRIVATE_WIRE_VALUE }
+
+    companion object {
+        private const val PRIVATE_WIRE_VALUE = 255
+
+        val PUBLIC = PostPermission(0)
+        val PRIVATE = PostPermission(PRIVATE_WIRE_VALUE)
+
+        /**
+         * 公开, then Lv1 up to the author's own level, then 私有.
+         *
+         * A null [selfRank] means the profile has not arrived yet — the account endpoint is a
+         * round-trip away and can be refused — so Lv1 is offered on its own, which is exactly what
+         * the menu held back when the choice was hard-coded. A known rank of 0 offers no level at
+         * all, because there is none to require.
+         */
+        fun options(selfRank: Int?): List<PostPermission> =
+            buildList {
+                add(PUBLIC)
+                (1..(selfRank ?: 1)).forEach { level -> add(PostPermission(level)) }
+                add(PRIVATE)
+            }
+    }
+}
+
+/**
+ * Ints on the wire and in new drafts. Drafts saved before 阅读权限 became a range hold the old enum
+ * names instead, and a decode failure there costs the user the entire draft, not just the choice.
+ */
+internal object PostPermissionSerializer : KSerializer<PostPermission> {
+    override val descriptor = PrimitiveSerialDescriptor("io.github.nodyssey.PostPermission", PrimitiveKind.INT)
+
+    override fun serialize(encoder: Encoder, value: PostPermission) = encoder.encodeInt(value.wireValue)
+
+    override fun deserialize(decoder: Decoder): PostPermission {
+        val primitive = (decoder as? JsonDecoder)?.decodeJsonElement()?.jsonPrimitive
+            ?: return PostPermission(decoder.decodeInt())
+        primitive.intOrNull?.let { return PostPermission(it) }
+        return when (primitive.contentOrNull) {
+            "LEVEL_ONE" -> PostPermission(1)
+            "PRIVATE" -> PostPermission.PRIVATE
+            else -> PostPermission.PUBLIC
+        }
+    }
 }
 
 data class PostSubmission(
