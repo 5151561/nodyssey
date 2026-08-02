@@ -636,9 +636,20 @@ fun MainNavigation(
                 ContactRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
-                    // The bind link belongs to Telegram (t.me / tg://), so it leaves the app for
-                    // whatever owns the scheme — the Telegram app, or the browser's web version.
-                    // Never the in-app web view, whose cookie jar is for nodeseek.com only.
+                    // 修改邮箱 and 绑定 Telegram are errands on nodeseek.com's own settings page, so
+                    // they go to the web view that shares the app's session. A Custom Tab would hand
+                    // them to the browser's cookie jar, where the account is not signed in.
+                    onOpenSite = { url, forBinding ->
+                        backStack.add(
+                            WebKey(
+                                url,
+                                siteTitle,
+                                if (forBinding) WebViewGoal.TELEGRAM_BIND else WebViewGoal.MANAGE,
+                            ),
+                        )
+                    },
+                    // 打开 Bot 会话 is Telegram's own link, and belongs to whatever owns the scheme —
+                    // the Telegram app, or the browser's web version. Never the in-app web view.
                     onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
                 )
             }
@@ -807,6 +818,13 @@ fun MainNavigation(
                     userAgent = container.userAgent,
                     onOpenExternal = openExternalUrl,
                     onClose = { backStack.removeLastOrNull() },
+                    // A failed poll means "not yet", never "give up": the page is still open and the
+                    // user is still working, so a hiccup on one request must not end the watch.
+                    isBound = {
+                        runCatchingExceptCancellation {
+                            container.accountSettingsRepository.telegramBinding().bound
+                        }.getOrDefault(false)
+                    },
                 )
             }
         }

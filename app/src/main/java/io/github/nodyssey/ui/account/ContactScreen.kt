@@ -56,6 +56,8 @@ import io.github.nodyssey.ui.theme.readableWidth
 fun ContactRoute(
     viewModel: ContactViewModel,
     onBack: () -> Unit,
+    /** The URL, and whether this trip is the Telegram bind — which knows when it is finished. */
+    onOpenSite: (String, Boolean) -> Unit,
     onOpenUrl: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -69,15 +71,25 @@ fun ContactRoute(
         viewModel.consumeMessage()
     }
 
-    // The site link is opened from here rather than the ViewModel — leaving the app is a UI concern.
+    // Opened from here rather than the ViewModel — where a URL goes is a UI concern. Both of this
+    // screen's site errands (修改邮箱, 绑定 Telegram) need the signed-in session, which lives in the
+    // WebView's cookie jar; a Custom Tab is the *browser's* jar and shows 用户未登录 instead.
     LaunchedEffect(state.urlToOpen) {
         state.urlToOpen?.let { url ->
+            val forBinding = state.awaitingBinding
             viewModel.consumeUrl()
-            onOpenUrl(url)
+            onOpenSite(url, forBinding)
         }
     }
 
-    // Coming back from the website is the moment the user wants the answer; see onResumed.
+    // Coming back is the moment the user wants the answer. Two ways to come back, hence two effects:
+    // ON_RESUME for the trip that left the app (the Telegram app, an external browser), and the
+    // recomposition for the in-app web view, which never takes the Activity out of RESUMED.
+    // `onResumed` is a no-op unless a bind is actually in flight, so neither one fires on arrival.
+    LaunchedEffect(Unit) {
+        viewModel.onResumed()
+    }
+
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.onResumed()
     }
