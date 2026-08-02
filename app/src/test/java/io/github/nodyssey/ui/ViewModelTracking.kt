@@ -48,3 +48,6 @@ internal fun TextFieldState.typeText(text: String) {
     setTextAndPlaceCursorAtEnd(text)
     Snapshot.sendApplyNotifications()
 }
+
+/** Types on at the end, leaving what the field already holds — a quote block, an uploaded image. */
+internal fun TextFieldState.typeMore(text: String) = typeText(this.text.toString() + text)

@@ -37,8 +37,19 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Which floor a reply answers, and enough of it to keep the reply readable on its own. */
-data class ReplyQuote(
+/**
+ * A floor being answered, as either of the site's two actions takes it.
+ *
+ * The two are not two flavours of the same thing, and the editor treats them differently on purpose:
+ *
+ * - 回复 names **one** floor. It becomes [ReplyComposerUiState.replyTo], shown as a chip, and on the
+ *   wire it opens the comment with `@name` and a link to that floor. Answering a second floor
+ *   replaces the first, because a comment can only address one.
+ * - 引用 collects **as many floors as you like**. Each tap drops another blockquote into the body
+ *   text, exactly where the site's own 引用 button would put it, and from then on it is ordinary
+ *   editable text — reorder it, type between the blocks, delete one.
+ */
+data class FloorReference(
     val floor: Int,
     val author: String,
     val excerpt: String,
@@ -87,28 +98,54 @@ class ReplyComposerViewModel(
     /**
      * Opens the sheet, restoring whatever was left behind.
      *
-     * A [quote] passed in wins over the stored one — tapping 回复 on a different floor is a new
+     * A [replyTo] passed in wins over the stored one — tapping 回复 on a different floor is a new
      * intent, and silently answering the previous floor would be worse than losing the old context.
      */
-    fun open(quote: ReplyQuote? = null) {
+    fun open(replyTo: FloorReference? = null) {
         viewModelScope.launch {
-            val stored = repository.draft(postId).first()
-            _uiState.update { current ->
-                val restored = if (current.body.isBlank() && stored != null) {
-                    bodyState.editFromViewModel {
-                        replace(0, length, stored.body)
-                        placeCursorAtEnd()
-                    }
-                    current.copy(
-                        body = stored.body,
-                        savedAtMillis = stored.savedAtMillis.takeIf { it > 0 },
-                        quote = stored.toQuote(),
-                    )
-                } else {
-                    current
-                }
-                restored.copy(visible = true, previewing = false, quote = quote ?: restored.quote)
+            restoreDraft()
+            _uiState.update { it.copy(visible = true, previewing = false, replyTo = replyTo ?: it.replyTo) }
+        }
+    }
+
+    /**
+     * Drops another floor into the body as a blockquote, opening the sheet if it was closed.
+     *
+     * Deliberately text and not state: 引用 is cumulative on this site — a reader quotes one floor,
+     * scrolls on, quotes three more — and once the block is in the body it is ordinary Markdown that
+     * can be typed between, reordered or deleted like anything else the editor holds. A list of
+     * quotes kept beside the text could do none of that, and would have to invent an order for them.
+     */
+    fun quote(floor: FloorReference) {
+        viewModelScope.launch {
+            restoreDraft()
+            bodyState.editFromViewModel {
+                appendBlock(floor.toQuoteBlock(postId))
+                placeCursorAtEnd()
             }
+            _uiState.update { it.copy(visible = true, previewing = false) }
+        }
+    }
+
+    /**
+     * Puts a stored draft back, once, before the sheet becomes visible.
+     *
+     * Skipped when something has already been typed: a draft saved earlier must not overwrite the
+     * reply in progress, which is also why 引用 can be tapped repeatedly without re-restoring.
+     */
+    private suspend fun restoreDraft() {
+        if (_uiState.value.body.isNotBlank()) return
+        val stored = repository.draft(postId).first() ?: return
+        bodyState.editFromViewModel {
+            replace(0, length, stored.body)
+            placeCursorAtEnd()
+        }
+        _uiState.update {
+            it.copy(
+                body = stored.body,
+                savedAtMillis = stored.savedAtMillis.takeIf { millis -> millis > 0 },
+                replyTo = stored.toReplyTarget(),
+            )
         }
     }
 
@@ -116,7 +153,7 @@ class ReplyComposerViewModel(
         _uiState.update { it.copy(visible = false, previewing = false) }
     }
 
-    fun clearQuote() = mutate { it.copy(quote = null) }
+    fun clearReplyTo() = mutate { it.copy(replyTo = null) }
 
     fun setPreviewing(previewing: Boolean) {
         _uiState.update { it.copy(previewing = previewing) }
@@ -144,12 +181,15 @@ class ReplyComposerViewModel(
                     CommentSubmission(
                         postId = postId,
                         body = state.submissionBody,
-                        quotedFloor = state.quote?.floor,
+                        quotedFloor = state.replyTo?.floor,
                     ),
                 )
             }.onSuccess { floor ->
                 saveJob?.cancel()
                 repository.deleteDraft(postId)
+                // The field is not part of the state object, so resetting the state alone would leave
+                // the just-published text sitting in the editor for the next floor to inherit.
+                bodyState.editFromViewModel { replace(0, length, "") }
                 _uiState.value = ReplyComposerUiState(postId = postId)
                 uploads.clear()
                 onPublished(floor)
@@ -206,12 +246,13 @@ class ReplyComposerViewModel(
 }
 
 data class ReplyComposerUiState(
-    /** Fixed for the lifetime of the editor; [submissionBody] needs it to link the quoted floor. */
+    /** Fixed for the lifetime of the editor; [submissionBody] needs it to link the answered floor. */
     val postId: Long = 0L,
     val visible: Boolean = false,
     val previewing: Boolean = false,
     val body: String = "",
-    val quote: ReplyQuote? = null,
+    /** The single floor 回复 addresses. 引用 is not here — it lives in [body] as Markdown. */
+    val replyTo: FloorReference? = null,
     val savedAtMillis: Long? = null,
     val isPublishing: Boolean = false,
     val publishError: NodeSeekError? = null,
@@ -233,39 +274,61 @@ data class ReplyComposerUiState(
             attachments.none { it.status == UploadStatus.UPLOADING || it.status == UploadStatus.WAITING }
 
     /**
-     * What actually gets sent: the quote is a chip in the editor but a Markdown blockquote on the
-     * wire, because that is how the site's own quote button leaves it in the comment source.
+     * What actually gets sent: the body as typed, with the 回复 reference in front of it.
      *
-     * The shape is copied from a captured quote rather than invented (sandbox thread, 2026-07-28):
-     * a header line naming the author and linking the floor, the quoted text as further blockquote
-     * lines, a blank line, then the reply. Getting the order wrong is not cosmetic — the site renders
-     * `@name` at the *end* of a blockquote as part of the quotation, so the previous shape read as
-     * though the quoted author had signed the reply.
+     * Any 引用 blocks are already *in* [body] — [ReplyComposerViewModel.quote] put them there — so
+     * this only has the one thing left to add. The shape is the site's, read off a real comment
+     * rather than invented (fixture `post-703863-1.html` floor #8):
+     * `@ipv4 [#7](/post-703863-1#7) 想要十几刀年付的中盘鸡` — mention, floor link and answer on one
+     * line. The mention is the entire point of 回复: it is what puts the answer in the other reader's
+     * 回复我的, and what the site folds back into its "@ipv4 #7" reference chip.
+     *
+     * The one case that cannot share the line is a body that opens with a quote, because a `>` has to
+     * start a line to be a blockquote at all. There the reference becomes its own paragraph above it.
+     *
+     * The floor link stays site-relative for the same reason the rest of the shape does: that is what
+     * the site's own editor writes, so a reply from here is indistinguishable from one written there.
      */
     val submissionBody: String
-        get() = quote?.let { quote ->
-            buildString {
-                append("> @").append(quote.author)
-                append(" [#").append(quote.floor).append(']')
-                append('(').append(NodeSeekSite.BASE_URL)
-                append(NodeSeekSite.postPath(postId)).append('#').append(quote.floor).append(')')
-                quote.postedAt?.takeIf(String::isNotBlank)?.let { append(" 发布于").append(it) }
-                append('\n')
-                append("> ").append(quote.excerpt.replace("\n", "\n> "))
-                append("\n\n")
-            }
+        get() = replyTo?.let { target ->
+            val reference = floorReference(postId, target.floor, target.author)
+            if (body.trimStart().startsWith(">")) "$reference\n\n" else "$reference "
         }.orEmpty() + body
+}
+
+/** `@name [#7](/post-703863-1#7)`, the reference both actions are built out of. */
+private fun floorReference(postId: Long, floor: Int, author: String): String = buildString {
+    append('@').append(author)
+    append(" [#").append(floor).append(']')
+    append('(').append(NodeSeekSite.postPath(postId)).append('#').append(floor).append(')')
+}
+
+/**
+ * One 引用, as the site's own quote button leaves it in the comment source: a header line naming the
+ * author, linking the floor and repeating its timestamp, then the quoted text as blockquote lines.
+ *
+ * Order is not cosmetic — the site renders `@name` at the *end* of a blockquote as part of the
+ * quotation, which reads as though the quoted author signed the reply. The trailing blank line is
+ * what stops the next thing typed from being swallowed into the quotation as a lazy continuation,
+ * and it is also what lets the next 引用 land as its own block rather than extending this one.
+ */
+internal fun FloorReference.toQuoteBlock(postId: Long): String = buildString {
+    append("> ").append(floorReference(postId, floor, author))
+    postedAt?.takeIf(String::isNotBlank)?.let { append(" 发布于").append(it) }
+    append('\n')
+    append("> ").append(excerpt.replace("\n", "\n> "))
+    append("\n\n")
 }
 
 private fun ReplyComposerUiState.toDraft() = CommentDraft(
     body = body,
-    quotedFloor = quote?.floor,
-    quotedAuthor = quote?.author,
-    quotedText = quote?.excerpt,
+    replyToFloor = replyTo?.floor,
+    replyToAuthor = replyTo?.author,
+    replyToText = replyTo?.excerpt,
     savedAtMillis = savedAtMillis ?: 0L,
 )
 
-private fun CommentDraft.toQuote(): ReplyQuote? {
-    val floor = quotedFloor ?: return null
-    return ReplyQuote(floor = floor, author = quotedAuthor.orEmpty(), excerpt = quotedText.orEmpty())
+private fun CommentDraft.toReplyTarget(): FloorReference? {
+    val floor = replyToFloor ?: return null
+    return FloorReference(floor = floor, author = replyToAuthor.orEmpty(), excerpt = replyToText.orEmpty())
 }

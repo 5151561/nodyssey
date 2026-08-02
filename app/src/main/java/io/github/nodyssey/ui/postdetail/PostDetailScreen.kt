@@ -107,9 +107,9 @@ import io.github.nodyssey.ui.common.SkeletonBar
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.common.rememberClipboardCopy
 import io.github.nodyssey.ui.common.shortMessage
+import io.github.nodyssey.ui.composer.FloorReference
 import io.github.nodyssey.ui.composer.ReplyComposerHost
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
-import io.github.nodyssey.ui.composer.ReplyQuote
 import io.github.nodyssey.ui.richtext.RichContent
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.PostTitle
@@ -160,7 +160,9 @@ fun PostDetailRoute(
         showBackButton = showBackButton,
         // Replying needs an account; sending an anonymous reply into the void is the one outcome
         // the editor must not produce, so the sign-in page comes first.
-        onReply = { quote -> if (state.isSignedIn) replyViewModel.open(quote) else onSignIn() },
+        onReply = { target -> if (state.isSignedIn) replyViewModel.open(target) else onSignIn() },
+        // 引用 needs the account for the same reason 回复 does, and it writes into the same editor.
+        onQuote = { floor -> if (state.isSignedIn) replyViewModel.quote(floor) else onSignIn() },
         onReact = viewModel::react,
         onLoadFreeChickenLegs = viewModel::loadFreeChickenLegs,
         onReactionFailureShown = viewModel::onReactionFailureShown,
@@ -172,7 +174,7 @@ fun PostDetailRoute(
         state = replyState,
         onDismiss = replyViewModel::close,
         bodyState = replyViewModel.bodyState,
-        onClearQuote = replyViewModel::clearQuote,
+        onClearReplyTo = replyViewModel::clearReplyTo,
         onPreviewChange = replyViewModel::setPreviewing,
         onPickImages = replyViewModel::addImages,
         onRemoveAttachment = replyViewModel::removeAttachment,
@@ -202,8 +204,10 @@ fun PostDetailScreen(
     onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
     /** Clears a Cloudflare challenge on this thread's own URL. */
     onVerify: () -> Unit = { onOpenBrowser(postUrl) },
-    /** `null` opens an empty reply; a quote answers one floor (6d). The editor itself is hosted by the route. */
-    onReply: (ReplyQuote?) -> Unit = {},
+    /** `null` opens an empty reply; a floor addresses one (6d). The editor itself is hosted by the route. */
+    onReply: (FloorReference?) -> Unit = {},
+    /** Appends one more 引用 block to whatever the editor already holds. */
+    onQuote: (FloorReference) -> Unit = {},
     /** Spends one mark on a floor. Confirmation, where the site has one, happens before this. */
     onReact: (Long, ReactionAction) -> Unit = { _, _ -> },
     /** Asked for when a 投喂 confirmation opens, so it can say whether this one is free. */
@@ -367,6 +371,7 @@ fun PostDetailScreen(
                             }
                         },
                         onReplyToFloor = onReply,
+                        onQuoteFloor = onQuote,
                         onAuthorClick = onAuthorClick,
                         modifier =
                         Modifier.floatingToolbarVerticalNestedScroll(
@@ -652,7 +657,8 @@ private fun ThreadList(
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
     onReact: (PostContent, ReactionAction) -> Unit,
-    onReplyToFloor: (ReplyQuote?) -> Unit,
+    onReplyToFloor: (FloorReference?) -> Unit,
+    onQuoteFloor: (FloorReference) -> Unit,
     onAuthorClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -696,7 +702,8 @@ private fun ThreadList(
                 onJumpToFloor = onJumpToFloor,
                 pendingReaction = state.pendingReactionFor(comment),
                 onReact = { action -> onReact(comment, action) },
-                onReply = { onReplyToFloor(comment.toReplyQuote()) },
+                onReply = { onReplyToFloor(comment.toFloorReference()) },
+                onQuote = { comment.toFloorReference()?.let(onQuoteFloor) },
                 onAuthorClick = onAuthorClick,
             )
         }
@@ -907,6 +914,7 @@ private fun CommentRow(
     pendingReaction: ReactionAction?,
     onReact: (ReactionAction) -> Unit,
     onReply: () -> Unit,
+    onQuote: () -> Unit,
     onAuthorClick: (Long) -> Unit,
 ) {
     Column(
@@ -976,6 +984,7 @@ private fun CommentRow(
             pending = pendingReaction,
             onReact = onReact,
             onReply = onReply,
+            onQuote = onQuote,
         )
     }
 }
@@ -1019,6 +1028,7 @@ private fun ReactionRow(
     onReact: (ReactionAction) -> Unit,
     modifier: Modifier = Modifier,
     onReply: (() -> Unit)? = null,
+    onQuote: (() -> Unit)? = null,
 ) {
     Row(
         // Every reaction is a TextButton, which keeps 12dp of content padding inside its own bounds.
@@ -1045,8 +1055,18 @@ private fun ReactionRow(
                 onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
             )
         }
-        // Not a reaction, but it has always lived on this row: it carries the floor into the editor
-        // as a quote, which is what 6d's "回复 #12 · nssk" header is showing.
+        // Not reactions, but they have always lived on this row: they carry the floor into the
+        // editor, which is what 6d's "回复 #12 · nssk" header is showing. Two buttons rather than
+        // one because the site has two — 回复 addresses the author, 引用 reproduces the floor — and
+        // collapsing them into a single action is what made every answer from here read as a quote.
+        onQuote?.let {
+            QuietReaction(
+                icon = NodysseyIcons.FormatQuote,
+                label = R.string.post_quote_action,
+                count = "",
+                onClick = it,
+            )
+        }
         onReply?.let {
             QuietReaction(
                 icon = NodysseyIcons.Reply,
@@ -1253,14 +1273,14 @@ private fun EditedMarker(fullText: String?) {
 }
 
 /**
- * The quote context the reply editor opens with.
+ * The context the reply editor opens with.
  *
- * `null` for a floor with no number — a reply that says "回复 #" answers nothing, and the editor
- * handles a missing quote perfectly well by opening empty.
+ * `null` for a floor with no number — an answer that says "回复 #" answers nothing, and the editor
+ * handles a missing target perfectly well by opening empty.
  */
-private fun PostContent.toReplyQuote(): ReplyQuote? {
+private fun PostContent.toFloorReference(): FloorReference? {
     val number = floor?.trimStart('#')?.toIntOrNull() ?: return null
-    return ReplyQuote(
+    return FloorReference(
         floor = number,
         author = authorName,
         excerpt = nodes.excerpt(),

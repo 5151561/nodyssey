@@ -135,6 +135,7 @@
     <string name="post_quote_reply">@%1$s %2$s</string>
     <string name="post_auto_paging">自动续页</string>
     <string name="post_reply_action">回复</string>
+    <string name="post_quote_action">引用</string>
     <string name="post_previous_page">上一页</string>
     <string name="post_next_page">下一页</string>
     <string name="post_page_of">第 %1$d / %2$d 页</string>
@@ -151,7 +152,7 @@
     <string name="post_reply_preview_title">预览 · 回复</string>
     <string name="post_reply_preview_title_floor">预览 · 回复 #%1$d</string>
     <string name="post_reply_draft_saved">草稿已保存 %1$s</string>
-    <string name="post_reply_quote_remove">移除引用</string>
+    <string name="post_reply_quote_remove">移除回复对象</string>
     <string name="post_reply_publish_failed">发布失败：%1$s，草稿已保留</string>
     <string name="post_reply_publish_unavailable">评论发布接口尚未接入</string>
     <string name="post_quote_prefix">#%1$d</string>
