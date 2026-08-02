@@ -1,5 +1,8 @@
 package io.github.nodyssey.ui.messages
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,7 +22,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
@@ -49,11 +51,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -68,11 +71,21 @@ import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.core.net.NodeSeekError
+import io.github.nodyssey.data.composer.ImageAttachment
+import io.github.nodyssey.data.composer.PickedImage
+import io.github.nodyssey.ui.common.EditorTextField
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.UserAvatar
+import io.github.nodyssey.ui.composer.AttachmentTray
+import io.github.nodyssey.ui.composer.EditorAction
+import io.github.nodyssey.ui.composer.MarkdownEditorBar
+import io.github.nodyssey.ui.composer.MarkdownEditorState
+import io.github.nodyssey.ui.composer.ToolbarCustomizeSheet
 import io.github.nodyssey.ui.composer.parseMarkdown
+import io.github.nodyssey.ui.composer.rememberMarkdownEditorState
+import io.github.nodyssey.ui.composer.toPickedImages
 import io.github.nodyssey.ui.richtext.RichContent
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
@@ -101,6 +114,11 @@ fun MessageThreadRoute(
         onToggleMarkdown = viewModel::toggleMarkdown,
         onSend = viewModel::send,
         onRetrySend = viewModel::retry,
+        onPickImages = viewModel::addImages,
+        onRemoveAttachment = viewModel::removeAttachment,
+        onRetryAttachment = viewModel::retryUpload,
+        onToolbarChange = viewModel::setToolbar,
+        onToolbarReset = viewModel::resetToolbar,
         modifier = modifier,
     )
 }
@@ -119,11 +137,26 @@ fun MessageThreadScreen(
     onToggleMarkdown: () -> Unit,
     onSend: () -> Unit,
     onRetrySend: (String) -> Unit,
+    onPickImages: (List<PickedImage>) -> Unit,
+    onRemoveAttachment: (ImageAttachment) -> Unit,
+    onRetryAttachment: (ImageAttachment) -> Unit,
+    onToolbarChange: (List<EditorAction>) -> Unit,
+    onToolbarReset: () -> Unit,
     modifier: Modifier = Modifier,
     /** Bubble-content links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
     onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
     val webUrl = NodeSeekSite.BASE_URL + NodeSeekSite.messageThreadWebPath(state.uid)
+    val editorState = rememberMarkdownEditorState()
+    var customizing by rememberSaveable { mutableStateOf(false) }
+    // Turning MD off takes the strip away, and neither the panel nor the sheet it opened may be left
+    // behind on a bar that no longer has a key to close them.
+    LaunchedEffect(state.isMarkdown) {
+        if (!state.isMarkdown) {
+            editorState.closeEmoji()
+            customizing = false
+        }
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -190,14 +223,27 @@ fun MessageThreadScreen(
                     else -> MessageBubbles(state, onLinkClick, onRetrySend)
                 }
             }
-            MessageInputBar(
+            MessageComposer(
                 draftState = draftState,
-                isMarkdown = state.isMarkdown,
-                canSend = state.canSend,
+                state = state,
+                editorState = editorState,
                 onToggleMarkdown = onToggleMarkdown,
                 onSend = onSend,
+                onPickImages = onPickImages,
+                onRemoveAttachment = onRemoveAttachment,
+                onRetryAttachment = onRetryAttachment,
+                onCustomize = { customizing = true },
             )
         }
+    }
+
+    if (customizing) {
+        ToolbarCustomizeSheet(
+            layout = state.toolbar,
+            onChange = onToolbarChange,
+            onReset = onToolbarReset,
+            onDismiss = { customizing = false },
+        )
     }
 }
 
@@ -490,19 +536,19 @@ private fun MessageDraftField(
     isMarkdown: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val hint =
+    EditorTextField(
+        state = draftState,
+        hint =
         stringResource(
             if (isMarkdown) R.string.message_input_hint_markdown else R.string.message_input_hint_plain,
-        )
-    val textStyle =
-        MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
-    BasicTextField(
-        state = draftState,
+        ),
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+        // One line of placeholder, elided: the pill is 44dp tall when empty and a wrapping hint
+        // would grow it before anything has been typed.
+        hintMaxLines = 1,
         lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = MAX_INPUT_LINES),
-        textStyle = textStyle,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         modifier = modifier,
-        decorator = { inner ->
+        container = { content ->
             Surface(
                 shape = RoundedCornerShape(INPUT_CONTROL_SIZE / 2),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -514,20 +560,74 @@ private fun MessageDraftField(
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    if (draftState.text.isEmpty()) {
-                        Text(
-                            text = hint,
-                            style = textStyle,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    inner()
+                    content()
                 }
             }
         },
     )
+}
+
+/**
+ * The formatting strip, shown only while MD is on (7f + C6).
+ *
+ * Off, the server takes the text verbatim, and a toolbar that inserted `**` would be offering syntax
+ * that arrives as literal asterisks — so the strip is not disabled, it is absent, and the toggle is
+ * the one control that decides.
+ *
+ * The strip sits above the message bar rather than below it, and the emoji panel below: the panel
+ * stands in for the keyboard and belongs where the keyboard was, while the keys belong next to the
+ * text they format. [MarkdownEditorBar] emits them in that order around its content slot.
+ */
+@Composable
+private fun MessageComposer(
+    draftState: TextFieldState,
+    state: MessageThreadUiState,
+    editorState: MarkdownEditorState,
+    onToggleMarkdown: () -> Unit,
+    onSend: () -> Unit,
+    onPickImages: (List<PickedImage>) -> Unit,
+    onRemoveAttachment: (ImageAttachment) -> Unit,
+    onRetryAttachment: (ImageAttachment) -> Unit,
+    onCustomize: () -> Unit,
+) {
+    val context = LocalContext.current
+    val picker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(MAX_IMAGES_PER_PICK),
+    ) { uris -> onPickImages(uris.toPickedImages(context)) }
+
+    val inputBar: @Composable () -> Unit = {
+        MessageInputBar(
+            draftState = draftState,
+            isMarkdown = state.isMarkdown,
+            canSend = state.canSend,
+            onToggleMarkdown = onToggleMarkdown,
+            onSend = onSend,
+        )
+    }
+
+    Column {
+        // Outside the MD branch: an upload started before the toggle was flipped is still running,
+        // and its cell is the only place the user can see that, or cancel it.
+        AttachmentTray(
+            attachments = state.attachments,
+            onRemove = onRemoveAttachment,
+            onRetry = onRetryAttachment,
+        )
+        if (state.isMarkdown) {
+            MarkdownEditorBar(
+                actions = state.toolbar.enabled,
+                bodyState = draftState,
+                editorState = editorState,
+                onPickImages = {
+                    picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                onCustomize = onCustomize,
+                content = { inputBar() },
+            )
+        } else {
+            inputBar()
+        }
+    }
 }
 
 /**
@@ -590,6 +690,7 @@ private fun Modifier.wrapContentWidthTo(isMine: Boolean): Modifier =
 
 private const val BUBBLE_MAX_WIDTH = 0.78f
 private const val MAX_INPUT_LINES = 5
+private const val MAX_IMAGES_PER_PICK = 9
 
 /** One height for the MD toggle, the send key and the empty draft pill, so the bar reads as a row. */
 private val INPUT_CONTROL_SIZE = 44.dp
@@ -664,6 +765,11 @@ private fun MessageThreadPreview() {
             onToggleMarkdown = {},
             onSend = {},
             onRetrySend = {},
+            onPickImages = {},
+            onRemoveAttachment = {},
+            onRetryAttachment = {},
+            onToolbarChange = {},
+            onToolbarReset = {},
         )
     }
 }

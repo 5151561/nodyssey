@@ -60,6 +60,9 @@ class SettingsRepository(
                     .toSet(),
                 homeBoardOrder = decodeValues(preferences[KEY_HOME_BOARD_ORDER]),
                 disabledHomeBoards = decodeValues(preferences[KEY_DISABLED_HOME_BOARDS]).toSet(),
+                postToolbarActions = decodeValues(preferences[KEY_POST_TOOLBAR]),
+                replyToolbarActions = decodeValues(preferences[KEY_REPLY_TOOLBAR]),
+                messageToolbarActions = decodeValues(preferences[KEY_MESSAGE_TOOLBAR]),
                 notificationsEnabled = preferences[KEY_NOTIFICATIONS_ENABLED] ?: false,
                 notificationPollMinutes =
                 (preferences[KEY_NOTIFICATION_POLL_MINUTES] ?: DEFAULT_POLL_MINUTES)
@@ -212,6 +215,28 @@ class SettingsRepository(
         }
     }
 
+    /**
+     * Stores one composer's strip. An empty list clears the preference rather than writing one, so
+     * "I put it back the way it was" and "I never touched it" stay the same stored state.
+     */
+    suspend fun setComposerToolbar(
+        surface: ComposerSurface,
+        actions: List<String>,
+    ) {
+        val key = when (surface) {
+            ComposerSurface.POST -> KEY_POST_TOOLBAR
+            ComposerSurface.REPLY -> KEY_REPLY_TOOLBAR
+            ComposerSurface.MESSAGE -> KEY_MESSAGE_TOOLBAR
+        }
+        edit { preferences ->
+            if (actions.isEmpty()) {
+                preferences.remove(key)
+            } else {
+                preferences[key] = encodeValues(actions, MAX_TOOLBAR_ACTIONS)
+            }
+        }
+    }
+
     /** Local mirror of the site's Remote 启用节日主题 switch; the sync authority is the account. */
     suspend fun setHolidayTheme(enabled: Boolean) = edit { it[KEY_HOLIDAY_THEME] = enabled }
 
@@ -274,6 +299,9 @@ class SettingsRepository(
         private val KEY_HIDDEN_HOME_BOARDS = stringPreferencesKey("hidden_home_boards")
         private val KEY_HOME_BOARD_ORDER = stringPreferencesKey("home_board_order")
         private val KEY_DISABLED_HOME_BOARDS = stringPreferencesKey("disabled_home_boards")
+        private val KEY_POST_TOOLBAR = stringPreferencesKey("post_toolbar_actions")
+        private val KEY_REPLY_TOOLBAR = stringPreferencesKey("reply_toolbar_actions")
+        private val KEY_MESSAGE_TOOLBAR = stringPreferencesKey("message_toolbar_actions")
         private val KEY_HOLIDAY_THEME = booleanPreferencesKey("holiday_theme")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         private val KEY_NOTIFICATION_POLL_MINUTES = intPreferencesKey("notification_poll_minutes")
@@ -292,6 +320,9 @@ class SettingsRepository(
 
         /** The site has fifteen boards. The cap is only here so a corrupt write cannot grow forever. */
         private const val MAX_HOME_BOARDS = 64
+
+        /** Comfortably above `EditorAction.entries.size`; a stored strip can never need more. */
+        private const val MAX_TOOLBAR_ACTIONS = 32
 
         private fun decodeRecentSearches(value: String?): List<String> =
             value.orEmpty().split(RECENT_SEARCH_SEPARATOR).filter(String::isNotBlank)
@@ -334,6 +365,9 @@ class SettingsRepository(
     }
 }
 
+/** Which composer's formatting strip a stored arrangement belongs to. */
+enum class ComposerSurface { POST, REPLY, MESSAGE }
+
 data class UserSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = false,
@@ -353,6 +387,16 @@ data class UserSettings(
     val homeBoardOrder: List<String> = emptyList(),
     /** Boards parked at the tail of the strip. A subset of [homeBoardOrder]; see `setHomeBoardArrangement`. */
     val disabledHomeBoards: Set<String> = emptySet(),
+    /*
+     * The three formatting strips, as laid out through the wrench on the toolbar. Stored as
+     * `EditorAction` names in the order they appear; empty means "never customised" and the surface
+     * falls back to its own default set. Separate per surface on purpose — a topic wants a list and a
+     * link where a reply wants a quote and an @, and one shared arrangement would have to drop one of
+     * those from somebody's defaults to exist at all.
+     */
+    val postToolbarActions: List<String> = emptyList(),
+    val replyToolbarActions: List<String> = emptyList(),
+    val messageToolbarActions: List<String> = emptyList(),
     /*
      * App notification polling (board f4). Off by default: polling costs battery and needs the
      * POST_NOTIFICATIONS runtime permission, so it starts only when the user asks for it.

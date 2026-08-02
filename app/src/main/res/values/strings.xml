@@ -61,8 +61,6 @@
     <string name="post_edited">已编辑</string>
 
     <!-- Post composer -->
-    <string name="composer_title">新建帖子</string>
-    <string name="composer_preview_title">预览</string>
     <string name="composer_title_hint">一句话说清主题</string>
     <string name="composer_body_hint">写下正文，支持 Markdown…</string>
     <string name="composer_title_count">%1$d/%2$d</string>
@@ -88,6 +86,8 @@
     <string name="composer_publish_http">服务器返回 HTTP %1$d</string>
     <string name="composer_publish_unknown">请稍后重试</string>
     <string name="composer_format_bold">加粗</string>
+    <string name="composer_format_italic">斜体</string>
+    <string name="composer_format_strikethrough">删除线</string>
     <string name="composer_format_heading">二级标题</string>
     <string name="composer_format_code">行内代码</string>
     <string name="composer_format_quote">引用</string>
@@ -96,6 +96,14 @@
     <string name="composer_format_mention">提到某人</string>
     <string name="composer_format_image">图片</string>
     <string name="composer_format_emoji">表情</string>
+    <!-- The wrench at the end of the two composers' strips, and the panel it opens -->
+    <string name="composer_toolbar_customize">自定义工具栏</string>
+    <string name="composer_toolbar_enabled">工具栏上的按键</string>
+    <string name="composer_toolbar_available">可添加</string>
+    <string name="composer_toolbar_reorder">拖动排序</string>
+    <string name="composer_toolbar_remove">移出工具栏</string>
+    <string name="composer_toolbar_add">加入工具栏</string>
+    <string name="composer_toolbar_reset">恢复默认</string>
     <string name="composer_preview_empty">正文预览会显示在这里</string>
     <string name="composer_just_now">刚刚</string>
     <string name="composer_view_content">内容</string>
@@ -373,11 +381,6 @@
     <string name="account_bio_hint">请用一句话介绍自己</string>
     <string name="account_signature_helper">帖子内容下显示 · 支持 Markdown · 不支持图片和引用</string>
     <string name="account_readme_helper">用户主页中显示 · 支持 Markdown</string>
-    <string name="account_format_bold">加粗</string>
-    <string name="account_format_italic">斜体</string>
-    <string name="account_format_strikethrough">删除线</string>
-    <string name="account_format_link">链接</string>
-    <string name="account_format_code">行内代码</string>
 
     <!-- 安全 (d6 2/4) -->
     <string name="account_security_title">安全</string>

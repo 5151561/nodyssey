@@ -25,6 +25,8 @@ import io.github.nodyssey.data.composer.PostSubmission
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.data.session.SessionState
+import io.github.nodyssey.data.settings.ComposerSurface
+import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.common.appendBlock
 import io.github.nodyssey.ui.common.editFromViewModel
@@ -35,8 +37,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -48,6 +52,11 @@ class PostComposerViewModel(
     private val clock: AppClock,
     uploader: ImageUploader,
     private val profileRepository: ProfileRepository? = null,
+    /**
+     * Null in tests and wherever the strip is not editable; the editor then shows
+     * [EditorActions.Post] and the wrench does nothing worth opening, so it is not offered.
+     */
+    private val settings: SettingsRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostComposerUiState())
     val uiState: StateFlow<PostComposerUiState> = _uiState.asStateFlow()
@@ -82,6 +91,12 @@ class PostComposerViewModel(
         uploads.attachments
             .onEach { attachments -> _uiState.update { it.copy(attachments = attachments) } }
             .launchIn(viewModelScope)
+        settings?.settings
+            ?.map { it.postToolbarActions }
+            ?.distinctUntilChanged()
+            ?.onEach { stored ->
+                _uiState.update { it.copy(toolbar = toolbarLayout(stored, EditorActions.Post)) }
+            }?.launchIn(viewModelScope)
         // An upload lands while typing continues, so its Markdown goes to the end of the body
         // rather than wherever the caret happens to be sitting — and, because this edits the buffer
         // instead of replacing the whole string, the caret stays wherever the user left it.
@@ -241,6 +256,20 @@ class PostComposerViewModel(
         }
     }
 
+    /** Writes the strip through on every edit in the wrench panel; see `ToolbarCustomizeSheet`. */
+    fun setToolbar(actions: List<EditorAction>) {
+        val repository = settings ?: return
+        viewModelScope.launch {
+            repository.setComposerToolbar(ComposerSurface.POST, actions.map(EditorAction::name))
+        }
+    }
+
+    /** Clears the stored arrangement, which is what makes the defaults come back. */
+    fun resetToolbar() {
+        val repository = settings ?: return
+        viewModelScope.launch { repository.setComposerToolbar(ComposerSurface.POST, emptyList()) }
+    }
+
     companion object {
         const val MAX_TITLE_LENGTH = 60
         private const val AUTOSAVE_DELAY_MILLIS = 750L
@@ -254,6 +283,7 @@ class PostComposerViewModel(
                     clock = container.clock,
                     uploader = container.imageUploader,
                     profileRepository = container.profileRepository,
+                    settings = container.settingsRepository,
                 )
             }
         }
@@ -272,6 +302,8 @@ data class PostComposerUiState(
     val boardTitle: String? = null,
     val permission: PostPermission = PostPermission.PUBLIC,
     val viewMode: ComposerViewMode = ComposerViewMode.CONTENT,
+    /** The formatting strip's keys and the wrench panel's pool. Defaults until settings arrive. */
+    val toolbar: ToolbarLayout = toolbarLayout(emptyList(), EditorActions.Post),
     val isPublishing: Boolean = false,
     val publishError: NodeSeekError? = null,
     val publishErrorDetail: String? = null,

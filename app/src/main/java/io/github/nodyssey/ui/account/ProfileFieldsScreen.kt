@@ -21,7 +21,6 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,12 +54,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.ui.common.AvatarShape
-import io.github.nodyssey.ui.common.MARKDOWN_LINK_CARET
-import io.github.nodyssey.ui.common.MARKDOWN_LINK_SUFFIX
-import io.github.nodyssey.ui.common.MarkdownInsertion
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.UserAvatar
-import io.github.nodyssey.ui.common.applyMarkdown
+import io.github.nodyssey.ui.composer.EditorActions
+import io.github.nodyssey.ui.composer.EditorToolbar
+import io.github.nodyssey.ui.composer.applyMarkdown
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.readableWidth
@@ -288,10 +286,10 @@ private fun AvatarEditor(
 /**
  * A Markdown field with the five formatting actions a signature is allowed.
  *
- * The glyph labels rather than icons match the post composer's toolbar, which made the same call for
- * the same reason: `material-icons-core` ships none of `format_bold`, `format_italic` or
- * `strikethrough_s`, and hand-drawing three vectors to say what "B" and "I" already say is a poor
- * trade. Each button still carries a spoken description.
+ * The toolbar is the post composer's, not a second one that happens to insert the same characters:
+ * the keys, their spoken labels, the caret arithmetic and the 32dp grid all come from
+ * [EditorToolbar]. Only [EditorActions.Signature] and the container's colour are local, the latter
+ * because this is the one strip that sits inside a settings form rather than against the keyboard.
  */
 @Composable
 private fun MarkdownField(
@@ -323,51 +321,14 @@ private fun MarkdownField(
             textStyle = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.fillMaxWidth(),
         )
-        Surface(
-            shape = RoundedCornerShape(12.dp),
+        EditorToolbar(
+            actions = EditorActions.Signature,
+            onAction = { action -> fieldState.edit { applyMarkdown(action) } },
+            showDivider = false,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
-        ) {
-            Row(Modifier.padding(2.dp)) {
-                SignatureFormat.entries.forEach { format ->
-                    val description = stringResource(format.descriptionRes)
-                    IconButton(
-                        onClick = { fieldState.edit { applyMarkdown(format.insertion) } },
-                        modifier = Modifier.semantics { contentDescription = description },
-                    ) {
-                        Text(format.glyph, style = MaterialTheme.typography.labelLarge)
-                    }
-                }
-            }
-        }
+            shape = RoundedCornerShape(12.dp),
+        )
     }
-}
-
-/**
- * Bold, italic, strikethrough, link, inline code — and deliberately nothing else.
- *
- * The absent actions are the point: NodeSeek's own helper text says a signature supports neither
- * images nor quotes. The insertion mechanics come from [applyMarkdown], shared with the post
- * composer, so only the *set* differs between the two editors.
- */
-private enum class SignatureFormat(
-    val glyph: String,
-    val descriptionRes: Int,
-    val insertion: MarkdownInsertion,
-) {
-    Bold("B", R.string.account_format_bold, MarkdownInsertion("**", "**", "加粗文字")),
-    Italic("I", R.string.account_format_italic, MarkdownInsertion("*", "*", "斜体文字")),
-    Strikethrough("S", R.string.account_format_strikethrough, MarkdownInsertion("~~", "~~", "删除线")),
-    Link(
-        "↗",
-        R.string.account_format_link,
-        MarkdownInsertion(
-            prefix = "[",
-            suffix = MARKDOWN_LINK_SUFFIX,
-            placeholder = "链接文字",
-            caretInSuffix = MARKDOWN_LINK_CARET,
-        ),
-    ),
-    Code("</>", R.string.account_format_code, MarkdownInsertion("`", "`", "code")),
 }
 
 private val AVATAR_SIZE = 84.dp

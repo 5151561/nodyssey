@@ -16,14 +16,30 @@ import io.github.nodyssey.data.DirectMessage
 import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationRepository
+import io.github.nodyssey.data.composer.ImageAttachment
+import io.github.nodyssey.data.composer.ImageUploadQueue
+import io.github.nodyssey.data.composer.ImageUploader
+import io.github.nodyssey.data.composer.PickedImage
+import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.data.session.SessionRepository
+import io.github.nodyssey.data.settings.ComposerSurface
+import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.common.appendBlock
+import io.github.nodyssey.ui.common.editFromViewModel
+import io.github.nodyssey.ui.common.removeBlock
+import io.github.nodyssey.ui.composer.EditorAction
+import io.github.nodyssey.ui.composer.EditorActions
+import io.github.nodyssey.ui.composer.ToolbarLayout
+import io.github.nodyssey.ui.composer.toolbarLayout
 import io.github.nodyssey.ui.postlist.toNodeSeekError
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -41,24 +57,80 @@ class MessageThreadViewModel(
     private val notifications: NotificationRepository,
     private val session: SessionRepository,
     private val clock: AppClock,
+    uploader: ImageUploader,
     uid: Long,
     userName: String,
+    /** Null in tests; the bar then shows [EditorActions.Message] and offers no wrench. */
+    private val settings: SettingsRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MessageThreadUiState(uid = uid, userName = userName))
     val uiState: StateFlow<MessageThreadUiState> = _uiState.asStateFlow()
 
     /** The composer's text and selection, held here for the same reason the post editor's is. */
     val draftState = TextFieldState()
+
+    /**
+     * The same queue the two composers use, and the same NodeImage host behind it.
+     *
+     * There is nothing message-shaped about an image here: `message/send` carries one `content`
+     * string, so an image in a private message is `![](…)` spliced into that string exactly the way
+     * it is spliced into a topic's body.
+     */
+    private val uploads = ImageUploadQueue(viewModelScope, uploader)
     private var loadJob: Job? = null
     private var pendingSeed = 0L
 
     init {
         refresh()
-        // `canSend` is a property of the text, and the text lives in a state object the ViewModel
-        // cannot make a StateFlow out of — so the one derived bit it needs is mirrored across.
+        // The text lives in a state object the ViewModel cannot make a StateFlow out of, so the one
+        // derived bit it needs is mirrored across. Whether that is *enough* to send is the UiState's
+        // question, because an upload still in flight also has a say.
         snapshotFlow { draftState.text.isNotBlank() }
-            .onEach { canSend -> _uiState.update { it.copy(canSend = canSend) } }
+            .onEach { hasText -> _uiState.update { it.copy(hasDraftText = hasText) } }
             .launchIn(viewModelScope)
+        uploads.attachments
+            .onEach { attachments -> _uiState.update { it.copy(attachments = attachments) } }
+            .launchIn(viewModelScope)
+        // Appended rather than spliced at the caret: the upload lands while typing continues, and
+        // dropping `![](…)` mid-sentence is both surprising and hard to undo.
+        uploads.uploaded
+            .onEach { attachment ->
+                val markdown = attachment.markdown ?: return@onEach
+                draftState.editFromViewModel { appendBlock(markdown) }
+            }.launchIn(viewModelScope)
+        settings?.settings
+            ?.map { it.messageToolbarActions }
+            ?.distinctUntilChanged()
+            ?.onEach { stored ->
+                _uiState.update { it.copy(toolbar = toolbarLayout(stored, EditorActions.Message)) }
+            }?.launchIn(viewModelScope)
+    }
+
+    fun addImages(images: List<PickedImage>) = uploads.enqueue(images)
+
+    fun retryUpload(attachment: ImageAttachment) = uploads.retry(attachment.id)
+
+    fun retryFailedUploads() = uploads.retryFailed()
+
+    /** Dismissing a finished upload also takes its Markdown out of the draft it was written into. */
+    fun removeAttachment(attachment: ImageAttachment) {
+        val removed = uploads.remove(attachment.id) ?: return
+        val markdown = removed.markdown ?: return
+        draftState.editFromViewModel { removeBlock(markdown) }
+    }
+
+    /** Writes the strip through on every edit in the wrench panel; see `ToolbarCustomizeSheet`. */
+    fun setToolbar(actions: List<EditorAction>) {
+        val repository = settings ?: return
+        viewModelScope.launch {
+            repository.setComposerToolbar(ComposerSurface.MESSAGE, actions.map(EditorAction::name))
+        }
+    }
+
+    /** Clears the stored arrangement, which is what makes the defaults come back. */
+    fun resetToolbar() {
+        val repository = settings ?: return
+        viewModelScope.launch { repository.setComposerToolbar(ComposerSurface.MESSAGE, emptyList()) }
     }
 
     fun refresh() {
@@ -131,6 +203,9 @@ class MessageThreadViewModel(
                 status = SendStatus.SENDING,
             )
         draftState.clearText()
+        // The Markdown went out inside `content`; the queue's cells were only ever the progress
+        // report for getting it there, and leaving them up would attach them to the next message.
+        uploads.clear()
         _uiState.update {
             it.copy(messages = it.messages + bubble, nowMillis = clock.nowMillis())
         }
@@ -208,8 +283,10 @@ class MessageThreadViewModel(
                         notifications = container.notificationRepository,
                         session = container.sessionRepository,
                         clock = container.clock,
+                        uploader = container.imageUploader,
                         uid = uid,
                         userName = userName,
+                        settings = container.settingsRepository,
                     )
                 }
             }
@@ -244,8 +321,21 @@ data class MessageThreadUiState(
     val isLoading: Boolean = false,
     val error: NodeSeekError? = null,
     /** Mirrored out of [MessageThreadViewModel.draftState]; the text itself is not UiState. */
-    val canSend: Boolean = false,
+    val hasDraftText: Boolean = false,
+    val attachments: List<ImageAttachment> = emptyList(),
     /** The site's own MD On/Off switch; off sends the text verbatim. */
     val isMarkdown: Boolean = true,
+    /** The formatting strip's keys and the wrench panel's pool. Defaults until settings arrive. */
+    val toolbar: ToolbarLayout = toolbarLayout(emptyList(), EditorActions.Message),
     val nowMillis: Long = 0L,
-)
+) {
+    /**
+     * Sending an image that has not finished uploading would send its placeholder.
+     *
+     * The same guard the two composers put on 发布, for the same reason: the Markdown carries a URL
+     * the upload has not produced yet, and a message is gone the moment it is sent.
+     */
+    val canSend: Boolean
+        get() = hasDraftText &&
+            attachments.none { it.status == UploadStatus.UPLOADING || it.status == UploadStatus.WAITING }
+}

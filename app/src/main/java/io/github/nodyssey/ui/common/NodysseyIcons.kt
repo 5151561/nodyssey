@@ -14,8 +14,7 @@ import androidx.compose.ui.unit.dp
  * strict lockfile makes a separate, deliberate operation.
  *
  * The bar for adding one: the icon has to carry meaning a core icon cannot. 账号设置's `tune` became
- * `Icons.Default.Settings` and `logout` became `ExitToApp` for exactly that reason, and the signature
- * editor's format toolbar uses the same text glyphs the post composer already does.
+ * `Icons.Default.Settings` and `logout` became `ExitToApp` for exactly that reason.
  */
 object NodysseyIcons {
     /** Decorative welcome glyph used by the signed-out profile illustration (board c7). */
@@ -351,6 +350,17 @@ object NodysseyIcons {
         )
     }
 
+    val FormatItalic: ImageVector by lazy {
+        materialIcon(name = "FormatItalic", pathData = "M10,4v3h2.21l-3.42,8H6v3h8v-3h-2.21l3.42,-8H18V4z")
+    }
+
+    val StrikethroughS: ImageVector by lazy {
+        materialIcon(
+            name = "StrikethroughS",
+            pathData = "M10,19h4v-3h-4v3zM5,4v3h5v3h4V7h5V4H5zM3,14h18v-2H3v2z",
+        )
+    }
+
     /** Heading. Material's `title` glyph rather than `format_h2`, which is text rendered as a path. */
     val Title: ImageVector by lazy {
         materialIcon(name = "Title", pathData = "M5,4v3h5.5v12h3V7H19V4z")
@@ -401,6 +411,28 @@ object NodysseyIcons {
             "M21,19V5c0,-1.1 -0.9,-2 -2,-2H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2z" +
                 "M8.5,13.5l2.5,3.01L14.5,12l4.5,6H5l3.5,-4.5z",
         )
+    }
+
+    /**
+     * The key that opens the toolbar's own settings, at the end of the strip.
+     *
+     * A wrench rather than Material's `tune` sliders: `tune` sits in a row of formatting glyphs and
+     * reads as one of them — three horizontal bars is very nearly the list key. A wrench cannot be
+     * mistaken for something that edits the text.
+     */
+    val Build: ImageVector by lazy {
+        materialIcon(
+            name = "Build",
+            pathData =
+            "M22.7,19l-9.1,-9.1c0.9,-2.3 0.4,-5 -1.5,-6.9 -2,-2 -5,-2.4 -7.4,-1.3L9,6 6,9 1.6,4.7" +
+                "C0.4,7.1 0.9,10.1 2.9,12.1c1.9,1.9 4.6,2.4 6.9,1.5l9.1,9.1c0.4,0.4 1,0.4 1.4,0" +
+                "l2.3,-2.3c0.5,-0.4 0.5,-1.1 0.1,-1.4z",
+        )
+    }
+
+    /** The grab handle on a reorderable row. */
+    val DragHandle: ImageVector by lazy {
+        materialIcon(name = "DragHandle", pathData = "M20,9H4v2h16V9zM4,15h16v-2H4V15z")
     }
 
     /** The emoji panel's entry point. */

@@ -18,14 +18,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.maxLength
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
@@ -60,10 +58,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -76,9 +72,8 @@ import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
+import io.github.nodyssey.ui.common.EditorTextField
 import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.deleteBackwards
-import io.github.nodyssey.ui.common.insertText
 import io.github.nodyssey.ui.theme.PostBody
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.readableWidth
@@ -135,6 +130,8 @@ fun PostComposerRoute(
         onPublish = { if (state.isSignedIn) viewModel.publish(onPublished) else onSignIn() },
         onContinueDraft = viewModel::continueDraft,
         onDiscardDraft = viewModel::discardDraft,
+        onToolbarChange = viewModel::setToolbar,
+        onToolbarReset = viewModel::resetToolbar,
         modifier = modifier,
     )
 }
@@ -213,6 +210,8 @@ fun PostComposerScreen(
     onPublish: () -> Unit,
     onContinueDraft: () -> Unit,
     onDiscardDraft: () -> Unit,
+    onToolbarChange: (List<EditorAction>) -> Unit,
+    onToolbarReset: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // While a publish is in flight the request may already have created the topic; leaving now would
@@ -226,11 +225,11 @@ fun PostComposerScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             ComposerTopBar(
-                preview = state.viewMode == ComposerViewMode.PREVIEW,
+                viewMode = state.viewMode,
                 isPublishing = state.isPublishing,
                 canPublish = state.canPublish,
                 onClose = onClose,
-                onBack = { onViewModeChange(ComposerViewMode.CONTENT) },
+                onViewModeChange = onViewModeChange,
                 onPublish = onPublish,
             )
         },
@@ -244,10 +243,11 @@ fun PostComposerScreen(
                 bodyState = bodyState,
                 onBoardSelect = onBoardSelect,
                 onPermissionSelect = onPermissionSelect,
-                onViewModeChange = onViewModeChange,
                 onPickImages = onPickImages,
                 onRemoveAttachment = onRemoveAttachment,
                 onRetryAttachment = onRetryAttachment,
+                onToolbarChange = onToolbarChange,
+                onToolbarReset = onToolbarReset,
                 modifier = Modifier.padding(padding),
             )
         }
@@ -258,29 +258,43 @@ fun PostComposerScreen(
     }
 }
 
+/**
+ * Close, the view switch, publish.
+ *
+ * The switch is here rather than in the formatting strip because 内容/预览/对照 is not a formatting
+ * action — it changes what the whole screen shows, the way the close and publish buttons beside it do.
+ * It sat in the toolbar's trailing slot until users called the keys "蚂蚁一样": three of the strip's
+ * seven slots went to a view switch, which is what forced the remaining keys down to 32dp.
+ *
+ * It also replaces the title. "发布帖子" told you where you were on a screen that could not be
+ * anywhere else, and the switch says the same thing better by showing which of the three views is
+ * live. With the switch always reachable there is no back arrow either — tapping 内容 is the way out
+ * of a preview, and 关闭 stays 关闭 in every mode instead of turning into something else.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ComposerTopBar(
-    preview: Boolean,
+    viewMode: ComposerViewMode,
     isPublishing: Boolean,
     canPublish: Boolean,
     onClose: () -> Unit,
-    onBack: () -> Unit,
+    onViewModeChange: (ComposerViewMode) -> Unit,
     onPublish: () -> Unit,
 ) {
     TopAppBar(
         title = {
-            Text(
-                text = stringResource(if (preview) R.string.composer_preview_title else R.string.composer_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontSize = 16.sp,
+            ViewModeSwitch(
+                options = ComposerViewMode.entries,
+                selected = viewMode,
+                label = { mode -> stringResource(mode.labelRes) },
+                onSelect = onViewModeChange,
             )
         },
         navigationIcon = {
-            IconButton(onClick = if (preview) onBack else onClose, enabled = !isPublishing) {
+            IconButton(onClick = onClose, enabled = !isPublishing) {
                 Icon(
-                    imageVector = if (preview) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Close,
-                    contentDescription = stringResource(if (preview) R.string.action_back else R.string.action_cancel),
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.action_cancel),
                 )
             }
         },
@@ -340,17 +354,16 @@ private fun EditorContent(
     bodyState: TextFieldState,
     onBoardSelect: (Board) -> Unit,
     onPermissionSelect: (PostPermission) -> Unit,
-    onViewModeChange: (ComposerViewMode) -> Unit,
     onPickImages: () -> Unit,
     onRemoveAttachment: (ImageAttachment) -> Unit,
     onRetryAttachment: (ImageAttachment) -> Unit,
+    onToolbarChange: (List<EditorAction>) -> Unit,
+    onToolbarReset: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var emojiOpen by rememberSaveable { mutableStateOf(false) }
-    // Held here, not in the panel: the panel leaves the composition whenever it closes.
-    var recentEmoji by rememberSaveable { mutableStateOf(listOf<String>()) }
+    val editorState = rememberMarkdownEditorState()
     val focusRequester = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
+    var customizing by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxSize().imePadding()) {
         ComposerOptions(state = state, onBoardSelect = onBoardSelect, onPermissionSelect = onPermissionSelect)
@@ -366,42 +379,25 @@ private fun EditorContent(
             onRemove = onRemoveAttachment,
             onRetry = onRetryAttachment,
         )
-        EditorToolbar(
-            actions = POST_ACTIONS,
-            active = if (emojiOpen) setOf(EditorAction.EMOJI) else emptySet(),
-            onAction = { action ->
-                when (action) {
-                    EditorAction.IMAGE -> onPickImages()
-
-                    EditorAction.EMOJI -> {
-                        emojiOpen = !emojiOpen
-                        if (emojiOpen) keyboard?.hide()
-                    }
-
-                    else -> {
-                        emojiOpen = false
-                        bodyState.edit { applyMarkdown(action) }
-                        focusRequester.requestFocus()
-                    }
-                }
-            },
-            trailing = {
-                ViewModeSwitch(
-                    options = ComposerViewMode.entries,
-                    selected = state.viewMode,
-                    label = { mode -> stringResource(mode.labelRes) },
-                    onSelect = onViewModeChange,
-                )
-            },
+        MarkdownEditorBar(
+            actions = state.toolbar.enabled,
+            bodyState = bodyState,
+            editorState = editorState,
+            onPickImages = onPickImages,
+            onCustomize = { customizing = true },
+            // The toolbar takes focus when it is tapped, and a caret the user cannot see is a caret
+            // they have lost track of.
+            onFormatted = { focusRequester.requestFocus() },
         )
-        if (emojiOpen) {
-            EmojiPanel(
-                onInsert = { text -> bodyState.edit { insertText(text) } },
-                onBackspace = { bodyState.edit { deleteBackwards() } },
-                recent = recentEmoji,
-                onRecentChange = { recentEmoji = it },
-            )
-        }
+    }
+
+    if (customizing) {
+        ToolbarCustomizeSheet(
+            layout = state.toolbar,
+            onChange = onToolbarChange,
+            onReset = onToolbarReset,
+            onDismiss = { customizing = false },
+        )
     }
 }
 
@@ -438,27 +434,18 @@ private fun BodyField(
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
-    BasicTextField(
+    EditorTextField(
         state = bodyState,
+        hint = stringResource(R.string.composer_body_hint),
         textStyle = PostBody.copy(color = MaterialTheme.colorScheme.onSurface),
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        lineLimits = TextFieldLineLimits.MultiLine(),
+        hintStyle = PostBody,
         modifier = modifier
             .readableWidth()
             .focusRequester(focusRequester)
             .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        decorator = { inner ->
-            Box(Modifier.fillMaxSize()) {
-                if (bodyState.text.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.composer_body_hint),
-                        style = PostBody,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                inner()
-            }
-        },
+        // The body owns the rest of the screen, so the placeholder is drawn against all of it rather
+        // than against one line's worth.
+        container = { content -> Box(Modifier.fillMaxSize()) { content() } },
     )
 }
 
@@ -467,33 +454,26 @@ private fun TitleField(
     titleState: TextFieldState,
     length: Int,
 ) {
-    BasicTextField(
+    EditorTextField(
         state = titleState,
-        lineLimits = TextFieldLineLimits.SingleLine,
-        // Enforced at the input layer rather than trimmed afterwards: truncating in the ViewModel
-        // cut composing text out from under the IME, which made the field stutter mid-word.
-        inputTransformation = InputTransformation.maxLength(PostComposerViewModel.MAX_TITLE_LENGTH),
+        hint = stringResource(R.string.composer_title_hint),
         textStyle = MaterialTheme.typography.titleMedium.copy(
             fontSize = 19.sp,
             lineHeight = 26.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         ),
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        // The placeholder is not bold: the weight belongs to a title that exists.
+        hintStyle = MaterialTheme.typography.titleMedium.copy(fontSize = 19.sp),
+        lineLimits = TextFieldLineLimits.SingleLine,
+        // Enforced at the input layer rather than trimmed afterwards: truncating in the ViewModel
+        // cut composing text out from under the IME, which made the field stutter mid-word.
+        inputTransformation = InputTransformation.maxLength(PostComposerViewModel.MAX_TITLE_LENGTH),
         modifier = Modifier.readableWidth().padding(horizontal = Spacing.lg),
-        decorator = { inner ->
+        container = { content ->
             Column {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Box(Modifier.weight(1f).padding(bottom = Spacing.sm)) {
-                        if (length == 0) {
-                            Text(
-                                text = stringResource(R.string.composer_title_hint),
-                                style = MaterialTheme.typography.titleMedium.copy(fontSize = 19.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        inner()
-                    }
+                    Box(Modifier.weight(1f).padding(bottom = Spacing.sm)) { content() }
                     Text(
                         text = stringResource(
                             R.string.composer_title_count,
@@ -732,14 +712,5 @@ private fun formatTime(timestamp: Long): String =
     DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(timestamp))
 
 private val IMAGE_MARKDOWN = Regex("""!\[[^]]*]\([^)]+\)""")
-
-private val POST_ACTIONS = listOf(
-    EditorAction.BOLD,
-    EditorAction.CODE,
-    EditorAction.LIST,
-    EditorAction.LINK,
-    EditorAction.IMAGE,
-    EditorAction.EMOJI,
-)
 
 private const val MAX_IMAGES_PER_PICK = 9

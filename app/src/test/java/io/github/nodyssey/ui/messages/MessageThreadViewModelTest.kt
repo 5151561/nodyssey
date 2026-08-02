@@ -12,6 +12,7 @@ import io.github.nodyssey.data.DirectMessage
 import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.MessageThread
 import io.github.nodyssey.data.NotificationRepository
+import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.session.SessionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -151,6 +152,7 @@ class MessageThreadViewModelTest {
         notifications = notifications,
         session = SessionRepository(WebViewCookieJar(cookieManager)),
         clock = AppClock { NOW },
+        uploader = ImageUploader { _, _ -> "https://cdn.nodeimage.com/i/x.webp" },
         uid = 4471,
         userName = "iwil",
     )
