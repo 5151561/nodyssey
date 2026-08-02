@@ -293,6 +293,12 @@ fun PostDetailScreen(
         // The fetch has finished but the new comments may not have flowed out of Room yet; wait for
         // the emission that carries them rather than scrolling to a stale end-of-list.
         if (target.page !in state.firstLoadedPage..state.lastLoadedPage) return@LaunchedEffect
+        // Holding the page and holding its floors are not the same thing, and page 1 is where they
+        // come apart: an empty thread on its very first frame already reports 1..1, so a notification
+        // about a floor on page 1 used to be answered against a list with nothing in it — scrolled to
+        // the top, marked handled, and gone by the time the floors arrived. Waiting for a comment
+        // from that page or later covers the deleted-page case too, where its own never turn up.
+        if (state.commentPages.none { it >= target.page }) return@LaunchedEffect
         // The floor when the site named one and it is on the page; otherwise the page's own start.
         // A floor can be missing from the page it was computed for — it was deleted, or the thread
         // was renumbered under it — and landing on the right page beats not moving at all.

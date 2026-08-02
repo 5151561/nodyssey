@@ -389,6 +389,54 @@ class PostDetailScreenTest {
         composeRule.onNodeWithText("floor 127").assertIsDisplayed()
     }
 
+    /**
+     * A notification about a floor on page 1 — most of them, since most threads are one page long.
+     *
+     * The empty state a thread opens in already claims to hold page 1, so the request was answered
+     * against a list with no floors in it: the screen scrolled to index 0, reported the scroll done,
+     * and the floors arriving a moment later found nothing left asking to be scrolled to. The reader
+     * was left at the top of the post, which is exactly where they would have landed without the
+     * floor in the first place.
+     */
+    @Test
+    fun `a pending scroll to a floor on page one waits for that page to arrive`() {
+        // The ViewModel's own first emission: the request to scroll is set before anything has been
+        // fetched, so the list is empty and its "loaded pages" are still the default 1..1.
+        var state by mutableStateOf(
+            PostDetailUiState(
+                title = "a thread",
+                pendingScroll = PendingScroll(page = 1, floor = "#7"),
+            ),
+        )
+        composeRule.setContent {
+            NodysseyTheme {
+                PostDetailScreen(
+                    state = state,
+                    postUrl = "https://www.nodeseek.com/post-1-1",
+                    onBack = {},
+                    onOpenBrowser = {},
+                    onImageClick = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    // What the ViewModel does with it, and what makes consuming the request against
+                    // an empty list unrecoverable rather than merely early.
+                    onScrollHandled = { state = state.copy(pendingScroll = null) },
+                )
+            }
+        }
+        composeRule.waitForIdle()
+
+        state = state.copy(
+            body = content("the opening post"),
+            comments = (1..10).map { content("floor $it", floor = "#$it") },
+            commentPages = List(10) { 1 },
+            totalPages = 4,
+            hasNextPage = true,
+        )
+
+        composeRule.onNodeWithText("floor 7").assertIsDisplayed()
+    }
+
     /** One page of a long thread, loaded on its own — what a jump or a notification produces. */
     private fun jumpedState(
         floors: List<Int> = (121..130).toList(),
