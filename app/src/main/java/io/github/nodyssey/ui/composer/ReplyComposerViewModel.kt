@@ -22,6 +22,8 @@ import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.data.composer.UploadStatus
+import io.github.nodyssey.data.settings.ComposerSurface
+import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.common.appendBlock
 import io.github.nodyssey.ui.common.editFromViewModel
@@ -31,8 +33,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -69,6 +73,8 @@ class ReplyComposerViewModel(
     private val repository: CommentComposerRepository,
     private val clock: AppClock,
     uploader: ImageUploader,
+    /** Null in tests; the sheet then shows [EditorActions.Reply] and offers no wrench. */
+    private val settings: SettingsRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ReplyComposerUiState(postId = postId))
     val uiState: StateFlow<ReplyComposerUiState> = _uiState.asStateFlow()
@@ -82,6 +88,12 @@ class ReplyComposerViewModel(
     private var publishJob: Job? = null
 
     init {
+        settings?.settings
+            ?.map { it.replyToolbarActions }
+            ?.distinctUntilChanged()
+            ?.onEach { stored ->
+                _uiState.update { it.copy(toolbar = toolbarLayout(stored, EditorActions.Reply)) }
+            }?.launchIn(viewModelScope)
         uploads.attachments
             .onEach { attachments -> _uiState.update { it.copy(attachments = attachments) } }
             .launchIn(viewModelScope)
@@ -229,6 +241,20 @@ class ReplyComposerViewModel(
         }
     }
 
+    /** Writes the strip through on every edit in the wrench panel; see `ToolbarCustomizeSheet`. */
+    fun setToolbar(actions: List<EditorAction>) {
+        val repository = settings ?: return
+        viewModelScope.launch {
+            repository.setComposerToolbar(ComposerSurface.REPLY, actions.map(EditorAction::name))
+        }
+    }
+
+    /** Clears the stored arrangement, which is what makes the defaults come back. */
+    fun resetToolbar() {
+        val repository = settings ?: return
+        viewModelScope.launch { repository.setComposerToolbar(ComposerSurface.REPLY, emptyList()) }
+    }
+
     companion object {
         private const val AUTOSAVE_DELAY_MILLIS = 750L
 
@@ -239,6 +265,7 @@ class ReplyComposerViewModel(
                     repository = container.commentComposerRepository,
                     clock = container.clock,
                     uploader = container.imageUploader,
+                    settings = container.settingsRepository,
                 )
             }
         }
@@ -258,6 +285,8 @@ data class ReplyComposerUiState(
     val publishError: NodeSeekError? = null,
     val publishErrorDetail: String? = null,
     val attachments: List<ImageAttachment> = emptyList(),
+    /** The formatting strip's keys and the wrench panel's pool. Defaults until settings arrive. */
+    val toolbar: ToolbarLayout = toolbarLayout(emptyList(), EditorActions.Reply),
 ) {
     val failedUploadCount: Int get() = attachments.count { it.status == UploadStatus.FAILED }
 

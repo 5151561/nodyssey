@@ -12,9 +12,9 @@ import java.text.BreakIterator
  * One Markdown formatting action, described rather than implemented.
  *
  * Every editor in the app offers a different *set* of actions — the post composer has images and
- * quotes, a signature is not allowed either — but they all insert text the same way, and the caret
- * arithmetic is the part that silently rots when it is copied. Editors declare their own actions and
- * share [applyMarkdown].
+ * quotes, a signature is allowed neither — but they all insert text the same way, and the caret
+ * arithmetic is the part that silently rots when it is copied. Surfaces declare their actions in
+ * `EditorActions` and share [applyMarkdown].
  */
 internal data class MarkdownInsertion(
     val prefix: String,
@@ -34,18 +34,19 @@ internal data class MarkdownInsertion(
 /**
  * Where an insertion leaves the caret.
  *
- * The two editors answer this differently and always have: the post composer selects what it just
- * wrapped, the signature editor places a caret. Unifying the *arithmetic* is the point of this file;
- * unifying the *behaviour* would be a silent UX change, so the difference is named here instead.
+ * Wrapping actions all select what they just wrapped, so the placeholder is gone the moment typing
+ * resumes. The signature editor used to place a bare caret instead, which left the caret *before*
+ * `加粗文字` and the placeholder behind in the text — a difference that was recorded here as
+ * deliberate long after it had stopped being defensible.
  */
 internal enum class MarkdownCaret {
-    /** Selects the wrapped content, so the next keystroke replaces it. The post composer's choice. */
+    /** Selects the wrapped content, so the next keystroke replaces it. Every wrapping action's choice. */
     SELECT_CONTENT,
 
     /** Just past the prefix when nothing was selected, at [MarkdownInsertion.caretInSuffix] otherwise. */
     AFTER_INSERTION,
 
-    /** Always at [MarkdownInsertion.caretInSuffix], selection or not. Used by the composer's link. */
+    /** Always at [MarkdownInsertion.caretInSuffix], selection or not. Used by the link action. */
     IN_SUFFIX,
 }
 

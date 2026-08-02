@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.composer
 
-import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -26,8 +25,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -52,17 +49,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,9 +66,8 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
+import io.github.nodyssey.ui.common.EditorTextField
 import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.deleteBackwards
-import io.github.nodyssey.ui.common.insertText
 import io.github.nodyssey.ui.theme.CommentBody
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.readableWidth
@@ -102,12 +95,21 @@ fun ReplyComposerHost(
     onRetryFailedUploads: () -> Unit,
     onPublish: () -> Unit,
     onClearError: () -> Unit,
+    onToolbarChange: (List<EditorAction>) -> Unit,
+    onToolbarReset: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Above the early return on purpose: the host stays composed while the sheet is closed, so
     // this is the one place the recents survive both the emoji panel and the sheet being dismissed.
-    var recentEmoji by rememberSaveable { mutableStateOf(listOf<String>()) }
+    val editorState = rememberMarkdownEditorState()
+    // The panel is part of the sheet even though its state is not, so it goes down with it — the
+    // recents are what outlive the dismissal, not a half-open drawer.
+    LaunchedEffect(state.visible) { if (!state.visible) editorState.closeEmoji() }
     if (!state.visible) return
+    // Hosted here rather than inside the editor sheet: it is a sheet too, and a sheet opened from
+    // inside another sheet's content stacks two dialog windows for no reason. As siblings the wrench
+    // panel simply covers the editor, which is what it should look like anyway.
+    var customizing by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(MAX_IMAGES_PER_PICK),
@@ -149,8 +151,17 @@ fun ReplyComposerHost(
             onRetryFailedUploads = onRetryFailedUploads,
             onPublish = onPublish,
             onClearError = onClearError,
-            recentEmoji = recentEmoji,
-            onRecentEmojiChange = { recentEmoji = it },
+            editorState = editorState,
+            onCustomize = { customizing = true },
+        )
+    }
+
+    if (customizing) {
+        ToolbarCustomizeSheet(
+            layout = state.toolbar,
+            onChange = onToolbarChange,
+            onReset = onToolbarReset,
+            onDismiss = { customizing = false },
         )
     }
 }
@@ -169,10 +180,9 @@ private fun ReplyEditorSheet(
     onRetryFailedUploads: () -> Unit,
     onPublish: () -> Unit,
     onClearError: () -> Unit,
-    recentEmoji: List<String>,
-    onRecentEmojiChange: (List<String>) -> Unit,
+    editorState: MarkdownEditorState,
+    onCustomize: () -> Unit,
 ) {
-    var emojiOpen by rememberSaveable { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
 
     ModalBottomSheet(
@@ -208,6 +218,23 @@ private fun ReplyEditorSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                // The sheet's own chrome is where a view switch belongs — this row is what the post
+                // editor's top bar is, and it is the only bar the sheet has.
+                IconButton(
+                    onClick = {
+                        // The preview covers the sheet, so the IME has to be gone before it rises —
+                        // otherwise it comes back to a keyboard over a screen that has no field.
+                        keyboard?.hide()
+                        onPreview()
+                    },
+                    enabled = !state.isPublishing,
+                ) {
+                    Icon(
+                        imageVector = NodysseyIcons.Visibility,
+                        contentDescription = stringResource(R.string.action_preview),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 IconButton(onClick = onDismiss, enabled = !state.isPublishing) {
                     Icon(
                         imageVector = Icons.Default.Close,
@@ -223,33 +250,22 @@ private fun ReplyEditorSheet(
                     modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.xs),
                 )
             }
-            BasicTextField(
+            // The default container fills the width it was given, which is what this field needs:
+            // `readableWidth` centres what it wraps, so a decoration that measured to its content
+            // would centre a half-typed reply.
+            EditorTextField(
                 state = bodyState,
-                lineLimits = TextFieldLineLimits.MultiLine(),
+                hint = stringResource(R.string.post_reply_editor_hint),
                 textStyle = CommentBody.copy(
                     fontSize = 16.sp,
                     lineHeight = 26.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                 ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                hintStyle = CommentBody.copy(fontSize = 16.sp, lineHeight = 26.sp),
                 modifier = Modifier
                     .readableWidth()
                     .heightIn(min = MIN_EDITOR_HEIGHT, max = MAX_EDITOR_HEIGHT)
                     .padding(horizontal = Spacing.xl, vertical = Spacing.sm),
-                decorator = { inner ->
-                    // Fills the width it was given: `readableWidth` centres what it wraps, so a
-                    // decoration that measures to its content would centre a half-typed reply.
-                    Box(Modifier.fillMaxWidth()) {
-                        if (bodyState.text.isEmpty()) {
-                            Text(
-                                text = stringResource(R.string.post_reply_editor_hint),
-                                style = CommentBody.copy(fontSize = 16.sp, lineHeight = 26.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        inner()
-                    }
-                },
             )
             AttachmentTray(
                 attachments = state.attachments,
@@ -267,30 +283,16 @@ private fun ReplyEditorSheet(
                 onDismiss = onClearError,
                 modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             )
-            EditorToolbar(
-                actions = REPLY_ACTIONS,
-                active = if (emojiOpen) setOf(EditorAction.EMOJI) else emptySet(),
+            MarkdownEditorBar(
+                actions = state.toolbar.enabled,
+                bodyState = bodyState,
+                editorState = editorState,
                 showDivider = false,
-                onAction = { action ->
-                    when (action) {
-                        EditorAction.IMAGE -> onPickImages()
-
-                        EditorAction.PREVIEW -> {
-                            keyboard?.hide()
-                            onPreview()
-                        }
-
-                        EditorAction.EMOJI -> {
-                            emojiOpen = !emojiOpen
-                            if (emojiOpen) keyboard?.hide()
-                        }
-
-                        else -> {
-                            emojiOpen = false
-                            bodyState.edit { applyMarkdown(action) }
-                        }
-                    }
-                },
+                // The one strip in the app under 48dp: it keeps 发布 pinned at its end, and six full
+                // keys plus that button want 392dp on a 360dp screen.
+                keySize = EditorToolbarDefaults.CompactKeySize,
+                onPickImages = onPickImages,
+                onCustomize = onCustomize,
                 trailing = {
                     PublishReplyButton(
                         isPublishing = state.isPublishing,
@@ -299,14 +301,6 @@ private fun ReplyEditorSheet(
                     )
                 },
             )
-            if (emojiOpen) {
-                EmojiPanel(
-                    onInsert = { text -> bodyState.edit { insertText(text) } },
-                    onBackspace = { bodyState.edit { deleteBackwards() } },
-                    recent = recentEmoji,
-                    onRecentChange = onRecentEmojiChange,
-                )
-            }
         }
     }
 }
@@ -556,16 +550,6 @@ private fun replyErrorReason(error: NodeSeekError, detail: String?): String = wh
 
 private fun formatTime(timestamp: Long): String =
     DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(timestamp))
-
-private val REPLY_ACTIONS = listOf(
-    EditorAction.BOLD,
-    EditorAction.CODE,
-    EditorAction.QUOTE,
-    EditorAction.MENTION,
-    EditorAction.IMAGE,
-    EditorAction.EMOJI,
-    EditorAction.PREVIEW,
-)
 
 private val MIN_EDITOR_HEIGHT = 96.dp
 private val MAX_EDITOR_HEIGHT = 260.dp

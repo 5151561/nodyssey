@@ -20,8 +20,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
@@ -31,16 +35,29 @@ import io.github.nodyssey.ui.theme.Spacing
 /**
  * The formatting strip that sits on the keyboard's top edge.
  *
- * Shared by the post editor (7a/C5) and the reply sheet (6d/C6) — same component, different action
- * list and different trailing control.
+ * Shared by the post editor (7a/C5), the reply sheet (6d/C6), the message bar and the signature field
+ * — same component, different action list and different trailing control.
  *
- * The trailing control is pinned and the keys scroll under it. Measured on a 360dp phone, seven
- * 32dp keys and a 发布 button fit with a few dp to spare — which means they stop fitting the moment
- * the system font scale goes up, and of the two, a key you have to scroll to is far less costly
- * than a publish button you cannot see.
+ * Nothing but text-mutating keys goes in here. 预览 and 内容/预览/对照 used to, and they were the
+ * reason the keys were 32dp: every slot a view switch took was a slot the keys had to shrink to fit
+ * around. Those live in each surface's own chrome now, which is what bought the size below.
+ *
+ * [keySize] is 48dp — Material's minimum touch target — for every caller with room for it. The reply
+ * sheet is the one that has not: it keeps 发布 pinned at the end of the strip, and six 48dp keys plus
+ * that button want 392dp on a 360dp screen. It passes 42dp and stays scroll-free, which was the
+ * deliberate trade over the alternative, a strip that scrolls its last key under the publish button.
  *
  * [active] is what marks the toggled-open panels — the image and emoji keys stay lit while their
  * sheet is showing, which is the only cue that tapping again closes it.
+ *
+ * [color] and [shape] exist for the signature field, which is the one caller not sitting against the
+ * keyboard: inside a settings form the strip has to read as a grouped control rather than as the
+ * bottom edge of the screen, and it gets there by being a rounded container instead of a flat one.
+ *
+ * [onCustomize] adds the wrench that opens the strip's own settings — only the two composers whose
+ * strip is user-arranged pass it. It rides at the end of the *scrolling* keys rather than pinned
+ * beside [trailing]: it is the one key nobody reaches for mid-sentence, so it is the right thing to
+ * put behind a swipe, and the reply sheet has exactly one pinned slot and 发布 has it.
  */
 @Composable
 fun EditorToolbar(
@@ -49,9 +66,13 @@ fun EditorToolbar(
     modifier: Modifier = Modifier,
     active: Set<EditorAction> = emptySet(),
     showDivider: Boolean = true,
+    keySize: Dp = EditorToolbarDefaults.KeySize,
+    color: Color = MaterialTheme.colorScheme.surface,
+    shape: Shape = RectangleShape,
+    onCustomize: (() -> Unit)? = null,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
-    Surface(color = MaterialTheme.colorScheme.surface, modifier = modifier) {
+    Surface(color = color, shape = shape, modifier = modifier) {
         Box {
             if (showDivider) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -69,10 +90,25 @@ fun EditorToolbar(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     actions.forEach { action ->
-                        ToolbarButton(
-                            action = action,
+                        ToolbarKey(
+                            icon = action.icon,
+                            contentDescription = stringResource(action.labelRes),
+                            size = keySize,
+                            // An unlit 表情 key is still a checkbox in the "off" position, while 加粗
+                            // is never a checkbox at all — see [EditorAction.opensPanel].
+                            checkable = action.opensPanel,
                             selected = action in active,
                             onClick = { onAction(action) },
+                        )
+                    }
+                    onCustomize?.let { customize ->
+                        ToolbarKey(
+                            icon = NodysseyIcons.Build,
+                            contentDescription = stringResource(R.string.composer_toolbar_customize),
+                            size = keySize,
+                            checkable = false,
+                            selected = false,
+                            onClick = customize,
                         )
                     }
                 }
@@ -83,33 +119,37 @@ fun EditorToolbar(
 }
 
 /**
- * One key. A panel key is a checkbox; a formatting key is a button.
+ * One key. A panel key is a checkbox; every other key is a button.
  *
- * Both branches draw identically — 32dp box, `shapes.medium`, lit state in `surfaceContainer` +
- * `primary`. The split is about semantics: [EditorAction.opensPanel] keys have an on/off state that
- * colour alone conveys, so they go through `IconToggleButton` and TalkBack announces 表情 as
- * "已选中"/"未选中". The formatting keys fire and forget, and dressing them as checkboxes would be a
+ * Both branches draw identically — same box, `shapes.medium`, lit state in `surfaceContainer` +
+ * `primary`. The split is about semantics: a [checkable] key has an on/off state that colour alone
+ * conveys, so it goes through `IconToggleButton` and TalkBack announces 表情 as "已选中"/"未选中".
+ * The formatting keys and the wrench fire and forget, and dressing them as checkboxes would be a
  * regression, not a fix.
  */
 @Composable
-private fun ToolbarButton(
-    action: EditorAction,
+private fun ToolbarKey(
+    icon: ImageVector,
+    contentDescription: String,
+    size: Dp,
+    checkable: Boolean,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    // 32dp box, matching the board's density. Both branches take the identical modifier, so the two
-    // key flavours measure the same and the strip stays on one grid.
-    val modifier = Modifier.size(32.dp)
+    // Both branches take the identical modifier, so the two key flavours measure the same and the
+    // strip stays on one grid. The glyph is half the box: 24dp inside 48dp is the Material ratio, and
+    // scaling it with the box is what keeps the tighter reply strip from looking like a different set.
+    val modifier = Modifier.size(size)
     val shape = MaterialTheme.shapes.medium
-    val icon: @Composable () -> Unit = {
+    val content: @Composable () -> Unit = {
         Icon(
-            imageVector = action.icon,
-            contentDescription = stringResource(action.labelRes),
-            modifier = Modifier.size(20.dp),
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(size / 2),
         )
     }
 
-    if (action.opensPanel) {
+    if (checkable) {
         IconToggleButton(
             checked = selected,
             onCheckedChange = { onClick() },
@@ -120,7 +160,7 @@ private fun ToolbarButton(
                 checkedContentColor = MaterialTheme.colorScheme.primary,
             ),
             shape = shape,
-            content = icon,
+            content = content,
         )
     } else {
         IconButton(
@@ -130,14 +170,30 @@ private fun ToolbarButton(
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
             shape = shape,
-            content = icon,
+            content = content,
         )
     }
 }
 
-private val EditorAction.icon: ImageVector
+object EditorToolbarDefaults {
+    /** Material's minimum touch target. Every strip with the room for it uses this. */
+    val KeySize = 48.dp
+
+    /**
+     * What the reply sheet passes: six keys and a pinned 发布 in 360dp, without a scroll.
+     *
+     * Below the 48dp minimum on purpose, and the only place in the app that is. The alternative was a
+     * strip that scrolls, and a scrolling strip always hides its *last* key under the publish button —
+     * so the cost lands on one specific key rather than being spread as 6dp across all six.
+     */
+    val CompactKeySize = 42.dp
+}
+
+internal val EditorAction.icon: ImageVector
     get() = when (this) {
         EditorAction.BOLD -> NodysseyIcons.FormatBold
+        EditorAction.ITALIC -> NodysseyIcons.FormatItalic
+        EditorAction.STRIKETHROUGH -> NodysseyIcons.StrikethroughS
         EditorAction.HEADING -> NodysseyIcons.Title
         EditorAction.CODE -> NodysseyIcons.Code
         EditorAction.QUOTE -> NodysseyIcons.FormatQuote
@@ -146,12 +202,13 @@ private val EditorAction.icon: ImageVector
         EditorAction.MENTION -> NodysseyIcons.AlternateEmail
         EditorAction.IMAGE -> NodysseyIcons.Image
         EditorAction.EMOJI -> NodysseyIcons.Mood
-        EditorAction.PREVIEW -> NodysseyIcons.Visibility
     }
 
-private val EditorAction.labelRes: Int
+internal val EditorAction.labelRes: Int
     get() = when (this) {
         EditorAction.BOLD -> R.string.composer_format_bold
+        EditorAction.ITALIC -> R.string.composer_format_italic
+        EditorAction.STRIKETHROUGH -> R.string.composer_format_strikethrough
         EditorAction.HEADING -> R.string.composer_format_heading
         EditorAction.CODE -> R.string.composer_format_code
         EditorAction.QUOTE -> R.string.composer_format_quote
@@ -160,7 +217,6 @@ private val EditorAction.labelRes: Int
         EditorAction.MENTION -> R.string.composer_format_mention
         EditorAction.IMAGE -> R.string.composer_format_image
         EditorAction.EMOJI -> R.string.composer_format_emoji
-        EditorAction.PREVIEW -> R.string.action_preview
     }
 
 /**

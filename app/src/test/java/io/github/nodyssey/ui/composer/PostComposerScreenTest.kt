@@ -48,6 +48,8 @@ class PostComposerScreenTest {
                     onPublish = {},
                     onContinueDraft = {},
                     onDiscardDraft = {},
+                    onToolbarChange = {},
+                    onToolbarReset = {},
                 )
             }
         }

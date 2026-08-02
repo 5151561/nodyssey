@@ -182,6 +182,8 @@ fun PostDetailRoute(
         onRetryFailedUploads = replyViewModel::retryFailedUploads,
         onPublish = { replyViewModel.publish { viewModel.refresh() } },
         onClearError = replyViewModel::clearPublishError,
+        onToolbarChange = replyViewModel::setToolbar,
+        onToolbarReset = replyViewModel::resetToolbar,
     )
 }
 
