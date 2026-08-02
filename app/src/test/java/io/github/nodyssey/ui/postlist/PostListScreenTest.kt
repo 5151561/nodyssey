@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
@@ -127,6 +130,7 @@ class PostListScreenTest {
         onBoardClick: (String?) -> Unit,
         onSortChange: (FeedSort) -> Unit,
         onRecoverInBrowser: () -> Unit,
+        scrollToTopRequests: Int = 0,
     ) {
         val pagingData =
             PagingData.from(
@@ -146,6 +150,7 @@ class PostListScreenTest {
             onSortChange = onSortChange,
             onSignInClick = {},
             onRecoverInBrowser = onRecoverInBrowser,
+            scrollToTopRequests = scrollToTopRequests,
         )
     }
 
@@ -267,6 +272,101 @@ class PostListScreenTest {
 
         composeRule.onNodeWithText("post 1").assertIsDisplayed()
     }
+
+    /** Re-selecting 首页 in the host bar arrives here as an increment, not as a scroll call. */
+    @Test
+    fun `a scroll-to-top request returns to the first row`() {
+        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
+        var requests by mutableStateOf(0)
+        composeRule.setContent {
+            NodysseyTheme {
+                ScreenUnderTest(
+                    posts = posts,
+                    refresh = LoadState.NotLoading(false),
+                    append = LoadState.NotLoading(true),
+                    state = PostListUiState(boards = boards),
+                    onPostClick = {},
+                    onBoardClick = {},
+                    onSortChange = {},
+                    onRecoverInBrowser = {},
+                    scrollToTopRequests = requests,
+                )
+            }
+        }
+
+        composeRule.onNode(feedList).performScrollToIndex(20)
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+
+        requests++
+
+        composeRule.onNodeWithText("post 1").assertIsDisplayed()
+    }
+
+    /**
+     * A tap that has already been answered must not be answered a second time when the screen comes
+     * back — which is what a rotation, or a return from a thread, looks like from inside the effect.
+     */
+    @Test
+    fun `a restored screen does not replay the last scroll-to-top`() {
+        val restorationTester = StateRestorationTester(composeRule)
+        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
+        var requests by mutableStateOf(0)
+        restorationTester.setContent {
+            NodysseyTheme {
+                ScreenUnderTest(
+                    posts = posts,
+                    refresh = LoadState.NotLoading(false),
+                    append = LoadState.NotLoading(true),
+                    state = PostListUiState(boards = boards),
+                    onPostClick = {},
+                    onBoardClick = {},
+                    onSortChange = {},
+                    onRecoverInBrowser = {},
+                    scrollToTopRequests = requests,
+                )
+            }
+        }
+
+        requests++
+        composeRule.onNode(feedList).performScrollToIndex(20)
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+    }
+
+    /** The counter starts at zero, and zero must not read as a request that was already made. */
+    @Test
+    fun `no request leaves the scroll position alone`() {
+        setScreen((1..40).map { feedPost(it.toLong(), "post $it") })
+
+        composeRule.onNode(feedList).performScrollToIndex(20)
+
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+    }
+
+    /** The wordmark is the route that still works while the navigation bar is hidden. */
+    @Test
+    fun `tapping the title returns to the first row`() {
+        setScreen((1..40).map { feedPost(it.toLong(), "post $it") })
+
+        composeRule.onNode(feedList).performScrollToIndex(20)
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+
+        composeRule.onNode(scrollToTopAffordance).performClick()
+
+        composeRule.onNodeWithText("post 1").assertIsDisplayed()
+    }
+
+    /**
+     * The wordmark, found by the label it offers TalkBack rather than by its text: the text is the
+     * app name, which the debug build decorates, and the label is the part worth pinning down.
+     */
+    private val scrollToTopAffordance =
+        SemanticsMatcher("click labelled 回到顶部") { node ->
+            node.config.getOrNull(SemanticsActions.OnClick)?.label == "回到顶部"
+        }
 
     /** The vertical list of rows, told apart from the board strip that also scrolls. */
     private val feedList = hasScrollAction() and hasAnyDescendant(hasText("post 1"))

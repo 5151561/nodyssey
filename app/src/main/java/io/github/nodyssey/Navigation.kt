@@ -18,6 +18,7 @@ import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -162,6 +163,18 @@ fun MainNavigation(
     // Transient by design: rotation should not restore a navigation bar hidden by an old gesture.
     var feedNavigationBarHidden by remember { mutableStateOf(false) }
 
+    /*
+     * Tapping 首页 while already on 首页 is the platform's "back to the top" gesture, and until now it
+     * was the one place in the bar where a tap did nothing at all.
+     *
+     * A counter rather than a boolean flag: two taps in a row are two separate requests, and a flag
+     * would need clearing afterwards — which is a second write the screen would have to own. Saved
+     * rather than merely remembered, so that it survives a rotation alongside the screen's record of
+     * which request it has already answered; a counter that reset while that record did not would
+     * look like a fresh tap and scroll a restored list back to the top.
+     */
+    var homeScrollToTopRequests by rememberSaveable { mutableIntStateOf(0) }
+
     val backStack: NavBackStack<NavKey> =
         when (currentTab) {
             TopLevelDestination.HOME -> homeStack
@@ -257,6 +270,7 @@ fun MainNavigation(
                     onNavigationBarHiddenChanged = { hidden ->
                         if (!currentListDetailExpanded) feedNavigationBarHidden = hidden
                     },
+                    scrollToTopRequests = homeScrollToTopRequests,
                 )
             }
 
@@ -872,7 +886,15 @@ fun MainNavigation(
         navigationItems = {
             NodysseyNavigationItems(
                 current = currentTab,
-                onSelect = { destination -> currentTab = destination },
+                onSelect = { destination ->
+                    // Re-selecting 首页 scrolls the feed back to the start. Only 首页 — the other
+                    // three are not lists you get lost in, and a tab that silently jumps somewhere
+                    // is worse than one that does nothing.
+                    if (destination == currentTab && destination == TopLevelDestination.HOME) {
+                        homeScrollToTopRequests++
+                    }
+                    currentTab = destination
+                },
                 unreadCount = notificationsState.counts.all,
             )
         },

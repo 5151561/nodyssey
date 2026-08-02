@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -284,7 +285,10 @@ fun RulingScreen(
                     expanded = toolbarExpanded,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+                        // Same trim as the thread's bar: Material's 64dp container reads as bulky
+                        // for a row of three small controls. No FAB here, so nothing overhangs.
+                        .height(56.dp),
                 ) {
                     PageJumpToolbarContent(
                         page = visiblePage,

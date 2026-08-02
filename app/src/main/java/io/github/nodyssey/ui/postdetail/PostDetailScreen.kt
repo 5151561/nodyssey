@@ -485,7 +485,17 @@ private fun DetailBottomActions(
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             )
         },
-        modifier = modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        // Material's floating toolbar is a fixed 64dp and offers no size parameter, which leaves it
+        // standing 8dp taller than the 回复 FAB inside it. Collapsed, that FAB becomes an 80dp round
+        // button centred on these bounds, so 12dp of it now falls below them — hence the extra
+        // bottom margin, which puts it back exactly where it sat before.
+        modifier = modifier
+            .padding(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                top = Spacing.sm,
+                bottom = Spacing.sm + 12.dp,
+            ).height(56.dp),
     ) {
         PageJumpToolbarContent(
             page = page,
