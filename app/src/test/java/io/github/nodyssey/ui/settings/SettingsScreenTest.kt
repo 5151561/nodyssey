@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import io.github.nodyssey.data.settings.ThemeMode
@@ -178,5 +180,44 @@ class SettingsScreenTest {
 
         composeRule.waitForIdle()
         assertTrue(appliedScale != null)
+    }
+
+    @Test
+    fun `about row states the installed version`() {
+        composeRule.setContent {
+            NodysseyTheme {
+                SettingsScreen(
+                    state = SettingsUiState(versionName = "9.9.9"),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
+                    onClearCache = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("v9.9.9").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `about row gives up the version line to the update offer`() {
+        composeRule.setContent {
+            NodysseyTheme {
+                SettingsScreen(
+                    state = SettingsUiState(versionName = "9.9.9", updateVersionName = "10.0.0"),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
+                    onClearCache = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("发现新版本 10.0.0").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("v9.9.9").assertDoesNotExist()
     }
 }

@@ -278,7 +278,7 @@
     <string name="settings_clear_cache">清除缓存</string>
     <string name="settings_about">关于</string>
     <string name="settings_about_app">关于 Nodyssey</string>
-    <string name="settings_version">v1.0</string>
+    <string name="settings_version">v%1$s</string>
     <string name="settings_licenses">开源许可</string>
 
     <!-- About & community (board f1). -->
