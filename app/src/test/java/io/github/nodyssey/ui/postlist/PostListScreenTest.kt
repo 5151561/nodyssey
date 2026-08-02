@@ -1,15 +1,23 @@
 package io.github.nodyssey.ui.postlist
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
 import androidx.paging.PagingData
@@ -196,6 +204,72 @@ class PostListScreenTest {
         // No rows, and nothing claiming the list is empty.
         composeRule.onNodeWithText("first post").assertDoesNotExist()
     }
+
+    /**
+     * Reading a thread and coming back must land where the list was left.
+     *
+     * Opening a thread takes this screen out of the composition, so returning restores it the same way
+     * a saved instance state does — which is exactly what [StateRestorationTester] emulates. The
+     * regression this guards is a scroll-to-top effect that cannot tell that restore apart from the
+     * user picking a different board.
+     */
+    @Test
+    fun `a restored list stays where it was scrolled to`() {
+        val restorationTester = StateRestorationTester(composeRule)
+        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
+        restorationTester.setContent {
+            NodysseyTheme {
+                ScreenUnderTest(
+                    posts = posts,
+                    refresh = LoadState.NotLoading(false),
+                    append = LoadState.NotLoading(true),
+                    state = PostListUiState(boards = boards),
+                    onPostClick = {},
+                    onBoardClick = {},
+                    onSortChange = {},
+                    onRecoverInBrowser = {},
+                )
+            }
+        }
+
+        composeRule.onNode(feedList).performScrollToIndex(20)
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+    }
+
+    /** Picking a different board does still start that board's list from the top. */
+    @Test
+    fun `switching boards returns to the top`() {
+        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
+        var state by mutableStateOf(PostListUiState(boards = boards))
+        composeRule.setContent {
+            NodysseyTheme {
+                ScreenUnderTest(
+                    posts = posts,
+                    refresh = LoadState.NotLoading(false),
+                    append = LoadState.NotLoading(true),
+                    state = state,
+                    onPostClick = {},
+                    onBoardClick = {},
+                    onSortChange = {},
+                    onRecoverInBrowser = {},
+                )
+            }
+        }
+
+        composeRule.onNode(feedList).performScrollToIndex(20)
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+
+        state = state.copy(categorySlug = "tech")
+
+        composeRule.onNodeWithText("post 1").assertIsDisplayed()
+    }
+
+    /** The vertical list of rows, told apart from the board strip that also scrolls. */
+    private val feedList = hasScrollAction() and hasAnyDescendant(hasText("post 1"))
 
     // ---------------------------------------------------------------------------------------------
     // Error recovery
