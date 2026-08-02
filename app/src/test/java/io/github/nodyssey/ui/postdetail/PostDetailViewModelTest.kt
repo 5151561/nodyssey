@@ -443,6 +443,34 @@ class PostDetailViewModelTest {
             assertEquals(PendingScroll(page = 13, floor = "#127"), vm.uiState.value.pendingScroll)
         }
 
+    /**
+     * The gap between "Room has nothing" and "the fetch came back" is where every notification was
+     * lost: a thread nobody has cached emits null first, and the branch that clears the screen after a
+     * logout was clearing the request to scroll along with it. The test dispatcher normally hides this
+     * by finishing the fetch before Room's first emission, so the fetch is held open here — which is
+     * what a phone does anyway, for as long as the round trip takes.
+     */
+    @Test
+    fun `the floor survives the empty cache a thread opens in`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 10, totalPages = 40)
+            }
+            val gate = CompletableDeferred<Unit>()
+            remote.gate = gate
+
+            val vm = viewModel(initialFloor = "#127")
+            advanceUntilIdle()
+
+            assertEquals(PendingScroll(page = 13, floor = "#127"), vm.uiState.value.pendingScroll)
+
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(PendingScroll(page = 13, floor = "#127"), vm.uiState.value.pendingScroll)
+            assertEquals(13, vm.uiState.value.firstLoadedPage)
+        }
+
     @Test
     fun `a quote pointing at an unloaded floor fetches its page`() =
         runTest(dispatcher) {

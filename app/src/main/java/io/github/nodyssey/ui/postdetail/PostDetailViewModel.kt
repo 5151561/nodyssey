@@ -67,6 +67,12 @@ class PostDetailViewModel(
                     // Logout deletes the Room row while this Navigation 3 entry can remain alive in a
                     // background tab. Clear the mirrored UI state as well or the composable would keep
                     // rendering the last authenticated snapshot after its owner was removed.
+                    //
+                    // Everything cleared here is *content*, and [pendingScroll] deliberately is not:
+                    // null is also what a thread nobody has cached looks like, which is what every
+                    // thread opened from a notification looks like for the length of its first fetch.
+                    // Clearing the floor here threw away the one thing that read was opened for,
+                    // before the floors it named could possibly have arrived.
                     _uiState.update {
                         it.copy(
                             title = "",
@@ -77,7 +83,6 @@ class PostDetailViewModel(
                             lastLoadedPage = 1,
                             totalPages = 1,
                             hasNextPage = false,
-                            pendingScroll = null,
                         )
                     }
                     return@collect
