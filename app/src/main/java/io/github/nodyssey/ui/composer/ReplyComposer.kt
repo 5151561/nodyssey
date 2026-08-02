@@ -94,7 +94,7 @@ fun ReplyComposerHost(
     state: ReplyComposerUiState,
     onDismiss: () -> Unit,
     bodyState: TextFieldState,
-    onClearQuote: () -> Unit,
+    onClearReplyTo: () -> Unit,
     onPreviewChange: (Boolean) -> Unit,
     onPickImages: (List<PickedImage>) -> Unit,
     onRemoveAttachment: (ImageAttachment) -> Unit,
@@ -141,7 +141,7 @@ fun ReplyComposerHost(
             state = state,
             onDismiss = onDismiss,
             bodyState = bodyState,
-            onClearQuote = onClearQuote,
+            onClearReplyTo = onClearReplyTo,
             onPreview = { onPreviewChange(true) },
             onPickImages = launchPicker,
             onRemoveAttachment = onRemoveAttachment,
@@ -161,7 +161,7 @@ private fun ReplyEditorSheet(
     state: ReplyComposerUiState,
     onDismiss: () -> Unit,
     bodyState: TextFieldState,
-    onClearQuote: () -> Unit,
+    onClearReplyTo: () -> Unit,
     onPreview: () -> Unit,
     onPickImages: () -> Unit,
     onRemoveAttachment: (ImageAttachment) -> Unit,
@@ -191,7 +191,7 @@ private fun ReplyEditorSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = state.quote?.let {
+                    text = state.replyTo?.let {
                         stringResource(R.string.post_reply_editor_title_floor, it.floor, it.author)
                     } ?: stringResource(R.string.post_reply_editor_title),
                     style = MaterialTheme.typography.titleSmall,
@@ -216,10 +216,10 @@ private fun ReplyEditorSheet(
                     )
                 }
             }
-            state.quote?.let { quote ->
-                QuoteChip(
-                    excerpt = quote.excerpt,
-                    onClear = onClearQuote,
+            state.replyTo?.let { replyTo ->
+                ReplyTargetChip(
+                    replyTo = replyTo,
+                    onClear = onClearReplyTo,
                     modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.xs),
                 )
             }
@@ -326,7 +326,7 @@ private fun ReplyPreviewScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = state.quote?.let {
+                        text = state.replyTo?.let {
                             stringResource(R.string.post_reply_preview_title_floor, it.floor)
                         } ?: stringResource(R.string.post_reply_preview_title),
                         style = MaterialTheme.typography.titleSmall,
@@ -370,8 +370,10 @@ private fun ReplyPreviewScreen(
                     .padding(horizontal = Spacing.xl, vertical = Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm + 2.dp),
             ) {
-                state.quote?.let { quote ->
-                    QuoteReference(floor = quote.floor, author = quote.author, excerpt = quote.excerpt)
+                // Only the 回复 reference: any 引用 is part of the body below, and the Markdown
+                // preview already renders it as the blockquote it will become.
+                state.replyTo?.let { replyTo ->
+                    ReplyReference(floor = replyTo.floor, author = replyTo.author)
                 }
                 MarkdownPreviewBody(markdown = state.body)
             }
@@ -379,10 +381,16 @@ private fun ReplyPreviewScreen(
     }
 }
 
-/** The dismissible quote context above the reply field (6d). */
+/**
+ * The dismissible 回复 target above the reply field (6d).
+ *
+ * Only 回复 gets a chip, because only 回复 is a property of the comment as a whole and can only be
+ * one floor. A 引用 is text in the body, visible and editable there, and giving it a chip too would
+ * imply it could be dismissed the same way.
+ */
 @Composable
-private fun QuoteChip(
-    excerpt: String,
+private fun ReplyTargetChip(
+    replyTo: FloorReference,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -397,14 +405,24 @@ private fun QuoteChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 2.dp),
         ) {
-            Icon(NodysseyIcons.FormatQuote, contentDescription = null, modifier = Modifier.size(15.dp))
-            Text(
-                text = excerpt,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            Icon(NodysseyIcons.Reply, contentDescription = null, modifier = Modifier.size(15.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.post_quote_reply, replyTo.author, "#${replyTo.floor}"),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (replyTo.excerpt.isNotBlank()) {
+                    Text(
+                        text = replyTo.excerpt,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             IconButton(onClick = onClear, modifier = Modifier.size(24.dp)) {
                 Icon(
                     Icons.Default.Close,
@@ -416,41 +434,23 @@ private fun QuoteChip(
     }
 }
 
-/** How the quote reads once published: an addressed chip, then the quoted floor. */
+/** How the 回复 reads once published: the addressed floor, ahead of the body it belongs to. */
 @Composable
-private fun QuoteReference(
+private fun ReplyReference(
     floor: Int,
     author: String,
-    excerpt: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        Surface(
-            shape = RoundedCornerShape(11.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        ) {
-            Text(
-                text = "@$author ${stringResource(R.string.post_quote_prefix, floor)}",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
-            )
-        }
-        Row {
-            Box(
-                Modifier
-                    .width(3.dp)
-                    .heightIn(min = 20.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.outlineVariant),
-            )
-            Text(
-                text = excerpt,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = Spacing.md),
-            )
-        }
+    Surface(
+        shape = RoundedCornerShape(11.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    ) {
+        Text(
+            text = "@$author ${stringResource(R.string.post_quote_prefix, floor)}",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+        )
     }
 }
 

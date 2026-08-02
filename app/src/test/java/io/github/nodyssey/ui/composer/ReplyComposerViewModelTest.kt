@@ -9,6 +9,7 @@ import io.github.nodyssey.data.composer.CommentSubmission
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.ui.ViewModels
+import io.github.nodyssey.ui.typeMore
 import io.github.nodyssey.ui.typeText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -91,24 +92,23 @@ class ReplyComposerViewModelTest {
     }
 
     /**
-     * The exact shape matters, and it is not ours: it was read off a quote the site's own editor
-     * produced (sandbox thread, 2026-07-28). The header line names the author and links the floor,
-     * the quoted text follows as blockquote lines, and the reply starts after a blank line —
-     * `@name` at the *end* of the blockquote would render as part of the quotation instead.
+     * The shape is the site's, not ours: fixture `post-703863-1.html` floor #8 is
+     * `@ipv4 [#7](/post-703863-1#7) 想要十几刀年付的中盘鸡` — mention, floor link and answer on one
+     * line. The mention is the whole point of 回复; without it the answer reaches nobody.
      */
     @Test
-    fun `replying to a floor quotes it, and the quote is sent as a blockquote`() = runTest(dispatcher) {
-        val viewModel = viewModel(postId = 841108L)
+    fun `回复 opens the comment with a mention of the floor it answers`() = runTest(dispatcher) {
+        val viewModel = viewModel(postId = 703863L)
         viewModel.open(
-            ReplyQuote(
-                floor = 12,
-                author = "nssk",
-                excerpt = "还没有这个功能",
-                postedAt = "2026/7/28 12:01:29",
+            FloorReference(
+                floor = 7,
+                author = "ipv4",
+                excerpt = "绿云有哪些产品可以 归类为 传家宝 的？",
+                postedAt = "2026/4/27 16:00:53",
             ),
         )
         advanceUntilIdle()
-        viewModel.bodyState.typeText("赞成用星辰兑换改名")
+        viewModel.bodyState.typeText("想要十几刀年付的中盘鸡")
         runCurrent()
         advanceUntilIdle()
 
@@ -116,9 +116,41 @@ class ReplyComposerViewModelTest {
         advanceUntilIdle()
 
         val submission = repository.submission
-        assertEquals(12, submission?.quotedFloor)
+        assertEquals(7, submission?.quotedFloor)
+        // No blockquote and no timestamp: 回复 addresses the floor, it does not reproduce it.
+        assertEquals("@ipv4 [#7](/post-703863-1#7) 想要十几刀年付的中盘鸡", submission?.body)
+    }
+
+    /**
+     * The exact shape matters, and it is not ours either: fixture `post-703863-1.html` floor #7 is a
+     * 引用. The header line names the author and links the floor, the quoted text follows as
+     * blockquote lines, and the reply starts after a blank line — `@name` at the *end* of the
+     * blockquote would render as part of the quotation instead.
+     */
+    @Test
+    fun `引用 drops the floor into the body as a blockquote`() = runTest(dispatcher) {
+        val viewModel = viewModel(postId = 841108L)
+        viewModel.quote(
+            FloorReference(
+                floor = 12,
+                author = "nssk",
+                excerpt = "还没有这个功能",
+                postedAt = "2026/7/28 12:01:29",
+            ),
+        )
+        advanceUntilIdle()
+        viewModel.bodyState.typeMore("赞成用星辰兑换改名")
+        runCurrent()
+        advanceUntilIdle()
+
+        viewModel.publish {}
+        advanceUntilIdle()
+
+        val submission = repository.submission
+        // Nothing is addressed: 引用 reproduces a floor, it does not reply at one.
+        assertNull(submission?.quotedFloor)
         assertEquals(
-            "> @nssk [#12](https://www.nodeseek.com/post-841108-1#12) 发布于2026/7/28 12:01:29\n" +
+            "> @nssk [#12](/post-841108-1#12) 发布于2026/7/28 12:01:29\n" +
                 "> 还没有这个功能\n" +
                 "\n" +
                 "赞成用星辰兑换改名",
@@ -126,13 +158,18 @@ class ReplyComposerViewModelTest {
         )
     }
 
-    /** Most floors carry a timestamp; a comment parsed without one must not print "发布于null". */
+    /**
+     * The whole point of the redesign: a reader quotes one floor, scrolls on, quotes another. Both
+     * have to survive as separate blocks, which is what the blank line between them is for.
+     */
     @Test
-    fun `a quote with no timestamp omits the 发布于 clause`() = runTest(dispatcher) {
+    fun `每点一次引用就多一段，互不覆盖`() = runTest(dispatcher) {
         val viewModel = viewModel(postId = 7L)
-        viewModel.open(ReplyQuote(floor = 3, author = "nssk", excerpt = "占位"))
+        viewModel.quote(FloorReference(floor = 3, author = "nssk", excerpt = "第一段"))
         advanceUntilIdle()
-        viewModel.bodyState.typeText("好")
+        viewModel.quote(FloorReference(floor = 9, author = "other", excerpt = "第二段"))
+        advanceUntilIdle()
+        viewModel.bodyState.typeMore("两位说得都对")
         runCurrent()
         advanceUntilIdle()
 
@@ -140,21 +177,102 @@ class ReplyComposerViewModelTest {
         advanceUntilIdle()
 
         assertEquals(
-            "> @nssk [#3](https://www.nodeseek.com/post-7-1#3)\n> 占位\n\n好",
+            "> @nssk [#3](/post-7-1#3)\n> 第一段\n" +
+                "\n" +
+                "> @other [#9](/post-7-1#9)\n> 第二段\n" +
+                "\n" +
+                "两位说得都对",
             repository.submission?.body,
         )
     }
 
+    /** 回复 and 引用 compose: the mention cannot share a line with a `>` and still be a blockquote. */
     @Test
-    fun `a later floor replaces the quote instead of answering the old one`() = runTest(dispatcher) {
-        val viewModel = viewModel()
-        viewModel.open(ReplyQuote(floor = 12, author = "nssk", excerpt = "第一段"))
+    fun `一条评论既引用又回复时，@ 独占一行`() = runTest(dispatcher) {
+        val viewModel = viewModel(postId = 7L)
+        viewModel.open(FloorReference(floor = 3, author = "nssk", excerpt = "占位"))
         advanceUntilIdle()
-        viewModel.close()
-        viewModel.open(ReplyQuote(floor = 20, author = "other", excerpt = "第二段"))
+        viewModel.quote(FloorReference(floor = 9, author = "other", excerpt = "另一层"))
+        advanceUntilIdle()
+        viewModel.bodyState.typeMore("见上")
+        runCurrent()
         advanceUntilIdle()
 
-        assertEquals(20, viewModel.uiState.value.quote?.floor)
+        viewModel.publish {}
+        advanceUntilIdle()
+
+        assertEquals(
+            "@nssk [#3](/post-7-1#3)\n" +
+                "\n" +
+                "> @other [#9](/post-7-1#9)\n> 另一层\n" +
+                "\n" +
+                "见上",
+            repository.submission?.body,
+        )
+    }
+
+    /** Most floors carry a timestamp; a comment parsed without one must not print "发布于null". */
+    @Test
+    fun `a quote with no timestamp omits the 发布于 clause`() = runTest(dispatcher) {
+        val viewModel = viewModel(postId = 7L)
+        viewModel.quote(FloorReference(floor = 3, author = "nssk", excerpt = "占位"))
+        advanceUntilIdle()
+        viewModel.bodyState.typeMore("好")
+        runCurrent()
+        advanceUntilIdle()
+
+        viewModel.publish {}
+        advanceUntilIdle()
+
+        assertEquals("> @nssk [#3](/post-7-1#3)\n> 占位\n\n好", repository.submission?.body)
+    }
+
+    /** The quotes live in the body, so a restored draft gets them back for free — the chip does not. */
+    @Test
+    fun `a restored draft keeps its quotes and the floor it replies to`() = runTest(dispatcher) {
+        val viewModel = viewModel(postId = 7L)
+        viewModel.open(FloorReference(floor = 3, author = "nssk", excerpt = "占位"))
+        advanceUntilIdle()
+        viewModel.quote(FloorReference(floor = 9, author = "other", excerpt = "另一层"))
+        advanceUntilIdle()
+        viewModel.bodyState.typeMore("见上")
+        runCurrent()
+        advanceUntilIdle()
+
+        val second = viewModel(postId = 7L)
+        second.open()
+        advanceUntilIdle()
+
+        assertEquals(3, second.uiState.value.replyTo?.floor)
+        assertTrue(second.uiState.value.body.startsWith("> @other [#9](/post-7-1#9)"))
+    }
+
+    @Test
+    fun `a later floor replaces the reply target instead of answering the old one`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.open(FloorReference(floor = 12, author = "nssk", excerpt = "第一段"))
+        advanceUntilIdle()
+        viewModel.close()
+        viewModel.open(FloorReference(floor = 20, author = "other", excerpt = "第二段"))
+        advanceUntilIdle()
+
+        assertEquals(20, viewModel.uiState.value.replyTo?.floor)
+    }
+
+    /** The field is not part of the state, so a publish that only reset the state would leak text. */
+    @Test
+    fun `publishing clears the editor, not just the state`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.open()
+        advanceUntilIdle()
+        viewModel.bodyState.typeText("发出去的话")
+        runCurrent()
+        advanceUntilIdle()
+
+        viewModel.publish {}
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.bodyState.text.toString())
     }
 
     @Test

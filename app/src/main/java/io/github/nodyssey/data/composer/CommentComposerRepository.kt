@@ -35,15 +35,16 @@ private val Context.commentComposerDataStore: DataStore<Preferences> by preferen
 /**
  * An unsent reply.
  *
- * [quotedFloor]/[quotedText] survive the round trip so reopening the sheet restores the quote chip
- * along with the text — a reply written against a quote reads as a non sequitur without it.
+ * [replyToFloor]/[replyToText] survive the round trip so reopening the sheet restores the 回复 chip
+ * along with the text — a reply written at somebody reads as a non sequitur without it. Quotes need
+ * no fields of their own: 引用 writes Markdown straight into [body], so they are saved with it.
  */
 @Serializable
 data class CommentDraft(
     val body: String = "",
-    val quotedFloor: Int? = null,
-    val quotedAuthor: String? = null,
-    val quotedText: String? = null,
+    val replyToFloor: Int? = null,
+    val replyToAuthor: String? = null,
+    val replyToText: String? = null,
     val savedAtMillis: Long = 0L,
 ) {
     val hasContent: Boolean get() = body.isNotBlank()
