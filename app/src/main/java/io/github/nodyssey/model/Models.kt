@@ -56,21 +56,24 @@ data class PostDetail(
 /**
  * A thread as currently held in the database — what the detail screen renders, online or not.
  *
- * Unlike [PostDetail] this is not one fetch: [comments] accumulates every page read so far, which is
- * how the thread reads as one scroll on a phone.
+ * Unlike [PostDetail] this is not one fetch: [comments] accumulates the pages read so far, which is
+ * how the thread reads as one scroll on a phone. Those pages are contiguous but need not start at
+ * the beginning — jumping to page 12 loads page 12, not pages 1 through 12 — so the slice is
+ * described by both its ends.
  */
 data class ThreadSnapshot(
     val postId: Long,
     val title: String,
     val body: PostContent?,
     val comments: List<PostContent>,
-    val loadedPages: Int,
+    val firstLoadedPage: Int,
+    val lastLoadedPage: Int,
     val totalPages: Int,
     val cachedAtMillis: Long,
     /** The site page each comment came from, index-aligned with [comments]. */
     val commentPages: List<Int> = emptyList(),
 ) {
-    val hasNextPage: Boolean get() = loadedPages < totalPages
+    val hasNextPage: Boolean get() = lastLoadedPage < totalPages
 }
 
 /**

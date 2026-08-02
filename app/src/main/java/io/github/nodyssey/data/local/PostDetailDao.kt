@@ -31,7 +31,8 @@ fun CachedThread.toSnapshot(): ThreadSnapshot {
         body = detail.body,
         comments = ordered.map { it.content },
         commentPages = ordered.map { it.page },
-        loadedPages = detail.loadedPages,
+        firstLoadedPage = detail.firstLoadedPage,
+        lastLoadedPage = detail.lastLoadedPage,
         totalPages = detail.totalPages,
         cachedAtMillis = detail.cachedAtMillis,
     )
@@ -53,12 +54,15 @@ interface PostDetailDao {
      *
      * - **A null [body] preserves the stored one.** NodeSeek renders the opening post on page 1
      *   only, so appending page 2 would otherwise blank out the post the user is reading.
-     * - **Page 1 replaces every comment; later pages replace only themselves.** Page 1 arriving means
-     *   "this is a fresh read", and threads shrink when a comment is deleted. Appending page 4 must
-     *   not disturb pages 1-3 already on screen.
-     * - **[PostDetailEntity.loadedPages] describes a contiguous prefix.** Re-reading page 1 deletes
-     *   later pages, so the cursor must reset to 1 as well. Keeping the old cursor after deleting the
-     *   rows would make the next append skip straight from page 1 to page 4.
+     * - **[replacesWindow] decides what survives.** A *refresh* — the first read of a thread, a retry,
+     *   or a jump to a page nowhere near the cached ones — makes [page] the whole of the cache. Every
+     *   other page goes, because a deleted comment shifts every floor after it up by one and the
+     *   pages either side of it now describe content that has moved. An *extend* — the next page as
+     *   the reader scrolls, or the previous one as they page back — replaces only itself.
+     * - **[PostDetailEntity.firstLoadedPage]..[PostDetailEntity.lastLoadedPage] stays contiguous.**
+     *   An extend may only widen the window by adjoining it; a page with a gap between it and the
+     *   window is not an extend at all and is stored as a refresh, or the list would read as one
+     *   scroll while silently skipping the floors in between.
      */
     @Transaction
     suspend fun saveThreadPage(
@@ -69,19 +73,26 @@ interface PostDetailDao {
         page: Int,
         comments: List<CommentEntity>,
         nowMillis: Long,
+        replacesWindow: Boolean,
     ) {
         val existing = findDetail(postId)
+        val replaces =
+            replacesWindow ||
+                existing == null ||
+                page < existing.firstLoadedPage - 1 ||
+                page > existing.lastLoadedPage + 1
         upsertDetail(
             PostDetailEntity(
                 postId = postId,
                 title = title.ifBlank { existing?.title.orEmpty() },
                 body = body ?: existing?.body,
                 totalPages = totalPages,
-                loadedPages = if (page == 1) 1 else maxOf(existing?.loadedPages ?: 0, page),
+                firstLoadedPage = if (replaces) page else minOf(existing.firstLoadedPage, page),
+                lastLoadedPage = if (replaces) page else maxOf(existing.lastLoadedPage, page),
                 cachedAtMillis = nowMillis,
             ),
         )
-        if (page == 1) deleteAllComments(postId) else deleteCommentPage(postId, page)
+        if (replaces) deleteAllComments(postId) else deleteCommentPage(postId, page)
         upsertComments(comments)
     }
 

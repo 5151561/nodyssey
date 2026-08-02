@@ -2,6 +2,7 @@ package io.github.nodyssey.core
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -48,6 +49,28 @@ class NodeSeekSiteTest {
         assertEquals(LevelSpan(barRank = 2, floor = 400, next = 900), NodeSeekSite.levelChickenSpan(2))
         assertEquals(LevelSpan(barRank = 3, floor = 900, next = 1600), NodeSeekSite.levelChickenSpan(3))
         assertEquals(LevelSpan(barRank = 4, floor = 1600, next = 2500), NodeSeekSite.levelChickenSpan(4))
+    }
+
+    /**
+     * A floor is the only address a notification gives, so the page has to come out of the number.
+     * Ten floors a page, #0 being the opening post and #1 the first floor under it.
+     */
+    @Test
+    fun `a floor resolves to the page it is rendered on`() {
+        assertEquals(1, NodeSeekSite.pageOfFloor(0))
+        assertEquals(1, NodeSeekSite.pageOfFloor(1))
+        assertEquals(1, NodeSeekSite.pageOfFloor(10))
+        assertEquals(2, NodeSeekSite.pageOfFloor(11))
+        assertEquals(13, NodeSeekSite.pageOfFloor(127))
+    }
+
+    @Test
+    fun `floor labels are read with or without the site's hash`() {
+        assertEquals(127, NodeSeekSite.parseFloorNumber("#127"))
+        assertEquals(127, NodeSeekSite.parseFloorNumber(" 127 "))
+        assertNull(NodeSeekSite.parseFloorNumber(null))
+        assertNull(NodeSeekSite.parseFloorNumber("#"))
+        assertNull(NodeSeekSite.parseFloorNumber("楼主"))
     }
 
     /** The site clamps its bar at Lv5 (`Math.min(user.rank, 5)`); nothing beyond it is published. */

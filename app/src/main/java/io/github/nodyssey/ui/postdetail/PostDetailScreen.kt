@@ -44,6 +44,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -129,7 +130,6 @@ fun PostDetailRoute(
     onVerify: (String) -> Unit,
     onImageClick: (List<String>, String) -> Unit,
     modifier: Modifier = Modifier,
-    initialFloor: String? = null,
     showBackButton: Boolean = true,
     /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
     onLinkClick: (String) -> Unit = onOpenBrowser,
@@ -144,7 +144,6 @@ fun PostDetailRoute(
     val images = remember(state.body, state.comments) { state.imageUrls() }
     PostDetailScreen(
         state = state,
-        initialFloor = initialFloor,
         postUrl = postUrl,
         onBack = onBack,
         onOpenBrowser = onOpenBrowser,
@@ -156,7 +155,8 @@ fun PostDetailRoute(
         onRetry = viewModel::refresh,
         onLoadMore = viewModel::loadNextPage,
         onLoadPage = viewModel::loadPage,
-        onPageScrollHandled = viewModel::onPageScrollHandled,
+        onJumpToFloor = viewModel::jumpToFloor,
+        onScrollHandled = viewModel::onScrollHandled,
         showBackButton = showBackButton,
         // Replying needs an account; sending an anonymous reply into the void is the one outcome
         // the editor must not produce, so the sign-in page comes first.
@@ -199,8 +199,9 @@ fun PostDetailScreen(
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
     onLoadPage: (Int) -> Unit = { onLoadMore() },
-    onPageScrollHandled: () -> Unit = {},
-    initialFloor: String? = null,
+    /** Scrolls to a floor, fetching its page first when that floor is not loaded. */
+    onJumpToFloor: (String) -> Unit = {},
+    onScrollHandled: () -> Unit = {},
     showBackButton: Boolean = true,
     /** Opens the sign-in page. Separate from [onOpenBrowser] because "登录" is not "看看网页版". */
     onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
@@ -228,7 +229,6 @@ fun PostDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showPageSheet by remember { mutableStateOf(false) }
     var pageToolbarExpanded by rememberSaveable { mutableStateOf(true) }
-    var hasJumpedToInitialFloor by remember(initialFloor) { mutableStateOf(false) }
     val collapsedTitleThreshold = with(LocalDensity.current) { 72.dp.roundToPx() }
     val showCollapsedTitle by remember {
         derivedStateOf {
@@ -258,45 +258,47 @@ fun PostDetailScreen(
     LaunchedEffect(shouldLoadMore, state.comments.size) {
         if (shouldLoadMore) onLoadMore()
     }
-    LaunchedEffect(initialFloor, state.comments.size) {
-        if (hasJumpedToInitialFloor) return@LaunchedEffect
-        val floor = initialFloor ?: return@LaunchedEffect
-        val index = state.indexOfFloor(floor) ?: return@LaunchedEffect
-        listState.scrollToItem(index)
-        hasJumpedToInitialFloor = true
-    }
 
     // The page the reader is looking at, not the furthest page fetched. Pages already in the list
-    // are navigated by scrolling; only pages beyond the loaded prefix involve the network.
-    val visiblePage by remember(state.commentPages, state.body != null) {
+    // are navigated by scrolling; only pages outside the loaded slice involve the network.
+    val visiblePage by remember(state.commentPages, state.body != null, state.firstLoadedPage) {
         derivedStateOf {
             val commentIndex = listState.firstVisibleItemIndex - state.headerItemCount
             if (commentIndex < 0) {
-                1
+                state.firstLoadedPage
             } else {
                 state.commentPages.getOrNull(commentIndex)
                     ?: state.commentPages.lastOrNull()
-                    ?: 1
+                    ?: state.firstLoadedPage
             }
         }
     }
-    fun scrollToPage(target: Int) {
+
+    /** Scrolls when the page is already in the list, and asks for it when it is not. */
+    fun goToPage(target: Int) {
         val index = state.firstIndexOfPage(target)
-        if (index != null) {
+        if (index != null && target in state.firstLoadedPage..state.lastLoadedPage) {
             scope.launch { listState.animateScrollToItem(index) }
         } else {
             onLoadPage(target)
         }
     }
-    LaunchedEffect(state.pendingScrollPage, state.commentPages.size) {
-        val target = state.pendingScrollPage ?: return@LaunchedEffect
+    // Keyed on the pages themselves rather than on how many comments there are: a jump swaps one page
+    // of ten floors for another page of ten floors, so a count would not change and the effect would
+    // never re-run against the content it was waiting for.
+    LaunchedEffect(state.pendingScroll, state.commentPages) {
+        val target = state.pendingScroll ?: return@LaunchedEffect
         // The fetch has finished but the new comments may not have flowed out of Room yet; wait for
         // the emission that carries them rather than scrolling to a stale end-of-list.
-        if (target > state.page) return@LaunchedEffect
-        val index = state.firstIndexOfPage(target)
+        if (target.page !in state.firstLoadedPage..state.lastLoadedPage) return@LaunchedEffect
+        // The floor when the site named one and it is on the page; otherwise the page's own start.
+        // A floor can be missing from the page it was computed for — it was deleted, or the thread
+        // was renumbered under it — and landing on the right page beats not moving at all.
+        val index = target.floor?.let { state.indexOfFloor(it) }
+            ?: state.firstIndexOfPage(target.page)
             ?: (state.headerItemCount + state.comments.size - 1).coerceAtLeast(0)
         listState.scrollToItem(index)
-        onPageScrollHandled()
+        onScrollHandled()
     }
     /*
      * The nested-scroll state drives the toolbar; boundaries only pin it open where that is stable.
@@ -351,8 +353,14 @@ fun PostDetailScreen(
                         onOpenBrowser = onLinkClick,
                         onImageClick = onImageClick,
                         onJumpToFloor = { floor ->
+                            // A quote can point anywhere in the thread, including pages nobody has
+                            // opened. Scroll when it is here, fetch its page when it is not.
                             val index = state.indexOfFloor(floor)
-                            if (index != null) scope.launch { listState.animateScrollToItem(index) }
+                            if (index != null) {
+                                scope.launch { listState.animateScrollToItem(index) }
+                            } else {
+                                onJumpToFloor(floor)
+                            }
                         },
                         onReact = { content, action ->
                             val commentId = content.commentId
@@ -384,16 +392,22 @@ fun PostDetailScreen(
                     )
             }
 
+            // A jump replaces the whole list, so the append spinner at its foot would be pointing at
+            // content that is on its way out. This says "a different page is coming" where the reader
+            // is already looking — and it is the only feedback between the tap and the new page.
+            if (state.isLoading && state.body != null) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter),
+                )
+            }
+
             if (state.body != null && !replyOpen) {
                 DetailBottomActions(
                     toolbarExpanded = toolbarExpanded,
                     page = visiblePage,
                     totalPages = state.totalPages,
-                    onPrevious = { scrollToPage((visiblePage - 1).coerceAtLeast(1)) },
-                    onNext = {
-                        val next = (visiblePage + 1).coerceAtMost(state.totalPages)
-                        if (next <= state.page) scrollToPage(next) else onLoadPage(next)
-                    },
+                    onPrevious = { goToPage((visiblePage - 1).coerceAtLeast(1)) },
+                    onNext = { goToPage((visiblePage + 1).coerceAtMost(state.totalPages)) },
                     onPageClick = { showPageSheet = true },
                     onReply = { onReply(null) },
                     modifier = Modifier.align(Alignment.BottomEnd),
@@ -427,14 +441,13 @@ fun PostDetailScreen(
     if (showPageSheet) {
         PageJumpSheet(
             page = visiblePage,
-            loadedPage = state.page,
+            loadedPage = state.lastLoadedPage,
             totalPages = state.totalPages,
             loadedFloors = state.comments.size + if (state.body != null) 1 else 0,
             onDismiss = { showPageSheet = false },
             onGo = { target ->
                 showPageSheet = false
-                val clamped = target.coerceIn(1, state.totalPages.coerceAtLeast(1))
-                if (clamped <= state.page) scrollToPage(clamped) else onLoadPage(clamped)
+                goToPage(target.coerceIn(1, state.totalPages.coerceAtLeast(1)))
             },
         )
     }
@@ -1343,9 +1356,13 @@ private fun PostDetailUiState.indexOfFloor(floor: String): Int? {
 /**
  * The list index where [page] starts, or null when no loaded comment belongs to it yet. `>=` rather
  * than `==` so a page whose comments were all deleted resolves to the next page instead of nowhere.
+ *
+ * The slice's first page resolves to the first comment rather than to the top of the list: the title
+ * and the opening post sit above every page, and a reader who asked for page 12 asked for its floors,
+ * not for the post they have already read. Page 1 keeps the whole top, which is where it begins.
  */
 private fun PostDetailUiState.firstIndexOfPage(page: Int): Int? {
-    if (page <= 1) return 0
+    if (page <= firstLoadedPage) return if (firstLoadedPage > 1) headerItemCount else 0
     val position = commentPages.indexOfFirst { it >= page }
     if (position < 0) return null
     return headerItemCount + position

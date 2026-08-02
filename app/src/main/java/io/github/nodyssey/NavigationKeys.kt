@@ -92,10 +92,18 @@ data class MessageThreadKey(
     val userName: String,
 ) : NavKey
 
+/**
+ * A thread, optionally opened somewhere other than its top.
+ *
+ * [floor] is what a notification or a quote knows — the site labels floors and leaves their page
+ * implicit — and [page] is what a `/post-703863-4` link knows. Either one makes the detail screen
+ * start there instead of at page 1; [floor] wins, being the more precise of the two.
+ */
 @Serializable
 data class PostDetailKey(
     val postId: Long,
     val floor: String? = null,
+    val page: Int? = null,
 ) : NavKey
 
 /**

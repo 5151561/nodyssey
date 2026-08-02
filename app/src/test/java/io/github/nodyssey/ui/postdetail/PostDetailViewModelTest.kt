@@ -55,7 +55,11 @@ class PostDetailViewModelTest {
 
     private val session = MutableStateFlow(SessionState())
 
-    private fun viewModel(postId: Long = 42) = PostDetailViewModel(postId, repository, session)
+    private fun viewModel(
+        postId: Long = 42,
+        initialFloor: String? = null,
+        initialPage: Int? = null,
+    ) = PostDetailViewModel(postId, repository, session, initialFloor, initialPage)
 
     /**
      * A thread that answered "登录后查看" a second ago has content now. The freshness window would
@@ -124,7 +128,7 @@ class PostDetailViewModelTest {
             advanceUntilIdle()
 
             assertEquals(4, vm.uiState.value.comments.size)
-            assertEquals(2, vm.uiState.value.page)
+            assertEquals(2, vm.uiState.value.lastLoadedPage)
             assertTrue(vm.uiState.value.hasNextPage)
         }
 
@@ -200,7 +204,7 @@ class PostDetailViewModelTest {
 
             assertNull(vm.uiState.value.body)
             assertTrue(vm.uiState.value.comments.isEmpty())
-            assertEquals(1, vm.uiState.value.page)
+            assertEquals(1, vm.uiState.value.lastLoadedPage)
         }
 
     @Test
@@ -215,17 +219,17 @@ class PostDetailViewModelTest {
             advanceUntilIdle()
             vm.loadNextPage()
             advanceUntilIdle()
-            assertEquals(3, vm.uiState.value.page)
+            assertEquals(3, vm.uiState.value.lastLoadedPage)
 
             vm.refresh()
             advanceUntilIdle()
-            assertEquals(1, vm.uiState.value.page)
+            assertEquals(1, vm.uiState.value.lastLoadedPage)
 
             vm.loadNextPage()
             advanceUntilIdle()
 
             assertEquals(2, remote.detailRequests.last().second)
-            assertEquals(2, vm.uiState.value.page)
+            assertEquals(2, vm.uiState.value.lastLoadedPage)
         }
 
     /** A flaky connection must not throw away content the user is already reading. */
@@ -348,30 +352,55 @@ class PostDetailViewModelTest {
         }
 
     /**
-     * Regression: jumping used to append the target page directly after page 1, leaving a gap in the
-     * middle of the thread and a `loadedPages` cursor that claimed pages 2-4 were present.
+     * The whole point of the control. Jumping used to walk pages 2, 3, 4 to keep the loaded pages a
+     * prefix of the thread, which on a thread of any length is dozens of requests and, against the
+     * site's own throttle, a jump that never arrives.
      */
     @Test
-    fun `jumping to a later page fetches every page in between`() =
+    fun `jumping to a distant page fetches that page and nothing else`() =
         runTest(dispatcher) {
             remote.detailResult = { postId, page ->
-                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 5)
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 40)
             }
             val vm = viewModel()
             advanceUntilIdle()
+            val requestsBefore = remote.detailRequests.size
 
-            vm.loadPage(4)
+            vm.loadPage(30)
             advanceUntilIdle()
 
             val state = vm.uiState.value
-            assertEquals(listOf(2, 3, 4), remote.detailRequests.takeLast(3).map { it.second })
-            assertEquals(4, state.page)
-            assertEquals(8, state.comments.size)
-            assertEquals((1..4).flatMap { page -> List(2) { page } }, state.commentPages)
-            assertEquals(4, state.pendingScrollPage)
+            assertEquals(listOf(42L to 30), remote.detailRequests.drop(requestsBefore))
+            assertEquals(30, state.firstLoadedPage)
+            assertEquals(30, state.lastLoadedPage)
+            assertEquals(2, state.comments.size)
+            assertEquals(listOf(30, 30), state.commentPages)
+            assertEquals(PendingScroll(page = 30), state.pendingScroll)
 
-            vm.onPageScrollHandled()
-            assertNull(vm.uiState.value.pendingScrollPage)
+            vm.onScrollHandled()
+            assertNull(vm.uiState.value.pendingScroll)
+        }
+
+    /** The pages either side of the slice are what a reader scrolls into, so they join it. */
+    @Test
+    fun `paging back from a jumped-to page keeps the page it came from`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 40)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+            vm.loadPage(30)
+            advanceUntilIdle()
+
+            vm.loadPage(29)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals(29, state.firstLoadedPage)
+            assertEquals(30, state.lastLoadedPage)
+            assertEquals(listOf(29, 29, 30, 30), state.commentPages)
+            assertEquals(PendingScroll(page = 29), state.pendingScroll)
         }
 
     @Test
@@ -390,8 +419,76 @@ class PostDetailViewModelTest {
             advanceUntilIdle()
 
             assertEquals(requestsBefore, remote.detailRequests.size)
-            assertEquals(1, vm.uiState.value.pendingScrollPage)
-            assertEquals(2, vm.uiState.value.page)
+            assertEquals(PendingScroll(page = 1), vm.uiState.value.pendingScroll)
+            assertEquals(2, vm.uiState.value.lastLoadedPage)
+        }
+
+    /**
+     * A reply notification carries `floor_id` and no page at all, which is why this used to strand the
+     * reader on page 1 of a thread they had just been told they were @-ed in.
+     */
+    @Test
+    fun `opening on a floor loads the page that floor lives on`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 10, totalPages = 40)
+            }
+
+            val vm = viewModel(initialFloor = "#127")
+            advanceUntilIdle()
+
+            // Ten floors a page, #1 opening page 1, so #127 is the seventh floor of page 13.
+            assertEquals(listOf(42L to 13), remote.detailRequests)
+            assertEquals(13, vm.uiState.value.firstLoadedPage)
+            assertEquals(PendingScroll(page = 13, floor = "#127"), vm.uiState.value.pendingScroll)
+        }
+
+    @Test
+    fun `a quote pointing at an unloaded floor fetches its page`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 10, totalPages = 40)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            vm.jumpToFloor("#35")
+            advanceUntilIdle()
+
+            assertEquals(listOf(42L to 1, 42L to 4), remote.detailRequests)
+            assertEquals(PendingScroll(page = 4, floor = "#35"), vm.uiState.value.pendingScroll)
+        }
+
+    /** A `/post-703863-4` link names its page; opening it at the top throws that away. */
+    @Test
+    fun `opening a link to a later page starts there`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 9)
+            }
+
+            val vm = viewModel(initialPage = 4)
+            advanceUntilIdle()
+
+            assertEquals(listOf(42L to 4), remote.detailRequests)
+            assertEquals(4, vm.uiState.value.firstLoadedPage)
+        }
+
+    /** Freshness covers the pages the cache holds; it says nothing about one nobody has fetched. */
+    @Test
+    fun `a fresh thread is still fetched when the floor is on a page it does not hold`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 10, totalPages = 40)
+            }
+            repository.refreshThread(postId = 42, page = 1)
+            val requestsBefore = remote.detailRequests.size
+
+            val vm = viewModel(initialFloor = "#55")
+            advanceUntilIdle()
+
+            assertEquals(listOf(42L to 6), remote.detailRequests.drop(requestsBefore))
+            assertEquals(6, vm.uiState.value.firstLoadedPage)
         }
 
     @Test

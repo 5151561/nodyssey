@@ -127,14 +127,35 @@ interface PostRepository {
     /** The cached thread, emitting null until page 1 has ever been fetched. */
     fun thread(postId: Long): Flow<ThreadSnapshot?>
 
-    /** Fetches one comment page and writes it into the thread. Throws on failure. */
+    /**
+     * Fetches [page] and makes it the whole of the cached thread. Throws on failure.
+     *
+     * This is what a first read, a retry and a jump all are: one page, read fresh, with no claim that
+     * anything either side of it is still accurate. Any other cached page is dropped — a comment
+     * deleted since they were stored has shifted every floor after it.
+     */
     suspend fun refreshThread(
+        postId: Long,
+        page: Int,
+    )
+
+    /**
+     * Fetches [page] and adds it to the cached slice, keeping what is already there. Throws on failure.
+     *
+     * For the pages a reader reaches by continuing — the next one as they scroll off the end, the
+     * previous one as they page back. A [page] that does not adjoin the cached slice cannot be
+     * appended without leaving a hole in the scroll, so it is stored as a [refreshThread] instead.
+     */
+    suspend fun extendThread(
         postId: Long,
         page: Int,
     )
 
     /** True when the cached thread is recent enough that opening it need not hit the network. */
     suspend fun isThreadFresh(postId: Long): Boolean
+
+    /** The comment pages the cache currently holds, or null when the thread was never fetched. */
+    suspend fun cachedPages(postId: Long): IntRange?
 
     /**
      * Records that the user has opened this thread.
@@ -296,6 +317,17 @@ class OfflineFirstPostRepository(
     override suspend fun refreshThread(
         postId: Long,
         page: Int,
+    ) = loadThreadPage(postId, page, replacesWindow = true)
+
+    override suspend fun extendThread(
+        postId: Long,
+        page: Int,
+    ) = loadThreadPage(postId, page, replacesWindow = false)
+
+    private suspend fun loadThreadPage(
+        postId: Long,
+        page: Int,
+        replacesWindow: Boolean,
     ) {
         val detail = remote.loadDetail(postId, page)
         database.postDetailDao().saveThreadPage(
@@ -314,6 +346,7 @@ class OfflineFirstPostRepository(
                 )
             },
             nowMillis = clock.nowMillis(),
+            replacesWindow = replacesWindow,
         )
         database.postDetailDao().trimTo(MAX_CACHED_THREADS)
     }
@@ -322,6 +355,9 @@ class OfflineFirstPostRepository(
         val detail = database.postDetailDao().findDetail(postId) ?: return false
         return clock.nowMillis() - detail.cachedAtMillis < THREAD_CACHE_TTL_MILLIS
     }
+
+    override suspend fun cachedPages(postId: Long): IntRange? =
+        database.postDetailDao().findDetail(postId)?.let { it.firstLoadedPage..it.lastLoadedPage }
 
     override suspend fun markThreadRead(postId: Long) {
         // Zero when the post was never in a cached list (a deep link), which is the honest baseline:
