@@ -31,12 +31,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,14 +81,23 @@ fun StardustRoute(
     viewModel: StardustViewModel,
     onBack: () -> Unit,
     onOpenBrowser: () -> Unit,
-    onTransferOnSite: () -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val messageText = state.message?.let { stardustMessageText(it) }
+
+    LaunchedEffect(state.message, messageText) {
+        if (messageText == null) return@LaunchedEffect
+        snackbarHostState.showSnackbar(messageText)
+        viewModel.consumeMessage()
+    }
+
     StardustScreen(
         state = state,
         entries = viewModel.entries,
+        snackbarHostState = snackbarHostState,
         amountState = viewModel.amount,
         recipientState = viewModel.recipientUid,
         refState = viewModel.refId,
@@ -96,19 +109,40 @@ fun StardustRoute(
         onDismissTransfer = viewModel::dismissTransfer,
         onRequestConfirm = viewModel::requestConfirm,
         onDismissConfirm = viewModel::dismissConfirm,
-        onConfirmTransfer = {
-            viewModel.transferHandedOff()
-            onTransferOnSite()
-        },
+        onConfirmTransfer = viewModel::confirmTransfer,
         modifier = modifier,
     )
 }
+
+/**
+ * The one line the transfer gets to say afterwards.
+ *
+ * A refusal is shown in the site's own words whenever it gave any — "余额不足", "Ref ID 不正确" — because
+ * those name the field to fix, and every sentence this app could substitute would be vaguer.
+ */
+@Composable
+private fun stardustMessageText(message: StardustMessage): String =
+    when (message) {
+        is StardustMessage.Sent -> stringResource(R.string.transfer_sent, message.amount)
+
+        is StardustMessage.Failed ->
+            message.detail ?: stringResource(
+                when (message.error) {
+                    NodeSeekError.Cloudflare -> R.string.status_challenge_title
+                    NodeSeekError.LoginRequired -> R.string.status_sign_in_title
+                    NodeSeekError.Network -> R.string.status_network_title
+                    NodeSeekError.RateLimited -> R.string.status_rate_limited_title
+                    else -> R.string.transfer_failed
+                },
+            )
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StardustScreen(
     state: StardustUiState,
     entries: Flow<PagingData<StardustEntry>>,
+    snackbarHostState: SnackbarHostState,
     amountState: TextFieldState,
     recipientState: TextFieldState,
     refState: TextFieldState,
@@ -139,9 +173,10 @@ fun StardustScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            // No uid yet means no per-member ledger URL to hand the transfer to — the button that
-            // would end on the site's home page with the typed form lost is better absent.
+            // No uid means the profile call has not answered — nobody to send from and no balance to
+            // check the amount against, so the form would be a form that cannot submit.
             if (state.uid != null) {
                 ExtendedFloatingActionButton(
                     onClick = onOpenTransfer,
@@ -398,9 +433,9 @@ private fun StardustEntry.metaLine(): String =
  * transfer as a modal layer (8f's own framing), and a dialog window resizes for the keyboard — the
  * sheet provably did not on a real device, hiding the fields behind the IME as they were typed into.
  *
- * No memo field: the site's own layer has none. It does have a recipient-name lookup the app has not
- * adopted yet (`/api/stardust/payment-prepare` answers with `receiver_name`), so until it does, the
- * caution line under the fields stays the only protection against a mistyped uid.
+ * No memo field: the site's own layer has none. The recipient's name is not asked for here either —
+ * 下一步 fetches it, so the check lands on the step that is about to spend rather than on the one
+ * still being typed into.
  */
 @Composable
 private fun TransferDialog(
@@ -455,6 +490,13 @@ private fun NumberField(
     )
 }
 
+/**
+ * The step that spends.
+ *
+ * The recipient row is the point of it: `payment-prepare` answers the uid with the name the site
+ * itself would show, so the row carries that name and the caution line underneath says which of the
+ * two situations the user is in — a named recipient, or a uid nothing came back for.
+ */
 @Composable
 private fun TransferConfirmDialog(
     state: StardustUiState,
@@ -473,7 +515,13 @@ private fun TransferConfirmDialog(
                 ),
             )
             state.form.recipientValue?.let {
-                add(SpendDetail(stringResource(R.string.transfer_recipient), it.toString()))
+                add(
+                    SpendDetail(
+                        stringResource(R.string.transfer_recipient),
+                        it.toString(),
+                        note = state.recipient?.note(),
+                    ),
+                )
             }
             state.form.refValue?.let {
                 add(SpendDetail(stringResource(R.string.transfer_ref), it.toString()))
@@ -493,17 +541,36 @@ private fun TransferConfirmDialog(
                 )
             }
         },
-        // Two sentences: what cannot be undone, and where the last step actually happens. Saying the
-        // hand-off *before* the tap is what stops the web view from looking like a failure.
+        // Two sentences: that it cannot be undone, and — when the lookup came back empty-handed — that
+        // the uid on the row above went unverified, which is the one thing left for the user to check.
         caution =
-        stringResource(R.string.transfer_caution) + "\n" + stringResource(R.string.transfer_opened_web),
-        confirmLabel = stringResource(R.string.transfer_confirm),
+        listOfNotNull(
+            stringResource(R.string.transfer_caution),
+            (state.recipient as? RecipientCheck.Unnamed)
+                ?.let { it.reason ?: stringResource(R.string.transfer_name_unknown) },
+        ).joinToString("\n"),
+        confirmLabel =
+        stringResource(if (state.isSending) R.string.transfer_sending else R.string.transfer_confirm),
         onConfirm = onConfirm,
         onDismiss = onDismiss,
         icon = NodysseyIcons.Wallet,
         shortfall = state.shortfall?.let { stringResource(R.string.transfer_shortfall, it) },
+        isSending = state.isSending,
     )
 }
+
+/** What the recipient row says beside the uid while, and after, the site is asked who it belongs to. */
+@Composable
+private fun RecipientCheck.note(): String? =
+    when (this) {
+        RecipientCheck.Checking -> stringResource(R.string.transfer_checking_name)
+
+        is RecipientCheck.Named -> name
+
+        // The reason belongs in the caution line, not here: a refusal sentence sitting where a name
+        // goes would read as the name.
+        is RecipientCheck.Unnamed -> null
+    }
 
 // -------------------------------------------------------------------------------------------------
 
@@ -557,6 +624,7 @@ private fun PreviewScreen(
     StardustScreen(
         state = state,
         entries = entries,
+        snackbarHostState = remember { SnackbarHostState() },
         amountState = rememberTextFieldState(),
         recipientState = rememberTextFieldState(),
         refState = rememberTextFieldState(),

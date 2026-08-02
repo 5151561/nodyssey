@@ -1,6 +1,8 @@
 package io.github.nodyssey.ui.assets
 
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -144,6 +146,7 @@ class LedgerScreensTest {
                 StardustScreen(
                     state = state,
                     entries = flowOf(PagingData.from(entries)),
+                    snackbarHostState = remember { SnackbarHostState() },
                     amountState = TextFieldState(),
                     recipientState = TextFieldState(),
                     refState = TextFieldState(),

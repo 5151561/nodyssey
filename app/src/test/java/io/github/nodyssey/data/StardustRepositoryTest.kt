@@ -1,8 +1,8 @@
 package io.github.nodyssey.data
 
 import io.github.nodyssey.core.AppDispatchers
-import io.github.nodyssey.core.net.JsonPostResponse
-import io.github.nodyssey.core.net.JsonSource
+import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
@@ -18,11 +18,15 @@ import org.junit.Test
  * Pins `/api/stardust/list` as read out of the site's own `stardustList` bundle and then verified
  * against a live signed-in account on 2026-07-30.
  *
- * Two things here are worth breaking a build over. The first is that a movement can be **negative** and
- * comes in **five kinds** — the app previously shipped a screen that hardcoded "点赞 +1" for every row,
- * which would have misreported every transfer out. The second is the parameter whitelist: the server
- * answers an unexpected query parameter with HTTP 422 rather than ignoring it, so the path builder
- * cannot be allowed to drift.
+ * Two things about the read are worth breaking a build over. The first is that a movement can be
+ * **negative** and comes in **five kinds** — the app previously shipped a screen that hardcoded
+ * "点赞 +1" for every row, which would have misreported every transfer out. The second is the parameter
+ * whitelist: the server answers an unexpected query parameter with HTTP 422 rather than ignoring it,
+ * so the path builder cannot be allowed to drift.
+ *
+ * The two writes are pinned harder still, because they are the only calls in the app with no undo:
+ * which uid goes in the body, and that a `success:false` answered with HTTP 200 is a refusal rather
+ * than a completed transfer.
  */
 class StardustRepositoryTest {
     private val dispatchers =
@@ -188,12 +192,99 @@ class StardustRepositoryTest {
             assertFalse(page.hasMore)
             assertNull(page.cursor)
         }
+
+    @Test
+    fun `asks payment-prepare who a recipient uid is`() =
+        runTest {
+            val api = FakeStardustJsonSource("""{"success":true,"receiver_name":"站长"}""")
+
+            val name =
+                NetworkStardustRepository(api, dispatchers)
+                    .recipientName(recipientUid = 9, viewerUid = 52_425)
+
+            assertEquals("站长", name)
+            assertEquals("/api/stardust/payment-prepare", api.postedPath)
+            assertEquals("""{"receiver_id":9,"origin":"transfer"}""", api.postedBody)
+            // The lookup runs from the sender's own ledger page, which is where the site's layer opens.
+            assertEquals(NodeSeekSite.BASE_URL + "/stardust/list?member_id=52425", api.postedReferer)
+        }
+
+    /** Answered, but with nobody named. Distinct from a refusal, and it must not read as an error. */
+    @Test
+    fun `reports a nameless prepare answer as no name rather than as a failure`() =
+        runTest {
+            val name =
+                NetworkStardustRepository(
+                    FakeStardustJsonSource("""{"success":true}"""),
+                    dispatchers,
+                ).recipientName(recipientUid = 9, viewerUid = 52_425)
+
+            assertNull(name)
+        }
+
+    @Test
+    fun `carries the site's own sentence when a recipient lookup is refused`() =
+        runTest {
+            val exception =
+                runCatching {
+                    NetworkStardustRepository(
+                        FakeStardustJsonSource("""{"success":false,"message":"用户不存在"}"""),
+                        dispatchers,
+                    ).recipientName(recipientUid = 1, viewerUid = 52_425)
+                }.exceptionOrNull()
+
+            assertEquals("用户不存在", (exception as? NodeSeekException)?.detail)
+        }
+
+    /**
+     * `member_id` is the **receiver**, not the sender.
+     *
+     * The sender is whoever the cookie says. Reading this field the other way round would send the
+     * stardust to the person who pressed the button, which the server would happily accept.
+     */
+    @Test
+    fun `sends by posting the receiver, the amount and the ref`() =
+        runTest {
+            val api = FakeStardustJsonSource("""{"success":true,"message":"转账成功"}""")
+
+            NetworkStardustRepository(api, dispatchers)
+                .send(recipientUid = 9, amount = 2, refId = 866_042, viewerUid = 52_425)
+
+            assertEquals("/api/stardust/send", api.postedPath)
+            assertEquals("""{"member_id":9,"diff":2,"ref_id":866042}""", api.postedBody)
+        }
+
+    /**
+     * A refusal arrives as a 200 with `success:false`.
+     *
+     * Status alone would report "余额不足" as a completed transfer — the one mistake on this screen
+     * that cannot be walked back by looking again.
+     */
+    @Test
+    fun `treats a success false answer to a send as a refusal`() =
+        runTest {
+            val exception =
+                runCatching {
+                    NetworkStardustRepository(
+                        FakeStardustJsonSource("""{"success":false,"message":"余额不足"}"""),
+                        dispatchers,
+                    ).send(recipientUid = 9, amount = 999, refId = 1, viewerUid = 52_425)
+                }.exceptionOrNull()
+
+            assertEquals("余额不足", (exception as? NodeSeekException)?.detail)
+        }
 }
 
 private class FakeStardustJsonSource(
     private val body: String,
-) : JsonSource {
+) : JsonApi {
     var requestedPath: String? = null
+        private set
+    var postedPath: String? = null
+        private set
+    var postedBody: String? = null
+        private set
+    var postedReferer: String? = null
         private set
 
     override suspend fun getJson(
@@ -206,6 +297,12 @@ private class FakeStardustJsonSource(
 
     override suspend fun postJson(
         path: String,
+        body: String,
         referer: String,
-    ): JsonPostResponse = error("Sending stardust still happens on the site")
+    ): String {
+        postedPath = path
+        postedBody = body
+        postedReferer = referer
+        return this.body
+    }
 }

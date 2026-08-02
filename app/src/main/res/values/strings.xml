@@ -677,7 +677,7 @@
     <string name="transfer_amount">数额</string>
     <string name="transfer_recipient">收款人 UID</string>
     <string name="transfer_ref">Ref ID</string>
-    <string name="transfer_hint">站点没有「UID 转昵称」的接口，提交前请再核对一次收款人 UID。</string>
+    <string name="transfer_hint">下一步会向站点查询收款人昵称，请核对后再提交。</string>
     <string name="transfer_next">下一步</string>
     <string name="transfer_confirm_title">确认转账 %1$d 星辰？</string>
     <string name="transfer_amount_value">%1$d 星辰</string>
@@ -686,7 +686,11 @@
     <string name="transfer_caution">星辰转账一旦提交无法撤销，请确认收款人 UID 与 Ref ID 无误。</string>
     <string name="transfer_confirm">确认转账</string>
     <string name="transfer_shortfall">还差 %1$d 星辰</string>
-    <string name="transfer_opened_web">App 还没有对接转账接口，已在网页中打开转账页。</string>
+    <string name="transfer_checking_name">查询中…</string>
+    <string name="transfer_name_unknown">没能查到该 UID 的昵称，请再核对一次收款人。</string>
+    <string name="transfer_sending">转账中…</string>
+    <string name="transfer_sent">已转出 %1$d 星辰</string>
+    <string name="transfer_failed">转账没有成功，请稍后再试。</string>
     <string name="spend_current_balance">当前余额</string>
 
     <!-- Follows and followers (8c) -->
