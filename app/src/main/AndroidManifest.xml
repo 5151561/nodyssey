@@ -6,6 +6,13 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Requested at runtime from the notification settings screen (API 33+). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+        应用内更新. This app is published as an APK on GitHub Releases, not through a store, so the
+        update it offers is an APK it downloaded and handed to the platform installer. Declaring the
+        permission does not grant it: the user still turns "allow from this source" on per app, and
+        the system still shows its own install confirmation. See data/update/ApkInstaller.kt.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!--
         Backup is on, but the WebView profile is excluded. Backing it up would put the session cookie
@@ -39,6 +46,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            Where an install session reports back: the system's confirmation screen on the way out,
+            the outcome on the way back. Not exported — the only sender is our own PendingIntent.
+        -->
+        <receiver
+            android:name=".data.update.ApkInstallResultReceiver"
+            android:exported="false" />
 
         <!-- WorkManager initializes on demand via NodysseyApp (Configuration.Provider). -->
         <provider

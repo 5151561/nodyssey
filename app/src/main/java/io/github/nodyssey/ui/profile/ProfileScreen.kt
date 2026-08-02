@@ -58,6 +58,7 @@ import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.SectionLabel
+import io.github.nodyssey.ui.common.UpdateDot
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Sizes
@@ -70,6 +71,7 @@ fun ProfileRoute(
     viewModel: ProfileViewModel,
     onSignIn: () -> Unit,
     onSettings: () -> Unit,
+    hasAppUpdate: Boolean,
     onAccountSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
     onOpenSpace: (Long) -> Unit,
@@ -89,6 +91,7 @@ fun ProfileRoute(
         onSignOut = viewModel::signOut,
         onRetry = viewModel::refresh,
         onSettings = onSettings,
+        hasAppUpdate = hasAppUpdate,
         onAccountSettings = onAccountSettings,
         onOpenWebsite = onOpenWebsite,
         onOpenSpace = { state.uid?.let(onOpenSpace) },
@@ -119,6 +122,8 @@ fun ProfileScreen(
     onFollow: () -> Unit,
     onTools: () -> Unit,
     modifier: Modifier = Modifier,
+    /** 应用内更新 found something; the 设置 row carries the dot that leads to it. */
+    hasAppUpdate: Boolean = false,
     onDismissAttendanceBoard: () -> Unit = {},
     onRetryAttendanceBoard: () -> Unit = {},
 ) {
@@ -127,6 +132,7 @@ fun ProfileScreen(
             SignedOutProfile(
                 onSignIn = onSignIn,
                 onSettings = onSettings,
+                hasAppUpdate = hasAppUpdate,
                 onTools = onTools,
                 modifier = Modifier.padding(padding),
             )
@@ -229,7 +235,12 @@ fun ProfileScreen(
                             NodysseyIcons.Badge,
                             onAccountSettings,
                         ),
-                        ProfileMenuItem(R.string.settings_title, Icons.Default.Settings, onSettings),
+                        ProfileMenuItem(
+                            R.string.settings_title,
+                            Icons.Default.Settings,
+                            onSettings,
+                            badge = hasAppUpdate,
+                        ),
                         ProfileMenuItem(
                             R.string.profile_open_web,
                             Icons.AutoMirrored.Filled.ExitToApp,
@@ -262,6 +273,7 @@ fun ProfileScreen(
 private fun SignedOutProfile(
     onSignIn: () -> Unit,
     onSettings: () -> Unit,
+    hasAppUpdate: Boolean,
     onTools: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -358,6 +370,13 @@ private fun SignedOutProfile(
                         first = true,
                         icon = Icons.Default.Settings,
                         onClick = onSettings,
+                        // Updating has nothing to do with being signed in, so the guest side of 我的
+                        // carries the same dot.
+                        trailing = if (hasAppUpdate) {
+                            { UpdateDot() }
+                        } else {
+                            null
+                        },
                     )
                     GroupedRow(
                         title = stringResource(R.string.profile_tools),
@@ -542,6 +561,7 @@ private data class ProfileMenuItem(
     val title: Int,
     val icon: ImageVector,
     val onClick: () -> Unit,
+    val badge: Boolean = false,
 )
 
 /** Renders through the shared grouped-list components so 我的 matches the screens it links to. */
@@ -555,6 +575,11 @@ private fun ProfileMenuGroup(items: List<ProfileMenuItem>) {
                 last = index == items.lastIndex,
                 icon = item.icon,
                 onClick = item.onClick,
+                trailing = if (item.badge) {
+                    { UpdateDot() }
+                } else {
+                    null
+                },
             )
         }
     }

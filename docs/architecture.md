@@ -143,6 +143,27 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
   `links.direct` 里；网页版 cookie 认证的 `/upload` 回扁平的 `url`。只读后者，就是"图床已经存下了
   图，App 却报上传失败"那个 bug。
 
+**应用内更新约定（github.com）**：
+- 分发渠道就是本项目的 GitHub Releases，所以「更新」= 下载那个 Release 上的签名 APK 并交给系统
+  安装器。数据层在 `data/update/`，纯粹的版本号比较在 `core/update/VersionNames.kt`。
+- **第三个 `OkHttpClient`。** 理由和 nodeimage 那条一样：`AppContainer.okHttpClient` 挂着 WebView 的
+  cookie jar 并补 `Referer: nodeseek.com`，这两样发给 GitHub 都没道理。User-Agent 这里写的是
+  `Nodyssey/<版本>`——GitHub API 要求调用方自报家门，而这里没有需要伪装成浏览器的挑战。
+- **只信 `releases/latest`，不做任何第三方中转。** GitHub 已经把草稿和预发布排除在这个端点之外；
+  连不上就明说连不上并给出手动入口，而不是换一条来路不明的下载链路。
+- **比较的是 tag 和 `PackageManager` 报的 versionName**，不是 versionCode——Release 上没有
+  versionCode。`release.yml` 里那道「tag 必须等于 versionName」的闸门是这件事成立的前提。
+- **`PackageInstaller` 而不是 `FileProvider` + `ACTION_VIEW`。** 会话直接读我们自己的流，不需要
+  导出任何 URI，也不需要给别的应用授权；结果以状态码回到 `ApkInstallResultReceiver`，而不是在
+  另一个 Activity 打开的瞬间丢失。**不设 `setAppPackageName`**：debug 构建的 id 带 `.debug` 后缀，
+  写错会让会话当场失败，等于这条路在它被开发的那种构建上不可测。
+- **更新器活在容器里，不在 ViewModel 里。** 下载要能熬过用户退出关于页去看别的，红点要能同时被
+  设置页和「我的」读到。为此 `DefaultAppContainer` 有一个进程级 `appScope`，目前只有它一个租户。
+- **上次检查的结果落盘**（`SettingsRepository` 的更新簿记，和 `notificationSeenCounts` 同类，
+  不进 `UserSettings`）：红点要在冷启动第一帧就在，而不是一次网络往返之后才出现；
+  落盘的答案也让六小时内的重启不再问 GitHub。读出来时**仍然按当前 versionName 过滤一遍**——
+  记录会比写下它的那个版本活得久，装完之后那条记录还在说「1.2.0 出了」。
+
 **会话约定**：
 - **不许硬编码 User-Agent。** 用 `resolveUserAgent()` 从 WebView 读，WebView 那边则**一行都不设**。
   Cloudflare 的 managed challenge 会拿 `User-Agent` header 去和 JS 环境（`navigator.userAgentData`、

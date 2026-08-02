@@ -43,6 +43,7 @@ import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.UpdateDot
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.readableWidth
@@ -218,10 +219,13 @@ fun SettingsScreen(
             SettingsGroup {
                 SettingsRow(
                     title = stringResource(R.string.settings_about_app),
-                    subtitle = stringResource(R.string.settings_version),
+                    subtitle = state.updateVersionName
+                        ?.let { stringResource(R.string.settings_about_app_update, it) }
+                        ?: stringResource(R.string.settings_version),
                     top = true,
                     onClick = onOpenAbout,
                     leading = { Icon(Icons.Default.Info, contentDescription = null) },
+                    trailing = { if (state.updateVersionName != null) UpdateDot() },
                 )
                 SettingsRow(
                     title = stringResource(R.string.settings_licenses),

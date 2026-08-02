@@ -49,6 +49,10 @@ open class NodysseyApp :
         container = DefaultAppContainer(this)
 
         NotificationChannels.ensure(this)
+        // The silent half of 应用内更新: ask once at launch so 设置 and 我的 can carry the dot from
+        // the first frame. Not forced, so the stored answer covers most launches and GitHub is asked
+        // at most once every few hours; a failure updates nothing and says nothing.
+        container.appUpdateRepository.check()
         // The scheduler follows the settings SSOT rather than being poked from the settings screen,
         // so the schedule is correct even when a setting changes without that screen ever opening.
         applicationScope.launch {

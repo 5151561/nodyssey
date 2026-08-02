@@ -6,12 +6,14 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.AppDispatchers
+import io.github.nodyssey.core.AppVersion
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.NodeSeekClient
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.core.net.UserAgent
 import io.github.nodyssey.core.net.WebViewCookieJar
 import io.github.nodyssey.core.net.resolveUserAgent
+import io.github.nodyssey.core.readAppVersion
 import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
@@ -57,7 +59,14 @@ import io.github.nodyssey.data.nodeimage.DefaultNodeImageRepository
 import io.github.nodyssey.data.nodeimage.NodeImageRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.update.ApkInstaller
+import io.github.nodyssey.data.update.AppUpdateRepository
+import io.github.nodyssey.data.update.DefaultAppUpdateRepository
+import io.github.nodyssey.data.update.GitHubReleaseSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 /**
@@ -98,6 +107,15 @@ interface AppContainer {
     val termsRepository: TermsRepository
 
     val followRepository: FollowRepository
+
+    /** The installed build's own version. Read once; the About screen and the updater both use it. */
+    val appVersion: AppVersion
+
+    /** 应用内更新: asks GitHub Releases, holds the answer, fetches the APK. */
+    val appUpdateRepository: AppUpdateRepository
+
+    /** The other half of it — handing that APK to the platform installer. */
+    val apkInstaller: ApkInstaller
 
     /*
      * The site-only page left. Typed here rather than left out so that wiring it up later is a single
@@ -299,4 +317,55 @@ class DefaultAppContainer(
      * ones the WebView collects have to be the same cookies, or "am I signed in" gets two answers.
      */
     override val sessionRepository: SessionRepository by lazy { SessionRepository(cookieJar) }
+
+    override val appVersion: AppVersion by lazy { readAppVersion(appContext) }
+
+    /**
+     * A third client, for github.com only.
+     *
+     * Same reasoning as [nodeImageClient]: [okHttpClient] carries the NodeSeek session cookies and
+     * stamps `Referer: nodeseek.com` on anything without one, and neither belongs on a call to a
+     * host that has no part in that session. The User-Agent names the app and its version instead of
+     * borrowing the device's browser UA — GitHub's API asks callers to identify themselves, and
+     * there is no challenge here to impersonate a browser for.
+     */
+    private val gitHubClient: OkHttpClient by lazy {
+        OkHttpClient
+            .Builder()
+            .connectionPool(okHttpClient.connectionPool)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            // An APK download is minutes of streaming, not a page read.
+            .readTimeout(120, TimeUnit.SECONDS)
+            .build()
+    }
+
+    /**
+     * Lives as long as the process, and has exactly one tenant.
+     *
+     * The update download has to survive the 关于 screen being left — a ViewModel scope would cancel
+     * it the moment the user backs out to read what changed — and the silent check at launch belongs
+     * to no screen at all.
+     */
+    private val appScope = CoroutineScope(SupervisorJob() + dispatchers.default)
+
+    override val appUpdateRepository: AppUpdateRepository by lazy {
+        DefaultAppUpdateRepository(
+            source =
+            GitHubReleaseSource(
+                okHttpClient = gitHubClient,
+                dispatchers = dispatchers,
+                userAgent = "Nodyssey/${appVersion.name} (+https://github.com/${GitHubReleaseSource.REPOSITORY})",
+            ),
+            store = settingsRepository,
+            clock = clock,
+            dispatchers = dispatchers,
+            scope = appScope,
+            currentVersionName = appVersion.name,
+            // The cache: an APK that has been installed is dead weight, and one that never got
+            // installed is not worth keeping across a system cleanup either.
+            downloadDirectory = File(appContext.cacheDir, "updates"),
+        )
+    }
+
+    override val apkInstaller: ApkInstaller by lazy { ApkInstaller(appContext, dispatchers) }
 }

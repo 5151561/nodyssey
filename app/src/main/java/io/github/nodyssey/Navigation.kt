@@ -2,7 +2,6 @@ package io.github.nodyssey
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -85,10 +84,10 @@ import io.github.nodyssey.ui.profile.ProfileRoute
 import io.github.nodyssey.ui.profile.ProfileViewModel
 import io.github.nodyssey.ui.search.SearchRoute
 import io.github.nodyssey.ui.search.SearchViewModel
-import io.github.nodyssey.ui.settings.AboutAppScreen
+import io.github.nodyssey.ui.settings.AboutAppRoute
+import io.github.nodyssey.ui.settings.AboutAppViewModel
 import io.github.nodyssey.ui.settings.AboutCommunityScreen
 import io.github.nodyssey.ui.settings.AppLinks
-import io.github.nodyssey.ui.settings.AppUpdateStatus
 import io.github.nodyssey.ui.settings.ChangelogScreen
 import io.github.nodyssey.ui.settings.CommunityLinks
 import io.github.nodyssey.ui.settings.NotificationSettingsRoute
@@ -327,10 +326,14 @@ fun MainNavigation(
             entry<ProfileKey> {
                 val viewModel: ProfileViewModel =
                     viewModel(factory = ProfileViewModel.factory(container))
+                // Read here rather than folded into ProfileViewModel: signing out rebuilds that
+                // state from scratch, and whether a newer APK exists is not a fact about the session.
+                val updateState by container.appUpdateRepository.state.collectAsStateWithLifecycle()
                 ProfileRoute(
                     viewModel = viewModel,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                     onSettings = { backStack.add(SettingsKey) },
+                    hasAppUpdate = updateState.available != null,
                     onAccountSettings = { backStack.add(AccountSettingsKey) },
                     onOpenWebsite = { openExternalUrl(NodeSeekSite.BASE_URL) },
                     onOpenSpace = { uid -> backStack.add(UserSpaceKey(uid, isSelf = true)) },
@@ -365,22 +368,11 @@ fun MainNavigation(
             }
 
             entry<AboutAppKey> {
-                val context = LocalContext.current
-                val packageInfo =
-                    remember(context) {
-                        context.packageManager.getPackageInfo(context.packageName, 0)
-                    }
-                AboutAppScreen(
-                    versionName = packageInfo.versionName.orEmpty().ifBlank { "—" },
-                    versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        packageInfo.longVersionCode
-                    } else {
-                        @Suppress("DEPRECATION")
-                        packageInfo.versionCode.toLong()
-                    },
-                    updateStatus = AppUpdateStatus.Unknown,
+                val viewModel: AboutAppViewModel =
+                    viewModel(factory = AboutAppViewModel.factory(container))
+                AboutAppRoute(
+                    viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
-                    onCheckUpdates = { openExternalUrl(AppLinks.RELEASES) },
                     onOpenChangelog = { backStack.add(ChangelogKey) },
                     onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
                     onOpenUri = openExternalUrl,
@@ -443,13 +435,8 @@ fun MainNavigation(
             }
 
             entry<ChangelogKey> {
-                val context = LocalContext.current
-                val versionName = remember(context) {
-                    context.packageManager.getPackageInfo(context.packageName, 0)
-                        .versionName.orEmpty().ifBlank { "—" }
-                }
                 ChangelogScreen(
-                    versionName = versionName,
+                    versionName = container.appVersion.name.ifBlank { "—" },
                     onBack = { backStack.removeLastOrNull() },
                     onOpenReleases = { openExternalUrl(AppLinks.RELEASES) },
                 )
