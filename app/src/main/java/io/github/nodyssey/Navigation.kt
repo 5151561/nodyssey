@@ -648,9 +648,6 @@ fun MainNavigation(
                             ),
                         )
                     },
-                    // 打开 Bot 会话 is Telegram's own link, and belongs to whatever owns the scheme —
-                    // the Telegram app, or the browser's web version. Never the in-app web view.
-                    onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
                 )
             }
 
