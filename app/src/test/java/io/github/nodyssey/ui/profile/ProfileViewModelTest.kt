@@ -41,6 +41,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -180,6 +181,41 @@ class ProfileViewModelTest {
         }
 
     @Test
+    fun `keeps today's receipt on screen while a re-check runs`() =
+        runTest(dispatcher) {
+            val assets = FakeAssetsRepository(gain = 7)
+            val viewModel =
+                ProfileViewModel(
+                    session = SessionRepository(WebViewCookieJar(cookieManager)),
+                    postRepository = NoOpPostRepository,
+                    profileRepository =
+                    FakeProfileRepository(
+                        UserProfile(
+                            uid = 31037,
+                            name = "缭雾",
+                            avatarUrl = "https://www.nodeseek.com/avatar/31037.png",
+                        ),
+                    ),
+                    assetsRepository = assets,
+                )
+            advanceUntilIdle()
+
+            // What returning to the foreground does. The button must not fall back to 检查中… — the
+            // answer it is already showing stays true until the ledger says otherwise.
+            viewModel.refreshAttendance()
+            runCurrent()
+
+            assertFalse(viewModel.uiState.value.isAttendanceUnknown)
+            assertEquals(true, viewModel.uiState.value.hasSignedInToday)
+            assertEquals(7, viewModel.uiState.value.attendanceGain)
+
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.isAttendanceUnknown)
+            assertEquals(7, viewModel.uiState.value.attendanceGain)
+        }
+
+    @Test
     fun `opens attendance board in the profile state without navigation`() =
         runTest(dispatcher) {
             val entries =
@@ -221,21 +257,30 @@ private class FakeAssetsRepository(
     private val board: List<AttendanceBoardEntry> = emptyList(),
 ) : AssetsRepository {
     private val status = MutableStateFlow<AttendanceStatus?>(null)
+    var refreshCount = 0
+        private set
 
     override fun observeAttendanceStatus(): StateFlow<AttendanceStatus?> = status
 
     override suspend fun growth(): GrowthSnapshot = error("Not used")
 
-    override suspend fun refreshAttendanceStatus(uid: Long): AttendanceStatus =
-        AttendanceStatus(
+    override suspend fun refreshAttendanceStatus(uid: Long): AttendanceStatus {
+        refreshCount++
+        return AttendanceStatus(
             uid = uid,
+            date = TODAY,
             hasSignedIn = gain != null,
             gain = gain,
         ).also { status.value = it }
+    }
 
     override suspend fun signInForToday(mode: AttendanceMode): AttendanceResult = error("Not used")
 
     override suspend fun attendanceBoard(page: Int): List<AttendanceBoardEntry> = board
+
+    private companion object {
+        val TODAY: LocalDate = LocalDate.of(2026, 8, 2)
+    }
 }
 
 private class FakeProfileRepository(

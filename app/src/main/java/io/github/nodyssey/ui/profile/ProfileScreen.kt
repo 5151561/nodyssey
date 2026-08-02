@@ -34,7 +34,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,7 +49,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.net.NodeSeekError
@@ -82,9 +85,7 @@ fun ProfileRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refreshAttendance()
-    }
+    RefreshOnReturnToForeground(viewModel::refreshAttendance)
     ProfileScreen(
         state = state,
         onSignIn = onSignIn,
@@ -104,6 +105,32 @@ fun ProfileRoute(
         onTools = onTools,
         modifier = modifier,
     )
+}
+
+/**
+ * Runs [onForeground] when the app comes back to the foreground — and only then.
+ *
+ * `LifecycleEventEffect(ON_RESUME)` would not do: this entry has no lifecycle of its own (the tabs
+ * share the activity's), and `LifecycleRegistry` replays the up-events an already-resumed owner has
+ * passed to every observer that joins late. Since 我的 leaves composition on each tab switch and
+ * re-enters on the way back, that replay made "returning to the tab" indistinguishable from
+ * "returning to the app", and fired the callback on every visit. The replayed event is dropped here;
+ * the real transitions after it are the ones worth reacting to.
+ */
+@Composable
+internal fun RefreshOnReturnToForeground(onForeground: () -> Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentOnForeground by rememberUpdatedState(onForeground)
+    DisposableEffect(lifecycleOwner) {
+        var replay = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
+                if (replay) replay = false else currentOnForeground()
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 }
 
 @Composable
@@ -173,7 +200,7 @@ fun ProfileScreen(
             item(key = "attendance") {
                 Button(
                     onClick = if (state.hasSignedInToday) onAttendanceBoard else onAttendance,
-                    enabled = !state.isCheckingAttendance,
+                    enabled = !state.isAttendanceUnknown,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
                     colors =
@@ -184,7 +211,7 @@ fun ProfileScreen(
                     },
                 ) {
                     when {
-                        state.isCheckingAttendance -> {
+                        state.isAttendanceUnknown -> {
                             CircularProgressIndicator(Modifier.size(18.dp))
                             Text(
                                 stringResource(R.string.profile_attendance_checking),

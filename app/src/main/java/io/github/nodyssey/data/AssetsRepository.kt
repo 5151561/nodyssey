@@ -62,9 +62,15 @@ data class AttendanceResult(
     val message: String?,
 )
 
-/** The signed-in account's attendance receipt for the current NodeSeek calendar day. */
+/**
+ * The signed-in account's attendance receipt for one NodeSeek calendar day.
+ *
+ * [date] is that day in the site's zone, and it is what makes the receipt cacheable: without it a
+ * "已签到" read from yesterday is indistinguishable from one taken a minute ago.
+ */
 data class AttendanceStatus(
     val uid: Long,
+    val date: LocalDate,
     val hasSignedIn: Boolean,
     val gain: Int? = null,
 )
@@ -94,7 +100,14 @@ interface AssetsRepository {
 
     suspend fun growth(): GrowthSnapshot
 
-    /** Checks the account's own ledger without performing the sign-in write. */
+    /**
+     * Checks the account's own ledger without performing the sign-in write.
+     *
+     * A "已签到" receipt already held for today is returned as-is rather than re-read: signing in is
+     * one-way within a NodeSeek day, so that answer cannot go stale before the date rolls over, and
+     * re-reading it costs up to ten ledger pages. An unsigned day is always re-checked — that one
+     * can change from anywhere, including the site itself.
+     */
     suspend fun refreshAttendanceStatus(uid: Long): AttendanceStatus
 
     suspend fun signInForToday(mode: AttendanceMode): AttendanceResult
@@ -191,7 +204,12 @@ class NetworkAssetsRepository(
         val gain = attendanceRecordToday() ?: attendanceGainToday()
         profileRepository.selfUid?.let { uid ->
             attendanceStatus.value =
-                AttendanceStatus(uid = uid, hasSignedIn = gain != null, gain = gain)
+                AttendanceStatus(
+                    uid = uid,
+                    date = clock.nowMillis().toDate(),
+                    hasSignedIn = gain != null,
+                    gain = gain,
+                )
         }
         return if (gain != null) {
             DailyQuota(used = gain, total = gain)
@@ -259,6 +277,7 @@ class NetworkAssetsRepository(
             attendanceStatus.value =
                 AttendanceStatus(
                     uid = uid,
+                    date = clock.nowMillis().toDate(),
                     hasSignedIn = true,
                     gain = resolvedGain,
                 )
@@ -267,9 +286,14 @@ class NetworkAssetsRepository(
     }
 
     override suspend fun refreshAttendanceStatus(uid: Long): AttendanceStatus {
+        val today = clock.nowMillis().toDate()
+        attendanceStatus.value?.let { cached ->
+            if (cached.uid == uid && cached.date == today && cached.hasSignedIn) return cached
+        }
         val gain = attendanceGainToday()
         return AttendanceStatus(
             uid = uid,
+            date = today,
             hasSignedIn = gain != null,
             gain = gain,
         ).also { attendanceStatus.value = it }

@@ -1,13 +1,22 @@
 package io.github.nodyssey.ui.profile
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.nodyssey.data.AttendanceBoardEntry
 import io.github.nodyssey.ui.theme.NodysseyTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -280,4 +289,58 @@ class ProfileScreenTest {
         composeRule.onNodeWithText("缭雾").assertIsDisplayed()
         composeRule.onNodeWithText("+7").assertIsDisplayed()
     }
+
+    /**
+     * 我的 shares the activity's lifecycle and re-enters composition on every tab switch, so an
+     * observer that joins an already-resumed owner is handed a replayed ON_RESUME. Reacting to that
+     * one is what re-checked the sign-in on every visit.
+     */
+    @Test
+    fun `foreground effect ignores the resume replayed to a late observer`() {
+        val owner = FakeLifecycleOwner()
+        owner.registry.currentState = Lifecycle.State.RESUMED
+        var refreshes = 0
+        var attached by mutableStateOf(true)
+        composeRule.setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides owner) {
+                if (attached) RefreshOnReturnToForeground { refreshes++ }
+            }
+        }
+
+        composeRule.waitForIdle()
+        assertEquals(0, refreshes)
+
+        // Leaving 我的 for another tab and coming back: a second late observer, a second replay.
+        attached = false
+        composeRule.waitForIdle()
+        attached = true
+        composeRule.waitForIdle()
+
+        assertEquals(0, refreshes)
+    }
+
+    @Test
+    fun `foreground effect reacts to a real return to the foreground`() {
+        val owner = FakeLifecycleOwner()
+        owner.registry.currentState = Lifecycle.State.RESUMED
+        var refreshes = 0
+        composeRule.setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides owner) {
+                RefreshOnReturnToForeground { refreshes++ }
+            }
+        }
+        composeRule.waitForIdle()
+
+        owner.registry.currentState = Lifecycle.State.CREATED
+        owner.registry.currentState = Lifecycle.State.RESUMED
+        composeRule.waitForIdle()
+
+        assertEquals(1, refreshes)
+    }
+}
+
+private class FakeLifecycleOwner : LifecycleOwner {
+    val registry = LifecycleRegistry(this)
+
+    override val lifecycle: Lifecycle get() = registry
 }
