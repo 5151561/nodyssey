@@ -43,6 +43,10 @@ class PostDetailViewModel(
     private val postId: Long,
     private val repository: PostRepository,
     session: StateFlow<SessionState> = MutableStateFlow(SessionState()),
+    /** The floor a notification or a quote came in on, as the site labels it (`"#127"`). */
+    private val initialFloor: String? = null,
+    /** The page a `/post-703863-4` link named, when the thread was opened from one. */
+    private val initialPage: Int? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostDetailUiState())
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
@@ -69,10 +73,11 @@ class PostDetailViewModel(
                             body = null,
                             comments = emptyList(),
                             commentPages = emptyList(),
-                            page = 1,
+                            firstLoadedPage = 1,
+                            lastLoadedPage = 1,
                             totalPages = 1,
                             hasNextPage = false,
-                            pendingScrollPage = null,
+                            pendingScroll = null,
                         )
                     }
                     return@collect
@@ -84,7 +89,8 @@ class PostDetailViewModel(
                         body = thread.body,
                         comments = thread.comments,
                         commentPages = thread.commentPages,
-                        page = thread.loadedPages,
+                        firstLoadedPage = thread.firstLoadedPage,
+                        lastLoadedPage = thread.lastLoadedPage,
                         totalPages = thread.totalPages,
                         hasNextPage = thread.hasNextPage,
                     )
@@ -124,57 +130,85 @@ class PostDetailViewModel(
             }.launchIn(viewModelScope)
 
         viewModelScope.launch {
-            // A thread read moments ago needs no request; the observation above has already painted it.
-            if (!repository.isThreadFresh(postId)) {
-                load(page = 1, append = false)
+            // Opening on a notification's floor, or on the page a `/post-703863-4` link named, starts
+            // the thread there. Page 1 is only the default, not where every read begins.
+            val start = startPage()
+            if (initialFloor != null || start > 1) {
+                _uiState.update { it.copy(pendingScroll = PendingScroll(start, initialFloor)) }
+            }
+            // A thread read moments ago needs no request — but only if the page being asked for is
+            // one of the pages it cached; freshness says nothing about a page nobody has fetched.
+            val cached = repository.cachedPages(postId)
+            if (cached == null || start !in cached || !repository.isThreadFresh(postId)) {
+                load(page = start, replacesWindow = true)
             }
         }
     }
 
-    fun refresh() = load(page = 1, append = false)
+    /** Where this thread opens: the floor's page, the link's page, or the top. */
+    private fun startPage(): Int =
+        NodeSeekSite
+            .parseFloorNumber(initialFloor)
+            ?.let(NodeSeekSite::pageOfFloor)
+            ?: initialPage?.coerceAtLeast(1)
+            ?: 1
+
+    fun refresh() = load(page = _uiState.value.firstLoadedPage, replacesWindow = true)
 
     /**
-     * Comments are paginated on the site but read as one thread on a phone, so later pages are
+     * Comments are paginated on the site but read as one thread on a phone, so the next page is
      * appended to the same list rather than replacing it. The append itself happens in the database.
      */
     fun loadNextPage() {
         val state = _uiState.value
         if (state.isLoading || state.isAppending || !state.hasNextPage) return
-        load(page = state.page + 1, append = true)
+        load(page = state.lastLoadedPage + 1, replacesWindow = false)
     }
 
     /**
-     * Brings [page] onto the screen without breaking the database invariant that loaded pages form a
-     * contiguous prefix. A page already in the list is a scroll target, not a fetch; a page beyond
-     * the prefix is reached by fetching every page up to it, so the list never has a gap.
+     * Brings [page] onto the screen, fetching it when it is not one of the loaded ones.
+     *
+     * The site serves any page directly, so a jump is one request: page 12 is fetched as page 12 and
+     * becomes what the screen shows. It used to be reached by fetching pages 2 through 12 in turn, to
+     * keep the loaded pages a prefix of the thread — which on a long thread meant dozens of requests
+     * and, in practice, a control that never arrived anywhere it had not already been.
+     *
+     * Only the pages either side of the loaded slice extend it. Those are the ones a reader reaches
+     * by continuing to read, and joining them on keeps the thread one uninterrupted scroll.
      */
-    fun loadPage(page: Int) {
+    fun loadPage(page: Int) = bringIntoView(page, floor = null)
+
+    /**
+     * Scrolls to [floor], loading the page it lives on when it is not on screen.
+     *
+     * The site names a floor without saying where it is — a notification carries `floor_id`, a quote
+     * reference an `#4` anchor — so the page is computed from the floor number.
+     */
+    fun jumpToFloor(floor: String) {
+        val number = NodeSeekSite.parseFloorNumber(floor) ?: return
+        bringIntoView(NodeSeekSite.pageOfFloor(number), floor = floor)
+    }
+
+    private fun bringIntoView(
+        page: Int,
+        floor: String?,
+    ) {
         val state = _uiState.value
-        if (page < 1 || page > state.totalPages) return
-        if (page <= state.page) {
-            _uiState.update { it.copy(pendingScrollPage = page) }
+        val target = page.coerceAtLeast(1)
+        if (target > state.totalPages) return
+        val scroll = PendingScroll(target, floor)
+        if (target in state.firstLoadedPage..state.lastLoadedPage) {
+            _uiState.update { it.copy(pendingScroll = scroll) }
             return
         }
         if (state.isLoading || state.isAppending) return
-        loadJob?.cancel()
-        _uiState.update { it.copy(isAppending = true, error = null) }
-        loadJob =
-            viewModelScope.launch {
-                runCatchingExceptCancellation {
-                    for (next in state.page + 1..page) repository.refreshThread(postId, next)
-                }.onSuccess {
-                    _uiState.update { it.copy(isAppending = false, pendingScrollPage = page) }
-                }.onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(isAppending = false, error = throwable.toNodeSeekError())
-                    }
-                }
-            }
+        val adjoins = target == state.firstLoadedPage - 1 || target == state.lastLoadedPage + 1
+        load(page = target, replacesWindow = !adjoins, scrollTo = scroll)
     }
 
-    /** The screen has scrolled to [PostDetailUiState.pendingScrollPage]; stop asking it to. */
-    fun onPageScrollHandled() {
-        _uiState.update { it.copy(pendingScrollPage = null) }
+    /** The screen has scrolled to [PostDetailUiState.pendingScroll]; stop asking it to. */
+    fun onScrollHandled() {
+        _uiState.update { it.copy(pendingScroll = null) }
     }
 
     /**
@@ -233,37 +267,57 @@ class PostDetailViewModel(
         }
     }
 
+    /**
+     * @param replacesWindow true when [page] becomes the whole of the cached thread — a first read, a
+     *   retry, or a jump — and false when it joins the pages already loaded.
+     */
     private fun load(
         page: Int,
-        append: Boolean,
+        replacesWindow: Boolean,
+        scrollTo: PendingScroll? = null,
     ) {
         loadJob?.cancel()
-        _uiState.update { it.copy(isLoading = !append, isAppending = append, error = null) }
+        _uiState.update {
+            it.copy(isLoading = replacesWindow, isAppending = !replacesWindow, error = null)
+        }
         loadJob =
             viewModelScope.launch {
-                runCatchingExceptCancellation { repository.refreshThread(postId, page) }
-                    .onSuccess {
-                        // Neither content nor the read mark is applied here: both follow from the Room
-                        // observation above, so there is exactly one path by which either can happen.
-                        _uiState.update { it.copy(isLoading = false, isAppending = false) }
-                    }.onFailure { throwable ->
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                isAppending = false,
-                                error = throwable.toNodeSeekError(),
-                            )
-                        }
+                runCatchingExceptCancellation {
+                    if (replacesWindow) {
+                        repository.refreshThread(postId, page)
+                    } else {
+                        repository.extendThread(postId, page)
                     }
+                }.onSuccess {
+                    // Neither content nor the read mark is applied here: both follow from the Room
+                    // observation above, so there is exactly one path by which either can happen.
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isAppending = false,
+                            pendingScroll = scrollTo ?: it.pendingScroll,
+                        )
+                    }
+                }.onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isAppending = false,
+                            error = throwable.toNodeSeekError(),
+                        )
+                    }
+                }
             }
     }
 
-    fun postUrl(): String = NodeSeekSite.BASE_URL + NodeSeekSite.postPath(postId, _uiState.value.page)
+    fun postUrl(): String = NodeSeekSite.BASE_URL + NodeSeekSite.postPath(postId, _uiState.value.lastLoadedPage)
 
     companion object {
         fun factory(
             container: AppContainer,
             postId: Long,
+            initialFloor: String? = null,
+            initialPage: Int? = null,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -271,6 +325,8 @@ class PostDetailViewModel(
                         postId,
                         container.postRepository,
                         container.sessionRepository.state,
+                        initialFloor,
+                        initialPage,
                     )
                 }
             }
@@ -283,14 +339,17 @@ data class PostDetailUiState(
     val comments: List<PostContent> = emptyList(),
     /** The site page each comment came from, index-aligned with [comments]. */
     val commentPages: List<Int> = emptyList(),
-    val page: Int = 1,
+    /** The first site page held in [comments] — not always 1, since a jump loads its page alone. */
+    val firstLoadedPage: Int = 1,
+    /** The last site page held in [comments]. */
+    val lastLoadedPage: Int = 1,
     val totalPages: Int = 1,
     val hasNextPage: Boolean = false,
     val isLoading: Boolean = false,
     val isAppending: Boolean = false,
     val isSignedIn: Boolean = false,
-    /** A page the screen should scroll to once its comments are in [comments]. */
-    val pendingScrollPage: Int? = null,
+    /** Where the screen should scroll once the content it names has arrived in [comments]. */
+    val pendingScroll: PendingScroll? = null,
     val error: NodeSeekError? = null,
     /** The floor whose reaction is in flight, so its row can show it and refuse a second tap. */
     val pendingReaction: PendingReaction? = null,
@@ -303,6 +362,18 @@ data class PostDetailUiState(
 data class PendingReaction(
     val commentId: Long,
     val action: ReactionAction,
+)
+
+/**
+ * A scroll the screen still owes the reader.
+ *
+ * [page] is what decides whether the target has arrived — a floor that is not in the list yet is
+ * indistinguishable from one that was deleted, but "is this page loaded" is answerable. [floor] is
+ * the precise target when the site named one; without it the page's first floor will do.
+ */
+data class PendingScroll(
+    val page: Int,
+    val floor: String? = null,
 )
 
 /**

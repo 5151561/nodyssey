@@ -27,7 +27,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CacheSessionEntity::class,
         SelfProfileEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -50,7 +50,7 @@ abstract class NodeSeekDatabase : RoomDatabase() {
                 .databaseBuilder(context, NodeSeekDatabase::class.java, "nodeseek.db")
                 // Known upgrades preserve local state explicitly. The fallback remains for unknown
                 // legacy versions whose downloaded content can be rebuilt; schemas stay checked in.
-                .addMigrations(MIGRATION_3_4)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }
@@ -80,6 +80,22 @@ internal val MIGRATION_3_4 =
                     PRIMARY KEY(`sessionFingerprint`)
                 )
                 """.trimIndent(),
+            )
+        }
+    }
+
+/**
+ * Gives a cached thread a start as well as an end, so a jump can load page 12 alone.
+ *
+ * Every v4 row held a prefix that began at page 1, which is exactly the default, and `loadedPages`
+ * counted that prefix — the same number as the window's last page. So the whole upgrade is one
+ * column, and no stored thread has to be re-fetched to be readable.
+ */
+internal val MIGRATION_4_5 =
+    object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "ALTER TABLE `post_details` ADD COLUMN `firstLoadedPage` INTEGER NOT NULL DEFAULT 1",
             )
         }
     }

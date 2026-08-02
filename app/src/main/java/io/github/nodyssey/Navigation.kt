@@ -203,7 +203,8 @@ fun MainNavigation(
     }
     val openContentUrl: (String) -> Unit = { url ->
         when (val route = NodeSeekSite.parseInternalRoute(url)) {
-            is NodeSeekSite.InternalRoute.Post -> backStack.add(PostDetailKey(route.postId))
+            is NodeSeekSite.InternalRoute.Post ->
+                backStack.add(PostDetailKey(route.postId, page = route.page))
 
             is NodeSeekSite.InternalRoute.Space -> openSpace(route.uid)
 
@@ -742,7 +743,13 @@ fun MainNavigation(
                 val viewModel: PostDetailViewModel =
                     viewModel(
                         key = "post-${key.postId}",
-                        factory = PostDetailViewModel.factory(container, key.postId),
+                        factory =
+                        PostDetailViewModel.factory(
+                            container,
+                            key.postId,
+                            initialFloor = key.floor,
+                            initialPage = key.page,
+                        ),
                     )
                 // Its own ViewModel, keyed the same way: an unsent reply belongs to one thread
                 // and has to outlive the sheet that shows it.
@@ -754,7 +761,6 @@ fun MainNavigation(
                 PostDetailRoute(
                     viewModel = viewModel,
                     replyViewModel = replyViewModel,
-                    initialFloor = key.floor,
                     showBackButton =
                     !(currentListDetailExpanded && backStack.firstOrNull() == PostListKey),
                     onBack = { backStack.removeLastOrNull() },
