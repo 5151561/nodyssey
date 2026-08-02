@@ -23,7 +23,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-class NodysseyApp :
+// Open only so the unit tests can install a subclass carrying Robolectric's teardown hook; see
+// RobolectricApp in the test sources. Nothing in the app subclasses this.
+open class NodysseyApp :
     Application(),
     SingletonImageLoader.Factory,
     Configuration.Provider {
