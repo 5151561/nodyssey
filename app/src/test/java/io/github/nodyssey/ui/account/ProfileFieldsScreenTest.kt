@@ -84,6 +84,18 @@ class ProfileFieldsScreenTest {
     }
 
     @Test
+    fun `the plain bio field sends the strip away`() {
+        setContent()
+
+        composeRule.onNodeWithText("签名").performScrollTo().requestFocus()
+        composeRule.onNodeWithContentDescription("加粗").assertIsDisplayed()
+
+        // Bio holds no Markdown, so keys standing over it would write somewhere off screen.
+        composeRule.onNodeWithText("Bio").performScrollTo().requestFocus()
+        composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
+    }
+
+    @Test
     fun `readme offers the block keys a signature does not`() {
         setContent()
 

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -64,6 +63,7 @@ import io.github.nodyssey.ui.composer.EditorToolbar
 import io.github.nodyssey.ui.composer.applyMarkdown
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
+import io.github.nodyssey.ui.theme.paddingWithKeyboard
 import io.github.nodyssey.ui.theme.readableWidth
 
 @Composable
@@ -157,13 +157,13 @@ fun ProfileFieldsScreen(
         // Edge-to-edge makes API 30+ ignore the manifest's adjustResize, and Scaffold's default
         // insets exclude the IME, so without this the keyboard covers Readme with no way to scroll
         // it back into view. It sits on the outer column so the strip rides the keyboard's top edge
-        // instead of scrolling away with the form. Same shape as the post composer.
+        // rather than scrolling away with the form — see [paddingWithKeyboard] for why the strip
+        // rests on the keyboard instead of hovering a navigation bar above it.
         Column(
             modifier =
             Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .imePadding(),
+                .paddingWithKeyboard(padding)
+                .fillMaxSize(),
         ) {
             Column(
                 modifier =
@@ -180,6 +180,10 @@ fun ProfileFieldsScreen(
                     onFailed = onAvatarFailed,
                 )
 
+                // Bio is one line of plain text — the site renders no Markdown in it — so it gets no
+                // formatting keys. It has to *dismiss* them, though: the strip's target is sticky, and
+                // one left standing while the caret sits here would write into a field the user can no
+                // longer see. Focus landing on any plain field is the end of the strip's business.
                 OutlinedTextField(
                     value = state.bio,
                     onValueChange = onBioChange,
@@ -187,7 +191,10 @@ fun ProfileFieldsScreen(
                     placeholder = { Text(stringResource(R.string.account_bio_hint)) },
                     singleLine = true,
                     shape = AccountFieldShape,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { if (it.isFocused) target = null },
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {

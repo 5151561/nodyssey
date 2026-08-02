@@ -1,6 +1,10 @@
 package io.github.nodyssey.ui.theme
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.ui.Alignment
@@ -54,3 +58,25 @@ fun Modifier.readableWidth(): Modifier =
         .fillMaxWidth()
         .wrapContentWidth(Alignment.CenterHorizontally)
         .widthIn(max = Sizes.readableContentWidth)
+
+/**
+ * Takes a `Scaffold`'s content padding *and* the keyboard, without paying for the bottom twice.
+ *
+ * `Scaffold` hands out padding that already contains the navigation bar, and `imePadding` asks for
+ * the keyboard's full height — which is measured from the bottom of the window, navigation bar
+ * included. Applied one after the other they stack, and whatever sits at the bottom of the screen
+ * floats a navigation bar's worth above the keyboard instead of resting on it. That gap is the
+ * recurring bug: every editor that pins a formatting strip to the keyboard has had it, and it looks
+ * enough like a design decision that it survives review.
+ *
+ * [consumeWindowInsets] is the missing step. It tells the `imePadding` below it that the bottom
+ * inset has already been handled, so the keyboard padding applies only what is left.
+ *
+ * Only for content inside a `Scaffold`. A bottom sheet gets no such padding and wants a bare
+ * `imePadding()` — see the reply composer, which is why that one has always sat flush.
+ */
+fun Modifier.paddingWithKeyboard(padding: PaddingValues): Modifier =
+    this
+        .padding(padding)
+        .consumeWindowInsets(padding)
+        .imePadding()

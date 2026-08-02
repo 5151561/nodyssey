@@ -10,11 +10,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -89,6 +87,7 @@ import io.github.nodyssey.ui.composer.toPickedImages
 import io.github.nodyssey.ui.richtext.RichContent
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
+import io.github.nodyssey.ui.theme.paddingWithKeyboard
 
 @Composable
 fun MessageThreadRoute(
@@ -197,7 +196,7 @@ fun MessageThreadScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize().imePadding()) {
+        Column(Modifier.paddingWithKeyboard(padding).fillMaxSize()) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Box(Modifier.weight(1f)) {
                 when {

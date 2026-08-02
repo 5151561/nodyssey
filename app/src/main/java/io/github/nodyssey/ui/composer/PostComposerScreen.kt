@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -76,6 +75,7 @@ import io.github.nodyssey.ui.common.EditorTextField
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.theme.PostBody
 import io.github.nodyssey.ui.theme.Spacing
+import io.github.nodyssey.ui.theme.paddingWithKeyboard
 import io.github.nodyssey.ui.theme.readableWidth
 import java.text.DateFormat
 import java.util.Date
@@ -248,7 +248,7 @@ fun PostComposerScreen(
                 onRetryAttachment = onRetryAttachment,
                 onToolbarChange = onToolbarChange,
                 onToolbarReset = onToolbarReset,
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.paddingWithKeyboard(padding),
             )
         }
     }
@@ -365,7 +365,9 @@ private fun EditorContent(
     val focusRequester = remember { FocusRequester() }
     var customizing by rememberSaveable { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxSize().imePadding()) {
+    // The keyboard padding is the caller's — [paddingWithKeyboard] has to sit next to the Scaffold
+    // padding it consumes, and applying `imePadding` again here would put the gap right back.
+    Column(modifier = modifier.fillMaxSize()) {
         ComposerOptions(state = state, onBoardSelect = onBoardSelect, onPermissionSelect = onPermissionSelect)
         TitleField(titleState = titleState, length = state.title.length)
         BodyArea(
