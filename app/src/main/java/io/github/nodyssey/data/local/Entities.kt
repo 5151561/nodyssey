@@ -1,5 +1,6 @@
 package io.github.nodyssey.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -159,6 +160,14 @@ data class FeedRemoteKeyEntity(
 // Post detail
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * A cached thread, plus which slice of it is cached.
+ *
+ * [firstLoadedPage]..[lastLoadedPage] is a *window*, not a prefix: opening a notification for #127
+ * fetches the one page that floor lives on and nothing before it, so the window can start anywhere.
+ * Both ends are stored because both survive process death and neither is derivable from the comment
+ * rows — a page whose comments were all deleted still counts as loaded.
+ */
 @Entity(tableName = "post_details")
 data class PostDetailEntity(
     @PrimaryKey val postId: Long,
@@ -166,8 +175,15 @@ data class PostDetailEntity(
     /** Null when only later comment pages have been fetched — page 1 is the one that carries it. */
     val body: PostContent?,
     val totalPages: Int,
-    /** Highest comment page fetched so far, so "is there more" survives process death. */
-    val loadedPages: Int,
+    /** The window's first page. 1 for a thread read from the top, which is most of them. */
+    val firstLoadedPage: Int = 1,
+    /**
+     * The window's last page, so "is there more" survives process death.
+     *
+     * The column keeps its old name: it used to be a count of a prefix, which for a window starting
+     * at page 1 is the same number, so v4 rows migrate by adding [firstLoadedPage] and nothing else.
+     */
+    @ColumnInfo(name = "loadedPages") val lastLoadedPage: Int,
     val cachedAtMillis: Long,
 )
 

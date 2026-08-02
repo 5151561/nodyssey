@@ -285,7 +285,11 @@ private object NoOpPostRepository : PostRepository {
 
     override suspend fun refreshThread(postId: Long, page: Int) = Unit
 
+    override suspend fun extendThread(postId: Long, page: Int) = Unit
+
     override suspend fun isThreadFresh(postId: Long): Boolean = false
+
+    override suspend fun cachedPages(postId: Long): IntRange? = null
 
     override suspend fun markThreadRead(postId: Long) = Unit
 

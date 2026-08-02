@@ -49,7 +49,7 @@ class PostDetailCacheTest {
             assertEquals("thread 42", thread.title)
             assertNotNull(thread.body)
             assertEquals(3, thread.comments.size)
-            assertEquals(1, thread.loadedPages)
+            assertEquals(1, thread.lastLoadedPage)
             assertEquals(2, thread.totalPages)
             assertTrue(thread.hasNextPage)
         }
@@ -72,13 +72,13 @@ class PostDetailCacheTest {
             }
 
             repository.refreshThread(postId = 42, page = 1)
-            repository.refreshThread(postId = 42, page = 2)
+            repository.extendThread(postId = 42, page = 2)
 
             val thread = requireNotNull(repository.thread(42).first())
             val bodyText = (requireNotNull(thread.body).nodes.first() as RichNode.CodeBlock).code
             assertEquals("the original post", bodyText)
             assertEquals(4, thread.comments.size)
-            assertEquals(2, thread.loadedPages)
+            assertEquals(2, thread.lastLoadedPage)
         }
 
     @Test
@@ -89,8 +89,8 @@ class PostDetailCacheTest {
             }
 
             repository.refreshThread(postId = 42, page = 1)
-            repository.refreshThread(postId = 42, page = 2)
-            repository.refreshThread(postId = 42, page = 3)
+            repository.extendThread(postId = 42, page = 2)
+            repository.extendThread(postId = 42, page = 3)
 
             val texts =
                 requireNotNull(repository.thread(42).first())
@@ -117,7 +117,7 @@ class PostDetailCacheTest {
                 FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 2)
             }
             repository.refreshThread(postId = 42, page = 1)
-            repository.refreshThread(postId = 42, page = 2)
+            repository.extendThread(postId = 42, page = 2)
             assertEquals(4, requireNotNull(repository.thread(42).first()).comments.size)
 
             remote.detailResult = { postId, page ->
@@ -128,23 +128,83 @@ class PostDetailCacheTest {
             assertEquals(1, requireNotNull(repository.thread(42).first()).comments.size)
         }
 
-    /** Re-reading page 1 deletes later rows, so the contiguous-page cursor resets with them. */
+    /** Re-reading page 1 deletes later rows, so the loaded slice has to close up behind them. */
     @Test
-    fun `re-reading page one resets the contiguous loaded page count`() =
+    fun `re-reading page one resets the loaded slice`() =
         runTest {
             remote.detailResult = { postId, page ->
                 FakePostRemoteDataSource.detail(postId, page, commentCount = 1, totalPages = 5)
             }
 
             repository.refreshThread(postId = 42, page = 1)
-            repository.refreshThread(postId = 42, page = 2)
-            repository.refreshThread(postId = 42, page = 3)
+            repository.extendThread(postId = 42, page = 2)
+            repository.extendThread(postId = 42, page = 3)
             repository.refreshThread(postId = 42, page = 1)
 
             val thread = requireNotNull(repository.thread(42).first())
-            assertEquals(1, thread.loadedPages)
+            assertEquals(1, thread.firstLoadedPage)
+            assertEquals(1, thread.lastLoadedPage)
             assertEquals(1, thread.comments.size)
             assertTrue(thread.hasNextPage)
+        }
+
+    /**
+     * A jump is a fresh read of a page far from the cached ones. Keeping page 1 alongside page 12
+     * would make the list read as one scroll while skipping the hundred floors in between.
+     */
+    @Test
+    fun `refreshing a distant page makes it the whole of the cache`() =
+        runTest {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 20)
+            }
+            repository.refreshThread(postId = 42, page = 1)
+
+            repository.refreshThread(postId = 42, page = 12)
+
+            val thread = requireNotNull(repository.thread(42).first())
+            assertEquals(12, thread.firstLoadedPage)
+            assertEquals(12, thread.lastLoadedPage)
+            assertEquals(listOf(12, 12), thread.commentPages)
+            // Page 12 carries no opening post; the one already read stays readable above it.
+            assertNotNull(thread.body)
+        }
+
+    /** Paging back from a jumped-to page widens the slice downwards rather than starting over. */
+    @Test
+    fun `extending backwards keeps the pages already loaded`() =
+        runTest {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 20)
+            }
+            repository.refreshThread(postId = 42, page = 12)
+
+            repository.extendThread(postId = 42, page = 11)
+
+            val thread = requireNotNull(repository.thread(42).first())
+            assertEquals(11, thread.firstLoadedPage)
+            assertEquals(12, thread.lastLoadedPage)
+            assertEquals(listOf(11, 11, 12, 12), thread.commentPages)
+        }
+
+    /**
+     * An extend that does not adjoin the slice is not an extend. Storing it as one would leave a hole
+     * in the middle of a list the reader scrolls straight through.
+     */
+    @Test
+    fun `extending to a page with a gap before it starts a new slice`() =
+        runTest {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 20)
+            }
+            repository.refreshThread(postId = 42, page = 1)
+
+            repository.extendThread(postId = 42, page = 7)
+
+            val thread = requireNotNull(repository.thread(42).first())
+            assertEquals(7, thread.firstLoadedPage)
+            assertEquals(7, thread.lastLoadedPage)
+            assertEquals(listOf(7, 7), thread.commentPages)
         }
 
     @Test

@@ -1,5 +1,8 @@
 package io.github.nodyssey.ui.postdetail
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -15,6 +18,7 @@ import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.theme.NodysseyTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,9 +42,10 @@ class PostDetailScreenTest {
         signature: List<RichNode> = emptyList(),
         /** Null is a page that never carried the tallies, which is what disables the three marks. */
         reactions: PostReactions? = null,
+        floor: String? = null,
     ) = PostContent(
         commentId = text.hashCode().toLong(),
-        floor = null,
+        floor = floor,
         authorName = author,
         authorUid = 1,
         avatarUrl = null,
@@ -61,6 +66,7 @@ class PostDetailScreenTest {
         onOpenBrowser: (String) -> Unit = {},
         onSignIn: () -> Unit = {},
         onReact: (Long, ReactionAction) -> Unit = { _, _ -> },
+        onLoadPage: (Int) -> Unit = {},
     ) {
         composeRule.setContent {
             NodysseyTheme {
@@ -72,6 +78,7 @@ class PostDetailScreenTest {
                     onImageClick = {},
                     onRetry = onRetry,
                     onLoadMore = {},
+                    onLoadPage = onLoadPage,
                     onSignIn = onSignIn,
                     onReact = onReact,
                 )
@@ -281,4 +288,121 @@ class PostDetailScreenTest {
 
         composeRule.onNodeWithText("重试").assertDoesNotExist()
     }
+
+    /**
+     * A thread opened on page 13 is on page 13, and the toolbar has to say so. It read the first
+     * *loaded* comment's page as page 1 while the slice always started there, and would have gone on
+     * claiming page 1 of 40 for a reader who had jumped.
+     */
+    @Test
+    fun `the toolbar reads the page the reader jumped to`() {
+        setScreen(jumpedState())
+
+        composeRule.onNodeWithText("第 13 / 40 页").assertIsDisplayed()
+    }
+
+    /** Paging on from a jumped-to slice asks for the page after it, not for page 2. */
+    @Test
+    fun `the next page button asks for the page after the loaded slice`() {
+        var requested: Int? = null
+        setScreen(
+            jumpedState(),
+            onLoadPage = { requested = it },
+        )
+
+        composeRule.onNodeWithContentDescription("下一页").performClick()
+
+        assertEquals(14, requested)
+    }
+
+    /** And back the other way: the page before the slice, which is not on screen either. */
+    @Test
+    fun `the previous page button asks for the page before the loaded slice`() {
+        var requested: Int? = null
+        setScreen(
+            jumpedState(),
+            onLoadPage = { requested = it },
+        )
+
+        composeRule.onNodeWithContentDescription("上一页").performClick()
+
+        assertEquals(12, requested)
+    }
+
+    /**
+     * The last leg of a notification: the page it named has arrived, and the floor on it has to be
+     * the thing the reader is looking at rather than the top of the page.
+     */
+    @Test
+    fun `a pending scroll lands on its floor once the page holding it is loaded`() {
+        setScreen(jumpedState(pendingScroll = PendingScroll(page = 13, floor = "#127")))
+
+        composeRule.onNodeWithText("floor 127").assertIsDisplayed()
+        // The opening post sits above the whole page and must have scrolled off with it.
+        composeRule.onNodeWithText("the opening post").assertDoesNotExist()
+    }
+
+    /** A page jump with no floor named lands on the page's first floor, not back on the opening post. */
+    @Test
+    fun `a pending scroll to a page lands on that page's first floor`() {
+        setScreen(jumpedState(pendingScroll = PendingScroll(page = 13)))
+
+        composeRule.onNodeWithText("floor 121").assertIsDisplayed()
+        composeRule.onNodeWithText("the opening post").assertDoesNotExist()
+    }
+
+    /**
+     * Both pages hold ten floors, so nothing about the *size* of the list changes when one replaces
+     * the other. Waiting on the comment count is what made a jump between two equal-length pages
+     * arrive and then sit there without scrolling.
+     */
+    @Test
+    fun `a jump between two pages of the same length still scrolls`() {
+        var state by mutableStateOf(
+            jumpedState(
+                floors = (41..50).toList(),
+                page = 5,
+                pendingScroll = null,
+            ),
+        )
+        composeRule.setContent {
+            NodysseyTheme {
+                PostDetailScreen(
+                    state = state,
+                    postUrl = "https://www.nodeseek.com/post-1-5",
+                    onBack = {},
+                    onOpenBrowser = {},
+                    onImageClick = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                )
+            }
+        }
+        composeRule.onNodeWithText("floor 41").assertIsDisplayed()
+
+        // The order the ViewModel produces: the request to scroll is set when the fetch returns, and
+        // the page it asked for arrives afterwards, on Room's own emission.
+        state = state.copy(pendingScroll = PendingScroll(page = 13, floor = "#127"))
+        composeRule.waitForIdle()
+        state = jumpedState(pendingScroll = PendingScroll(page = 13, floor = "#127"))
+
+        composeRule.onNodeWithText("floor 127").assertIsDisplayed()
+    }
+
+    /** One page of a long thread, loaded on its own — what a jump or a notification produces. */
+    private fun jumpedState(
+        floors: List<Int> = (121..130).toList(),
+        page: Int = 13,
+        pendingScroll: PendingScroll? = null,
+    ) = PostDetailUiState(
+        title = "a long thread",
+        body = content("the opening post"),
+        comments = floors.map { content("floor $it", floor = "#$it") },
+        commentPages = List(floors.size) { page },
+        firstLoadedPage = page,
+        lastLoadedPage = page,
+        totalPages = 40,
+        hasNextPage = true,
+        pendingScroll = pendingScroll,
+    )
 }

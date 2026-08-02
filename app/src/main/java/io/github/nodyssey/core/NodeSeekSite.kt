@@ -71,6 +71,27 @@ object NodeSeekSite {
 
     fun postPath(postId: Long, page: Int = 1): String = "/post-$postId-${page.coerceAtLeast(1)}"
 
+    /**
+     * Floors per comment page.
+     *
+     * Needed because the site names a floor and leaves the page implicit: a reply notification carries
+     * `floor_id` and nothing else, and `a.floor-link` is a bare `#4` anchor. Without this constant the
+     * only way to reach floor #127 is to walk every page until it turns up.
+     *
+     * Ten is what the committed `post-703863-1` capture holds — the opening post plus #1–#10, with the
+     * pager offering four pages — and the value confirmed against the live site.
+     */
+    const val COMMENTS_PER_PAGE = 10
+
+    /**
+     * The page [floor] is rendered on. `#0` is the opening post, which the site puts on page 1 with
+     * floors #1–#10.
+     */
+    fun pageOfFloor(floor: Int): Int = if (floor <= 0) 1 else (floor - 1) / COMMENTS_PER_PAGE + 1
+
+    /** `"#127"` → 127. Null for a floor the site did not number, which is nothing to jump to. */
+    fun parseFloorNumber(floor: String?): Int? = floor?.trim()?.removePrefix("#")?.trim()?.toIntOrNull()
+
     fun spacePath(uid: Long): String = "/space/$uid"
 
     /**
