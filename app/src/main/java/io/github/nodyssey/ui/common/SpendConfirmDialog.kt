@@ -43,6 +43,10 @@ data class SpendDetail(
  * [shortfall] is what turns it into a dead end on purpose: when the balance cannot cover the amount,
  * the confirm button is disabled and the gap is named, because "确认" that fails server-side teaches
  * the user nothing.
+ *
+ * [isSending] seals the layer while the request is in flight — no second tap, no cancel, no dismiss by
+ * back or by tapping outside. None of those can call the spend back once it has left, and a layer that
+ * vanishes mid-flight would leave the user with no idea whether it went.
  */
 @Composable
 fun SpendConfirmDialog(
@@ -55,9 +59,10 @@ fun SpendConfirmDialog(
     modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Default.Warning,
     shortfall: String? = null,
+    isSending: Boolean = false,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isSending) onDismiss() },
         modifier = modifier,
         icon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         title = { Text(title, style = MaterialTheme.typography.headlineSmall) },
@@ -115,12 +120,14 @@ fun SpendConfirmDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, enabled = shortfall == null) {
+            TextButton(onClick = onConfirm, enabled = shortfall == null && !isSending) {
                 Text(confirmLabel)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss, enabled = !isSending) {
+                Text(stringResource(R.string.action_cancel))
+            }
         },
     )
 }

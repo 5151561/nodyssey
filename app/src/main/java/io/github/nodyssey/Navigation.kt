@@ -559,25 +559,19 @@ fun MainNavigation(
                 val viewModel: StardustViewModel =
                     viewModel(factory = StardustViewModel.factory(container))
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
-                // The ledger URL is per-member, so it exists only once the profile call has said
-                // who we are. The screen keeps the transfer entry off until then — landing a
-                // just-confirmed transfer on the home page would silently drop the typed form.
+                // The ledger URL is per-member, so it exists only once the profile call has said who
+                // we are; before that "在网页打开" can only offer the site's front page.
                 val ledgerUrl = state.uid?.let { NodeSeekSite.BASE_URL + NodeSeekSite.stardustPath(it) }
-                val openLedger = {
-                    backStack.add(
-                        WebKey(ledgerUrl ?: NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.MANAGE),
-                    )
-                    Unit
-                }
                 StardustRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
                     // The ledger needs the session's cookies, so it opens in-app like every other
                     // authenticated page rather than in the cookie-less system browser.
-                    onOpenBrowser = openLedger,
-                    // Confirmed in the app, submitted on the site: sending stardust is irreversible
-                    // and the endpoint is undocumented, so the last step stays where it works.
-                    onTransferOnSite = openLedger,
+                    onOpenBrowser = {
+                        backStack.add(
+                            WebKey(ledgerUrl ?: NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.MANAGE),
+                        )
+                    },
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                 )
             }

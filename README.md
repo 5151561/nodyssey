@@ -41,7 +41,7 @@ scrolling stays in one list, and the UI follows the system theme.
 - 应用内更新：从本项目 GitHub Releases 查新版、看更新说明、下载后直接拉起系统安装器；
   冷启动静默查一次（最多每六小时问一次 GitHub），有新版就在「我的」和关于入口上点红点
 
-修改邮箱、绑定 Telegram、星辰转账、邀请码购买没有原生闭环，会带用户到真实站点完成。
+修改邮箱、绑定 Telegram、邀请码购买没有原生闭环，会带用户到真实站点完成。
 逐项清单见 [docs/implementation-status.md](docs/implementation-status.md)。
 
 各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，当前版本 1.1.0。
@@ -128,7 +128,7 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 - [x] 等级进度与今日四项额度（`/api/progress/today`）
 - [x] 管理记录（`/api/admin/ruling/page-N`）
 - [x] 应用内检查更新、下载与安装（GitHub `releases/latest` + `PackageInstaller`）
-- [ ] 星辰转账原生化（站点有 `payment-prepare` / `send`，目前仍转网页）
+- [x] 星辰转账原生化（`payment-prepare` 回显收款人 + `send` 提交）
 
 ## 架构
 

@@ -307,6 +307,18 @@ class NodeSeekJsonClient(
 
         const val STARDUST_PAGE_SIZE = 20
 
+        /*
+         * 星辰转账: the two writes behind the site's own transfer layer.
+         *
+         * `payment-prepare` takes `{receiver_id, origin}` and answers `{success, receiver_name}` —
+         * it is the name echo the site shows on its confirmation step, not a token the send depends
+         * on; `send` takes `{member_id, diff, ref_id}` on its own and there is no Turnstile in front
+         * of either. `member_id` on the send is the **receiver**: the sender is whoever the cookie
+         * says, and the site never puts its own id in the body.
+         */
+        const val PATH_STARDUST_PREPARE = "/api/stardust/payment-prepare"
+        const val PATH_STARDUST_SEND = "/api/stardust/send"
+
         /** `?all=true` with an empty body. */
         fun markAllViewedPath(type: String) = "/api/notification/$type/markViewed?all=true"
 

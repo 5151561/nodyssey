@@ -15,6 +15,7 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import androidx.paging.cachedIn
 import io.github.nodyssey.core.net.NodeSeekError
+import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.ProfileRepository
@@ -51,6 +52,37 @@ data class TransferForm(
     val isComplete: Boolean get() = amountValue != null && recipientValue != null && refValue != null
 }
 
+/**
+ * What the site says the typed recipient uid belongs to.
+ *
+ * The form takes a bare number and the site's own confirmation layer echoes a name back, so the app
+ * does the same: a mistyped digit is another real account, and the amount cannot be recalled once it
+ * lands there.
+ */
+sealed interface RecipientCheck {
+    data object Checking : RecipientCheck
+
+    data class Named(val name: String) : RecipientCheck
+
+    /**
+     * No name came back. [reason] is the site's own sentence when it gave one.
+     *
+     * Deliberately **not** a block on 确认转账. The lookup is a courtesy `payment-prepare` performs and
+     * `send` does not depend on it, so a lookup that fails for its own reasons — a rejected `origin`,
+     * a moment offline — must not be able to make transfers impossible in the app. It changes the
+     * caution line instead, which is what the user acts on.
+     */
+    data class Unnamed(val reason: String?) : RecipientCheck
+}
+
+/** Something the screen has to say once, in a snackbar. */
+sealed interface StardustMessage {
+    data class Sent(val amount: Int) : StardustMessage
+
+    /** [detail] is the refusal in the site's own words, which is more use than anything we'd write. */
+    data class Failed(val error: NodeSeekError, val detail: String?) : StardustMessage
+}
+
 data class StardustUiState(
     /** The profile call only. The ledger is a `PagingData` stream and reports its own load state. */
     val isLoadingBalance: Boolean = true,
@@ -67,6 +99,11 @@ data class StardustUiState(
     val transferOpen: Boolean = false,
     val confirmOpen: Boolean = false,
     val form: TransferForm = TransferForm(),
+    /** Null until 下一步 asks; see [RecipientCheck]. */
+    val recipient: RecipientCheck? = null,
+    /** In flight and irreversible: the confirmation layer refuses to close or fire twice while true. */
+    val isSending: Boolean = false,
+    val message: StardustMessage? = null,
 ) {
     /** How far the balance falls short of the amount typed, or null when it covers it. */
     val shortfall: Int?
@@ -80,10 +117,11 @@ data class StardustUiState(
 /**
  * State holder for 星辰.
  *
- * Both halves are real now. The balance comes from the account endpoint; the ledger comes from
+ * All three parts are real now. The balance comes from the account endpoint; the ledger comes from
  * `/api/stardust/list`, whose contract was read out of the site's own bundle on 2026-07-30 — until
- * then this screen's list deliberately said "not wired" rather than guess. What has not moved into the
- * app is the *write*: sending stardust is irreversible, so the last step still happens on the site.
+ * then this screen's list deliberately said "not wired" rather than guess. The write moved in last,
+ * once the same note produced `payment-prepare` and `send`: until then the confirmation step ended by
+ * opening the website, which meant the three fields the user had just filled in were retyped there.
  *
  * The ledger cannot be requested before the profile call answers, because the endpoint is per-member
  * and there is no "me" form of it. So the pager hangs off the uid rather than starting in `init`.
@@ -117,6 +155,8 @@ class StardustViewModel(
             }.cachedIn(viewModelScope)
 
     private var profileJob: Job? = null
+    private var recipientJob: Job? = null
+    private var sendJob: Job? = null
 
     init {
         refresh()
@@ -154,7 +194,10 @@ class StardustViewModel(
 
     fun openTransfer() = _uiState.update { it.copy(transferOpen = true) }
 
-    fun dismissTransfer() = _uiState.update { it.copy(transferOpen = false, confirmOpen = false) }
+    fun dismissTransfer() {
+        recipientJob?.cancel()
+        _uiState.update { it.copy(transferOpen = false, confirmOpen = false, recipient = null) }
+    }
 
     fun requestConfirm() {
         // Parsed from the fields rather than read off the mirror: what the confirmation step shows
@@ -163,17 +206,116 @@ class StardustViewModel(
         // check that let it open.
         val form = parseForm()
         if (!form.isComplete) return
-        _uiState.update { it.copy(form = form, confirmOpen = true) }
+        val recipient = form.recipientValue ?: return
+        val viewer = _uiState.value.uid
+        _uiState.update {
+            it.copy(form = form, confirmOpen = true, recipient = RecipientCheck.Checking)
+        }
+        recipientJob?.cancel()
+        recipientJob =
+            viewModelScope.launch {
+                // The layer opens before the answer arrives rather than after it: a confirmation step
+                // that waits on the network to appear reads as a dead 下一步 button.
+                val check =
+                    if (viewer == null) {
+                        RecipientCheck.Unnamed(null)
+                    } else {
+                        runCatchingExceptCancellation {
+                            stardustRepository.recipientName(recipient, viewer)
+                        }.fold(
+                            onSuccess = { name ->
+                                name?.let(RecipientCheck::Named) ?: RecipientCheck.Unnamed(null)
+                            },
+                            onFailure = { throwable ->
+                                RecipientCheck.Unnamed((throwable as? NodeSeekException)?.detail)
+                            },
+                        )
+                    }
+                // Only if the same recipient is still the one being confirmed: a lookup that lands
+                // after the user went back and retyped would otherwise name the previous uid.
+                _uiState.update {
+                    if (it.confirmOpen && it.form.recipientValue == recipient) {
+                        it.copy(recipient = check)
+                    } else {
+                        it
+                    }
+                }
+            }
     }
 
-    fun dismissConfirm() = _uiState.update { it.copy(confirmOpen = false) }
+    fun dismissConfirm() {
+        if (_uiState.value.isSending) return
+        recipientJob?.cancel()
+        _uiState.update { it.copy(confirmOpen = false, recipient = null) }
+    }
 
-    /** Clears the form after the transfer has been handed to the site's own page. */
-    fun transferHandedOff() {
+    /**
+     * Sends, for real and for good.
+     *
+     * Guarded rather than trusted to the disabled button: this is the one call in the app that cannot
+     * be taken back, and a second tap landing between the first one and the recomposition would send
+     * the amount twice.
+     */
+    fun confirmTransfer() {
+        val state = _uiState.value
+        if (state.isSending || state.shortfall != null) return
+        val form = state.form
+        val recipient = form.recipientValue ?: return
+        val amountValue = form.amountValue ?: return
+        val ref = form.refValue ?: return
+        val viewer = state.uid ?: return
+        sendJob?.cancel()
+        sendJob =
+            viewModelScope.launch {
+                _uiState.update { it.copy(isSending = true) }
+                runCatchingExceptCancellation {
+                    stardustRepository.send(
+                        recipientUid = recipient,
+                        amount = amountValue,
+                        refId = ref,
+                        viewerUid = viewer,
+                    )
+                }.onSuccess {
+                    clearForm()
+                    _uiState.update {
+                        it.copy(
+                            isSending = false,
+                            transferOpen = false,
+                            confirmOpen = false,
+                            recipient = null,
+                            form = TransferForm(),
+                            message = StardustMessage.Sent(amountValue),
+                        )
+                    }
+                    // The balance and the ledger both moved. Re-reading is the only way to know by
+                    // how much: the response says whether it landed, not what is left.
+                    refresh()
+                }.onFailure { throwable ->
+                    // The form stays as typed and its dialog stays open, because the most likely
+                    // refusals — not enough stardust, a uid that cannot receive — are things the user
+                    // fixes in these three fields and sends again.
+                    _uiState.update {
+                        it.copy(
+                            isSending = false,
+                            confirmOpen = false,
+                            recipient = null,
+                            message =
+                            StardustMessage.Failed(
+                                error = throwable.toNodeSeekError(),
+                                detail = (throwable as? NodeSeekException)?.detail,
+                            ),
+                        )
+                    }
+                }
+            }
+    }
+
+    fun consumeMessage() = _uiState.update { it.copy(message = null) }
+
+    private fun clearForm() {
         amount.clearText()
         recipientUid.clearText()
         refId.clearText()
-        _uiState.update { it.copy(transferOpen = false, confirmOpen = false, form = TransferForm()) }
     }
 
     private fun parseForm(): TransferForm =
