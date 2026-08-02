@@ -50,6 +50,9 @@ enum class EditorAction {
  *   costs a second message, not a deleted topic.
  * - [Signature] omits images and quotes because NodeSeek's own helper text says signatures support
  *   neither. Offering keys the server will strip is the failure the reduced set exists to avoid.
+ * - [Readme] is the longest, because a Readme is a document: it is the one field the space page runs
+ *   through the full Markdown renderer, so headings, lists and quotes all land. It stops short of
+ *   images and emoji only because the profile form hosts neither a picker nor a panel.
  */
 object EditorActions {
     val Post =
@@ -85,6 +88,18 @@ object EditorActions {
             EditorAction.BOLD,
             EditorAction.ITALIC,
             EditorAction.STRIKETHROUGH,
+            EditorAction.LINK,
+            EditorAction.CODE,
+        )
+
+    val Readme =
+        listOf(
+            EditorAction.BOLD,
+            EditorAction.ITALIC,
+            EditorAction.STRIKETHROUGH,
+            EditorAction.HEADING,
+            EditorAction.LIST,
+            EditorAction.QUOTE,
             EditorAction.LINK,
             EditorAction.CODE,
         )

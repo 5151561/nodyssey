@@ -37,7 +37,7 @@ class ReplyComposerScreenTest {
                     state = state,
                     onDismiss = {},
                     bodyState = rememberTextFieldState(state.body),
-                    onClearQuote = {},
+                    onClearReplyTo = {},
                     onPreviewChange = {},
                     onPickImages = {},
                     onRemoveAttachment = {},

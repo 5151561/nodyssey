@@ -22,15 +22,12 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -40,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -448,8 +446,14 @@ private fun ProfileHeader(
     state: ProfileUiState,
     onOpenSpace: () -> Unit,
 ) {
+    // 头像和 ID 本身就是进空间的入口，右边再挂一个编辑按钮只是重复，去掉。
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .clickable(onClickLabel = stringResource(R.string.profile_space), onClick = onOpenSpace)
+            .padding(vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
@@ -470,24 +474,6 @@ private fun ProfileHeader(
                 text = state.memberSince ?: stringResource(R.string.profile_session_active),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        // The tonal flavour owns the circle and the fill, so the ripple is clipped to the same shape
-        // it draws; the hand-rolled version clipped the container but not the indication.
-        FilledTonalIconButton(
-            onClick = onOpenSpace,
-            modifier = Modifier.size(48.dp),
-            shape = CircleShape,
-            colors =
-            IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Edit,
-                contentDescription = stringResource(R.string.profile_space),
-                modifier = Modifier.size(20.dp),
             )
         }
     }
