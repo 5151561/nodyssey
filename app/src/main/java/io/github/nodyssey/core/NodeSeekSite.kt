@@ -120,6 +120,16 @@ object NodeSeekSite {
     fun stardustPath(uid: Long): String = "/stardust/list?member_id=$uid"
 
     const val RULING_PATH = "/ruling"
+
+    /**
+     * 管理记录, page [page].
+     *
+     * The page number is a **hash route**, not a path segment: the table is a Vue app whose own
+     * paginator links `#/p-2`, and `/ruling/page-2` — the scheme every server-rendered list here uses
+     * — is a 404 (verified live 2026-08-02). Worth a function rather than a constant because both the
+     * referer and the "open in browser" fallback should land on the page the user was reading.
+     */
+    fun rulingPath(page: Int = 1): String = if (page <= 1) RULING_PATH else "$RULING_PATH#/p-$page"
     const val INVITE_PATH = "/invite"
     const val LUCKY_PATH = "/lucky"
     const val PROVIDERS_PATH = "/providers"

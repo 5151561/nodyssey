@@ -144,16 +144,18 @@
     <string name="post_auto_paging">自动续页</string>
     <string name="post_reply_action">回复</string>
     <string name="post_quote_action">引用</string>
-    <string name="post_previous_page">上一页</string>
-    <string name="post_next_page">下一页</string>
-    <string name="post_page_of">第 %1$d / %2$d 页</string>
-    <string name="post_jump_title">跳转到</string>
+    <!-- Shared by the paged-and-appending lists: the comment thread and 管理记录 -->
+    <string name="page_jump_previous">上一页</string>
+    <string name="page_jump_next">下一页</string>
+    <string name="page_jump_page_of">第 %1$d / %2$d 页</string>
+    <string name="page_jump_title">跳转到</string>
+    <string name="page_jump_input">页码（1–%1$d）</string>
+    <string name="page_jump_first">第一页</string>
+    <string name="page_jump_latest_read">上次阅读</string>
+    <string name="page_jump_last">最后一页</string>
+    <string name="page_jump_go">前往第 %1$s 页</string>
+    <!-- The "what is loaded" line each list words in its own noun -->
     <string name="post_page_progress">第 %1$d / %2$d 页 · 已载入 %3$d 楼</string>
-    <string name="post_page_input">页码（1–%1$d）</string>
-    <string name="post_first_page">第一页</string>
-    <string name="post_latest_read">上次阅读</string>
-    <string name="post_last_page">最后一页</string>
-    <string name="post_go_page">前往第 %1$s 页</string>
     <string name="post_reply_editor_title">回复</string>
     <string name="post_reply_editor_title_floor">回复 #%1$d · %2$s</string>
     <string name="post_reply_editor_hint">写下你的回复…</string>
@@ -767,9 +769,33 @@
     <string name="ruling_title">管理记录</string>
     <string name="ruling_subtitle">处罚与奖励公示</string>
     <string name="ruling_target_kind"> 的%1$s</string>
+    <string name="ruling_target_post">帖子</string>
+    <string name="ruling_target_comment">评论</string>
     <string name="ruling_reason"> · 因「%1$s」</string>
     <string name="ruling_meta">%1$s · 管理员 %2$s · %3$s</string>
     <string name="ruling_meta_no_moderator">%1$s · %2$s</string>
+    <string name="ruling_action_none">—</string>
+    <string name="ruling_action_coin_add">加 %1$d 鸡腿</string>
+    <string name="ruling_action_coin_deduct">扣 %1$d 鸡腿</string>
+    <string name="ruling_action_stardust_add">加 %1$d 星辰</string>
+    <string name="ruling_action_stardust_deduct">扣 %1$d 星辰</string>
+    <string name="ruling_action_title">标题改为「%1$s」</string>
+    <string name="ruling_action_move">移动版块至 %1$s</string>
+    <string name="ruling_action_rank">阅读权限改为 %1$d</string>
+    <string name="ruling_action_lock">锁定修改</string>
+    <string name="ruling_action_unlock">解锁修改</string>
+    <string name="ruling_action_award">设为推荐阅读</string>
+    <string name="ruling_action_award_cancel">取消推荐阅读</string>
+    <string name="ruling_action_hide">隐藏内容</string>
+    <string name="ruling_action_hide_all">隐藏全部内容</string>
+    <string name="ruling_action_unhide">取消隐藏内容</string>
+    <string name="ruling_action_unhide_all">取消隐藏全部内容</string>
+    <string name="ruling_action_pin">置顶评论</string>
+    <string name="ruling_action_unpin">取消置顶评论</string>
+    <string name="ruling_action_suspend">禁言 %1$d 天</string>
+    <string name="ruling_action_unsuspend">解除禁言</string>
+    <string name="ruling_page_progress">第 %1$d / %2$d 页 · 已载入 %3$d 条</string>
+    <string name="ruling_page_cap">站点只公开前 %1$d 页，更早的记录要到网页上查</string>
 
     <!-- Profile menu entries added by the 8/9 batch -->
     <string name="profile_space">我的主页</string>

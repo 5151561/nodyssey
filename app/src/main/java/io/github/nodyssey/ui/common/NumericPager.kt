@@ -28,10 +28,14 @@ import io.github.nodyssey.ui.theme.TABULAR_FIGURES
 /**
  * The site's numeric pager, for the lists that have one instead of infinite scroll.
  *
- * Curated threads and the moderation log are read by page number on the site — "第 104 页" is how
- * people refer to them — and both run to three digits, so an endless scroll would replace a two-tap
- * jump with a hundred flings. The window is deliberately narrow: current page, its neighbours, and
- * the last page, with an ellipsis standing in for everything skipped.
+ * Curated threads are read by page number on the site — "第 104 页" is how people refer to them — and
+ * run to three digits, so an endless scroll alone would replace a two-tap jump with a hundred flings.
+ * The window is deliberately narrow: current page, its neighbours, and the last page, with an
+ * ellipsis standing in for everything skipped.
+ *
+ * 管理记录 used this and no longer does: it now appends while you scroll and keeps the jump in a
+ * [PageJumpSheet], which is the pairing the comment thread already had. The same move is open to this
+ * screen whenever it is worth making — nothing here is load-bearing for it.
  */
 @Composable
 fun NumericPager(

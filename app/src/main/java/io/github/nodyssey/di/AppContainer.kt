@@ -30,6 +30,7 @@ import io.github.nodyssey.data.NetworkFollowRepository
 import io.github.nodyssey.data.NetworkMessageRepository
 import io.github.nodyssey.data.NetworkPostDataSource
 import io.github.nodyssey.data.NetworkProfileRepository
+import io.github.nodyssey.data.NetworkRulingRepository
 import io.github.nodyssey.data.NetworkSearchRepository
 import io.github.nodyssey.data.NetworkStardustRepository
 import io.github.nodyssey.data.NetworkTermsRepository
@@ -41,7 +42,6 @@ import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.RulingRepository
 import io.github.nodyssey.data.SearchRepository
-import io.github.nodyssey.data.SiteOnlyRulingRepository
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.data.TermsRepository
 import io.github.nodyssey.data.UserSpaceRepository
@@ -117,10 +117,6 @@ interface AppContainer {
     /** The other half of it — handing that APK to the platform installer. */
     val apkInstaller: ApkInstaller
 
-    /*
-     * The site-only page left. Typed here rather than left out so that wiring it up later is a single
-     * constructor swap — see `SiteOnlyRepositories.kt` for why it answers NotWired today.
-     */
     val rulingRepository: RulingRepository
 
     /**
@@ -261,7 +257,9 @@ class DefaultAppContainer(
         NetworkFollowRepository(jsonClient, dispatchers) { sessionRepository.state.value.isSignedIn }
     }
 
-    override val rulingRepository: RulingRepository by lazy { SiteOnlyRulingRepository() }
+    override val rulingRepository: RulingRepository by lazy {
+        NetworkRulingRepository(jsonClient, dispatchers)
+    }
 
     override val commentComposerRepository: CommentComposerRepository by lazy {
         DefaultCommentComposerRepository(appContext, okHttpClient, dispatchers, clock)

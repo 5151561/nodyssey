@@ -32,13 +32,13 @@ scrolling stays in one list, and the UI follows the system theme.
 - 用户空间、账号设置二级页（资料、头像、密码、2FA、绑定状态、偏好、屏蔽列表）与 Telegram 流程
 - 关注 / 粉丝两份列表，以及公开用户页上的关注 / 取关按钮
 - 等级进度与今日四项额度、鸡腿与星辰余额，鸡腿流水与星辰流水两条真实分页流水，签到 / 签到榜与社区工具
+- 管理记录：处罚与奖励公示，下滑自动接页、跳页与帖子评论共用同一套控件，一条决定的几个动作连在
+  一起显示，点行进对应帖子与楼层
 - WorkManager 通知轮询、Android 通知渠道与免打扰设置
 - f1 关于与社区页；f2 隐私协议原生长文页，WebView 仅作失败降级
 - 图片查看、缩放、保存与分享
 - 站外链接默认开在应用内的 Chrome Custom Tab，返回键回到帖子；设置 › 内容 › 站外链接可改回系统浏览器
 
-管理记录依赖尚未确认的站点数据源，界面会明确提示并提供网页降级，
-不会伪装为空数据。
 修改邮箱、绑定 Telegram、星辰转账、邀请码购买没有原生闭环，会带用户到真实站点完成。
 逐项清单见 [docs/implementation-status.md](docs/implementation-status.md)。
 
@@ -122,7 +122,7 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 - [x] f1 关于与社区、f2 隐私协议原生阅读
 - [x] 关注 / 粉丝列表与关注 / 取关（`/api/fans/{follow,fans,add,del}`）
 - [x] 等级进度与今日四项额度（`/api/progress/today`）
-- [ ] 接入管理记录
+- [x] 管理记录（`/api/admin/ruling/page-N`）
 - [ ] 星辰转账原生化（站点有 `payment-prepare` / `send`，目前仍转网页）
 
 ## 架构

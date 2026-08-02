@@ -36,13 +36,14 @@ sealed interface NodeSeekError {
     /**
      * The page exists on the site but the app has no endpoint for it.
      *
-     * Not a failure of this request — nothing was sent. `/ruling` renders entirely client-side and
-     * exposes no XHR we could read without guessing at a contract, so the screen says so and offers
-     * the web page instead of inventing rows. Distinct from [Unparsable], which means we *did* ask
-     * and could not read the answer.
+     * Not a failure of this request — nothing was sent. A screen in this state says so and offers the
+     * web page instead of inventing rows. Distinct from [Unparsable], which means we *did* ask and
+     * could not read the answer.
      *
-     * `/credit`, `/stardust/list` and `/fans` were all here once; each left when its contract was read
-     * out of the site's own bundle rather than guessed.
+     * `/credit`, `/stardust/list`, `/fans` and `/ruling` were all here once; each left when its
+     * contract was read out of the site's own bundle rather than guessed. No screen answers this
+     * today — the one caller left is a reaction write on a page that arrived without the `__config__`
+     * the write needs.
      */
     data object NotWired : NodeSeekError
 
