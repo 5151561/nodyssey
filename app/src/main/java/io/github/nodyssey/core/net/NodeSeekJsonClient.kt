@@ -23,9 +23,9 @@ data class JsonPostResponse(
  * The handful of real JSON endpoints NodeSeek exposes. They do not cover browsing — lists and post
  * pages are still HTML — but they are authoritative where one exists, so prefer them over scraping.
  *
- * Endpoints under `/api/notification` and `/api/statistics` answer **500 when unauthenticated**
- * rather than 401. [NodeSeekJsonClient] maps that quirk to [NodeSeekError.LoginRequired] itself,
- * so callers see the same error a 401 would have produced.
+ * Endpoints under `/api/notification`, `/api/statistics` and `/api/admin` answer **500 when
+ * unauthenticated** rather than 401. [NodeSeekJsonClient] maps that quirk to
+ * [NodeSeekError.LoginRequired] itself, so callers see the same error a 401 would have produced.
  */
 interface JsonSource {
     suspend fun getJson(path: String, referer: String = NodeSeekSite.BASE_URL + "/"): String
@@ -155,7 +155,12 @@ class NodeSeekJsonClient(
 
     /** The endpoint families that only answer for a signed-in session — see the interface KDoc. */
     private fun isSessionScoped(path: String): Boolean =
-        path.startsWith("/api/notification") || path.startsWith("/api/statistics")
+        path.startsWith("/api/notification") ||
+            path.startsWith("/api/statistics") ||
+            // 管理记录 is public reading behind a private endpoint: signed out it answers 500 with
+            // `{"message":"USER NOT FOUND"}`, so without this the moderation log would offer a retry
+            // button for a state no retry clears.
+            path.startsWith("/api/admin")
 
     override suspend fun postJson(path: String, body: String, referer: String): String =
         withContext(dispatchers.io) {
@@ -348,5 +353,21 @@ class NodeSeekJsonClient(
         /** Both writes take `{"followed_member_id": <uid>}` and answer `{success, message}`. */
         const val PATH_FANS_ADD = "/api/fans/add"
         const val PATH_FANS_DEL = "/api/fans/del"
+
+        /*
+         * 管理记录, read out of the site's own `ruling` bundle on 2026-08-02.
+         *
+         * `admin` names the endpoint, not the caller: any signed-in account reads the log, and the
+         * page number is a path segment here even though the web route pages by hash — see
+         * [io.github.nodyssey.core.NodeSeekSite.rulingPath].
+         *
+         * Both bounds below are the server's, answered as HTTP 200 with `success:false`: page 0 is
+         * "wrong page number" and page 101 is "max page is 100". The cap is real and low enough to
+         * matter — 30 212 decisions is 1 511 pages of twenty, of which the site serves the first 100.
+         */
+        fun rulingPagePath(page: Int): String = "/api/admin/ruling/page-${page.coerceAtLeast(1)}"
+
+        const val RULING_PAGE_SIZE = 20
+        const val RULING_MAX_PAGES = 100
     }
 }

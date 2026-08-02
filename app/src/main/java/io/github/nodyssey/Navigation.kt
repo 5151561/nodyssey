@@ -704,6 +704,10 @@ fun MainNavigation(
                 RulingRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
+                    onPostClick = { postId, floor ->
+                        backStack.add(PostDetailKey(postId, floor = floor?.toString()))
+                    },
+                    onUserClick = openSpace,
                     onOpenBrowser = openExternalUrl,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                 )

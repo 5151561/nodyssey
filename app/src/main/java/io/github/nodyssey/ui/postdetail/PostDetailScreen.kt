@@ -103,6 +103,8 @@ import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.MetaText
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.PageJumpSheet
+import io.github.nodyssey.ui.common.PageJumpToolbarContent
 import io.github.nodyssey.ui.common.RoleBadgeRow
 import io.github.nodyssey.ui.common.SkeletonBar
 import io.github.nodyssey.ui.common.UserAvatar
@@ -439,11 +441,12 @@ fun PostDetailScreen(
     }
 
     if (showPageSheet) {
+        val loadedFloors = state.comments.size + if (state.body != null) 1 else 0
         PageJumpSheet(
             page = visiblePage,
             loadedPage = state.lastLoadedPage,
             totalPages = state.totalPages,
-            loadedFloors = state.comments.size + if (state.body != null) 1 else 0,
+            progress = stringResource(R.string.post_page_progress, visiblePage, state.totalPages, loadedFloors),
             onDismiss = { showPageSheet = false },
             onGo = { target ->
                 showPageSheet = false
@@ -484,96 +487,13 @@ private fun DetailBottomActions(
         },
         modifier = modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
     ) {
-        DetailFloatingToolbarContent(
+        PageJumpToolbarContent(
             page = page,
             totalPages = totalPages,
             onPrevious = onPrevious,
             onNext = onNext,
             onPageClick = onPageClick,
         )
-    }
-}
-
-@Composable
-private fun DetailFloatingToolbarContent(
-    page: Int,
-    totalPages: Int,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    onPageClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.height(48.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
-        IconButton(onClick = onPrevious, enabled = page > 1) {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(R.string.post_previous_page),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        TextButton(onClick = onPageClick, contentPadding = PaddingValues(horizontal = Spacing.sm)) {
-            Text(stringResource(R.string.post_page_of, page, totalPages))
-            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
-        }
-        IconButton(onClick = onNext, enabled = page < totalPages) {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(R.string.post_next_page),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PageJumpSheet(
-    page: Int,
-    loadedPage: Int,
-    totalPages: Int,
-    loadedFloors: Int,
-    onDismiss: () -> Unit,
-    onGo: (Int) -> Unit,
-) {
-    var input by rememberSaveable { mutableStateOf(page.toString()) }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState =
-        rememberBottomSheetState(
-            initialValue = SheetValue.Hidden,
-            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            Text(stringResource(R.string.post_jump_title), style = MaterialTheme.typography.titleLarge)
-            Text(
-                stringResource(R.string.post_page_progress, page, totalPages, loadedFloors),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            OutlinedTextField(
-                value = input,
-                onValueChange = { input = it.filter { character -> character.isDigit() } },
-                label = { Text(stringResource(R.string.post_page_input, totalPages)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                TextButton(onClick = { onGo(1) }) { Text(stringResource(R.string.post_first_page)) }
-                TextButton(onClick = { onGo(loadedPage) }) { Text(stringResource(R.string.post_latest_read)) }
-                TextButton(onClick = { onGo(totalPages) }) { Text(stringResource(R.string.post_last_page)) }
-            }
-            Button(onClick = { input.toIntOrNull()?.let(onGo) }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.post_go_page, input.ifBlank { page.toString() }))
-            }
-        }
     }
 }
 
