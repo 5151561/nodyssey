@@ -6,8 +6,12 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.nodyssey.data.NotificationCounts
+import io.github.nodyssey.data.update.AppRelease
+import io.github.nodyssey.data.update.UpdateCheckRecord
+import io.github.nodyssey.data.update.UpdateCheckStore
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.SearchHistoryEntry
 import io.github.nodyssey.model.SearchTarget
@@ -32,7 +36,7 @@ import java.io.IOException
  */
 class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
-) {
+) : UpdateCheckStore {
     private val json = Json { ignoreUnknownKeys = true }
 
     val settings: Flow<UserSettings> = dataStore.data
@@ -274,6 +278,40 @@ class SettingsRepository(
             it[KEY_SEEN_MESSAGES] = counts.messages
         }
 
+    /**
+     * The last answer GitHub gave about a newer build — bookkeeping like [notificationSeenCounts],
+     * not a user setting, and deliberately absent from [settings].
+     *
+     * It is stored at all so that "有新版本" is on screen the instant the app opens rather than a
+     * network round trip later, and so a relaunch does not re-ask GitHub. A record that fails to
+     * decode reads as "never checked", which costs one extra call and nothing else.
+     */
+    override suspend fun updateCheckRecord(): UpdateCheckRecord {
+        val preferences =
+            dataStore.data
+                .catch { throwable ->
+                    if (throwable is IOException) emit(emptyPreferences()) else throw throwable
+                }.first()
+        return UpdateCheckRecord(
+            checkedAtMillis = preferences[KEY_UPDATE_CHECKED_AT] ?: 0L,
+            release =
+            preferences[KEY_UPDATE_RELEASE]?.let { stored ->
+                runCatching { json.decodeFromString<AppRelease>(stored) }.getOrNull()
+            },
+        )
+    }
+
+    override suspend fun setUpdateCheckRecord(record: UpdateCheckRecord) =
+        edit { preferences ->
+            preferences[KEY_UPDATE_CHECKED_AT] = record.checkedAtMillis
+            val release = record.release
+            if (release == null) {
+                preferences.remove(KEY_UPDATE_RELEASE)
+            } else {
+                preferences[KEY_UPDATE_RELEASE] = json.encodeToString(release)
+            }
+        }
+
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         dataStore.edit(block)
     }
@@ -313,6 +351,8 @@ class SettingsRepository(
         private val KEY_SEEN_REPLIES = intPreferencesKey("notification_seen_replies")
         private val KEY_SEEN_MENTIONS = intPreferencesKey("notification_seen_mentions")
         private val KEY_SEEN_MESSAGES = intPreferencesKey("notification_seen_messages")
+        private val KEY_UPDATE_CHECKED_AT = longPreferencesKey("update_checked_at")
+        private val KEY_UPDATE_RELEASE = stringPreferencesKey("update_latest_release")
 
         private const val RECENT_SEARCH_SEPARATOR = '\u001F'
         private const val MAX_RECENT_SEARCHES = 8

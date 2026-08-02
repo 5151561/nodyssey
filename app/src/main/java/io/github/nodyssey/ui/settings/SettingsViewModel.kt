@@ -11,6 +11,7 @@ import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
+import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.di.AppContainer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,12 +24,20 @@ class SettingsViewModel(
     private val settings: SettingsRepository,
     private val posts: PostRepository,
     private val session: SessionRepository,
+    updates: AppUpdateRepository,
 ) : ViewModel() {
     private val clearingCache = MutableStateFlow(false)
 
     val uiState: StateFlow<SettingsUiState> =
-        combine(settings.settings, clearingCache) { values, clearing ->
-            SettingsUiState(settings = values, isClearingCache = clearing)
+        combine(settings.settings, clearingCache, updates.state) { values, clearing, update ->
+            SettingsUiState(
+                settings = values,
+                isClearingCache = clearing,
+                // Read off the shared updater rather than checked here: the answer is already in
+                // memory by the time this screen opens, and 我的 shows the same dot from the same
+                // state.
+                updateVersionName = update.available?.versionName,
+            )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -72,6 +81,7 @@ class SettingsViewModel(
                         settings = container.settingsRepository,
                         posts = container.postRepository,
                         session = container.sessionRepository,
+                        updates = container.appUpdateRepository,
                     )
                 }
             }
@@ -81,4 +91,6 @@ class SettingsViewModel(
 data class SettingsUiState(
     val settings: UserSettings = UserSettings(),
     val isClearingCache: Boolean = false,
+    /** The newer version on GitHub, or null when there is none to offer. */
+    val updateVersionName: String? = null,
 )
