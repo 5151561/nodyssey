@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -53,8 +54,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -107,6 +110,7 @@ import io.github.nodyssey.ui.theme.TABULAR_FIGURES
 import io.github.nodyssey.ui.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 /**
@@ -122,6 +126,7 @@ fun PostListRoute(
     onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
     onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
+    scrollToTopRequests: Int = 0,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     PostListScreen(
@@ -138,6 +143,7 @@ fun PostListRoute(
         onRecoverInBrowser = { onVerify(viewModel.challengeUrl()) },
         modifier = modifier,
         onNavigationBarHiddenChanged = onNavigationBarHiddenChanged,
+        scrollToTopRequests = scrollToTopRequests,
     )
 }
 
@@ -164,6 +170,12 @@ fun PostListScreen(
     onCreatePost: () -> Unit = {},
     /** Keeps the host navigation bar hidden until the user deliberately scrolls toward the list start. */
     onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
+    /**
+     * How many times the host has asked for the top of the feed — one per tap on the already-selected
+     * 首页 tab. Any increase scrolls; the count itself means nothing, which is what lets two taps in a
+     * row read as two requests without the host having to clear a flag afterwards.
+     */
+    scrollToTopRequests: Int = 0,
 ) {
     val listState = rememberLazyListState()
     val directionThresholdPx = with(LocalDensity.current) { NavigationDirectionThreshold.toPx() }
@@ -204,6 +216,38 @@ fun PostListScreen(
     // The host must not stay stuck bar-less if this screen leaves the composition.
     DisposableEffect(Unit) { onDispose { currentOnNavigationBarHiddenChanged(false) } }
 
+    /*
+     * The two ways back to the start of the feed: the 首页 tab, and the wordmark above the list.
+     *
+     * The bar is revealed first and without waiting for the animation, because neither route came
+     * from a user scroll and the direction connection would otherwise leave the list sitting at its
+     * top with no bar — the one position from which nothing can be reached.
+     */
+    val scope = rememberCoroutineScope()
+    suspend fun scrollToTop() {
+        navigationBarScrollConnection.reveal()
+        // Animating hundreds of rows past would take seconds and show nothing. Jumping to the last
+        // screenful first costs the same gesture a fixed, short animation however deep the user is.
+        if (listState.firstVisibleItemIndex > SCROLL_TO_TOP_ANIMATED_ITEMS) {
+            listState.scrollToItem(SCROLL_TO_TOP_ANIMATED_ITEMS)
+        }
+        listState.animateScrollToItem(0)
+    }
+    /*
+     * Which request has already been answered, remembered exactly as the board identity above is and
+     * for the same reason: opening a thread takes this screen out of the composition, so a plain
+     * `LaunchedEffect` on the count alone would run again on the way back and throw away the offset
+     * the list had just restored. A tap that happened before the thread was opened is not a request
+     * to scroll after returning from it.
+     */
+    var answeredScrollRequest by rememberSaveable { mutableIntStateOf(scrollToTopRequests) }
+    LaunchedEffect(scrollToTopRequests) {
+        if (scrollToTopRequests != answeredScrollRequest) {
+            answeredScrollRequest = scrollToTopRequests
+            scrollToTop()
+        }
+    }
+
     val refreshState = posts.loadState.refresh
     val appendState = posts.loadState.append
 
@@ -211,7 +255,11 @@ fun PostListScreen(
         modifier = modifier,
         topBar = {
             Column {
-                HomeTopBar(sort = state.sort, onSortChange = onSortChange)
+                HomeTopBar(
+                    sort = state.sort,
+                    onSortChange = onSortChange,
+                    onTitleClick = { scope.launch { scrollToTop() } },
+                )
                 BoardStrip(
                     boards = state.boards,
                     parkedBoards = state.parkedBoards,
@@ -310,6 +358,9 @@ private fun feedIdentity(state: PostListUiState): String = "${state.categorySlug
 
 private val NavigationDirectionThreshold = 16.dp
 
+/** How much of the feed a "back to the top" actually animates past; anything beyond it is a jump. */
+private const val SCROLL_TO_TOP_ANIMATED_ITEMS = 12
+
 /**
  * Drops the avatar onto the title's cap line.
  *
@@ -361,6 +412,21 @@ internal class FeedNavigationBarScrollConnection(
     fun resetGesture() {
         accumulatedDeltaY = 0f
     }
+
+    /**
+     * Puts the bar back without a gesture having asked for it.
+     *
+     * Only for jumps the user initiated elsewhere — a programmatic scroll produces no user deltas, so
+     * without this the connection would still believe it is hidden and the next downward scroll would
+     * have nothing left to hide.
+     */
+    fun reveal() {
+        accumulatedDeltaY = 0f
+        if (isHidden) {
+            isHidden = false
+            onHiddenChanged(false)
+        }
+    }
 }
 
 /**
@@ -374,6 +440,7 @@ internal class FeedNavigationBarScrollConnection(
 private fun HomeTopBar(
     sort: FeedSort,
     onSortChange: (FeedSort) -> Unit,
+    onTitleClick: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
 
@@ -382,6 +449,17 @@ private fun HomeTopBar(
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.titleLarge,
+                // The wordmark doubles as the second way back to the top, and the only one that
+                // works while the navigation bar is hidden — which is exactly when a reader deep in
+                // the feed wants it. Height rather than padding grows the target to 48dp, so the
+                // title stays on the same start inset as the board strip below it.
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(
+                        onClickLabel = stringResource(R.string.action_scroll_to_top),
+                        onClick = onTitleClick,
+                    ).heightIn(min = Sizes.minTouchTarget)
+                    .wrapContentHeight(Alignment.CenterVertically),
             )
         },
         actions = {

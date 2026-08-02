@@ -36,6 +36,20 @@ class FeedNavigationBarScrollConnectionTest {
     }
 
     @Test
+    fun `revealing reports once and leaves the bar hideable again`() {
+        val changes = mutableListOf<Boolean>()
+        val connection = FeedNavigationBarScrollConnection(10f, changes::add)
+        connection.onPreScroll(Offset(0f, -10f), NestedScrollSource.UserInput)
+
+        connection.reveal()
+        connection.reveal()
+        assertEquals(listOf(true, false), changes)
+
+        connection.onPreScroll(Offset(0f, -10f), NestedScrollSource.UserInput)
+        assertEquals(listOf(true, false, true), changes)
+    }
+
+    @Test
     fun `fling movement cannot reveal a hidden bar`() {
         val changes = mutableListOf<Boolean>()
         val connection = FeedNavigationBarScrollConnection(10f, changes::add)
