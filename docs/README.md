@@ -11,7 +11,8 @@
 | [`design-requirements-remaining.md`](design-requirements-remaining.md) | 登录态站点实测词典与批次 A–E 完成记录 | 是，真实数据样本 |
 | [`design-requirements-additions.md`](design-requirements-additions.md) | 边角功能复核与批次 F | 是，补充数据和画板要求 |
 | [`design-brief.md`](design-brief.md) | 第一轮设计输入 | 否，仅供历史追溯 |
-| [`../CHANGELOG.md`](../CHANGELOG.md) | 尚未发布的用户可见变化 | 是，发布记录 |
+| [`../CHANGELOG.md`](../CHANGELOG.md) | 各版本的用户可见变化，未发布的先记在「Unreleased」 | 是，发布记录 |
+| [`../README.md`](../README.md) | 项目介绍、可用能力概览、构建与 roadmap | 是，对外入口 |
 
 `design/` 是本地画板工作区，当前由仓库 `.gitignore` 排除；其中 `boards.json.status` 只代表出稿状态，
 不能代替实现状态。涉及 UI 的代码提交必须同步更新实现状态和设计对照，不能只修改画板或只修改代码。

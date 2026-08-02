@@ -105,11 +105,13 @@ data/        Repository。隐藏数据源，暴露领域模型
   ├ local/                  Room：实体、DAO、TypeConverter
   ├ session/                共享 cookie store 的读模型（登录态 + 人机验证态）
   ├ nodeimage/              站外图床 nodeimage.com：API Key + 上传/列表/删除
+  ├ update/                 GitHub Releases 查询、APK 下载与 PackageInstaller 会话
   └ settings/               DataStore，SSOT
 
 core/        无 Android 依赖的纯逻辑（parser、错误类型、URL 词表、时钟）
   ├ html/    jsoup 解析，选择器全部集中在 Selectors.kt
-  └ net/     OkHttp 客户端、Cookie 桥、challenge 检测
+  ├ net/     OkHttp 客户端、Cookie 桥、challenge 检测
+  └ update/  版本名比较与 Release 说明裁剪
 
 notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 ```
@@ -284,11 +286,10 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 | 严重度 | 问题 | 计划 |
 |---|---|---|
 | **P2** | 单模块，没有编译期约束防止 `ui/` 直连 `core/net` | 拆 `:core` / `:data` / `:feature:*`，或先上 lint 的依赖规则 |
-| **P1** | 点赞/反对/投喂尚未接真实写端点 | 逐项确认站点契约，先补回归测试，再接 Repository；禁止 UI 假成功。当前详情页没有收藏控件，不把收藏误报为“界面已完成” |
 | **P2** | 修改邮箱与绑定 Telegram 只能转网页（Turnstile 与 Telegram 登录挂件） | 想原生化就得在 WebView 里跑挂件并把令牌回传；在此之前保持明确交接，不做能提交却必然失败的表单 |
-| **P2** | 管理记录缺可靠动态数据源 | 保持明确“尚未接入”与网页降级，不用空列表冒充无数据 |
 | **P3** | 未验证字号缩放 200% 与 TalkBack | 用真实设备和至少一台大屏设备做发布前验收 |
-| **P3** | 星辰转账、邀请码购买和检查更新只有网页闭环 | 有可靠契约后逐项原生化；接入前保留明确网页交接，其中检查更新只打开 Releases 核对。星辰转账的契约已经拿到（`payment-prepare` / `send`），是下一个可动的 |
+| **P3** | 星辰转账和邀请码购买只有网页闭环 | 有可靠契约后逐项原生化，接入前保留明确网页交接。星辰转账的契约已经拿到（`payment-prepare` / `send`），是下一个可动的 |
+| **P3** | 详情页没有收藏控件 | 写接口已定位（`POST /api/statistics/collection`，可撤销），要做时直接用；在此之前不把收藏误报为“界面已完成” |
 | **P3** | 无 baseline profile / macrobenchmark | 有真实卡顿反馈后再做，不预先优化 |
 | **P3** | 无崩溃上报 | 发布前再定，涉及隐私取舍 |
 
@@ -306,8 +307,9 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 
 ### 阶段二 ✅ 已完成 — 离线优先
 
-- Room 8 张表：`boards` / `posts` / `feed_positions` / `feed_remote_keys` / `post_details` /
-  `post_comments` / `post_read_marks` / `cache_session`。schema 随代码入库（`app/schemas/`），CI 校验一致性。
+- Room 9 张表（当前 schema 版本 5）：`boards` / `posts` / `feed_positions` / `feed_remote_keys` /
+  `post_details` / `post_comments` / `post_read_marks` / `cache_session` / `self_profile`。
+  schema 随代码入库（`app/schemas/`），CI 校验一致性。
 - 列表改 Paging 3 + `FeedRemoteMediator`。mediator 只往 Room 写，Room 失效 PagingSource，UI 自己更新。
 - 已读标记 + "N 条新回复"角标；已读帖子标题变灰。
 - **原先写的阻塞条件（等 KSP）已不存在**：KSP2 改用独立版本号；Room 直接用 KSP，没引入 kapt。
@@ -331,10 +333,10 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
   五道都是硬门禁。锁文件不单列一步：locking 是 STRICT 模式，上面任何一步解析类路径时都会因
   "not part of the dependency lock state" 直接失败。
 - spotless + ktlint（版本在 version catalog 里钉住）。
-- Compose UI 测试持续扩展，当前工作区 JVM/Robolectric 总计 409 条，覆盖列表→详情、
+- Compose UI 测试持续扩展，当前工作区 JVM/Robolectric 总计 739 条（`6f3031c`），覆盖列表→详情、
   各类错误态、账号二级页和 f1/f2 关键动作。
   **跑在 Robolectric 上，所以 CI 不需要模拟器。**
-- `gradle.lockfile` 用 STRICT 模式锁定 6 条类路径上的 272 个模块；
+- `gradle.lockfile` 用 STRICT 模式锁定 6 条类路径上的 277 个模块；
   `./gradlew resolveAndLockAll --write-locks` 更新。
 - Android lint 开 `warningsAsErrors`。只禁用"按日历触发而不是按提交触发"的检查
   （`GradleDependency` 等、`OldTargetApi`）——否则上游一发新版，没改过任何代码的提交就会红。
@@ -375,8 +377,15 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 今日额度与等级进度同日接完：`GET /api/progress/today` 不带 scope 就一次返回发帖、评论、
 免费投喂三项，签到那项取自签到榜响应里的 `record`；等级门槛是 `rank² × 100` 的公式（Lv5 封顶）。
 
-尚未完成：管理记录的可靠数据源；检查更新的动态数据；
-星辰转账、邀请码购买的原生闭环；200% 字号、TalkBack 与大屏的发布级真机验收。
+管理记录也接完了（2026-08-02）：契约来自站点自己的 `/static/js/ruling.*.js`，
+`GET /api/admin/ruling/page-N` 任何已登录账号都读得到（未登录回 500 而不是 401），站点只服务前 100 页。
+分页控件抽到 `ui/common/PageJump.kt` 与帖子评论共用；接页与跳页是两种语义，接页只接紧邻的下一页，
+跳页整段替换成目标页，所以状态里同时有 `firstLoadedPage` 和 `lastLoadedPage`。
+
+检查更新于同日搬进 App：数据源是本项目自己的 GitHub Releases 而不是 NodeSeek，
+约定与理由见上面第 2 节的「应用内更新约定」。
+
+尚未完成：星辰转账、邀请码购买的原生闭环；200% 字号、TalkBack 与大屏的发布级真机验收。
 当前详情页没有收藏操作控件。界面存在不等于功能接入，完整边界以
 [`implementation-status.md`](implementation-status.md) 为准。
 

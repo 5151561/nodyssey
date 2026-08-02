@@ -15,10 +15,10 @@ scrolling stays in one list, and the UI follows the system theme.
 
 ## 状态
 
-**已发布 1.0.1，仍在持续开发。** 读和写都已不再是“只读 v1”，当前实现总表见
+**已发布 1.1.0，仍在持续开发。** 读和写都已不再是“只读 v1”，当前实现总表见
 [docs/implementation-status.md](docs/implementation-status.md)，主要可用能力包括：
 
-- 版块列表、排序、Paging 无限滚动、下拉刷新和 Room 离线缓存
+- 版块列表、排序、Paging 无限滚动、下拉刷新和 Room 离线缓存；点底栏已选中的「首页」或顶栏应用名回到列表顶部
 - 首页板块栏可自定义：长按拖动重排、把不看的板块移到队尾，顺序存本机，冷启动即生效
 - 帖子详情与评论连续分页；段落、图片、表情、代码、引用、列表、表格和行内链接原生渲染
 - WebView 登录 / Cloudflare 验证，Cookie 与 OkHttp 共享
@@ -38,11 +38,13 @@ scrolling stays in one list, and the UI follows the system theme.
 - f1 关于与社区页；f2 隐私协议原生长文页，WebView 仅作失败降级
 - 图片查看、缩放、保存与分享
 - 站外链接默认开在应用内的 Chrome Custom Tab，返回键回到帖子；设置 › 内容 › 站外链接可改回系统浏览器
+- 应用内更新：从本项目 GitHub Releases 查新版、看更新说明、下载后直接拉起系统安装器；
+  冷启动静默查一次（最多每六小时问一次 GitHub），有新版就在「我的」和关于入口上点红点
 
 修改邮箱、绑定 Telegram、星辰转账、邀请码购买没有原生闭环，会带用户到真实站点完成。
 逐项清单见 [docs/implementation-status.md](docs/implementation-status.md)。
 
-各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，当前版本 1.0.1。
+各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，当前版本 1.1.0。
 
 ## Architecture
 
@@ -66,9 +68,11 @@ app/src/main/java/io/github/nodyssey/
 │   │   ├── RichContentParser.kt post HTML → block/inline tree
 │   │   └── TermsParser.kt       terms article → native reading blocks
 │   ├── net/                     OkHttp, JSON, cookies, rate gate, challenge detection
-│   └── report/                  NodeQuality report parsing
+│   ├── report/                  NodeQuality report parsing
+│   └── update/                  version-name comparison, release-note trimming
 ├── model/                       Android-free domain types
 ├── data/                        repositories, Room, DataStore and composers
+│   └── update/                  GitHub release lookup, APK download and install
 ├── notifications/               WorkManager polling and Android notifications
 └── ui/                          Compose routes, screens and native renderers
 ```
@@ -123,6 +127,7 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 - [x] 关注 / 粉丝列表与关注 / 取关（`/api/fans/{follow,fans,add,del}`）
 - [x] 等级进度与今日四项额度（`/api/progress/today`）
 - [x] 管理记录（`/api/admin/ruling/page-N`）
+- [x] 应用内检查更新、下载与安装（GitHub `releases/latest` + `PackageInstaller`）
 - [ ] 星辰转账原生化（站点有 `payment-prepare` / `send`，目前仍转网页）
 
 ## 架构
