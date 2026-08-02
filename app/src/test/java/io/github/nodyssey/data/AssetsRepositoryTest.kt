@@ -29,12 +29,13 @@ class AssetsRepositoryTest {
     private fun repository(
         source: JsonSource,
         profiles: ProfileRepository = UnusedProfileRepository,
+        clock: AppClock = AppClock { MIDNIGHT_2025_07_29 },
     ) = NetworkAssetsRepository(
         profiles,
         NetworkCreditRepository(source, dispatchers),
         source,
         dispatchers,
-        AppClock { 1_753_718_400_000L }, // 2025-07-29T00:00:00+08:00
+        clock,
     )
 
     private fun growthRepository(source: JsonSource) = repository(source, FakeProfileRepository)
@@ -266,6 +267,65 @@ class AssetsRepositoryTest {
 
             assertEquals(DailyQuota(0, 20), growth.attendanceQuota)
         }
+
+    /**
+     * 我的 re-checks the receipt whenever it comes back to the foreground, and the check costs up to
+     * ten ledger pages. Signing in is one-way within a NodeSeek day, so once today's answer is "已签到"
+     * there is nothing left to learn from asking again.
+     */
+    @Test
+    fun `answers a known sign-in from the cache instead of re-reading the ledger`() =
+        runTest {
+            val source =
+                FakeCreditJsonSource(
+                    """{"success":true,"data":[[7,344,"签到收益7个鸡腿","2025-07-28T16:30:00.000Z"]]}""",
+                )
+            val repository = repository(source)
+
+            repository.refreshAttendanceStatus(uid = 31037)
+            val status = repository.refreshAttendanceStatus(uid = 31037)
+
+            assertEquals(1, source.requestCount)
+            assertEquals(true, status.hasSignedIn)
+            assertEquals(7, status.gain)
+        }
+
+    /** The other direction is not one-way: the account can sign in from the site at any point. */
+    @Test
+    fun `keeps re-reading the ledger while the day is still unsigned`() =
+        runTest {
+            val source = FakeCreditJsonSource("""{"success":true,"data":[]}""")
+            val repository = repository(source)
+
+            repository.refreshAttendanceStatus(uid = 31037)
+            repository.refreshAttendanceStatus(uid = 31037)
+
+            assertEquals(2, source.requestCount)
+        }
+
+    @Test
+    fun `re-reads the ledger once the NodeSeek day has rolled over`() =
+        runTest {
+            val source =
+                FakeCreditJsonSource(
+                    """{"success":true,"data":[[7,344,"签到收益7个鸡腿","2025-07-28T16:30:00.000Z"]]}""",
+                )
+            var now = MIDNIGHT_2025_07_29
+            val repository = repository(source, clock = AppClock { now })
+
+            repository.refreshAttendanceStatus(uid = 31037)
+            now += ONE_DAY_MILLIS
+            val status = repository.refreshAttendanceStatus(uid = 31037)
+
+            assertEquals(2, source.requestCount)
+            // Yesterday's row is not today's receipt, whatever the cache was holding.
+            assertEquals(false, status.hasSignedIn)
+        }
+
+    private companion object {
+        const val MIDNIGHT_2025_07_29 = 1_753_718_400_000L // 2025-07-29T00:00:00+08:00
+        const val ONE_DAY_MILLIS = 86_400_000L
+    }
 }
 
 /** Answers per path, because [NetworkAssetsRepository.growth] reads three different endpoints. */
@@ -286,9 +346,12 @@ private class FakeCreditJsonSource(
 ) : JsonSource {
     var requestedPath: String? = null
         private set
+    var requestCount = 0
+        private set
 
     override suspend fun getJson(path: String, referer: String): String {
         requestedPath = path
+        requestCount++
         return body
     }
 

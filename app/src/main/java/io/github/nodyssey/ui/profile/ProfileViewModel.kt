@@ -105,6 +105,8 @@ class ProfileViewModel(
                             error = current.error,
                             isCheckingAttendance =
                             current.isCheckingAttendance.takeIf { current.uid == profile.uid } ?: false,
+                            attendanceKnown =
+                            current.attendanceKnown.takeIf { current.uid == profile.uid } ?: false,
                             hasSignedInToday =
                             current.hasSignedInToday.takeIf { current.uid == profile.uid } ?: false,
                             attendanceGain =
@@ -135,6 +137,7 @@ class ProfileViewModel(
                     _uiState.update { current ->
                         profile.toUiState().copy(
                             isCheckingAttendance = current.isCheckingAttendance,
+                            attendanceKnown = current.attendanceKnown,
                             hasSignedInToday = current.hasSignedInToday,
                             attendanceGain = current.attendanceGain,
                             boardOpen = current.boardOpen,
@@ -177,6 +180,7 @@ class ProfileViewModel(
             } else {
                 current.copy(
                     isCheckingAttendance = false,
+                    attendanceKnown = true,
                     hasSignedInToday = status.hasSignedIn,
                     attendanceGain = status.gain,
                 )
@@ -280,6 +284,8 @@ data class ProfileUiState(
     val chickenCount: Int? = null,
     val starCount: Int? = null,
     val isCheckingAttendance: Boolean = false,
+    /** Whether today's receipt has been read at least once; a re-check never un-answers it. */
+    val attendanceKnown: Boolean = false,
     val hasSignedInToday: Boolean = false,
     val attendanceGain: Int? = null,
     val boardOpen: Boolean = false,
@@ -289,6 +295,15 @@ data class ProfileUiState(
 ) {
     val hasProfile: Boolean
         get() = uid != null && displayName.isNotBlank()
+
+    /**
+     * Whether the sign-in button has nothing to show yet.
+     *
+     * Only this may put the button into its spinner: a check running over an answer we already have
+     * is a background refresh, and regressing 已签到 to 检查中… on every visit was the bug.
+     */
+    val isAttendanceUnknown: Boolean
+        get() = isCheckingAttendance && !attendanceKnown
 }
 
 private val REGISTERED_YEAR_MONTH = Regex("""^(\d{4})-(\d{2})""")
