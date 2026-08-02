@@ -77,6 +77,7 @@ class PostComposerViewModel(
     private var saveJob: Job? = null
     private var publishJob: Job? = null
     private var authorJob: Job? = null
+    private var profileLoaded = false
 
     init {
         boards
@@ -86,8 +87,10 @@ class PostComposerViewModel(
                 }
             }.launchIn(viewModelScope)
         session
-            .onEach { session -> _uiState.update { it.copy(isSignedIn = session.isSignedIn) } }
-            .launchIn(viewModelScope)
+            .onEach { session ->
+                _uiState.update { it.copy(isSignedIn = session.isSignedIn) }
+                if (session.isSignedIn) loadSelfProfile()
+            }.launchIn(viewModelScope)
         uploads.attachments
             .onEach { attachments -> _uiState.update { it.copy(attachments = attachments) } }
             .launchIn(viewModelScope)
@@ -134,7 +137,7 @@ class PostComposerViewModel(
 
     fun setViewMode(mode: ComposerViewMode) {
         _uiState.update { it.copy(viewMode = mode) }
-        if (mode != ComposerViewMode.CONTENT) loadAuthorName()
+        if (mode != ComposerViewMode.CONTENT) loadSelfProfile()
     }
 
     fun continueDraft() {
@@ -221,16 +224,24 @@ class PostComposerViewModel(
     }
 
     /**
-     * The preview's byline needs a name, and nothing else in the composer does — so it is fetched
-     * the first time a preview is opened rather than on entry, and a failure just leaves the byline
-     * one field shorter.
+     * The signed-in account, for the 阅读权限 menu's ceiling and the preview's byline.
+     *
+     * On entry rather than on demand, because the 权限 chip is on screen from the first frame and
+     * its menu has to know the account's level before it can be opened. The byline used to pull
+     * this by itself when a preview was first opened; it now rides along for free.
+     *
+     * A failure costs the higher levels and one byline field, so it is swallowed: the fallback set
+     * in [PostPermission.options] still posts.
      */
-    private fun loadAuthorName() {
+    private fun loadSelfProfile() {
         val repository = profileRepository ?: return
-        if (_uiState.value.authorName != null || authorJob?.isActive == true) return
+        if (profileLoaded || authorJob?.isActive == true) return
         authorJob = viewModelScope.launch {
             runCatchingExceptCancellation { repository.profile() }
-                .onSuccess { profile -> _uiState.update { it.copy(authorName = profile.name) } }
+                .onSuccess { profile ->
+                    profileLoaded = true
+                    _uiState.update { it.copy(authorName = profile.name, selfRank = profile.rank) }
+                }
         }
     }
 
@@ -312,8 +323,20 @@ data class PostComposerUiState(
     val draftDecisionMade: Boolean = false,
     val attachments: List<ImageAttachment> = emptyList(),
     val authorName: String? = null,
+    /** The signed-in account's level; null until the profile lands, or if it never does. */
+    val selfRank: Int? = null,
 ) {
     val hasContent: Boolean get() = title.isNotBlank() || body.isNotBlank()
+
+    /**
+     * What the 阅读权限 menu offers. A draft restored with a level the current [selfRank] does not
+     * reach — saved before the profile was known, say — keeps its own choice in the list, so the
+     * menu can always show what the chip is displaying.
+     */
+    val permissionOptions: List<PostPermission>
+        get() = PostPermission.options(selfRank).let { options ->
+            if (permission in options) options else (options + permission).sortedBy { it.wireValue }
+        }
 
     val failedUploadCount: Int get() = attachments.count { it.status == UploadStatus.FAILED }
 

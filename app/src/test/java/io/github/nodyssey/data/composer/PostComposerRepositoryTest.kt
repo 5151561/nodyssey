@@ -129,6 +129,27 @@ class PostComposerRepositoryTest {
             assertEquals(NodeSeekError.LoginRequired, error)
         }
 
+    @Test
+    fun `a draft written before 阅读权限 became a range still opens`() {
+        val json = Json { ignoreUnknownKeys = true }
+        val legacy = """{"title":"标题","body":"正文","permission":"LEVEL_ONE","savedAtMillis":1}"""
+
+        val draft = json.decodeFromString<PostDraft>(legacy)
+
+        assertEquals(PostPermission(1), draft.permission)
+        assertEquals("标题", draft.title)
+        // And it goes back out as the number the site actually takes.
+        val rewritten = json.parseToJsonElement(json.encodeToString(draft)).jsonObject
+        assertEquals(1, rewritten.getValue("permission").jsonPrimitive.int)
+    }
+
+    @Test
+    fun `every offered level is one the account has reached`() {
+        assertEquals(listOf(0, 1, 2, 255), PostPermission.options(selfRank = 2).map { it.wireValue })
+        assertEquals(listOf(0, 1, 255), PostPermission.options(selfRank = null).map { it.wireValue })
+        assertEquals(listOf(0, 255), PostPermission.options(selfRank = 0).map { it.wireValue })
+    }
+
     private suspend fun TestScope.publishExpectingError(interceptor: Interceptor): NodeSeekError {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val repository =

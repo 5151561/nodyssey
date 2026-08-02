@@ -67,7 +67,7 @@
     <string name="composer_title_count">%1$d/%2$d</string>
     <string name="composer_select_board">选择版块</string>
     <string name="composer_permission_public">公开</string>
-    <string name="composer_permission_level_one" tools:ignore="Typos">Lv1</string>
+    <string name="composer_permission_level" tools:ignore="Typos">Lv%1$d</string>
     <string name="composer_permission_private">私有</string>
     <string name="composer_draft_saved">草稿 %1$s</string>
     <string name="composer_draft_saving">草稿自动保存</string>
