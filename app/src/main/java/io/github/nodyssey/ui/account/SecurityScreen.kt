@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -54,6 +53,7 @@ import io.github.nodyssey.R
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
+import io.github.nodyssey.ui.theme.paddingWithKeyboard
 import io.github.nodyssey.ui.theme.readableWidth
 
 @Composable
@@ -143,13 +143,12 @@ fun SecurityScreen(
         Column(
             modifier =
             Modifier
-                .padding(padding)
+                // Edge-to-edge plus Scaffold's IME-free insets would leave 确认新密码 under the
+                // keyboard and unreachable.
+                .paddingWithKeyboard(padding)
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                // See ProfileFieldsScreen: edge-to-edge plus Scaffold's IME-free insets would leave
-                // 确认新密码 under the keyboard and unreachable.
-                .imePadding()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {

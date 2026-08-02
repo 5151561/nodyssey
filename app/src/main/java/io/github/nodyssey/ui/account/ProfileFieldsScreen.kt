@@ -8,14 +8,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
@@ -45,6 +44,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -61,6 +63,7 @@ import io.github.nodyssey.ui.composer.EditorToolbar
 import io.github.nodyssey.ui.composer.applyMarkdown
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Spacing
+import io.github.nodyssey.ui.theme.paddingWithKeyboard
 import io.github.nodyssey.ui.theme.readableWidth
 
 @Composable
@@ -96,10 +99,16 @@ fun ProfileFieldsRoute(
 /**
  * 个人信息 (d6 1/4).
  *
- * The signature editor's toolbar is the detail worth protecting: five actions, no image and no quote,
- * because NodeSeek's own helper text says signatures do not support either. Offering the buttons and
- * letting the server drop the markup is the failure mode this screen exists to avoid — the reduced
- * toolbar *is* the documentation.
+ * 签名 and Readme are both Markdown, so both get the composers' formatting strip — one strip, pinned
+ * against the keyboard, following whichever of the two is being edited. A strip per field would have
+ * put two of them in a form that has room for neither, and the earlier arrangement — a single strip
+ * parked under 签名 — read as belonging to the field below it as much as the one above, while wiring
+ * to only one of them.
+ *
+ * Which keys it carries still depends on the field: [EditorActions.Signature] drops images and quotes
+ * because NodeSeek's own helper text says signatures support neither, while [EditorActions.Readme]
+ * keeps the block-level keys a document wants. Offering buttons the server will strip is the failure
+ * mode the split exists to avoid — the per-field action list *is* the documentation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,6 +124,14 @@ fun ProfileFieldsScreen(
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val signatureState = rememberSeededTextFieldState(state.signature, onSignatureChange)
+    val readmeState = rememberSeededTextFieldState(state.readme, onReadmeChange)
+    val signatureFocus = remember { FocusRequester() }
+    val readmeFocus = remember { FocusRequester() }
+    // Sticky rather than plain focus: a toolbar key takes focus off the field the moment it is
+    // pressed, so a strip that hid on blur would vanish under the finger that was using it.
+    var target by remember { mutableStateOf<MarkdownTarget?>(null) }
+
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -137,61 +154,92 @@ fun ProfileFieldsScreen(
             )
         },
     ) { padding ->
+        // Edge-to-edge makes API 30+ ignore the manifest's adjustResize, and Scaffold's default
+        // insets exclude the IME, so without this the keyboard covers Readme with no way to scroll
+        // it back into view. It sits on the outer column so the strip rides the keyboard's top edge
+        // rather than scrolling away with the form — see [paddingWithKeyboard] for why the strip
+        // rests on the keyboard instead of hovering a navigation bar above it.
         Column(
             modifier =
             Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .readableWidth()
-                .verticalScroll(rememberScrollState())
-                // Edge-to-edge makes API 30+ ignore the manifest's adjustResize, and Scaffold's
-                // default insets exclude the IME, so without this the keyboard covers Readme with
-                // no way to scroll it back into view. Same call the post composer makes.
-                .imePadding()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                .paddingWithKeyboard(padding)
+                .fillMaxSize(),
         ) {
-            AvatarEditor(
-                state = state,
-                onPicked = onAvatarPicked,
-                onFailed = onAvatarFailed,
-            )
-
-            OutlinedTextField(
-                value = state.bio,
-                onValueChange = onBioChange,
-                label = { Text(stringResource(R.string.account_bio)) },
-                placeholder = { Text(stringResource(R.string.account_bio_hint)) },
-                singleLine = true,
-                shape = AccountFieldShape,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                MarkdownField(
-                    value = state.signature,
-                    onValueChange = onSignatureChange,
-                    label = stringResource(R.string.account_signature),
-                    minLines = SIGNATURE_MIN_LINES,
+            Column(
+                modifier =
+                Modifier
+                    .weight(1f)
+                    .readableWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+            ) {
+                AvatarEditor(
+                    state = state,
+                    onPicked = onAvatarPicked,
+                    onFailed = onAvatarFailed,
                 )
-                AccountFieldHelper(stringResource(R.string.account_signature_helper))
+
+                // Bio is one line of plain text — the site renders no Markdown in it — so it gets no
+                // formatting keys. It has to *dismiss* them, though: the strip's target is sticky, and
+                // one left standing while the caret sits here would write into a field the user can no
+                // longer see. Focus landing on any plain field is the end of the strip's business.
+                OutlinedTextField(
+                    value = state.bio,
+                    onValueChange = onBioChange,
+                    label = { Text(stringResource(R.string.account_bio)) },
+                    placeholder = { Text(stringResource(R.string.account_bio_hint)) },
+                    singleLine = true,
+                    shape = AccountFieldShape,
+                    modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { if (it.isFocused) target = null },
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    MarkdownField(
+                        fieldState = signatureState,
+                        label = stringResource(R.string.account_signature),
+                        minLines = SIGNATURE_MIN_LINES,
+                        focusRequester = signatureFocus,
+                        onFocused = { target = MarkdownTarget.SIGNATURE },
+                    )
+                    AccountFieldHelper(stringResource(R.string.account_signature_helper))
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    MarkdownField(
+                        fieldState = readmeState,
+                        label = stringResource(R.string.account_readme),
+                        minLines = README_MIN_LINES,
+                        focusRequester = readmeFocus,
+                        onFocused = { target = MarkdownTarget.README },
+                    )
+                    AccountFieldHelper(stringResource(R.string.account_readme_helper))
+                }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                OutlinedTextField(
-                    value = state.readme,
-                    onValueChange = onReadmeChange,
-                    label = { Text(stringResource(R.string.account_readme)) },
-                    minLines = README_MIN_LINES,
-                    shape = AccountFieldShape,
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.fillMaxWidth(),
+            target?.let { field ->
+                val signature = field == MarkdownTarget.SIGNATURE
+                EditorToolbar(
+                    actions = if (signature) EditorActions.Signature else EditorActions.Readme,
+                    onAction = { action ->
+                        val edited = if (signature) signatureState else readmeState
+                        edited.edit { applyMarkdown(action) }
+                        // Pressing a key moved focus to the key. A caret the user cannot see is a
+                        // caret they have lost track of, so it goes straight back.
+                        (if (signature) signatureFocus else readmeFocus).requestFocus()
+                    },
+                    modifier = Modifier.readableWidth(),
                 )
-                AccountFieldHelper(stringResource(R.string.account_readme_helper))
             }
         }
     }
 }
+
+/** Which of the two Markdown fields the strip is currently writing into. */
+private enum class MarkdownTarget { SIGNATURE, README }
 
 /**
  * The avatar, its camera badge, and the menu the badge opens.
@@ -284,51 +332,55 @@ private fun AvatarEditor(
 }
 
 /**
- * A Markdown field with the five formatting actions a signature is allowed.
- *
- * The toolbar is the post composer's, not a second one that happens to insert the same characters:
- * the keys, their spoken labels, the caret arithmetic and the 32dp grid all come from
- * [EditorToolbar]. Only [EditorActions.Signature] and the container's colour are local, the latter
- * because this is the one strip that sits inside a settings form rather than against the keyboard.
+ * A form field whose text is Markdown. The strip that formats it belongs to the screen, not here:
+ * both of these share one, so the field's job is to report when it becomes the strip's target.
  */
 @Composable
 private fun MarkdownField(
-    value: String,
-    onValueChange: (String) -> Unit,
+    fieldState: TextFieldState,
     label: String,
     minLines: Int,
+    focusRequester: FocusRequester,
+    onFocused: () -> Unit,
 ) {
-    // Scoped to the field, not to the ViewModel: unlike the post composer, nothing here edits the
-    // text behind the user's back, so there is no caret to protect from a background write — and a
-    // `TextFieldState` parked in a ViewModel observes the global snapshot for as long as it lives.
+    OutlinedTextField(
+        state = fieldState,
+        label = { Text(label) },
+        lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = minLines),
+        shape = AccountFieldShape,
+        textStyle = MaterialTheme.typography.bodyMedium,
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester)
+            .onFocusChanged { if (it.isFocused) onFocused() },
+    )
+}
+
+/**
+ * A [TextFieldState] seeded once from the saved value and read back through [onValueChange].
+ *
+ * Scoped to the screen, not to the ViewModel: unlike the post composer, nothing here edits the text
+ * behind the user's back, so there is no caret to protect from a background write — and a
+ * `TextFieldState` parked in a ViewModel observes the global snapshot for as long as it lives.
+ *
+ * The saved text arrives from the network after the fields are already on screen. Seeding is one-way
+ * and one-time; from then on the field is the writer and the ViewModel the reader, which is what the
+ * old `if (fieldValue.text != value)` assignment during composition got wrong.
+ */
+@Composable
+private fun rememberSeededTextFieldState(
+    value: String,
+    onValueChange: (String) -> Unit,
+): TextFieldState {
     val fieldState = rememberTextFieldState()
-    // The saved signature arrives from the network after this field is already on screen. Seeding is
-    // one-way and one-time; from then on the field is the writer and the ViewModel the reader, which
-    // is what the old `if (fieldValue.text != value)` assignment during composition got wrong.
     LaunchedEffect(value) {
         if (value.isNotEmpty() && fieldState.text.isEmpty()) fieldState.setTextAndPlaceCursorAtEnd(value)
     }
     LaunchedEffect(fieldState) {
         snapshotFlow { fieldState.text.toString() }.collect(onValueChange)
     }
-
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        OutlinedTextField(
-            state = fieldState,
-            label = { Text(label) },
-            lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = minLines),
-            shape = AccountFieldShape,
-            textStyle = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        EditorToolbar(
-            actions = EditorActions.Signature,
-            onAction = { action -> fieldState.edit { applyMarkdown(action) } },
-            showDivider = false,
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            shape = RoundedCornerShape(12.dp),
-        )
-    }
+    return fieldState
 }
 
 private val AVATAR_SIZE = 84.dp

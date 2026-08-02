@@ -4,7 +4,6 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.nodyssey.data.AttendanceBoardEntry
@@ -150,7 +149,7 @@ class ProfileScreenTest {
     }
 
     @Test
-    fun `header avatar action opens the space page`() {
+    fun `tapping the header name opens the space page`() {
         var clicked = false
         composeRule.setContent {
             NodysseyTheme {
@@ -172,7 +171,7 @@ class ProfileScreenTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("我的主页").performClick()
+        composeRule.onNodeWithText("nodyssey_dev").performClick()
 
         check(clicked)
     }

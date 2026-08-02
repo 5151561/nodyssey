@@ -483,7 +483,8 @@ fun MainNavigation(
                             ),
                         )
                     },
-                    onEditProfile = { backStack.add(AccountSettingsKey) },
+                    // 空间页右上角的笔是「编辑资料」，直接进资料编辑页，不是账号设置的目录页。
+                    onEditProfile = { backStack.add(AccountProfileFieldsKey) },
                     onOpenBrowser = openExternalUrl,
                     onLinkClick = openContentUrl,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
