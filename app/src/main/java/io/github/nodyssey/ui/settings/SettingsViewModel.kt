@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nodyssey.core.AppVersion
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.ExternalLinkTarget
@@ -25,14 +26,18 @@ class SettingsViewModel(
     private val posts: PostRepository,
     private val session: SessionRepository,
     updates: AppUpdateRepository,
+    appVersion: AppVersion,
 ) : ViewModel() {
     private val clearingCache = MutableStateFlow(false)
+
+    private val versionName = appVersion.name.ifBlank { "—" }
 
     val uiState: StateFlow<SettingsUiState> =
         combine(settings.settings, clearingCache, updates.state) { values, clearing, update ->
             SettingsUiState(
                 settings = values,
                 isClearingCache = clearing,
+                versionName = versionName,
                 // Read off the shared updater rather than checked here: the answer is already in
                 // memory by the time this screen opens, and 我的 shows the same dot from the same
                 // state.
@@ -41,7 +46,7 @@ class SettingsViewModel(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = SettingsUiState(),
+            initialValue = SettingsUiState(versionName = versionName),
         )
 
     fun setThemeMode(value: ThemeMode) {
@@ -82,6 +87,7 @@ class SettingsViewModel(
                         posts = container.postRepository,
                         session = container.sessionRepository,
                         updates = container.appUpdateRepository,
+                        appVersion = container.appVersion,
                     )
                 }
             }
@@ -91,6 +97,8 @@ class SettingsViewModel(
 data class SettingsUiState(
     val settings: UserSettings = UserSettings(),
     val isClearingCache: Boolean = false,
+    /** The installed build's own version, as `PackageManager` reports it. */
+    val versionName: String = "—",
     /** The newer version on GitHub, or null when there is none to offer. */
     val updateVersionName: String? = null,
 )

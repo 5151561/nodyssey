@@ -221,7 +221,7 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_about_app),
                     subtitle = state.updateVersionName
                         ?.let { stringResource(R.string.settings_about_app_update, it) }
-                        ?: stringResource(R.string.settings_version),
+                        ?: stringResource(R.string.settings_version, state.versionName),
                     top = true,
                     onClick = onOpenAbout,
                     leading = { Icon(Icons.Default.Info, contentDescription = null) },
@@ -293,7 +293,7 @@ private fun bodySizeToFontScale(bodySize: Float): Float =
 private fun SettingsPreview() {
     NodysseyTheme {
         SettingsScreen(
-            state = SettingsUiState(),
+            state = SettingsUiState(versionName = "1.1.1"),
             onBack = {},
             onThemeModeChange = {},
             onFontScaleChange = {},
