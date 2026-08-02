@@ -1,0 +1,2 @@
+# 测试用的页面快照不参与 GitHub 语言统计
+app/src/test/resources/fixtures/** linguist-detectable=false
