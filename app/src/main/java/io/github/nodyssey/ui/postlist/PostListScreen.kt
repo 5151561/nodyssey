@@ -178,8 +178,23 @@ fun PostListScreen(
             }
         }
 
-    // Switching boards is the one case where the previous scroll offset is meaningless.
-    LaunchedEffect(state.categorySlug, state.sort) { listState.scrollToItem(0) }
+    /*
+     * Switching boards or sort order is the one case where the previous scroll offset is meaningless.
+     *
+     * Coming back from a thread is not a switch, but it looks like one from inside a `LaunchedEffect`:
+     * the screen left the composition while the thread was open, so the effect starts again on the
+     * same board and used to throw away the offset the list had just restored. Remembering which feed
+     * the list was last reset for — saved alongside that offset, so it survives the same trips — is
+     * what tells a real switch apart from a return.
+     */
+    var lastResetFeed by rememberSaveable { mutableStateOf(feedIdentity(state)) }
+    LaunchedEffect(state.categorySlug, state.sort) {
+        val feed = feedIdentity(state)
+        if (feed != lastResetFeed) {
+            lastResetFeed = feed
+            listState.scrollToItem(0)
+        }
+    }
 
     val scrollActive = listState.isScrollInProgress
     // Ending a gesture clears only its partial distance. It deliberately does not reveal the bar.
@@ -284,6 +299,14 @@ fun PostListScreen(
         }
     }
 }
+
+/**
+ * Which feed the rows on screen belong to — the board and the order, as one saveable value.
+ *
+ * A plain string rather than the pair itself so it goes into a `Bundle` unchanged, and so comparing
+ * "the same feed as before" cannot depend on how a null slug or an enum happens to be stored.
+ */
+private fun feedIdentity(state: PostListUiState): String = "${state.categorySlug.orEmpty()}/${state.sort.name}"
 
 private val NavigationDirectionThreshold = 16.dp
 
