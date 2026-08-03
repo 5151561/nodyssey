@@ -17,6 +17,17 @@ object Selectors {
      * (additions.md §1.4), so the parser folds it into `isLocked` — the app draws one lock state.
      */
     const val LIST_READ_ONLY = "div.post-title span:matchesOwn(^\\s*只读\\s*$)"
+
+    /**
+     * What the server puts on a row whose author this account has blocked.
+     *
+     * Read off the site's own bundle on 2026-08-03: its 临时显示Block内容 menu item is nothing but
+     * `document.querySelectorAll(".blocked-post")` with the class removed, and the stylesheet carries
+     * `.blocked-post,.blocked-comment{display:none!important}`. So the content is *sent*, marked, and
+     * hidden by CSS — a scraper receives it like any other row unless it looks for the class.
+     */
+    const val BLOCKED_POST_CLASS = "blocked-post"
+    const val BLOCKED_COMMENT_CLASS = "blocked-comment"
     const val LIST_AVATAR = "img.avatar-normal, img[src*=/avatar/]"
     const val LIST_AUTHOR = "span.info-author a[href]"
     const val LIST_VIEWS = "span.info-views span"

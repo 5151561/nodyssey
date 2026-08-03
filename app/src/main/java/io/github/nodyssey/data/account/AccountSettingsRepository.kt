@@ -157,6 +157,14 @@ interface AccountSettingsRepository {
 
     suspend fun blockedUsers(): List<BlockedUser>
 
+    /**
+     * Blocks by username, because that is the only handle the site's own form takes.
+     *
+     * There is no uid overload to add: `/api/block-list/add` reads `block_member_name` and nothing
+     * else, so a screen holding a uid still has to send the name it displays.
+     */
+    suspend fun block(name: String)
+
     suspend fun unblock(uid: Long)
 }
 
@@ -393,19 +401,33 @@ class NetworkAccountSettingsRepository(
             ?: throw NodeSeekException(NodeSeekError.Unparsable)
         val users =
             rows.mapNotNull { row ->
-                val uid = row.long("member_id", "uid", "user_id", "blocked_id") ?: return@mapNotNull null
-                val name = row.text("member_name", "username", "name") ?: return@mapNotNull null
+                /*
+                 * `block_member_id` / `block_member_name` are what the site's own block panel reads —
+                 * its table renders `o.block_member_name` linked to `/space/o.block_member_id`
+                 * (bundle, 2026-08-03). The names are listed first and alone on purpose: this used to
+                 * accept a spread of plausible-looking aliases, none of which was the real one, so
+                 * every non-empty list came back Unparsable while the tests stayed green against
+                 * invented fixtures.
+                 */
+                val uid = row.long("block_member_id") ?: return@mapNotNull null
+                val name = row.text("block_member_name") ?: return@mapNotNull null
                 BlockedUser(
                     uid = uid,
                     name = name,
-                    avatarUrl =
-                    NodeSeekSite.absoluteUrl(
-                        row.text("avatar", "avatarUrl", "avatar_url") ?: "/avatar/$uid.png",
-                    ),
+                    // The endpoint returns no avatar; the site builds one from the uid the same way.
+                    avatarUrl = NodeSeekSite.absoluteUrl("/avatar/$uid.png"),
                 )
             }
         if (rows.isNotEmpty() && users.isEmpty()) throw NodeSeekException(NodeSeekError.Unparsable)
         return users
+    }
+
+    override suspend fun block(name: String) {
+        postObject(
+            path = NodeSeekJsonClient.PATH_BLOCK_ADD,
+            body = JsonObject(mapOf("block_member_name" to JsonPrimitive(name))),
+            operation = "block",
+        )
     }
 
     override suspend fun unblock(uid: Long) {

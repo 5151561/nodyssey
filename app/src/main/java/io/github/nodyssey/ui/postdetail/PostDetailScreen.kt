@@ -143,7 +143,8 @@ fun PostDetailRoute(
     val postUrl = viewModel.postUrl()
     // Every image in the thread as currently loaded, so the viewer can page between them without
     // going back to the data layer — the URLs were already parsed into the rendered content.
-    val images = remember(state.body, state.comments) { state.imageUrls() }
+    val images =
+        remember(state.body, state.comments, state.showBlockedContent) { state.imageUrls() }
     PostDetailScreen(
         state = state,
         postUrl = postUrl,
@@ -626,15 +627,17 @@ private fun ThreadList(
 
         state.body?.let { body ->
             item(key = "body") {
-                OriginalPost(
-                    body = body,
-                    onOpenBrowser = onOpenBrowser,
-                    onImageClick = onImageClick,
-                    onJumpToFloor = onJumpToFloor,
-                    pendingReaction = state.pendingReactionFor(body),
-                    onReact = { action -> onReact(body, action) },
-                    onAuthorClick = onAuthorClick,
-                )
+                BlockAware(content = body, revealed = state.showBlockedContent) {
+                    OriginalPost(
+                        body = body,
+                        onOpenBrowser = onOpenBrowser,
+                        onImageClick = onImageClick,
+                        onJumpToFloor = onJumpToFloor,
+                        pendingReaction = state.pendingReactionFor(body),
+                        onReact = { action -> onReact(body, action) },
+                        onAuthorClick = onAuthorClick,
+                    )
+                }
             }
         }
 
@@ -646,21 +649,78 @@ private fun ThreadList(
             items = state.comments,
             key = { index, comment -> comment.commentId ?: -index.toLong() - 1 },
         ) { _, comment ->
-            CommentRow(
-                comment = comment,
-                onOpenBrowser = onOpenBrowser,
-                onImageClick = onImageClick,
-                onJumpToFloor = onJumpToFloor,
-                pendingReaction = state.pendingReactionFor(comment),
-                onReact = { action -> onReact(comment, action) },
-                onReply = { onReplyToFloor(comment.toFloorReference()) },
-                onQuote = { comment.toFloorReference()?.let(onQuoteFloor) },
-                onAuthorClick = onAuthorClick,
-            )
+            BlockAware(content = comment, revealed = state.showBlockedContent) {
+                CommentRow(
+                    comment = comment,
+                    onOpenBrowser = onOpenBrowser,
+                    onImageClick = onImageClick,
+                    onJumpToFloor = onJumpToFloor,
+                    pendingReaction = state.pendingReactionFor(comment),
+                    onReact = { action -> onReact(comment, action) },
+                    onReply = { onReplyToFloor(comment.toFloorReference()) },
+                    onQuote = { comment.toFloorReference()?.let(onQuoteFloor) },
+                    onAuthorClick = onAuthorClick,
+                )
+            }
         }
 
         if (state.isAppending) {
             item(key = "appending") { AppendSpinner() }
+        }
+    }
+}
+
+/**
+ * Draws [floor], or the one-line stand-in the site's block list has earned it.
+ *
+ * A blocked floor is *kept*, not dropped: NodeSeek sends it and hides it, so the app collapses it the
+ * same way. Dropping it would renumber nothing — floors carry their own numbers — but it would leave
+ * a reply quoting #12 pointing at a floor that, as far as the reader can tell, never existed.
+ *
+ * [revealed] is 临时显示被屏蔽内容 and opens every floor at once; the row's own 显示 opens exactly one
+ * and forgets it when the item scrolls out of the composition, which is the lighter of the two ways
+ * to answer "what did they actually say".
+ */
+@Composable
+private fun BlockAware(
+    content: PostContent,
+    revealed: Boolean,
+    floor: @Composable () -> Unit,
+) {
+    var openedHere by rememberSaveable(content.commentId) { mutableStateOf(false) }
+    if (!content.isBlocked || revealed || openedHere) {
+        floor()
+    } else {
+        BlockedFloorRow(floor = content.floor, onShow = { openedHere = true })
+    }
+}
+
+@Composable
+private fun BlockedFloorRow(
+    floor: String?,
+    onShow: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Icon(
+            NodysseyIcons.VisibilityOff,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = floor?.let { "$it · " }.orEmpty() + stringResource(R.string.post_comment_blocked),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onShow) {
+            Text(stringResource(R.string.post_comment_blocked_show))
         }
     }
 }
@@ -1451,9 +1511,13 @@ private fun PostDetailDarkPreview() {
  * Reading order is what makes the viewer's "2 / 4" mean anything: it has to match the order the images
  * appear while scrolling, so a tap on the third screenshot opens page three. Inline stickers are left
  * out — nobody opens a full-screen viewer for an emoji.
+ *
+ * Collapsed floors contribute nothing, for the same reason: paging past a hidden floor's screenshot
+ * would show the reader exactly what the block spared them.
  */
 internal fun PostDetailUiState.imageUrls(): List<String> =
     (listOfNotNull(body) + comments)
+        .filter { showBlockedContent || !it.isBlocked }
         .flatMap { content -> content.nodes.imageUrls() }
         .distinct()
 

@@ -1,6 +1,7 @@
 package io.github.nodyssey.core.html
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -70,6 +71,36 @@ class PostListParserTest {
             """.trimIndent()
 
         assertEquals(3, PostListParser.parse(html, page = 3).totalPages)
+    }
+
+    /**
+     * The site sends a blocked author's row and hides it in CSS, so the row arrives looking ordinary
+     * apart from one class. A scraper that ignores it shows the reader exactly what they blocked.
+     */
+    @Test
+    fun `marks the rows the server blocked`() {
+        val html =
+            """
+            <html><body><ul class="post-list">
+              <li class="blocked-post post-list-item">
+                <div class="post-title"><a href="/post-11-1">blocked author</a></div>
+              </li>
+              <li class="post-list-item">
+                <div class="post-title"><a href="/post-12-1">ordinary</a></div>
+              </li>
+            </ul></body></html>
+            """.trimIndent()
+
+        val posts = PostListParser.parse(html, page = 1).posts
+
+        assertEquals(listOf(11L, 12L), posts.map { it.postId })
+        assertTrue(posts.first().isBlocked)
+        assertFalse(posts.last().isBlocked)
+    }
+
+    @Test
+    fun `leaves the front page unblocked`() {
+        assertTrue(page.posts.none { it.isBlocked })
     }
 
     @Test

@@ -1,5 +1,7 @@
 package io.github.nodyssey.ui.account
 
+import io.github.nodyssey.core.net.NodeSeekError
+import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.account.BlockedUser
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.testSettingsRepository
@@ -100,6 +102,65 @@ class BlockListViewModelTest {
 
             assertTrue(vm.uiState.value.showBlockedContent)
             assertTrue(settings.showBlockedContent.first())
+        }
+
+    /**
+     * The list, not the typed name, is what the row is built from: the site owns the uid and the
+     * canonical spelling, so an accepted block is followed by a re-read rather than a guessed row.
+     */
+    @Test
+    fun `blocking a name sends it and re-reads the list`() =
+        runTest(dispatcher) {
+            val repository = FakeAccountSettingsRepository()
+            val vm = viewModel(repository)
+            collectState(vm)
+            advanceUntilIdle()
+
+            vm.onNameInputChange("  vps_matthew  ")
+            vm.block()
+            advanceUntilIdle()
+
+            assertEquals(listOf("vps_matthew"), repository.blockedNames)
+            assertEquals(listOf("vps_matthew"), vm.uiState.value.blocked.map { it.name })
+            assertEquals("", vm.uiState.value.nameInput)
+            assertFalse(vm.uiState.value.isBlocking)
+            assertTrue(vm.uiState.value.message is AccountMessage.Info)
+        }
+
+    @Test
+    fun `a blank name is not sent`() =
+        runTest(dispatcher) {
+            val repository = FakeAccountSettingsRepository()
+            val vm = viewModel(repository)
+            collectState(vm)
+            advanceUntilIdle()
+
+            vm.onNameInputChange("   ")
+            vm.block()
+            advanceUntilIdle()
+
+            assertTrue(repository.blockedNames.isEmpty())
+        }
+
+    /** A refusal is the site's sentence, and the reader keeps what they typed to fix it. */
+    @Test
+    fun `a refused name keeps the field and shows the site's reason`() =
+        runTest(dispatcher) {
+            val repository =
+                FakeAccountSettingsRepository(
+                    failWith = { NodeSeekException(NodeSeekError.Unknown, detail = "用户不存在") },
+                )
+            val vm = viewModel(repository)
+            collectState(vm)
+            advanceUntilIdle()
+
+            vm.onNameInputChange("nobody")
+            vm.block()
+            advanceUntilIdle()
+
+            assertEquals("nobody", vm.uiState.value.nameInput)
+            assertFalse(vm.uiState.value.isBlocking)
+            assertEquals(AccountMessage.Detail("用户不存在"), vm.uiState.value.message)
         }
 
     @Test

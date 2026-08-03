@@ -3,12 +3,15 @@ package io.github.nodyssey.ui.account
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,6 +20,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -31,9 +35,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -68,6 +74,8 @@ fun BlockListRoute(
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onShowBlockedChange = viewModel::setShowBlockedContent,
+        onNameChange = viewModel::onNameInputChange,
+        onBlock = viewModel::block,
         onRequestUnblock = viewModel::requestUnblock,
         onDismissUnblock = viewModel::dismissUnblock,
         onConfirmUnblock = viewModel::confirmUnblock,
@@ -76,11 +84,13 @@ fun BlockListRoute(
 }
 
 /**
- * 屏蔽用户 (d6 4/5): the session-scoped reveal switch on top, then the site's blocked list.
+ * 屏蔽用户 (d6 4/5): the reveal switch on top, then the account's blocked list.
  *
- * The switch's subtitle says out loud that the reveal ends with the app — that promise is what makes
- * it safe to flip out of curiosity, and it is the app keeping the site's own wording for the feature
- * rather than inventing a scarier or softer version.
+ * The list is Remote and badged as such — blocking is account state, and it is the *server* that
+ * decides which posts and comments arrive marked. The switch below it is the one device-side control
+ * on the page: it unhides what is already downloaded, and its subtitle says out loud that the reveal
+ * ends with the app. That promise is what makes it safe to flip out of curiosity, and it keeps the
+ * site's own wording for the feature rather than inventing a scarier or softer version.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,6 +99,8 @@ fun BlockListScreen(
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onShowBlockedChange: (Boolean) -> Unit,
+    onNameChange: (String) -> Unit,
+    onBlock: () -> Unit,
     onRequestUnblock: (BlockedUser) -> Unit,
     onDismissUnblock: () -> Unit,
     onConfirmUnblock: () -> Unit,
@@ -129,11 +141,11 @@ fun BlockListScreen(
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                AccountSectionLabel(
-                    text = stringResource(R.string.account_block_section),
-                    modifier = Modifier.weight(1f),
-                )
+                AccountSectionLabel(text = stringResource(R.string.account_block_section))
+                StorageBadge(local = false)
+                Spacer(Modifier.weight(1f))
                 if (state.blocked.isNotEmpty()) {
                     Text(
                         stringResource(R.string.account_blocked_count, state.blocked.size),
@@ -142,6 +154,13 @@ fun BlockListScreen(
                     )
                 }
             }
+
+            AddBlockField(
+                name = state.nameInput,
+                isBlocking = state.isBlocking,
+                onNameChange = onNameChange,
+                onBlock = onBlock,
+            )
 
             if (!state.isLoading && state.blocked.isEmpty()) {
                 BlockedEmptyState()
@@ -220,6 +239,50 @@ private fun ShowBlockedSwitchCard(
     }
 }
 
+/**
+ * 添加屏蔽, by username — the only handle `/api/block-list/add` accepts.
+ *
+ * The field is cleared only once the site has accepted the name. A refusal ("用户不存在") comes back as
+ * the site's own sentence in the snackbar, and the reader should not have to retype what they typed.
+ */
+@Composable
+private fun AddBlockField(
+    name: String,
+    isBlocking: Boolean,
+    onNameChange: (String) -> Unit,
+    onBlock: () -> Unit,
+) {
+    val keyboard = LocalSoftwareKeyboardController.current
+    val submit = {
+        if (name.isNotBlank() && !isBlocking) {
+            keyboard?.hide()
+            onBlock()
+        }
+    }
+
+    OutlinedTextField(
+        value = name,
+        onValueChange = onNameChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        enabled = !isBlocking,
+        label = { Text(stringResource(R.string.account_block_add_label)) },
+        placeholder = { Text(stringResource(R.string.account_block_add_placeholder)) },
+        shape = AccountFieldShape,
+        keyboardOptions =
+        KeyboardOptions(
+            autoCorrectEnabled = false,
+            imeAction = ImeAction.Done,
+        ),
+        keyboardActions = KeyboardActions(onDone = { submit() }),
+        trailingIcon = {
+            TextButton(onClick = submit, enabled = name.isNotBlank() && !isBlocking) {
+                Text(stringResource(R.string.account_block_add_action))
+            }
+        },
+    )
+}
+
 @Composable
 private fun BlockedRow(
     user: BlockedUser,
@@ -295,6 +358,8 @@ private fun BlockListPreview() {
             snackbarHostState = remember { SnackbarHostState() },
             onBack = {},
             onShowBlockedChange = {},
+            onNameChange = {},
+            onBlock = {},
             onRequestUnblock = {},
             onDismissUnblock = {},
             onConfirmUnblock = {},

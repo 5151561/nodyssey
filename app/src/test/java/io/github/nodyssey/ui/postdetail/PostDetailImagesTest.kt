@@ -10,20 +10,23 @@ import org.junit.Test
  * The image viewer pages through whatever this returns, so its order *is* the "2 / 4" the user reads.
  */
 class PostDetailImagesTest {
-    private fun content(vararg nodes: RichNode) =
-        PostContent(
-            commentId = null,
-            floor = null,
-            authorName = "tester",
-            authorUid = null,
-            avatarUrl = null,
-            isOriginalPoster = false,
-            badges = emptyList(),
-            createdAtText = null,
-            createdAtTitle = null,
-            categoryTitle = null,
-            nodes = nodes.toList(),
-        )
+    private fun content(
+        vararg nodes: RichNode,
+        blocked: Boolean = false,
+    ) = PostContent(
+        commentId = null,
+        floor = null,
+        authorName = "tester",
+        authorUid = null,
+        avatarUrl = null,
+        isOriginalPoster = false,
+        badges = emptyList(),
+        createdAtText = null,
+        createdAtTitle = null,
+        categoryTitle = null,
+        nodes = nodes.toList(),
+        isBlocked = blocked,
+    )
 
     private fun image(url: String) = RichNode.BlockImage(url = url, alt = null)
 
@@ -82,5 +85,35 @@ class PostDetailImagesTest {
             )
 
         assertEquals(listOf("real.png"), state.imageUrls())
+    }
+
+    /**
+     * A collapsed floor is collapsed in the viewer too. Paging into a blocked author's screenshot
+     * would show the reader exactly the thing the block was for.
+     */
+    @Test
+    fun `skips floors the site marked blocked`() {
+        val state =
+            PostDetailUiState(
+                body = content(image("body.png")),
+                comments =
+                listOf(
+                    content(image("blocked.png"), blocked = true),
+                    content(image("ordinary.png")),
+                ),
+            )
+
+        assertEquals(listOf("body.png", "ordinary.png"), state.imageUrls())
+    }
+
+    @Test
+    fun `includes them once the reveal switch is on`() {
+        val state =
+            PostDetailUiState(
+                comments = listOf(content(image("blocked.png"), blocked = true)),
+                showBlockedContent = true,
+            )
+
+        assertEquals(listOf("blocked.png"), state.imageUrls())
     }
 }

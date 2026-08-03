@@ -492,6 +492,13 @@
     <string name="account_block_unblock">解除屏蔽</string>
     <string name="account_block_empty">你还没有屏蔽任何用户</string>
     <string name="account_block_footer">被屏蔽用户的帖子在列表中隐藏，评论显示为「已屏蔽用户的评论」折叠行；解除立即生效。</string>
+    <string name="account_block_add_label">添加屏蔽</string>
+    <string name="account_block_add_placeholder">对方用户名</string>
+    <string name="account_block_add_action">添加</string>
+    <string name="account_block_added">已加入屏蔽列表</string>
+    <!-- 帖子详情里被屏蔽楼层折叠成的一行 -->
+    <string name="post_comment_blocked">已屏蔽用户的评论</string>
+    <string name="post_comment_blocked_show">显示</string>
 
     <!-- 偏好与首页版块 (d6 5/5)。Local=本机 DataStore，Remote=账号（服务端），归属徽标随行展示 -->
     <string name="account_preferences_title">偏好与首页版块</string>

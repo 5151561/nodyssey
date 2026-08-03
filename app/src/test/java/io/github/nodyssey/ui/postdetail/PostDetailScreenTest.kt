@@ -43,6 +43,7 @@ class PostDetailScreenTest {
         /** Null is a page that never carried the tallies, which is what disables the three marks. */
         reactions: PostReactions? = null,
         floor: String? = null,
+        blocked: Boolean = false,
     ) = PostContent(
         commentId = text.hashCode().toLong(),
         floor = floor,
@@ -57,6 +58,7 @@ class PostDetailScreenTest {
         nodes = listOf(RichNode.Paragraph(listOf(InlineNode.Text(text)))),
         signatureNodes = signature,
         reactions = reactions,
+        isBlocked = blocked,
     )
 
     private fun setScreen(
@@ -101,6 +103,49 @@ class PostDetailScreenTest {
         composeRule.onNodeWithText("the opening post").assertIsDisplayed()
         composeRule.onNodeWithText("first reply").assertIsDisplayed()
         composeRule.onNodeWithText("second reply").assertIsDisplayed()
+    }
+
+    /**
+     * The floor is kept and collapsed, not dropped. A reply quoting #2 has to still find a #2 there,
+     * and the reader has to be able to see what was hidden without turning blocking off for the app.
+     */
+    @Test
+    fun `collapses a blocked floor into a row that can be opened`() {
+        setScreen(
+            PostDetailUiState(
+                title = "t",
+                body = content("the opening post", author = "op"),
+                comments =
+                listOf(
+                    content("blocked reply", floor = "#1", blocked = true),
+                    content("ordinary reply", floor = "#2"),
+                ),
+            ),
+        )
+
+        composeRule.onAllNodesWithText("blocked reply").assertCountEquals(0)
+        composeRule.onNodeWithText("ordinary reply").assertIsDisplayed()
+        composeRule.onNodeWithText("#1 · 已屏蔽用户的评论").assertIsDisplayed()
+
+        composeRule.onNodeWithText("显示").performClick()
+
+        composeRule.onNodeWithText("blocked reply").assertIsDisplayed()
+    }
+
+    /** 临时显示被屏蔽内容 opens every floor at once, without touching the network. */
+    @Test
+    fun `the reveal switch draws blocked floors as ordinary ones`() {
+        setScreen(
+            PostDetailUiState(
+                title = "t",
+                body = content("the opening post", author = "op"),
+                comments = listOf(content("blocked reply", floor = "#1", blocked = true)),
+                showBlockedContent = true,
+            ),
+        )
+
+        composeRule.onNodeWithText("blocked reply").assertIsDisplayed()
+        composeRule.onAllNodesWithText("已屏蔽用户的评论").assertCountEquals(0)
     }
 
     @Test

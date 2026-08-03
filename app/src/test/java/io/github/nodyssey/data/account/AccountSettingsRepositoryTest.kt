@@ -64,15 +64,20 @@ class AccountSettingsRepositoryTest {
             assertEquals(NodeSeekJsonClient.PATH_ACCOUNT_OTP_STATUS, source.requestedPath)
         }
 
+    /**
+     * The field names are the site's, not plausible ones: its own block panel renders
+     * `block_member_name` linked to `/space/block_member_id`. An earlier version of this test used
+     * invented aliases and passed while the real list came back Unparsable on every device.
+     */
     @Test
-    fun `reads blocked users with tolerant field names`() =
+    fun `reads the blocked list the site actually returns`() =
         runTest {
             val source =
                 FakeSettingsJsonSource(
                     """
                     {"success":true,"data":[
-                      {"member_id":"7","member_name":"alpha","avatar":"/avatar/7.png"},
-                      {"uid":8,"username":"beta"}
+                      {"block_member_id":7,"block_member_name":"alpha"},
+                      {"block_member_id":"8","block_member_name":"beta"}
                     ]}
                     """.trimIndent(),
                 )
@@ -335,6 +340,28 @@ class AccountSettingsRepositoryTest {
 
             assertTrue(failure is IllegalArgumentException)
             assertTrue(source.posts.isEmpty())
+        }
+
+    /** Blocking takes a name and only a name: the site's own form has no uid to send. */
+    @Test
+    fun `blocks by member name`() =
+        runTest {
+            val source = FakeSettingsJsonSource("""{"success":true}""")
+
+            repository(source).block("alpha")
+
+            assertEquals(NodeSeekJsonClient.PATH_BLOCK_ADD, source.posts.single().path)
+            assertJsonEquals("""{"block_member_name":"alpha"}""", source.posts.single().body)
+        }
+
+    @Test
+    fun `carries the site's refusal of an unknown name`() =
+        runTest {
+            val source = FakeSettingsJsonSource("""{"success":false,"message":"用户不存在"}""")
+
+            val failure = runCatching { repository(source).block("nobody") }.exceptionOrNull()
+
+            assertEquals("用户不存在", (failure as? NodeSeekException)?.detail)
         }
 
     @Test

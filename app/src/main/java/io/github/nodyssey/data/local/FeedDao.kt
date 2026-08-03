@@ -29,6 +29,11 @@ interface FeedDao {
      * Returning a [PagingSource] rather than a `Flow<List<…>>` is what makes the database — not the
      * network — the thing the UI reads from. Room invalidates it on any write to the joined tables,
      * so a mediator writing page 3 shows up without anyone telling the UI to reload.
+     *
+     * Blocked rows are dropped here rather than by the UI so that they never take up a slot in the
+     * paging window: a page of fifty that is half blocked would otherwise draw twenty-five rows and
+     * leave the reader looking at a short list with no scroll left to trigger the next load.
+     * [includeBlocked] is 临时显示被屏蔽内容 — the same rows, unhidden, no re-fetch.
      */
     @Query(
         """
@@ -36,11 +41,14 @@ interface FeedDao {
         FROM posts p
         INNER JOIN feed_positions f ON f.postId = p.postId
         LEFT JOIN post_read_marks r ON r.postId = p.postId
-        WHERE f.feedKey = :feedKey
+        WHERE f.feedKey = :feedKey AND (:includeBlocked OR p.isBlocked = 0)
         ORDER BY f.sortIndex ASC
         """,
     )
-    fun pagingSource(feedKey: String): PagingSource<Int, FeedPostRow>
+    fun pagingSource(
+        feedKey: String,
+        includeBlocked: Boolean = false,
+    ): PagingSource<Int, FeedPostRow>
 
     /**
      * Searches the posts that have already reached the offline cache.
@@ -54,13 +62,20 @@ interface FeedDao {
         SELECT p.*, r.lastReadAtMillis AS lastReadAtMillis, r.lastSeenCommentCount AS lastSeenCommentCount
         FROM posts p
         LEFT JOIN post_read_marks r ON r.postId = p.postId
-        WHERE p.title LIKE '%' || :query || '%' ESCAPE '\'
-           OR p.authorName LIKE '%' || :query || '%' ESCAPE '\'
+        WHERE (:includeBlocked OR p.isBlocked = 0)
+          AND (
+                p.title LIKE '%' || :query || '%' ESCAPE '\'
+             OR p.authorName LIKE '%' || :query || '%' ESCAPE '\'
+          )
         ORDER BY p.lastActiveText IS NULL, p.postId DESC
         LIMIT :limit
         """,
     )
-    fun search(query: String, limit: Int = 100): Flow<List<FeedPostRow>>
+    fun search(
+        query: String,
+        includeBlocked: Boolean = false,
+        limit: Int = 100,
+    ): Flow<List<FeedPostRow>>
 
     @Upsert
     suspend fun upsertPosts(posts: List<PostEntity>)

@@ -86,6 +86,10 @@ class SettingsRepository(
      * version the same way: "重启 App 后恢复屏蔽". Local storage that survived the process would
      * quietly turn "show me, just for now" into "never block again", so the flag lives and dies with
      * the process on purpose.
+     *
+     * It is a *view* switch and nothing more: the block list is account state and the server is what
+     * marks a post or a floor blocked. Flipping this reveals rows the app has already downloaded —
+     * it never asks the site for anything, and it can never block or unblock anyone.
      */
     private val showBlockedContentState = MutableStateFlow(false)
     val showBlockedContent: StateFlow<Boolean> = showBlockedContentState.asStateFlow()

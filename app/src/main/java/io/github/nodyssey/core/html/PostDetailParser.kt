@@ -3,7 +3,6 @@ package io.github.nodyssey.core.html
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostDetail
-import io.github.nodyssey.model.PostReactions
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
@@ -17,16 +16,17 @@ object PostDetailParser {
             ?: document.selectFirst(Selectors.DETAIL_TITLE_FALLBACK)?.text()?.trim()
             ?: ""
 
-        // The counts and this account's own marks come from the page's `__config__` blob, keyed by the
-        // same `data-comment-id` the markup carries. Read once for the page, not once per floor.
-        val reactions = PostConfigParser.parseReactions(document)
+        // The counts, this account's own marks and the block flags come from the page's `__config__`
+        // blob, keyed by the same `data-comment-id` the markup carries. Read once for the page, not
+        // once per floor.
+        val config = PostConfigParser.parse(document)
 
         // Null rather than a blank placeholder: page 2 onwards has no opening post, and the cache
         // must not mistake "not on this page" for "the author wrote nothing".
         val body = document.selectFirst(Selectors.DETAIL_BODY_ITEM)
-            ?.let { parseContent(it, isBody = true, reactions = reactions) }
+            ?.let { parseContent(it, isBody = true, config = config) }
         val comments = document.select(Selectors.DETAIL_COMMENTS)
-            .map { parseContent(it, isBody = false, reactions = reactions) }
+            .map { parseContent(it, isBody = false, config = config) }
 
         val pager = document.selectFirst(Selectors.DETAIL_PAGER)
         // The href, not the text: the last-page shortcut on a long thread renders as "..37", which
@@ -60,7 +60,7 @@ object PostDetailParser {
     private fun parseContent(
         element: Element,
         isBody: Boolean,
-        reactions: Map<Long, PostReactions>,
+        config: PostConfig,
     ): PostContent {
         val commentId = element.attr("data-comment-id").toLongOrNull()
         val authorLink = element.selectFirst(Selectors.CONTENT_AUTHOR)
@@ -90,7 +90,12 @@ object PostDetailParser {
             isEdited = editedText != null,
             editedAtText = editedText,
             signatureNodes = RichContentParser.parse(element.selectFirst(Selectors.CONTENT_SIGNATURE)),
-            reactions = commentId?.let(reactions::get),
+            reactions = commentId?.let(config.reactions::get),
+            // Either source will do, and they answer for different pages: the blob covers a floor the
+            // markup renders unmarked, the class covers a page whose blob we could not read.
+            isBlocked =
+            element.hasClass(Selectors.BLOCKED_COMMENT_CLASS) ||
+                commentId in config.blockedCommentIds,
         )
     }
 

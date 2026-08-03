@@ -27,7 +27,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CacheSessionEntity::class,
         SelfProfileEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -50,7 +50,7 @@ abstract class NodeSeekDatabase : RoomDatabase() {
                 .databaseBuilder(context, NodeSeekDatabase::class.java, "nodeseek.db")
                 // Known upgrades preserve local state explicitly. The fallback remains for unknown
                 // legacy versions whose downloaded content can be rebuilt; schemas stay checked in.
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }
@@ -97,5 +97,20 @@ internal val MIGRATION_4_5 =
             db.execSQL(
                 "ALTER TABLE `post_details` ADD COLUMN `firstLoadedPage` INTEGER NOT NULL DEFAULT 1",
             )
+        }
+    }
+
+/**
+ * Records the site's block mark on a cached row.
+ *
+ * Defaulting to 0 is right for every stored row: they were parsed before the mark was read, so
+ * nothing is known about them, and "not blocked" is what the app did with them anyway. The next
+ * refresh writes the truth. Comments need no migration — their column is a serialized `PostContent`
+ * and the new field has a default.
+ */
+internal val MIGRATION_5_6 =
+    object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `posts` ADD COLUMN `isBlocked` INTEGER NOT NULL DEFAULT 0")
         }
     }

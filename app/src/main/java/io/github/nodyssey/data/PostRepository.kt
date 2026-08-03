@@ -22,7 +22,10 @@ import io.github.nodyssey.model.PostListPage
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.ThreadSnapshot
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
@@ -182,7 +185,7 @@ interface PostRepository {
     suspend fun freeChickenLegs(): FreeChickenLegs?
 }
 
-@OptIn(ExperimentalPagingApi::class)
+@OptIn(ExperimentalPagingApi::class, ExperimentalCoroutinesApi::class)
 class OfflineFirstPostRepository(
     private val database: NodeSeekDatabase,
     private val remote: PostRemoteDataSource,
@@ -193,6 +196,15 @@ class OfflineFirstPostRepository(
      * rather than pretend it landed.
      */
     private val reactions: PostReactionWriter? = null,
+    /**
+     * 临时显示被屏蔽内容, as a flow because it can change while a list is on screen.
+     *
+     * Every list of posts reads it here rather than each screen remembering to: blocking is account
+     * state that the site applies to every route, so one feed honouring it and another not would be
+     * the app disagreeing with itself. Default false — a caller that never wires it up hides blocked
+     * rows, which is the site's own default.
+     */
+    private val showBlockedContent: Flow<Boolean> = flowOf(false),
 ) : PostRepository {
     override fun feed(
         categorySlug: String?,
@@ -224,34 +236,45 @@ class OfflineFirstPostRepository(
         }
     }
 
-    /** One pager shape for every list of posts, so a feed and a search can never drift apart. */
+    /**
+     * One pager shape for every list of posts, so a feed and a search can never drift apart.
+     *
+     * Flipping 临时显示被屏蔽内容 builds a new pager rather than filtering an existing one, because the
+     * paging window is what the query decides: reveal has to change which rows exist, not which of
+     * the loaded ones are drawn. The rows themselves are already in Room either way, so the reveal
+     * costs a re-query and not a request.
+     */
     private fun pagedFeed(
         feedKey: String,
         loadPage: suspend (page: Int) -> PostListPage,
     ): Flow<PagingData<FeedPost>> =
-        Pager(
-            config =
-            PagingConfig(
-                pageSize = NETWORK_PAGE_SIZE,
-                // Matches the old hand-rolled "load when eight rows from the end" heuristic.
-                prefetchDistance = 8,
-                initialLoadSize = NETWORK_PAGE_SIZE,
-                enablePlaceholders = false,
-            ),
-            remoteMediator =
-            FeedRemoteMediator(
-                feedKey = feedKey,
-                database = database,
-                clock = clock,
-                loadPage = loadPage,
-            ),
-            pagingSourceFactory = { database.feedDao().pagingSource(feedKey) },
-        ).flow.map { pagingData -> pagingData.map(FeedPostRow::toFeedPost) }
+        showBlockedContent.distinctUntilChanged().flatMapLatest { includeBlocked ->
+            Pager(
+                config =
+                PagingConfig(
+                    pageSize = NETWORK_PAGE_SIZE,
+                    // Matches the old hand-rolled "load when eight rows from the end" heuristic.
+                    prefetchDistance = 8,
+                    initialLoadSize = NETWORK_PAGE_SIZE,
+                    enablePlaceholders = false,
+                ),
+                remoteMediator =
+                FeedRemoteMediator(
+                    feedKey = feedKey,
+                    database = database,
+                    clock = clock,
+                    loadPage = loadPage,
+                ),
+                pagingSourceFactory = { database.feedDao().pagingSource(feedKey, includeBlocked) },
+            ).flow
+        }.map { pagingData -> pagingData.map(FeedPostRow::toFeedPost) }
 
     override fun search(query: String): Flow<List<FeedPost>> {
         val escaped = query.trim().escapeLikePattern()
         if (escaped.isEmpty()) return flowOf(emptyList())
-        return database.feedDao().search(escaped).map { rows -> rows.map(FeedPostRow::toFeedPost) }
+        return showBlockedContent.distinctUntilChanged().flatMapLatest { includeBlocked ->
+            database.feedDao().search(escaped, includeBlocked)
+        }.map { rows -> rows.map(FeedPostRow::toFeedPost) }
     }
 
     override suspend fun invalidateCaches() {

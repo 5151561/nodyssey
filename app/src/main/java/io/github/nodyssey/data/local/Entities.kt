@@ -77,6 +77,11 @@ data class PostEntity(
     val isPinned: Boolean,
     val isLocked: Boolean,
     val lockLevel: Int?,
+    /**
+     * Stored rather than filtered away on arrival, because whether it is shown is a *view* decision:
+     * 临时显示被屏蔽内容 reveals what is already here instead of re-fetching the feed.
+     */
+    val isBlocked: Boolean = false,
     val cachedAtMillis: Long,
 )
 
@@ -96,6 +101,7 @@ fun PostEntity.toSummary() =
         isPinned = isPinned,
         isLocked = isLocked,
         lockLevel = lockLevel,
+        isBlocked = isBlocked,
     )
 
 fun PostSummary.toEntity(cachedAtMillis: Long) =
@@ -114,6 +120,7 @@ fun PostSummary.toEntity(cachedAtMillis: Long) =
         isPinned = isPinned,
         isLocked = isLocked,
         lockLevel = lockLevel,
+        isBlocked = isBlocked,
         cachedAtMillis = cachedAtMillis,
     )
 
