@@ -20,6 +20,14 @@ data class PostSummary(
     val isLocked: Boolean = false,
     /** The reader level a locked post demands, when the list shows one next to the lock icon. */
     val lockLevel: Int? = null,
+    /**
+     * The author is on this account's block list, as the *server* decided.
+     *
+     * NodeSeek blocks server-side and sends the row anyway, marked `class="blocked-post"`, which its
+     * own stylesheet hides with `display:none`. The app never derives this from a local list: the
+     * block list is account state, so a row is blocked because the site said so or not at all.
+     */
+    val isBlocked: Boolean = false,
 )
 
 data class PostListPage(
@@ -111,6 +119,14 @@ data class PostContent(
     val signatureNodes: List<RichNode> = emptyList(),
     /** Counts and this account's own marks, or null when the page did not carry them. */
     val reactions: PostReactions? = null,
+    /**
+     * The author is on this account's block list, as the *server* decided.
+     *
+     * Comes from the page's own `__config__` (`postData.comments[].blocked`), with the markup's
+     * `blocked-comment` class as a second source. Never derived on the device — see
+     * [PostSummary.isBlocked].
+     */
+    val isBlocked: Boolean = false,
 )
 
 /**

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.R
+import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.account.AccountSettingsRepository
 import io.github.nodyssey.data.account.BlockedUser
@@ -22,10 +23,11 @@ import kotlinx.coroutines.launch
 /**
  * State holder for 屏蔽用户 (d6 4/5).
  *
- * Two owners meet on this page and stay separate: the blocked list is the site's (`#block`, endpoint
- * pending), while 临时显示被屏蔽内容 is the app's own session flag — the site keeps that escape hatch
- * in its user menu, d6 folds it in here, and it deliberately dies with the process
- * (see `SettingsRepository.showBlockedContent`).
+ * Blocking is the account's, not the device's: the list lives on the site, and the site is also what
+ * decides which posts and comments come back marked as blocked. Nothing here keeps a block of its
+ * own. 临时显示被屏蔽内容 is the one device-side thing on the page, and it is a *view* switch over
+ * those marks — the site's own user menu has the same escape hatch and it lasts exactly as long as
+ * the page does (see `SettingsRepository.showBlockedContent`).
  */
 class BlockListViewModel(
     private val account: AccountSettingsRepository,
@@ -39,6 +41,8 @@ class BlockListViewModel(
                 isLoading = state.isLoading,
                 blocked = state.blocked,
                 unblocking = state.unblocking,
+                nameInput = state.nameInput,
+                isBlocking = state.isBlocking,
                 showBlockedContent = showBlocked,
                 message = state.message,
             )
@@ -49,19 +53,58 @@ class BlockListViewModel(
         )
 
     init {
+        viewModelScope.launch { reload() }
+    }
+
+    private suspend fun reload() {
+        runCatchingExceptCancellation { account.blockedUsers() }
+            .onSuccess { blocked ->
+                local.update { it.copy(isLoading = false, blocked = blocked) }
+            }.onFailure { throwable ->
+                local.update {
+                    it.copy(isLoading = false, message = throwable.toAccountMessage())
+                }
+            }
+    }
+
+    fun setShowBlockedContent(enabled: Boolean) = settings.setShowBlockedContent(enabled)
+
+    fun onNameInputChange(value: String) = local.update { it.copy(nameInput = value) }
+
+    /**
+     * Blocks whoever holds the typed name, then re-reads the list rather than appending a guessed row.
+     *
+     * By name because the endpoint takes a name — and because that means the site is the only thing
+     * that knows whether the name exists. A row invented here would sit in the list until the next
+     * visit and then quietly vanish. The field is cleared only on acceptance: after a refusal the
+     * reader gets the site's sentence and their own typing back.
+     */
+    fun block() {
+        val target = local.value.nameInput.trim()
+        if (target.isEmpty() || local.value.isBlocking) return
         viewModelScope.launch {
-            runCatchingExceptCancellation { account.blockedUsers() }
-                .onSuccess { blocked ->
-                    local.update { it.copy(isLoading = false, blocked = blocked) }
+            local.update { it.copy(isBlocking = true) }
+            runCatchingExceptCancellation { account.block(target) }
+                .onSuccess {
+                    reload()
+                    local.update {
+                        it.copy(
+                            isBlocking = false,
+                            nameInput = "",
+                            message = AccountMessage.Info(R.string.account_block_added),
+                        )
+                    }
                 }.onFailure { throwable ->
                     local.update {
-                        it.copy(isLoading = false, message = throwable.toAccountMessage())
+                        it.copy(isBlocking = false, message = throwable.toBlockMessage())
                     }
                 }
         }
     }
 
-    fun setShowBlockedContent(enabled: Boolean) = settings.setShowBlockedContent(enabled)
+    /** The site says why it refused a name — 用户不存在 and the like — so that sentence wins. */
+    private fun Throwable.toBlockMessage(): AccountMessage =
+        (this as? NodeSeekException)?.detail?.let(AccountMessage::Detail) ?: toAccountMessage()
 
     fun requestUnblock(user: BlockedUser) = local.update { it.copy(unblocking = user) }
 
@@ -106,6 +149,8 @@ private data class BlockListLocalState(
     val isLoading: Boolean = true,
     val blocked: List<BlockedUser> = emptyList(),
     val unblocking: BlockedUser? = null,
+    val nameInput: String = "",
+    val isBlocking: Boolean = false,
     val message: AccountMessage? = null,
 )
 
@@ -113,6 +158,10 @@ data class BlockListUiState(
     val isLoading: Boolean = true,
     val blocked: List<BlockedUser> = emptyList(),
     val unblocking: BlockedUser? = null,
+    /** What is typed into 添加屏蔽; owned here so a refused name survives the failure. */
+    val nameInput: String = "",
+    /** A 添加屏蔽 in flight, so the field can refuse a second submit of the same name. */
+    val isBlocking: Boolean = false,
     val showBlockedContent: Boolean = false,
     val message: AccountMessage? = null,
 )

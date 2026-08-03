@@ -254,6 +254,9 @@ class NodeSeekJsonClient(
         const val PATH_PREFERENCE_SET = "/api/preference/set"
         const val PATH_HOMEPAGE = "/api/homepage"
         const val PATH_BLOCK_LIST = "/api/block-list/list"
+
+        /** Takes `block_member_name` — the site blocks by username, not by uid. */
+        const val PATH_BLOCK_ADD = "/api/block-list/add"
         const val PATH_BLOCK_DELETE = "/api/block-list/del"
 
         fun discussionListPath(uid: Long, page: Int = 1) =

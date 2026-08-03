@@ -172,7 +172,13 @@ class DefaultAppContainer(
     private val remotePosts by lazy { NetworkPostDataSource(htmlClient, dispatchers, clock) }
 
     override val postRepository: PostRepository by lazy {
-        OfflineFirstPostRepository(database, remotePosts, clock, PostReactionWriter(jsonClient))
+        OfflineFirstPostRepository(
+            database,
+            remotePosts,
+            clock,
+            PostReactionWriter(jsonClient),
+            settingsRepository.showBlockedContent,
+        )
     }
 
     override val categoryRepository: CategoryRepository by lazy {

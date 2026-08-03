@@ -29,6 +29,14 @@ sealed interface AccountMessage {
     data class Info(@StringRes val textRes: Int) : AccountMessage
 
     data class Failure(val error: NodeSeekError) : AccountMessage
+
+    /**
+     * The site's own sentence for a refusal it explained itself.
+     *
+     * Worth a variant of its own where the refusal is about *what the user typed* — blocking a name
+     * that does not exist is answered by the site and by nothing we could infer from a status code.
+     */
+    data class Detail(val text: String) : AccountMessage
 }
 
 /** Turns a thrown load/save failure into something sayable. */
@@ -39,6 +47,7 @@ internal fun accountMessageText(message: AccountMessage): String =
     when (message) {
         is AccountMessage.Info -> stringResource(message.textRes)
         is AccountMessage.Failure -> stringResource(message.error.messageRes())
+        is AccountMessage.Detail -> message.text
     }
 
 @Composable

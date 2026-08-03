@@ -47,6 +47,14 @@ class PostDetailViewModel(
     private val initialFloor: String? = null,
     /** The page a `/post-703863-4` link named, when the thread was opened from one. */
     private val initialPage: Int? = null,
+    /**
+     * 临时显示被屏蔽内容.
+     *
+     * A floor the site marked blocked is downloaded and cached like any other, so revealing is a
+     * change of view and not of content — no re-fetch, and switching it back re-collapses what is
+     * already on screen.
+     */
+    showBlockedContent: StateFlow<Boolean> = MutableStateFlow(false),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostDetailUiState())
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
@@ -111,6 +119,10 @@ class PostDetailViewModel(
                 repository.markThreadRead(postId)
             }
         }
+
+        showBlockedContent
+            .onEach { show -> _uiState.update { it.copy(showBlockedContent = show) } }
+            .launchIn(viewModelScope)
 
         // The reply editor is the only thing here that needs an account, and it needs to know before
         // it opens rather than after a failed publish.
@@ -332,6 +344,7 @@ class PostDetailViewModel(
                         container.sessionRepository.state,
                         initialFloor,
                         initialPage,
+                        container.settingsRepository.showBlockedContent,
                     )
                 }
             }
@@ -353,6 +366,8 @@ data class PostDetailUiState(
     val isLoading: Boolean = false,
     val isAppending: Boolean = false,
     val isSignedIn: Boolean = false,
+    /** 临时显示被屏蔽内容 — draws the blocked floors instead of collapsing them. */
+    val showBlockedContent: Boolean = false,
     /** Where the screen should scroll once the content it names has arrived in [comments]. */
     val pendingScroll: PendingScroll? = null,
     val error: NodeSeekError? = null,

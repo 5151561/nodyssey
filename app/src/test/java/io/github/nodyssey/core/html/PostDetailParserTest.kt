@@ -181,6 +181,62 @@ class PostDetailParserTest {
         assertTrue(requireNotNull(parsed.body).nodes.isNotEmpty())
     }
 
+    /**
+     * `blocked` rides in the same `__config__` blob as the tallies, one entry per floor. Reading it
+     * is the only way the app learns that a floor it was *sent* is one the account asked not to see.
+     */
+    @Test
+    fun `marks the floors the config blob says are blocked`() {
+        val target = requireNotNull(detail.comments.first().commentId)
+        val config = """{"postData":{"comments":[{"commentId":$target,"blocked":true}]}}"""
+        val parsed =
+            PostDetailParser.parse(withConfig(config), postId = 703863L, page = 1)
+
+        assertTrue(parsed.comments.first { it.commentId == target }.isBlocked)
+        assertFalse(requireNotNull(parsed.body).isBlocked)
+        assertTrue(parsed.comments.count { it.isBlocked } == 1)
+    }
+
+    /** The markup says it too, as `class="blocked-comment"`, and that is enough on its own. */
+    @Test
+    fun `marks a floor the markup blocked without a config blob`() {
+        val html =
+            """
+            <html><body><ul class="comments">
+              <li class="content-item blocked-comment" data-comment-id="5">
+                <a class="floor-link">#1</a><a class="author-name" href="/space/1">someone</a>
+                <article class="post-content"><p>hidden</p></article>
+              </li>
+              <li class="content-item" data-comment-id="6">
+                <a class="floor-link">#2</a><a class="author-name" href="/space/2">other</a>
+                <article class="post-content"><p>shown</p></article>
+              </li>
+            </ul></body></html>
+            """.trimIndent()
+
+        val parsed = PostDetailParser.parse(html, postId = 1L, page = 1)
+
+        assertTrue(parsed.comments.first().isBlocked)
+        assertFalse(parsed.comments.last().isBlocked)
+    }
+
+    @Test
+    fun `leaves an ordinary thread unblocked`() {
+        assertFalse(body.isBlocked)
+        assertTrue(detail.comments.none { it.isBlocked })
+    }
+
+    /** Swaps the fixture's bootstrap blob for [json], base64 as the site encodes it. */
+    private fun withConfig(json: String): String {
+        val encoded = java.util.Base64.getEncoder().encodeToString(json.toByteArray())
+        return Fixtures
+            .load("post-703863-1.html")
+            .replace(
+                Regex("""<script id="temp-script"[^>]*>[^<]*</script>"""),
+                """<script id="temp-script">$encoded</script>""",
+            )
+    }
+
     @Test
     fun `parses a long post without dropping content`() {
         val long =

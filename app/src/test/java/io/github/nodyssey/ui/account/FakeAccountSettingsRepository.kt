@@ -36,6 +36,8 @@ internal class FakeAccountSettingsRepository(
     var changedPassword: Pair<String, String>? = null
     var uploadedAvatar: AvatarUpload? = null
     var unblocked = mutableListOf<Long>()
+    var blockedNames = mutableListOf<String>()
+    private var nextBlockedUid = 900L
     var holidayThemeWrites = mutableListOf<Boolean>()
     var boardHiddenWrites = mutableListOf<Pair<String, Boolean>>()
     var enrolmentUri: String = "otpauth://totp/NodeSeek:tester?secret=ABC"
@@ -109,9 +111,18 @@ internal class FakeAccountSettingsRepository(
         return blocked
     }
 
+    override suspend fun block(name: String) {
+        record("block")
+        blockedNames += name
+        // The site answers a successful add with the new list; the fake grows the same way, so a
+        // ViewModel that re-reads instead of guessing sees the row it just created.
+        blocked = blocked + BlockedUser(uid = nextBlockedUid++, name = name)
+    }
+
     override suspend fun unblock(uid: Long) {
         record("unblock")
         unblocked += uid
+        blocked = blocked.filterNot { it.uid == uid }
     }
 
     companion object {
