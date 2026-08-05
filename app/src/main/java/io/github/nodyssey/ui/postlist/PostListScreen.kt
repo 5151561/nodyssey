@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -120,6 +121,7 @@ import kotlin.math.abs
 @Composable
 fun PostListRoute(
     viewModel: PostListViewModel,
+    listState: LazyListState,
     onPostClick: (Long) -> Unit,
     onCreatePost: () -> Unit,
     onSignIn: () -> Unit,
@@ -132,6 +134,7 @@ fun PostListRoute(
     PostListScreen(
         state = state,
         posts = viewModel.feed.collectAsLazyPagingItems(),
+        listState = listState,
         onPostClick = onPostClick,
         onCreatePost = onCreatePost,
         onBoardClick = viewModel::selectCategory,
@@ -165,6 +168,7 @@ fun PostListScreen(
     onSignInClick: () -> Unit,
     onRecoverInBrowser: () -> Unit,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
     /** Commits an edit made on the board strip itself: the pill order, and which boards are parked. */
     onArrangementChange: (order: List<String>, parked: Set<String>) -> Unit = { _, _ -> },
     onCreatePost: () -> Unit = {},
@@ -177,7 +181,6 @@ fun PostListScreen(
      */
     scrollToTopRequests: Int = 0,
 ) {
-    val listState = rememberLazyListState()
     val directionThresholdPx = with(LocalDensity.current) { NavigationDirectionThreshold.toPx() }
     val currentOnNavigationBarHiddenChanged by
         rememberUpdatedState(onNavigationBarHiddenChanged)

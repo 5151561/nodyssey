@@ -1,5 +1,7 @@
 package io.github.nodyssey.ui.postlist
 
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -126,6 +128,7 @@ class PostListScreenTest {
         refresh: LoadState,
         append: LoadState,
         state: PostListUiState,
+        listState: LazyListState = rememberLazyListState(),
         onPostClick: (Long) -> Unit,
         onBoardClick: (String?) -> Unit,
         onSortChange: (FeedSort) -> Unit,
@@ -145,6 +148,7 @@ class PostListScreenTest {
         PostListScreen(
             state = state,
             posts = flowOf(pagingData).collectAsLazyPagingItems(),
+            listState = listState,
             onPostClick = onPostClick,
             onBoardClick = onBoardClick,
             onSortChange = onSortChange,
@@ -243,6 +247,48 @@ class PostListScreenTest {
         restorationTester.emulateSavedInstanceStateRestore()
 
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
+    }
+
+    /**
+     * A thread replaces the compact list entry's composition, but it must not replace the list state.
+     * The navigation host owns that state for as long as the home stack exists.
+     */
+    @Test
+    fun `leaving the list composition and returning keeps the exact position`() {
+        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
+        var showingList by mutableStateOf(true)
+        lateinit var retainedListState: LazyListState
+        composeRule.setContent {
+            retainedListState = rememberLazyListState()
+            NodysseyTheme {
+                if (showingList) {
+                    ScreenUnderTest(
+                        posts = posts,
+                        refresh = LoadState.NotLoading(false),
+                        append = LoadState.NotLoading(true),
+                        state = PostListUiState(boards = boards),
+                        listState = retainedListState,
+                        onPostClick = {},
+                        onBoardClick = {},
+                        onSortChange = {},
+                        onRecoverInBrowser = {},
+                    )
+                } else {
+                    androidx.compose.material3.Text("thread detail")
+                }
+            }
+        }
+
+        composeRule.onNode(feedList).performScrollToIndex(20)
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(20, retainedListState.firstVisibleItemIndex) }
+
+        composeRule.runOnIdle { showingList = false }
+        composeRule.onNodeWithText("thread detail").assertIsDisplayed()
+        composeRule.runOnIdle { showingList = true }
+
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(20, retainedListState.firstVisibleItemIndex) }
     }
 
     /** Picking a different board does still start that board's list from the top. */

@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -158,6 +159,14 @@ fun MainNavigation(
     val notificationsStack = rememberNavBackStack(NotificationsKey)
     val profileStack = rememberNavBackStack(ProfileKey)
 
+    /*
+     * The feed's position belongs to the home stack, not to whichever home entry composition happens
+     * to be visible. A compact NavDisplay removes the list while a thread is on screen; keeping the
+     * same LazyListState here makes Back reveal the exact list object that was left, instead of asking
+     * SaveableStateHolder to reconstruct an index after Paging and the pop transition have restarted.
+     */
+    val homeListState = rememberLazyListState()
+
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
 
     // Transient by design: rotation should not restore a navigation bar hidden by an old gesture.
@@ -259,6 +268,7 @@ fun MainNavigation(
                     viewModel(factory = PostListViewModel.factory(container))
                 PostListRoute(
                     viewModel = viewModel,
+                    listState = homeListState,
                     onPostClick = { backStack.add(PostDetailKey(it)) },
                     onCreatePost = { backStack.add(PostComposerKey) },
                     onSignIn = {
