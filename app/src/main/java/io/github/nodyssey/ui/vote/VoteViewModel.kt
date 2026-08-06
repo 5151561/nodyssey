@@ -32,6 +32,14 @@ data class VoterListState(
     val uids: List<Long> = emptyList(),
     val loadedPages: Int = 0,
     val isLoading: Boolean = false,
+    /**
+     * Whether the card is currently showing it.
+     *
+     * A closed list stays in the map rather than being dropped: someone who paged three times, closed
+     * the strip and opened it again would otherwise be back at the first ten, and the pages they had
+     * already been given would have to be fetched a second time.
+     */
+    val expanded: Boolean = true,
 ) {
     /** A short page is the last page — the endpoint reports no total. */
     val hasMore: Boolean get() = loadedPages > 0 && uids.size >= loadedPages * NodeSeekJsonClient.VOTER_PAGE_SIZE
@@ -186,23 +194,37 @@ class VoteViewModel(
     }
 
     /**
-     * Opens (or extends) one option's voter list.
+     * Opens or closes one option's voter list.
      *
-     * The first page comes with the vote itself, so opening costs nothing; only "more" is a request.
-     * Anonymous votes never get here — the card offers no handle to pull.
+     * Never a request either way. The first page comes with the vote itself, and a list that has been
+     * paged further is kept across a close — see [VoterListState.expanded]. Anonymous votes never get
+     * here: the card offers no handle to pull.
      */
-    fun expandVoters(itemId: Long) {
+    fun toggleVoters(itemId: Long) {
         val state = _uiState.value
         val vote = state.vote ?: return
         if (!vote.isPublic || !state.showsResults) return
         val existing = state.voters[itemId]
-        if (existing == null) {
-            val seed = vote.items.firstOrNull { it.itemId == itemId }?.voters.orEmpty()
-            _uiState.update {
-                it.copy(voters = it.voters + (itemId to VoterListState(uids = seed, loadedPages = 1)))
-            }
-            return
-        }
+        val next =
+            existing?.copy(expanded = !existing.expanded)
+                ?: VoterListState(
+                    uids = vote.items.firstOrNull { it.itemId == itemId }?.voters.orEmpty(),
+                    loadedPages = 1,
+                )
+        _uiState.update { it.copy(voters = it.voters + (itemId to next)) }
+    }
+
+    /**
+     * Asks for the next page of an already-open voter list.
+     *
+     * Separate from [toggleVoters] because only this one costs a request: the strip's own "more" is
+     * the only thing that reaches the network, and a row tapped shut must not.
+     */
+    fun loadMoreVoters(itemId: Long) {
+        val state = _uiState.value
+        val vote = state.vote ?: return
+        if (!vote.isPublic || !state.showsResults) return
+        val existing = state.voters[itemId] ?: return
         if (existing.isLoading || !existing.hasMore) return
         _uiState.update {
             it.copy(voters = it.voters + (itemId to existing.copy(isLoading = true)))

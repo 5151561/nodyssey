@@ -1,19 +1,24 @@
 package io.github.nodyssey.ui.vote
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,12 +34,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
+import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.nodyssey.ui.theme.Sizes
 import io.github.nodyssey.ui.theme.Spacing
+import io.github.nodyssey.ui.theme.TABULAR_FIGURES
 
 /** How a vote creation is going, so the dialog can wait and report without owning the request. */
 sealed interface VoteCreationState {
@@ -75,6 +85,7 @@ fun VoteComposeDialog(
 
     AlertDialog(
         onDismissRequest = { if (state !is VoteCreationState.InFlight) onDismiss() },
+        icon = { Icon(NodysseyIcons.Poll, contentDescription = null) },
         title = { Text(stringResource(R.string.vote_compose_title)) },
         text = {
             Column(
@@ -86,6 +97,7 @@ fun VoteComposeDialog(
                     onValueChange = { title = it },
                     label = { Text(stringResource(R.string.vote_compose_question)) },
                     singleLine = true,
+                    shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth(),
                 )
 
@@ -96,47 +108,87 @@ fun VoteComposeDialog(
                             onValueChange = { options[index] = it },
                             label = { Text(stringResource(R.string.vote_compose_option, index + 1)) },
                             singleLine = true,
+                            shape = MaterialTheme.shapes.small,
                             modifier = Modifier.weight(1f),
                         )
-                        // Two is the floor: a vote with one option is not a question.
-                        IconButton(
-                            onClick = { options.removeAt(index) },
-                            enabled = options.size > MIN_OPTIONS,
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.vote_compose_remove_option, index + 1),
-                            )
+                        // Two is the floor: a vote with one option is not a question. Below it the
+                        // button is absent rather than greyed — a disabled cross on every row of a
+                        // two-option vote reads as something the author has done wrong.
+                        if (options.size > MIN_OPTIONS) {
+                            IconButton(onClick = { options.removeAt(index) }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription =
+                                    stringResource(R.string.vote_compose_remove_option, index + 1),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
                         }
                     }
                 }
 
-                TextButton(onClick = { options.add("") }, enabled = options.size < MAX_OPTIONS) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { options.add("") }, enabled = options.size < MAX_OPTIONS) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(
+                            stringResource(R.string.vote_compose_add_option),
+                            modifier = Modifier.padding(start = Spacing.xs),
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
                     Text(
-                        stringResource(R.string.vote_compose_add_option),
-                        modifier = Modifier.padding(start = Spacing.xs),
+                        "${options.size} / $MAX_OPTIONS",
+                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = Spacing.sm),
                     )
                 }
 
-                VoteToggleRow(
-                    label = stringResource(R.string.vote_compose_multiple),
-                    checked = multiple,
-                    onChange = { multiple = it },
-                )
-                VoteToggleRow(
-                    label = stringResource(R.string.vote_compose_public),
-                    description = stringResource(R.string.vote_compose_public_body),
-                    checked = isPublic,
-                    onChange = { isPublic = it },
-                )
+                // The two switches are settings on the vote rather than more of the form, so they sit
+                // in their own block instead of continuing the column of text fields.
+                Column(
+                    Modifier
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                ) {
+                    VoteToggleRow(
+                        label = stringResource(R.string.vote_compose_multiple),
+                        checked = multiple,
+                        onChange = { multiple = it },
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    VoteToggleRow(
+                        label = stringResource(R.string.vote_compose_public),
+                        description = stringResource(R.string.vote_compose_public_body),
+                        checked = isPublic,
+                        onChange = { isPublic = it },
+                    )
+                }
 
                 (state as? VoteCreationState.Failed)?.let { failure ->
-                    Text(
-                        failure.detail?.takeIf { it.isNotBlank() } ?: stringResource(R.string.vote_compose_failed),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                    Row(
+                        modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.small)
+                            .background(MaterialTheme.colorScheme.errorContainer)
+                            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            NodysseyIcons.ErrorCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            failure.detail?.takeIf { it.isNotBlank() }
+                                ?: stringResource(R.string.vote_compose_failed),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(start = Spacing.sm),
+                        )
+                    }
                 }
             }
         },
@@ -183,8 +235,16 @@ private fun VoteToggleRow(
     onChange: (Boolean) -> Unit,
     description: String? = null,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.weight(1f)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
+            .defaultMinSize(minHeight = Sizes.minTouchTarget)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+    ) {
+        Column(Modifier.weight(1f).padding(end = Spacing.sm)) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
             description?.let {
                 Text(
@@ -194,7 +254,9 @@ private fun VoteToggleRow(
                 )
             }
         }
-        Switch(checked = checked, onCheckedChange = onChange)
+        // null, not `onChange`: the row above already carries the toggle and its semantics, and a
+        // switch that also handles clicks announces the same control twice.
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 

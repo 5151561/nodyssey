@@ -250,7 +250,7 @@ class VoteViewModelTest {
             val vm = viewModel(repository)
             advanceUntilIdle()
 
-            vm.expandVoters(13201)
+            vm.toggleVoters(13201)
             advanceUntilIdle()
 
             assertEquals((1L..10L).toList(), vm.uiState.value.voters[13201]?.uids)
@@ -267,15 +267,48 @@ class VoteViewModelTest {
                 )
             val vm = viewModel(repository)
             advanceUntilIdle()
-            vm.expandVoters(13201)
+            vm.toggleVoters(13201)
             advanceUntilIdle()
 
-            vm.expandVoters(13201)
+            vm.loadMoreVoters(13201)
             advanceUntilIdle()
 
             val list = requireNotNull(vm.uiState.value.voters[13201])
             assertEquals((1L..13L).toList(), list.uids)
             assertFalse(list.hasMore)
+            assertEquals(listOf(2), repository.voterPages)
+        }
+
+    /**
+     * Closing keeps what was paged in. Dropping the list instead would make the second open show ten
+     * of thirty voters again, and cost a request per page to get back to where the reader was.
+     */
+    @Test
+    fun `closing a voter list hides it without discarding the pages already fetched`() =
+        runTest(dispatcher) {
+            val repository =
+                FakeVoteRepository(
+                    vote = voted(firstPageVoters = (1L..10L).toList()),
+                    voterPagesByPage = mapOf(2 to (11L..13L).toList()),
+                )
+            val vm = viewModel(repository)
+            advanceUntilIdle()
+            vm.toggleVoters(13201)
+            vm.loadMoreVoters(13201)
+            advanceUntilIdle()
+
+            vm.toggleVoters(13201)
+            advanceUntilIdle()
+
+            assertFalse(requireNotNull(vm.uiState.value.voters[13201]).expanded)
+
+            vm.toggleVoters(13201)
+            advanceUntilIdle()
+
+            val reopened = requireNotNull(vm.uiState.value.voters[13201])
+            assertTrue(reopened.expanded)
+            assertEquals((1L..13L).toList(), reopened.uids)
+            // Still the one request from the first "more": reopening asked for nothing.
             assertEquals(listOf(2), repository.voterPages)
         }
 
@@ -287,7 +320,7 @@ class VoteViewModelTest {
             val vm = viewModel(repository)
             advanceUntilIdle()
 
-            vm.expandVoters(13201)
+            vm.toggleVoters(13201)
             advanceUntilIdle()
 
             assertTrue(vm.uiState.value.voters.isEmpty())

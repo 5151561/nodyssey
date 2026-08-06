@@ -41,7 +41,8 @@ class VoteCardTest {
                     onSubmit = onSubmit,
                     onSetLocked = {},
                     onDelete = {},
-                    onExpandVoters = {},
+                    onToggleVoters = {},
+                    onLoadMoreVoters = {},
                     onSignIn = onSignIn,
                     onUserClick = {},
                 )
