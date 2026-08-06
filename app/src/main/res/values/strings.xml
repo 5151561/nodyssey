@@ -839,7 +839,8 @@
     <string name="vote_count">%1$d 票</string>
     <string name="vote_percent">%1$d%%</string>
     <string name="vote_total">共 %1$d 票</string>
-    <string name="vote_voters_expand">%1$d 人</string>
+    <string name="vote_voters_expand">查看投票的 %1$d 人</string>
+    <string name="vote_voters_collapse">收起投票人</string>
     <string name="vote_voters_more">加载更多</string>
     <string name="vote_voter_uid">用户 %1$d</string>
     <string name="vote_manage">管理投票</string>

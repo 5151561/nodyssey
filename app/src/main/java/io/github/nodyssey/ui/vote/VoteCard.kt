@@ -1,5 +1,9 @@
 package io.github.nodyssey.ui.vote
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -7,27 +11,28 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,9 +43,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,11 +57,14 @@ import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.VoteItem
 import io.github.nodyssey.model.totalCount
 import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.SkeletonBar
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.richtext.VoteCardSurface
 import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.nodyssey.ui.theme.Sizes
 import io.github.nodyssey.ui.theme.Spacing
+import io.github.nodyssey.ui.theme.TABULAR_FIGURES
 
 @Composable
 fun VoteCard(
@@ -71,7 +81,8 @@ fun VoteCard(
         onSubmit = viewModel::submit,
         onSetLocked = viewModel::setLocked,
         onDelete = viewModel::delete,
-        onExpandVoters = viewModel::expandVoters,
+        onToggleVoters = viewModel::toggleVoters,
+        onLoadMoreVoters = viewModel::loadMoreVoters,
         onSignIn = onSignIn,
         onUserClick = onUserClick,
         modifier = modifier,
@@ -86,6 +97,11 @@ fun VoteCard(
  * nothing else — no bars, no percentages, no totals, and no voter avatars either, even though the
  * voter endpoint would in fact answer. Matching the site here is deliberate; showing a tally it
  * chose to withhold would change what participating means.
+ *
+ * The card keeps to two faces and to as little furniture as it can. Before voting an option is a tick
+ * and a label; after voting the same line grows a hairline bar and its numbers. Nothing gets a box of
+ * its own — this arrives in the middle of someone's post, and a stack of filled slabs would carry more
+ * weight than the paragraph it interrupts.
  */
 @Composable
 fun VoteCard(
@@ -95,7 +111,8 @@ fun VoteCard(
     onSubmit: () -> Unit,
     onSetLocked: (Boolean) -> Unit,
     onDelete: () -> Unit,
-    onExpandVoters: (Long) -> Unit,
+    onToggleVoters: (Long) -> Unit,
+    onLoadMoreVoters: (Long) -> Unit,
     onSignIn: () -> Unit,
     onUserClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -119,7 +136,8 @@ fun VoteCard(
                     onSubmit = onSubmit,
                     onSetLocked = onSetLocked,
                     onDelete = onDelete,
-                    onExpandVoters = onExpandVoters,
+                    onToggleVoters = onToggleVoters,
+                    onLoadMoreVoters = onLoadMoreVoters,
                     onSignIn = onSignIn,
                     onUserClick = onUserClick,
                 )
@@ -135,7 +153,8 @@ private fun VoteBody(
     onSubmit: () -> Unit,
     onSetLocked: (Boolean) -> Unit,
     onDelete: () -> Unit,
-    onExpandVoters: (Long) -> Unit,
+    onToggleVoters: (Long) -> Unit,
+    onLoadMoreVoters: (Long) -> Unit,
     onSignIn: () -> Unit,
     onUserClick: (Long) -> Unit,
 ) {
@@ -143,58 +162,63 @@ private fun VoteBody(
     var confirmLock by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
+    val total = vote.totalCount
+
     VoteHeader(
         state = state,
         vote = vote,
+        total = total,
         onLock = { confirmLock = true },
         onUnlock = { onSetLocked(false) },
         onDelete = { confirmDelete = true },
     )
 
-    val total = vote.totalCount
-    vote.items.forEach { item ->
-        VoteOptionRow(
-            item = item,
-            multiple = vote.multiple,
-            selected = item.itemId in state.selectedIds,
-            enabled = state.isSignedIn && !vote.locked && !state.hasVoted && !state.isSubmitting,
-            showsResults = state.showsResults,
-            total = total,
-            onToggle = { onToggle(item.itemId) },
-        )
-        if (state.showsResults && vote.isPublic) {
-            VoterStrip(
-                item = item,
-                list = state.voters[item.itemId],
-                onExpand = { onExpandVoters(item.itemId) },
-                onUserClick = onUserClick,
-            )
-        }
-    }
+    // The option with the most votes gets the one emphasis a result row has left, so the answer to
+    // the question can be read without comparing three bars by eye.
+    val leading = if (state.showsResults) vote.items.mapNotNull(VoteItem::count).maxOrNull() else null
 
-    if (state.showsResults && total != null) {
-        Text(
-            stringResource(R.string.vote_total, total),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = Spacing.sm),
-        )
-    } else if (!state.hasVoted && !vote.locked) {
-        Text(
-            stringResource(R.string.vote_results_hidden),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = Spacing.sm),
-        )
+    Column(
+        modifier = Modifier.padding(top = Spacing.sm),
+        // Results are two-part blocks and need air between them; choice rows carry their own touch
+        // target and would drift apart if the column added more on top of it.
+        verticalArrangement = Arrangement.spacedBy(if (state.showsResults) Spacing.sm else 0.dp),
+    ) {
+        vote.items.forEach { item ->
+            if (state.showsResults) {
+                VoteResultRow(
+                    item = item,
+                    total = total,
+                    leading = leading != null && leading > 0 && item.count == leading,
+                    voters = state.voters[item.itemId]?.takeIf { vote.isPublic },
+                    onToggleVoters = { onToggleVoters(item.itemId) }.takeIf { vote.isPublic },
+                    onLoadMore = { onLoadMoreVoters(item.itemId) },
+                    onUserClick = onUserClick,
+                )
+            } else {
+                VoteChoiceRow(
+                    item = item,
+                    multiple = vote.multiple,
+                    selected = item.itemId in state.selectedIds,
+                    enabled = state.isSignedIn && !vote.locked && !state.hasVoted && !state.isSubmitting,
+                    onToggle = { onToggle(item.itemId) },
+                )
+            }
+        }
     }
 
     // No button once voted or locked: neither state has anything left to submit, and a disabled
     // button in a card that is otherwise finished reads as something the reader failed to do.
     if (!state.hasVoted && !vote.locked) {
+        Text(
+            stringResource(R.string.vote_results_hidden),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = Spacing.sm, start = Spacing.xs),
+        )
         Button(
             onClick = { if (state.isSignedIn) confirmSubmit = true else onSignIn() },
             enabled = !state.isSubmitting && (!state.isSignedIn || state.selectedIds.isNotEmpty()),
-            modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
+            modifier = Modifier.padding(top = Spacing.sm).fillMaxWidth(),
         ) {
             if (state.isSubmitting) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -246,37 +270,50 @@ private fun VoteBody(
     }
 }
 
+/**
+ * Title, badge and the vote's own properties.
+ *
+ * The total sits here rather than under the options: it describes the vote, like "单选" and "匿名投票"
+ * do, and as a footer it left the card ending on a stray grey line once the button was gone.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun VoteHeader(
     state: VoteUiState,
     vote: Vote,
+    total: Int?,
     onLock: () -> Unit,
     onUnlock: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = Alignment.Top) {
         Column(Modifier.weight(1f)) {
-            Text(vote.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                VoteChip(
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    NodysseyIcons.Poll,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp),
+                )
+                Text(
+                    vote.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = Spacing.xs),
+                )
+            }
+            // Separate Text nodes rather than one joined string: each of these is a fact about the
+            // vote that TalkBack should be able to land on, and "单选 · 已锁定" as one blob is also
+            // one long line to re-read every time the card redraws.
+            VoteMetaLine(
+                listOfNotNull(
                     stringResource(
                         if (vote.multiple) R.string.vote_multiple_choice else R.string.vote_single_choice,
                     ),
-                )
-                if (!vote.isPublic) VoteChip(stringResource(R.string.vote_anonymous))
-                if (vote.locked) {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    VoteChip(stringResource(R.string.vote_locked))
-                }
-            }
+                    stringResource(R.string.vote_anonymous).takeIf { !vote.isPublic },
+                    stringResource(R.string.vote_locked).takeIf { vote.locked },
+                    total?.let { stringResource(R.string.vote_total, it) }.takeIf { state.showsResults },
+                ),
+            )
         }
         // Only when there is at least one thing this account may actually do: the owner of a locked
         // vote can neither unlock nor delete it, so an empty menu would be a promise we cannot keep.
@@ -335,83 +372,247 @@ private fun VoteManageMenu(
     }
 }
 
+/** The vote's own properties, as one grey line under the title. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun VoteOptionRow(
+private fun VoteMetaLine(parts: List<String>) {
+    val style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES)
+    FlowRow(modifier = Modifier.padding(top = 2.dp, start = 20.dp)) {
+        parts.forEachIndexed { index, part ->
+            if (index > 0) {
+                Text(
+                    " · ",
+                    style = style,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            }
+            Text(part, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/**
+ * An option before the vote is cast.
+ *
+ * No container of its own: a box per option turned a three-option vote into three stacked slabs, and
+ * the card was heavier than the paragraph it interrupts. What is left is a tick and a label, and the
+ * tick is the only thing that changes when the reader picks one.
+ *
+ * The row carries the [selectable]/[toggleable] semantics itself, which is both why the target is the
+ * full width and why the tick can be a drawing rather than a real control — a `RadioButton` inside a
+ * clickable row either announces itself twice or, silenced, announces nothing at all.
+ */
+@Composable
+private fun VoteChoiceRow(
     item: VoteItem,
     multiple: Boolean,
     selected: Boolean,
     enabled: Boolean,
-    showsResults: Boolean,
-    total: Int?,
     onToggle: () -> Unit,
 ) {
-    Column(
+    Row(
+        modifier =
         Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onToggle)
-            .padding(vertical = Spacing.xs),
+            .clip(OptionShape)
+            .then(
+                if (multiple) {
+                    Modifier.toggleable(
+                        value = selected,
+                        enabled = enabled,
+                        role = Role.Checkbox,
+                        onValueChange = { onToggle() },
+                    )
+                } else {
+                    Modifier.selectable(
+                        selected = selected,
+                        enabled = enabled,
+                        role = Role.RadioButton,
+                        onClick = onToggle,
+                    )
+                },
+            )
+            .defaultMinSize(minHeight = Sizes.minTouchTarget)
+            .padding(horizontal = Spacing.xs, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        VoteTick(selected = selected, multiple = multiple, enabled = enabled)
+        Text(
+            item.text,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f).padding(start = Spacing.md),
+        )
+    }
+}
+
+/** The mark for "this one". Drawn rather than a control — see [VoteChoiceRow]. */
+@Composable
+private fun VoteTick(
+    selected: Boolean,
+    multiple: Boolean,
+    enabled: Boolean,
+) {
+    val shape = if (multiple) RoundedCornerShape(6.dp) else CircleShape
+    val tint by animateColorAsState(
+        targetValue =
+        when {
+            selected -> MaterialTheme.colorScheme.primary
+            enabled -> MaterialTheme.colorScheme.outline
+            else -> MaterialTheme.colorScheme.outlineVariant
+        },
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "voteTick",
+    )
+    Box(
+        modifier =
+        Modifier
+            .size(TICK_SIZE)
+            .clip(shape)
+            .background(if (selected) tint else Color.Transparent)
+            .border(2.dp, tint, shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            Icon(
+                Icons.Default.Check,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(14.dp),
+            )
+        }
+    }
+}
+
+/**
+ * An option once the results exist: one line of text, one hairline of bar under it.
+ *
+ * The bar is 4dp and sits tight under its own label, because three of these have to read as a
+ * comparison at a glance. A taller bar — or a filled row — says the same thing while taking three
+ * times the space, in a card that interrupts someone's post.
+ *
+ * On a public vote the whole block is the handle for the voter list, which is why there is no button
+ * for it: a row of "12 人" under every option was a third of the card's height spent on an affordance
+ * the count beside it already named.
+ */
+@Composable
+private fun VoteResultRow(
+    item: VoteItem,
+    total: Int?,
+    leading: Boolean,
+    voters: VoterListState?,
+    onToggleVoters: (() -> Unit)?,
+    onLoadMore: () -> Unit,
+    onUserClick: (Long) -> Unit,
+) {
+    val fraction =
+        if (item.count != null && total != null && total > 0) item.count.toFloat() / total else 0f
+    // Grown rather than snapped: this row is redrawn the moment the submit comes back, and a bar that
+    // appears at its final length loses the only feedback the reader gets that the vote was counted.
+    val grown by animateFloatAsState(
+        targetValue = fraction,
+        animationSpec = MaterialTheme.motionScheme.slowEffectsSpec(),
+        label = "voteBar",
+    )
+    val fill =
+        if (item.voted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+
+    val open = voters?.expanded == true
+    val togglable = onToggleVoters != null && (item.count ?: 0) > 0
+    Column(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .clip(OptionShape)
+            .then(
+                if (togglable) {
+                    Modifier.clickable(
+                        onClickLabel =
+                        if (open) {
+                            stringResource(R.string.vote_voters_collapse)
+                        } else {
+                            stringResource(R.string.vote_voters_expand, item.count ?: 0)
+                        },
+                        onClick = { onToggleVoters?.invoke() },
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .padding(Spacing.xs),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            when {
-                // Once voted, the control is a read-out rather than an input: a disabled radio still
-                // looks like something to press, and a tick does not.
-                showsResults ->
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = null,
-                        tint =
-                        if (item.voted) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant
-                        },
-                        modifier = Modifier.size(20.dp),
-                    )
-
-                multiple ->
-                    Checkbox(
-                        checked = selected,
-                        onCheckedChange = { onToggle() },
-                        enabled = enabled,
-                        modifier = Modifier.clearAndSetSemantics { },
-                    )
-
-                else ->
-                    RadioButton(
-                        selected = selected,
-                        onClick = onToggle,
-                        enabled = enabled,
-                        modifier = Modifier.clearAndSetSemantics { },
-                    )
+            if (item.voted) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(15.dp).padding(end = 3.dp),
+                )
             }
             Text(
                 item.text,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f).padding(start = Spacing.sm),
+                fontWeight = if (item.voted) FontWeight.SemiBold else null,
+                modifier = Modifier.weight(1f),
             )
-            if (showsResults && item.count != null) {
+            // The one mark that says this line opens: without it the voter list — which the site has
+            // and which is half of why a public vote is public — is a feature nobody would find. It
+            // stays put once open, because by then it is the way back.
+            if (togglable) {
+                Icon(
+                    NodysseyIcons.Group,
+                    contentDescription = null,
+                    tint =
+                    if (open) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                    modifier = Modifier.size(17.dp).padding(end = 3.dp),
+                )
+            }
+            if (item.count != null) {
                 Text(
                     stringResource(R.string.vote_count, item.count),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (total != null && total > 0) {
+                    Text(
+                        stringResource(R.string.vote_percent, (fraction * 100).toInt()),
+                        style =
+                        MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
+                        color =
+                        if (leading) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        textAlign = TextAlign.End,
+                        // A fixed column so the percentages line up down the card instead of
+                        // stepping left and right with the width of their own digits.
+                        modifier = Modifier.padding(start = Spacing.sm).widthIn(min = PERCENT_COLUMN),
+                    )
+                }
             }
         }
-        if (showsResults && item.count != null && total != null && total > 0) {
-            val fraction = item.count.toFloat() / total
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                LinearProgressIndicator(
-                    progress = { fraction },
-                    modifier = Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)),
-                )
-                Text(
-                    stringResource(R.string.vote_percent, (fraction * 100).toInt()),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
-            }
+        Box(
+            Modifier
+                .padding(top = 3.dp)
+                .fillMaxWidth()
+                .height(BAR_HEIGHT)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(grown)
+                    .fillMaxHeight()
+                    .clip(CircleShape)
+                    .background(fill),
+            )
         }
+        if (open && voters != null) VoterStrip(list = voters, onLoadMore = onLoadMore, onUserClick = onUserClick)
     }
 }
 
@@ -425,73 +626,69 @@ private fun VoteOptionRow(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun VoterStrip(
-    item: VoteItem,
-    list: VoterListState?,
-    onExpand: () -> Unit,
+    list: VoterListState,
+    onLoadMore: () -> Unit,
     onUserClick: (Long) -> Unit,
 ) {
-    val count = item.count ?: return
-    if (count == 0) return
-
-    if (list == null) {
-        TextButton(onClick = onExpand, modifier = Modifier.padding(start = Spacing.xl)) {
-            Text(stringResource(R.string.vote_voters_expand, count))
-        }
-        return
-    }
-
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-        modifier = Modifier.padding(start = Spacing.xl, bottom = Spacing.xs),
-    ) {
+    FlowRow(modifier = Modifier.padding(top = Spacing.xs)) {
         list.uids.forEach { uid ->
             // uid as the name, because that is all the endpoint returns. Fetching a display name
             // per avatar would be one request each for a strip that is decoration.
             UserAvatar(
                 url = NodeSeekSite.avatarUrl(uid),
                 name = uid.toString(),
-                size = 24.dp,
+                size = VOTER_AVATAR,
                 // The avatar itself is decorative (UserAvatar passes a null description), so the
                 // uid has to reach TalkBack through the click label or the strip is a dead end.
+                //
+                // Padding *inside* the clickable, so the gap between two avatars belongs to the one
+                // the finger is nearer to. Ordered the other way it would be dead space, and these
+                // are the handles onto everyone who voted.
                 modifier =
-                Modifier.clickable(
-                    onClickLabel = stringResource(R.string.vote_voter_uid, uid),
-                ) { onUserClick(uid) },
+                Modifier
+                    .clickable(
+                        onClickLabel = stringResource(R.string.vote_voter_uid, uid),
+                    ) { onUserClick(uid) }
+                    .padding(Spacing.xs),
             )
         }
         if (list.isLoading) {
-            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
         } else if (list.hasMore) {
-            TextButton(onClick = onExpand) { Text(stringResource(R.string.vote_voters_more)) }
+            TextButton(onClick = onLoadMore) { Text(stringResource(R.string.vote_voters_more)) }
         }
     }
 }
 
-@Composable
-private fun VoteChip(text: String) {
-    Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-    ) {
-        Text(
-            text,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = Spacing.xs, vertical = 1.dp),
-        )
-    }
-}
-
+/**
+ * The card's own skeleton, in the shapes the loaded card will use.
+ *
+ * A bare spinner said "something is happening" without saying what, and the card then jumped from one
+ * line to five. Three bars at the option rows' height reserve roughly the space the answer needs.
+ */
 @Composable
 private fun VoteLoading() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            NodysseyIcons.Poll,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp),
+        )
         Text(
             stringResource(R.string.vote_placeholder_title),
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = Spacing.xs),
         )
+    }
+    Column(
+        modifier = Modifier.padding(top = Spacing.md, start = Spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        SKELETON_WIDTHS.forEach { width ->
+            SkeletonBar(fraction = width, height = 14.dp)
+        }
     }
 }
 
@@ -538,6 +735,21 @@ private fun VoteConfirmDialog(
     )
 }
 
+/** Only ever seen as a ripple: the option rows have no fill of their own. */
+private val OptionShape = RoundedCornerShape(8.dp)
+
+private val TICK_SIZE = 20.dp
+
+/** A hairline. Any taller and three of these read as blocks rather than as lengths to compare. */
+private val BAR_HEIGHT = 4.dp
+
+/** Fits "100%" at [androidx.compose.material3.Typography.labelMedium]. */
+private val PERCENT_COLUMN = 32.dp
+
+private val VOTER_AVATAR = 28.dp
+
+private val SKELETON_WIDTHS = listOf(0.55f, 0.85f, 0.7f)
+
 private fun previewVote(
     locked: Boolean = false,
     voted: Boolean = false,
@@ -567,7 +779,34 @@ private fun VoteCardUnvotedPreview() {
             onSubmit = {},
             onSetLocked = {},
             onDelete = {},
-            onExpandVoters = {},
+            onToggleVoters = {},
+            onLoadMoreVoters = {},
+            onSignIn = {},
+            onUserClick = {},
+            modifier = Modifier.padding(Spacing.lg),
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, name = "投票 · 已选中")
+@Composable
+private fun VoteCardSelectedPreview() {
+    NodysseyTheme {
+        VoteCard(
+            state =
+            VoteUiState(
+                vote = previewVote(),
+                isLoading = false,
+                isSignedIn = true,
+                selectedIds = setOf(13202),
+            ),
+            onRetry = {},
+            onToggle = {},
+            onSubmit = {},
+            onSetLocked = {},
+            onDelete = {},
+            onToggleVoters = {},
+            onLoadMoreVoters = {},
             onSignIn = {},
             onUserClick = {},
             modifier = Modifier.padding(Spacing.lg),
@@ -586,7 +825,28 @@ private fun VoteCardVotedPreview() {
             onSubmit = {},
             onSetLocked = {},
             onDelete = {},
-            onExpandVoters = {},
+            onToggleVoters = {},
+            onLoadMoreVoters = {},
+            onSignIn = {},
+            onUserClick = {},
+            modifier = Modifier.padding(Spacing.lg),
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, name = "投票 · 载入中")
+@Composable
+private fun VoteCardLoadingPreview() {
+    NodysseyTheme {
+        VoteCard(
+            state = VoteUiState(isLoading = true),
+            onRetry = {},
+            onToggle = {},
+            onSubmit = {},
+            onSetLocked = {},
+            onDelete = {},
+            onToggleVoters = {},
+            onLoadMoreVoters = {},
             onSignIn = {},
             onUserClick = {},
             modifier = Modifier.padding(Spacing.lg),
