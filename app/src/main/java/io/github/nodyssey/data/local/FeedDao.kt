@@ -101,6 +101,15 @@ interface FeedDao {
     @Query("SELECT commentCount FROM posts WHERE postId = :postId")
     suspend fun commentCount(postId: Long): Int?
 
+    /**
+     * The stored row for one post, or null when no feed has ever carried it.
+     *
+     * Null is the ordinary case for a thread opened from a notification or an external link, which
+     * is exactly why the read mark keeps its own snapshot instead of joining back to here.
+     */
+    @Query("SELECT * FROM posts WHERE postId = :postId")
+    suspend fun findPost(postId: Long): PostEntity?
+
     @Query("DELETE FROM feed_positions WHERE feedKey = :feedKey")
     suspend fun clearFeed(feedKey: String)
 

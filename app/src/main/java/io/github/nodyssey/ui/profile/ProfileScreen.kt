@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -78,6 +79,9 @@ fun ProfileRoute(
     onAccountSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
     onOpenSpace: (Long) -> Unit,
+    /** 我的收藏 — the space page's own 收藏 tab, opened straight onto it. */
+    onCollections: (Long) -> Unit,
+    onHistory: () -> Unit,
     onAssets: () -> Unit,
     onAttendance: () -> Unit,
     onFollow: () -> Unit,
@@ -96,6 +100,8 @@ fun ProfileRoute(
         onAccountSettings = onAccountSettings,
         onOpenWebsite = onOpenWebsite,
         onOpenSpace = { state.uid?.let(onOpenSpace) },
+        onCollections = { state.uid?.let(onCollections) },
+        onHistory = onHistory,
         onAssets = onAssets,
         onAttendance = onAttendance,
         onAttendanceBoard = viewModel::openAttendanceBoard,
@@ -143,6 +149,8 @@ fun ProfileScreen(
     onAccountSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
     onOpenSpace: () -> Unit,
+    onCollections: () -> Unit,
+    onHistory: () -> Unit,
     onAssets: () -> Unit,
     onAttendance: () -> Unit,
     onAttendanceBoard: () -> Unit,
@@ -247,6 +255,8 @@ fun ProfileScreen(
                     items =
                     listOf(
                         ProfileMenuItem(R.string.profile_space, Icons.Default.Person, onOpenSpace),
+                        ProfileMenuItem(R.string.profile_collections, Icons.Default.Star, onCollections),
+                        ProfileMenuItem(R.string.profile_history, NodysseyIcons.History, onHistory),
                         ProfileMenuItem(R.string.profile_follow, NodysseyIcons.Group, onFollow),
                         ProfileMenuItem(R.string.profile_assets, NodysseyIcons.Wallet, onAssets),
                         ProfileMenuItem(R.string.profile_tools, NodysseyIcons.MenuBook, onTools),
@@ -633,6 +643,8 @@ private fun ProfileSignedInPreview() {
             onAccountSettings = {},
             onOpenWebsite = {},
             onOpenSpace = {},
+            onCollections = {},
+            onHistory = {},
             onAssets = {},
             onAttendance = {},
             onAttendanceBoard = {},
@@ -662,6 +674,8 @@ private fun ProfileSignedOutPreview() {
             onAccountSettings = {},
             onOpenWebsite = {},
             onOpenSpace = {},
+            onCollections = {},
+            onHistory = {},
             onAssets = {},
             onAttendance = {},
             onAttendanceBoard = {},

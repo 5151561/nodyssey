@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -137,6 +138,8 @@ fun PostDetailRoute(
     onLinkClick: (String) -> Unit = onOpenBrowser,
     /** Opens the tapped author's space. */
     onAuthorClick: (Long) -> Unit = {},
+    /** Draws the votes embedded in the thread; see [PostDetailScreen]. */
+    voteContent: @Composable (Long) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val replyState by replyViewModel.uiState.collectAsStateWithLifecycle()
@@ -169,6 +172,9 @@ fun PostDetailRoute(
         onReact = viewModel::react,
         onLoadFreeChickenLegs = viewModel::loadFreeChickenLegs,
         onReactionFailureShown = viewModel::onReactionFailureShown,
+        onCollect = viewModel::toggleCollect,
+        onCollectFailureShown = viewModel::onCollectFailureShown,
+        voteContent = voteContent,
         replyOpen = replyState.visible,
         modifier = modifier,
     )
@@ -219,6 +225,16 @@ fun PostDetailScreen(
     /** Asked for when a 投喂 confirmation opens, so it can say whether this one is free. */
     onLoadFreeChickenLegs: () -> Unit = {},
     onReactionFailureShown: () -> Unit = {},
+    /** Collects the thread, or takes it out. Whole-thread, so only the opening post offers it. */
+    onCollect: () -> Unit = {},
+    onCollectFailureShown: () -> Unit = {},
+    /**
+     * Draws the votes embedded in the body and the comments.
+     *
+     * Supplied by the navigation layer, which is the only place that can reach [AppContainer] to
+     * build a per-vote ViewModel. Defaults to nothing, which is what a preview or a screen test wants.
+     */
+    voteContent: @Composable (Long) -> Unit = {},
     /** Hides the bottom toolbar while the editor covers it. */
     replyOpen: Boolean = false,
     /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
@@ -392,6 +408,10 @@ fun PostDetailScreen(
                         onReplyToFloor = onReply,
                         onQuoteFloor = onQuote,
                         onAuthorClick = onAuthorClick,
+                        // Same gate as the editor and the marks: the account has to exist before the
+                        // action, not after a rejection that also spent the tap.
+                        onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
+                        voteContent = voteContent,
                         modifier =
                         Modifier.floatingToolbarVerticalNestedScroll(
                             expanded = toolbarExpanded,
@@ -445,6 +465,18 @@ fun PostDetailScreen(
         if (failure == null) return@LaunchedEffect
         snackbarHostState.showSnackbar(failure.detail?.takeIf { it.isNotBlank() } ?: fallback.orEmpty())
         onReactionFailureShown()
+    }
+
+    // Same treatment for the star, kept separate so a refused collection and a refused mark cannot
+    // clear each other's message.
+    val collectFailure = state.collectFailure
+    val collectFallback = collectFailure?.error?.shortMessage()
+    LaunchedEffect(collectFailure) {
+        if (collectFailure == null) return@LaunchedEffect
+        snackbarHostState.showSnackbar(
+            collectFailure.detail?.takeIf { it.isNotBlank() } ?: collectFallback.orEmpty(),
+        )
+        onCollectFailureShown()
     }
 
     if (showPageSheet) {
@@ -612,6 +644,8 @@ private fun ThreadList(
     onReplyToFloor: (FloorReference?) -> Unit,
     onQuoteFloor: (FloorReference) -> Unit,
     onAuthorClick: (Long) -> Unit,
+    onCollect: () -> Unit,
+    voteContent: @Composable (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -636,6 +670,11 @@ private fun ThreadList(
                         pendingReaction = state.pendingReactionFor(body),
                         onReact = { action -> onReact(body, action) },
                         onAuthorClick = onAuthorClick,
+                        collected = state.collected,
+                        collectionCount = state.collectionCount,
+                        collectPending = state.collectPending,
+                        onCollect = onCollect,
+                        voteContent = voteContent,
                     )
                 }
             }
@@ -660,6 +699,7 @@ private fun ThreadList(
                     onReply = { onReplyToFloor(comment.toFloorReference()) },
                     onQuote = { comment.toFloorReference()?.let(onQuoteFloor) },
                     onAuthorClick = onAuthorClick,
+                    voteContent = voteContent,
                 )
             }
         }
@@ -788,6 +828,12 @@ private fun OriginalPost(
     pendingReaction: ReactionAction?,
     onReact: (ReactionAction) -> Unit,
     onAuthorClick: (Long) -> Unit,
+    /* Collection is whole-thread, so it belongs on the opening post and nowhere else. */
+    collected: Boolean?,
+    collectionCount: Int?,
+    collectPending: Boolean,
+    onCollect: () -> Unit,
+    voteContent: @Composable (Long) -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = 12.dp),
@@ -843,6 +889,7 @@ private fun OriginalPost(
                 onImageClick = onImageClick,
                 onQuoteRefClick = { onJumpToFloor(it.floor) },
                 textStyle = MaterialTheme.typography.bodyLarge,
+                voteContent = voteContent,
                 modifier = Modifier.padding(top = Spacing.md),
             )
         }
@@ -856,6 +903,10 @@ private fun OriginalPost(
             reactions = body.reactions,
             pending = pendingReaction,
             onReact = onReact,
+            collected = collected,
+            collectionCount = collectionCount,
+            collectPending = collectPending,
+            onCollect = onCollect,
         )
     }
 }
@@ -927,6 +978,7 @@ private fun CommentRow(
     onReply: () -> Unit,
     onQuote: () -> Unit,
     onAuthorClick: (Long) -> Unit,
+    voteContent: @Composable (Long) -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(
@@ -982,6 +1034,7 @@ private fun CommentRow(
             onImageClick = onImageClick,
             onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
             textStyle = MaterialTheme.typography.bodyMedium,
+            voteContent = voteContent,
             modifier = Modifier.padding(top = Spacing.sm),
         )
         UserSignature(
@@ -1040,6 +1093,15 @@ private fun ReactionRow(
     modifier: Modifier = Modifier,
     onReply: (() -> Unit)? = null,
     onQuote: (() -> Unit)? = null,
+    /*
+     * Collection is whole-thread on NodeSeek, so only the opening post passes these; every comment
+     * row leaves them at their defaults and the star simply is not drawn. Null [collected] is the
+     * same absence for a different reason — no fetched page has said which way it points.
+     */
+    collected: Boolean? = null,
+    collectionCount: Int? = null,
+    collectPending: Boolean = false,
+    onCollect: (() -> Unit)? = null,
 ) {
     Row(
         // Every reaction is a TextButton, which keeps 12dp of content padding inside its own bounds.
@@ -1052,6 +1114,17 @@ private fun ReactionRow(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // First in an End-arranged row, so it draws leftmost and the three marks keep their places.
+        if (collected != null && onCollect != null) {
+            QuietReaction(
+                icon = if (collected) Icons.Default.Star else NodysseyIcons.StarBorder,
+                label = if (collected) R.string.post_collected_action else R.string.post_collect_action,
+                count = collectionCount?.toString().orEmpty(),
+                selected = collected,
+                pending = collectPending,
+                onClick = onCollect.takeUnless { collectPending },
+            )
+        }
         REACTION_ORDER.forEach { (action, icon) ->
             QuietReaction(
                 icon = icon,
@@ -1112,6 +1185,14 @@ private fun QuietReaction(
     onClick: (() -> Unit)? = null,
     spent: Boolean = false,
     pending: Boolean = false,
+    /**
+     * On, and still tappable — which is what makes it not [spent].
+     *
+     * Collection is the only reversible thing on this row, so it needs the "already done" colour
+     * without the "and that is final" disabling. Folding it into [spent] would leave a reader who
+     * collected a thread unable to un-collect it.
+     */
+    selected: Boolean = false,
 ) {
     /*
      * Spent is drawn, not merely disabled. These three cannot be undone, so the row has to answer
@@ -1122,10 +1203,10 @@ private fun QuietReaction(
         onClick = onClick ?: {},
         enabled = onClick != null && !spent && !pending,
         colors =
-        if (spent) {
-            ButtonDefaults.textButtonColors(disabledContentColor = MaterialTheme.colorScheme.primary)
-        } else {
-            ButtonDefaults.textButtonColors()
+        when {
+            spent -> ButtonDefaults.textButtonColors(disabledContentColor = MaterialTheme.colorScheme.primary)
+            selected -> ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+            else -> ButtonDefaults.textButtonColors()
         },
     ) {
         if (pending) {

@@ -16,6 +16,7 @@ import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.GrowthSnapshot
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
+import io.github.nodyssey.data.ReadHistoryEntry
 import io.github.nodyssey.data.UserProfile
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.model.FeedSort
@@ -341,4 +342,12 @@ private object NoOpPostRepository : PostRepository {
     override suspend fun react(postId: Long, commentId: Long, action: ReactionAction) = Unit
 
     override suspend fun freeChickenLegs(): FreeChickenLegs? = null
+
+    override suspend fun setCollected(postId: Long, collected: Boolean) = Unit
+
+    override fun readHistory(): Flow<List<ReadHistoryEntry>> = emptyFlow()
+
+    override suspend fun removeFromHistory(postId: Long) = Unit
+
+    override suspend fun clearReadHistory() = Unit
 }

@@ -35,6 +35,8 @@ fun CachedThread.toSnapshot(): ThreadSnapshot {
         lastLoadedPage = detail.lastLoadedPage,
         totalPages = detail.totalPages,
         cachedAtMillis = detail.cachedAtMillis,
+        collected = detail.collected,
+        collectionCount = detail.collectionCount,
     )
 }
 
@@ -74,6 +76,8 @@ interface PostDetailDao {
         comments: List<CommentEntity>,
         nowMillis: Long,
         replacesWindow: Boolean,
+        collected: Boolean? = null,
+        collectionCount: Int? = null,
     ) {
         val existing = findDetail(postId)
         val replaces =
@@ -89,6 +93,11 @@ interface PostDetailDao {
                 totalPages = totalPages,
                 firstLoadedPage = if (replaces) page else minOf(existing.firstLoadedPage, page),
                 lastLoadedPage = if (replaces) page else maxOf(existing.lastLoadedPage, page),
+                // Same rule as [body]: a page that said nothing about the collection must not erase
+                // what an earlier page did say. Every page observed so far carries these, but the
+                // fallback costs nothing and is the difference between a stale star and a missing one.
+                collected = collected ?: existing?.collected,
+                collectionCount = collectionCount ?: existing?.collectionCount,
                 cachedAtMillis = nowMillis,
             ),
         )
@@ -126,6 +135,20 @@ interface PostDetailDao {
             listOf(row.copy(content = row.content.copy(reactions = transform(row.content.reactions)))),
         )
     }
+
+    /**
+     * Writes back a collection toggle the site accepted.
+     *
+     * A targeted `UPDATE` rather than [updateReactions]' read-modify-write, because collection state
+     * lives in its own columns instead of inside a serialized [PostContent]. No row means the thread
+     * was trimmed while the request was in flight, and there is nothing left to correct.
+     */
+    @Query("UPDATE post_details SET collected = :collected, collectionCount = :count WHERE postId = :postId")
+    suspend fun updateCollection(
+        postId: Long,
+        collected: Boolean,
+        count: Int?,
+    )
 
     @Query("SELECT * FROM post_comments WHERE postId = :postId")
     suspend fun findComments(postId: Long): List<CommentEntity>

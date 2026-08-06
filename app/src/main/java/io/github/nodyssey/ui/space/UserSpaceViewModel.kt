@@ -122,6 +122,13 @@ class UserSpaceViewModel(
     private val spaceRepository: UserSpaceRepository,
     private val followRepository: FollowRepository,
     private val clock: AppClock,
+    /**
+     * Land on 收藏 rather than the usual first tab — 我的收藏 in the profile menu comes in this way.
+     *
+     * Only meaningful together with [isSelf]: the site publishes nobody else's collections, so the
+     * tab does not exist on anyone else's space.
+     */
+    openCollections: Boolean = false,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(UserSpaceUiState(uid = uid, isSelf = isSelf))
     val uiState: StateFlow<UserSpaceUiState> = _uiState.asStateFlow()
@@ -138,7 +145,13 @@ class UserSpaceViewModel(
 
     init {
         refreshProfile()
-        selectTab(if (isSelf) SpaceTab.TOPICS else SpaceTab.GENERAL)
+        selectTab(
+            when {
+                isSelf && openCollections -> SpaceTab.COLLECTIONS
+                isSelf -> SpaceTab.TOPICS
+                else -> SpaceTab.GENERAL
+            },
+        )
     }
 
     fun refreshProfile() {
@@ -223,6 +236,7 @@ class UserSpaceViewModel(
             container: AppContainer,
             uid: Long,
             isSelf: Boolean,
+            openCollections: Boolean = false,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -233,6 +247,7 @@ class UserSpaceViewModel(
                         spaceRepository = container.userSpaceRepository,
                         followRepository = container.followRepository,
                         clock = container.clock,
+                        openCollections = openCollections,
                     )
                 }
             }

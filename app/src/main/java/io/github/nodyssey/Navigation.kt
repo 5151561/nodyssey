@@ -70,6 +70,8 @@ import io.github.nodyssey.ui.assets.StardustViewModel
 import io.github.nodyssey.ui.composer.PostComposerRoute
 import io.github.nodyssey.ui.composer.PostComposerViewModel
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
+import io.github.nodyssey.ui.history.ReadHistoryRoute
+import io.github.nodyssey.ui.history.ReadHistoryViewModel
 import io.github.nodyssey.ui.login.WebViewGoal
 import io.github.nodyssey.ui.login.WebViewRoute
 import io.github.nodyssey.ui.messages.MessageThreadRoute
@@ -114,6 +116,8 @@ import io.github.nodyssey.ui.tools.RulingRoute
 import io.github.nodyssey.ui.tools.RulingViewModel
 import io.github.nodyssey.ui.viewer.ImageViewerScreen
 import io.github.nodyssey.ui.viewer.ImageViewerViewModel
+import io.github.nodyssey.ui.vote.VoteCard
+import io.github.nodyssey.ui.vote.VoteViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -361,6 +365,12 @@ fun MainNavigation(
                     onAccountSettings = { backStack.add(AccountSettingsKey) },
                     onOpenWebsite = { openExternalUrl(NodeSeekSite.BASE_URL) },
                     onOpenSpace = { uid -> backStack.add(UserSpaceKey(uid, isSelf = true)) },
+                    // 我的收藏 is the space page's own 收藏 tab, opened directly. A separate screen
+                    // would be the same list rendered twice from the same endpoint.
+                    onCollections = { uid ->
+                        backStack.add(UserSpaceKey(uid, isSelf = true, openCollections = true))
+                    },
+                    onHistory = { backStack.add(ReadHistoryKey) },
                     onAssets = { backStack.add(AssetsKey()) },
                     onAttendance = { backStack.add(AssetsKey(openAttendanceChooser = true)) },
                     onFollow = { backStack.add(FollowKey) },
@@ -476,8 +486,11 @@ fun MainNavigation(
             entry<UserSpaceKey> { key ->
                 val viewModel: UserSpaceViewModel =
                     viewModel(
-                        key = "space-${key.uid}",
-                        factory = UserSpaceViewModel.factory(container, key.uid, key.isSelf),
+                        // The landing tab is part of the identity: 我的主页 and 我的收藏 are the same
+                        // uid, and without it in the key the second would reuse the first's tab.
+                        key = "space-${key.uid}-${key.openCollections}",
+                        factory =
+                        UserSpaceViewModel.factory(container, key.uid, key.isSelf, key.openCollections),
                     )
                 UserSpaceRoute(
                     viewModel = viewModel,
@@ -499,6 +512,16 @@ fun MainNavigation(
                     onOpenBrowser = openExternalUrl,
                     onLinkClick = openContentUrl,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                )
+            }
+
+            entry<ReadHistoryKey> {
+                val viewModel: ReadHistoryViewModel =
+                    viewModel(factory = ReadHistoryViewModel.factory(container))
+                ReadHistoryRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onPostClick = { postId -> backStack.add(PostDetailKey(postId)) },
                 )
             }
 
@@ -788,6 +811,20 @@ fun MainNavigation(
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                     onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                     onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
+                    // Supplied here because this is the only layer that can reach the container.
+                    // Keyed by vote id and not merely by post: a thread may embed more than one, and
+                    // without the key they would share a single ViewModel and each other's state.
+                    voteContent = { voteId ->
+                        VoteCard(
+                            viewModel =
+                            viewModel(
+                                key = "vote-$voteId",
+                                factory = VoteViewModel.factory(container, voteId),
+                            ),
+                            onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                            onUserClick = openSpace,
+                        )
+                    },
                 )
             }
 

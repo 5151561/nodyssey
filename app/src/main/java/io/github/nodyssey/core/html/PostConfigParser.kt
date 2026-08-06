@@ -20,6 +20,15 @@ import org.jsoup.nodes.Document
 internal data class PostConfig(
     val reactions: Map<Long, PostReactions> = emptyMap(),
     val blockedCommentIds: Set<Long> = emptySet(),
+    /**
+     * Whether this account has the thread in its collection.
+     *
+     * Null when the page carried no blob — which is not "not collected". The site has no endpoint
+     * that answers this question on its own, so a page without a blob leaves it genuinely unknown
+     * and the star has to stay untappable rather than offer to remove a collection that may exist.
+     */
+    val collected: Boolean? = null,
+    val collectionCount: Int? = null,
 )
 
 /**
@@ -40,21 +49,18 @@ internal object PostConfigParser {
     /** The blob's per-floor state, empty when the page carried none. The body is a comment here too. */
     fun parse(document: Document): PostConfig {
         val decoded = SiteBootstrap.decodeOrNull(document) ?: return PostConfig()
-        val comments =
+        val postData =
             try {
-                json
-                    .parseToJsonElement(decoded)
-                    .jsonObject["postData"]
-                    ?.jsonObject
-                    ?.get("comments")
-                    ?.jsonArray
+                json.parseToJsonElement(decoded).jsonObject["postData"]?.jsonObject
             } catch (exception: IllegalArgumentException) {
                 null
             } ?: return PostConfig()
 
         val reactions = mutableMapOf<Long, PostReactions>()
         val blocked = mutableSetOf<Long>()
-        comments.forEach { entry ->
+        // Absent on a reshaped page, which costs the tallies but must not cost the thread-level
+        // state sitting next to them — hence a loop over nothing rather than an early return.
+        postData["comments"]?.jsonArray.orEmpty().forEach { entry ->
             val comment = entry as? JsonObject ?: return@forEach
             val commentId = comment.long("commentId") ?: return@forEach
             reactions[commentId] =
@@ -68,7 +74,13 @@ internal object PostConfigParser {
                 )
             if (comment.bool("blocked")) blocked += commentId
         }
-        return PostConfig(reactions = reactions, blockedCommentIds = blocked)
+        return PostConfig(
+            reactions = reactions,
+            blockedCommentIds = blocked,
+            // Thread-level, so they sit on `postData` itself rather than inside `comments`.
+            collected = postData.boolOrNull("collected"),
+            collectionCount = postData.intOrNull("collectionCount"),
+        )
     }
 
     private fun JsonObject.long(key: String): Long? = this[key]?.jsonPrimitive?.longOrNull
@@ -81,4 +93,15 @@ internal object PostConfigParser {
         this[key]?.jsonPrimitive?.contentOrNull?.toIntOrNull()?.coerceAtLeast(0) ?: 0
 
     private fun JsonObject.bool(key: String): Boolean = this[key]?.jsonPrimitive?.booleanOrNull ?: false
+
+    /*
+     * The nullable pair, for the thread-level fields. Kept separate from [bool] and [int] rather
+     * than made the general case: a floor with no `liked` key really has not been marked, but a
+     * page with no `collected` key has told us nothing, and collapsing the two would put a
+     * tappable "remove from collection" in front of a reader whose page never mentioned it.
+     */
+    private fun JsonObject.boolOrNull(key: String): Boolean? = this[key]?.jsonPrimitive?.booleanOrNull
+
+    private fun JsonObject.intOrNull(key: String): Int? =
+        this[key]?.jsonPrimitive?.contentOrNull?.toIntOrNull()?.coerceAtLeast(0)
 }

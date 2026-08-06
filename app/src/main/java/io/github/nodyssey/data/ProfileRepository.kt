@@ -17,8 +17,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 data class UserProfile(
     val uid: Long,
@@ -80,6 +83,16 @@ interface ProfileRepository {
      * it to decide `isSelf` — a null simply means "not known to be self", never "known not to be".
      */
     val selfUid: Long? get() = null
+
+    /**
+     * Whether the signed-in account is a site moderator.
+     *
+     * Held in memory beside [selfUid] rather than on [UserProfile]: it is a fact about the session,
+     * not about the person, nothing renders it, and persisting it would mean a Room column that only
+     * one dropdown menu ever reads. False until a profile has loaded — "not known to be a moderator",
+     * which is the safe reading, since the site refuses the operations it gates anyway.
+     */
+    val selfIsAdmin: Boolean get() = false
 }
 
 /**
@@ -103,6 +116,10 @@ class NetworkProfileRepository(
     override var selfUid: Long? = null
         private set
 
+    @Volatile
+    override var selfIsAdmin: Boolean = false
+        private set
+
     private val cacheLock = Mutex()
 
     override fun observeProfile(sessionFingerprint: Int): Flow<UserProfile?> =
@@ -118,6 +135,7 @@ class NetworkProfileRepository(
         cacheLock.withLock {
             profileDao.deleteAll()
             selfUid = null
+            selfIsAdmin = false
         }
     }
 
@@ -157,6 +175,10 @@ class NetworkProfileRepository(
                     ),
                 )
             }.getOrNull()
+
+        // Neither source is guaranteed to carry it, and neither contradicts the other: the page blob
+        // has `roles` for the session, the account endpoint repeats it. Either saying yes is enough.
+        selfIsAdmin = (account?.isAdmin ?: false) || (bootstrap.isAdmin ?: false)
 
         return bootstrap.merge(account).toProfile()
     }
@@ -279,6 +301,8 @@ internal data class RawProfile(
     val topicCount: Int? = null,
     val commentCount: Int? = null,
     val followed: Boolean? = null,
+    /** Session state rather than profile data — see [ProfileRepository.selfIsAdmin]. */
+    val isAdmin: Boolean? = null,
 )
 
 private fun JsonElement.findProfileObject(): JsonObject? {
@@ -309,7 +333,27 @@ private fun JsonObject.toRawProfile(): RawProfile =
         topicCount = int("nPost", "post_count", "postCount", "topicCount", "discussion_count"),
         commentCount = int("nComment", "comment_count", "commentCount"),
         followed = bool("followed"),
+        isAdmin = readIsAdmin(),
     )
+
+/**
+ * The moderator flag, from either shape the site uses.
+ *
+ * `roles` is what the site's own vote script checks; `isAdmin` arrives as `0`/`1` rather than a
+ * boolean, which is why [bool] cannot be reused for it.
+ */
+private fun JsonObject.readIsAdmin(): Boolean? {
+    val roles = this["roles"] as? JsonArray
+    if (roles != null) {
+        return roles.any { role ->
+            (role as? JsonObject)?.get("name")?.jsonPrimitive?.contentOrNull == ADMIN_ROLE
+        }
+    }
+    val flag = this["isAdmin"]?.jsonPrimitive?.contentOrNull ?: return null
+    return flag == "true" || flag.toIntOrNull()?.let { it != 0 } == true
+}
+
+private const val ADMIN_ROLE = "admin"
 
 /** Long enough to cover one walk through the profile area, short enough that balances stay honest. */
 private const val PROFILE_CACHE_TTL_MILLIS = 60_000L

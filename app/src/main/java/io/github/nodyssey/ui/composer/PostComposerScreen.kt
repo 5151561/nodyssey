@@ -77,6 +77,7 @@ import io.github.nodyssey.ui.theme.PostBody
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.paddingWithKeyboard
 import io.github.nodyssey.ui.theme.readableWidth
+import io.github.nodyssey.ui.vote.VoteComposeDialog
 import java.text.DateFormat
 import java.util.Date
 
@@ -132,6 +133,8 @@ fun PostComposerRoute(
         onDiscardDraft = viewModel::discardDraft,
         onToolbarChange = viewModel::setToolbar,
         onToolbarReset = viewModel::resetToolbar,
+        onCreateVote = viewModel::createVote,
+        onDismissVoteCreation = viewModel::dismissVoteCreation,
         modifier = modifier,
     )
 }
@@ -213,6 +216,14 @@ fun PostComposerScreen(
     onToolbarChange: (List<EditorAction>) -> Unit,
     onToolbarReset: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Creates a vote and, on success only, runs the callback so the dialog can close.
+     *
+     * The lambda is the "it landed" signal: a failed creation keeps the dialog open with the site's
+     * own sentence in it, because everything the author typed is still worth keeping.
+     */
+    onCreateVote: (String, Boolean, Boolean, List<String>, () -> Unit) -> Unit = { _, _, _, _, _ -> },
+    onDismissVoteCreation: () -> Unit = {},
 ) {
     // While a publish is in flight the request may already have created the topic; leaving now would
     // cancel the ViewModel, keep the draft, and set up a duplicate post on the next attempt. Preview
@@ -248,6 +259,8 @@ fun PostComposerScreen(
                 onRetryAttachment = onRetryAttachment,
                 onToolbarChange = onToolbarChange,
                 onToolbarReset = onToolbarReset,
+                onCreateVote = onCreateVote,
+                onDismissVoteCreation = onDismissVoteCreation,
                 modifier = Modifier.paddingWithKeyboard(padding),
             )
         }
@@ -359,11 +372,14 @@ private fun EditorContent(
     onRetryAttachment: (ImageAttachment) -> Unit,
     onToolbarChange: (List<EditorAction>) -> Unit,
     onToolbarReset: () -> Unit,
+    onCreateVote: (String, Boolean, Boolean, List<String>, () -> Unit) -> Unit,
+    onDismissVoteCreation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val editorState = rememberMarkdownEditorState()
     val focusRequester = remember { FocusRequester() }
     var customizing by rememberSaveable { mutableStateOf(false) }
+    var composingVote by rememberSaveable { mutableStateOf(false) }
 
     // The keyboard padding is the caller's — [paddingWithKeyboard] has to sit next to the Scaffold
     // padding it consumes, and applying `imePadding` again here would put the gap right back.
@@ -390,6 +406,30 @@ private fun EditorContent(
             // The toolbar takes focus when it is tapped, and a caret the user cannot see is a caret
             // they have lost track of.
             onFormatted = { focusRequester.requestFocus() },
+            // The strip's trailing slot rather than an [EditorAction]: that enum is the shared pool
+            // every editor draws from, and adding to it would put 插入投票 in the message, signature
+            // and readme editors too — none of which can carry a vote.
+            trailing = {
+                IconButton(onClick = { composingVote = true }) {
+                    Icon(
+                        NodysseyIcons.Poll,
+                        contentDescription = stringResource(R.string.composer_insert_vote),
+                    )
+                }
+            },
+        )
+    }
+
+    if (composingVote) {
+        VoteComposeDialog(
+            state = state.voteCreation,
+            onCreate = { title, multiple, isPublic, items ->
+                onCreateVote(title, multiple, isPublic, items) { composingVote = false }
+            },
+            onDismiss = {
+                composingVote = false
+                onDismissVoteCreation()
+            },
         )
     }
 

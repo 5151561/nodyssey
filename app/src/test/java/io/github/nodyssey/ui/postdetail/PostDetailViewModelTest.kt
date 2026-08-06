@@ -580,6 +580,125 @@ class PostDetailViewModelTest {
             vm.onReactionFailureShown()
             assertNull(vm.uiState.value.reactionFailure)
         }
+
+    /**
+     * The state the star is drawn from arrives by the same Room observation as the rest of the
+     * thread — nothing about collection is fetched separately.
+     */
+    @Test
+    fun `the page's collection state reaches the screen`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, collected = true, collectionCount = 7)
+            }
+
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(true, vm.uiState.value.collected)
+            assertEquals(7, vm.uiState.value.collectionCount)
+        }
+
+    /**
+     * Nothing has said which way the toggle points, so "add" would be a guess — and the guess that
+     * loses silently un-collects a thread the reader had already saved.
+     */
+    @Test
+    fun `toggling does nothing while the collection state is unknown`() =
+        runTest(dispatcher) {
+            val collecting = CollectingRepository(repository)
+            val vm = PostDetailViewModel(42, collecting, session)
+            advanceUntilIdle()
+            assertNull(vm.uiState.value.collected)
+
+            vm.toggleCollect()
+            advanceUntilIdle()
+
+            assertEquals(0, collecting.calls.size)
+        }
+
+    @Test
+    fun `toggling sends the opposite of what the page said`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, collected = true, collectionCount = 7)
+            }
+            val collecting = CollectingRepository(repository)
+            val vm = PostDetailViewModel(42, collecting, session)
+            advanceUntilIdle()
+
+            vm.toggleCollect()
+            advanceUntilIdle()
+
+            assertEquals(listOf(false), collecting.calls)
+        }
+
+    /** A second tap while the first is in flight would send the toggle straight back again. */
+    @Test
+    fun `a toggle in flight refuses a second tap`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, collected = false, collectionCount = 6)
+            }
+            val gate = CompletableDeferred<Unit>()
+            val collecting = CollectingRepository(repository, gate = gate)
+            val vm = PostDetailViewModel(42, collecting, session)
+            advanceUntilIdle()
+
+            vm.toggleCollect()
+            advanceUntilIdle()
+            assertTrue(vm.uiState.value.collectPending)
+
+            vm.toggleCollect()
+            advanceUntilIdle()
+            assertEquals(1, collecting.calls.size)
+
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertFalse(vm.uiState.value.collectPending)
+        }
+
+    @Test
+    fun `a refused toggle keeps the site's sentence and clears the pending flag`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, collected = false, collectionCount = 6)
+            }
+            val collecting =
+                CollectingRepository(
+                    repository,
+                    failure = NodeSeekException(NodeSeekError.Unknown, detail = "收藏夹已满"),
+                )
+            val vm = PostDetailViewModel(42, collecting, session)
+            advanceUntilIdle()
+
+            vm.toggleCollect()
+            advanceUntilIdle()
+
+            assertEquals("收藏夹已满", vm.uiState.value.collectFailure?.detail)
+            assertFalse(vm.uiState.value.collectPending)
+
+            vm.onCollectFailureShown()
+            assertNull(vm.uiState.value.collectFailure)
+        }
+}
+
+/** The same trick as [GatedReactionRepository] for the star: a real thread, a recorded toggle. */
+private class CollectingRepository(
+    private val delegate: PostRepository,
+    private val gate: CompletableDeferred<Unit>? = null,
+    private val failure: Throwable? = null,
+) : PostRepository by delegate {
+    val calls = mutableListOf<Boolean>()
+
+    override suspend fun setCollected(
+        postId: Long,
+        collected: Boolean,
+    ) {
+        calls += collected
+        gate?.await()
+        failure?.let { throw it }
+    }
 }
 
 /** Delegates the thread to a real repository and only stands in for the write. */

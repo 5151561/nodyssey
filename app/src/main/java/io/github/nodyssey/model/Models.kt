@@ -59,6 +59,14 @@ data class PostDetail(
     val page: Int,
     val totalPages: Int,
     val hasNextPage: Boolean,
+    /**
+     * Whether this account has the thread collected, per the page's own `__config__` blob.
+     *
+     * Null when the page carried no blob — a different claim from "not collected", and the reason
+     * the star can be missing rather than merely unlit.
+     */
+    val collected: Boolean? = null,
+    val collectionCount: Int? = null,
 )
 
 /**
@@ -80,6 +88,9 @@ data class ThreadSnapshot(
     val cachedAtMillis: Long,
     /** The site page each comment came from, index-aligned with [comments]. */
     val commentPages: List<Int> = emptyList(),
+    /** See [PostDetail.collected]; null survives into the cache for the same reason. */
+    val collected: Boolean? = null,
+    val collectionCount: Int? = null,
 ) {
     val hasNextPage: Boolean get() = lastLoadedPage < totalPages
 }
@@ -209,6 +220,28 @@ sealed interface RichNode {
     data class BlockImage(
         val url: String,
         val alt: String?,
+    ) : RichNode
+
+    /**
+     * Where a vote goes. The body carries only its id.
+     *
+     * NodeSeek writes a vote into a post as the bare URL `nsapp://vote?id=2871`, which its markdown
+     * renderer turns into `<a data-href="nsapp://vote?id=2871">` and its own script replaces with a
+     * panel. Nothing about the vote itself is in the HTML — the options, the tallies and whether this
+     * account has voted all take a separate request, and all of them change — so caching anything
+     * beyond the id would be storing a stale answer as though it were the article.
+     *
+     * Block-level, because the marker shares a `<p>` with ordinary prose (`<p><a vote/><br>正文</p>`)
+     * and a card with buttons cannot live inside an `AnnotatedString`. Like [BlockImage] it splits
+     * the paragraph it was found in.
+     *
+     * Note for the next migration: this discriminator did not exist before v1.1.4, so a *downgrade*
+     * would fail to decode bodies cached by a newer build. Reading old rows is unaffected.
+     */
+    @Serializable
+    @SerialName("vote")
+    data class VotePlaceholder(
+        val voteId: Long,
     ) : RichNode
 
     @Serializable

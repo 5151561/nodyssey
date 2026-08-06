@@ -9,11 +9,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.core.AppClock
+import io.github.nodyssey.core.VoteMarkup
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.ProfileRepository
+import io.github.nodyssey.data.VoteRepository
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.ImageUploadQueue
 import io.github.nodyssey.data.composer.ImageUploader
@@ -30,7 +32,9 @@ import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.common.appendBlock
 import io.github.nodyssey.ui.common.editFromViewModel
+import io.github.nodyssey.ui.common.insertText
 import io.github.nodyssey.ui.common.removeBlock
+import io.github.nodyssey.ui.vote.VoteCreationState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -57,6 +61,13 @@ class PostComposerViewModel(
      * [EditorActions.Post] and the wrench does nothing worth opening, so it is not offered.
      */
     private val settings: SettingsRepository? = null,
+    /**
+     * Null wherever 插入投票 is not offered — tests, and any build that has not wired it.
+     *
+     * Creating a vote lives here rather than in a dialog of its own because the id has to land at
+     * this editor's caret: the site creates the vote first and only then is there a marker to insert.
+     */
+    private val voteRepository: VoteRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostComposerUiState())
     val uiState: StateFlow<PostComposerUiState> = _uiState.asStateFlow()
@@ -281,6 +292,49 @@ class PostComposerViewModel(
         viewModelScope.launch { repository.setComposerToolbar(ComposerSurface.POST, emptyList()) }
     }
 
+    /**
+     * Creates a vote and splices its marker in at the caret.
+     *
+     * Two steps that must not come apart: the vote exists on the server before the body mentions it,
+     * so a failure here leaves the post exactly as it was rather than carrying a marker pointing at
+     * nothing. Only a success reaches [bodyState], and [onInserted] runs only then — the dialog stays
+     * open on failure with the site's own sentence still in it.
+     */
+    fun createVote(
+        title: String,
+        multiple: Boolean,
+        isPublic: Boolean,
+        items: List<String>,
+        onInserted: () -> Unit,
+    ) {
+        val votes = voteRepository ?: return
+        if (_uiState.value.voteCreation is VoteCreationState.InFlight) return
+        _uiState.update { it.copy(voteCreation = VoteCreationState.InFlight) }
+        viewModelScope.launch {
+            runCatchingExceptCancellation { votes.create(title, multiple, isPublic, items) }
+                .onSuccess { voteId ->
+                    // `editFromViewModel`, not `edit`: this runs off-frame, and without the apply
+                    // notification the body's snapshotFlow mirror never sees the marker — the draft
+                    // would autosave the text as it was and the post would publish without the vote.
+                    bodyState.editFromViewModel { insertText(VoteMarkup.marker(voteId)) }
+                    _uiState.update { it.copy(voteCreation = VoteCreationState.Idle) }
+                    onInserted()
+                }.onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            voteCreation =
+                            VoteCreationState.Failed((throwable as? NodeSeekException)?.detail),
+                        )
+                    }
+                }
+        }
+    }
+
+    /** Puts the creation state back to idle — the dialog closing without having created anything. */
+    fun dismissVoteCreation() {
+        _uiState.update { it.copy(voteCreation = VoteCreationState.Idle) }
+    }
+
     companion object {
         const val MAX_TITLE_LENGTH = 60
         private const val AUTOSAVE_DELAY_MILLIS = 750L
@@ -295,6 +349,7 @@ class PostComposerViewModel(
                     uploader = container.imageUploader,
                     profileRepository = container.profileRepository,
                     settings = container.settingsRepository,
+                    voteRepository = container.voteRepository,
                 )
             }
         }
@@ -325,6 +380,8 @@ data class PostComposerUiState(
     val authorName: String? = null,
     /** The signed-in account's level; null until the profile lands, or if it never does. */
     val selfRank: Int? = null,
+    /** How 插入投票 is going. Idle whenever the dialog is closed or has nothing to report. */
+    val voteCreation: VoteCreationState = VoteCreationState.Idle,
 ) {
     val hasContent: Boolean get() = title.isNotBlank() || body.isNotBlank()
 

@@ -8,6 +8,7 @@ import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.AppVersion
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.net.DynamicSignInterceptor
 import io.github.nodyssey.core.net.NodeSeekClient
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.core.net.UserAgent
@@ -35,8 +36,10 @@ import io.github.nodyssey.data.NetworkSearchRepository
 import io.github.nodyssey.data.NetworkStardustRepository
 import io.github.nodyssey.data.NetworkTermsRepository
 import io.github.nodyssey.data.NetworkUserSpaceRepository
+import io.github.nodyssey.data.NetworkVoteRepository
 import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.OfflineFirstPostRepository
+import io.github.nodyssey.data.PostCollectionWriter
 import io.github.nodyssey.data.PostReactionWriter
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
@@ -45,6 +48,7 @@ import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.data.TermsRepository
 import io.github.nodyssey.data.UserSpaceRepository
+import io.github.nodyssey.data.VoteRepository
 import io.github.nodyssey.data.account.AccountSettingsRepository
 import io.github.nodyssey.data.account.NetworkAccountSettingsRepository
 import io.github.nodyssey.data.composer.CommentComposerRepository
@@ -108,6 +112,9 @@ interface AppContainer {
 
     val followRepository: FollowRepository
 
+    /** 投票帖. Never cached — see [io.github.nodyssey.data.VoteRepository]. */
+    val voteRepository: VoteRepository
+
     /** The installed build's own version. Read once; the About screen and the updater both use it. */
     val appVersion: AppVersion
 
@@ -159,7 +166,11 @@ class DefaultAppContainer(
                     builder.header("Referer", "${NodeSeekSite.BASE_URL}/")
                 }
                 chain.proceed(builder.build())
-            }.build()
+            }
+            // After the one above, and not merged into it: the vote signature covers the very
+            // `User-Agent` that interceptor just set, so it has to observe the finished request.
+            .addInterceptor(DynamicSignInterceptor())
+            .build()
     }
 
     private val htmlClient by lazy { NodeSeekClient(okHttpClient, dispatchers) }
@@ -178,6 +189,7 @@ class DefaultAppContainer(
             clock,
             PostReactionWriter(jsonClient),
             settingsRepository.showBlockedContent,
+            PostCollectionWriter(jsonClient),
         )
     }
 
@@ -262,6 +274,8 @@ class DefaultAppContainer(
         // thread. See [NetworkFollowRepository].
         NetworkFollowRepository(jsonClient, dispatchers) { sessionRepository.state.value.isSignedIn }
     }
+
+    override val voteRepository: VoteRepository by lazy { NetworkVoteRepository(jsonClient) }
 
     override val rulingRepository: RulingRepository by lazy {
         NetworkRulingRepository(jsonClient, dispatchers)

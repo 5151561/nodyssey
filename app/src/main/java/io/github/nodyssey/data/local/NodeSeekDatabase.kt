@@ -27,7 +27,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CacheSessionEntity::class,
         SelfProfileEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -50,7 +50,7 @@ abstract class NodeSeekDatabase : RoomDatabase() {
                 .databaseBuilder(context, NodeSeekDatabase::class.java, "nodeseek.db")
                 // Known upgrades preserve local state explicitly. The fallback remains for unknown
                 // legacy versions whose downloaded content can be rebuilt; schemas stay checked in.
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }
@@ -112,5 +112,28 @@ internal val MIGRATION_5_6 =
     object : Migration(5, 6) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE `posts` ADD COLUMN `isBlocked` INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
+/**
+ * Gives read marks enough of a thread to list it as browsing history, and cached threads a place to
+ * remember whether they are collected.
+ *
+ * Two tables in one migration because they ship together, and because both are the same kind of
+ * change: a fact the app never used to record. Every column is nullable with no default, which is
+ * the whole point — a v6 row genuinely does not know its own title or collection state, and writing
+ * `''` or `0` would dress that ignorance up as an answer. The screens read null as "ask the server"
+ * rather than as "no".
+ */
+internal val MIGRATION_6_7 =
+    object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `title` TEXT")
+            db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `authorName` TEXT")
+            db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `authorUid` INTEGER")
+            db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `categoryTitle` TEXT")
+            db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `commentCount` INTEGER")
+            db.execSQL("ALTER TABLE `post_details` ADD COLUMN `collected` INTEGER")
+            db.execSQL("ALTER TABLE `post_details` ADD COLUMN `collectionCount` INTEGER")
         }
     }

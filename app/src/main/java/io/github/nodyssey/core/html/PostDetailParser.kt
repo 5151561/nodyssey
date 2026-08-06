@@ -47,6 +47,8 @@ object PostDetailParser {
             page = page,
             totalPages = maxOf(totalPages, page),
             hasNextPage = pager?.selectFirst(Selectors.DETAIL_PAGER_NEXT) != null,
+            collected = config.collected,
+            collectionCount = config.collectionCount,
         )
     }
 
