@@ -319,14 +319,7 @@ class OfflineFirstPostRepository(
     ): Flow<PagingData<FeedPost>> =
         showBlockedContent.distinctUntilChanged().flatMapLatest { includeBlocked ->
             Pager(
-                config =
-                PagingConfig(
-                    pageSize = NETWORK_PAGE_SIZE,
-                    // Matches the old hand-rolled "load when eight rows from the end" heuristic.
-                    prefetchDistance = 8,
-                    initialLoadSize = NETWORK_PAGE_SIZE,
-                    enablePlaceholders = false,
-                ),
+                config = FEED_PAGING_CONFIG,
                 remoteMediator =
                 FeedRemoteMediator(
                     feedKey = feedKey,
@@ -540,6 +533,37 @@ class OfflineFirstPostRepository(
          * smaller, Paging asks the mediator to append while a page it already fetched is still unread.
          */
         const val NETWORK_PAGE_SIZE = 50
+
+        /**
+         * The window every list of posts is read through — the feed and search alike, so the two can
+         * never drift apart.
+         *
+         * [PagingConfig.enablePlaceholders] is on, and is not negotiable for a Room-backed pager.
+         * Room invalidates this `PagingSource` on every write to `posts`, `feed_positions` or
+         * `post_read_marks` — so on every page the mediator appends, and on every thread the reader
+         * opens, because opening one writes its read mark. Paging answers an invalidation by loading
+         * one [NETWORK_PAGE_SIZE] window around the anchor and handing the UI a new list.
+         *
+         * With placeholders off, that new list is *re-based*: the row being read stops being item 217
+         * and becomes item 25 of a fifty-item list. `LazyColumn` follows an item by key across a
+         * window of a few dozen positions, so a shift that large is not a move it can follow — it
+         * keeps the old index, finds it out of range, and clamps to the end of what it now has. The
+         * reader lands near the top of the feed having touched nothing. That is the "opening a post
+         * throws me back to the top" bug, and it was never in the navigation layer at all.
+         *
+         * With placeholders on, Room reports the full row count and indices are absolute: item 217 is
+         * item 217 before and after the reload, so there is nothing for the list to recover from. The
+         * price is a placeholder row for anything outside the window, which at this prefetch distance
+         * is rarely on screen.
+         */
+        internal val FEED_PAGING_CONFIG =
+            PagingConfig(
+                pageSize = NETWORK_PAGE_SIZE,
+                // Matches the old hand-rolled "load when eight rows from the end" heuristic.
+                prefetchDistance = 8,
+                initialLoadSize = NETWORK_PAGE_SIZE,
+                enablePlaceholders = true,
+            )
 
         /**
          * Threads go stale faster than they are re-read, so this is short. It only decides whether

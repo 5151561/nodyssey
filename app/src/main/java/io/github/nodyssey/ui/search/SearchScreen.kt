@@ -89,6 +89,7 @@ import io.github.nodyssey.ui.common.NoSearchResultsState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.UserAvatar
+import io.github.nodyssey.ui.postlist.FeedRowPlaceholder
 import io.github.nodyssey.ui.postlist.PostRow
 import io.github.nodyssey.ui.postlist.toNodeSeekError
 import io.github.nodyssey.ui.theme.NodysseyTheme
@@ -570,13 +571,18 @@ private fun PostResults(
                 count = posts.itemCount,
                 key = posts.itemKey { it.summary.postId },
             ) { index ->
-                posts[index]?.let { post ->
-                    PostRow(
-                        post = post,
-                        onClick = { onPostClick(post.summary.postId) },
-                        highlight = highlight,
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                // Same pager, same reason as the feed: a counted-but-unloaded row keeps its space.
+                when (val post = posts[index]) {
+                    null -> FeedRowPlaceholder()
+
+                    else -> {
+                        PostRow(
+                            post = post,
+                            onClick = { onPostClick(post.summary.postId) },
+                            highlight = highlight,
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
                 }
             }
             appendRow(posts)
