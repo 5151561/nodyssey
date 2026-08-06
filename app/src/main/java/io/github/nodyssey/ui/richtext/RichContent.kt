@@ -667,7 +667,7 @@ private fun InlineText(
             style =
             SpanStyle(
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontSize = 12.sp,
+                fontSize = QUOTE_LABEL_SIZE,
                 fontWeight = FontWeight.SemiBold,
                 fontFeatureSettings = TABULAR_FIGURES,
             ),
@@ -855,6 +855,7 @@ private fun InlineText(
         Modifier.drawBehind {
             val layout = textLayoutResult ?: return@drawBehind
             val chipHeight = QUOTE_HEIGHT.toPx()
+            val labelCenter = QUOTE_LABEL_CENTER.toPx()
             quoteRanges.forEach { range ->
                 var start = range.first
                 while (start <= range.last) {
@@ -866,7 +867,11 @@ private fun InlineText(
                     val last = layout.getBoundingBox(end - 1)
                     val left = minOf(first.left, last.left)
                     val right = maxOf(first.right, last.right)
-                    val centerY = (first.top + first.bottom) / 2f
+                    // Hung off the baseline rather than centred in the line box. The box is as tall
+                    // as the *paragraph's* 16sp font plus its leading, and its middle sits well
+                    // above the middle of a 12sp label — which drew the chip a couple of sp high,
+                    // with the label grazing its bottom edge.
+                    val centerY = layout.getLineBaseline(line) - labelCenter
                     drawRoundRect(
                         color = quoteBackground,
                         topLeft = Offset(left, centerY - chipHeight / 2f),
@@ -882,6 +887,17 @@ private fun InlineText(
 
 private val STICKER_SIZE = 20.sp
 private val QUOTE_HEIGHT = 22.sp
+private val QUOTE_LABEL_SIZE = 12.sp
+
+/**
+ * How far the quote label's optical middle sits above the baseline, and so where the chip drawn
+ * behind it is centred.
+ *
+ * Just over a third of the type size is where the middle of a hanzi's em box (0.38em above the
+ * baseline) and the middle of Latin cap height (0.36em) both land — close enough that one figure
+ * centres a label that is usually both at once, `@某人 #12`.
+ */
+private val QUOTE_LABEL_CENTER = QUOTE_LABEL_SIZE * 0.37f
 private const val QUOTE_HORIZONTAL_SPACE = "\u00A0\u00A0"
 private const val STICKER_PREFIX = "sticker:"
 private const val QUOTE_PREFIX = "quote:"
