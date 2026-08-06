@@ -7,9 +7,14 @@ import io.github.nodyssey.data.inMemoryDatabase
 import io.github.nodyssey.data.local.FeedPositionEntity
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.toEntity
+import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.testSettingsRepository
 import io.github.nodyssey.model.PostSummary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -30,6 +35,7 @@ class ReadHistoryViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val remote = FakePostRemoteDataSource()
     private val clock = MutableClock()
+    private val limit = MutableStateFlow(SettingsRepository.DEFAULT_READ_HISTORY_LIMIT)
     private lateinit var database: NodeSeekDatabase
     private lateinit var repository: OfflineFirstPostRepository
 
@@ -37,7 +43,7 @@ class ReadHistoryViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         database = inMemoryDatabase(dispatcher)
-        repository = OfflineFirstPostRepository(database, remote, clock)
+        repository = OfflineFirstPostRepository(database, remote, clock, readHistoryLimit = limit)
     }
 
     @After
@@ -80,7 +86,7 @@ class ReadHistoryViewModelTest {
     @Test
     fun `starts loading rather than empty`() =
         runTest(dispatcher) {
-            val vm = ReadHistoryViewModel(repository)
+            val vm = ReadHistoryViewModel(repository, testSettingsRepository(backgroundScope))
 
             assertTrue(vm.uiState.value.isLoading)
             assertTrue(vm.uiState.value.entries.isEmpty())
@@ -92,7 +98,7 @@ class ReadHistoryViewModelTest {
             givenRead(1, "first")
             givenRead(2, "second")
 
-            val vm = ReadHistoryViewModel(repository)
+            val vm = ReadHistoryViewModel(repository, testSettingsRepository(backgroundScope))
             advanceUntilIdle()
 
             assertFalse(vm.uiState.value.isLoading)
@@ -104,20 +110,38 @@ class ReadHistoryViewModelTest {
         runTest(dispatcher) {
             givenRead(1, "first")
             givenRead(2, "second")
-            val vm = ReadHistoryViewModel(repository)
+            val vm = ReadHistoryViewModel(repository, testSettingsRepository(backgroundScope))
             advanceUntilIdle()
 
-            vm.remove(2)
+            vm.remove(vm.uiState.value.entries.first { it.postId == 2L })
             advanceUntilIdle()
 
             assertEquals(listOf(1L), vm.uiState.value.entries.map { it.postId })
+        }
+
+    /** 撤销 on the snackbar. The row comes back where it was, not at the top. */
+    @Test
+    fun `a removed entry can be restored`() =
+        runTest(dispatcher) {
+            givenRead(1, "first")
+            givenRead(2, "second")
+            val vm = ReadHistoryViewModel(repository, testSettingsRepository(backgroundScope))
+            advanceUntilIdle()
+            val removed = vm.uiState.value.entries.first { it.postId == 2L }
+
+            vm.remove(removed)
+            advanceUntilIdle()
+            vm.restore(removed)
+            advanceUntilIdle()
+
+            assertEquals(listOf(2L, 1L), vm.uiState.value.entries.map { it.postId })
         }
 
     @Test
     fun `clearing empties the state`() =
         runTest(dispatcher) {
             givenRead(1, "first")
-            val vm = ReadHistoryViewModel(repository)
+            val vm = ReadHistoryViewModel(repository, testSettingsRepository(backgroundScope))
             advanceUntilIdle()
 
             vm.clear()
@@ -125,5 +149,28 @@ class ReadHistoryViewModelTest {
 
             assertTrue(vm.uiState.value.entries.isEmpty())
             assertFalse(vm.uiState.value.isLoading)
+        }
+
+    /** The picker writes the setting, and the list it is looking at re-lengths from the same store. */
+    @Test
+    fun `choosing a limit stores it and comes back through the state`() =
+        runTest(dispatcher) {
+            val settings = testSettingsRepository(backgroundScope)
+            repository =
+                OfflineFirstPostRepository(
+                    database,
+                    remote,
+                    clock,
+                    readHistoryLimit = settings.settings.map { it.readHistoryLimit },
+                )
+            val vm = ReadHistoryViewModel(repository, settings)
+            advanceUntilIdle()
+            assertEquals(SettingsRepository.DEFAULT_READ_HISTORY_LIMIT, vm.uiState.value.limit)
+
+            vm.setLimit(100)
+            advanceUntilIdle()
+
+            assertEquals(100, settings.settings.first().readHistoryLimit)
+            assertEquals(100, vm.uiState.value.limit)
         }
 }

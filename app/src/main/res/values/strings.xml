@@ -880,6 +880,20 @@
     <!-- These rows double as the unread baseline, and the reader has to know that before agreeing -->
     <string name="history_clear_body">这些记录同时也是「几条新回复」的已读基准。清除之后，列表里已读变灰的帖子会重新显示为未读。</string>
     <string name="history_clear_confirm">清除</string>
+    <!-- Top bar second line: how much is kept, and how much of that is used -->
+    <string name="history_subtitle">共 %1$d 条 · 保留 %2$s</string>
+    <string name="history_section_today">今天</string>
+    <string name="history_section_yesterday">昨天</string>
+    <string name="history_section_week">最近七天</string>
+    <string name="history_section_earlier">更早</string>
+    <string name="history_removed">已移除一条记录</string>
+    <string name="history_undo">撤销</string>
+    <!-- 保留条数 — the same rows are the unread baseline, so the picker has to say what a small number costs -->
+    <string name="history_limit_title">保留条数</string>
+    <string name="history_limit_body">浏览记录同时是「已读」和「N 条新回复」的判断依据。留得越少，读过的旧帖越早重新显示为未读。一条记录只是几个字段，一千条也远不到 1 MB。</string>
+    <string name="history_limit_count">%1$d 条</string>
+    <string name="history_limit_unlimited">无上限</string>
+    <string name="history_limit_default">%1$d 条（默认）</string>
 
     <!-- 图床 (nodeimage.com) — a separate service; see NodeImageSite for why it has its own vocabulary. -->
     <string name="nodeimage_title">NodeImage 图床</string>

@@ -69,6 +69,8 @@ import io.github.nodyssey.data.update.DefaultAppUpdateRepository
 import io.github.nodyssey.data.update.GitHubReleaseSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -190,6 +192,7 @@ class DefaultAppContainer(
             PostReactionWriter(jsonClient),
             settingsRepository.showBlockedContent,
             PostCollectionWriter(jsonClient),
+            settingsRepository.settings.map { it.readHistoryLimit }.distinctUntilChanged(),
         )
     }
 

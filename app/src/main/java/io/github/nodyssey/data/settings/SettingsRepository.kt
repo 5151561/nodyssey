@@ -76,6 +76,9 @@ class SettingsRepository(
                 notifyMentions = preferences[KEY_NOTIFY_MENTIONS] ?: true,
                 notifyReplies = preferences[KEY_NOTIFY_REPLIES] ?: true,
                 notifyMessages = preferences[KEY_NOTIFY_MESSAGES] ?: true,
+                readHistoryLimit =
+                (preferences[KEY_READ_HISTORY_LIMIT] ?: DEFAULT_READ_HISTORY_LIMIT)
+                    .let { limit -> if (limit in READ_HISTORY_LIMIT_CHOICES) limit else DEFAULT_READ_HISTORY_LIMIT },
             )
         }
 
@@ -130,6 +133,20 @@ class SettingsRepository(
     suspend fun setNotifyReplies(enabled: Boolean) = edit { it[KEY_NOTIFY_REPLIES] = enabled }
 
     suspend fun setNotifyMessages(enabled: Boolean) = edit { it[KEY_NOTIFY_MESSAGES] = enabled }
+
+    /**
+     * How long 浏览历史 remembers. Anything outside [READ_HISTORY_LIMIT_CHOICES] is refused rather
+     * than stored, so a bad write cannot leave the history capped at some number no picker can undo.
+     *
+     * Lowering it does not itself delete anything — the rows go on the next
+     * [io.github.nodyssey.data.PostRepository.trimReadHistory]. The caller that changes this setting
+     * is expected to ask for that trim; see the history screen's ViewModel.
+     */
+    suspend fun setReadHistoryLimit(limit: Int) =
+        edit {
+            it[KEY_READ_HISTORY_LIMIT] =
+                if (limit in READ_HISTORY_LIMIT_CHOICES) limit else DEFAULT_READ_HISTORY_LIMIT
+        }
 
     suspend fun addSearchHistory(entry: SearchHistoryEntry) {
         val normalized = entry.copy(query = entry.query.trim())
@@ -330,6 +347,27 @@ class SettingsRepository(
         val POLL_MINUTE_CHOICES = listOf(15, 30, 60)
         const val DEFAULT_POLL_MINUTES = 30
 
+        /**
+         * 无上限, expressed as a limit so that every caller stays one `LIMIT :n` and one `trimTo(n)`.
+         *
+         * A sentinel of 0 was the obvious alternative and is the dangerous one: a stray 0 anywhere in
+         * this chain would silently mean "keep nothing", and these rows are the unread baselines. The
+         * failure mode of the largest possible number is that nothing gets trimmed.
+         */
+        const val READ_HISTORY_UNLIMITED = Int.MAX_VALUE
+
+        /**
+         * How many threads 浏览历史 keeps.
+         *
+         * A row is a handful of strings — a thousand of them is well under a megabyte — so the cap is
+         * not really about storage. It is about the second job these rows do: they are the baselines
+         * behind 已读变灰 and 「N 条新回复」, and a small cap makes threads look unread again while the
+         * reader still cares. That is why the default is 300 rather than the 100 the list itself
+         * would be tidier at.
+         */
+        val READ_HISTORY_LIMIT_CHOICES = listOf(100, 300, 1000, READ_HISTORY_UNLIMITED)
+        const val DEFAULT_READ_HISTORY_LIMIT = 300
+
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
@@ -355,6 +393,7 @@ class SettingsRepository(
         private val KEY_SEEN_REPLIES = intPreferencesKey("notification_seen_replies")
         private val KEY_SEEN_MENTIONS = intPreferencesKey("notification_seen_mentions")
         private val KEY_SEEN_MESSAGES = intPreferencesKey("notification_seen_messages")
+        private val KEY_READ_HISTORY_LIMIT = intPreferencesKey("read_history_limit")
         private val KEY_UPDATE_CHECKED_AT = longPreferencesKey("update_checked_at")
         private val KEY_UPDATE_RELEASE = stringPreferencesKey("update_latest_release")
 
@@ -453,6 +492,8 @@ data class UserSettings(
     val notifyMentions: Boolean = true,
     val notifyReplies: Boolean = true,
     val notifyMessages: Boolean = true,
+    /** 浏览历史保留条数; [SettingsRepository.READ_HISTORY_UNLIMITED] for 无上限. */
+    val readHistoryLimit: Int = SettingsRepository.DEFAULT_READ_HISTORY_LIMIT,
 )
 
 /**

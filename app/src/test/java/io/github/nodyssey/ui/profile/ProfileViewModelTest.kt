@@ -349,5 +349,9 @@ private object NoOpPostRepository : PostRepository {
 
     override suspend fun removeFromHistory(postId: Long) = Unit
 
+    override suspend fun restoreToHistory(entry: ReadHistoryEntry) = Unit
+
+    override suspend fun trimReadHistory() = Unit
+
     override suspend fun clearReadHistory() = Unit
 }

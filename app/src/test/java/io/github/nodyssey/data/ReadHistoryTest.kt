@@ -3,9 +3,12 @@ package io.github.nodyssey.data
 import io.github.nodyssey.data.local.FeedPositionEntity
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.toEntity
+import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.model.RichNode
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -170,24 +173,85 @@ class ReadHistoryTest {
             assertNull(database.readMarkDao().find(1))
         }
 
+    /** Undo for a swiped-away row: the snapshot is enough to write the whole mark again. */
+    @Test
+    fun `a removed entry can be put back`() =
+        runTest {
+            givenListedPost(postId = 7, title = "绿云抢鸡竞赛", author = "ipv4")
+            repository.markThreadRead(7)
+            val removed = repository.readHistory().first().single()
+
+            repository.removeFromHistory(7)
+            repository.restoreToHistory(removed)
+
+            val restored = repository.readHistory().first().single()
+            assertEquals(removed, restored)
+            // And with it the unread baseline, which is the half of this row nobody can see.
+            assertEquals(10, database.readMarkDao().find(7)?.lastSeenCommentCount)
+        }
+
     /** The table gains a row per thread ever opened, so something has to bound it. */
     @Test
     fun `the history is trimmed to its cap, oldest first`() =
         runTest {
-            val overflow = OfflineFirstPostRepository.MAX_READ_HISTORY + 5
-            repeat(overflow) { index ->
-                val postId = index + 1L
-                givenListedPost(postId = postId, title = "post $postId")
-                repository.markThreadRead(postId)
-                clock.advanceBy(1_000)
-            }
+            val cap = 8
+            repository = repositoryWithLimit(MutableStateFlow(cap))
+            givenReadThreads(cap + 5)
 
             val history = repository.readHistory().first()
-            assertEquals(OfflineFirstPostRepository.MAX_READ_HISTORY, history.size)
-            assertEquals(overflow.toLong(), history.first().postId)
+            assertEquals(cap, history.size)
+            assertEquals((cap + 5).toLong(), history.first().postId)
             // The five oldest went, and so did their read marks.
             assertNull(database.readMarkDao().find(1))
         }
+
+    /** 无上限 keeps everything — including the read marks the feed greys its rows with. */
+    @Test
+    fun `an unlimited history is never trimmed`() =
+        runTest {
+            repository =
+                repositoryWithLimit(MutableStateFlow(SettingsRepository.READ_HISTORY_UNLIMITED))
+            givenReadThreads(12)
+
+            assertEquals(12, repository.readHistory().first().size)
+        }
+
+    /**
+     * Lowering 保留条数 has to take effect on rows nobody is about to re-read: they would otherwise
+     * go on greying out their feed rows until the next thread is opened.
+     */
+    @Test
+    fun `lowering the limit shortens the list and drops the rows on request`() =
+        runTest {
+            val limit = MutableStateFlow(SettingsRepository.READ_HISTORY_UNLIMITED)
+            repository = repositoryWithLimit(limit)
+            givenReadThreads(12)
+
+            limit.value = 5
+
+            // The list re-lengths on its own, because the query is re-run with the new limit.
+            assertEquals(5, repository.readHistory().first().size)
+            // The rows themselves survive until something asks, which is what the setting screen does.
+            assertEquals(12, database.readMarkDao().observeHistory(Int.MAX_VALUE).first().size)
+
+            repository.trimReadHistory()
+
+            assertEquals(5, database.readMarkDao().observeHistory(Int.MAX_VALUE).first().size)
+            assertNull(database.readMarkDao().find(1))
+        }
+
+    private fun repositoryWithLimit(limit: Flow<Int>) =
+        OfflineFirstPostRepository(database, remote, clock, readHistoryLimit = limit)
+
+    /** Reads threads 1..[count], one second apart, so the oldest is the lowest id. */
+    private suspend fun givenReadThreads(count: Int) {
+        repeat(count) { index ->
+            val postId = index + 1L
+            givenListedPost(postId = postId, title = "post $postId")
+            repository.markThreadRead(postId)
+            clock.advanceBy(1_000)
+        }
+    }
 
     private fun opener(
         author: String,
