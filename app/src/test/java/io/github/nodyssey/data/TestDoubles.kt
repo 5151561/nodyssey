@@ -175,6 +175,8 @@ internal class FakePostRemoteDataSource : PostRemoteDataSource {
             body: PostContent? = content("body of $postId"),
             commentCount: Int = 2,
             totalPages: Int = 1,
+            collected: Boolean? = null,
+            collectionCount: Int? = null,
         ) = PostDetail(
             postId = postId,
             title = "thread $postId",
@@ -183,6 +185,8 @@ internal class FakePostRemoteDataSource : PostRemoteDataSource {
             page = page,
             totalPages = totalPages,
             hasNextPage = page < totalPages,
+            collected = collected,
+            collectionCount = collectionCount,
         )
 
         fun content(text: String) =

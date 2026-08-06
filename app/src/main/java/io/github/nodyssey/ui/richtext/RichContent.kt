@@ -111,6 +111,18 @@ fun RichContent(
     modifier: Modifier = Modifier,
     textStyle: TextStyle = PostBody,
     onQuoteRefClick: (InlineNode.QuoteRef) -> Unit = { onLinkClick(it.url) },
+    /**
+     * Draws the vote a [RichNode.VotePlaceholder] stands for.
+     *
+     * A slot, because a vote is a live server object and this renderer is not always somewhere that
+     * may go and get one: the same function draws editor previews, signatures, direct messages and
+     * space readmes, none of which has a ViewModel and none of which should be issuing requests. The
+     * thread screen passes a real card; everywhere else gets the static placeholder.
+     *
+     * Deliberately not a `CompositionLocal`. Forgetting to provide one is invisible to the compiler
+     * and to lint, and would show up only as a silently inert card at runtime.
+     */
+    voteContent: @Composable (Long) -> Unit = { VotePlaceholderCard() },
 ) {
     // Reading upgrades happen here, at the display seam, so the same styles stay safe to reuse in
     // editors — see `TextStyle.asProse` for why an editor must never inherit them.
@@ -122,6 +134,7 @@ fun RichContent(
             onImageClick = onImageClick,
             onQuoteRefClick = onQuoteRefClick,
             textStyle = prose,
+            voteContent = voteContent,
         )
     }
 }
@@ -140,6 +153,7 @@ private fun RichBlockColumn(
     onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
     textStyle: TextStyle,
     modifier: Modifier = Modifier,
+    voteContent: @Composable (Long) -> Unit = { VotePlaceholderCard() },
 ) {
     Column(modifier = modifier) {
         nodes.forEachIndexed { index, node ->
@@ -150,6 +164,7 @@ private fun RichBlockColumn(
                 onImageClick = onImageClick,
                 onQuoteRefClick = onQuoteRefClick,
                 textStyle = textStyle,
+                voteContent = voteContent,
             )
         }
     }
@@ -171,8 +186,11 @@ private fun RichBlock(
     onImageClick: (String) -> Unit,
     onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
     textStyle: TextStyle,
+    voteContent: @Composable (Long) -> Unit = { VotePlaceholderCard() },
 ) {
     when (node) {
+        is RichNode.VotePlaceholder -> voteContent(node.voteId)
+
         is RichNode.Paragraph -> InlineText(node.inlines, textStyle, onLinkClick, onQuoteRefClick)
 
         is RichNode.Heading ->

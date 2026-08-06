@@ -91,6 +91,8 @@ class PostDetailViewModel(
                             lastLoadedPage = 1,
                             totalPages = 1,
                             hasNextPage = false,
+                            collected = null,
+                            collectionCount = null,
                         )
                     }
                     return@collect
@@ -106,6 +108,8 @@ class PostDetailViewModel(
                         lastLoadedPage = thread.lastLoadedPage,
                         totalPages = thread.totalPages,
                         hasNextPage = thread.hasNextPage,
+                        collected = thread.collected,
+                        collectionCount = thread.collectionCount,
                     )
                 }
 
@@ -271,6 +275,46 @@ class PostDetailViewModel(
     }
 
     /**
+     * Collects the thread, or takes it out of the collection.
+     *
+     * A no-op while [PostDetailUiState.collected] is null: no fetched page has said which way the
+     * toggle points, and sending "add" on a guess would silently un-collect a thread the reader had
+     * already saved.
+     *
+     * Deliberately not optimistic, unlike most toggles. The star's truth lives in Room and arrives by
+     * the same observation as the rest of the thread; flipping it locally first means two writers for
+     * one value, and the loser is whichever the reader was actually looking at. [collectPending]
+     * greys the star for the round trip instead, which says the same thing without lying about it.
+     */
+    fun toggleCollect() {
+        val state = _uiState.value
+        val current = state.collected ?: return
+        if (state.collectPending) return
+        _uiState.update { it.copy(collectPending = true, collectFailure = null) }
+        viewModelScope.launch {
+            runCatchingExceptCancellation { repository.setCollected(postId, !current) }
+                .onSuccess { _uiState.update { it.copy(collectPending = false) } }
+                .onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            collectPending = false,
+                            collectFailure =
+                            ReactionFailure(
+                                error = throwable.toNodeSeekError(),
+                                detail = (throwable as? NodeSeekException)?.detail,
+                            ),
+                        )
+                    }
+                }
+        }
+    }
+
+    /** The collection failure has been shown; stop holding it. */
+    fun onCollectFailureShown() {
+        _uiState.update { it.copy(collectFailure = null) }
+    }
+
+    /**
      * Loads today's free 加鸡腿 allowance so the confirmation can say whether this one is free.
      *
      * Called when the reader opens that confirmation, not on entering the thread: it is one request
@@ -377,6 +421,18 @@ data class PostDetailUiState(
     val reactionFailure: ReactionFailure? = null,
     /** Today's free 加鸡腿 allowance; null until [PostDetailViewModel.loadFreeChickenLegs] answers. */
     val freeChickenLegs: FreeChickenLegs? = null,
+    /**
+     * Whether this account collects the thread; null means no fetched page has said.
+     *
+     * Null is why the star can be absent rather than merely unlit — the site answers this question
+     * only inside a post page, so before one arrives there is nothing honest to draw.
+     */
+    val collected: Boolean? = null,
+    val collectionCount: Int? = null,
+    /** A collection toggle is in flight, so the star refuses a second tap until it lands. */
+    val collectPending: Boolean = false,
+    /** A refused collection toggle, held until the screen has shown it once. */
+    val collectFailure: ReactionFailure? = null,
 )
 
 data class PendingReaction(

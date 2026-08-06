@@ -15,6 +15,7 @@ import io.github.nodyssey.data.local.CacheSessionEntity
 import io.github.nodyssey.data.local.CommentEntity
 import io.github.nodyssey.data.local.FeedPostRow
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.nodyssey.data.local.ReadMarkEntity
 import io.github.nodyssey.data.local.toSnapshot
 import io.github.nodyssey.data.local.toSummary
 import io.github.nodyssey.model.FeedSort
@@ -40,6 +41,23 @@ data class FeedPost(
     val isRead: Boolean,
     /** Replies added since the user last opened the thread. Zero when unread or unchanged. */
     val newCommentCount: Int,
+)
+
+/**
+ * One line of the browsing history.
+ *
+ * Everything but [postId] and [lastReadAtMillis] can be null, and none of it comes from the `posts`
+ * table: a thread opened from a notification or an external link has never been in a feed, so there
+ * is no row there to join against. What is here was snapshotted when the thread was read.
+ */
+data class ReadHistoryEntry(
+    val postId: Long,
+    val title: String?,
+    val authorName: String?,
+    val authorUid: Long?,
+    val categoryTitle: String?,
+    val commentCount: Int?,
+    val lastReadAtMillis: Long,
 )
 
 /**
@@ -183,6 +201,29 @@ interface PostRepository {
 
     /** Today's remaining free 加鸡腿, or null when the site would not say. */
     suspend fun freeChickenLegs(): FreeChickenLegs?
+
+    /**
+     * Adds the thread to this account's collection, or takes it out. Throws on refusal.
+     *
+     * Whole-thread, not per floor: that is all the site offers.
+     */
+    suspend fun setCollected(
+        postId: Long,
+        collected: Boolean,
+    )
+
+    /** Threads this device has opened, most recent first. Local only — the site keeps no such list. */
+    fun readHistory(): Flow<List<ReadHistoryEntry>>
+
+    suspend fun removeFromHistory(postId: Long)
+
+    /**
+     * Forgets every thread this device has read.
+     *
+     * Also clears the unread baselines, because they are the same rows: read marks do both jobs.
+     * Callers must say so before asking — every already-read thread goes back to looking unread.
+     */
+    suspend fun clearReadHistory()
 }
 
 @OptIn(ExperimentalPagingApi::class, ExperimentalCoroutinesApi::class)
@@ -205,6 +246,8 @@ class OfflineFirstPostRepository(
      * rows, which is the site's own default.
      */
     private val showBlockedContent: Flow<Boolean> = flowOf(false),
+    /** Absent for the same reason [reactions] is; see its note. */
+    private val collections: PostCollectionWriter? = null,
 ) : PostRepository {
     override fun feed(
         categorySlug: String?,
@@ -370,6 +413,8 @@ class OfflineFirstPostRepository(
             },
             nowMillis = clock.nowMillis(),
             replacesWindow = replacesWindow,
+            collected = detail.collected,
+            collectionCount = detail.collectionCount,
         )
         database.postDetailDao().trimTo(MAX_CACHED_THREADS)
     }
@@ -383,10 +428,37 @@ class OfflineFirstPostRepository(
         database.postDetailDao().findDetail(postId)?.let { it.firstLoadedPage..it.lastLoadedPage }
 
     override suspend fun markThreadRead(postId: Long) {
-        // Zero when the post was never in a cached list (a deep link), which is the honest baseline:
-        // every reply is then genuinely new to this user.
-        val commentCount = database.feedDao().commentCount(postId) ?: 0
-        database.readMarkDao().markRead(postId, commentCount, clock.nowMillis())
+        val listRow = database.feedDao().findPost(postId)
+        // The cached thread is the better source for a deep link: it is what was just rendered,
+        // whereas `posts` holds nothing at all for a thread no feed ever carried.
+        val cached = database.postDetailDao().findDetail(postId)
+        database.readMarkDao().markRead(
+            postId = postId,
+            // Zero when the post was never in a cached list (a deep link), which is the honest
+            // baseline: every reply is then genuinely new to this user.
+            commentCount = listRow?.commentCount ?: 0,
+            nowMillis = clock.nowMillis(),
+            title = cached?.title ?: listRow?.title,
+            authorName = cached?.body?.authorName ?: listRow?.authorName,
+            authorUid = cached?.body?.authorUid ?: listRow?.authorUid,
+            categoryTitle = cached?.body?.categoryTitle ?: listRow?.categoryTitle,
+            totalComments = listRow?.commentCount,
+        )
+        database.readMarkDao().trimTo(MAX_READ_HISTORY)
+    }
+
+    override fun readHistory(): Flow<List<ReadHistoryEntry>> =
+        database
+            .readMarkDao()
+            .observeHistory(MAX_READ_HISTORY)
+            .map { marks -> marks.map(ReadMarkEntity::toHistoryEntry) }
+
+    override suspend fun removeFromHistory(postId: Long) {
+        database.readMarkDao().delete(postId)
+    }
+
+    override suspend fun clearReadHistory() {
+        database.readMarkDao().clearAll()
     }
 
     override suspend fun react(
@@ -402,6 +474,16 @@ class OfflineFirstPostRepository(
     }
 
     override suspend fun freeChickenLegs(): FreeChickenLegs? = reactions?.freeChickenLegs()
+
+    override suspend fun setCollected(
+        postId: Long,
+        collected: Boolean,
+    ) {
+        val writer = collections ?: throw NodeSeekException(NodeSeekError.NotWired)
+        val outcome = writer.setCollected(postId = postId, collected = collected)
+        // The site's echo, not the request: see [CollectionOutcome.collected].
+        database.postDetailDao().updateCollection(postId, outcome.collected, outcome.postCollectionCount)
+    }
 
     companion object {
         /**
@@ -419,8 +501,28 @@ class OfflineFirstPostRepository(
 
         /** Enough to cover a browsing session without letting the cache grow forever. */
         const val MAX_CACHED_THREADS = 60
+
+        /**
+         * How many threads the history remembers.
+         *
+         * Far larger than [MAX_CACHED_THREADS] because a row here is a handful of strings rather
+         * than a whole thread, and because it doubles as the unread baseline — trimming it too
+         * eagerly would make threads look unread again while the reader still cares.
+         */
+        const val MAX_READ_HISTORY = 300
     }
 }
+
+private fun ReadMarkEntity.toHistoryEntry(): ReadHistoryEntry =
+    ReadHistoryEntry(
+        postId = postId,
+        title = title,
+        authorName = authorName,
+        authorUid = authorUid,
+        categoryTitle = categoryTitle,
+        commentCount = commentCount,
+        lastReadAtMillis = lastReadAtMillis,
+    )
 
 private fun FeedPostRow.toFeedPost(): FeedPost {
     val seen = lastSeenCommentCount

@@ -66,6 +66,16 @@ object Selectors {
     const val CONTENT_ARTICLE = "article.post-content"
     const val CONTENT_SIGNATURE = "div.signature"
 
+    /**
+     * The `nsapp://vote?id=2871` marker a vote leaves in the body.
+     *
+     * The scheme is on `data-href`, not `href` — the anchor's own `href` is `javascript://void(0)`,
+     * because the site's script intercepts the click. Matching on `href` finds nothing.
+     */
+    const val VOTE_PLACEHOLDER_ATTR = "data-href"
+    const val VOTE_PLACEHOLDER_SCHEME = "nsapp://vote"
+    const val VOTE_PLACEHOLDER = "a[$VOTE_PLACEHOLDER_ATTR^=$VOTE_PLACEHOLDER_SCHEME]"
+
     // --- Page-level state ---------------------------------------------------
 
     /**

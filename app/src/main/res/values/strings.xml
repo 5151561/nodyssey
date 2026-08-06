@@ -170,6 +170,9 @@
     <string name="post_reaction_like">点赞</string>
     <string name="post_reaction_chicken">投喂鸡腿</string>
     <string name="post_reaction_dislike">点踩</string>
+    <!-- Whole-thread, so only the opening post shows these -->
+    <string name="post_collect_action">收藏</string>
+    <string name="post_collected_action">已收藏</string>
     <string name="chicken_dialog_title">投喂鸡腿？</string>
     <string name="chicken_dialog_body">是否向 %1$s 投喂鸡腿？这将消耗你一个鸡腿。</string>
     <!-- Only shown when the site confirmed today's allowance still covers it -->
@@ -564,7 +567,7 @@
     <string name="profile_guest_tools_hint">推荐阅读、合作商家、友站</string>
 
     <string name="status_signed_in_title">已登录 NodeSeek</string>
-    <string name="status_signed_in_body">应用现在会带着你的登录状态请求内容，内版这类版块可以直接看了。收藏、通知和签到还在做。</string>
+    <string name="status_signed_in_body">应用现在会带着你的登录状态请求内容，内版这类版块可以直接看了。收藏、通知和签到都能用了。</string>
 
     <string name="status_unparsable_title">这个页面读不出来</string>
     <string name="status_unparsable_body">页面结构和预期不一致，多半是站点改版了。先去网页里看看。</string>
@@ -810,9 +813,72 @@
 
     <!-- Profile menu entries added by the 8/9 batch -->
     <string name="profile_space">我的主页</string>
+    <string name="profile_collections">我的收藏</string>
+    <string name="profile_history">浏览历史</string>
     <string name="profile_assets">账户与成长</string>
     <string name="profile_follow">关注与粉丝</string>
     <string name="profile_tools">社区工具</string>
+
+    <!-- 投票帖 — a vote lives in the body as an `nsapp://vote?id=N` marker and is fetched separately -->
+    <string name="vote_placeholder_title">投票</string>
+    <string name="vote_placeholder_body">在帖子里查看并参与</string>
+    <string name="vote_single_choice">单选</string>
+    <string name="vote_multiple_choice">多选</string>
+    <string name="vote_locked">已锁定</string>
+    <string name="vote_anonymous">匿名投票</string>
+    <string name="vote_submit">提交投票</string>
+    <!-- The site's own wording for a signed-out reader -->
+    <string name="vote_sign_in_first">登陆后再投票</string>
+    <string name="vote_confirm_title">确认投票？</string>
+    <string name="vote_confirm_body">提交后不可修改。</string>
+    <string name="vote_confirm_ok">提交</string>
+    <string name="vote_load_failed">投票读取失败</string>
+    <string name="vote_retry">重试</string>
+    <!-- Results stay hidden until this account votes; the site does the same -->
+    <string name="vote_results_hidden">投票后可以看到结果</string>
+    <string name="vote_count">%1$d 票</string>
+    <string name="vote_percent">%1$d%%</string>
+    <string name="vote_total">共 %1$d 票</string>
+    <string name="vote_voters_expand">%1$d 人</string>
+    <string name="vote_voters_more">加载更多</string>
+    <string name="vote_voter_uid">用户 %1$d</string>
+    <string name="vote_manage">管理投票</string>
+    <string name="vote_lock">锁定投票</string>
+    <string name="vote_unlock">解锁投票</string>
+    <string name="vote_delete">删除投票</string>
+    <string name="vote_lock_confirm_title">锁定这个投票？</string>
+    <!-- Owners can lock but not unlock; that asymmetry is the site's, and worth saying out loud -->
+    <string name="vote_lock_confirm_body">锁定后没有人能再投票，而且只有管理员能解锁。</string>
+    <string name="vote_delete_confirm_title">删除这个投票？</string>
+    <string name="vote_delete_confirm_body">删除后不可恢复，帖子里的投票会消失。</string>
+    <string name="vote_deleted">投票已删除</string>
+    <!-- 插入投票, in the post editor. The vote is created server-side, then its id goes into the body -->
+    <string name="composer_insert_vote">插入投票</string>
+    <string name="vote_compose_title">插入投票</string>
+    <string name="vote_compose_question">投票标题</string>
+    <string name="vote_compose_option">选项 %1$d</string>
+    <string name="vote_compose_remove_option">删除选项 %1$d</string>
+    <string name="vote_compose_add_option">添加选项</string>
+    <string name="vote_compose_multiple">允许多选</string>
+    <string name="vote_compose_public">公开投票人</string>
+    <string name="vote_compose_public_body">关闭后是匿名投票，谁投了什么不会公开。</string>
+    <string name="vote_compose_create">创建</string>
+    <string name="vote_compose_confirm_title">确认创建投票？</string>
+    <string name="vote_compose_confirm_body">创建后标题和选项都不能修改。</string>
+    <string name="vote_compose_failed">创建投票失败</string>
+
+    <!-- 浏览历史 — device-local; the site has no such list -->
+    <string name="history_title">浏览历史</string>
+    <string name="history_empty_title">还没有看过帖子</string>
+    <string name="history_empty_body">读过的帖子会按时间倒序留在这里，只存在这台设备上。</string>
+    <!-- A thread read before the snapshot existed, or one whose page carried no title -->
+    <string name="history_untitled">帖子 #%1$d</string>
+    <string name="history_remove">从历史中移除 %1$s</string>
+    <string name="history_clear_all">全部清除</string>
+    <string name="history_clear_title">清除浏览历史？</string>
+    <!-- These rows double as the unread baseline, and the reader has to know that before agreeing -->
+    <string name="history_clear_body">这些记录同时也是「几条新回复」的已读基准。清除之后，列表里已读变灰的帖子会重新显示为未读。</string>
+    <string name="history_clear_confirm">清除</string>
 
     <!-- 图床 (nodeimage.com) — a separate service; see NodeImageSite for why it has its own vocabulary. -->
     <string name="nodeimage_title">NodeImage 图床</string>

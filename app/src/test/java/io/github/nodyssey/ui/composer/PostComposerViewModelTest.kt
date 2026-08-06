@@ -6,6 +6,7 @@ import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.MutableClock
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.UserProfile
+import io.github.nodyssey.data.VoteRepository
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PickedImage
@@ -15,8 +16,10 @@ import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.PostSubmission
 import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.data.session.SessionState
+import io.github.nodyssey.model.Vote
 import io.github.nodyssey.ui.ViewModels
 import io.github.nodyssey.ui.typeText
+import io.github.nodyssey.ui.vote.VoteCreationState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -57,8 +60,101 @@ class PostComposerViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(profiles: ProfileRepository? = null) =
-        viewModels.track(PostComposerViewModel(repository, boards, session, clock, uploader, profiles))
+    private fun viewModel(
+        profiles: ProfileRepository? = null,
+        votes: VoteRepository? = null,
+    ) = viewModels.track(
+        PostComposerViewModel(
+            repository,
+            boards,
+            session,
+            clock,
+            uploader,
+            profiles,
+            voteRepository = votes,
+        ),
+    )
+
+    // --- 插入投票 ------------------------------------------------------------
+
+    /**
+     * The vote has to exist server-side before the body can name it, so the id in the marker is the
+     * one the site handed back — never a guess.
+     */
+    @Test
+    fun `creating a vote splices the site's own id into the body`() = runTest(dispatcher) {
+        val votes = FakeVoteRepository(newId = 3001)
+        val viewModel = viewModel(votes = votes)
+        advanceUntilIdle()
+        viewModel.bodyState.edit { replace(0, length, "正文") }
+        var inserted = false
+
+        viewModel.createVote("标题", multiple = false, isPublic = true, items = listOf("甲", "乙")) {
+            inserted = true
+        }
+        advanceUntilIdle()
+
+        assertTrue(inserted)
+        assertTrue(viewModel.bodyState.text.contains("nsapp://vote?id=3001"))
+        assertEquals(
+            listOf(VoteCreationRequest("标题", multiple = false, isPublic = true, items = listOf("甲", "乙"))),
+            votes.created,
+        )
+        assertEquals(VoteCreationState.Idle, viewModel.uiState.value.voteCreation)
+    }
+
+    /** The mirrored `body` has to see it too, or the draft would autosave the text without the vote. */
+    @Test
+    fun `the inserted marker reaches the mirrored body state`() = runTest(dispatcher) {
+        val viewModel = viewModel(votes = FakeVoteRepository(newId = 3001))
+        advanceUntilIdle()
+
+        viewModel.createVote("标题", multiple = false, isPublic = true, items = listOf("甲", "乙")) {}
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.body.contains("nsapp://vote?id=3001"))
+    }
+
+    /** A failed creation must leave the post exactly as it was — no marker pointing at nothing. */
+    @Test
+    fun `a refused creation keeps the body untouched and holds the site's sentence`() = runTest(dispatcher) {
+        val votes =
+            FakeVoteRepository(
+                newId = 3001,
+                failure = NodeSeekException(NodeSeekError.Unknown, detail = "没有发起投票的权限"),
+            )
+        val viewModel = viewModel(votes = votes)
+        advanceUntilIdle()
+        viewModel.bodyState.edit { replace(0, length, "正文") }
+        var inserted = false
+
+        viewModel.createVote("标题", multiple = false, isPublic = true, items = listOf("甲")) { inserted = true }
+        advanceUntilIdle()
+
+        assertFalse(inserted)
+        assertEquals("正文", viewModel.bodyState.text.toString())
+        assertEquals(
+            VoteCreationState.Failed("没有发起投票的权限"),
+            viewModel.uiState.value.voteCreation,
+        )
+
+        viewModel.dismissVoteCreation()
+        assertEquals(VoteCreationState.Idle, viewModel.uiState.value.voteCreation)
+    }
+
+    /** A build that never wired the repository does nothing rather than reporting a create it never sent. */
+    @Test
+    fun `an unwired composer cannot create a vote`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        var inserted = false
+
+        viewModel.createVote("标题", multiple = false, isPublic = true, items = listOf("甲")) { inserted = true }
+        advanceUntilIdle()
+
+        assertFalse(inserted)
+        assertEquals("", viewModel.bodyState.text.toString())
+    }
 
     @Test
     fun `read permission offers every level up to the account's own`() = runTest(dispatcher) {
@@ -316,4 +412,39 @@ private class FakeComposerRepository : PostComposerRepository {
         publishError?.let { throw it }
         return publishedId
     }
+}
+
+private data class VoteCreationRequest(
+    val title: String,
+    val multiple: Boolean,
+    val isPublic: Boolean,
+    val items: List<String>,
+)
+
+private class FakeVoteRepository(
+    private val newId: Long,
+    private val failure: Throwable? = null,
+) : VoteRepository {
+    val created = mutableListOf<VoteCreationRequest>()
+
+    override suspend fun info(voteId: Long): Vote = error("not used")
+
+    override suspend fun submit(voteId: Long, itemIds: List<Long>) = error("not used")
+
+    override suspend fun create(
+        title: String,
+        multiple: Boolean,
+        isPublic: Boolean,
+        items: List<String>,
+    ): Long {
+        failure?.let { throw it }
+        created += VoteCreationRequest(title, multiple, isPublic, items)
+        return newId
+    }
+
+    override suspend fun setLocked(voteId: Long, locked: Boolean) = error("not used")
+
+    override suspend fun delete(voteId: Long) = error("not used")
+
+    override suspend fun voters(itemId: Long, page: Int): List<Long> = error("not used")
 }

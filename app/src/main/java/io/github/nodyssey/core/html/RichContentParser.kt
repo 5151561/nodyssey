@@ -99,6 +99,10 @@ object RichContentParser {
 
         "img" -> if (isSticker(element)) null else listOf(blockImage(element))
 
+        // A vote marker that was not wrapped in a paragraph — the markdown renderer usually wraps it,
+        // but a body that is nothing but the marker leaves it hanging directly off the article.
+        "a" -> element.voteId()?.let { listOf(RichNode.VotePlaceholder(it)) }
+
         else -> null
     }
 
@@ -120,16 +124,44 @@ object RichContentParser {
         }
 
         element.childNodes().forEach { child ->
-            val image = child.blockImageElement()
-            if (image == null) {
-                inlineNodes += child
-            } else {
-                flushInlineNodes()
-                blocks += blockImage(image)
+            // Checked before the image, because a vote marker is an anchor and `blockImageElement`
+            // accepts `<a><img></a>` — an unlucky marker containing an image would be read as one.
+            val voteId = child.voteId()
+            val image = if (voteId == null) child.blockImageElement() else null
+            when {
+                voteId != null -> {
+                    flushInlineNodes()
+                    blocks += RichNode.VotePlaceholder(voteId)
+                }
+
+                image != null -> {
+                    flushInlineNodes()
+                    blocks += blockImage(image)
+                }
+
+                else -> inlineNodes += child
             }
         }
         flushInlineNodes()
         return blocks
+    }
+
+    /**
+     * Matches the id in `nsapp://vote?id=2871`.
+     *
+     * A regex rather than URI parsing: `nsapp://` is not a scheme any URI parser handles usefully,
+     * and the only field that has ever appeared is this one.
+     */
+    private val VOTE_ID = Regex("""\bid=(\d+)""")
+
+    /** This node's vote id, or null when it is not a vote marker. */
+    private fun Node.voteId(): Long? {
+        val element = this as? Element ?: return null
+        val anchor =
+            if (element.tagName() == "a") element else element.selectFirst(Selectors.VOTE_PLACEHOLDER)
+        val href = anchor?.attr(Selectors.VOTE_PLACEHOLDER_ATTR).orEmpty()
+        if (!href.startsWith(Selectors.VOTE_PLACEHOLDER_SCHEME)) return null
+        return VOTE_ID.find(href)?.groupValues?.get(1)?.toLongOrNull()
     }
 
     /** Accepts both a bare image and the common `<a><img></a>` image-link markup. */
@@ -243,7 +275,13 @@ object RichContentParser {
 
                     "code" -> result += InlineNode.Text(node.wholeText(), style.copy(code = true))
 
-                    "a" -> result += link(node, style)
+                    /*
+                     * A vote marker that reached the inline flow anyway — wrapped in `<strong>`, say,
+                     * so neither block path caught it. Dropped rather than linked: its `href` is
+                     * `javascript://void(0)` and its text is the raw `nsapp://vote?id=2871`, which is
+                     * exactly the broken rendering this parser exists to stop.
+                     */
+                    "a" -> if (node.voteId() == null) result += link(node, style)
 
                     "img" ->
                         if (isSticker(node)) {

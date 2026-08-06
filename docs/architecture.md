@@ -289,7 +289,6 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 | **P2** | 修改邮箱与绑定 Telegram 只能转网页（Turnstile 与 Telegram 登录挂件） | 想原生化就得在 WebView 里跑挂件并把令牌回传；在此之前保持明确交接，不做能提交却必然失败的表单 |
 | **P3** | 未验证字号缩放 200% 与 TalkBack | 用真实设备和至少一台大屏设备做发布前验收 |
 | **P3** | 邀请码购买只有网页闭环 | 有可靠契约后原生化，接入前保留明确网页交接。星辰转账已按这条路走完（`payment-prepare` / `send`） |
-| **P3** | 详情页没有收藏控件 | 写接口已定位（`POST /api/statistics/collection`，可撤销），要做时直接用；在此之前不把收藏误报为“界面已完成” |
 | **P3** | 无 baseline profile / macrobenchmark | 有真实卡顿反馈后再做，不预先优化 |
 | **P3** | 无崩溃上报 | 发布前再定，涉及隐私取舍 |
 

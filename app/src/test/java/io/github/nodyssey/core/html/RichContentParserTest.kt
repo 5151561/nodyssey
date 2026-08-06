@@ -99,4 +99,67 @@ class RichContentParserTest {
         assertEquals(2, nodes.size)
         assertTrue(nodes.all { it is RichNode.BlockImage })
     }
+
+    // --- Vote placeholder ----------------------------------------------------
+
+    /**
+     * The exact markup a vote post arrives as, captured from `/post-857694-1`. The marker shares a
+     * paragraph with the body text, so it has to split it — a card cannot live in an AnnotatedString.
+     */
+    @Test
+    fun `a vote marker becomes a block and splits the paragraph it shared`() {
+        val nodes =
+            parse(
+                """<p><a href="javascript://void(0)" data-href="nsapp://vote?id=2871">""" +
+                    """nsapp://vote?id=2871</a><br>三家的价格和权益差不多</p>""",
+            )
+
+        assertEquals(2, nodes.size)
+        assertEquals(RichNode.VotePlaceholder(2871), nodes[0])
+        assertEquals("三家的价格和权益差不多", (nodes[1] as RichNode.Paragraph).inlines.first().let { (it as InlineNode.Text).text })
+    }
+
+    /** What the app used to do with a vote: render `nsapp://vote?id=2871` as a blue link. */
+    @Test
+    fun `a vote marker never renders as a link or as its own raw text`() {
+        val nodes =
+            parse(
+                """<p><a href="javascript://void(0)" data-href="nsapp://vote?id=2871">nsapp://vote?id=2871</a></p>""",
+            )
+
+        val inlines = nodes.filterIsInstance<RichNode.Paragraph>().flatMap { it.inlines }
+        assertTrue(inlines.filterIsInstance<InlineNode.Link>().isEmpty())
+        assertTrue(inlines.filterIsInstance<InlineNode.Text>().none { it.text.contains("nsapp") })
+    }
+
+    /** A body that is nothing but the marker leaves it hanging directly off the article. */
+    @Test
+    fun `a bare vote anchor at article level is still a block`() {
+        val nodes = parse("""<a href="javascript://void(0)" data-href="nsapp://vote?id=99">x</a>""")
+
+        assertEquals(listOf(RichNode.VotePlaceholder(99)), nodes)
+    }
+
+    /** The last line of defence: wrapped in anything, it still must not reach the inline flow. */
+    @Test
+    fun `a vote anchor nested inside emphasis is dropped rather than linked`() {
+        val nodes =
+            parse(
+                """<p><strong><a href="javascript://void(0)" data-href="nsapp://vote?id=7">x</a></strong>后文</p>""",
+            )
+
+        val inlines = nodes.filterIsInstance<RichNode.Paragraph>().flatMap { it.inlines }
+        assertTrue(inlines.filterIsInstance<InlineNode.Link>().isEmpty())
+        assertTrue(inlines.filterIsInstance<InlineNode.Text>().none { it.text.contains("nsapp") })
+    }
+
+    /** Only `nsapp://vote` is ours. Another app scheme is an ordinary link and stays one. */
+    @Test
+    fun `another nsapp scheme is left as a link`() {
+        val nodes = parse("""<p><a href="/somewhere" data-href="nsapp://other?id=1">别的</a></p>""")
+
+        assertEquals(1, nodes.filterIsInstance<RichNode.Paragraph>().size)
+        assertTrue(nodes.filterIsInstance<RichNode.VotePlaceholder>().isEmpty())
+        assertEquals("别的", (inlinesOf(nodes).first() as InlineNode.Link).text)
+    }
 }

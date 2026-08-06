@@ -59,6 +59,29 @@ interface JsonWriteSource {
         body: String,
         referer: String = NodeSeekSite.BASE_URL + "/",
     ): String
+
+    /**
+     * A write whose status code is the caller's to read, for the endpoints that put the meaning in
+     * the body regardless of what they answer with.
+     *
+     * The vote family is the reason this exists: refusing a lock answers 403, a bad option id answers
+     * 422, and a delete without moderator rights answers 500 — each with the sentence to show in
+     * `{"success":false,"message":…}`. Through [postJson] the first of those would surface as
+     * [NodeSeekError.LoginRequired] and tell a signed-in reader to sign in.
+     *
+     * [method] is a parameter rather than there being one function per verb because the vote writes
+     * are POST and DELETE with identical handling — `DELETE /api/vote/info/{id}` carries a body, which
+     * is unusual but is what the site does. Two identical implementations differing only in a string
+     * would explain less than this does.
+     *
+     * Defaults to throwing, like [JsonSource.postJson], so the read-only test doubles stay small.
+     */
+    suspend fun sendJson(
+        method: String,
+        path: String,
+        body: String,
+        referer: String = NodeSeekSite.BASE_URL + "/",
+    ): JsonPostResponse = throw UnsupportedOperationException("This JsonWriteSource does not support $method")
 }
 
 /** Both halves, for the repositories that read a list and then add to it. */
@@ -181,6 +204,29 @@ class NodeSeekJsonClient(
             }
         }
 
+    override suspend fun sendJson(
+        method: String,
+        path: String,
+        body: String,
+        referer: String,
+    ): JsonPostResponse =
+        withContext(dispatchers.io) {
+            val request =
+                xhrRequest(path, referer)
+                    .header("Origin", NodeSeekSite.BASE_URL)
+                    .method(method, body.toRequestBody(JSON_MEDIA_TYPE))
+                    .build()
+            val response = execute(request)
+
+            response.use {
+                val payload = it.body.string()
+                // Still thrown, and still before the status: a challenge is not an answer from the
+                // site, so there is no site sentence for the caller to read.
+                throwIfChallenge(it.header("cf-mitigated"), payload)
+                JsonPostResponse(code = it.code, body = payload)
+            }
+        }
+
     override suspend fun postMultipart(
         path: String,
         fields: Map<String, String>,
@@ -268,6 +314,56 @@ class NodeSeekJsonClient(
         /** Collections belong to the session, not to a uid: the site offers no one else's. */
         fun collectionListPath(page: Int = 1) =
             "/api/statistics/list-collection?page=${page.coerceAtLeast(1)}"
+
+        /**
+         * Collecting and un-collecting a thread: `{"postId":857694,"action":"add"|"remove"}`, answered
+         * `{"success":true,"message":"added"|"removed","postCollectionCount":N,"userCollectionCount":M}`.
+         *
+         * Sits under `/api/statistics` alongside the three reactions, but unlike them it is
+         * reversible — which is why it is a toggle here rather than another
+         * [NodeSeekSite.reactionApiPath] action.
+         */
+        const val PATH_COLLECTION = "/api/statistics/collection"
+
+        /*
+         * 投票. Captured from the live site on 2026-08-06.
+         *
+         * Every one of these needs the `x-dynamic-sign` header — see [DynamicSignInterceptor] —
+         * without which they answer 403 regardless of the session. Reading works signed out.
+         *
+         * `info` is one path with three verbs: GET reads a vote, POST (with no id) creates one,
+         * DELETE (with an id, and with a body) removes it. That is the site's shape, not our tidying.
+         */
+
+        /** `{"success":true,"vote":{id,title,uid,isPublic,locked,multiple,items:[…]}}`. */
+        fun voteInfoPath(voteId: Long) = "/api/vote/info/$voteId"
+
+        /** Create: `{"title","multiple","isPublic","items":[…]}` → `{"success":true,"vote":{"id":N}}`. */
+        const val PATH_VOTE_CREATE = "/api/vote/info"
+
+        /** Cast: `{"ids":[13201]}` — an array even for a single-choice vote. */
+        const val PATH_VOTE_SUBMIT = "/api/vote/voteforitem"
+
+        /**
+         * Lock or unlock: `{"locked":true}`.
+         *
+         * Locking is the vote's owner's to do; *un*locking is a moderator's. Somebody else's vote
+         * answers `403 {"success":false,"message":"You are not the owner of vote"}`.
+         */
+        fun voteLockPath(voteId: Long) = "/api/vote/lock/$voteId"
+
+        /**
+         * One option's voters as bare uids, ten to a page. Public votes only.
+         *
+         * There is no total in the answer — the site derives the page count from the option's own
+         * `count`, and so do we.
+         */
+        fun voterOfItemPath(
+            itemId: Long,
+            page: Int = 1,
+        ) = "/api/vote/voter-of-item?id=$itemId&page=${page.coerceAtLeast(1)}"
+
+        const val VOTER_PAGE_SIZE = 10
 
         /** `random` is the sign-in mode's wire value: "true" gambles, "false" takes a flat five. */
         fun attendancePath(random: String) = "/api/attendance?random=$random"

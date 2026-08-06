@@ -191,6 +191,17 @@ data class PostDetailEntity(
      * at page 1 is the same number, so v4 rows migrate by adding [firstLoadedPage] and nothing else.
      */
     @ColumnInfo(name = "loadedPages") val lastLoadedPage: Int,
+    /**
+     * Whether this account has the thread in its collection, as of the last page that carried the
+     * site's `__config__` blob.
+     *
+     * Stored because the site has no "is this collected" endpoint — the answer only ever arrives
+     * folded into a post page — so without a column every cold start would open the thread with a
+     * star it cannot honestly fill in. Null is "no page has told us yet", which is a different claim
+     * from "not collected" and is why the star stays untappable rather than guessing.
+     */
+    val collected: Boolean? = null,
+    val collectionCount: Int? = null,
     val cachedAtMillis: Long,
 )
 
@@ -235,6 +246,27 @@ data class ReadMarkEntity(
     @PrimaryKey val postId: Long,
     val lastReadAtMillis: Long,
     val lastSeenCommentCount: Int,
+    /**
+     * Enough of the thread to list it in the browsing history without joining `posts`.
+     *
+     * The join looks tempting — `posts` already holds all of this — but a thread opened from a
+     * notification or an external link has never been in any feed, so it has no `posts` row at all
+     * and would list as a blank line. The snapshot is the only version that covers every entrance.
+     *
+     * Null throughout for rows written before the history screen existed; the list falls back to
+     * the post id rather than pretending the thread had no title.
+     */
+    val title: String? = null,
+    val authorName: String? = null,
+    val authorUid: Long? = null,
+    val categoryTitle: String? = null,
+    /**
+     * How many comments the thread had when it was read — for the history line's subtitle.
+     *
+     * Deliberately not [lastSeenCommentCount]: that one only ever grows and exists to make "4 new
+     * replies" work, so reusing it would tie a display detail to an invariant it does not share.
+     */
+    val commentCount: Int? = null,
 )
 
 /**

@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -69,6 +70,7 @@ class PostDetailScreenTest {
         onSignIn: () -> Unit = {},
         onReact: (Long, ReactionAction) -> Unit = { _, _ -> },
         onLoadPage: (Int) -> Unit = {},
+        onCollect: () -> Unit = {},
     ) {
         composeRule.setContent {
             NodysseyTheme {
@@ -83,6 +85,7 @@ class PostDetailScreenTest {
                     onLoadPage = onLoadPage,
                     onSignIn = onSignIn,
                     onReact = onReact,
+                    onCollect = onCollect,
                 )
             }
         }
@@ -284,6 +287,92 @@ class PostDetailScreenTest {
         composeRule.onNodeWithContentDescription("点赞").performClick()
 
         assert(sent.isEmpty()) { "sent $sent" }
+    }
+
+    /** Whole-thread on NodeSeek, so the star belongs to the opening post and to nothing else. */
+    @Test
+    fun `only the opening post carries the collect star`() {
+        setScreen(
+            PostDetailUiState(
+                title = "t",
+                body = content("body", author = "op", reactions = PostReactions()),
+                comments = listOf(content("a reply", reactions = PostReactions())),
+                isSignedIn = true,
+                collected = false,
+                collectionCount = 6,
+            ),
+        )
+
+        composeRule.onAllNodesWithContentDescription("收藏").assertCountEquals(1)
+        composeRule.onNodeWithText("6").assertIsDisplayed()
+    }
+
+    /**
+     * Null is not false. No fetched page has said which way the toggle points, and a star drawn on a
+     * guess is one tap away from silently un-collecting the thread.
+     */
+    @Test
+    fun `no star at all while the collection state is unknown`() {
+        setScreen(signedInState())
+
+        composeRule.onAllNodesWithContentDescription("收藏").assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("已收藏").assertCountEquals(0)
+    }
+
+    @Test
+    fun `a collected thread shows the filled star`() {
+        setScreen(
+            PostDetailUiState(
+                title = "t",
+                body = content("body", author = "op", reactions = PostReactions()),
+                isSignedIn = true,
+                collected = true,
+                collectionCount = 7,
+            ),
+        )
+
+        composeRule.onNodeWithContentDescription("已收藏").assertIsDisplayed()
+    }
+
+    @Test
+    fun `tapping the star reports the toggle`() {
+        var collects = 0
+        setScreen(
+            PostDetailUiState(
+                title = "t",
+                body = content("body", author = "op", reactions = PostReactions()),
+                isSignedIn = true,
+                collected = false,
+                collectionCount = 6,
+            ),
+            onCollect = { collects++ },
+        )
+
+        composeRule.onNodeWithContentDescription("收藏").performClick()
+
+        assertEquals(1, collects)
+    }
+
+    /** Same gate as the marks and the editor: the account comes before the action. */
+    @Test
+    fun `a signed-out reader is sent to sign in instead of collecting`() {
+        var signIn = 0
+        var collects = 0
+        setScreen(
+            PostDetailUiState(
+                title = "t",
+                body = content("body", author = "op", reactions = PostReactions()),
+                collected = false,
+                collectionCount = 6,
+            ),
+            onSignIn = { signIn++ },
+            onCollect = { collects++ },
+        )
+
+        composeRule.onNodeWithContentDescription("收藏").performClick()
+
+        assertEquals(1, signIn)
+        assertEquals(0, collects)
     }
 
     @Test

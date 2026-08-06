@@ -118,11 +118,26 @@ data class PostDetailKey(
 data class UserSpaceKey(
     val uid: Long,
     val isSelf: Boolean = false,
+    /**
+     * Opens on the 收藏 tab instead of the default one — what 我的收藏 in the profile menu means.
+     *
+     * A Boolean rather than a `SpaceTab`, so this file does not have to depend on `ui/space`. There
+     * is exactly one tab anything links straight to, and inventing a serializable mirror of the enum
+     * to express that would cost more than it explains.
+     */
+    val openCollections: Boolean = false,
 ) : NavKey
 
 /** 我的关注 / 我的粉丝. Only ever the signed-in user's — the site publishes nobody else's. */
 @Serializable
 data object FollowKey : NavKey
+
+/**
+ * 浏览历史. Device-local, so unlike almost every other destination here it has no web equivalent to
+ * fall back to — NodeSeek does not keep a reading history.
+ */
+@Serializable
+data object ReadHistoryKey : NavKey
 
 @Serializable
 data class AssetsKey(
