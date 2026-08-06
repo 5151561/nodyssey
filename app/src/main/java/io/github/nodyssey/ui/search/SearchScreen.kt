@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
@@ -44,7 +43,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SearchBarValue
@@ -67,7 +65,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -86,6 +83,7 @@ import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.SearchHistoryEntry
 import io.github.nodyssey.model.SearchTarget
+import io.github.nodyssey.ui.common.ChoiceRow
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NoSearchResultsState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
@@ -803,8 +801,8 @@ private fun BoardRangeSheet(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                BoardRadioRow(
-                    title = stringResource(R.string.search_all_boards),
+                ChoiceRow(
+                    label = stringResource(R.string.search_all_boards),
                     selected = picked == null,
                     onSelect = { picked = null },
                 )
@@ -840,8 +838,8 @@ private fun BoardRadioGrid(
     boards.chunked(2).forEach { row ->
         Row(Modifier.fillMaxWidth()) {
             row.forEach { board ->
-                BoardRadioRow(
-                    title = board.title,
+                ChoiceRow(
+                    label = board.title,
                     selected = board.slug != null && board.slug == selected,
                     onSelect = { onSelect(board.slug) },
                     modifier = Modifier.weight(1f),
@@ -849,32 +847,6 @@ private fun BoardRadioGrid(
             }
             if (row.size == 1) Spacer(Modifier.weight(1f))
         }
-    }
-}
-
-@Composable
-private fun BoardRadioRow(
-    title: String,
-    selected: Boolean,
-    onSelect: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier =
-        modifier.selectable(
-            selected = selected,
-            role = Role.RadioButton,
-            onClick = onSelect,
-        ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Text(
-            title,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
     }
 }
 

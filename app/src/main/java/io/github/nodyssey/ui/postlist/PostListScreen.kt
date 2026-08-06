@@ -7,8 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -78,8 +76,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -96,6 +92,7 @@ import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.common.AppendSpinner
+import io.github.nodyssey.ui.common.AvatarCapOffset
 import io.github.nodyssey.ui.common.AvatarShape
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
@@ -103,6 +100,8 @@ import io.github.nodyssey.ui.common.MetaText
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.SkeletonBar
+import io.github.nodyssey.ui.common.ThreadRow
+import io.github.nodyssey.ui.common.ThreadRowTitle
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Sizes
@@ -365,16 +364,6 @@ private val NavigationDirectionThreshold = 16.dp
 private const val SCROLL_TO_TOP_ANIMATED_ITEMS = 12
 
 /**
- * Drops the avatar onto the title's cap line.
- *
- * Even with the first line's leading trimmed, a 15sp line box still starts a few pixels above the
- * tallest glyph — ascent is not cap height — so a top-aligned avatar reads as floating higher than
- * the title next to it. Measured at 15sp on the row as built. An offset rather than padding so the
- * row keeps its height and the list still fits nine of them on a 800dp screen.
- */
-private val AvatarCapOffset = 5.dp
-
-/**
  * Turns deliberate user scroll direction into a sticky navigation-bar state.
  *
  * A negative Y delta advances the feed and hides the bar. A positive delta moves back toward earlier
@@ -534,100 +523,81 @@ internal fun PostRow(
     highlight: String? = null,
 ) {
     val summary = post.summary
-    Row(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .background(
-                if (summary.isPinned) {
-                    MaterialTheme.colorScheme.surfaceContainerLow
-                } else {
-                    MaterialTheme.colorScheme.surface
-                },
-            ).padding(start = 14.dp, end = Spacing.lg, top = 10.dp, bottom = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
+    ThreadRow(
+        onClick = onClick,
+        containerColor =
         if (summary.isPinned) {
-            Box(
-                modifier =
-                Modifier
-                    .offset(y = AvatarCapOffset)
-                    .size(Sizes.avatarList)
-                    .clip(AvatarShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = NodysseyIcons.PushPin,
-                    contentDescription = stringResource(R.string.post_badge_pinned),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(18.dp),
+            MaterialTheme.colorScheme.surfaceContainerLow
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        leading = {
+            if (summary.isPinned) {
+                Box(
+                    modifier =
+                    Modifier
+                        .offset(y = AvatarCapOffset)
+                        .size(Sizes.avatarList)
+                        .clip(AvatarShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = NodysseyIcons.PushPin,
+                        contentDescription = stringResource(R.string.post_badge_pinned),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            } else {
+                UserAvatar(
+                    url = summary.avatarUrl,
+                    name = summary.authorName,
+                    size = Sizes.avatarList,
+                    modifier = Modifier.offset(y = AvatarCapOffset),
                 )
             }
-        } else {
-            UserAvatar(
-                url = summary.avatarUrl,
-                name = summary.authorName,
-                size = Sizes.avatarList,
-                modifier = Modifier.offset(y = AvatarCapOffset),
+        },
+        title = {
+            ThreadRowTitle(
+                text = highlighted(summary.title, highlight, MaterialTheme.colorScheme.primary),
+                // A read thread is dimmed rather than hidden — the list is still the user's history,
+                // and the drop in both weight and contrast is legible at a glance without adding a
+                // badge that would cost a row's worth of space.
+                color =
+                if (post.isRead) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                fontWeight = if (post.isRead) FontWeight.Medium else FontWeight.SemiBold,
+                // Not filling, so the lock beside it keeps its place instead of being pushed off.
+                modifier = Modifier.weight(1f, fill = false),
             )
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = highlighted(summary.title, highlight, MaterialTheme.colorScheme.primary),
-                    // Trimmed at the top so the glyphs start at the row's top edge instead of 3sp
-                    // below it: 15/21 leaves leading above the first line, and against a 40dp avatar
-                    // that gap read as the avatar sitting higher than the title beside it.
-                    style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        lineHeightStyle =
-                        LineHeightStyle(
-                            alignment = LineHeightStyle.Alignment.Proportional,
-                            trim = LineHeightStyle.Trim.FirstLineTop,
-                        ),
-                    ),
-                    // A read thread is dimmed rather than hidden — the list is still the user's
-                    // history, and the drop in both weight and contrast is legible at a glance
-                    // without adding a badge that would cost a row's worth of space.
-                    color =
-                    if (post.isRead) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                    fontWeight = if (post.isRead) FontWeight.Medium else FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
+            if (summary.isLocked) {
+                Icon(
+                    Icons.Default.Lock,
+                    contentDescription =
+                    summary.lockLevel
+                        ?.let { stringResource(R.string.post_badge_locked_level, it) }
+                        ?: stringResource(R.string.post_badge_locked),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // 16dp per the b1 §8 只读→锁定 mapping spec.
+                    modifier = Modifier
+                        .padding(start = Spacing.xs)
+                        .size(16.dp),
                 )
-                if (summary.isLocked) {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription =
-                        summary.lockLevel
-                            ?.let { stringResource(R.string.post_badge_locked_level, it) }
-                            ?: stringResource(R.string.post_badge_locked),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        // 16dp per the b1 §8 只读→锁定 mapping spec.
-                        modifier = Modifier
-                            .padding(start = Spacing.xs)
-                            .size(16.dp),
+                summary.lockLevel?.let { level ->
+                    Text(
+                        text = level.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    summary.lockLevel?.let { level ->
-                        Text(
-                            text = level.toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
                 }
             }
-            PostMetaRow(post)
-        }
-    }
+        },
+        meta = { PostMetaItems(post) },
+    )
 }
 
 /**
@@ -660,29 +630,21 @@ internal fun highlighted(
 /**
  * The meta line, in the order a scanning eye wants it: what board, who, how busy, how fresh.
  *
- * It flows rather than clips so that a large system font wraps it onto a second line instead of
- * pushing the timestamp — the single most useful item here — off the edge.
+ * The row itself belongs to [ThreadRow] — this only says what goes in it.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PostMetaRow(post: FeedPost) {
+private fun PostMetaItems(post: FeedPost) {
     val summary = post.summary
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        itemVerticalAlignment = Alignment.CenterVertically,
-    ) {
-        BoardTag(title = summary.categoryTitle, slug = summary.categorySlug)
-        MetaText(summary.authorName, singleLine = true)
-        if (summary.isPinned) MetaText(stringResource(R.string.post_badge_pinned), singleLine = true)
-        if (post.newCommentCount > 0) {
-            NewReplyBadge(post.newCommentCount)
-        } else {
-            summary.commentCount?.let { MetaText(stringResource(R.string.post_reply_count, it), singleLine = true) }
-        }
-        summary.viewCount?.let { MetaText(stringResource(R.string.post_view_count, it), singleLine = true) }
-        summary.lastActiveText?.let { MetaText(it, singleLine = true) }
+    BoardTag(title = summary.categoryTitle, slug = summary.categorySlug)
+    MetaText(summary.authorName, singleLine = true)
+    if (summary.isPinned) MetaText(stringResource(R.string.post_badge_pinned), singleLine = true)
+    if (post.newCommentCount > 0) {
+        NewReplyBadge(post.newCommentCount)
+    } else {
+        summary.commentCount?.let { MetaText(stringResource(R.string.post_reply_count, it), singleLine = true) }
     }
+    summary.viewCount?.let { MetaText(stringResource(R.string.post_view_count, it), singleLine = true) }
+    summary.lastActiveText?.let { MetaText(it, singleLine = true) }
 }
 
 /** Replaces the reply count once the user has read the thread: the delta is the useful number. */

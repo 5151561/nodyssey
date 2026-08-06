@@ -18,6 +18,7 @@ import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.ReadMarkEntity
 import io.github.nodyssey.data.local.toSnapshot
 import io.github.nodyssey.data.local.toSummary
+import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostListPage
 import io.github.nodyssey.model.PostSummary
@@ -26,6 +27,7 @@ import io.github.nodyssey.model.ThreadSnapshot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -218,6 +220,25 @@ interface PostRepository {
     suspend fun removeFromHistory(postId: Long)
 
     /**
+     * Puts a just-removed row back, for 撤销.
+     *
+     * The unread baseline comes back at the snapshot's reply count rather than the exact
+     * `lastSeenCommentCount` that was deleted with it — the history entry does not carry that field.
+     * The two are written from the same read and differ only for a thread whose replies were deleted
+     * between reads, so an undo can at worst re-announce a reply the reader had already seen.
+     */
+    suspend fun restoreToHistory(entry: ReadHistoryEntry)
+
+    /**
+     * Drops everything past the current 保留条数.
+     *
+     * Called after the limit is lowered. Every other caller gets this for free when a thread is read;
+     * this exists because a setting change has to take effect on rows nobody is about to re-read —
+     * otherwise a thread the user just told the app to forget would keep greying out its feed row.
+     */
+    suspend fun trimReadHistory()
+
+    /**
      * Forgets every thread this device has read.
      *
      * Also clears the unread baselines, because they are the same rows: read marks do both jobs.
@@ -248,6 +269,11 @@ class OfflineFirstPostRepository(
     private val showBlockedContent: Flow<Boolean> = flowOf(false),
     /** Absent for the same reason [reactions] is; see its note. */
     private val collections: PostCollectionWriter? = null,
+    /**
+     * 浏览历史保留条数, as a flow for the same reason [showBlockedContent] is one: it can change while
+     * the history is on screen, and the list has to re-length itself when it does.
+     */
+    private val readHistoryLimit: Flow<Int> = flowOf(SettingsRepository.DEFAULT_READ_HISTORY_LIMIT),
 ) : PostRepository {
     override fun feed(
         categorySlug: String?,
@@ -444,17 +470,39 @@ class OfflineFirstPostRepository(
             categoryTitle = cached?.body?.categoryTitle ?: listRow?.categoryTitle,
             totalComments = listRow?.commentCount,
         )
-        database.readMarkDao().trimTo(MAX_READ_HISTORY)
+        trimReadHistory()
     }
 
     override fun readHistory(): Flow<List<ReadHistoryEntry>> =
-        database
-            .readMarkDao()
-            .observeHistory(MAX_READ_HISTORY)
+        readHistoryLimit
+            .distinctUntilChanged()
+            .flatMapLatest { limit -> database.readMarkDao().observeHistory(limit) }
             .map { marks -> marks.map(ReadMarkEntity::toHistoryEntry) }
 
     override suspend fun removeFromHistory(postId: Long) {
         database.readMarkDao().delete(postId)
+    }
+
+    override suspend fun restoreToHistory(entry: ReadHistoryEntry) {
+        database.readMarkDao().upsert(
+            ReadMarkEntity(
+                postId = entry.postId,
+                lastReadAtMillis = entry.lastReadAtMillis,
+                lastSeenCommentCount = entry.commentCount ?: 0,
+                title = entry.title,
+                authorName = entry.authorName,
+                authorUid = entry.authorUid,
+                categoryTitle = entry.categoryTitle,
+                commentCount = entry.commentCount,
+            ),
+        )
+    }
+
+    override suspend fun trimReadHistory() {
+        val limit = readHistoryLimit.first()
+        // Skipped rather than run with Int.MAX_VALUE: 无上限 should not cost a full-table DELETE scan
+        // on every thread the user opens.
+        if (limit != SettingsRepository.READ_HISTORY_UNLIMITED) database.readMarkDao().trimTo(limit)
     }
 
     override suspend fun clearReadHistory() {
@@ -501,15 +549,6 @@ class OfflineFirstPostRepository(
 
         /** Enough to cover a browsing session without letting the cache grow forever. */
         const val MAX_CACHED_THREADS = 60
-
-        /**
-         * How many threads the history remembers.
-         *
-         * Far larger than [MAX_CACHED_THREADS] because a row here is a handful of strings rather
-         * than a whole thread, and because it doubles as the unread baseline — trimming it too
-         * eagerly would make threads look unread again while the reader still cares.
-         */
-        const val MAX_READ_HISTORY = 300
     }
 }
 
