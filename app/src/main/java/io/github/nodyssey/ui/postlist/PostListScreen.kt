@@ -330,13 +330,21 @@ fun PostListScreen(
                                     count = posts.itemCount,
                                     key = posts.itemKey { it.summary.postId },
                                 ) { index ->
-                                    val post = posts[index]
-                                    if (post != null) {
-                                        PostRow(
-                                            post = post,
-                                            onClick = { onPostClick(post.summary.postId) },
-                                        )
-                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                    // Null is a counted row outside the loaded window, not a missing
+                                    // one. Skipping it would collapse the space it is holding and
+                                    // undo the stable indices placeholders were turned on for.
+                                    when (val post = posts[index]) {
+                                        null -> FeedRowPlaceholder()
+
+                                        else -> {
+                                            PostRow(
+                                                post = post,
+                                                onClick = { onPostClick(post.summary.postId) },
+                                            )
+                                            HorizontalDivider(
+                                                color = MaterialTheme.colorScheme.outlineVariant,
+                                            )
+                                        }
                                     }
                                 }
                                 if (appendState is LoadState.Loading) {
@@ -675,29 +683,45 @@ private fun FeedSkeleton(modifier: Modifier = Modifier) {
 
     Column(modifier.fillMaxSize()) {
         widths.forEachIndexed { index, width ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 14.dp, end = Spacing.lg, top = Spacing.md, bottom = Spacing.md),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Box(
-                    Modifier
-                        .size(Sizes.avatarList)
-                        .clip(AvatarShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                )
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    SkeletonBar(fraction = width, height = 13.dp)
-                    SkeletonBar(fraction = metaWidths[index], height = 11.dp)
-                }
-            }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            FeedRowPlaceholder(titleFraction = width, metaFraction = metaWidths[index])
         }
     }
+}
+
+/**
+ * One row's worth of skeleton, used both by the first-load [FeedSkeleton] and for a paging
+ * placeholder — a row the database has counted but has not handed to the window yet.
+ *
+ * The two have to be the same shape. A placeholder that measured differently from the row replacing
+ * it would move everything below it the moment the real row arrived, which is the same jump the
+ * placeholders exist to prevent.
+ */
+@Composable
+internal fun FeedRowPlaceholder(
+    titleFraction: Float = 0.82f,
+    metaFraction: Float = 0.48f,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 14.dp, end = Spacing.lg, top = Spacing.md, bottom = Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(
+            Modifier
+                .size(Sizes.avatarList)
+                .clip(AvatarShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        )
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            SkeletonBar(fraction = titleFraction, height = 13.dp)
+            SkeletonBar(fraction = metaFraction, height = 11.dp)
+        }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 // -------------------------------------------------------------------------------------------------

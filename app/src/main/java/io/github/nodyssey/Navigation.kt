@@ -165,9 +165,15 @@ fun MainNavigation(
 
     /*
      * The feed's position belongs to the home stack, not to whichever home entry composition happens
-     * to be visible. A compact NavDisplay removes the list while a thread is on screen; keeping the
-     * same LazyListState here makes Back reveal the exact list object that was left, instead of asking
-     * SaveableStateHolder to reconstruct an index after Paging and the pop transition have restarted.
+     * to be visible. A compact NavDisplay removes the list while a thread is on screen, so the state
+     * lives out here and Back reveals the same list object rather than a rebuilt one.
+     *
+     * Worth being honest about what this does and does not buy: it was added to fix "returning from a
+     * thread lands near the top of the feed" and it did not, because that was never about where the
+     * state lived — the pager was renumbering the rows underneath it. See
+     * [io.github.nodyssey.data.OfflineFirstPostRepository.FEED_PAGING_CONFIG] for the actual cause.
+     * This stays because holding the state here is still the clearer ownership, and it survives a tab
+     * switch without depending on SaveableStateHolder timing.
      */
     val homeListState = rememberLazyListState()
 
