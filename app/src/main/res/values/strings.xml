@@ -152,7 +152,8 @@
     <string name="page_jump_title">跳转到</string>
     <string name="page_jump_input">页码（1–%1$d）</string>
     <string name="page_jump_first">第一页</string>
-    <string name="page_jump_latest_read">上次阅读</string>
+    <!-- Carries its own page number: it is the one destination here whose page the reader cannot guess -->
+    <string name="page_jump_latest_read">上次阅读 · 第 %1$d 页</string>
     <string name="page_jump_last">最后一页</string>
     <string name="page_jump_go">前往第 %1$s 页</string>
     <!-- The "what is loaded" line each list words in its own noun -->

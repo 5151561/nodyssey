@@ -2,6 +2,8 @@ package io.github.nodyssey.ui.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -99,14 +101,18 @@ fun PageJumpToolbarContent(
  * thread counts 楼, the moderation log counts 条 — and a shared component inventing a noun for both
  * would be wrong in one of them.
  *
- * [resumePage] is where "上次阅读" goes, and a null one takes the button away with it. Every
- * destination here is only worth a button while it is somewhere else: 第一页 on page 1, or a resume
- * offer pointing at the page under the reader's thumb, are taps that do nothing and read as a broken
- * control rather than as a satisfied one. The caller decides what "上次阅读" means — the thread
- * remembers it across visits, the moderation log only knows how far this session scrolled — but not
- * whether it is worth showing.
+ * [resumePage] is where "上次阅读" goes, and a null one takes the button away with it. It is also
+ * printed on the button, unlike the other two: 第一页 and 最后一页 say where they go in their own
+ * names, and this one is a number only the app knows — a reader deciding whether to take the offer
+ * is deciding about that number.
+ *
+ * Every destination here is only worth a button while it is somewhere else: 第一页 on page 1, or a
+ * resume offer pointing at the page under the reader's thumb, are taps that do nothing and read as a
+ * broken control rather than as a satisfied one. The caller decides what "上次阅读" means — the
+ * thread remembers it across visits, the moderation log only knows how far this session scrolled —
+ * but not whether it is worth showing.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PageJumpSheet(
     page: Int,
@@ -154,15 +160,25 @@ fun PageJumpSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
             val showFirst = page > 1
-            val showResume = resumePage != null && resumePage != page
+            val resume = resumePage?.takeIf { it != page }
             val showLast = page < lastPage
-            if (showFirst || showResume || showLast) {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            if (showFirst || resume != null || showLast) {
+                // FlowRow, not Row: 第一页 and 最后一页 say where they go in their own names, but
+                // "上次阅读" is the one destination whose page the reader cannot guess, so it carries
+                // the number — and three chips, one of them that wide, do not fit a narrow phone in
+                // one line, let alone at the 1.5× font scale 设置 offers.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
                     if (showFirst) {
                         TextButton(onClick = { onGo(1) }) { Text(stringResource(R.string.page_jump_first)) }
                     }
-                    if (showResume) {
-                        TextButton(onClick = onResume) { Text(stringResource(R.string.page_jump_latest_read)) }
+                    if (resume != null) {
+                        TextButton(onClick = onResume) {
+                            Text(stringResource(R.string.page_jump_latest_read, resume))
+                        }
                     }
                     if (showLast) {
                         TextButton(onClick = { onGo(lastPage) }) { Text(stringResource(R.string.page_jump_last)) }
