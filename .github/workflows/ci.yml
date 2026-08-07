@@ -33,9 +33,14 @@ jobs:
           # against a different JDK than everyone's machine does.
           java-version: '21'
 
-      # Deliberately not v6: that release moved the caching this step exists for into
-      # `gradle-actions-caching`, a closed-source component under Gradle's own Terms of Use rather
-      # than the MIT license, and dropped configuration-cache support — which this build has on.
+      # Deliberately not v6, and the reason is that v5 is strictly the better deal today. v6 split the
+      # caching this step exists for into two providers: the default `enhanced` one is
+      # `gradle-actions-caching`, proprietary and governed by Gradle's Terms of Use rather than the MIT
+      # license (free for public repositories like this one, but accepting those terms is a decision,
+      # not a version bump); the MIT `basic` one matches keys exactly with no fallback, so any change
+      # to the dependency set re-downloads everything. v5 is that same enhanced implementation from
+      # before it was extracted — MIT, no terms to accept — and it already runs on Node 24, so nothing
+      # about staying here is a compromise. Revisit when v6 offers something v5 does not.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
         with:
