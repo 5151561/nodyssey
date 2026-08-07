@@ -30,11 +30,12 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxDefaults
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -326,12 +327,17 @@ private fun HistoryRow(
     // The id is not much, but it is true, and it still opens the thread.
     val title = entry.title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.history_untitled, entry.postId)
     val removeLabel = stringResource(R.string.history_remove, title)
+    // Deliberately `remember` and not `rememberSwipeToDismissBoxState`, which is a `rememberSaveable`.
+    // A LazyColumn saves each item's state under its key and hands it back when an item with that key
+    // returns — so a row put back by 撤销 came back still holding "dismissed", and SwipeToDismissBox
+    // fired onDismiss again the moment it composed. The row was deleted, restored, and deleted again
+    // within a frame, which read as 撤销 doing nothing at all. A swipe is a gesture in progress: it has
+    // no business surviving the row it was performed on.
+    val positionalThreshold = SwipeToDismissBoxDefaults.positionalThreshold
     val dismissState =
-        rememberSwipeToDismissBoxState(
-            // Only 起点→终点 would be a second gesture for the same destructive action, and it is the
-            // one the back gesture starts from at the screen edge.
-            confirmValueChange = { it == SwipeToDismissBoxValue.EndToStart },
-        )
+        remember(positionalThreshold) {
+            SwipeToDismissBoxState(SwipeToDismissBoxValue.Settled, positionalThreshold)
+        }
 
     SwipeToDismissBox(
         state = dismissState,
