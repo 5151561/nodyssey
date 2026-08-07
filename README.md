@@ -15,12 +15,16 @@ scrolling stays in one list, and the UI follows the system theme.
 
 ## 状态
 
-**已发布 1.1.1，仍在持续开发。** 读和写都已不再是“只读 v1”，当前实现总表见
+**已发布 1.2.1，仍在持续开发。** 读和写都已不再是“只读 v1”，当前实现总表见
 [docs/implementation-status.md](docs/implementation-status.md)，主要可用能力包括：
 
 - 版块列表、排序、Paging 无限滚动、下拉刷新和 Room 离线缓存；点底栏已选中的「首页」或顶栏应用名回到列表顶部
 - 首页板块栏可自定义：长按拖动重排、把不看的板块移到队尾，顺序存本机，冷启动即生效
 - 帖子详情与评论连续分页；段落、图片、表情、代码、引用、列表、表格和行内链接原生渲染
+- 帖子底栏的跳页控件：下滑自动接页之外还能直接跳页、回第一页 / 最后一页；离开帖子时记下停在哪一页
+  哪一楼（只存本机），下次打开点「上次阅读」回到那一楼，按钮上直接写着要去第几页
+- 投票帖原生渲染：一个选项一行的投票卡片，支持投票、楼主锁定、管理员解锁与删除，公开投票可展开
+  投票人列表，发帖时也能带一个投票；未投票时不显示票数和百分比，投票不入本地缓存
 - WebView 登录 / Cloudflare 验证，Cookie 与 OkHttp 共享
 - 帖子 / 用户搜索：输入框常驻顶部，先选版块和类型再搜；与论坛列表共享同一条管线，
   因此结果行有一致的已读态与新回复角标，并高亮命中的关键词
@@ -28,6 +32,9 @@ scrolling stays in one list, and the UI follows the system theme.
   未读数因此真的会降下来
 - 原生发帖编辑器、Markdown 预览、表情、阅读权限和本地草稿；发帖与回复都走站点接口
 - 点赞 / 投喂鸡腿 / 点踩，真实计数与「已操作」状态；消耗鸡腿的两个会先说明代价再发
+- 帖子收藏与收藏人数，「我的」里的「我的收藏」直达空间收藏列表；是否已收藏以站点回应为准
+- 浏览历史（只在本机）：与信息流一致的行样式，按今天 / 昨天 / 最近七天 / 更早分组吸顶，
+  左滑删单条可撤销、右上角菜单全部清除，保留条数可选 100 / 300 / 1000 / 无上限
 - NodeImage 图床：图片按最长边 2048 转 WebP 后上传，API Key 只存本机
 - 用户空间、账号设置二级页（资料、头像、密码、2FA、绑定状态、偏好、屏蔽列表）与 Telegram 流程
 - 屏蔽按站点的判定生效：被屏蔽者的帖子不进列表，楼层折叠成一行可单条展开，「临时显示被屏蔽内容」
@@ -46,12 +53,12 @@ scrolling stays in one list, and the UI follows the system theme.
 修改邮箱、绑定 Telegram、邀请码购买没有原生闭环，会带用户到真实站点完成。
 逐项清单见 [docs/implementation-status.md](docs/implementation-status.md)。
 
-各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，当前版本 1.1.1。
+各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，当前版本 1.2.1。
 
 ## Architecture
 
 NodeSeek has no public API. A few JSON endpoints exist (`/api/statistics/*`, `/api/notification/*`,
-`/api/content/list-comments`, `/api/content/new-comment`, and the `/setting` writes), but list, detail,
+`/api/vote/*`, `/api/content/list-comments`, `/api/content/new-comment`, and the `/setting` writes), but list, detail,
 search and terms pages also depend on server-rendered HTML. Everything sits behind Cloudflare, so requests have to look like a real mobile browser and
 carry cookies obtained from a WebView.
 
@@ -74,6 +81,7 @@ app/src/main/java/io/github/nodyssey/
 │   └── update/                  version-name comparison, release-note trimming
 ├── model/                       Android-free domain types
 ├── data/                        repositories, Room, DataStore and composers
+│   ├── local/                   Room: feed cache, read marks, browse history, reading positions
 │   └── update/                  GitHub release lookup, APK download and install
 ├── notifications/               WorkManager polling and Android notifications
 └── ui/                          Compose routes, screens and native renderers
@@ -131,6 +139,9 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 - [x] 管理记录（`/api/admin/ruling/page-N`）
 - [x] 应用内检查更新、下载与安装（GitHub `releases/latest` + `PackageInstaller`）
 - [x] 星辰转账原生化（`payment-prepare` 回显收款人 + `send` 提交）
+- [x] 投票帖阅读、投票、创建、锁定 / 解锁 / 删除与投票人列表（`/api/vote/*`）
+- [x] 帖子收藏（`/api/statistics/collection`）与「我的收藏」入口
+- [x] 本机浏览历史与每帖阅读位置（Room，保留条数可调）
 
 ## 架构
 
@@ -158,9 +169,10 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 
 - **Token**：`ui/theme/` 中的 light / dark M3 配色、字阶、形状与间距；品牌色为「石墨青」。
 - **首页 / 详情**：密集分割线列表、就地展开且可长按拖动重排的版块栏、已读态、连续评论与原生富文本；
-  正文启用平台最优断行与汉字 / 西文间隙，表格首列钉住，NodeQuality 报告为独立卡片。
+  正文启用平台最优断行与汉字 / 西文间隙，表格首列钉住，NodeQuality 报告与投票各为独立卡片，
+  列表底栏收纳跳页与「上次阅读」。
 - **搜索 / 通知 / 我的 / 设置**：常驻输入框的单页搜索（类型 Tab、版块单选 chip、站点真有的两档排序、
-  未提交时显示历史）、私信、账号二级页、后台通知设置和 M3E 分组列表。
+  未提交时显示历史）、私信、账号二级页、浏览历史（分组吸顶、左滑删除）、后台通知设置和 M3E 分组列表。
 - **关于 / 隐私**：f1 的两屏滚动节奏；f2 的原生协议排版和失败降级。
 - **自适应导航**：4 个 tab；宽窗口由 `NavigationSuiteScaffold` 切换为侧边 rail，每个 tab 保留独立返回栈。
 
