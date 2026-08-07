@@ -114,7 +114,11 @@ class RulingViewModel(
             _uiState.update { it.copy(pendingScroll = target) }
             return
         }
-        if (state.isLoading || state.isAppending) return
+        // Deliberately not guarded on an in-flight request, unlike [loadNextPage]. The page control
+        // sits in the bar at the foot of the list, which is exactly where auto-append is running, so
+        // refusing a jump mid-append refused most of them — and said nothing about it. A jump is the
+        // reader overriding the append, and [load] cancels the request it overrides.
+        //
         // Only the page directly after the slice extends it. The one before would have to be
         // prepended, and a list that grows upward moves everything the reader is looking at.
         load(page = target, replacesWindow = target != state.lastLoadedPage + 1, scrollTo = target)

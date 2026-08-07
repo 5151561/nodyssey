@@ -270,6 +270,25 @@ data class ReadMarkEntity(
 )
 
 /**
+ * Where each thread was left off, so 上次阅读 has somewhere to go on the next visit.
+ *
+ * A table of its own rather than columns on [ReadMarkEntity], which is where it looks like it
+ * belongs: those rows are the unread baselines and are trimmed by 浏览历史's own limit, so a reader
+ * who turns that limit down would silently lose their bookmarks as well.
+ *
+ * [updatedAtMillis] exists only to order the trim. It is not [ReadMarkEntity.lastReadAtMillis] and
+ * must not be shown as one: this timestamp moves while the reader scrolls, not when they open.
+ */
+@Entity(tableName = "post_reading_positions")
+data class ReadingPositionEntity(
+    @PrimaryKey val postId: Long,
+    val page: Int,
+    /** The site's own label for the topmost floor (`"#42"`), null where the page served none. */
+    val floor: String?,
+    val updatedAtMillis: Long,
+)
+
+/**
  * Whether the current post cache may contain content fetched with an authenticated cookie jar.
  *
  * This survives process death. If the cookie expires while the app is stopped, the next reader can

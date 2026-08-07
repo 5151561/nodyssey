@@ -10,7 +10,10 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.FreeChickenLegs
+import io.github.nodyssey.data.NoReadingPositions
 import io.github.nodyssey.data.PostRepository
+import io.github.nodyssey.data.ReadingPosition
+import io.github.nodyssey.data.ReadingPositionStore
 import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.model.PostContent
@@ -21,8 +24,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -55,11 +61,16 @@ class PostDetailViewModel(
      * already on screen.
      */
     showBlockedContent: StateFlow<Boolean> = MutableStateFlow(false),
+    /** Where this thread was left off last time, and where this read's own place is written. */
+    private val readingPositions: ReadingPositionStore = NoReadingPositions,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostDetailUiState())
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
 
     private var loadJob: Job? = null
+
+    /** Where the reader is *now*, reported by the screen as it scrolls. See [recordReadingPosition]. */
+    private val readingPosition = MutableStateFlow<ReadingPosition?>(null)
 
     init {
         // Reconcile session provenance before collecting Room. A restored detail destination can be
@@ -150,6 +161,22 @@ class PostDetailViewModel(
                 refresh()
             }.launchIn(viewModelScope)
 
+        // The stored place is read *before* this read starts writing over it, and then held for the
+        // whole visit. That ordering is the feature: the thread opens at its top, so the first thing
+        // this read would record is page 1, and a resume offer recomputed from the store would be
+        // gone by the time the reader could reach for it.
+        viewModelScope.launch {
+            val resume = readingPositions.readingPosition(postId)
+            _uiState.update { it.copy(resumePosition = resume) }
+            readingPosition
+                .filterNotNull()
+                .distinctUntilChanged()
+                // Scrolling past a floor moves the position; writing every one of them would put a
+                // database write on each frame of a fling. The reader only has to stop somewhere.
+                .debounce(POSITION_WRITE_DELAY_MILLIS)
+                .collect { position -> readingPositions.setReadingPosition(postId, position) }
+        }
+
         viewModelScope.launch {
             // Opening on a notification's floor, or on the page a `/post-703863-4` link named, starts
             // the thread there. Page 1 is only the default, not where every read begins.
@@ -210,6 +237,33 @@ class PostDetailViewModel(
         bringIntoView(NodeSeekSite.pageOfFloor(number), floor = floor)
     }
 
+    /**
+     * Returns to where this thread was left off, exactly — the floor when one was recorded, the page
+     * otherwise. A no-op when nothing was: the control that offers this hides itself in that case.
+     */
+    fun resumeReading() {
+        val state = _uiState.value
+        val resume = state.resumePosition ?: return
+        val lastPage = state.totalPages.coerceAtLeast(1)
+        // A thread can lose pages between visits — floors get deleted and everything after them moves
+        // up. The last page is then the closest thing left to where the reader was, and the floor
+        // they stopped on is certainly not on it.
+        if (resume.page > lastPage) bringIntoView(lastPage, floor = null) else bringIntoView(resume.page, resume.floor)
+    }
+
+    /**
+     * Reports where the reader is, so the next visit can offer to come back to it.
+     *
+     * Called freely as the list scrolls; the write behind it is debounced, and an unchanged position
+     * costs nothing.
+     */
+    fun recordReadingPosition(
+        page: Int,
+        floor: String?,
+    ) {
+        readingPosition.value = ReadingPosition(page, floor)
+    }
+
     private fun bringIntoView(
         page: Int,
         floor: String?,
@@ -222,7 +276,10 @@ class PostDetailViewModel(
             _uiState.update { it.copy(pendingScroll = scroll) }
             return
         }
-        if (state.isLoading || state.isAppending) return
+        // Deliberately *not* guarded on [PostDetailUiState.isAppending]. The page control lives in the
+        // bar at the foot of the list, which is exactly where auto-append is running, so refusing a
+        // jump mid-append refused most of them — silently, since nothing on screen says why. A jump is
+        // the reader overriding the append, and [load] cancels the request it overrides.
         val adjoins = target == state.firstLoadedPage - 1 || target == state.lastLoadedPage + 1
         load(page = target, replacesWindow = !adjoins, scrollTo = scroll)
     }
@@ -389,9 +446,18 @@ class PostDetailViewModel(
                         initialFloor,
                         initialPage,
                         container.settingsRepository.showBlockedContent,
+                        container.readingPositionStore,
                     )
                 }
             }
+
+        /**
+         * How long the reader has to stop scrolling before their place is written.
+         *
+         * Long enough that a fling through twenty floors is one write rather than twenty, short
+         * enough that leaving the thread the moment you stop still records where you stopped.
+         */
+        private const val POSITION_WRITE_DELAY_MILLIS = 500L
     }
 }
 
@@ -414,6 +480,13 @@ data class PostDetailUiState(
     val showBlockedContent: Boolean = false,
     /** Where the screen should scroll once the content it names has arrived in [comments]. */
     val pendingScroll: PendingScroll? = null,
+    /**
+     * Where this thread was left off on a previous visit, or null when it was never read.
+     *
+     * Read once when the screen opens and then held for the visit, so it keeps meaning "last time"
+     * rather than sliding along with the scroll it is offered against.
+     */
+    val resumePosition: ReadingPosition? = null,
     val error: NodeSeekError? = null,
     /** The floor whose reaction is in flight, so its row can show it and refuse a second tap. */
     val pendingReaction: PendingReaction? = null,

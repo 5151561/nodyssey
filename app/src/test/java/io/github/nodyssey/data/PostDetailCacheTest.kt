@@ -213,11 +213,16 @@ class PostDetailCacheTest {
             database.boardDao().replaceAll(listOf(Board("inside", "内版", null).toEntity(0)))
             repository.refreshThread(postId = 42, page = 1)
             repository.markThreadRead(42)
+            val positions = RoomReadingPositionStore(database.readingPositionDao(), clock)
+            positions.setReadingPosition(42, ReadingPosition(page = 3, floor = "#25"))
 
             repository.clearSessionData()
 
             assertNull(repository.thread(42).first())
             assertNull(database.readMarkDao().find(42))
+            // The bookmark goes with the read mark: signing out must not leave the next account
+            // 上次阅读 pointing at where the previous one stopped.
+            assertNull(positions.readingPosition(42))
             assertEquals(1, database.boardDao().count())
         }
 

@@ -1,9 +1,24 @@
 package io.github.nodyssey.data.local
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
+
+/**
+ * A history row joined with the place that thread was left off, if it has one.
+ *
+ * Both columns are nullable and null means "no bookmark": a thread can be in the history without
+ * one — every read before this feature shipped is such a row, and so is a thread opened and left
+ * without scrolling. The screen does not draw them; they are carried so that 撤销 can put back
+ * everything a swipe deleted, bookmark included.
+ */
+data class ReadHistoryRow(
+    @Embedded val mark: ReadMarkEntity,
+    val readingPage: Int?,
+    val readingFloor: String?,
+)
 
 @Dao
 interface ReadMarkDao {
@@ -20,10 +35,19 @@ interface ReadMarkDao {
      * Most recently read first — the browsing history, in the order a reader would look for it.
      *
      * Deliberately not a join against `posts`: the snapshot columns exist so that threads which were
-     * never in any feed still have a title here, and joining would put them back to blank rows.
+     * never in any feed still have a title here, and joining would put them back to blank rows. The
+     * `LEFT JOIN` against the bookmarks is the opposite case — it adds a column that is allowed to be
+     * absent and cannot blank anything out.
      */
-    @Query("SELECT * FROM post_read_marks ORDER BY lastReadAtMillis DESC LIMIT :limit")
-    fun observeHistory(limit: Int): Flow<List<ReadMarkEntity>>
+    @Query(
+        """
+        SELECT m.*, p.page AS readingPage, p.floor AS readingFloor
+        FROM post_read_marks AS m
+        LEFT JOIN post_reading_positions AS p ON p.postId = m.postId
+        ORDER BY m.lastReadAtMillis DESC LIMIT :limit
+        """,
+    )
+    fun observeHistory(limit: Int): Flow<List<ReadHistoryRow>>
 
     @Query("DELETE FROM post_read_marks WHERE postId = :postId")
     suspend fun delete(postId: Long)

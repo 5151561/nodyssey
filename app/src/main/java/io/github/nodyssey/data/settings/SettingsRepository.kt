@@ -76,9 +76,7 @@ class SettingsRepository(
                 notifyMentions = preferences[KEY_NOTIFY_MENTIONS] ?: true,
                 notifyReplies = preferences[KEY_NOTIFY_REPLIES] ?: true,
                 notifyMessages = preferences[KEY_NOTIFY_MESSAGES] ?: true,
-                readHistoryLimit =
-                (preferences[KEY_READ_HISTORY_LIMIT] ?: DEFAULT_READ_HISTORY_LIMIT)
-                    .let { limit -> if (limit in READ_HISTORY_LIMIT_CHOICES) limit else DEFAULT_READ_HISTORY_LIMIT },
+                readHistoryLimit = readHistoryLimit(preferences),
             )
         }
 
@@ -141,6 +139,11 @@ class SettingsRepository(
      * Lowering it does not itself delete anything — the rows go on the next
      * [io.github.nodyssey.data.PostRepository.trimReadHistory]. The caller that changes this setting
      * is expected to ask for that trim; see the history screen's ViewModel.
+     *
+     * It caps the stored reading places as well, on the same reasoning that it caps the history:
+     * both answer "how many threads does this app remember", and a second number for one of them
+     * would be a cap nobody set and no picker could reach. They are trimmed together, by the same
+     * caller — see [io.github.nodyssey.data.PostRepository.trimReadHistory].
      */
     suspend fun setReadHistoryLimit(limit: Int) =
         edit {
@@ -280,11 +283,7 @@ class SettingsRepository(
      * deliberately absent from [settings]; it lives here only because this class owns the DataStore.
      */
     suspend fun notificationSeenCounts(): NotificationCounts {
-        val preferences =
-            dataStore.data
-                .catch { throwable ->
-                    if (throwable is IOException) emit(emptyPreferences()) else throw throwable
-                }.first()
+        val preferences = preferences()
         return NotificationCounts(
             replies = preferences[KEY_SEEN_REPLIES] ?: 0,
             mentions = preferences[KEY_SEEN_MENTIONS] ?: 0,
@@ -308,11 +307,7 @@ class SettingsRepository(
      * decode reads as "never checked", which costs one extra call and nothing else.
      */
     override suspend fun updateCheckRecord(): UpdateCheckRecord {
-        val preferences =
-            dataStore.data
-                .catch { throwable ->
-                    if (throwable is IOException) emit(emptyPreferences()) else throw throwable
-                }.first()
+        val preferences = preferences()
         return UpdateCheckRecord(
             checkedAtMillis = preferences[KEY_UPDATE_CHECKED_AT] ?: 0L,
             release =
@@ -332,6 +327,12 @@ class SettingsRepository(
                 preferences[KEY_UPDATE_RELEASE] = json.encodeToString(release)
             }
         }
+
+    /** One snapshot of the store, with the same IOException fallback [settings] has. */
+    private suspend fun preferences(): Preferences =
+        dataStore.data
+            .catch { throwable -> if (throwable is IOException) emit(emptyPreferences()) else throw throwable }
+            .first()
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         dataStore.edit(block)
@@ -406,6 +407,17 @@ class SettingsRepository(
 
         /** Comfortably above `EditorAction.entries.size`; a stored strip can never need more. */
         private const val MAX_TOOLBAR_ACTIONS = 32
+
+        /**
+         * How many threads 浏览历史 keeps, which is also how many reading places are kept.
+         *
+         * One reader, and every caller goes through [settings]. A stored value outside
+         * [READ_HISTORY_LIMIT_CHOICES] reads as the default here as well as in [setReadHistoryLimit],
+         * so a bad write cannot cap either of them at a number no picker can undo.
+         */
+        private fun readHistoryLimit(preferences: Preferences): Int =
+            (preferences[KEY_READ_HISTORY_LIMIT] ?: DEFAULT_READ_HISTORY_LIMIT)
+                .let { limit -> if (limit in READ_HISTORY_LIMIT_CHOICES) limit else DEFAULT_READ_HISTORY_LIMIT }
 
         private fun decodeRecentSearches(value: String?): List<String> =
             value.orEmpty().split(RECENT_SEARCH_SEPARATOR).filter(String::isNotBlank)

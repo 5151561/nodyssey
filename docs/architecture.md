@@ -26,6 +26,7 @@
 | 帖子列表 | `posts` + `feed_positions` 表 → `PostRepository.feed()` | `collectAsLazyPagingItems()` |
 | 帖子详情 | `post_details` + `post_comments` 表 → `PostRepository.thread()` | ViewModel `onEach` 镜像进 UiState |
 | 已读状态 | `post_read_marks` 表 | 在 SQL 里 join 进列表行，UI 不再单独查 |
+| 帖子读到哪一楼 | `post_reading_positions` 表 → `ReadingPositionStore` | `PostDetailViewModel` 开屏读一次，滚动时防抖写回 |
 | 我的资料 | `self_profile` 表 → `ProfileRepository.observeProfile()` | 先回放同会话缓存，再后台刷新写回 Room |
 | App 设置与通知轮询配置 | `SettingsRepository`（DataStore） | UI 与 `NodysseyApp` 分别 collect 同一设置流 |
 | 隐私协议文档 | `TermsRepository` 的单次结果 | `PrivacyViewModel` 持有当前加载状态；失败不写入伪造正文 |
@@ -379,7 +380,26 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 管理记录也接完了（2026-08-02）：契约来自站点自己的 `/static/js/ruling.*.js`，
 `GET /api/admin/ruling/page-N` 任何已登录账号都读得到（未登录回 500 而不是 401），站点只服务前 100 页。
 分页控件抽到 `ui/common/PageJump.kt` 与帖子评论共用；接页与跳页是两种语义，接页只接紧邻的下一页，
-跳页整段替换成目标页，所以状态里同时有 `firstLoadedPage` 和 `lastLoadedPage`。
+跳页整段替换成目标页，所以状态里同时有 `firstLoadedPage` 和 `lastLoadedPage`。跳页不受在飞的接页
+阻挡：控件就长在列表底部那条工具栏上，而自动接页恰好也在那里跑，谁挡谁的结果是大部分跳页被静默丢掉。
+跳页是读者对接页的覆盖，`load()` 会取消被它覆盖的那次请求。
+
+帖子读到哪儿了存在 Room（`post_reading_positions` 表，一帖一行，`RoomReadingPositionStore`），不是
+`post_read_marks` 的几列：位置是边滚边写的记录，和「一次阅读写一次」的读标不是一种东西，压到那张
+三个界面都在观察的表上等于一页唤醒它们好几次；自己一张表则没有任何 Flow 观察，边滚边写不唤醒任何人。
+写是主键 upsert，读是主键查，都与表里有多少行无关。
+
+**存多少条**是另一个问题，答案取自读标那边——留的位置数就是「浏览历史」留的帖子数
+（`read_history_limit`，含无上限），全 App 只有一个「记得多少」的数字，而不是第二个没人设过、
+也没有任何选择器够得着的上限。两张表在同一处一起裁（`trimReadHistory`）：位置只可能属于打开过的
+帖子，而打开帖子本来就会跑这一句，写位置那条路（滚动中）因此一句 upsert 就完。
+
+书签的生命周期也跟着读标走：划掉一条历史、清空浏览历史、退出登录或换号（`clearPostData`）都会
+连带清掉。划掉那条走的是有撤销的路径，所以 `ReadHistoryEntry` 带上了 `readingPosition`
+（`observeHistory` 对 `post_reading_positions` 做 `LEFT JOIN` 取来，屏幕上不画），
+`restoreToHistory` 才能把整行连书签一起写回去；否则误划一下再撤销，行回来了书签却没了。
+`PostDetailViewModel` 在开屏时把存下的位置读进 `resumePosition` 并整次持有——帖子默认从顶部打开，
+若这个提议跟着滚动重算，第一帧写下的第 1 页就会把它盖掉。
 
 检查更新于同日搬进 App：数据源是本项目自己的 GitHub Releases 而不是 NodeSeek，
 约定与理由见上面第 2 节的「应用内更新约定」。

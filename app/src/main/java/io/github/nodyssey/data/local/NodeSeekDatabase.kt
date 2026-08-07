@@ -24,10 +24,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PostDetailEntity::class,
         CommentEntity::class,
         ReadMarkEntity::class,
+        ReadingPositionEntity::class,
         CacheSessionEntity::class,
         SelfProfileEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -40,6 +41,8 @@ abstract class NodeSeekDatabase : RoomDatabase() {
 
     abstract fun readMarkDao(): ReadMarkDao
 
+    abstract fun readingPositionDao(): ReadingPositionDao
+
     abstract fun cacheSessionDao(): CacheSessionDao
 
     abstract fun profileDao(): ProfileDao
@@ -50,7 +53,7 @@ abstract class NodeSeekDatabase : RoomDatabase() {
                 .databaseBuilder(context, NodeSeekDatabase::class.java, "nodeseek.db")
                 // Known upgrades preserve local state explicitly. The fallback remains for unknown
                 // legacy versions whose downloaded content can be rebuilt; schemas stay checked in.
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }
@@ -135,5 +138,29 @@ internal val MIGRATION_6_7 =
             db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `commentCount` INTEGER")
             db.execSQL("ALTER TABLE `post_details` ADD COLUMN `collected` INTEGER")
             db.execSQL("ALTER TABLE `post_details` ADD COLUMN `collectionCount` INTEGER")
+        }
+    }
+
+/**
+ * Gives every thread a place to remember which page and floor it was left on.
+ *
+ * A new table and nothing else: no existing row means anything different afterwards. Nobody is
+ * upgrading with places to carry over either — the bookmark shipped in this same release, so the
+ * only stores that ever held one are the debug builds this branch was tested on.
+ */
+internal val MIGRATION_7_8 =
+    object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `post_reading_positions` (
+                    `postId` INTEGER NOT NULL,
+                    `page` INTEGER NOT NULL,
+                    `floor` TEXT,
+                    `updatedAtMillis` INTEGER NOT NULL,
+                    PRIMARY KEY(`postId`)
+                )
+                """.trimIndent(),
+            )
         }
     }

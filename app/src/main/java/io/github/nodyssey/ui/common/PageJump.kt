@@ -2,11 +2,14 @@ package io.github.nodyssey.ui.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -31,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
@@ -91,27 +95,41 @@ fun PageJumpToolbarContent(
 }
 
 /**
- * The jump sheet: a page number, and the three destinations worth one tap.
+ * The jump sheet: a page number, and the destinations worth one tap.
  *
  * [progress] is the caller's own sentence because only the caller knows what it has loaded — the
  * thread counts 楼, the moderation log counts 条 — and a shared component inventing a noun for both
  * would be wrong in one of them.
  *
- * [loadedPage] is the far end of what is already in the list, which is where "上次阅读" goes. It is
- * distinct from [page]: a reader who has appended their way to page 9 and then scrolled back to
- * page 2 wants both destinations offered.
+ * [resumePage] is where "上次阅读" goes, and a null one takes the button away with it. It is also
+ * printed on the button, unlike the other two: 第一页 and 最后一页 say where they go in their own
+ * names, and this one is a number only the app knows — a reader deciding whether to take the offer
+ * is deciding about that number.
+ *
+ * Every destination here is only worth a button while it is somewhere else: 第一页 on page 1, or a
+ * resume offer pointing at the page under the reader's thumb, are taps that do nothing and read as a
+ * broken control rather than as a satisfied one. The caller decides what "上次阅读" means — the
+ * thread remembers it across visits, the moderation log only knows how far this session scrolled —
+ * but not whether it is worth showing.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PageJumpSheet(
     page: Int,
-    loadedPage: Int,
     totalPages: Int,
     progress: String,
     onDismiss: () -> Unit,
     onGo: (Int) -> Unit,
+    resumePage: Int? = null,
+    onResume: () -> Unit = { resumePage?.let(onGo) },
 ) {
     var input by rememberSaveable { mutableStateOf(page.toString()) }
+    val lastPage = totalPages.coerceAtLeast(1)
+    // What the button both says and does. Clamping here rather than in each caller is what keeps
+    // those two from disagreeing: the label used to promise page 9999 and the tap delivered the last
+    // page. A blank field means "where I already am", which is also what the label falls back to —
+    // it used to fall back in the label alone, leaving a button that read fine and did nothing.
+    val target = input.toIntOrNull()?.coerceIn(1, lastPage) ?: page.coerceIn(1, lastPage)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState =
@@ -133,18 +151,42 @@ fun PageJumpSheet(
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it.filter { character -> character.isDigit() } },
-                label = { Text(stringResource(R.string.page_jump_input, totalPages)) },
+                label = { Text(stringResource(R.string.page_jump_input, lastPage)) },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions =
+                KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Go),
+                // The keyboard covers the button it would otherwise take two taps to reach.
+                keyboardActions = KeyboardActions(onGo = { onGo(target) }),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                TextButton(onClick = { onGo(1) }) { Text(stringResource(R.string.page_jump_first)) }
-                TextButton(onClick = { onGo(loadedPage) }) { Text(stringResource(R.string.page_jump_latest_read)) }
-                TextButton(onClick = { onGo(totalPages) }) { Text(stringResource(R.string.page_jump_last)) }
+            val showFirst = page > 1
+            val resume = resumePage?.takeIf { it != page }
+            val showLast = page < lastPage
+            if (showFirst || resume != null || showLast) {
+                // FlowRow, not Row: 第一页 and 最后一页 say where they go in their own names, but
+                // "上次阅读" is the one destination whose page the reader cannot guess, so it carries
+                // the number — and three chips, one of them that wide, do not fit a narrow phone in
+                // one line, let alone at the 1.5× font scale 设置 offers.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (showFirst) {
+                        TextButton(onClick = { onGo(1) }) { Text(stringResource(R.string.page_jump_first)) }
+                    }
+                    if (resume != null) {
+                        TextButton(onClick = onResume) {
+                            Text(stringResource(R.string.page_jump_latest_read, resume))
+                        }
+                    }
+                    if (showLast) {
+                        TextButton(onClick = { onGo(lastPage) }) { Text(stringResource(R.string.page_jump_last)) }
+                    }
+                }
             }
-            Button(onClick = { input.toIntOrNull()?.let(onGo) }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.page_jump_go, input.ifBlank { page.toString() }))
+            Button(onClick = { onGo(target) }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.page_jump_go, target.toString()))
             }
         }
     }

@@ -152,7 +152,8 @@
     <string name="page_jump_title">跳转到</string>
     <string name="page_jump_input">页码（1–%1$d）</string>
     <string name="page_jump_first">第一页</string>
-    <string name="page_jump_latest_read">上次阅读</string>
+    <!-- Carries its own page number: it is the one destination here whose page the reader cannot guess -->
+    <string name="page_jump_latest_read">上次阅读 · 第 %1$d 页</string>
     <string name="page_jump_last">最后一页</string>
     <string name="page_jump_go">前往第 %1$s 页</string>
     <!-- The "what is loaded" line each list words in its own noun -->
@@ -878,7 +879,7 @@
     <string name="history_clear_all">全部清除</string>
     <string name="history_clear_title">清除浏览历史？</string>
     <!-- These rows double as the unread baseline, and the reader has to know that before agreeing -->
-    <string name="history_clear_body">这些记录同时也是「几条新回复」的已读基准。清除之后，列表里已读变灰的帖子会重新显示为未读。</string>
+    <string name="history_clear_body">这些记录同时也是「几条新回复」的已读基准。清除之后，列表里已读变灰的帖子会重新显示为未读，帖子里记下的「上次阅读」位置也会一并清掉。</string>
     <string name="history_clear_confirm">清除</string>
     <!-- Top bar second line: how much is kept, and how much of that is used -->
     <string name="history_subtitle">共 %1$d 条 · 保留 %2$s</string>
@@ -890,7 +891,7 @@
     <string name="history_undo">撤销</string>
     <!-- 保留条数 — the same rows are the unread baseline, so the picker has to say what a small number costs -->
     <string name="history_limit_title">保留条数</string>
-    <string name="history_limit_body">浏览记录同时是「已读」和「N 条新回复」的判断依据。留得越少，读过的旧帖越早重新显示为未读。一条记录只是几个字段，一千条也远不到 1 MB。</string>
+    <string name="history_limit_body">浏览记录同时是「已读」「N 条新回复」和帖子里「上次阅读」的判断依据。留得越少，读过的旧帖越早重新显示为未读，App 也越早忘掉你在那些帖子里读到了哪一楼。一条记录只是几个字段，一千条也远不到 1 MB。</string>
     <string name="history_limit_count">%1$d 条</string>
     <string name="history_limit_unlimited">无上限</string>
     <string name="history_limit_default">%1$d 条（默认）</string>
