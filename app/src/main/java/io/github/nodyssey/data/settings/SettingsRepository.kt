@@ -9,6 +9,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.nodyssey.data.NotificationCounts
+import io.github.nodyssey.data.ReadingPosition
+import io.github.nodyssey.data.ReadingPositionStore
 import io.github.nodyssey.data.update.AppRelease
 import io.github.nodyssey.data.update.UpdateCheckRecord
 import io.github.nodyssey.data.update.UpdateCheckStore
@@ -36,7 +38,8 @@ import java.io.IOException
  */
 class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
-) : UpdateCheckStore {
+) : UpdateCheckStore,
+    ReadingPositionStore {
     private val json = Json { ignoreUnknownKeys = true }
 
     val settings: Flow<UserSettings> = dataStore.data
@@ -280,11 +283,7 @@ class SettingsRepository(
      * deliberately absent from [settings]; it lives here only because this class owns the DataStore.
      */
     suspend fun notificationSeenCounts(): NotificationCounts {
-        val preferences =
-            dataStore.data
-                .catch { throwable ->
-                    if (throwable is IOException) emit(emptyPreferences()) else throw throwable
-                }.first()
+        val preferences = preferences()
         return NotificationCounts(
             replies = preferences[KEY_SEEN_REPLIES] ?: 0,
             mentions = preferences[KEY_SEEN_MENTIONS] ?: 0,
@@ -308,11 +307,7 @@ class SettingsRepository(
      * decode reads as "never checked", which costs one extra call and nothing else.
      */
     override suspend fun updateCheckRecord(): UpdateCheckRecord {
-        val preferences =
-            dataStore.data
-                .catch { throwable ->
-                    if (throwable is IOException) emit(emptyPreferences()) else throw throwable
-                }.first()
+        val preferences = preferences()
         return UpdateCheckRecord(
             checkedAtMillis = preferences[KEY_UPDATE_CHECKED_AT] ?: 0L,
             release =
@@ -332,6 +327,42 @@ class SettingsRepository(
                 preferences[KEY_UPDATE_RELEASE] = json.encodeToString(release)
             }
         }
+
+    override suspend fun readingPosition(postId: Long): ReadingPosition? = decodeReadingPositions(preferences())[postId.toString()]
+
+    /**
+     * Writes [postId]'s place, keeping the most recently written [MAX_READING_POSITIONS] of them.
+     *
+     * Re-encoding the whole map on every write is what a single preference costs, and it is cheap
+     * for the size this is capped at. The cap is what stops a record per thread ever opened from
+     * growing without bound, and dropping the least recently written one is right: a place nobody
+     * has returned to in a thousand threads is not one anybody is still holding.
+     */
+    override suspend fun setReadingPosition(
+        postId: Long,
+        position: ReadingPosition,
+    ) = edit { preferences ->
+        val key = postId.toString()
+        val stored = decodeReadingPositions(preferences)
+        val next = LinkedHashMap<String, ReadingPosition>(MAX_READING_POSITIONS)
+        next[key] = position
+        stored.forEach { (storedKey, storedPosition) ->
+            if (storedKey != key && next.size < MAX_READING_POSITIONS) next[storedKey] = storedPosition
+        }
+        preferences[KEY_READING_POSITIONS] = json.encodeToString<Map<String, ReadingPosition>>(next)
+    }
+
+    /** A corrupt or unreadable store reads as "nowhere to return to", never as a crash. */
+    private fun decodeReadingPositions(preferences: Preferences): Map<String, ReadingPosition> {
+        val stored = preferences[KEY_READING_POSITIONS] ?: return emptyMap()
+        return runCatching { json.decodeFromString<Map<String, ReadingPosition>>(stored) }.getOrDefault(emptyMap())
+    }
+
+    /** One snapshot of the store, with the same IOException fallback [settings] has. */
+    private suspend fun preferences(): Preferences =
+        dataStore.data
+            .catch { throwable -> if (throwable is IOException) emit(emptyPreferences()) else throw throwable }
+            .first()
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         dataStore.edit(block)
@@ -396,6 +427,16 @@ class SettingsRepository(
         private val KEY_READ_HISTORY_LIMIT = intPreferencesKey("read_history_limit")
         private val KEY_UPDATE_CHECKED_AT = longPreferencesKey("update_checked_at")
         private val KEY_UPDATE_RELEASE = stringPreferencesKey("update_latest_release")
+        private val KEY_READING_POSITIONS = stringPreferencesKey("thread_reading_positions")
+
+        /**
+         * How many threads remember where they were left off.
+         *
+         * Each record is a page number and a short floor label, so the cap is not really about disk.
+         * It is about the write: the whole map is re-encoded on every save, and saves happen while
+         * the reader scrolls.
+         */
+        private const val MAX_READING_POSITIONS = 200
 
         private const val RECENT_SEARCH_SEPARATOR = '\u001F'
         private const val MAX_RECENT_SEARCHES = 8

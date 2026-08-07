@@ -163,6 +163,8 @@ fun PostDetailRoute(
         onLoadPage = viewModel::loadPage,
         onJumpToFloor = viewModel::jumpToFloor,
         onScrollHandled = viewModel::onScrollHandled,
+        onReadingPositionChange = viewModel::recordReadingPosition,
+        onResumeReading = viewModel::resumeReading,
         showBackButton = showBackButton,
         // Replying needs an account; sending an anonymous reply into the void is the one outcome
         // the editor must not produce, so the sign-in page comes first.
@@ -211,6 +213,10 @@ fun PostDetailScreen(
     /** Scrolls to a floor, fetching its page first when that floor is not loaded. */
     onJumpToFloor: (String) -> Unit = {},
     onScrollHandled: () -> Unit = {},
+    /** Reports where the reader is, so a later visit can offer to come back to it. */
+    onReadingPositionChange: (Int, String?) -> Unit = { _, _ -> },
+    /** Returns to where a previous visit left off; only reachable when there was one. */
+    onResumeReading: () -> Unit = {},
     showBackButton: Boolean = true,
     /** Opens the sign-in page. Separate from [onOpenBrowser] because "登录" is not "看看网页版". */
     onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
@@ -291,6 +297,24 @@ fun PostDetailScreen(
                     ?: state.firstLoadedPage
             }
         }
+    }
+
+    // The topmost floor on screen, which is what makes a return exact rather than page-accurate. Null
+    // above the first comment — the title and the opening post belong to no page's floors.
+    val visibleFloor by remember(state.comments, state.body != null) {
+        derivedStateOf {
+            state.comments
+                .getOrNull(listState.firstVisibleItemIndex - state.headerItemCount)
+                ?.floor
+        }
+    }
+    // Two gates, both against overwriting a real read's place with a visit that never happened. There
+    // has to be a thread to be positioned in — an empty screen mid-fetch reports page 1 — and the
+    // reader has to have got somewhere: every thread parks at its top on open, so opening one and
+    // backing straight out would otherwise reset it to page 1.
+    val positionWorthRecording = state.body != null && (visiblePage > 1 || !atListTop)
+    LaunchedEffect(visiblePage, visibleFloor, positionWorthRecording) {
+        if (positionWorthRecording) onReadingPositionChange(visiblePage, visibleFloor)
     }
 
     /** Scrolls when the page is already in the list, and asks for it when it is not. */
@@ -481,15 +505,27 @@ fun PostDetailScreen(
 
     if (showPageSheet) {
         val loadedFloors = state.comments.size + if (state.body != null) 1 else 0
+        // "上次阅读" is the place a previous visit left behind when there is one, and otherwise the
+        // far end of this session's own reading. Both are "where I had got to"; only the first
+        // survives closing the thread, and a thread opened for the first time has neither until it
+        // has been scrolled.
+        val resume = state.resumePosition
         PageJumpSheet(
             page = visiblePage,
-            loadedPage = state.lastLoadedPage,
             totalPages = state.totalPages,
             progress = stringResource(R.string.post_page_progress, visiblePage, state.totalPages, loadedFloors),
             onDismiss = { showPageSheet = false },
             onGo = { target ->
                 showPageSheet = false
                 goToPage(target.coerceIn(1, state.totalPages.coerceAtLeast(1)))
+            },
+            // Clamped so a place left in a thread that has since lost pages still resolves to a
+            // button that goes somewhere — the ViewModel lands it on the last page for the same reason.
+            resumePage =
+            (resume?.page ?: state.lastLoadedPage).coerceIn(1, state.totalPages.coerceAtLeast(1)),
+            onResume = {
+                showPageSheet = false
+                if (resume != null) onResumeReading() else goToPage(state.lastLoadedPage)
             },
         )
     }

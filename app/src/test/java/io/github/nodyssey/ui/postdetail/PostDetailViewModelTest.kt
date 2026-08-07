@@ -4,8 +4,11 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.FakePostRemoteDataSource
 import io.github.nodyssey.data.MutableClock
+import io.github.nodyssey.data.NoReadingPositions
 import io.github.nodyssey.data.OfflineFirstPostRepository
 import io.github.nodyssey.data.PostRepository
+import io.github.nodyssey.data.ReadingPosition
+import io.github.nodyssey.data.ReadingPositionStore
 import io.github.nodyssey.data.inMemoryDatabase
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.session.SessionState
@@ -59,7 +62,32 @@ class PostDetailViewModelTest {
         postId: Long = 42,
         initialFloor: String? = null,
         initialPage: Int? = null,
-    ) = PostDetailViewModel(postId, repository, session, initialFloor, initialPage)
+        readingPositions: ReadingPositionStore = NoReadingPositions,
+    ) = PostDetailViewModel(
+        postId,
+        repository,
+        session,
+        initialFloor,
+        initialPage,
+        readingPositions = readingPositions,
+    )
+
+    /** A [ReadingPositionStore] a test can seed and then read back, in place of DataStore. */
+    private class FakeReadingPositions(
+        private var stored: ReadingPosition? = null,
+    ) : ReadingPositionStore {
+        val writes = mutableListOf<ReadingPosition>()
+
+        override suspend fun readingPosition(postId: Long): ReadingPosition? = stored
+
+        override suspend fun setReadingPosition(
+            postId: Long,
+            position: ReadingPosition,
+        ) {
+            stored = position
+            writes += position
+        }
+    }
 
     /**
      * A thread that answered "登录后查看" a second ago has content now. The freshness window would
@@ -421,6 +449,103 @@ class PostDetailViewModelTest {
             assertEquals(requestsBefore, remote.detailRequests.size)
             assertEquals(PendingScroll(page = 1), vm.uiState.value.pendingScroll)
             assertEquals(2, vm.uiState.value.lastLoadedPage)
+        }
+
+    /**
+     * Regression: the page control sits in the bar at the foot of the list, which is exactly where
+     * auto-append runs — so a jump taken from it landed on an in-flight append more often than not,
+     * and was dropped without a word. A jump is the reader overriding the append, not queuing behind it.
+     */
+    @Test
+    fun `a jump taken while a page is appending still arrives`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 40)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            val gate = CompletableDeferred<Unit>()
+            remote.gate = gate
+            vm.loadNextPage()
+            // Let it start and park on the gate, so the jump really does land mid-append.
+            advanceUntilIdle()
+            assertTrue("expected an append in flight", vm.uiState.value.isAppending)
+
+            remote.gate = null
+            vm.loadPage(30)
+            advanceUntilIdle()
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals(30, state.firstLoadedPage)
+            assertEquals(30, state.lastLoadedPage)
+            assertEquals(PendingScroll(page = 30), state.pendingScroll)
+        }
+
+    /**
+     * Regression: 上次阅读 went to the far end of what *this* read had loaded, which on a thread just
+     * opened is the page already on screen — a button that could not do anything.
+     */
+    @Test
+    fun `the place a previous visit left is offered and returned to`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 40)
+            }
+            val vm = viewModel(readingPositions = FakeReadingPositions(ReadingPosition(page = 12, floor = "#231")))
+            advanceUntilIdle()
+
+            assertEquals(ReadingPosition(page = 12, floor = "#231"), vm.uiState.value.resumePosition)
+
+            vm.resumeReading()
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals(12, state.firstLoadedPage)
+            assertEquals(PendingScroll(page = 12, floor = "#231"), state.pendingScroll)
+        }
+
+    /**
+     * The offer is read once and then held: the thread opens at its top, so a resume offer recomputed
+     * from the store would be overwritten with page 1 before the reader could reach for it.
+     */
+    @Test
+    fun `reading on records the new place without moving the offer`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 40)
+            }
+            val positions = FakeReadingPositions(ReadingPosition(page = 12))
+            val vm = viewModel(readingPositions = positions)
+            advanceUntilIdle()
+
+            vm.recordReadingPosition(3, "#25")
+            vm.recordReadingPosition(4, "#31")
+            advanceUntilIdle()
+
+            // Debounced: a fling through a page of floors is one write, and it is the last one.
+            assertEquals(listOf(ReadingPosition(page = 4, floor = "#31")), positions.writes)
+            assertEquals(ReadingPosition(page = 12), vm.uiState.value.resumePosition)
+        }
+
+    /** A thread that lost pages between visits still has a last page to come back to. */
+    @Test
+    fun `a place past the end of a shortened thread lands on its last page`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 3)
+            }
+            val vm = viewModel(readingPositions = FakeReadingPositions(ReadingPosition(page = 12, floor = "#231")))
+            advanceUntilIdle()
+
+            vm.resumeReading()
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals(3, state.lastLoadedPage)
+            assertEquals(PendingScroll(page = 3), state.pendingScroll)
         }
 
     /**

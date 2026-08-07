@@ -305,7 +305,9 @@ fun RulingScreen(
     if (showPageSheet) {
         PageJumpSheet(
             page = visiblePage,
-            loadedPage = state.lastLoadedPage,
+            // The log keeps no place across visits, so "上次阅读" is this session's own furthest
+            // point — offered while the reader has scrolled back from it, and gone once they have not.
+            resumePage = state.lastLoadedPage,
             totalPages = state.totalPages,
             progress =
             stringResource(
