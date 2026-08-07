@@ -79,9 +79,7 @@ class SettingsRepository(
                 notifyMentions = preferences[KEY_NOTIFY_MENTIONS] ?: true,
                 notifyReplies = preferences[KEY_NOTIFY_REPLIES] ?: true,
                 notifyMessages = preferences[KEY_NOTIFY_MESSAGES] ?: true,
-                readHistoryLimit =
-                (preferences[KEY_READ_HISTORY_LIMIT] ?: DEFAULT_READ_HISTORY_LIMIT)
-                    .let { limit -> if (limit in READ_HISTORY_LIMIT_CHOICES) limit else DEFAULT_READ_HISTORY_LIMIT },
+                readHistoryLimit = readHistoryLimit(preferences),
             )
         }
 
@@ -144,6 +142,10 @@ class SettingsRepository(
      * Lowering it does not itself delete anything — the rows go on the next
      * [io.github.nodyssey.data.PostRepository.trimReadHistory]. The caller that changes this setting
      * is expected to ask for that trim; see the history screen's ViewModel.
+     *
+     * It caps the reading places in [setReadingPosition] as well, on the same reasoning that it caps
+     * the history: both answer "how many threads does this app remember", and a second number for
+     * one of them would be a cap nobody set and no picker could reach.
      */
     suspend fun setReadHistoryLimit(limit: Int) =
         edit {
@@ -331,23 +333,29 @@ class SettingsRepository(
     override suspend fun readingPosition(postId: Long): ReadingPosition? = decodeReadingPositions(preferences())[postId.toString()]
 
     /**
-     * Writes [postId]'s place, keeping the most recently written [MAX_READING_POSITIONS] of them.
+     * Writes [postId]'s place, keeping as many of them as 浏览历史 keeps threads.
      *
-     * Re-encoding the whole map on every write is what a single preference costs, and it is cheap
-     * for the size this is capped at. The cap is what stops a record per thread ever opened from
-     * growing without bound, and dropping the least recently written one is right: a place nobody
-     * has returned to in a thousand threads is not one anybody is still holding.
+     * The limit is [KEY_READ_HISTORY_LIMIT]'s, read from the same snapshot this write edits — one
+     * number for "how many threads does this app remember", rather than a second cap nobody set and
+     * no picker can reach. 无上限 is [READ_HISTORY_UNLIMITED], and the comparison below simply never
+     * trims at that value.
+     *
+     * The order is most-recently-written first, so trimming drops the place nobody has come back to
+     * in the longest — the same rule, on the same axis, as the read marks' own trim. Lowering the
+     * setting takes effect on the next write rather than immediately, for the same reason it does
+     * there: this only ever runs while somebody is reading.
      */
     override suspend fun setReadingPosition(
         postId: Long,
         position: ReadingPosition,
     ) = edit { preferences ->
         val key = postId.toString()
+        val limit = readHistoryLimit(preferences)
         val stored = decodeReadingPositions(preferences)
-        val next = LinkedHashMap<String, ReadingPosition>(MAX_READING_POSITIONS)
+        val next = LinkedHashMap<String, ReadingPosition>()
         next[key] = position
         stored.forEach { (storedKey, storedPosition) ->
-            if (storedKey != key && next.size < MAX_READING_POSITIONS) next[storedKey] = storedPosition
+            if (storedKey != key && next.size < limit) next[storedKey] = storedPosition
         }
         preferences[KEY_READING_POSITIONS] = json.encodeToString<Map<String, ReadingPosition>>(next)
     }
@@ -429,15 +437,6 @@ class SettingsRepository(
         private val KEY_UPDATE_RELEASE = stringPreferencesKey("update_latest_release")
         private val KEY_READING_POSITIONS = stringPreferencesKey("thread_reading_positions")
 
-        /**
-         * How many threads remember where they were left off.
-         *
-         * Each record is a page number and a short floor label, so the cap is not really about disk.
-         * It is about the write: the whole map is re-encoded on every save, and saves happen while
-         * the reader scrolls.
-         */
-        private const val MAX_READING_POSITIONS = 200
-
         private const val RECENT_SEARCH_SEPARATOR = '\u001F'
         private const val MAX_RECENT_SEARCHES = 8
         private const val MAX_RECENT_BOARDS = 6
@@ -447,6 +446,17 @@ class SettingsRepository(
 
         /** Comfortably above `EditorAction.entries.size`; a stored strip can never need more. */
         private const val MAX_TOOLBAR_ACTIONS = 32
+
+        /**
+         * How many threads 浏览历史 keeps, which is also how many reading places are kept.
+         *
+         * One reader, two callers: the settings flow and [setReadingPosition]. A stored value outside
+         * [READ_HISTORY_LIMIT_CHOICES] reads as the default here as well as in [setReadHistoryLimit],
+         * so a bad write cannot cap either of them at a number no picker can undo.
+         */
+        private fun readHistoryLimit(preferences: Preferences): Int =
+            (preferences[KEY_READ_HISTORY_LIMIT] ?: DEFAULT_READ_HISTORY_LIMIT)
+                .let { limit -> if (limit in READ_HISTORY_LIMIT_CHOICES) limit else DEFAULT_READ_HISTORY_LIMIT }
 
         private fun decodeRecentSearches(value: String?): List<String> =
             value.orEmpty().split(RECENT_SEARCH_SEPARATOR).filter(String::isNotBlank)

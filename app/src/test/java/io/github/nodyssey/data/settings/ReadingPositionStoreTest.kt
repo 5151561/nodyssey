@@ -48,4 +48,39 @@ class ReadingPositionStoreTest {
 
             assertEquals(ReadingPosition(page = 5, floor = "#42"), settings.readingPosition(703863))
         }
+
+    /**
+     * One number for how many threads this app remembers: 浏览历史's limit caps the places too, so a
+     * reader who asks for a shorter history does not keep a longer list of bookmarks behind its back.
+     */
+    @Test
+    fun `the history limit is what caps how many places are kept`() =
+        runTest {
+            val settings = testSettingsRepository(backgroundScope)
+            settings.setReadHistoryLimit(100)
+
+            repeat(101) { index -> settings.setReadingPosition(index.toLong(), ReadingPosition(page = index + 1)) }
+
+            // The hundredth-newest survives, the hundred-and-first does not, and the newest is intact.
+            assertEquals(ReadingPosition(page = 101), settings.readingPosition(100))
+            assertEquals(ReadingPosition(page = 2), settings.readingPosition(1))
+            assertNull(settings.readingPosition(0))
+        }
+
+    /** Lowering the limit takes effect on the next write, the same way the read marks' own trim does. */
+    @Test
+    fun `a lowered limit trims the places on the next write`() =
+        runTest {
+            val settings = testSettingsRepository(backgroundScope)
+            settings.setReadHistoryLimit(300)
+            repeat(120) { index -> settings.setReadingPosition(index.toLong(), ReadingPosition(page = index + 1)) }
+
+            settings.setReadHistoryLimit(100)
+            assertEquals(ReadingPosition(page = 1), settings.readingPosition(0))
+
+            settings.setReadingPosition(1_000, ReadingPosition(page = 7))
+
+            assertEquals(ReadingPosition(page = 7), settings.readingPosition(1_000))
+            assertNull(settings.readingPosition(0))
+        }
 }

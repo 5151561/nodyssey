@@ -383,9 +383,11 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 阻挡：控件就长在列表底部那条工具栏上，而自动接页恰好也在那里跑，谁挡谁的结果是大部分跳页被静默丢掉。
 跳页是读者对接页的覆盖，`load()` 会取消被它覆盖的那次请求。
 
-帖子读到哪儿了存在 DataStore（`ReadingPositionStore`，键 `thread_reading_positions`，上限 200 条），
-不是 `post_read_marks` 的一列：那张表的行是未读基线，会跟着「浏览历史」的条数上限被裁，把位置放进去
-等于用户把历史调短就丢了自己的书签；而且位置是边滚边写的记录，和「一次阅读写一次」的读标不是一种东西。
+帖子读到哪儿了存在 DataStore（`ReadingPositionStore`，键 `thread_reading_positions`），不是
+`post_read_marks` 的一列：位置是边滚边写的记录，和「一次阅读写一次」的读标不是一种东西，压到那张
+三个界面都在观察的表上等于一页唤醒它们好几次。**存多少条**是另一个问题，答案取自读标那边——留的位置
+数就是「浏览历史」留的帖子数（`read_history_limit`，含无上限），全 App 只有一个「记得多少」的数字，
+而不是第二个没人设过、也没有任何选择器够得着的上限。
 `PostDetailViewModel` 在开屏时把存下的位置读进 `resumePosition` 并整次持有——帖子默认从顶部打开，
 若这个提议跟着滚动重算，第一帧写下的第 1 页就会把它盖掉。
 

@@ -18,11 +18,12 @@ data class ReadingPosition(
 /**
  * Where each thread was left off.
  *
- * Deliberately not a column on `post_read_marks`, which is where it looks like it belongs: those rows
- * are the unread baselines and are trimmed by 浏览历史's own limit, so a reader who turns that limit
- * down would silently lose their places as well. This is also the kind of record the read marks are
- * not — written continuously while scrolling rather than once per read — and DataStore takes that
- * without a write amplification on a table three screens observe.
+ * Kept in DataStore rather than as a column on `post_read_marks`, which is where it looks like it
+ * belongs, because it is not the kind of record those rows are: a place is written continuously while
+ * the reader scrolls, and putting that on a table three screens observe means waking all of them a
+ * few times a page. How *many* of these are kept is a different question from where they live, and
+ * that answer does come from the read marks — the implementation keeps as many places as 浏览历史
+ * keeps threads, so there is one number for how much of your reading this app remembers.
  */
 interface ReadingPositionStore {
     suspend fun readingPosition(postId: Long): ReadingPosition?
