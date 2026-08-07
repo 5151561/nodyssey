@@ -173,6 +173,122 @@ class ReadHistoryTest {
             assertNull(database.readMarkDao().find(1))
         }
 
+    /**
+     * Forgetting a thread includes forgetting where it was left off.
+     *
+     * Otherwise a reader who swipes a thread out of their history and opens it again is offered
+     * 上次阅读 for a read the app has just told them it no longer has a record of.
+     */
+    @Test
+    fun `removing one entry forgets where that thread was left off`() =
+        runTest {
+            val positions = readingPositions()
+            givenListedPost(postId = 1, title = "first")
+            givenListedPost(postId = 2, title = "second")
+            repository.markThreadRead(1)
+            repository.markThreadRead(2)
+            positions.setReadingPosition(1, ReadingPosition(page = 4, floor = "#31"))
+            positions.setReadingPosition(2, ReadingPosition(page = 9))
+
+            repository.removeFromHistory(1)
+
+            assertNull(positions.readingPosition(1))
+            assertEquals(ReadingPosition(page = 9), positions.readingPosition(2))
+        }
+
+    /** 撤销 has to be an undo, which means the bookmark comes back with the row. */
+    @Test
+    fun `putting a removed entry back restores where it was left off`() =
+        runTest {
+            val positions = readingPositions()
+            givenListedPost(postId = 7, title = "绿云抢鸡竞赛", author = "ipv4")
+            repository.markThreadRead(7)
+            positions.setReadingPosition(7, ReadingPosition(page = 4, floor = "#31"))
+            val removed = repository.readHistory().first().single()
+
+            repository.removeFromHistory(7)
+            repository.restoreToHistory(removed)
+
+            assertEquals(ReadingPosition(page = 4, floor = "#31"), positions.readingPosition(7))
+            assertEquals(removed, repository.readHistory().first().single())
+        }
+
+    /** A thread read without scrolling has no bookmark, and its history row must survive anyway. */
+    @Test
+    fun `a thread with no bookmark still lists and still restores`() =
+        runTest {
+            givenListedPost(postId = 7, title = "绿云抢鸡竞赛")
+            repository.markThreadRead(7)
+            val removed = repository.readHistory().first().single()
+            assertNull(removed.readingPosition)
+
+            repository.removeFromHistory(7)
+            repository.restoreToHistory(removed)
+
+            assertEquals(removed, repository.readHistory().first().single())
+        }
+
+    @Test
+    fun `clearing forgets where every thread was left off`() =
+        runTest {
+            val positions = readingPositions()
+            givenListedPost(postId = 1, title = "first")
+            repository.markThreadRead(1)
+            positions.setReadingPosition(1, ReadingPosition(page = 4, floor = "#31"))
+
+            repository.clearReadHistory()
+
+            assertNull(positions.readingPosition(1))
+        }
+
+    /**
+     * 保留条数 is one number for how much reading this app remembers, so it bounds the bookmarks too.
+     *
+     * The order is the point: the place dropped is the one nobody has come back to in the longest,
+     * on the same axis the read marks are trimmed by, not whichever postId happens to sort last.
+     */
+    @Test
+    fun `lowering the limit trims the bookmarks along with the history`() =
+        runTest {
+            val cap = 3
+            repository = repositoryWithLimit(MutableStateFlow(cap))
+            val positions = readingPositions()
+            repeat(cap + 2) { index ->
+                val postId = index + 1L
+                givenListedPost(postId = postId, title = "post $postId")
+                repository.markThreadRead(postId)
+                clock.advanceBy(1000)
+                positions.setReadingPosition(postId, ReadingPosition(page = index + 1))
+            }
+
+            repository.trimReadHistory()
+
+            assertEquals(cap, database.readingPositionDao().count())
+            assertNull(positions.readingPosition(1))
+            assertEquals(ReadingPosition(page = cap + 2), positions.readingPosition(cap + 2L))
+        }
+
+    /** 无上限 keeps every place, for the same reason it keeps every row: it was asked to. */
+    @Test
+    fun `an unlimited history keeps every bookmark`() =
+        runTest {
+            repository = repositoryWithLimit(MutableStateFlow(SettingsRepository.READ_HISTORY_UNLIMITED))
+            val positions = readingPositions()
+            repeat(5) { index ->
+                val postId = index + 1L
+                givenListedPost(postId = postId, title = "post $postId")
+                repository.markThreadRead(postId)
+                clock.advanceBy(1000)
+                positions.setReadingPosition(postId, ReadingPosition(page = index + 1))
+            }
+
+            repository.trimReadHistory()
+
+            assertEquals(5, database.readingPositionDao().count())
+        }
+
+    private fun readingPositions() = RoomReadingPositionStore(database.readingPositionDao(), clock)
+
     /** Undo for a swiped-away row: the snapshot is enough to write the whole mark again. */
     @Test
     fun `a removed entry can be put back`() =

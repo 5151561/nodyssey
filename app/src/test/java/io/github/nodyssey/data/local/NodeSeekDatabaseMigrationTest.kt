@@ -157,6 +157,35 @@ class NodeSeekDatabaseMigrationTest {
         migrated.close()
     }
 
+    /**
+     * The new table is empty and everything else is untouched: a reader upgrading has read marks and
+     * cached threads, and has never had a bookmark to carry over.
+     */
+    @Test
+    fun `migration 7 to 8 adds the reading positions table and keeps read marks`() {
+        helper.createDatabase(DATABASE_NAME, 7).apply {
+            execSQL(
+                """
+                INSERT INTO post_read_marks(postId, lastReadAtMillis, lastSeenCommentCount, title)
+                VALUES(42, 1000, 3, 'a thread that was read')
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 8, true, MIGRATION_7_8)
+
+        migrated.query("SELECT title FROM post_read_marks WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("a thread that was read", it.getString(0))
+        }
+        migrated.query("SELECT COUNT(*) FROM post_reading_positions").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+        }
+        migrated.close()
+    }
+
     private companion object {
         const val DATABASE_NAME = "profile-migration-test"
     }

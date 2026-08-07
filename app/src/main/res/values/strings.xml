@@ -879,7 +879,7 @@
     <string name="history_clear_all">全部清除</string>
     <string name="history_clear_title">清除浏览历史？</string>
     <!-- These rows double as the unread baseline, and the reader has to know that before agreeing -->
-    <string name="history_clear_body">这些记录同时也是「几条新回复」的已读基准。清除之后，列表里已读变灰的帖子会重新显示为未读。帖子里记下的「上次阅读」位置不受影响。</string>
+    <string name="history_clear_body">这些记录同时也是「几条新回复」的已读基准。清除之后，列表里已读变灰的帖子会重新显示为未读，帖子里记下的「上次阅读」位置也会一并清掉。</string>
     <string name="history_clear_confirm">清除</string>
     <!-- Top bar second line: how much is kept, and how much of that is used -->
     <string name="history_subtitle">共 %1$d 条 · 保留 %2$s</string>

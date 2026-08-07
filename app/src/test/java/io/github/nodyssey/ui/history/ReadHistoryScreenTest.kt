@@ -163,7 +163,7 @@ class ReadHistoryScreenTest {
         composeRule.onNodeWithText("全部清除").performClick()
 
         composeRule.onNodeWithText("清除浏览历史？").assertIsDisplayed()
-        composeRule.onNodeWithText("这些记录同时也是「几条新回复」的已读基准。清除之后，列表里已读变灰的帖子会重新显示为未读。")
+        composeRule.onNodeWithText("这些记录同时也是「几条新回复」的已读基准。清除之后，列表里已读变灰的帖子会重新显示为未读，帖子里记下的「上次阅读」位置也会一并清掉。")
             .assertIsDisplayed()
         assertEquals(0, cleared)
 

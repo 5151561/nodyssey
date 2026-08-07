@@ -15,7 +15,9 @@ import io.github.nodyssey.data.local.CacheSessionEntity
 import io.github.nodyssey.data.local.CommentEntity
 import io.github.nodyssey.data.local.FeedPostRow
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.nodyssey.data.local.ReadHistoryRow
 import io.github.nodyssey.data.local.ReadMarkEntity
+import io.github.nodyssey.data.local.ReadingPositionEntity
 import io.github.nodyssey.data.local.toSnapshot
 import io.github.nodyssey.data.local.toSummary
 import io.github.nodyssey.data.settings.SettingsRepository
@@ -60,6 +62,13 @@ data class ReadHistoryEntry(
     val categoryTitle: String?,
     val commentCount: Int?,
     val lastReadAtMillis: Long,
+    /**
+     * Where this thread was left off, if it has a bookmark at all.
+     *
+     * Nothing on the history screen draws it. It is here because removing a row deletes the bookmark
+     * with it, and 撤销 has only this entry to put everything back from.
+     */
+    val readingPosition: ReadingPosition? = null,
 )
 
 /**
@@ -217,10 +226,11 @@ interface PostRepository {
     /** Threads this device has opened, most recent first. Local only — the site keeps no such list. */
     fun readHistory(): Flow<List<ReadHistoryEntry>>
 
+    /** Forgets one thread: its history row, its unread baseline, and where it was left off. */
     suspend fun removeFromHistory(postId: Long)
 
     /**
-     * Puts a just-removed row back, for 撤销.
+     * Puts a just-removed row back, for 撤销 — including its bookmark, which the entry carries.
      *
      * The unread baseline comes back at the snapshot's reply count rather than the exact
      * `lastSeenCommentCount` that was deleted with it — the history entry does not carry that field.
@@ -235,14 +245,19 @@ interface PostRepository {
      * Called after the limit is lowered. Every other caller gets this for free when a thread is read;
      * this exists because a setting change has to take effect on rows nobody is about to re-read —
      * otherwise a thread the user just told the app to forget would keep greying out its feed row.
+     *
+     * Bounds the reading places by the same number, which is the whole reason they are trimmed here
+     * rather than where they are written: 保留条数 is one answer to "how many threads does this app
+     * remember", and the write path runs while somebody is scrolling.
      */
     suspend fun trimReadHistory()
 
     /**
      * Forgets every thread this device has read.
      *
-     * Also clears the unread baselines, because they are the same rows: read marks do both jobs.
-     * Callers must say so before asking — every already-read thread goes back to looking unread.
+     * Also clears the unread baselines, because they are the same rows: read marks do both jobs, and
+     * the bookmarks, which are the same claim about the same threads. Callers must say so before
+     * asking — every already-read thread goes back to looking unread and opening at its top.
      */
     suspend fun clearReadHistory()
 }
@@ -395,6 +410,7 @@ class OfflineFirstPostRepository(
         database.feedDao().clearAllPosts()
         database.postDetailDao().clearAllThreads()
         database.readMarkDao().clearAll()
+        database.readingPositionDao().clearAll()
     }
 
     override fun thread(postId: Long): Flow<ThreadSnapshot?> = database.postDetailDao().observeThread(postId).map { it?.toSnapshot() }
@@ -470,10 +486,11 @@ class OfflineFirstPostRepository(
         readHistoryLimit
             .distinctUntilChanged()
             .flatMapLatest { limit -> database.readMarkDao().observeHistory(limit) }
-            .map { marks -> marks.map(ReadMarkEntity::toHistoryEntry) }
+            .map { rows -> rows.map(ReadHistoryRow::toHistoryEntry) }
 
     override suspend fun removeFromHistory(postId: Long) {
         database.readMarkDao().delete(postId)
+        database.readingPositionDao().delete(postId)
     }
 
     override suspend fun restoreToHistory(entry: ReadHistoryEntry) {
@@ -489,17 +506,35 @@ class OfflineFirstPostRepository(
                 commentCount = entry.commentCount,
             ),
         )
+        // Restored as freshly written rather than at the moment it was earned, because that moment
+        // went with the deleted row. The only thing this timestamp decides is the trim order, so at
+        // worst an undone deletion keeps a bookmark a little longer than it would have.
+        entry.readingPosition?.let { position ->
+            database.readingPositionDao().upsert(
+                ReadingPositionEntity(
+                    postId = entry.postId,
+                    page = position.page,
+                    floor = position.floor,
+                    updatedAtMillis = clock.nowMillis(),
+                ),
+            )
+        }
     }
 
     override suspend fun trimReadHistory() {
         val limit = readHistoryLimit.first()
         // Skipped rather than run with Int.MAX_VALUE: 无上限 should not cost a full-table DELETE scan
         // on every thread the user opens.
-        if (limit != SettingsRepository.READ_HISTORY_UNLIMITED) database.readMarkDao().trimTo(limit)
+        if (limit == SettingsRepository.READ_HISTORY_UNLIMITED) return
+        database.readMarkDao().trimTo(limit)
+        // The same number bounds the bookmarks, and this is the only place that has to know it: a
+        // place can only exist for a thread that was opened, and opening one is what runs this.
+        database.readingPositionDao().trimTo(limit)
     }
 
     override suspend fun clearReadHistory() {
         database.readMarkDao().clearAll()
+        database.readingPositionDao().clearAll()
     }
 
     override suspend fun react(
@@ -576,15 +611,16 @@ class OfflineFirstPostRepository(
     }
 }
 
-private fun ReadMarkEntity.toHistoryEntry(): ReadHistoryEntry =
+private fun ReadHistoryRow.toHistoryEntry(): ReadHistoryEntry =
     ReadHistoryEntry(
-        postId = postId,
-        title = title,
-        authorName = authorName,
-        authorUid = authorUid,
-        categoryTitle = categoryTitle,
-        commentCount = commentCount,
-        lastReadAtMillis = lastReadAtMillis,
+        postId = mark.postId,
+        title = mark.title,
+        authorName = mark.authorName,
+        authorUid = mark.authorUid,
+        categoryTitle = mark.categoryTitle,
+        commentCount = mark.commentCount,
+        lastReadAtMillis = mark.lastReadAtMillis,
+        readingPosition = readingPage?.let { ReadingPosition(page = it, floor = readingFloor) },
     )
 
 private fun FeedPostRow.toFeedPost(): FeedPost {

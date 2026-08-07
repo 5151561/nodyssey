@@ -172,7 +172,7 @@ class PostDetailViewModel(
                 .filterNotNull()
                 .distinctUntilChanged()
                 // Scrolling past a floor moves the position; writing every one of them would put a
-                // DataStore commit on each frame of a fling. The reader only has to stop somewhere.
+                // database write on each frame of a fling. The reader only has to stop somewhere.
                 .debounce(POSITION_WRITE_DELAY_MILLIS)
                 .collect { position -> readingPositions.setReadingPosition(postId, position) }
         }
@@ -446,7 +446,7 @@ class PostDetailViewModel(
                         initialFloor,
                         initialPage,
                         container.settingsRepository.showBlockedContent,
-                        container.settingsRepository,
+                        container.readingPositionStore,
                     )
                 }
             }

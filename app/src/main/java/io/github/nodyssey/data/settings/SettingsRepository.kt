@@ -9,8 +9,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.nodyssey.data.NotificationCounts
-import io.github.nodyssey.data.ReadingPosition
-import io.github.nodyssey.data.ReadingPositionStore
 import io.github.nodyssey.data.update.AppRelease
 import io.github.nodyssey.data.update.UpdateCheckRecord
 import io.github.nodyssey.data.update.UpdateCheckStore
@@ -38,8 +36,7 @@ import java.io.IOException
  */
 class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
-) : UpdateCheckStore,
-    ReadingPositionStore {
+) : UpdateCheckStore {
     private val json = Json { ignoreUnknownKeys = true }
 
     val settings: Flow<UserSettings> = dataStore.data
@@ -143,9 +140,10 @@ class SettingsRepository(
      * [io.github.nodyssey.data.PostRepository.trimReadHistory]. The caller that changes this setting
      * is expected to ask for that trim; see the history screen's ViewModel.
      *
-     * It caps the reading places in [setReadingPosition] as well, on the same reasoning that it caps
-     * the history: both answer "how many threads does this app remember", and a second number for
-     * one of them would be a cap nobody set and no picker could reach.
+     * It caps the stored reading places as well, on the same reasoning that it caps the history:
+     * both answer "how many threads does this app remember", and a second number for one of them
+     * would be a cap nobody set and no picker could reach. They are trimmed together, by the same
+     * caller — see [io.github.nodyssey.data.PostRepository.trimReadHistory].
      */
     suspend fun setReadHistoryLimit(limit: Int) =
         edit {
@@ -330,42 +328,6 @@ class SettingsRepository(
             }
         }
 
-    override suspend fun readingPosition(postId: Long): ReadingPosition? = decodeReadingPositions(preferences())[postId.toString()]
-
-    /**
-     * Writes [postId]'s place, keeping as many of them as 浏览历史 keeps threads.
-     *
-     * The limit is [KEY_READ_HISTORY_LIMIT]'s, read from the same snapshot this write edits — one
-     * number for "how many threads does this app remember", rather than a second cap nobody set and
-     * no picker can reach. 无上限 is [READ_HISTORY_UNLIMITED], and the comparison below simply never
-     * trims at that value.
-     *
-     * The order is most-recently-written first, so trimming drops the place nobody has come back to
-     * in the longest — the same rule, on the same axis, as the read marks' own trim. Lowering the
-     * setting takes effect on the next write rather than immediately, for the same reason it does
-     * there: this only ever runs while somebody is reading.
-     */
-    override suspend fun setReadingPosition(
-        postId: Long,
-        position: ReadingPosition,
-    ) = edit { preferences ->
-        val key = postId.toString()
-        val limit = readHistoryLimit(preferences)
-        val stored = decodeReadingPositions(preferences)
-        val next = LinkedHashMap<String, ReadingPosition>()
-        next[key] = position
-        stored.forEach { (storedKey, storedPosition) ->
-            if (storedKey != key && next.size < limit) next[storedKey] = storedPosition
-        }
-        preferences[KEY_READING_POSITIONS] = json.encodeToString<Map<String, ReadingPosition>>(next)
-    }
-
-    /** A corrupt or unreadable store reads as "nowhere to return to", never as a crash. */
-    private fun decodeReadingPositions(preferences: Preferences): Map<String, ReadingPosition> {
-        val stored = preferences[KEY_READING_POSITIONS] ?: return emptyMap()
-        return runCatching { json.decodeFromString<Map<String, ReadingPosition>>(stored) }.getOrDefault(emptyMap())
-    }
-
     /** One snapshot of the store, with the same IOException fallback [settings] has. */
     private suspend fun preferences(): Preferences =
         dataStore.data
@@ -435,7 +397,6 @@ class SettingsRepository(
         private val KEY_READ_HISTORY_LIMIT = intPreferencesKey("read_history_limit")
         private val KEY_UPDATE_CHECKED_AT = longPreferencesKey("update_checked_at")
         private val KEY_UPDATE_RELEASE = stringPreferencesKey("update_latest_release")
-        private val KEY_READING_POSITIONS = stringPreferencesKey("thread_reading_positions")
 
         private const val RECENT_SEARCH_SEPARATOR = '\u001F'
         private const val MAX_RECENT_SEARCHES = 8
@@ -450,7 +411,7 @@ class SettingsRepository(
         /**
          * How many threads 浏览历史 keeps, which is also how many reading places are kept.
          *
-         * One reader, two callers: the settings flow and [setReadingPosition]. A stored value outside
+         * One reader, and every caller goes through [settings]. A stored value outside
          * [READ_HISTORY_LIMIT_CHOICES] reads as the default here as well as in [setReadHistoryLimit],
          * so a bad write cannot cap either of them at a number no picker can undo.
          */

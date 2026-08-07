@@ -43,6 +43,8 @@ import io.github.nodyssey.data.PostCollectionWriter
 import io.github.nodyssey.data.PostReactionWriter
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
+import io.github.nodyssey.data.ReadingPositionStore
+import io.github.nodyssey.data.RoomReadingPositionStore
 import io.github.nodyssey.data.RulingRepository
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.StardustRepository
@@ -90,6 +92,9 @@ interface AppContainer {
     val clock: AppClock
     val cookieJar: WebViewCookieJar
     val postRepository: PostRepository
+
+    /** Where each thread was left off — its own store, not part of a screen's settings. */
+    val readingPositionStore: ReadingPositionStore
     val categoryRepository: CategoryRepository
     val settingsRepository: SettingsRepository
     val notificationRepository: NotificationRepository
@@ -194,6 +199,10 @@ class DefaultAppContainer(
             PostCollectionWriter(jsonClient),
             settingsRepository.settings.map { it.readHistoryLimit }.distinctUntilChanged(),
         )
+    }
+
+    override val readingPositionStore: ReadingPositionStore by lazy {
+        RoomReadingPositionStore(database.readingPositionDao(), clock)
     }
 
     override val categoryRepository: CategoryRepository by lazy {
