@@ -65,6 +65,10 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setExternalLinkTarget(value) }
     }
 
+    fun setUpdateCheckOnLaunch(value: Boolean) {
+        viewModelScope.launch { settings.setUpdateCheckOnLaunch(value) }
+    }
+
     fun clearCache() {
         if (clearingCache.value) return
         viewModelScope.launch {

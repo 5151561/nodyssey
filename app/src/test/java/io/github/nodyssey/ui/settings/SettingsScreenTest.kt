@@ -48,6 +48,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
             }
@@ -69,6 +70,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
             }
@@ -97,6 +99,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = { wifiOnly = it },
                     onExternalLinkTargetChange = {},
+                    onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
             }
@@ -117,6 +120,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = { target = it },
+                    onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
             }
@@ -139,6 +143,7 @@ class SettingsScreenTest {
                     onFontScaleChange = { appliedScale = it },
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
             }
@@ -169,6 +174,7 @@ class SettingsScreenTest {
                     onFontScaleChange = { appliedScale = it },
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
             }
@@ -183,6 +189,34 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun `the launch update check is on by default and can be switched off`() {
+        composeRule.setContent {
+            var settings by remember { mutableStateOf(UserSettings()) }
+            NodysseyTheme {
+                SettingsScreen(
+                    state = SettingsUiState(settings),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
+                    onUpdateCheckOnLaunchChange = {
+                        settings = settings.copy(updateCheckOnLaunch = it)
+                    },
+                    onClearCache = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("启动时检查更新")
+            .performScrollTo()
+            .assertIsOn()
+            .performClick()
+            .assertIsOff()
+    }
+
+    @Test
     fun `about row states the installed version`() {
         composeRule.setContent {
             NodysseyTheme {
@@ -193,6 +227,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
             }
@@ -212,6 +247,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
             }

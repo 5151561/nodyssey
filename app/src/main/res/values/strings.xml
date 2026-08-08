@@ -283,6 +283,8 @@
     <string name="settings_about">关于</string>
     <string name="settings_about_app">关于 Nodyssey</string>
     <string name="settings_version">v%1$s</string>
+    <string name="settings_update_on_launch">启动时检查更新</string>
+    <string name="settings_update_on_launch_hint">有新版就在启动后提醒一次；关掉后只在关于页手动查</string>
     <string name="settings_licenses">开源许可</string>
 
     <!-- About & community (board f1). -->
@@ -318,6 +320,9 @@
     <string name="about_install_failed_unknown">安装没有完成。</string>
     <string name="settings_about_app_update">发现新版本 %1$s</string>
     <string name="update_dot_description">有新版本</string>
+    <string name="update_reminder_title">发现新版本 %1$s</string>
+    <string name="update_reminder_size">安装包 %1$s</string>
+    <string name="update_reminder_later">稍后</string>
     <string name="about_project_home">项目主页</string>
     <string name="about_feedback">问题反馈</string>
     <string name="about_feedback_hint">提 GitHub Issue 或站内私信开发者</string>

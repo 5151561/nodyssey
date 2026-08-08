@@ -166,6 +166,16 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
   不进 `UserSettings`）：红点要在冷启动第一帧就在，而不是一次网络往返之后才出现；
   落盘的答案也让六小时内的重启不再问 GitHub。读出来时**仍然按当前 versionName 过滤一遍**——
   记录会比写下它的那个版本活得久，装完之后那条记录还在说「1.2.0 出了」。
+- **启动提醒和红点是两件事，走两条路。** 红点读 `state`（有新版就一直在），提醒读
+  `launchReminder`（问一次，按哪个按钮都算答完）。只有 `checkOnLaunch()` 会举起提醒，`check()` 不会——
+  打开关于页本身不是「请提醒我」，把它做成 state 上的一个标志就分不开这两者了。对话框挂在
+  `Navigation.kt` 而不是任何一屏上：启动检查答复时用户在哪一屏都有可能。
+- **「稍后」记的是版本名，不是时间戳。** 「这个版本别再提了」要能一直有效，而下一个 Release 换了名字
+  自己就会再问一次——不需要调过期时间，也不需要发版时去清什么。
+- **启动时检查更新是 `UserSettings` 里的开关，默认开**，读它的地方是 `NodysseyApp.onCreate`。
+  注意在 onCreate 的线程上先把 `appUpdateRepository` 取出来再进协程：构造它要读 `PackageManager`，
+  放进协程里就成了在一个可能已经拆掉的环境上读——Robolectric 下会以「上一个测试留下的未捕获异常」
+  的形态砸在下一个 `runTest` 上。
 
 **会话约定**：
 - **不许硬编码 User-Agent。** 用 `resolveUserAgent()` 从 WebView 读，WebView 那边则**一行都不设**。

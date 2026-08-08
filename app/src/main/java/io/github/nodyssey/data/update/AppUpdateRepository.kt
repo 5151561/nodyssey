@@ -19,6 +19,11 @@ interface UpdateCheckStore {
     suspend fun updateCheckRecord(): UpdateCheckRecord
 
     suspend fun setUpdateCheckRecord(record: UpdateCheckRecord)
+
+    /** The version whose launch reminder was answered with 稍后, or null when none was. */
+    suspend fun postponedUpdateVersion(): String?
+
+    suspend fun setPostponedUpdateVersion(versionName: String)
 }
 
 /**
@@ -33,6 +38,15 @@ interface AppUpdateRepository {
     val state: StateFlow<AppUpdateState>
 
     /**
+     * The release a launch check found and the user has not answered yet — the 启动提醒 dialog.
+     *
+     * Separate from [state] because "a newer build exists" and "ask about it" are different facts with
+     * different lifetimes: the dot on 设置 stays for as long as the release is out there, while this is
+     * one question, asked at launch, gone as soon as either button is pressed.
+     */
+    val launchReminder: StateFlow<AppRelease?>
+
+    /**
      * Asks whether a newer release exists.
      *
      * Without [force] the stored answer is reused while it is younger than
@@ -40,6 +54,20 @@ interface AppUpdateRepository {
      * app start from calling GitHub on every launch. The 检查更新 button forces.
      */
     fun check(force: Boolean = false)
+
+    /**
+     * The launch check: [check] with no force, and then a reminder if the answer is one worth raising.
+     *
+     * Opening 关于 must not raise the dialog, which is why this is a separate entry point rather than a
+     * flag on the state: only the caller that runs at app start asks for a reminder.
+     */
+    fun checkOnLaunch()
+
+    /** 下载并安装 from the reminder: closes it and starts the download. */
+    fun acceptLaunchReminder()
+
+    /** 稍后: closes the reminder and remembers the version, so no later launch raises it again. */
+    fun postponeLaunchReminder()
 
     /** Downloads the available release's APK into the cache. No-op when there is nothing to fetch. */
     fun download()
@@ -62,10 +90,30 @@ class DefaultAppUpdateRepository(
     private val mutableState = MutableStateFlow(AppUpdateState())
     override val state: StateFlow<AppUpdateState> = mutableState.asStateFlow()
 
+    private val mutableLaunchReminder = MutableStateFlow<AppRelease?>(null)
+    override val launchReminder: StateFlow<AppRelease?> = mutableLaunchReminder.asStateFlow()
+
     private var checkJob: Job? = null
     private var downloadJob: Job? = null
 
-    override fun check(force: Boolean) {
+    override fun check(force: Boolean) = runCheck(force = force, reminding = false)
+
+    override fun checkOnLaunch() = runCheck(force = false, reminding = true)
+
+    override fun acceptLaunchReminder() {
+        mutableLaunchReminder.value = null
+        // 下载并安装 means the download starts here, not on the 关于 screen the dialog sends the user
+        // to: that screen binds to the same shared state, so it opens already showing progress.
+        download()
+    }
+
+    override fun postponeLaunchReminder() {
+        val release = mutableLaunchReminder.value ?: return
+        mutableLaunchReminder.value = null
+        scope.launch { store.setPostponedUpdateVersion(release.versionName) }
+    }
+
+    private fun runCheck(force: Boolean, reminding: Boolean) {
         if (checkJob?.isActive == true) return
         checkJob =
             scope.launch {
@@ -76,18 +124,33 @@ class DefaultAppUpdateRepository(
                 val fresh = record.checkedAtMillis > 0L && age in 0 until CHECK_INTERVAL_MILLIS
                 if (!force && fresh) {
                     publish(record.release)
-                    return@launch
+                } else {
+                    mutableState.update { it.copy(check = UpdateCheck.Checking) }
+                    try {
+                        val release = source.latestRelease()
+                        store.setUpdateCheckRecord(UpdateCheckRecord(clock.nowMillis(), release))
+                        publish(release)
+                    } catch (e: AppUpdateException) {
+                        mutableState.update { it.copy(check = UpdateCheck.Failed(e.failure)) }
+                    }
                 }
-
-                mutableState.update { it.copy(check = UpdateCheck.Checking) }
-                try {
-                    val release = source.latestRelease()
-                    store.setUpdateCheckRecord(UpdateCheckRecord(clock.nowMillis(), release))
-                    publish(release)
-                } catch (e: AppUpdateException) {
-                    mutableState.update { it.copy(check = UpdateCheck.Failed(e.failure)) }
-                }
+                // Deliberately after the stored-answer path too: a launch that answered from the record
+                // still has to raise the reminder, or the first launch inside the six-hour window would
+                // be the only one that ever mentions the release.
+                if (reminding) raiseLaunchReminder()
             }
+    }
+
+    /**
+     * Raises the 启动提醒 unless there is nothing to offer or this version was already met with 稍后.
+     *
+     * Filtered against the version installed by [publish] before this runs, so a release that is
+     * already on the device cannot be announced as new.
+     */
+    private suspend fun raiseLaunchReminder() {
+        val release = mutableState.value.available ?: return
+        if (release.versionName == store.postponedUpdateVersion()) return
+        mutableLaunchReminder.value = release
     }
 
     override fun download() {
