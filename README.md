@@ -15,7 +15,7 @@ scrolling stays in one list, and the UI follows the system theme.
 
 ## 状态
 
-**已发布 1.2.2，仍在持续开发。** 读和写都已不再是“只读 v1”，当前实现总表见
+**已发布 1.2.3，仍在持续开发。** 读和写都已不再是“只读 v1”，当前实现总表见
 [docs/implementation-status.md](docs/implementation-status.md)，主要可用能力包括：
 
 - 版块列表、排序、Paging 无限滚动、下拉刷新和 Room 离线缓存；点底栏已选中的「首页」或顶栏应用名回到列表顶部
@@ -53,7 +53,7 @@ scrolling stays in one list, and the UI follows the system theme.
 修改邮箱、绑定 Telegram、邀请码购买没有原生闭环，会带用户到真实站点完成。
 逐项清单见 [docs/implementation-status.md](docs/implementation-status.md)。
 
-各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，当前版本 1.2.2。
+各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，当前版本 1.2.3。
 
 ## Architecture
 
