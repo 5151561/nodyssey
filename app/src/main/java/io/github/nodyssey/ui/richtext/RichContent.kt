@@ -805,7 +805,7 @@ private fun InlineText(
                     // 盘古之白: a hair of air wherever hanzi meets halfwidth letters or digits,
                     // added by the layout rather than the text, so selection and copy still hand
                     // back exactly what was posted.
-                    var prevChar = ' '
+                    var prevChar = '\u0000'
                     var prevIsCode = false
 
                     /**
@@ -827,7 +827,7 @@ private fun InlineText(
                                         val left =
                                             when {
                                                 offset > 0 -> text[offset - 1]
-                                                prevIsCode -> ' '
+                                                prevIsCode -> '\u0000'
                                                 else -> prevChar
                                             }
                                         if (isPanguSeam(left, char)) add(length + offset - 1)
@@ -867,7 +867,7 @@ private fun InlineText(
                                     STICKER_PREFIX + inline.url,
                                     inline.alt ?: "[表情]",
                                 )
-                                prevChar = ' '
+                                prevChar = '\u0000'
                                 prevIsCode = false
                             }
 
