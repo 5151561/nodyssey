@@ -109,6 +109,26 @@ fun TextStyle.asProse(): TextStyle =
     )
 
 /**
+ * A floor's signature, one step under the body it hangs off.
+ *
+ * Derived from that body's own style rather than fixed, so the step holds at every reading size:
+ * the signature has to stay the quieter voice whether the body is set to 13sp or 24sp, and a fixed
+ * 13sp label overtook the body as soon as the reading size went below default.
+ *
+ * The weight drops back to normal because `labelMedium`'s 500 was making a 13sp signature read
+ * heavier — and so bigger — than the 15sp reply above it. The site does the same thing more
+ * bluntly: it runs signatures at 13px against a 14px body and resets `strong` inside them to 400.
+ */
+fun TextStyle.asSignature(): TextStyle =
+    copy(
+        fontSize = fontSize * SIGNATURE_SCALE,
+        lineHeight = lineHeight * SIGNATURE_SCALE,
+        fontWeight = FontWeight.Normal,
+    )
+
+private const val SIGNATURE_SCALE = 0.85f
+
+/**
  * The full title on the detail screen, where it may wrap to several lines.
  *
  * [LineBreak.Heading] balances the wrapped lines instead of filling the first and leaving a couple
