@@ -49,6 +49,7 @@ class SettingsScreenTest {
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
+                    onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
@@ -72,6 +73,7 @@ class SettingsScreenTest {
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
+                    onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
@@ -102,13 +104,19 @@ class SettingsScreenTest {
                     onImagesOnWifiOnlyChange = { wifiOnly = it },
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
+                    onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
             }
         }
 
-        composeRule.onNodeWithText("仅 Wi-Fi 下加载图片").assertIsOff().performClick().assertIsOn()
+        composeRule
+            .onNodeWithText("仅 Wi-Fi 下加载图片")
+            .performScrollTo()
+            .assertIsOff()
+            .performClick()
+            .assertIsOn()
     }
 
     @Test
@@ -124,6 +132,7 @@ class SettingsScreenTest {
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = { target = it },
                     onReportFormatChange = {},
+                    onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
@@ -148,6 +157,7 @@ class SettingsScreenTest {
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = { format = it },
+                    onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
@@ -157,6 +167,35 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("适配格式").assertIsSelected()
         composeRule.onNodeWithText("显示原文").performClick()
         composeRule.onNodeWithText("显示原文").assertIsSelected()
+    }
+
+    /** Off is the default: 首页 is read by scrolling unless the reader says otherwise. */
+    @Test
+    fun `the home page bar starts off and toggles from the whole row`() {
+        composeRule.setContent {
+            var enabled by remember { mutableStateOf(UserSettings().homePageBar) }
+            NodysseyTheme {
+                SettingsScreen(
+                    state = SettingsUiState(UserSettings(homePageBar = enabled)),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = { enabled = it },
+                    onUpdateCheckOnLaunchChange = {},
+                    onClearCache = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("首页翻页栏")
+            .performScrollTo()
+            .assertIsOff()
+            .performClick()
+            .assertIsOn()
     }
 
     @Test
@@ -172,6 +211,7 @@ class SettingsScreenTest {
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
+                    onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
@@ -204,6 +244,7 @@ class SettingsScreenTest {
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
+                    onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
@@ -231,6 +272,7 @@ class SettingsScreenTest {
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
+                    onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {
                         settings = settings.copy(updateCheckOnLaunch = it)
                     },
@@ -259,6 +301,7 @@ class SettingsScreenTest {
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
+                    onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )
@@ -280,6 +323,7 @@ class SettingsScreenTest {
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
+                    onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
                     onClearCache = {},
                 )

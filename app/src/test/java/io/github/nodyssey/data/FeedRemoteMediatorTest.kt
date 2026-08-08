@@ -43,12 +43,15 @@ class FeedRemoteMediatorTest {
         database.close()
     }
 
-    private fun mediator(slug: String? = null) =
-        FeedRemoteMediator(
-            feedKey = feedKeyFor(slug),
-            database = database,
-            clock = clock,
-        ) { page -> remote.loadList(slug, page, FeedSort.LAST_REPLY) }
+    private fun mediator(
+        slug: String? = null,
+        startPage: Int = FeedRemoteMediator.FIRST_PAGE,
+    ) = FeedRemoteMediator(
+        feedKey = feedKeyFor(slug),
+        database = database,
+        clock = clock,
+        startPage = startPage,
+    ) { page -> remote.loadList(slug, page, FeedSort.LAST_REPLY) }
 
     private fun emptyPagingState() =
         PagingState<Int, FeedPostRow>(
@@ -61,7 +64,8 @@ class FeedRemoteMediatorTest {
     private suspend fun load(
         loadType: LoadType,
         slug: String? = null,
-    ) = mediator(slug).load(loadType, emptyPagingState())
+        startPage: Int = FeedRemoteMediator.FIRST_PAGE,
+    ) = mediator(slug, startPage).load(loadType, emptyPagingState())
 
     private suspend fun storedFeed(slug: String? = null): List<Long> =
         database.feedDao().let { dao ->
@@ -76,6 +80,22 @@ class FeedRemoteMediatorTest {
                         ),
                     )
                 (result as androidx.paging.PagingSource.LoadResult.Page).data.map { it.post.postId }
+            }
+        }
+
+    /** The same rows in the same order, but named by the site page each of them came off. */
+    private suspend fun storedPages(slug: String? = null): List<Int?> =
+        database.feedDao().let { dao ->
+            dao.pagingSource(feedKeyFor(slug)).let { source ->
+                val result =
+                    source.load(
+                        androidx.paging.PagingSource.LoadParams.Refresh(
+                            key = null,
+                            loadSize = 200,
+                            placeholdersEnabled = false,
+                        ),
+                    )
+                (result as androidx.paging.PagingSource.LoadResult.Page).data.map { it.feedPage }
             }
         }
 
@@ -212,6 +232,90 @@ class FeedRemoteMediatorTest {
 
             assertEquals(listOf(100L, 101L), storedFeed(null))
             assertEquals(listOf(700L, 701L), storedFeed("tech"))
+        }
+
+    // -----------------------------------------------------------------------------------------
+    // 首页翻页栏: a window that need not start at page 1
+    // -----------------------------------------------------------------------------------------
+
+    @Test
+    fun `every row records the page it arrived on`() =
+        runTest {
+            remote.listResult = { slug, page ->
+                FakePostRemoteDataSource.page(slug, page, firstId = 100L * page, count = 2)
+            }
+
+            load(LoadType.REFRESH)
+            load(LoadType.APPEND)
+
+            assertEquals(listOf(1, 1, 2, 2), storedPages())
+        }
+
+    @Test
+    fun `the pager's own total is stored for the bar to draw`() =
+        runTest {
+            remote.listResult = { slug, page ->
+                FakePostRemoteDataSource.page(slug, page, firstId = 100, count = 2, totalPages = 217)
+            }
+
+            load(LoadType.REFRESH)
+
+            assertEquals(217, database.feedDao().remoteKey(feedKeyFor(null))?.totalPages)
+        }
+
+    @Test
+    fun `a jump refreshes from its own page and appends from there`() =
+        runTest {
+            remote.listResult = { slug, page ->
+                FakePostRemoteDataSource.page(slug, page, firstId = 100L * page, count = 2)
+            }
+
+            load(LoadType.REFRESH, startPage = 40)
+            load(LoadType.APPEND, startPage = 40)
+
+            assertEquals(listOf(4000L, 4001L, 4100L, 4101L), storedFeed())
+            assertEquals(listOf(40, 40, 41, 41), storedPages())
+        }
+
+    /**
+     * The cache window answers "is this list stale", not "is this the list I asked for". A perfectly
+     * fresh page 1 is no answer at all to "show me page 40" — nor is a fresh page 40 to "take me back
+     * to the top", which is the direction that used to strand the reader.
+     */
+    @Test
+    fun `a jump refreshes even while the stored feed is fresh`() =
+        runTest {
+            load(LoadType.REFRESH)
+            clock.advanceBy(1000)
+
+            assertEquals(
+                RemoteMediator.InitializeAction.LAUNCH_INITIAL_REFRESH,
+                mediator(startPage = 40).initialize(),
+            )
+        }
+
+    @Test
+    fun `coming back to page one refreshes rather than keeping the jumped-to window`() =
+        runTest {
+            load(LoadType.REFRESH, startPage = 40)
+            clock.advanceBy(1000)
+
+            assertEquals(
+                RemoteMediator.InitializeAction.LAUNCH_INITIAL_REFRESH,
+                mediator(startPage = 1).initialize(),
+            )
+        }
+
+    @Test
+    fun `returning to the same jumped-to page issues no request`() =
+        runTest {
+            load(LoadType.REFRESH, startPage = 40)
+            clock.advanceBy(FeedRemoteMediator.CACHE_TTL_MILLIS - 1)
+
+            assertEquals(
+                RemoteMediator.InitializeAction.SKIP_INITIAL_REFRESH,
+                mediator(startPage = 40).initialize(),
+            )
         }
 
     // -----------------------------------------------------------------------------------------

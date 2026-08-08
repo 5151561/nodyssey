@@ -19,6 +19,11 @@ data class FeedPostRow(
     @Embedded val post: PostEntity,
     val lastReadAtMillis: Long?,
     val lastSeenCommentCount: Int?,
+    /**
+     * Which of the site's pages this row arrived on, or null when the row was not read out of a feed
+     * at all — [FeedDao.search] matches the whole post cache, where "which page" has no answer.
+     */
+    val feedPage: Int? = null,
 )
 
 @Dao
@@ -37,7 +42,8 @@ interface FeedDao {
      */
     @Query(
         """
-        SELECT p.*, r.lastReadAtMillis AS lastReadAtMillis, r.lastSeenCommentCount AS lastSeenCommentCount
+        SELECT p.*, r.lastReadAtMillis AS lastReadAtMillis, r.lastSeenCommentCount AS lastSeenCommentCount,
+               f.page AS feedPage
         FROM posts p
         INNER JOIN feed_positions f ON f.postId = p.postId
         LEFT JOIN post_read_marks r ON r.postId = p.postId
@@ -59,7 +65,8 @@ interface FeedDao {
      */
     @Query(
         """
-        SELECT p.*, r.lastReadAtMillis AS lastReadAtMillis, r.lastSeenCommentCount AS lastSeenCommentCount
+        SELECT p.*, r.lastReadAtMillis AS lastReadAtMillis, r.lastSeenCommentCount AS lastSeenCommentCount,
+               NULL AS feedPage
         FROM posts p
         LEFT JOIN post_read_marks r ON r.postId = p.postId
         WHERE (:includeBlocked OR p.isBlocked = 0)
@@ -90,6 +97,16 @@ interface FeedDao {
 
     @Query("SELECT COALESCE(MAX(sortIndex) + 1, 0) FROM feed_positions WHERE feedKey = :feedKey")
     suspend fun nextSortIndex(feedKey: String): Int
+
+    /**
+     * The first of the site's pages this feed currently holds, or null when it holds nothing.
+     *
+     * Derived rather than stored: the rows are what a jump replaces, so asking them is the one answer
+     * that cannot disagree with what is on screen. The mediator compares it with the page it was asked
+     * to start at — that is how a jump to page 40 gets past a cache that is still perfectly fresh.
+     */
+    @Query("SELECT MIN(page) FROM feed_positions WHERE feedKey = :feedKey")
+    suspend fun firstLoadedPage(feedKey: String): Int?
 
     /**
      * The reply count the list is currently showing for this post.
@@ -129,6 +146,15 @@ interface FeedDao {
 
     @Query("SELECT * FROM feed_remote_keys WHERE feedKey = :feedKey")
     suspend fun remoteKey(feedKey: String): FeedRemoteKeyEntity?
+
+    /**
+     * The same row as a stream, for the screen rather than the mediator.
+     *
+     * 首页翻页栏 needs the page total the moment a load writes it, and a feed with nothing stored yet
+     * emits null rather than waiting — the bar simply has nothing to draw until the first page lands.
+     */
+    @Query("SELECT * FROM feed_remote_keys WHERE feedKey = :feedKey")
+    fun remoteKeyStream(feedKey: String): Flow<FeedRemoteKeyEntity?>
 
     @Upsert
     suspend fun upsertRemoteKey(key: FeedRemoteKeyEntity)

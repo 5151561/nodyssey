@@ -74,6 +74,7 @@ class PostListScreenTest {
         isPinned: Boolean = false,
         isLocked: Boolean = false,
         categoryTitle: String? = "日常",
+        page: Int? = null,
     ) = FeedPost(
         summary =
         PostSummary(
@@ -93,6 +94,7 @@ class PostListScreenTest {
         ),
         isRead = isRead,
         newCommentCount = newCommentCount,
+        page = page,
     )
 
     /** Renders the screen with a paging stream in an explicit load state. */
@@ -105,6 +107,7 @@ class PostListScreenTest {
         onBoardClick: (String?) -> Unit = {},
         onSortChange: (FeedSort) -> Unit = {},
         onRecoverInBrowser: () -> Unit = {},
+        onGoToPage: (Int) -> Unit = {},
     ) {
         composeRule.setContent {
             NodysseyTheme {
@@ -117,6 +120,7 @@ class PostListScreenTest {
                     onBoardClick = onBoardClick,
                     onSortChange = onSortChange,
                     onRecoverInBrowser = onRecoverInBrowser,
+                    onGoToPage = onGoToPage,
                 )
             }
         }
@@ -134,6 +138,7 @@ class PostListScreenTest {
         onSortChange: (FeedSort) -> Unit,
         onRecoverInBrowser: () -> Unit,
         scrollToTopRequests: Int = 0,
+        onGoToPage: (Int) -> Unit = {},
     ) {
         val pagingData =
             PagingData.from(
@@ -154,6 +159,7 @@ class PostListScreenTest {
             onSortChange = onSortChange,
             onSignInClick = {},
             onRecoverInBrowser = onRecoverInBrowser,
+            onGoToPage = onGoToPage,
             scrollToTopRequests = scrollToTopRequests,
         )
     }
@@ -580,5 +586,104 @@ class PostListScreenTest {
         )
 
         composeRule.onNodeWithText("「技术」需要登录后查看").assertIsDisplayed()
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 首页翻页栏
+    // ---------------------------------------------------------------------------------------------
+
+    private fun pagedState(
+        pageBarEnabled: Boolean = true,
+        totalPages: Int = 217,
+        startPage: Int = 1,
+    ) = PostListUiState(
+        boards = boards,
+        pageBarEnabled = pageBarEnabled,
+        totalPages = totalPages,
+        startPage = startPage,
+    )
+
+    /** The feed is a scroll by default; the bar exists only for the reader who asks for it. */
+    @Test
+    fun `the page bar stays away until the setting turns it on`() {
+        setScreen(
+            posts = listOf(feedPost(1, "post", page = 1)),
+            state = pagedState(pageBarEnabled = false),
+        )
+
+        composeRule.onAllNodesWithText("第 1 / 217 页").assertCountEquals(0)
+    }
+
+    @Test
+    fun `the page bar names the page and the total`() {
+        setScreen(listOf(feedPost(1, "post", page = 1)), state = pagedState())
+
+        composeRule.onNodeWithText("第 1 / 217 页").assertIsDisplayed()
+    }
+
+    /** One page is not a pager: a bar that can only ever say "第 1 / 1 页" is furniture. */
+    @Test
+    fun `a single-page feed draws no bar`() {
+        setScreen(
+            posts = listOf(feedPost(1, "post", page = 1)),
+            state = pagedState(totalPages = 1),
+        )
+
+        composeRule.onAllNodesWithText("第 1 / 1 页").assertCountEquals(0)
+    }
+
+    /** A jump names its destination before the rows arrive; otherwise the tap reads as ignored. */
+    @Test
+    fun `the bar names the page a jump is heading for while the old rows are still up`() {
+        setScreen(
+            posts = listOf(feedPost(1, "stale row", page = 1)),
+            state = pagedState(startPage = 40),
+        )
+
+        composeRule.onNodeWithText("第 40 / 217 页").assertIsDisplayed()
+    }
+
+    /** Travel, not fetching: a page already in the window is somewhere to scroll to. */
+    @Test
+    fun `next page scrolls instead of reloading when the page is already loaded`() {
+        var requested: Int? = null
+        setScreen(
+            posts = listOf(feedPost(1, "page one row", page = 1), feedPost(2, "page two row", page = 2)),
+            state = pagedState(),
+            onGoToPage = { requested = it },
+        )
+
+        composeRule.onNodeWithContentDescription("下一页").performClick()
+
+        assertEquals(null, requested)
+    }
+
+    @Test
+    fun `next page asks for a reload when the page is not loaded`() {
+        var requested: Int? = null
+        setScreen(
+            posts = listOf(feedPost(1, "only page one", page = 1)),
+            state = pagedState(),
+            onGoToPage = { requested = it },
+        )
+
+        composeRule.onNodeWithContentDescription("下一页").performClick()
+
+        assertEquals(2, requested)
+    }
+
+    @Test
+    fun `the jump sheet offers the last page and reports it`() {
+        var requested: Int? = null
+        setScreen(
+            posts = listOf(feedPost(1, "post", page = 1)),
+            state = pagedState(),
+            onGoToPage = { requested = it },
+        )
+
+        composeRule.onNodeWithText("第 1 / 217 页").performClick()
+        composeRule.onNodeWithText("最后一页").performClick()
+
+        assertEquals(217, requested)
     }
 }

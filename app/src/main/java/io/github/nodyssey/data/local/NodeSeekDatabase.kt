@@ -28,7 +28,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CacheSessionEntity::class,
         SelfProfileEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -53,7 +53,14 @@ abstract class NodeSeekDatabase : RoomDatabase() {
                 .databaseBuilder(context, NodeSeekDatabase::class.java, "nodeseek.db")
                 // Known upgrades preserve local state explicitly. The fallback remains for unknown
                 // legacy versions whose downloaded content can be rebuilt; schemas stay checked in.
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                .addMigrations(
+                    MIGRATION_3_4,
+                    MIGRATION_4_5,
+                    MIGRATION_5_6,
+                    MIGRATION_6_7,
+                    MIGRATION_7_8,
+                    MIGRATION_8_9,
+                )
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }
@@ -162,5 +169,22 @@ internal val MIGRATION_7_8 =
                 )
                 """.trimIndent(),
             )
+        }
+    }
+
+/**
+ * Teaches a stored feed which page each row came from, and how many pages the site offered.
+ *
+ * Both defaults describe a v8 store honestly rather than conveniently: every stored feed began at
+ * page 1 and was only ever appended to, so `page = 1` is wrong for the tail and right for the head —
+ * and the tail corrects itself on the next refresh, which clears the feed and rewrites every row.
+ * `totalPages = 1` is the same claim the pager makes when it offers no other page, so 首页翻页栏
+ * stays hidden on an unrefreshed store instead of drawing "第 1 / 1 页" over a list of hundreds.
+ */
+internal val MIGRATION_8_9 =
+    object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `feed_positions` ADD COLUMN `page` INTEGER NOT NULL DEFAULT 1")
+            db.execSQL("ALTER TABLE `feed_remote_keys` ADD COLUMN `totalPages` INTEGER NOT NULL DEFAULT 1")
         }
     }
