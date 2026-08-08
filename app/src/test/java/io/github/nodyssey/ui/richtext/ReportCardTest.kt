@@ -5,20 +5,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import io.github.nodyssey.core.html.AnsiParser
 import io.github.nodyssey.core.report.QualityReportParser
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -142,6 +148,47 @@ class ReportCardTest {
         compose.onNodeWithContentDescription("关闭").assertExists()
     }
 
+    /**
+     * 原文 is the output as the script wrote it, and the script wrote its verdicts in ANSI — a
+     * monochrome 原文 is a different report rather than a plainer one.
+     */
+    @Test
+    fun `the source format keeps the report's colours`() {
+        // The fixtures are saved with their escapes stripped, so the verdict gets its green back here
+        // — a report that arrives uncoloured cannot tell whether the colour survived the drawing.
+        val coloured = report().replace("KVM 虚拟机", "\u001B[32mKVM 虚拟机\u001B[0m")
+        showCodeBlock(coloured, format = ReportFormat.SOURCE)
+
+        val drawn = compose.onNodeWithText(BANNER, substring = true)
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .single()
+
+        assertTrue(
+            "原文 was drawn without any of the report's colour runs",
+            drawn.spanStyles.any { it.item.color.isSpecified || it.item.background.isSpecified },
+        )
+    }
+
+    /**
+     * Regression: a pinch rests a finger long enough to fire the long press that starts a text
+     * selection, and the dialog is a window of its own. Its text must not register with the post's
+     * `SelectionContainer`, whose container coordinates belong to the other layout root — asking one
+     * to be mapped into the other threw `layouts are not part of the same hierarchy` and took the app
+     * down mid-zoom.
+     */
+    @Test
+    fun `a long press inside the full screen original does not cross selection hierarchies`() {
+        showCodeBlock(report(), format = ReportFormat.SOURCE)
+        compose.onNodeWithText("全屏查看").performScrollTo().performClick()
+
+        // The banner is in the inline block as well as the dialog; the dialog's is the later node.
+        compose.onAllNodes(hasText(BANNER, substring = true)).onLast()
+            .performTouchInput { longClick() }
+
+        compose.onNodeWithContentDescription("关闭").assertExists()
+    }
+
     /** `language-ansi` is also how an ordinary coloured paste arrives, and that is not a report. */
     @Test
     fun `anything that is not a report stays a code block`() {
@@ -151,3 +198,6 @@ class ReportCardTest {
         assertEquals(null, QualityReportParser.parse("curl -sL https://run.nodequality.com | bash"))
     }
 }
+
+/** In the report's banner and nowhere in the card, so finding it means the original is on screen. */
+private const val BANNER = "bash <(curl -sL https://Check.Place) -H"

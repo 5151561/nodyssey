@@ -577,6 +577,7 @@ private fun CodeOrReport(node: RichNode.CodeBlock) {
             ReportSourceBlock(
                 title = report.title,
                 source = node.code,
+                spans = node.spans,
                 columns = node.columns,
                 onExpand = { showingSource = true },
             )
