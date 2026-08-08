@@ -71,6 +71,7 @@ import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.common.shortMessage
+import io.github.nodyssey.ui.composer.collapseMarkdown
 import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.nodyssey.ui.postlist.toNodeSeekError
 import io.github.nodyssey.ui.richtext.RichContent
@@ -536,7 +537,7 @@ private fun GeneralTab(
             } else {
                 val nodes = remember(readme, readmeExpanded) {
                     val markdown =
-                        if (readmeExpanded) readme else readme.lines().take(README_COLLAPSED_LINES).joinToString("\n")
+                        if (readmeExpanded) readme else collapseMarkdown(readme, README_COLLAPSED_LINES)
                     parseMarkdown(markdown)
                 }
                 RichContent(

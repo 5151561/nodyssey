@@ -153,6 +153,31 @@ class RichContentParserTest {
         assertTrue(inlines.filterIsInstance<InlineNode.Text>().none { it.text.contains("nsapp") })
     }
 
+    /**
+     * A 拼车 post files its NodeQuality reports in a table column, and reading the cell as `text()`
+     * left the reader a blue-less "点击查看 NQ" that went nowhere.
+     */
+    @Test
+    fun `keeps the link inside a table cell`() {
+        val nodes =
+            parse(
+                """
+                <table><tbody>
+                <tr><th>车次</th><th>报告</th></tr>
+                <tr><td><strong>一号车</strong></td>
+                <td><a href="/jump?to=https%3A%2F%2Fnodequality.com%2Fr%2Fabc">点击查看 NQ</a></td></tr>
+                </tbody></table>
+                """.trimIndent(),
+            )
+
+        val table = nodes.single() as RichNode.Table
+        assertEquals("车次", (table.content[0][0].single() as InlineNode.Text).text)
+        assertTrue((table.content[1][0].single() as InlineNode.Text).style.bold)
+        val link = table.content[1][1].single() as InlineNode.Link
+        assertEquals("点击查看 NQ", link.text)
+        assertTrue("got ${link.url}", link.url.endsWith("/jump?to=https%3A%2F%2Fnodequality.com%2Fr%2Fabc"))
+    }
+
     /** Only `nsapp://vote` is ours. Another app scheme is an ordinary link and stays one. */
     @Test
     fun `another nsapp scheme is left as a link`() {

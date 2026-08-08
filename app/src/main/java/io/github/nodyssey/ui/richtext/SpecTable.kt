@@ -13,7 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.ui.theme.Spacing
@@ -36,7 +38,7 @@ import io.github.nodyssey.ui.theme.TABULAR_FIGURES
  */
 @Composable
 internal fun SpecTable(
-    columns: List<String>,
+    columns: List<AnnotatedString>,
     rows: List<SpecRow>,
     modifier: Modifier = Modifier,
 ) {
@@ -50,13 +52,14 @@ internal fun SpecTable(
             .background(MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column {
-            SpecHeaderCell(text = "", width = LABEL_WIDTH)
+            SpecHeaderCell(text = AnnotatedString(""), width = LABEL_WIDTH)
             rows.forEach { row ->
                 Text(
                     text = row.label,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .width(LABEL_WIDTH)
                         .padding(horizontal = Spacing.sm, vertical = 5.dp),
@@ -69,7 +72,7 @@ internal fun SpecTable(
                 Row {
                     // Padded to the header's length: a row that is short is short at a known column,
                     // and a blank there is the finding.
-                    List(columns.size) { row.cells.getOrElse(it) { "" } }.forEach { cell ->
+                    List(columns.size) { row.cells.getOrElse(it) { AnnotatedString("") } }.forEach { cell ->
                         Text(
                             text = cell,
                             style =
@@ -78,6 +81,10 @@ internal fun SpecTable(
                             ),
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
+                            // A report's values fit; a post's or a Readme's prose cell does not, and
+                            // clipping it mid-glyph reads as a rendering fault rather than as "there
+                            // is more here". The ellipsis is the only thing that says which.
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier
                                 .width(CELL_WIDTH)
                                 .padding(horizontal = Spacing.sm, vertical = 5.dp),
@@ -89,11 +96,20 @@ internal fun SpecTable(
     }
 }
 
-/** One row: the pinned label, then one entry per column. Missing entries render blank. */
+/**
+ * One row: the pinned label, then one entry per column. Missing entries render blank.
+ *
+ * Cells are annotated rather than plain, because a post body's table cell can carry a link and the
+ * annotation is what keeps it tappable. A report's cells are plain strings and use the secondary
+ * constructor.
+ */
 internal data class SpecRow(
-    val label: String,
-    val cells: List<String>,
-)
+    val label: AnnotatedString,
+    val cells: List<AnnotatedString>,
+) {
+    constructor(label: String, cells: List<String>) :
+        this(AnnotatedString(label), cells.map(::AnnotatedString))
+}
 
 /**
  * A grid whose first row is the header and whose first column is the row label.
@@ -101,14 +117,15 @@ internal data class SpecRow(
  * That is how the site's Markdown tables are written — the parser hands back a plain grid, and the
  * leading column is what identifies the row, same as in a report.
  */
-internal fun List<List<String>>.asSpecTable(): Pair<List<String>, List<SpecRow>> {
+internal fun List<List<AnnotatedString>>.asSpecTable(): Pair<List<AnnotatedString>, List<SpecRow>> {
     val header = firstOrNull().orEmpty()
-    return header.drop(1) to drop(1).map { SpecRow(it.firstOrNull().orEmpty(), it.drop(1)) }
+    return header.drop(1) to
+        drop(1).map { SpecRow(it.firstOrNull() ?: AnnotatedString(""), it.drop(1)) }
 }
 
 @Composable
 private fun SpecHeaderCell(
-    text: String,
+    text: AnnotatedString,
     width: Dp = CELL_WIDTH,
 ) {
     Text(
@@ -117,6 +134,7 @@ private fun SpecHeaderCell(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.SemiBold,
         maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .width(width)
             .padding(horizontal = Spacing.sm, vertical = 6.dp),

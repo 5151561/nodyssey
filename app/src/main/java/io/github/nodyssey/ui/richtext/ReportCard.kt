@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -302,7 +303,7 @@ private fun BadgeRow(badges: QualityReport.Block.Badges) {
 @Composable
 private fun ReportTable(table: QualityReport.Block.Table) {
     SpecTable(
-        columns = table.columns,
+        columns = table.columns.map(::AnnotatedString),
         rows = table.rows.map { SpecRow(label = it.label, cells = it.cells) },
     )
 }

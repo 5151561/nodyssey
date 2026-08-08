@@ -301,8 +301,30 @@ sealed interface RichNode {
     @Serializable
     @SerialName("table")
     data class Table(
-        val rows: List<List<String>>,
-    ) : RichNode
+        /**
+         * Cells in reading order, header row first.
+         *
+         * Inline content rather than plain text because a cell is where the site's own posts put
+         * their links — a 拼车 table's "点击查看 NQ" column is nothing but links, and flattening the
+         * cell to `text()` is what turned them into unclickable prose.
+         */
+        val cells: List<List<List<InlineNode>>> = emptyList(),
+        /**
+         * The plain-string cells written by 1.2.2 and earlier, promoted by [content].
+         *
+         * Nothing writes it any more; it is here so those rows still decode. A `List<String>` cell
+         * cannot be read as a `List<InlineNode>` one, and
+         * [io.github.nodyssey.data.local.RichContentConverters] lets a decode failure out into the
+         * DAO rather than swallowing it — a thread cached before the upgrade would take the app down
+         * on open. Delete it once no install can still be carrying a cache that old.
+         */
+        @SerialName("rows")
+        val legacyRows: List<List<String>> = emptyList(),
+    ) : RichNode {
+        /** [cells], or a legacy row's strings read as unstyled text. */
+        val content: List<List<List<InlineNode>>>
+            get() = cells.ifEmpty { legacyRows.map { row -> row.map { listOf(InlineNode.Text(it)) } } }
+    }
 
     @Serializable
     @SerialName("hr")

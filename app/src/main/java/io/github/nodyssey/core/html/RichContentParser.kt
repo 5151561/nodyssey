@@ -245,11 +245,18 @@ object RichContentParser {
         return RichNode.ListBlock(ordered = ordered, items = items)
     }
 
+    /**
+     * Cells keep their inline content rather than collapsing to `text()`.
+     *
+     * A table cell is where a 拼车 post files its NodeQuality links — a whole column of
+     * `<a href="/jump?to=…">点击查看 NQ</a>` — and reading the cell as a string is what turned every
+     * one of them into prose the reader could see but not follow.
+     */
     private fun table(element: Element): RichNode {
-        val rows = element.select("tr").map { row ->
-            row.select("th, td").map { it.text() }
+        val cells = element.select("tr").map { row ->
+            row.select("th, td").map { finishInlines(parseInlines(it.childNodes())) }
         }.filter { it.isNotEmpty() }
-        return RichNode.Table(rows)
+        return RichNode.Table(cells)
     }
 
     // --- Inline -------------------------------------------------------------

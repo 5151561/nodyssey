@@ -287,7 +287,7 @@ private fun RichBlock(
                 }
             }
 
-        is RichNode.Table -> DataTable(node)
+        is RichNode.Table -> DataTable(node = node, onLinkClick = onLinkClick)
 
         is RichNode.Tabs ->
             TabGroup(
@@ -632,15 +632,87 @@ private fun CodeBlock(node: RichNode.CodeBlock) {
 }
 
 /**
- * Tables are rare here and always numeric — latency, packet loss, prices.
+ * Tables are rare here and mostly numeric — latency, packet loss, prices.
  *
  * They get a border and a header fill so the columns stay legible while scrolling sideways, and
- * tabular figures so the numbers line up on their decimal point.
+ * tabular figures so the numbers line up on their decimal point. Cells keep their links: a 拼车
+ * post files its NodeQuality reports in a table column, and a link the reader can see but not
+ * follow is the same as no link at all.
  */
 @Composable
-private fun DataTable(node: RichNode.Table) {
-    val (columns, rows) = node.rows.asSpecTable()
+private fun DataTable(
+    node: RichNode.Table,
+    onLinkClick: (String) -> Unit,
+) {
+    val linkStyles =
+        TextLinkStyles(
+            style =
+            SpanStyle(
+                color = MaterialTheme.colorScheme.primary,
+                textDecoration = TextDecoration.Underline,
+            ),
+        )
+    val codeBackground = MaterialTheme.colorScheme.surfaceContainer
+    // One remembered listener, for the reason spelled out in [InlineText]: a lambda built per cell
+    // makes every `LinkAnnotation.Url` compare unequal and rebuilds the whole grid each pass.
+    val linkListener =
+        remember(onLinkClick) {
+            LinkInteractionListener { link ->
+                if (link is LinkAnnotation.Url) onLinkClick(link.url)
+            }
+        }
+    val content = node.content
+    val quoteLabels =
+        content.flatten().flatten().filterIsInstance<InlineNode.QuoteRef>().associateWith { ref ->
+            stringResource(R.string.post_quote_reply, ref.name, ref.floor)
+        }
+    val cells =
+        remember(content, linkStyles, codeBackground, linkListener, quoteLabels) {
+            content.map { row ->
+                row.map { cellText(it, linkStyles, codeBackground, linkListener, quoteLabels) }
+            }
+        }
+    val (columns, rows) = cells.asSpecTable()
     SpecTable(columns = columns, rows = rows)
+}
+
+/**
+ * One table cell's inline content, flattened to a single line.
+ *
+ * A cell is a fixed-width box on one line, so the two nodes that need a layout of their own are
+ * reduced to their text — a sticker to its alt, a quote reference to its label — rather than being
+ * given a placeholder that would make the row taller than the rest of the grid. Links keep their
+ * annotation, which is the whole reason a cell carries inline content instead of a string.
+ */
+private fun cellText(
+    inlines: List<InlineNode>,
+    linkStyles: TextLinkStyles,
+    codeBackground: Color,
+    linkListener: LinkInteractionListener,
+    quoteLabels: Map<InlineNode.QuoteRef, String>,
+): AnnotatedString = buildAnnotatedString {
+    inlines.forEach { inline ->
+        when (inline) {
+            is InlineNode.Text -> withSpan(inline.style, codeBackground) { append(inline.text) }
+
+            is InlineNode.Link ->
+                withLink(
+                    LinkAnnotation.Url(
+                        url = inline.url,
+                        styles = linkStyles,
+                        linkInteractionListener = linkListener,
+                    ),
+                ) {
+                    withSpan(inline.style, codeBackground) { append(inline.text) }
+                }
+
+            is InlineNode.Sticker -> append(inline.alt.orEmpty())
+
+            is InlineNode.QuoteRef -> append(quoteLabels[inline].orEmpty())
+
+            InlineNode.LineBreak -> append(' ')
+        }
+    }
 }
 
 @Composable
@@ -1019,11 +1091,16 @@ private fun specNodes(): List<RichNode> =
             items = listOf(listOf(RichNode.Paragraph(listOf(InlineNode.Text("无序列表用实心圆点"))))),
         ),
         RichNode.Table(
-            rows =
+            cells =
             listOf(
-                listOf("节点", "延迟", "丢包"),
-                listOf("东京 TRI", "48ms", "0%"),
-                listOf("洛杉矶 4837", "152ms", "1.2%"),
+                listOf("节点", "延迟", "丢包", "报告").map { listOf(InlineNode.Text(it)) },
+                listOf(
+                    listOf(InlineNode.Text("东京 TRI")),
+                    listOf(InlineNode.Text("48ms")),
+                    listOf(InlineNode.Text("0%")),
+                    listOf(InlineNode.Link(text = "NQ", url = "https://nodequality.com/r/demo")),
+                ),
+                listOf("洛杉矶 4837", "152ms", "1.2%", "—").map { listOf(InlineNode.Text(it)) },
             ),
         ),
         RichNode.Divider,
