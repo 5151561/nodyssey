@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.settings.ExternalLinkTarget
+import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.ui.common.NodysseyIcons
@@ -66,6 +67,7 @@ fun SettingsRoute(
         onFontScaleChange = viewModel::setFontScale,
         onImagesOnWifiOnlyChange = viewModel::setImagesOnWifiOnly,
         onExternalLinkTargetChange = viewModel::setExternalLinkTarget,
+        onReportFormatChange = viewModel::setReportFormat,
         onUpdateCheckOnLaunchChange = viewModel::setUpdateCheckOnLaunch,
         onClearCache = viewModel::clearCache,
         onOpenNotifications = onOpenNotifications,
@@ -84,6 +86,7 @@ fun SettingsScreen(
     onFontScaleChange: (Float) -> Unit,
     onImagesOnWifiOnlyChange: (Boolean) -> Unit,
     onExternalLinkTargetChange: (ExternalLinkTarget) -> Unit,
+    onReportFormatChange: (ReportFormat) -> Unit,
     onUpdateCheckOnLaunchChange: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier,
@@ -180,6 +183,16 @@ fun SettingsScreen(
                         onSelected = onExternalLinkTargetChange,
                     )
                 }
+                SettingsBlock(
+                    icon = { Icon(NodysseyIcons.Code, contentDescription = null) },
+                    title = stringResource(R.string.settings_report_format),
+                    subtitle = stringResource(R.string.settings_report_format_hint),
+                ) {
+                    ConnectedReportFormatButtons(
+                        selected = state.settings.reportFormat,
+                        onSelected = onReportFormatChange,
+                    )
+                }
                 SettingsRow(
                     title = stringResource(R.string.settings_wifi_images),
                     subtitle = stringResource(R.string.settings_wifi_images_hint),
@@ -270,6 +283,23 @@ private fun ConnectedExternalLinkButtons(
 }
 
 @Composable
+private fun ConnectedReportFormatButtons(
+    selected: ReportFormat,
+    onSelected: (ReportFormat) -> Unit,
+) {
+    val choices =
+        listOf(
+            ReportFormat.ADAPTED to stringResource(R.string.settings_report_format_adapted),
+            ReportFormat.SOURCE to stringResource(R.string.settings_report_format_source),
+        )
+    ConnectedChoiceButtons(
+        labels = choices.map { it.second },
+        selectedIndex = choices.indexOfFirst { it.first == selected },
+        onSelect = { onSelected(choices[it].first) },
+    )
+}
+
+@Composable
 private fun ConnectedThemeButtons(
     selected: ThemeMode,
     onSelected: (ThemeMode) -> Unit,
@@ -313,6 +343,7 @@ private fun SettingsPreview() {
             onFontScaleChange = {},
             onImagesOnWifiOnlyChange = {},
             onExternalLinkTargetChange = {},
+            onReportFormatChange = {},
             onUpdateCheckOnLaunchChange = {},
             onClearCache = {},
         )

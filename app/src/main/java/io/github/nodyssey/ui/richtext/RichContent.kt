@@ -77,6 +77,7 @@ import io.github.nodyssey.R
 import io.github.nodyssey.core.image.ImagesDeferredException
 import io.github.nodyssey.core.image.allowMeteredImage
 import io.github.nodyssey.core.report.QualityReportParser
+import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.InlineStyle
 import io.github.nodyssey.model.RichNode
@@ -554,6 +555,10 @@ private const val TERMINAL_CHROME_ALPHA = 0.7f
  * tagged it with: `language-ansi` is also how an unrelated coloured terminal paste arrives, and that
  * is not a report. Parsing is cheap next to the layout it feeds and is remembered on the node, so a
  * scroll past a thread of them does not repeat it.
+ *
+ * It is still parsed under 原文 ([ReportFormat.SOURCE]): the parse is what says this block is a
+ * report at all rather than an ordinary code block, and its title is what the inline block is
+ * labelled with.
  */
 @Composable
 private fun CodeOrReport(node: RichNode.CodeBlock) {
@@ -565,7 +570,17 @@ private fun CodeOrReport(node: RichNode.CodeBlock) {
 
     var showingSource by rememberSaveable(node.code) { mutableStateOf(false) }
 
-    ReportCard(report = report, onShowSource = { showingSource = true })
+    when (LocalReportFormat.current) {
+        ReportFormat.ADAPTED -> ReportCard(report = report, onShowSource = { showingSource = true })
+
+        ReportFormat.SOURCE ->
+            ReportSourceBlock(
+                title = report.title,
+                source = node.code,
+                columns = node.columns,
+                onExpand = { showingSource = true },
+            )
+    }
 
     if (showingSource) {
         ReportSourceDialog(

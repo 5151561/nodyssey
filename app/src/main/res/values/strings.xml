@@ -7,6 +7,7 @@
     <string name="action_expand">展开</string>
     <string name="action_collapse">收起</string>
     <string name="report_show_source">查看原始报告</string>
+    <string name="report_open_fullscreen">全屏查看</string>
     <string name="action_retry">重试</string>
     <string name="action_refresh">刷新</string>
     <string name="search_load_more_failed">加载更多失败</string>
@@ -277,6 +278,10 @@
     <string name="settings_external_link_hint">帖子里指向别的网站的链接怎么打开</string>
     <string name="settings_external_link_custom_tab">应用内浏览</string>
     <string name="settings_external_link_browser">系统浏览器</string>
+    <string name="settings_report_format">测评报告</string>
+    <string name="settings_report_format_hint">帖子里的跑分报告是重排成卡片还是照原样显示</string>
+    <string name="settings_report_format_adapted">适配格式</string>
+    <string name="settings_report_format_source">显示原文</string>
     <string name="settings_wifi_images">仅 Wi-Fi 下加载图片</string>
     <string name="settings_wifi_images_hint">移动网络显示占位图</string>
     <string name="settings_clear_cache">清除缓存</string>
