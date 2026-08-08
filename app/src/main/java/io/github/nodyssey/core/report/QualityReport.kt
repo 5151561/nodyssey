@@ -34,7 +34,7 @@ data class QualityReport(
         /** `标签：值`, with any indented continuation lines that followed it. */
         data class Field(
             val label: String,
-            val values: List<String>,
+            val values: List<Value>,
         ) : Block
 
         /** A row of `✔`/`✘` capability markers, such as 指令集 or 超开指标. */
@@ -61,12 +61,33 @@ data class QualityReport(
 
     data class Badge(
         val text: String,
-        val passed: Boolean,
+        val tone: Tone,
     )
 
     data class Row(
         val label: String,
-        /** One entry per column in the owning table; missing cells are empty strings. */
-        val cells: List<String>,
+        /** One entry per column in the owning table; a cell the row did not fill is empty. */
+        val cells: List<Value>,
     )
+
+    /**
+     * A piece of text and what the terminal's colour was saying about it.
+     *
+     * The scripts do not only colour for decoration: a red 高风险 next to a green 低风险 is the
+     * finding, and the risk table is eight columns of 是/否 that mean nothing until you see which
+     * ones are red. Reading those into a [Tone] here — rather than a packed colour — is what lets the
+     * card draw them in the theme's own palette, dark mode included.
+     */
+    data class Value(
+        val text: String,
+        val tone: Tone = Tone.Neutral,
+    )
+
+    enum class Tone {
+        /** No verdict: ordinary values, which the scripts write in their plain value ink. */
+        Neutral,
+        Good,
+        Warn,
+        Bad,
+    }
 }
