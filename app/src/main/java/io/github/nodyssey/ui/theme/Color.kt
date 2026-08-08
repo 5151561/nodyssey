@@ -184,6 +184,11 @@ internal val NodysseyDarkColorScheme =
  * `success` joins it for the benchmark reports: those mark a check as passed or failed, and Material
  * gives a role to only half of that pair. Green rather than a brand tone because the reports are
  * read as a verdict — `error` opposite `primary` would read as "bad" opposite "branded".
+ *
+ * [success] and [warning] are the ink of that pair rather than its fill, and they are separate
+ * colours rather than the `on…Container` ones: a container's ink is chosen to sit on that container,
+ * and the report cards write a green 低风险 straight onto the card surface, where the near-black
+ * `onSuccessContainer` would read as ordinary text. `error` already plays this role for the third.
  */
 @Immutable
 data class NodysseyExtraColors(
@@ -191,6 +196,8 @@ data class NodysseyExtraColors(
     val onWarningContainer: Color,
     val successContainer: Color,
     val onSuccessContainer: Color,
+    val success: Color,
+    val warning: Color,
 )
 
 internal val LightExtraColors =
@@ -199,6 +206,8 @@ internal val LightExtraColors =
         onWarningContainer = Color(0xFF4E3D00),
         successContainer = Color(0xFFBFE9C8),
         onSuccessContainer = Color(0xFF0A2E15),
+        success = Color(0xFF1B6B3A),
+        warning = Color(0xFF7A5A00),
     )
 
 internal val DarkExtraColors =
@@ -207,6 +216,8 @@ internal val DarkExtraColors =
         onWarningContainer = Color(0xFFF7E3A6),
         successContainer = Color(0xFF244A2F),
         onSuccessContainer = Color(0xFFBFE9C8),
+        success = Color(0xFF7FD79B),
+        warning = Color(0xFFE5C07B),
     )
 
 val LocalNodysseyExtraColors = staticCompositionLocalOf { LightExtraColors }

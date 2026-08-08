@@ -544,6 +544,9 @@ private enum class InlineImagePhase { Loading, Success, Deferred, Error }
 
 private val INLINE_IMAGE_LOADING_HEIGHT = 132.dp
 
+/** The language tag and the copy button on a terminal ground: present, but not competing with it. */
+private const val TERMINAL_CHROME_ALPHA = 0.7f
+
 /**
  * Draws a benchmark report as a report and everything else as code.
  *
@@ -568,6 +571,7 @@ private fun CodeOrReport(node: RichNode.CodeBlock) {
         ReportSourceDialog(
             title = report.title,
             source = node.code,
+            spans = node.spans,
             columns = node.columns,
             onDismiss = { showingSource = false },
         )
@@ -580,12 +584,21 @@ private fun CodeBlock(node: RichNode.CodeBlock) {
     val confirmation = stringResource(R.string.post_code_copied)
     val copyLabel = stringResource(R.string.action_copy)
 
+    // A block carrying colour runs is terminal output, and it is drawn on the terminal's own ground
+    // in both themes — see [rememberTerminalText] for why that palette cannot move onto a light
+    // surface. Ordinary code keeps the app's surface, where it has always been.
+    val terminal = node.spans.isNotEmpty()
+    val code = rememberTerminalText(node.code, node.spans)
+    val ground = if (terminal) ReportTerminalGround else MaterialTheme.colorScheme.surfaceContainer
+    val ink = if (terminal) ReportTerminalInk else MaterialTheme.colorScheme.onSurface
+    val chrome = if (terminal) ReportTerminalInk.copy(alpha = TERMINAL_CHROME_ALPHA) else MaterialTheme.colorScheme.onSurfaceVariant
+
     Column(
         modifier =
         Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceContainer),
+            .background(ground),
     ) {
         Row(
             modifier = Modifier
@@ -596,7 +609,7 @@ private fun CodeBlock(node: RichNode.CodeBlock) {
             Text(
                 text = node.language.orEmpty(),
                 style = CodeStyle.copy(fontSize = 11.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = chrome,
                 modifier = Modifier.weight(1f),
             )
             Row(
@@ -615,21 +628,21 @@ private fun CodeBlock(node: RichNode.CodeBlock) {
                 Icon(
                     imageVector = NodysseyIcons.ContentCopy,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = chrome,
                     modifier = Modifier.size(15.dp),
                 )
                 Text(
                     text = copyLabel,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = chrome,
                 )
             }
         }
         // Code must never reflow, so it scrolls sideways instead of wrapping.
         Text(
-            text = node.code,
+            text = code,
             style = CodeStyle,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = ink,
             softWrap = false,
             modifier =
             Modifier
