@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -77,48 +78,58 @@ fun ReportSourceDialog(
         val confirmation = stringResource(R.string.post_code_copied)
         val coloured = rememberTerminalText(source, spans)
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(ReportTerminalGround),
-        ) {
-            Column(Modifier.systemBarsPadding()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = Spacing.lg, end = Spacing.xs),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = ReportTerminalInk,
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(onClick = { copy("report", source, confirmation) }) {
-                        Icon(
-                            imageVector = NodysseyIcons.ContentCopy,
-                            contentDescription = stringResource(R.string.action_copy),
-                            tint = ReportTerminalInk,
-                            modifier = Modifier.size(18.dp),
+        // The dialog is its own window, and so its own layout root, but it is composed from inside the
+        // post's `SelectionContainer` and would inherit that container's `LocalSelectionRegistrar`.
+        // The text here would then register as selectable with a manager whose container lives in the
+        // other hierarchy, and the long press that a slow pinch always produces would ask it to map
+        // one root's coordinates into the other's: `layouts are not part of the same hierarchy`, and
+        // the app is gone. Severing the registrar is also what the pinch wants — selection handles
+        // fighting a two-finger zoom is not a gesture anyone can win — and the whole report is one
+        // button away in the clipboard regardless.
+        DisableSelection {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(ReportTerminalGround),
+            ) {
+                Column(Modifier.systemBarsPadding()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = Spacing.lg, end = Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = ReportTerminalInk,
+                            modifier = Modifier.weight(1f),
                         )
+                        IconButton(onClick = { copy("report", source, confirmation) }) {
+                            Icon(
+                                imageVector = NodysseyIcons.ContentCopy,
+                                contentDescription = stringResource(R.string.action_copy),
+                                tint = ReportTerminalInk,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(R.string.action_close),
+                                tint = ReportTerminalInk,
+                            )
+                        }
                     }
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.action_close),
-                            tint = ReportTerminalInk,
-                        )
-                    }
-                }
 
-                BoxWithFit(columns = columns, zoom = zoom, onZoom = { zoom = it }) { fontScale ->
-                    Text(
-                        text = coloured,
-                        style = ReportTerminalStyle.scaledBy(fontScale),
-                        color = ReportTerminalInk,
-                        softWrap = false,
-                    )
+                    BoxWithFit(columns = columns, zoom = zoom, onZoom = { zoom = it }) { fontScale ->
+                        Text(
+                            text = coloured,
+                            style = ReportTerminalStyle.scaledBy(fontScale),
+                            color = ReportTerminalInk,
+                            softWrap = false,
+                        )
+                    }
                 }
             }
         }
@@ -135,11 +146,16 @@ fun ReportSourceDialog(
  * fraction of it. The type still starts at the size that makes eighty columns fit rather than at a
  * readable one — that is what keeps the report's own alignment, its bars and its boxes, intact — so
  * the pinch and 全屏查看 are how it actually gets read.
+ *
+ * The colours come with it. 原文 means the output as the script wrote it, and the script wrote half
+ * its meaning in ANSI — a verdict is a green or a red chip, not a word — so a monochrome 原文 is a
+ * different report, not a plainer one.
  */
 @Composable
 fun ReportSourceBlock(
     title: String,
     source: String,
+    spans: List<AnsiSpan>,
     columns: Int,
     onExpand: () -> Unit,
     modifier: Modifier = Modifier,
@@ -150,6 +166,7 @@ fun ReportSourceBlock(
     }
     val copy = rememberClipboardCopy()
     val confirmation = stringResource(R.string.post_code_copied)
+    val coloured = rememberTerminalText(source, spans)
 
     Column(
         modifier = modifier
@@ -195,7 +212,7 @@ fun ReportSourceBlock(
                     .padding(horizontal = Spacing.md, vertical = Spacing.xs),
             ) {
                 Text(
-                    text = source,
+                    text = coloured,
                     style = ReportTerminalStyle.scaledBy(fitted * zoom),
                     color = ReportTerminalInk,
                     softWrap = false,
