@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.LinkAnnotation
@@ -29,6 +30,7 @@ import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Sizes
+import io.github.nodyssey.ui.theme.Spacing
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -38,6 +40,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.math.abs
 
 /**
  * Rendering tests for post bodies.
@@ -90,7 +93,8 @@ class RichContentTest {
         assertTrue("expected the NQ report's URL, was ${url.url}", url.url == NQ_URL)
 
         // Clicked on the first glyph rather than at the node's middle, which is where `performClick`
-        // would land: the cell is a fixed 88dp box and a two-letter label does not reach halfway.
+        // would land: a narrow table is stretched to fill its container, so the cell is far wider
+        // than its two-letter label and the label does not reach halfway.
         composeRule.onNodeWithText("NQ").performTouchInput {
             click(Offset(x = left + CELL_PADDING_PX, y = centerY))
         }
@@ -105,6 +109,62 @@ class RichContentTest {
 
         composeRule.onNodeWithText("一号车").assertIsDisplayed()
         composeRule.onNodeWithText("VMISS 美西").assertIsDisplayed()
+    }
+
+    /**
+     * Three short columns used to sit in fixed 88dp boxes, ellipsised, beside half a screen of
+     * nothing. A table narrower than its container stretches to fill it, so the last column's right
+     * edge is the container's right edge.
+     */
+    @Test
+    fun `a narrow table stretches to fill its container`() {
+        setContent(listOf(NQ_TABLE))
+
+        val root = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val lastCell = composeRule.onNodeWithText("NQ").fetchSemanticsNode().boundsInRoot
+        // The text node's bounds sit inside the cell's padding, so the cell's edge is one
+        // `Spacing.sm` beyond the text's.
+        val cellEdge = lastCell.right + with(composeRule.density) { Spacing.sm.toPx() }
+        assertTrue(
+            "expected the last column to end at the container's edge ${root.right}, was $cellEdge",
+            abs(cellEdge - root.right) <= 1.5f,
+        )
+    }
+
+    /**
+     * The other side of sizing columns to their content: in a table already wider than the screen,
+     * one prose cell must not push every other column a screen away, so a cell is capped at
+     * `MAX_CELL_FRACTION` (60%) of the table and the ellipsis — the only one left in the component
+     * — appears there. (A table with room to spare instead hands that room to its widest columns,
+     * past the cap; the cap defends the neighbours, not a shape.)
+     */
+    @Test
+    fun `a long cell is capped to keep its neighbours reachable`() {
+        val prose = "价格首年 9.9 刀,续费涨到 19.9,IPv4 一个,IPv6 一个 /64,机房在圣何塞,线路是 4837 回程"
+        setContent(
+            listOf(
+                RichNode.Table(
+                    cells =
+                    listOf(
+                        listOf("车次", "备注", "报告", "延迟", "丢包").map { listOf(InlineNode.Text(it)) },
+                        listOf(
+                            listOf(InlineNode.Text("一号车")),
+                            listOf(InlineNode.Text(prose)),
+                            listOf(InlineNode.Text("NQ")),
+                            listOf(InlineNode.Text("152ms")),
+                            listOf(InlineNode.Text("0.0%")),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val root = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val cell = composeRule.onNodeWithText(prose).fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "expected the prose cell to be capped under ${root.width * 0.6f}, was ${cell.width}",
+            cell.width <= root.width * 0.6f + 1.5f,
+        )
     }
 
     /**

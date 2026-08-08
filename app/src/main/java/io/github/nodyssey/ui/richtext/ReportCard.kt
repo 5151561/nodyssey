@@ -305,6 +305,7 @@ private fun ReportTable(table: QualityReport.Block.Table) {
     SpecTable(
         columns = table.columns.map(::AnnotatedString),
         rows = table.rows.map { SpecRow(label = it.label, cells = it.cells) },
+        labelMinWidth = LABEL_WIDTH,
     )
 }
 
@@ -354,8 +355,7 @@ internal val ReportTerminalStyle =
 /**
  * The width a field row reserves for its label before the value starts.
  *
- * Same number as [SpecTable]'s pinned column by design — a card reads as one grid whether the block
- * is a field list or a table — but it is a minimum here and a fixed width there, so the two are not
- * the same constant.
+ * Also handed to [SpecTable] as its pinned column's minimum — a card reads as one grid whether the
+ * block is a field list or a table, so the two label edges share one number.
  */
 private val LABEL_WIDTH = 92.dp
