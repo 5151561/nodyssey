@@ -9,6 +9,7 @@ import io.github.nodyssey.core.AppVersion
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.ExternalLinkTarget
+import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
@@ -63,6 +64,10 @@ class SettingsViewModel(
 
     fun setExternalLinkTarget(value: ExternalLinkTarget) {
         viewModelScope.launch { settings.setExternalLinkTarget(value) }
+    }
+
+    fun setReportFormat(value: ReportFormat) {
+        viewModelScope.launch { settings.setReportFormat(value) }
     }
 
     fun clearCache() {

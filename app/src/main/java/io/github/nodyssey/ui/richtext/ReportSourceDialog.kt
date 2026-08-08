@@ -1,6 +1,7 @@
 package io.github.nodyssey.ui.richtext
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.horizontalScroll
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,16 +27,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.nodyssey.R
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.rememberClipboardCopy
+import io.github.nodyssey.ui.theme.Sizes
 import io.github.nodyssey.ui.theme.Spacing
 
 /**
@@ -104,15 +112,107 @@ fun ReportSourceDialog(
                 BoxWithFit(columns = columns, zoom = zoom, onZoom = { zoom = it }) { fontScale ->
                     Text(
                         text = source,
-                        style = ReportTerminalStyle.copy(
-                            fontSize = ReportTerminalStyle.fontSize * fontScale,
-                            lineHeight = ReportTerminalStyle.lineHeight * fontScale,
-                        ),
+                        style = ReportTerminalStyle.scaledBy(fontScale),
                         color = ReportTerminalInk,
                         softWrap = false,
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * The same report, on the same ground, but inline in the floor — what 测评报告 = 原文 draws instead
+ * of [ReportCard].
+ *
+ * It is the [ReportSourceDialog]'s layout minus the parts a post body cannot have: no vertical
+ * scroller, because a floor is already inside one and the whole report is meant to scroll past with
+ * the rest of the post; and no cropping, because a setting that says 原文 must not quietly show a
+ * fraction of it. The type still starts at the size that makes eighty columns fit rather than at a
+ * readable one — that is what keeps the report's own alignment, its bars and its boxes, intact — so
+ * the pinch and 全屏查看 are how it actually gets read.
+ */
+@Composable
+fun ReportSourceBlock(
+    title: String,
+    source: String,
+    columns: Int,
+    onExpand: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var zoom by rememberSaveable(source) { mutableFloatStateOf(1f) }
+    val transform = rememberTransformableState { _, zoomChange, _, _ ->
+        zoom = (zoom * zoomChange).coerceIn(MIN_ZOOM, MAX_ZOOM)
+    }
+    val copy = rememberClipboardCopy()
+    val confirmation = stringResource(R.string.post_code_copied)
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(ReportTerminalGround),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = Spacing.md, end = Spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall,
+                color = ReportTerminalInk,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = { copy("report", source, confirmation) }) {
+                Icon(
+                    imageVector = NodysseyIcons.ContentCopy,
+                    contentDescription = stringResource(R.string.action_copy),
+                    tint = ReportTerminalInk,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                // `canPan = { false }` for the reason [BoxWithFit] gives, and it matters more here:
+                // a one-finger drag inside a floor belongs to the thread's list, not to this block.
+                .transformable(state = transform, canPan = { false }),
+        ) {
+            val fitted = fittedScale(maxWidth - Spacing.md * 2, columns)
+            Box(
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+            ) {
+                Text(
+                    text = source,
+                    style = ReportTerminalStyle.scaledBy(fitted * zoom),
+                    color = ReportTerminalInk,
+                    softWrap = false,
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onExpand)
+                .defaultMinSize(minHeight = Sizes.minTouchTarget)
+                .padding(horizontal = Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.report_open_fullscreen),
+                style = MaterialTheme.typography.labelLarge,
+                color = ReportTerminalInk,
+            )
         }
     }
 }
@@ -140,7 +240,7 @@ private fun BoxWithFit(
     // this replaces captured `zoom` by value inside `pointerInput(Unit)`, whose coroutine never
     // restarts — it multiplied every event against the initial 1f, and since calculateZoom returns a
     // per-event delta of a percent or two, the pinch could never actually reach a larger size.
-    val transform = rememberTransformableState { zoomChange, _, _ ->
+    val transform = rememberTransformableState { _, zoomChange, _, _ ->
         onZoom((zoom * zoomChange).coerceIn(MIN_ZOOM, MAX_ZOOM))
     }
     BoxWithConstraints(
@@ -148,13 +248,7 @@ private fun BoxWithFit(
             .fillMaxSize()
             .transformable(state = transform, canPan = { false }),
     ) {
-        val available = maxWidth - Spacing.lg * 2
-        // The advance of a monospace glyph is about six tenths of its size, so this is the size at
-        // which the widest line just fits. It is deliberately allowed to be tiny: the whole report
-        // at a glance is what the fit is for, and reading it is what the pinch is for.
-        val fitted = remember(available, columns) {
-            if (columns <= 0) 1f else (available.value / columns / MONOSPACE_ADVANCE / BASE_SIZE).coerceIn(MIN_FIT, 1f)
-        }
+        val fitted = fittedScale(maxWidth - Spacing.lg * 2, columns)
 
         Box(
             modifier = Modifier
@@ -167,6 +261,24 @@ private fun BoxWithFit(
         }
     }
 }
+
+/**
+ * The type size, as a fraction of [ReportTerminalStyle]'s, at which [columns] just fit across
+ * [available].
+ *
+ * The advance of a monospace glyph is about six tenths of its size, which is the whole of the
+ * arithmetic. It is deliberately allowed to come out tiny: the report at a glance is what the fit is
+ * for, and reading it is what the pinch is for.
+ */
+private fun fittedScale(available: Dp, columns: Int): Float =
+    if (columns <= 0) {
+        1f
+    } else {
+        (available.value / columns / MONOSPACE_ADVANCE / BASE_SIZE).coerceIn(MIN_FIT, 1f)
+    }
+
+private fun TextStyle.scaledBy(scale: Float): TextStyle =
+    copy(fontSize = fontSize * scale, lineHeight = lineHeight * scale)
 
 private const val MONOSPACE_ADVANCE = 0.6f
 private const val BASE_SIZE = 12f

@@ -20,6 +20,7 @@ import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.data.settings.isTimedNightHour
 import io.github.nodyssey.ui.common.rememberExternalUriHandler
 import io.github.nodyssey.ui.navigation.TopLevelDestination
+import io.github.nodyssey.ui.richtext.LocalReportFormat
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import kotlinx.coroutines.delay
 import java.util.Calendar
@@ -60,10 +61,13 @@ class MainActivity : ComponentActivity() {
                 // Every link that leaves the app goes through LocalUriHandler — the explicit
                 // `openUri` calls in Navigation and the ones Compose resolves for a link inside post
                 // text alike. Overriding it here, inside the theme so the tab can match the colours
-                // on screen, is what makes 外部链接打开方式 apply everywhere at once.
+                // on screen, is what makes 外部链接打开方式 apply everywhere at once. 测评报告 rides
+                // along for the same reason: a report can appear in any post body, and only this one
+                // place has to know which way the setting is pointing.
                 CompositionLocalProvider(
                     LocalUriHandler provides
                         rememberExternalUriHandler(settings.externalLinkTarget),
+                    LocalReportFormat provides settings.reportFormat,
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),

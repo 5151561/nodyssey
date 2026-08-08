@@ -53,6 +53,9 @@ class SettingsRepository(
                 externalLinkTarget = preferences[KEY_EXTERNAL_LINK_TARGET]
                     ?.let { runCatching { ExternalLinkTarget.valueOf(it) }.getOrNull() }
                     ?: ExternalLinkTarget.CUSTOM_TAB,
+                reportFormat = preferences[KEY_REPORT_FORMAT]
+                    ?.let { runCatching { ReportFormat.valueOf(it) }.getOrNull() }
+                    ?: ReportFormat.ADAPTED,
                 holidayTheme = preferences[KEY_HOLIDAY_THEME] ?: false,
                 searchHistory = decodeSearchHistory(preferences),
                 recentBoards = decodeValues(preferences[KEY_RECENT_BOARDS]),
@@ -110,6 +113,8 @@ class SettingsRepository(
 
     suspend fun setExternalLinkTarget(target: ExternalLinkTarget) =
         edit { it[KEY_EXTERNAL_LINK_TARGET] = target.name }
+
+    suspend fun setReportFormat(format: ReportFormat) = edit { it[KEY_REPORT_FORMAT] = format.name }
 
     suspend fun setNotificationsEnabled(enabled: Boolean) =
         edit { it[KEY_NOTIFICATIONS_ENABLED] = enabled }
@@ -374,6 +379,7 @@ class SettingsRepository(
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
         private val KEY_IMAGES_WIFI_ONLY = booleanPreferencesKey("images_on_wifi_only")
         private val KEY_EXTERNAL_LINK_TARGET = stringPreferencesKey("external_link_target")
+        private val KEY_REPORT_FORMAT = stringPreferencesKey("report_format")
         private val KEY_RECENT_SEARCHES = stringPreferencesKey("recent_searches")
         private val KEY_SEARCH_HISTORY = stringPreferencesKey("search_history_v3")
         private val KEY_RECENT_BOARDS = stringPreferencesKey("recent_boards")
@@ -469,6 +475,8 @@ data class UserSettings(
     val fontScale: Float = 1f,
     val imagesOnWifiOnly: Boolean = false,
     val externalLinkTarget: ExternalLinkTarget = ExternalLinkTarget.CUSTOM_TAB,
+    /** How a NodeQuality-style benchmark report is drawn in a post; see [ReportFormat]. */
+    val reportFormat: ReportFormat = ReportFormat.ADAPTED,
     /** Local mirror of the account's Remote 启用节日主题 switch. */
     val holidayTheme: Boolean = false,
     val searchHistory: List<SearchHistoryEntry> = emptyList(),
@@ -529,6 +537,20 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK, TIMED }
  * browser supports Custom Tabs, whatever this setting says.
  */
 enum class ExternalLinkTarget { CUSTOM_TAB, BROWSER }
+
+/**
+ * How a benchmark report inside a post is drawn.
+ *
+ * [ADAPTED] is the default: the report is read apart by
+ * [io.github.nodyssey.core.report.QualityReportParser] and drawn again as ordinary rows, because
+ * eighty columns of terminal art across a phone puts the type near 7sp.
+ *
+ * [SOURCE] draws it the way it was posted — the same terminal ground and fit-to-width type the
+ * full-screen 查看原始报告 uses, inline in the floor. The scripts are versioned and the card is an
+ * interpretation, so a reader who does not trust the interpretation gets to switch it off for good
+ * rather than tapping through to the original on every report.
+ */
+enum class ReportFormat { ADAPTED, SOURCE }
 
 /**
  * Whether the 定时 night window covers this hour.

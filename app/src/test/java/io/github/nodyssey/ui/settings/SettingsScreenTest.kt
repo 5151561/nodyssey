@@ -48,6 +48,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
                     onClearCache = {},
                 )
             }
@@ -69,6 +70,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
                     onClearCache = {},
                 )
             }
@@ -97,6 +99,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = { wifiOnly = it },
                     onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
                     onClearCache = {},
                 )
             }
@@ -117,6 +120,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = { target = it },
+                    onReportFormatChange = {},
                     onClearCache = {},
                 )
             }
@@ -125,6 +129,29 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("应用内浏览").assertIsSelected()
         composeRule.onNodeWithText("系统浏览器").performClick()
         composeRule.onNodeWithText("系统浏览器").assertIsSelected()
+    }
+
+    @Test
+    fun `report format defaults to the adapted card and can be switched to the source`() {
+        composeRule.setContent {
+            var format by remember { mutableStateOf(UserSettings().reportFormat) }
+            NodysseyTheme {
+                SettingsScreen(
+                    state = SettingsUiState(UserSettings(reportFormat = format)),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
+                    onReportFormatChange = { format = it },
+                    onClearCache = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("适配格式").assertIsSelected()
+        composeRule.onNodeWithText("显示原文").performClick()
+        composeRule.onNodeWithText("显示原文").assertIsSelected()
     }
 
     @Test
@@ -139,6 +166,7 @@ class SettingsScreenTest {
                     onFontScaleChange = { appliedScale = it },
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
                     onClearCache = {},
                 )
             }
@@ -169,6 +197,7 @@ class SettingsScreenTest {
                     onFontScaleChange = { appliedScale = it },
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
                     onClearCache = {},
                 )
             }
@@ -193,6 +222,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
                     onClearCache = {},
                 )
             }
@@ -212,6 +242,7 @@ class SettingsScreenTest {
                     onFontScaleChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
                     onClearCache = {},
                 )
             }
