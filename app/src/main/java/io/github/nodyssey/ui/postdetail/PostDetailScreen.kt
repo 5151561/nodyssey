@@ -120,6 +120,7 @@ import io.github.nodyssey.ui.theme.PostTitle
 import io.github.nodyssey.ui.theme.Sizes
 import io.github.nodyssey.ui.theme.Spacing
 import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.nodyssey.ui.theme.asSignature
 import io.github.nodyssey.ui.theme.readableWidth
 import kotlinx.coroutines.launch
 
@@ -931,6 +932,7 @@ private fun OriginalPost(
         }
         UserSignature(
             nodes = body.signatureNodes,
+            bodyStyle = MaterialTheme.typography.bodyLarge,
             onOpenBrowser = onOpenBrowser,
             onImageClick = onImageClick,
             onJumpToFloor = onJumpToFloor,
@@ -1075,6 +1077,7 @@ private fun CommentRow(
         )
         UserSignature(
             nodes = comment.signatureNodes,
+            bodyStyle = MaterialTheme.typography.bodyMedium,
             onOpenBrowser = onOpenBrowser,
             onImageClick = onImageClick,
             onJumpToFloor = onJumpToFloor,
@@ -1089,10 +1092,17 @@ private fun CommentRow(
     }
 }
 
-/** NodeSeek's public Markdown signature, visually separated from the floor's actual content. */
+/**
+ * NodeSeek's public Markdown signature, visually separated from the floor's actual content.
+ *
+ * [bodyStyle] is the style of the floor this signature hangs off, which [asSignature] steps down
+ * from — a signature is a footer to *that* text, so it has to stay smaller than it at any reading
+ * size rather than sit at a size of its own.
+ */
 @Composable
 private fun UserSignature(
     nodes: List<RichNode>,
+    bodyStyle: TextStyle,
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
@@ -1108,7 +1118,7 @@ private fun UserSignature(
         onLinkClick = onOpenBrowser,
         onImageClick = onImageClick,
         onQuoteRefClick = { onJumpToFloor(it.floor) },
-        textStyle = MaterialTheme.typography.labelMedium.copy(
+        textStyle = bodyStyle.asSignature().copy(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
     )

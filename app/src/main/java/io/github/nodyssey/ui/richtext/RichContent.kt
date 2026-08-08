@@ -198,13 +198,21 @@ private fun RichBlock(
                 inlines = node.inlines,
                 style =
                 textStyle.copy(
+                    // A multiple of the text it heads, not a fixed sp. The same renderer draws a
+                    // 16sp opening post and a signature two thirds that size, and absolute sizes
+                    // made a signature's `##` line the largest type on the floor it hung off — 20sp
+                    // bold over a 15sp reply, which is not what the site does with the same markup.
+                    // Sized off the base, headings also finally follow the reading-size preference,
+                    // which the fixed sizes ignored: at the largest setting an h1 came out *below*
+                    // the body it introduced.
                     fontSize =
-                    when (node.level) {
-                        1 -> 22.sp
-                        2 -> 20.sp
-                        3 -> 18.sp
-                        else -> 17.sp
-                    },
+                    textStyle.fontSize *
+                        when (node.level) {
+                            1 -> 1.375f
+                            2 -> 1.25f
+                            3 -> 1.125f
+                            else -> 1.0625f
+                        },
                     // Weight, never size alone: a level-4 heading and body text are two points
                     // apart and would otherwise be indistinguishable in Chinese.
                     fontWeight = FontWeight.Bold,
