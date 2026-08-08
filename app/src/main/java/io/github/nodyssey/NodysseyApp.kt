@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -41,7 +42,7 @@ open class NodysseyApp :
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().build()
 
-    /** Lives as long as the process; the settings watcher below is the only tenant. */
+    /** Lives as long as the process; the launch update check and the settings watcher below use it. */
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
@@ -49,10 +50,23 @@ open class NodysseyApp :
         container = DefaultAppContainer(this)
 
         NotificationChannels.ensure(this)
-        // The silent half of 应用内更新: ask once at launch so 设置 and 我的 can carry the dot from
-        // the first frame. Not forced, so the stored answer covers most launches and GitHub is asked
-        // at most once every few hours; a failure updates nothing and says nothing.
-        container.appUpdateRepository.check()
+        // 应用内更新 asks once per launch: the dot on 设置 and 我的 is there from the first frame, and a
+        // release the user has not been told about raises the reminder dialog. Not forced, so the
+        // stored answer covers most launches and GitHub is asked at most once every few hours; a
+        // failure updates nothing and says nothing.
+        //
+        // Read once rather than collected: this is a decision made at launch, and a setting flipped
+        // later takes effect at the next launch, which is the only thing it can mean.
+        //
+        // The updater is resolved here rather than inside the coroutine: building it reads the
+        // installed version out of PackageManager, and doing that on a background coroutine that can
+        // outlive the caller means doing it against an environment that may already be gone.
+        val updates = container.appUpdateRepository
+        applicationScope.launch {
+            if (container.settingsRepository.settings.first().updateCheckOnLaunch) {
+                updates.checkOnLaunch()
+            }
+        }
         // The scheduler follows the settings SSOT rather than being poked from the settings screen,
         // so the schedule is correct even when a setting changes without that screen ever opening.
         applicationScope.launch {

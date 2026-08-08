@@ -98,6 +98,99 @@ class AppUpdateRepositoryTest {
         }
 
     @Test
+    fun `the launch check asks about a new release, opening 关于 does not`() =
+        runTest {
+            val source = FakeReleaseSource(release("1.2.0"))
+            val repository = repository(source)
+
+            repository.check()
+            advanceUntilIdle()
+            assertEquals(UpdateCheck.Available(release("1.2.0")), repository.state.value.check)
+            assertNull(repository.launchReminder.value)
+
+            repository.checkOnLaunch()
+            advanceUntilIdle()
+            assertEquals(release("1.2.0"), repository.launchReminder.value)
+        }
+
+    @Test
+    fun `a launch answered from the stored record still asks`() =
+        runTest {
+            // The second launch inside the six-hour window: no call goes out, and the reminder is
+            // exactly what that launch is for.
+            val store =
+                FakeUpdateCheckStore(UpdateCheckRecord(checkedAtMillis = NOW, release = release("1.2.0")))
+            val source = FakeReleaseSource(release("1.2.0"))
+            val repository = repository(source, store, MutableClock(NOW + 1_000L))
+
+            repository.checkOnLaunch()
+            advanceUntilIdle()
+
+            assertEquals(0, source.calls)
+            assertEquals(release("1.2.0"), repository.launchReminder.value)
+        }
+
+    @Test
+    fun `稍后 settles that version, and only that version`() =
+        runTest {
+            val source = FakeReleaseSource(release("1.2.0"))
+            val store = FakeUpdateCheckStore()
+            val repository = repository(source, store)
+
+            repository.checkOnLaunch()
+            advanceUntilIdle()
+            repository.postponeLaunchReminder()
+            advanceUntilIdle()
+            assertNull(repository.launchReminder.value)
+            assertEquals("1.2.0", store.postponed)
+
+            // Every later launch stays quiet about it — the dot on 设置 is what still carries it.
+            repository.checkOnLaunch()
+            advanceUntilIdle()
+            assertNull(repository.launchReminder.value)
+            assertEquals(UpdateCheck.Available(release("1.2.0")), repository.state.value.check)
+
+            // The next release is a different question, and gets asked.
+            source.release = release("1.3.0")
+            repository.check(force = true)
+            advanceUntilIdle()
+            repository.checkOnLaunch()
+            advanceUntilIdle()
+            assertEquals(release("1.3.0"), repository.launchReminder.value)
+        }
+
+    @Test
+    fun `下载并安装 from the reminder closes it and fetches the APK`() =
+        runTest {
+            val source = FakeReleaseSource(release("1.2.0"))
+            val store = FakeUpdateCheckStore()
+            val repository = repository(source, store)
+
+            repository.checkOnLaunch()
+            advanceUntilIdle()
+            repository.acceptLaunchReminder()
+            advanceUntilIdle()
+
+            assertNull(repository.launchReminder.value)
+            assertEquals("1.2.0", (repository.state.value.download as UpdateDownload.Ready).versionName)
+            // Not 稍后: nothing was installed yet, so a launch after a download that never finished
+            // installing must still be able to bring it up.
+            assertNull(store.postponed)
+        }
+
+    @Test
+    fun `nothing is asked when there is nothing newer`() =
+        runTest {
+            val repository = repository(FakeReleaseSource(release("1.0.0")))
+
+            repository.checkOnLaunch()
+            advanceUntilIdle()
+
+            assertEquals(UpdateCheck.UpToDate, repository.state.value.check)
+            assertNull(repository.launchReminder.value)
+        }
+
+    @Test
     fun `a finished download is ready at a real path, and is not fetched twice`() =
         runTest {
             val source = FakeReleaseSource(release("1.2.0"))
@@ -224,9 +317,18 @@ private class FakeReleaseSource(
 private class FakeUpdateCheckStore(
     private var record: UpdateCheckRecord = UpdateCheckRecord(),
 ) : UpdateCheckStore {
+    var postponed: String? = null
+        private set
+
     override suspend fun updateCheckRecord(): UpdateCheckRecord = record
 
     override suspend fun setUpdateCheckRecord(record: UpdateCheckRecord) {
         this.record = record
+    }
+
+    override suspend fun postponedUpdateVersion(): String? = postponed
+
+    override suspend fun setPostponedUpdateVersion(versionName: String) {
+        postponed = versionName
     }
 }
