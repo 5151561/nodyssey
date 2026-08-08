@@ -48,7 +48,9 @@ scrolling stays in one list, and the UI follows the system theme.
 - 图片查看、缩放、保存与分享
 - 站外链接默认开在应用内的 Chrome Custom Tab，返回键回到帖子；设置 › 内容 › 站外链接可改回系统浏览器
 - 应用内更新：从本项目 GitHub Releases 查新版、看更新说明、下载后直接拉起系统安装器；
-  冷启动静默查一次（最多每六小时问一次 GitHub），有新版就在「我的」和关于入口上点红点
+  冷启动静默查一次（最多每六小时问一次 GitHub），有新版就在「我的」和关于入口上点红点，
+  并在启动后提醒一次（写清版本号、包大小和更新日志；「稍后」后该版本不再提醒，
+  可在设置 › 关于 › 启动时检查更新关掉）
 
 修改邮箱、绑定 Telegram、邀请码购买没有原生闭环，会带用户到真实站点完成。
 逐项清单见 [docs/implementation-status.md](docs/implementation-status.md)。

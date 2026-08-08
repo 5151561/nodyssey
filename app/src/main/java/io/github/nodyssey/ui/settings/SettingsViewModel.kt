@@ -70,6 +70,10 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setReportFormat(value) }
     }
 
+    fun setUpdateCheckOnLaunch(value: Boolean) {
+        viewModelScope.launch { settings.setUpdateCheckOnLaunch(value) }
+    }
+
     fun clearCache() {
         if (clearingCache.value) return
         viewModelScope.launch {

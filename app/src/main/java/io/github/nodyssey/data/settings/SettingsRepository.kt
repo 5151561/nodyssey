@@ -80,6 +80,7 @@ class SettingsRepository(
                 notifyReplies = preferences[KEY_NOTIFY_REPLIES] ?: true,
                 notifyMessages = preferences[KEY_NOTIFY_MESSAGES] ?: true,
                 readHistoryLimit = readHistoryLimit(preferences),
+                updateCheckOnLaunch = preferences[KEY_UPDATE_CHECK_ON_LAUNCH] ?: true,
             )
         }
 
@@ -115,6 +116,9 @@ class SettingsRepository(
         edit { it[KEY_EXTERNAL_LINK_TARGET] = target.name }
 
     suspend fun setReportFormat(format: ReportFormat) = edit { it[KEY_REPORT_FORMAT] = format.name }
+
+    suspend fun setUpdateCheckOnLaunch(enabled: Boolean) =
+        edit { it[KEY_UPDATE_CHECK_ON_LAUNCH] = enabled }
 
     suspend fun setNotificationsEnabled(enabled: Boolean) =
         edit { it[KEY_NOTIFICATIONS_ENABLED] = enabled }
@@ -333,6 +337,17 @@ class SettingsRepository(
             }
         }
 
+    /**
+     * The one version the user has said 稍后 to, kept as a version name rather than a timestamp.
+     *
+     * A version name is what makes "不再提醒这个版本" survive: the next release has a different name
+     * and asks again on its own, with no expiry to tune and nothing to reset when one ships.
+     */
+    override suspend fun postponedUpdateVersion(): String? = preferences()[KEY_UPDATE_POSTPONED]
+
+    override suspend fun setPostponedUpdateVersion(versionName: String) =
+        edit { it[KEY_UPDATE_POSTPONED] = versionName }
+
     /** One snapshot of the store, with the same IOException fallback [settings] has. */
     private suspend fun preferences(): Preferences =
         dataStore.data
@@ -403,6 +418,8 @@ class SettingsRepository(
         private val KEY_READ_HISTORY_LIMIT = intPreferencesKey("read_history_limit")
         private val KEY_UPDATE_CHECKED_AT = longPreferencesKey("update_checked_at")
         private val KEY_UPDATE_RELEASE = stringPreferencesKey("update_latest_release")
+        private val KEY_UPDATE_POSTPONED = stringPreferencesKey("update_postponed_version")
+        private val KEY_UPDATE_CHECK_ON_LAUNCH = booleanPreferencesKey("update_check_on_launch")
 
         private const val RECENT_SEARCH_SEPARATOR = '\u001F'
         private const val MAX_RECENT_SEARCHES = 8
@@ -514,6 +531,14 @@ data class UserSettings(
     val notifyMessages: Boolean = true,
     /** 浏览历史保留条数; [SettingsRepository.READ_HISTORY_UNLIMITED] for 无上限. */
     val readHistoryLimit: Int = SettingsRepository.DEFAULT_READ_HISTORY_LIMIT,
+    /**
+     * 启动时检查更新. On by default: an APK installed from Releases has nothing else to tell its owner
+     * that a fix shipped, and the check is one conditional request every six hours at most.
+     *
+     * Off means neither the launch check nor the reminder it raises — 关于 still checks when opened and
+     * on the 检查更新 button, which is a check the user asked for by being on that screen.
+     */
+    val updateCheckOnLaunch: Boolean = true,
 )
 
 /**

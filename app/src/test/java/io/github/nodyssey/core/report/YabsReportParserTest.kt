@@ -30,6 +30,8 @@ class YabsReportParserTest {
     private fun QualityReport.Section.field(label: String) =
         checkNotNull(blocks.filterIsInstance<QualityReport.Block.Field>().firstOrNull { it.label == label })
 
+    private fun QualityReport.Block.Field.texts() = values.map { it.text }
+
     /** This banner names no report, so the project that produced it is the only name available. */
     @Test
     fun `names the report after the project when the banner does not`() {
@@ -54,14 +56,17 @@ class YabsReportParserTest {
 
     @Test
     fun `reads a label written with a half-width colon`() {
-        assertEquals(listOf("Intel Xeon Processor (SierraForest)"), section("Basic System Information").field("Processor").values)
-        assertEquals(listOf("2 @ 2699.998 MHz"), section("Basic System Information").field("CPU cores").values)
+        assertEquals(
+            listOf("Intel Xeon Processor (SierraForest)"),
+            section("Basic System Information").field("Processor").texts(),
+        )
+        assertEquals(listOf("2 @ 2699.998 MHz"), section("Basic System Information").field("CPU cores").texts())
     }
 
     /** A colon inside a value must not be mistaken for the label's own. */
     @Test
     fun `does not cut a value at a colon of its own`() {
-        assertEquals(listOf("AS25820 IT7 Networks Inc"), section("IPv4 Network Information").field("ASN").values)
+        assertEquals(listOf("AS25820 IT7 Networks Inc"), section("IPv4 Network Information").field("ASN").texts())
     }
 
     @Test
@@ -70,10 +75,10 @@ class YabsReportParserTest {
         val aes = basics.blocks.filterIsInstance<QualityReport.Block.Badges>().first { it.label == "AES-NI" }
 
         assertEquals(listOf("Enabled"), aes.items.map { it.text })
-        assertTrue(aes.items.single().passed)
+        assertEquals(QualityReport.Tone.Good, aes.items.single().tone)
 
         val virt = basics.blocks.filterIsInstance<QualityReport.Block.Badges>().first { it.label == "VM-x/AMD-V" }
-        assertTrue(!virt.items.single().passed)
+        assertEquals(QualityReport.Tone.Bad, virt.items.single().tone)
     }
 
     /** yabs writes two verdicts into one field where xykt would have padded them apart. */
@@ -86,7 +91,10 @@ class YabsReportParserTest {
                 .first { it.label == "IPv4/IPv6" }
 
         assertEquals(listOf("Online", "Offline"), stack.items.map { it.text })
-        assertEquals(listOf(true, false), stack.items.map { it.passed })
+        assertEquals(
+            listOf(QualityReport.Tone.Good, QualityReport.Tone.Bad),
+            stack.items.map { it.tone },
+        )
     }
 
     @Test
@@ -96,7 +104,10 @@ class YabsReportParserTest {
         assertEquals(listOf("Location (Link)", "Send Speed", "Recv Speed", "Ping"), table.columns)
         assertEquals(6, table.rows.size)
         assertEquals("Clouvider", table.rows.first().label)
-        assertEquals(listOf("London, UK (10G)", "872 Mbits/sec", "920 Mbits/sec", "186 ms"), table.rows.first().cells)
+        assertEquals(
+            listOf("London, UK (10G)", "872 Mbits/sec", "920 Mbits/sec", "186 ms"),
+            table.rows.first().cells.map { it.text },
+        )
     }
 
     /**

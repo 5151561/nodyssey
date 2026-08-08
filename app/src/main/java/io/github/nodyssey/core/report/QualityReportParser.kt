@@ -74,9 +74,14 @@ object QualityReportParser {
      */
     private val SIGNED_RUN = Regex("""^([+-][^+-]+){3,}$""")
 
-    /** ANSI palette indices for the badge backgrounds the scripts use to mean good and bad. */
+    /** ANSI palette indices the scripts colour their verdicts with; 8 above each is its bright half. */
     private const val ANSI_RED = 1
     private const val ANSI_GREEN = 2
+    private const val ANSI_YELLOW = 3
+    private const val ANSI_BRIGHT = 8
+
+    /** Black and white, the two the palette has that say nothing on their own. */
+    private val CHIP_INKS = setOf(0, 7)
 
     /** A table needs at least this many rows under one header before it is worth calling a table. */
     private const val MIN_TABLE_ROWS = 2
@@ -112,7 +117,14 @@ object QualityReportParser {
             target = title?.groupValues?.get(2)?.trim()?.ifBlank { null },
             generatedAt = meta?.groupValues?.get(1)?.trim(),
             scriptVersion = meta?.groupValues?.get(2),
-            sections = sections(lines, offsets, from = rules[1] + 1, until = closing, spans = spans),
+            sections =
+            sections(
+                lines = lines,
+                offsets = offsets,
+                from = rules[1] + 1,
+                until = closing,
+                colours = Colours(code, spans),
+            ),
             footnotes =
             lines
                 .drop(closing + 1)
@@ -128,7 +140,7 @@ object QualityReportParser {
         offsets: List<Int>,
         from: Int,
         until: Int,
-        spans: List<AnsiSpan>,
+        colours: Colours,
     ): List<QualityReport.Section> {
         val sections = mutableListOf<QualityReport.Section>()
         var title: String? = null
@@ -136,7 +148,7 @@ object QualityReportParser {
 
         fun flush() {
             val pending = title ?: return
-            sections += QualityReport.Section(pending, blocks(rows, spans))
+            sections += QualityReport.Section(pending, blocks(rows, colours))
             rows = mutableListOf()
         }
 
@@ -166,8 +178,9 @@ object QualityReportParser {
             val previous = rows.lastOrNull()
             if (indented && previous != null) {
                 // A value too long for one line is continued indented under it, and belongs to the
-                // row above rather than to a row of its own.
-                previous.continuations += line.trim()
+                // row above rather than to a row of its own. It is kept as a row so that it keeps its
+                // offset, which is what its own colour is found by.
+                previous.continuations += RawRow(label = "", line = line, valueFrom = 0, lineOffset = offsets[index])
                 continue
             }
             rows += rawRow(line, offsets[index])
@@ -183,9 +196,14 @@ object QualityReportParser {
         val valueFrom: Int,
         /** Offset of [line] within the whole report, so cells can be found in the ANSI spans. */
         val lineOffset: Int,
-        val continuations: MutableList<String> = mutableListOf(),
+        /** The indented lines the value ran on to, each one a row of its own so it keeps its offset. */
+        val continuations: MutableList<RawRow> = mutableListOf(),
     ) {
         val value: String get() = line.substring(valueFrom)
+
+        /** The value's place in the whole report, which is the range its colours are looked up in. */
+        val valueFromInReport: Int get() = lineOffset + valueFrom
+        val valueUntilInReport: Int get() = lineOffset + line.length
     }
 
     private fun rawRow(line: String, offset: Int): RawRow {
@@ -220,7 +238,7 @@ object QualityReportParser {
 
     private fun blocks(
         rows: List<RawRow>,
-        spans: List<AnsiSpan>,
+        colours: Colours,
     ): List<QualityReport.Block> {
         val blocks = mutableListOf<QualityReport.Block>()
         var index = 0
@@ -228,7 +246,7 @@ object QualityReportParser {
         while (index < rows.size) {
             val row = rows[index]
 
-            val piped = pipeTableAt(rows, index)
+            val piped = pipeTableAt(rows, index, colours)
             if (piped != null) {
                 blocks += piped.block
                 index = piped.next
@@ -252,7 +270,7 @@ object QualityReportParser {
             }
 
             if (row.value.any { it in MARKS }) {
-                blocks += badges(row, spans)
+                blocks += badges(row, colours)
                 index++
                 continue
             }
@@ -264,7 +282,7 @@ object QualityReportParser {
                 continue
             }
 
-            val table = tableAt(rows, index)
+            val table = tableAt(rows, index, colours)
             if (table != null) {
                 blocks += table.block
                 index = table.next
@@ -274,27 +292,36 @@ object QualityReportParser {
             blocks += QualityReport.Block.Field(
                 label = row.label,
                 // Reflowing is the point: the padding held a terminal column that no longer exists.
-                values = (listOf(row.value) + row.continuations).map(::collapseSpaces).filter { it.isNotBlank() },
+                values =
+                (listOf(row) + row.continuations)
+                    .map {
+                        QualityReport.Value(
+                            text = collapseSpaces(it.value),
+                            tone = colours.toneAt(it.valueFromInReport, it.valueUntilInReport),
+                        )
+                    }.filter { it.text.isNotBlank() },
             )
             index++
         }
         return blocks
     }
 
-    private fun badges(row: RawRow, spans: List<AnsiSpan>): QualityReport.Block.Badges {
+    private fun badges(row: RawRow, colours: Colours): QualityReport.Block.Badges {
         val items =
-            cellsOf(row.line, row.valueFrom).flatMap { it.splitOnMarks() }.map { cell ->
+            cellsOf(row.line, row.valueFrom, row.lineOffset).flatMap { it.splitOnMarks() }.map { cell ->
                 val marker = cell.text.firstOrNull()
-                // The glyph says whether the feature is present; the background says whether that is
-                // good news. They disagree on 超开指标, where a working balloon reclaim is a warning.
-                val background = backgroundAt(spans, row.lineOffset + cell.from, row.lineOffset + cell.until)
+                // The glyph says whether the feature is present; the colour says whether that is good
+                // news. They disagree on 超开指标, where a working balloon reclaim is a warning.
+                // A row of marks is chips by construction, so its fills are read whatever ink the
+                // script put on them — xykt colours the ground and leaves the glyph's own colour be.
+                val tone = colours.toneAt(cell.fromInReport, cell.untilInReport, filled = true)
                 QualityReport.Badge(
                     text = cell.text.drop(1).trim().trim('/').trim(),
-                    passed =
-                    when (background) {
-                        ANSI_GREEN -> true
-                        ANSI_RED -> false
-                        else -> marker != null && marker in PASS_MARKS
+                    tone =
+                    when {
+                        tone != QualityReport.Tone.Neutral -> tone
+                        marker != null && marker in PASS_MARKS -> QualityReport.Tone.Good
+                        else -> QualityReport.Tone.Bad
                     },
                 )
             }
@@ -318,6 +345,7 @@ object QualityReportParser {
                 until = from + end,
                 columnFrom = columnFrom,
                 columnUntil = columnUntil,
+                lineOffset = lineOffset,
             )
         }
     }
@@ -326,12 +354,90 @@ object QualityReportParser {
         Regex("""[+-][^+-]+""").findAll(value).map { match ->
             QualityReport.Badge(
                 text = match.value.drop(1).trim(),
-                passed = match.value.first() == '+',
+                tone = if (match.value.first() == '+') QualityReport.Tone.Good else QualityReport.Tone.Bad,
             )
         }.toList()
 
-    private fun backgroundAt(spans: List<AnsiSpan>, from: Int, until: Int): Int? =
-        spans.firstOrNull { it.bg != null && it.start < until && it.end > from }?.bg
+    // --- Colour -------------------------------------------------------------
+
+    /**
+     * The report's text together with the colour runs over it, which only mean anything as a pair.
+     *
+     * These scripts colour for two different reasons and the card must only follow one of them. A
+     * verdict is a colour *about* the value — a red 高风险, a green 解锁 — and that is what belongs
+     * on the card. The rest is drawing: HardwareQuality writes its fio and ATTO throughputs onto
+     * coloured bars, so a slow disk and a fast one differ in how much of the row is filled, not in
+     * what the colour means. Reading those as verdicts would paint a page of ordinary numbers red.
+     */
+    private class Colours(private val text: String, private val spans: List<AnsiSpan>) {
+
+        /**
+         * What the escape sequences over `[from, until)` were saying about that text.
+         *
+         * Three shapes, in the order they override each other:
+         *
+         * 1. A **bold** colour. This is how every script writes a verdict it means — `低风险`,
+         *    the 是/否 of the risk table — and nothing draws bars in bold.
+         * 2. A **fill under contrasting ink**: ` 机房 ` in white on red is a chip, and the ink is
+         *    what separates it from a bar, which colours the ground and leaves the text as it was.
+         *    A range carrying several fills at once is 风险等级's legend, not a verdict.
+         * 3. A plain red or yellow run that is **exactly this text, on a row that draws no bars**.
+         *    `本地25端口出站：阻断` is written no louder than that. Both halves of the condition are
+         *    needed: a bar chart's own labels are drawn in the bar's colour, and some of them do land
+         *    on exactly one cell — but a row that fills anything is drawing, so nothing plain on it
+         *    is a verdict.
+         *
+         * Plain green never counts: it is the ink the scripts write ordinary values in, and taking
+         * it as good news would turn most of the card green and leave the findings no louder than
+         * the timezone.
+         *
+         * @param filled the range is known to be a chip, so its fill counts whatever the ink. Only
+         *   the `✔`/`✘` rows pass this: they are chips by construction, and xykt colours the ground
+         *   under those while leaving the glyph its own colour.
+         */
+        fun toneAt(from: Int, until: Int, filled: Boolean = false): QualityReport.Tone {
+            if (from >= until) return QualityReport.Tone.Neutral
+            val covering = spans.filter { it.start < until && it.end > from }
+
+            covering.firstNotNullOfOrNull { span -> if (span.bold) toneOf(span.fg) else null }
+                ?.let { return it }
+
+            val fills = covering.filter { filled || it.fg.isChipInk() }.mapNotNull { toneOf(it.bg) }.distinct()
+            if (fills.size == 1) return fills.single()
+            if (fills.isNotEmpty()) return QualityReport.Tone.Neutral
+
+            if (drawsBars(from, until)) return QualityReport.Tone.Neutral
+            return covering.firstNotNullOfOrNull { span ->
+                toneOf(span.fg)
+                    ?.takeIf { it != QualityReport.Tone.Good }
+                    ?.takeIf { inkOf(span.start, span.end) == inkOf(from, until) }
+            } ?: QualityReport.Tone.Neutral
+        }
+
+        /** Whether the row this range sits on fills anything, which makes it a drawing. */
+        private fun drawsBars(from: Int, until: Int): Boolean {
+            val start = text.lastIndexOf('\n', (from - 1).coerceAtLeast(0)) + 1
+            val end = text.indexOf('\n', until).takeIf { it >= 0 } ?: text.length
+            return spans.any { it.bg != null && it.start < end && it.end > start }
+        }
+
+        /** What a run actually put on screen, so that a run and a value can be compared as text. */
+        private fun inkOf(from: Int, until: Int): String {
+            val start = from.coerceIn(0, text.length)
+            return text.substring(start, until.coerceIn(start, text.length)).trim()
+        }
+
+        /** A palette index, bright half folded onto the plain one — the two mean the same here. */
+        private fun toneOf(colour: Int?): QualityReport.Tone? = when (colour?.rem(ANSI_BRIGHT)) {
+            ANSI_RED -> QualityReport.Tone.Bad
+            ANSI_GREEN -> QualityReport.Tone.Good
+            ANSI_YELLOW -> QualityReport.Tone.Warn
+            else -> null
+        }
+
+        /** Black or white: the ink a script picks when it means the colour behind it to be a label. */
+        private fun Int?.isChipInk(): Boolean = this != null && this.rem(ANSI_BRIGHT) in CHIP_INKS
+    }
 
     // --- Tables -------------------------------------------------------------
 
@@ -343,7 +449,7 @@ object QualityReportParser {
      * Read before the padded kind because these rows are aligned *and* pipe-separated, and splitting
      * them on their padding would give a different — wrong — number of columns.
      */
-    private fun pipeTableAt(rows: List<RawRow>, index: Int): Table? {
+    private fun pipeTableAt(rows: List<RawRow>, index: Int, colours: Colours): Table? {
         if (!rows[index].line.contains(PIPE)) return null
         // The separator is the whole test. xykt writes `3|低风险` and `IOPS||RND4K/Q32` with pipes
         // too, and neither draws a rule under its header.
@@ -360,18 +466,21 @@ object QualityReportParser {
         }
         if (end <= index + 2) return null
 
-        val columns = rows[index].line.split(PIPE).map { it.trim() }
+        val columns = pipeCells(rows[index])
         if (columns.size < 2) return null
 
         return Table(
             block =
             QualityReport.Block.Table(
                 // The first column names the row rather than a column, and becomes the label.
-                columns = columns.drop(1),
+                columns = columns.drop(1).map { it.text },
                 rows =
                 rows.subList(index + 2, end).map { row ->
-                    val cells = row.line.split(PIPE).map { it.trim() }
-                    QualityReport.Row(label = cells.first(), cells = cells.drop(1))
+                    val cells = pipeCells(row)
+                    QualityReport.Row(
+                        label = cells.first().text,
+                        cells = cells.drop(1).map { it.value(colours) },
+                    )
                 },
             ),
             next = end,
@@ -384,7 +493,7 @@ object QualityReportParser {
      * The header is the row whose cells name the columns — 数据库, 库, 服务商, 项目 — but which of
      * those it is differs per script, so it is found by shape rather than by name.
      */
-    private fun tableAt(rows: List<RawRow>, index: Int): Table? {
+    private fun tableAt(rows: List<RawRow>, index: Int, colours: Colours): Table? {
         var end = index + 1
         while (end < rows.size && dataCells(rows[end]).size >= MIN_TABLE_CELLS && !isBadgeRow(rows[end])) end++
         if (end - (index + 1) < MIN_TABLE_ROWS) return null
@@ -398,7 +507,10 @@ object QualityReportParser {
             block =
             QualityReport.Block.Table(
                 columns = columns.map { tightenCjk(it.text) },
-                rows = body.map { row -> QualityReport.Row(row.label, align(dataCells(row), columns, rows[index])) },
+                rows =
+                body.map { row ->
+                    QualityReport.Row(row.label, align(dataCells(row), columns, rows[index], colours))
+                },
             ),
             next = end,
         )
@@ -407,7 +519,7 @@ object QualityReportParser {
     private fun isBadgeRow(row: RawRow): Boolean = row.value.any { it in MARKS }
 
     private fun dataCells(row: RawRow): List<Cell> =
-        cellsOf(row.line, row.valueFrom)
+        cellsOf(row.line, row.valueFrom, row.lineOffset)
             .flatMap { it.splitOnColumnBreak() }
             .filter { it.text !in CONNECTORS }
 
@@ -419,7 +531,7 @@ object QualityReportParser {
      * must not be re-split. Which applies is decided by whether the counts already agree.
      */
     private fun headerCells(header: RawRow, widest: Int): List<Cell> {
-        val padded = cellsOf(header.line, header.valueFrom).flatMap { it.splitOnColumnBreak() }
+        val padded = cellsOf(header.line, header.valueFrom, header.lineOffset).flatMap { it.splitOnColumnBreak() }
         if (padded.size >= widest) return padded
 
         val resplit = padded.flatMap { it.splitOnSingleSpaces() }
@@ -437,14 +549,15 @@ object QualityReportParser {
         cells: List<Cell>,
         columns: List<Cell>,
         header: RawRow,
-    ): List<String> {
-        if (cells.size == columns.size) return cells.map { it.text }
+        colours: Colours,
+    ): List<QualityReport.Value> {
+        if (cells.size == columns.size) return cells.map { it.value(colours) }
 
-        val result = MutableList(columns.size) { "" }
+        val result = MutableList(columns.size) { QualityReport.Value("") }
         cells.forEach { cell ->
             val column = columns.indices.maxByOrNull { overlap(cell, columns[it], header) } ?: return@forEach
-            if (overlap(cell, columns[column], header) > 0 && result[column].isEmpty()) {
-                result[column] = cell.text
+            if (overlap(cell, columns[column], header) > 0 && result[column].text.isEmpty()) {
+                result[column] = cell.value(colours)
             }
         }
         return result
@@ -467,7 +580,15 @@ object QualityReportParser {
         val until: Int,
         val columnFrom: Int,
         val columnUntil: Int,
-    )
+        /** Offset of the line this was cut out of, which turns [from] into a place in the report. */
+        val lineOffset: Int,
+    ) {
+        val fromInReport: Int get() = lineOffset + from
+        val untilInReport: Int get() = lineOffset + until
+    }
+
+    private fun Cell.value(colours: Colours): QualityReport.Value =
+        QualityReport.Value(text = text, tone = colours.toneAt(fromInReport, untilInReport))
 
     /**
      * Splits a padded line into cells.
@@ -475,7 +596,7 @@ object QualityReportParser {
      * Two spaces separate columns and one space does not, which is the rule the scripts pad to:
      * `总 分` and `0.80, 0.36` are single values that happen to contain a space.
      */
-    private fun cellsOf(line: String, from: Int): List<Cell> {
+    private fun cellsOf(line: String, from: Int, lineOffset: Int): List<Cell> {
         val cells = mutableListOf<Cell>()
         var index = from
         while (index < line.length) {
@@ -499,8 +620,32 @@ object QualityReportParser {
                 until = until,
                 columnFrom = TerminalColumns.columnAt(line, index),
                 columnUntil = TerminalColumns.columnAt(line, until),
+                lineOffset = lineOffset,
             )
             index = scan
+        }
+        return cells
+    }
+
+    /** yabs' own cells, cut at the pipes it draws its columns with. */
+    private fun pipeCells(row: RawRow): List<Cell> {
+        val cells = mutableListOf<Cell>()
+        var start = 0
+        while (start <= row.line.length) {
+            val pipe = row.line.indexOf(PIPE, start).takeIf { it >= 0 } ?: row.line.length
+            var from = start
+            var until = pipe
+            while (from < until && row.line[from].isWhitespace()) from++
+            while (until > from && row.line[until - 1].isWhitespace()) until--
+            cells += Cell(
+                text = row.line.substring(from, until),
+                from = from,
+                until = until,
+                columnFrom = TerminalColumns.columnAt(row.line, from),
+                columnUntil = TerminalColumns.columnAt(row.line, until),
+                lineOffset = row.lineOffset,
+            )
+            start = pipe + 1
         }
         return cells
     }
@@ -509,13 +654,13 @@ object QualityReportParser {
         if (!text.contains(COLUMN_BREAK)) return listOf(this)
         // Positions stop being meaningful once a cell is cut up, and only badges need them.
         return text.split(COLUMN_BREAK).map { part ->
-            Cell(part.trim(), from, until, columnFrom, columnUntil)
+            Cell(part.trim(), from, until, columnFrom, columnUntil, lineOffset)
         }.filter { it.text.isNotEmpty() }
     }
 
     private fun Cell.splitOnSingleSpaces(): List<Cell> =
         text.split(' ').filter { it.isNotBlank() }.map { part ->
-            Cell(part, from, until, columnFrom, columnUntil)
+            Cell(part, from, until, columnFrom, columnUntil, lineOffset)
         }
 
     // --- Text ---------------------------------------------------------------

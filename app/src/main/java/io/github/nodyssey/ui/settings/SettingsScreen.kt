@@ -68,6 +68,7 @@ fun SettingsRoute(
         onImagesOnWifiOnlyChange = viewModel::setImagesOnWifiOnly,
         onExternalLinkTargetChange = viewModel::setExternalLinkTarget,
         onReportFormatChange = viewModel::setReportFormat,
+        onUpdateCheckOnLaunchChange = viewModel::setUpdateCheckOnLaunch,
         onClearCache = viewModel::clearCache,
         onOpenNotifications = onOpenNotifications,
         onOpenAbout = onOpenAbout,
@@ -86,6 +87,7 @@ fun SettingsScreen(
     onImagesOnWifiOnlyChange: (Boolean) -> Unit,
     onExternalLinkTargetChange: (ExternalLinkTarget) -> Unit,
     onReportFormatChange: (ReportFormat) -> Unit,
+    onUpdateCheckOnLaunchChange: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenNotifications: () -> Unit = {},
@@ -241,6 +243,18 @@ fun SettingsScreen(
                     trailing = { if (state.updateVersionName != null) UpdateDot() },
                 )
                 SettingsRow(
+                    title = stringResource(R.string.settings_update_on_launch),
+                    subtitle = stringResource(R.string.settings_update_on_launch_hint),
+                    checked = state.settings.updateCheckOnLaunch,
+                    onCheckedChange = onUpdateCheckOnLaunchChange,
+                    trailing = {
+                        Switch(
+                            checked = state.settings.updateCheckOnLaunch,
+                            onCheckedChange = null,
+                        )
+                    },
+                )
+                SettingsRow(
                     title = stringResource(R.string.settings_licenses),
                     bottom = true,
                     onClick = onOpenLicenses,
@@ -330,6 +344,7 @@ private fun SettingsPreview() {
             onImagesOnWifiOnlyChange = {},
             onExternalLinkTargetChange = {},
             onReportFormatChange = {},
+            onUpdateCheckOnLaunchChange = {},
             onClearCache = {},
         )
     }

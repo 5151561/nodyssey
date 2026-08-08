@@ -101,6 +101,7 @@ import io.github.nodyssey.ui.settings.PrivacyRoute
 import io.github.nodyssey.ui.settings.PrivacyViewModel
 import io.github.nodyssey.ui.settings.SettingsRoute
 import io.github.nodyssey.ui.settings.SettingsViewModel
+import io.github.nodyssey.ui.settings.UpdateReminderDialog
 import io.github.nodyssey.ui.space.FollowRoute
 import io.github.nodyssey.ui.space.FollowViewModel
 import io.github.nodyssey.ui.space.UserSpaceRoute
@@ -943,6 +944,25 @@ fun MainNavigation(
             TopLevelDestination.NOTIFICATIONS -> notificationEntries
             TopLevelDestination.PROFILE -> profileEntries
         }
+
+    /*
+     * 启动提醒 lives here rather than on any screen: the launch check answers while whatever tab was
+     * last open is drawing, and a dialog owned by a screen would be missed by everyone who does not
+     * happen to be on that screen. Read straight off the shared updater — the same instance 关于 uses,
+     * so 下载并安装 hands the download to a screen that is already watching it.
+     */
+    val updateReminder by container.appUpdateRepository.launchReminder.collectAsStateWithLifecycle()
+    updateReminder?.let { release ->
+        UpdateReminderDialog(
+            release = release,
+            onDownload = {
+                container.appUpdateRepository.acceptLaunchReminder()
+                // Onto the current tab's stack, so Back returns to whatever the reminder interrupted.
+                backStack.add(AboutAppKey)
+            },
+            onPostpone = container.appUpdateRepository::postponeLaunchReminder,
+        )
+    }
 
     NavigationSuiteScaffold(
         navigationItems = {

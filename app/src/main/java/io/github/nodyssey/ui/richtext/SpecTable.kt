@@ -143,17 +143,14 @@ internal fun SpecTable(
 /**
  * One row: the pinned label, then one entry per column. Missing entries render blank.
  *
- * Cells are annotated rather than plain, because a post body's table cell can carry a link and the
- * annotation is what keeps it tappable. A report's cells are plain strings and use the secondary
- * constructor.
+ * Cells are annotated rather than plain, because both surfaces need more than characters out of a
+ * cell: a post body's cell can carry a link, and the annotation is what keeps it tappable, while a
+ * report's cell carries the colour its verdict was written in.
  */
 internal data class SpecRow(
     val label: AnnotatedString,
     val cells: List<AnnotatedString>,
-) {
-    constructor(label: String, cells: List<String>) :
-        this(AnnotatedString(label), cells.map(::AnnotatedString))
-}
+)
 
 /**
  * A grid whose first row is the header and whose first column is the row label.

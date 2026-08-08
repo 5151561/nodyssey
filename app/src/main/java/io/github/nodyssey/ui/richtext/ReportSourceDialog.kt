@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.nodyssey.R
+import io.github.nodyssey.model.AnsiSpan
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.rememberClipboardCopy
 import io.github.nodyssey.ui.theme.Sizes
@@ -63,6 +64,7 @@ import io.github.nodyssey.ui.theme.Spacing
 fun ReportSourceDialog(
     title: String,
     source: String,
+    spans: List<AnsiSpan>,
     columns: Int,
     onDismiss: () -> Unit,
 ) {
@@ -73,6 +75,7 @@ fun ReportSourceDialog(
         var zoom by remember(source) { mutableFloatStateOf(1f) }
         val copy = rememberClipboardCopy()
         val confirmation = stringResource(R.string.post_code_copied)
+        val coloured = rememberTerminalText(source, spans)
 
         Box(
             modifier = Modifier
@@ -111,7 +114,7 @@ fun ReportSourceDialog(
 
                 BoxWithFit(columns = columns, zoom = zoom, onZoom = { zoom = it }) { fontScale ->
                     Text(
-                        text = source,
+                        text = coloured,
                         style = ReportTerminalStyle.scaledBy(fontScale),
                         color = ReportTerminalInk,
                         softWrap = false,

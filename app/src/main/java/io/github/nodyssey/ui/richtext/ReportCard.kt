@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -61,6 +62,11 @@ import io.github.nodyssey.ui.theme.TABULAR_FIGURES
  * the padding encoded — this is a label, that is its value, these five belong to one comparison — is
  * recovered by [io.github.nodyssey.core.report.QualityReportParser] and drawn again at [ReportData]'s
  * 13sp, where a value that no longer fits wraps instead of scrolling off the side.
+ *
+ * The colours come across with it. A red 高风险 beside a green 低风险 is the finding these reports
+ * exist for, and eight columns of 是/否 mean nothing in one ink — so each verdict arrives as a
+ * [QualityReport.Tone] and is drawn in the theme's own red, green or amber rather than the
+ * terminal's.
  *
  * The scripts are versioned and their layout moves, so [onShowSource] stays available on every card:
  * whatever this misreads, the original is one tap away and is still the thing that was posted.
@@ -242,13 +248,28 @@ private fun FieldRow(field: QualityReport.Block.Field) {
         ) {
             field.values.forEach { value ->
                 Text(
-                    text = value,
+                    text = value.text,
                     style = ReportData.copy(fontFeatureSettings = TABULAR_FIGURES),
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = toneColour(value.tone),
                 )
             }
         }
     }
+}
+
+/**
+ * The theme's colour for a verdict the terminal wrote in its own.
+ *
+ * The mapping is the point of keeping [QualityReport.Tone] out of the parser's own palette: a script
+ * writing `低风险` in ANSI green means "this is good news", and good news here is whatever green the
+ * theme is currently using — which in dark mode is not the same green at all.
+ */
+@Composable
+private fun toneColour(tone: QualityReport.Tone): Color = when (tone) {
+    QualityReport.Tone.Neutral -> MaterialTheme.colorScheme.onSurface
+    QualityReport.Tone.Good -> LocalNodysseyExtraColors.current.success
+    QualityReport.Tone.Warn -> LocalNodysseyExtraColors.current.warning
+    QualityReport.Tone.Bad -> MaterialTheme.colorScheme.error
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -277,14 +298,20 @@ private fun BadgeRow(badges: QualityReport.Block.Badges) {
                     // carries the verdict, the text only has to stay legible.
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
                     color =
-                    if (badge.passed) extra.onSuccessContainer else MaterialTheme.colorScheme.onErrorContainer,
+                    when (badge.tone) {
+                        QualityReport.Tone.Good -> extra.onSuccessContainer
+                        QualityReport.Tone.Warn -> extra.onWarningContainer
+                        QualityReport.Tone.Bad -> MaterialTheme.colorScheme.onErrorContainer
+                        QualityReport.Tone.Neutral -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .background(
-                            if (badge.passed) {
-                                extra.successContainer
-                            } else {
-                                MaterialTheme.colorScheme.errorContainer
+                            when (badge.tone) {
+                                QualityReport.Tone.Good -> extra.successContainer
+                                QualityReport.Tone.Warn -> extra.warningContainer
+                                QualityReport.Tone.Bad -> MaterialTheme.colorScheme.errorContainer
+                                QualityReport.Tone.Neutral -> MaterialTheme.colorScheme.surfaceContainerHigh
                             },
                         ).padding(horizontal = 6.dp, vertical = 2.dp),
                 )
@@ -304,7 +331,16 @@ private fun BadgeRow(badges: QualityReport.Block.Badges) {
 private fun ReportTable(table: QualityReport.Block.Table) {
     SpecTable(
         columns = table.columns.map(::AnnotatedString),
-        rows = table.rows.map { SpecRow(label = it.label, cells = it.cells) },
+        rows =
+        table.rows.map { row ->
+            SpecRow(
+                label = AnnotatedString(row.label),
+                // The verdict is carried on the cell rather than passed to the table, because a
+                // table's colour is per cell: 风险因子 is eight columns of 是/否 whose whole meaning
+                // is which of them came back red.
+                cells = row.cells.map { AnnotatedString(it.text, SpanStyle(color = toneColour(it.tone))) },
+            )
+        },
         labelMinWidth = LABEL_WIDTH,
     )
 }
