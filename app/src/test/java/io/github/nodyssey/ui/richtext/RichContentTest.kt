@@ -1,11 +1,16 @@
 package io.github.nodyssey.ui.richtext
 
 import android.content.Context
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import coil3.ColorImage
@@ -20,6 +25,7 @@ import coil3.request.ImageResult
 import coil3.request.SuccessResult
 import io.github.nodyssey.core.image.AllowMeteredImage
 import io.github.nodyssey.core.image.ImagesDeferredException
+import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.theme.NodysseyTheme
 import io.github.nodyssey.ui.theme.Sizes
@@ -59,13 +65,46 @@ class RichContentTest {
     private fun setContent(
         nodes: List<RichNode>,
         imageLoader: ImageLoader? = null,
+        onLinkClick: (String) -> Unit = {},
     ) {
         imageLoader?.let(SingletonImageLoader::setUnsafe)
         composeRule.setContent {
             NodysseyTheme {
-                RichContent(nodes = nodes, onLinkClick = {}, onImageClick = {})
+                RichContent(nodes = nodes, onLinkClick = onLinkClick, onImageClick = {})
             }
         }
+    }
+
+    /**
+     * A 拼车 post files its NodeQuality reports in a table column, and the cell used to be read as a
+     * plain string — the reader could see "点击查看 NQ" and could not follow it.
+     */
+    @Test
+    fun `a link in a table cell stays a link`() {
+        val followed = mutableListOf<String>()
+        setContent(nodes = listOf(NQ_TABLE), onLinkClick = followed::add)
+
+        val cell = composeRule.onNodeWithText("NQ").assertIsDisplayed().fetchSemanticsNode()
+        val text = cell.config[SemanticsProperties.Text].single()
+        val url = text.getLinkAnnotations(0, text.length).single().item as LinkAnnotation.Url
+        assertTrue("expected the NQ report's URL, was ${url.url}", url.url == NQ_URL)
+
+        // Clicked on the first glyph rather than at the node's middle, which is where `performClick`
+        // would land: the cell is a fixed 88dp box and a two-letter label does not reach halfway.
+        composeRule.onNodeWithText("NQ").performTouchInput {
+            click(Offset(x = left + CELL_PADDING_PX, y = centerY))
+        }
+
+        assertTrue("expected the tap to be reported, got $followed", followed == listOf(NQ_URL))
+    }
+
+    /** The first column is the row label, so a link there has to survive the same trip. */
+    @Test
+    fun `a table renders the cells around a link`() {
+        setContent(listOf(NQ_TABLE))
+
+        composeRule.onNodeWithText("一号车").assertIsDisplayed()
+        composeRule.onNodeWithText("VMISS 美西").assertIsDisplayed()
     }
 
     /**
@@ -180,3 +219,20 @@ class RichContentTest {
 }
 
 private const val IMAGE_URL = "https://www.nodeseek.com/static/example.png"
+private const val NQ_URL = "https://nodequality.com/r/abc"
+
+/** A cell's horizontal padding, plus a glyph's width, at this test's 1x density. */
+private const val CELL_PADDING_PX = 12f
+
+private val NQ_TABLE =
+    RichNode.Table(
+        cells =
+        listOf(
+            listOf("车次", "节点范围", "报告").map { listOf(InlineNode.Text(it)) },
+            listOf(
+                listOf(InlineNode.Text("一号车")),
+                listOf(InlineNode.Text("VMISS 美西")),
+                listOf(InlineNode.Link(text = "NQ", url = NQ_URL)),
+            ),
+        ),
+    )

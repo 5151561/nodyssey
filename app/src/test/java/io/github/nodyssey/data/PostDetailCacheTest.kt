@@ -1,8 +1,10 @@
 package io.github.nodyssey.data
 
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.nodyssey.data.local.RichContentJson
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.data.local.toSnapshot
+import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.RichNode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -313,6 +315,27 @@ class PostDetailCacheTest {
             )
         }
 
+    /**
+     * A table cached before its cells carried inline content still decodes.
+     *
+     * The converter lets a decode failure out into the DAO, so a row this build could not read would
+     * be a crash on opening a thread that was cached by the previous one — not a lost cache entry.
+     */
+    @Test
+    fun `reads a table cached as plain strings`() {
+        val stored = """{"type":"table","rows":[["节点","延迟"],["东京","48ms"]]}"""
+
+        val table = RichContentJson.format.decodeFromString<RichNode>(stored) as RichNode.Table
+
+        assertEquals(
+            listOf(
+                listOf(listOf(InlineNode.Text("节点")), listOf(InlineNode.Text("延迟"))),
+                listOf(listOf(InlineNode.Text("东京")), listOf(InlineNode.Text("48ms"))),
+            ),
+            table.content,
+        )
+    }
+
     /** Rich content survives a round trip through JSON, including the sealed-node discriminators. */
     @Test
     fun `stored rich content round trips`() =
@@ -322,7 +345,15 @@ class PostDetailCacheTest {
                     RichNode.Heading(level = 2, inlines = emptyList()),
                     RichNode.CodeBlock("println(1)", language = "kotlin"),
                     RichNode.Divider,
-                    RichNode.Table(rows = listOf(listOf("a", "b"))),
+                    RichNode.Table(
+                        cells =
+                        listOf(
+                            listOf(
+                                listOf(InlineNode.Text("a")),
+                                listOf(InlineNode.Link(text = "b", url = "https://example.com")),
+                            ),
+                        ),
+                    ),
                 )
             remote.detailResult = { postId, page ->
                 FakePostRemoteDataSource.detail(
