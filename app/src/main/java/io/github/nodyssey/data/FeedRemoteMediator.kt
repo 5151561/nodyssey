@@ -32,6 +32,15 @@ class FeedRemoteMediator(
     private val database: NodeSeekDatabase,
     private val clock: AppClock,
     /**
+     * Which of the site's pages a refresh starts from. [FIRST_PAGE] for every list the reader simply
+     * opened; anything else is 首页翻页栏 having been sent somewhere.
+     *
+     * A jump is a different feed as far as the stored rows are concerned — page 40 does not append
+     * onto page 1, it replaces it — so it arrives as a new mediator rather than as a method call, the
+     * same way switching board or sort order does.
+     */
+    private val startPage: Int = FIRST_PAGE,
+    /**
      * How one page of this feed is fetched.
      *
      * A lambda rather than a `categorySlug` + `sort` pair because search is the same feed read from
@@ -47,8 +56,16 @@ class FeedRemoteMediator(
      * `SKIP_INITIAL_REFRESH` is the acceptance criterion for phase two made executable: coming back
      * from a post within the cache window shows the stored list and issues no request, so the
      * scroll position survives because nothing invalidated it.
+     *
+     * Freshness is the second question, not the first. A feed stored from page 1 is no answer at all
+     * to "show me page 40", however recently it was written, so a stored window that starts somewhere
+     * other than [startPage] refreshes regardless of the clock — including on the way back, when the
+     * reader leaves page 40 and asks for page 1 again.
      */
     override suspend fun initialize(): InitializeAction {
+        if (database.feedDao().firstLoadedPage(feedKey) != startPage) {
+            return InitializeAction.LAUNCH_INITIAL_REFRESH
+        }
         val refreshedAt =
             database.feedDao().remoteKey(feedKey)?.refreshedAtMillis
                 ?: return InitializeAction.LAUNCH_INITIAL_REFRESH
@@ -68,10 +85,11 @@ class FeedRemoteMediator(
         val page =
             when (loadType) {
                 LoadType.REFRESH -> {
-                    FIRST_PAGE
+                    startPage
                 }
 
-                // The site only paginates forwards, and refresh always restarts at page 1.
+                // The site only paginates forwards, and a refresh restarts the whole window. Reaching
+                // the page before a jumped-to one is 翻页栏's job, not scrolling upwards.
                 LoadType.PREPEND -> {
                     return MediatorResult.Success(endOfPaginationReached = true)
                 }
@@ -100,6 +118,7 @@ class FeedRemoteMediator(
                             feedKey = feedKey,
                             postId = post.postId,
                             sortIndex = baseSortIndex + offset,
+                            page = page,
                         )
                     },
                 )
@@ -107,6 +126,9 @@ class FeedRemoteMediator(
                     FeedRemoteKeyEntity(
                         feedKey = feedKey,
                         nextPage = if (result.hasNextPage) page + 1 else null,
+                        // The pager's own highest number, which only 首页翻页栏 reads. A page that
+                        // renders no pager reports itself as the total, so a one-page feed stays 1.
+                        totalPages = maxOf(result.totalPages, page),
                         // Only a refresh resets the clock. If appending bumped it, scrolling a long
                         // list would keep pushing the staleness window out and the feed would never
                         // refresh again.

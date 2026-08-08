@@ -309,7 +309,13 @@ private class FakeProfileRepository(
 }
 
 private object NoOpPostRepository : PostRepository {
-    override fun feed(categorySlug: String?, sort: FeedSort): Flow<PagingData<FeedPost>> = emptyFlow()
+    override fun feed(
+        categorySlug: String?,
+        sort: FeedSort,
+        startPage: Int,
+    ): Flow<PagingData<FeedPost>> = emptyFlow()
+
+    override fun feedTotalPages(categorySlug: String?, sort: FeedSort): Flow<Int> = emptyFlow()
 
     override fun searchFeed(
         query: String,

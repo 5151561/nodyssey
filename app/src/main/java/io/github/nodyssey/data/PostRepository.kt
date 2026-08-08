@@ -45,6 +45,11 @@ data class FeedPost(
     val isRead: Boolean,
     /** Replies added since the user last opened the thread. Zero when unread or unchanged. */
     val newCommentCount: Int,
+    /**
+     * Which of the site's pages the row arrived on, or null when it did not come out of a feed —
+     * local search matches the whole post cache, where the question has no answer.
+     */
+    val page: Int? = null,
 )
 
 /**
@@ -96,11 +101,30 @@ internal fun emptyLoadedPagingData(): PagingData<FeedPost> =
  * ViewModel field — the mistake this project already made once with the board list.
  */
 interface PostRepository {
-    /** A pager backed by the database, refilled from the network by [FeedRemoteMediator]. */
+    /**
+     * A pager backed by the database, refilled from the network by [FeedRemoteMediator].
+     *
+     * @param startPage where the window begins. Callers that simply want the feed leave it alone; it
+     * is 首页翻页栏 that asks for anything else, and asking for a different one is what replaces the
+     * stored window rather than appending to it.
+     */
     fun feed(
         categorySlug: String?,
         sort: FeedSort,
+        startPage: Int = FeedRemoteMediator.FIRST_PAGE,
     ): Flow<PagingData<FeedPost>>
+
+    /**
+     * How many pages the site last said this feed has; 1 until a page has been stored.
+     *
+     * Separate from [feed] because it is metadata about the list rather than a row in it: 首页翻页栏
+     * has to draw "第 3 / 217 页" before the reader has scrolled anywhere, and a `PagingData` carries
+     * no place to put a number that belongs to the whole feed.
+     */
+    fun feedTotalPages(
+        categorySlug: String?,
+        sort: FeedSort,
+    ): Flow<Int>
 
     /**
      * The site's own `/search?q=…`, read exactly like a board feed.
@@ -293,10 +317,21 @@ class OfflineFirstPostRepository(
     override fun feed(
         categorySlug: String?,
         sort: FeedSort,
+        startPage: Int,
     ): Flow<PagingData<FeedPost>> {
         val feedKey = feedKeyFor(categorySlug, sort)
-        return pagedFeed(feedKey) { page -> remote.loadList(categorySlug, page, sort) }
+        return pagedFeed(feedKey, startPage) { page -> remote.loadList(categorySlug, page, sort) }
     }
+
+    override fun feedTotalPages(
+        categorySlug: String?,
+        sort: FeedSort,
+    ): Flow<Int> =
+        database
+            .feedDao()
+            .remoteKeyStream(feedKeyFor(categorySlug, sort))
+            .map { key -> key?.totalPages?.coerceAtLeast(1) ?: 1 }
+            .distinctUntilChanged()
 
     override fun searchFeed(
         query: String,
@@ -330,6 +365,7 @@ class OfflineFirstPostRepository(
      */
     private fun pagedFeed(
         feedKey: String,
+        startPage: Int = FeedRemoteMediator.FIRST_PAGE,
         loadPage: suspend (page: Int) -> PostListPage,
     ): Flow<PagingData<FeedPost>> =
         showBlockedContent.distinctUntilChanged().flatMapLatest { includeBlocked ->
@@ -340,6 +376,7 @@ class OfflineFirstPostRepository(
                     feedKey = feedKey,
                     database = database,
                     clock = clock,
+                    startPage = startPage,
                     loadPage = loadPage,
                 ),
                 pagingSourceFactory = { database.feedDao().pagingSource(feedKey, includeBlocked) },
@@ -630,6 +667,7 @@ private fun FeedPostRow.toFeedPost(): FeedPost {
         isRead = lastReadAtMillis != null,
         // coerceAtLeast because a deleted comment can push the current count below the seen one.
         newCommentCount = if (seen == null) 0 else ((post.commentCount ?: 0) - seen).coerceAtLeast(0),
+        page = feedPage,
     )
 }
 

@@ -139,6 +139,8 @@ internal class FakePostRemoteDataSource : PostRemoteDataSource {
             firstId: Long,
             count: Int,
             hasNextPage: Boolean = true,
+            /** What the site's pager claims; defaults to "this page is the only one", as the model does. */
+            totalPages: Int = page,
         ) = PostListPage(
             posts =
             (0 until count).map { offset ->
@@ -149,6 +151,7 @@ internal class FakePostRemoteDataSource : PostRemoteDataSource {
             },
             page = page,
             hasNextPage = hasNextPage,
+            totalPages = totalPages,
         )
 
         fun summary(

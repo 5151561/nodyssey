@@ -50,6 +50,7 @@
     <string name="board_family_flagged">警示类</string>
 
     <!-- Post list -->
+    <string name="feed_page_progress">第 %1$d / %2$d 页 · 已载入 %3$d 个帖子</string>
     <string name="post_reply_count">%1$d 回复</string>
     <string name="post_new_reply_count">%1$d 条新回复</string>
     <string name="post_view_count">%1$d 浏览</string>
@@ -282,6 +283,8 @@
     <string name="settings_report_format_hint">帖子里的跑分报告是重排成卡片还是照原样显示</string>
     <string name="settings_report_format_adapted">适配格式</string>
     <string name="settings_report_format_source">显示原文</string>
+    <string name="settings_home_page_bar">首页翻页栏</string>
+    <string name="settings_home_page_bar_hint">在首页底部显示页码和跳页按钮；列表照样滚动加载</string>
     <string name="settings_wifi_images">仅 Wi-Fi 下加载图片</string>
     <string name="settings_wifi_images_hint">移动网络显示占位图</string>
     <string name="settings_clear_cache">清除缓存</string>

@@ -56,6 +56,7 @@ class SettingsRepository(
                 reportFormat = preferences[KEY_REPORT_FORMAT]
                     ?.let { runCatching { ReportFormat.valueOf(it) }.getOrNull() }
                     ?: ReportFormat.ADAPTED,
+                homePageBar = preferences[KEY_HOME_PAGE_BAR] ?: false,
                 holidayTheme = preferences[KEY_HOLIDAY_THEME] ?: false,
                 searchHistory = decodeSearchHistory(preferences),
                 recentBoards = decodeValues(preferences[KEY_RECENT_BOARDS]),
@@ -116,6 +117,9 @@ class SettingsRepository(
         edit { it[KEY_EXTERNAL_LINK_TARGET] = target.name }
 
     suspend fun setReportFormat(format: ReportFormat) = edit { it[KEY_REPORT_FORMAT] = format.name }
+
+    /** 首页翻页栏; see [UserSettings.homePageBar] for why it is off unless asked for. */
+    suspend fun setHomePageBar(enabled: Boolean) = edit { it[KEY_HOME_PAGE_BAR] = enabled }
 
     suspend fun setUpdateCheckOnLaunch(enabled: Boolean) =
         edit { it[KEY_UPDATE_CHECK_ON_LAUNCH] = enabled }
@@ -404,6 +408,7 @@ class SettingsRepository(
         private val KEY_POST_TOOLBAR = stringPreferencesKey("post_toolbar_actions")
         private val KEY_REPLY_TOOLBAR = stringPreferencesKey("reply_toolbar_actions")
         private val KEY_MESSAGE_TOOLBAR = stringPreferencesKey("message_toolbar_actions")
+        private val KEY_HOME_PAGE_BAR = booleanPreferencesKey("home_page_bar")
         private val KEY_HOLIDAY_THEME = booleanPreferencesKey("holiday_theme")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         private val KEY_NOTIFICATION_POLL_MINUTES = intPreferencesKey("notification_poll_minutes")
@@ -494,6 +499,18 @@ data class UserSettings(
     val externalLinkTarget: ExternalLinkTarget = ExternalLinkTarget.CUSTOM_TAB,
     /** How a NodeQuality-style benchmark report is drawn in a post; see [ReportFormat]. */
     val reportFormat: ReportFormat = ReportFormat.ADAPTED,
+    /**
+     * Whether 首页 carries the same 翻页栏 the thread and 管理记录 have.
+     *
+     * Off by default, and the default is the argument: the feed is read by scrolling, and a control
+     * that names the page is answering a question a scrolling reader never asks. It earns its place
+     * for the reader who does — one who reads 首页 by page number the way the site is read in a
+     * browser, or who wants to get back to page 40 without flinging there.
+     *
+     * Switching it on does not change how the feed loads. Pages still append while scrolling; the bar
+     * only adds a way to arrive somewhere, which is the same pairing the comment thread uses.
+     */
+    val homePageBar: Boolean = false,
     /** Local mirror of the account's Remote 启用节日主题 switch. */
     val holidayTheme: Boolean = false,
     val searchHistory: List<SearchHistoryEntry> = emptyList(),

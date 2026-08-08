@@ -68,6 +68,7 @@ fun SettingsRoute(
         onImagesOnWifiOnlyChange = viewModel::setImagesOnWifiOnly,
         onExternalLinkTargetChange = viewModel::setExternalLinkTarget,
         onReportFormatChange = viewModel::setReportFormat,
+        onHomePageBarChange = viewModel::setHomePageBar,
         onUpdateCheckOnLaunchChange = viewModel::setUpdateCheckOnLaunch,
         onClearCache = viewModel::clearCache,
         onOpenNotifications = onOpenNotifications,
@@ -87,6 +88,7 @@ fun SettingsScreen(
     onImagesOnWifiOnlyChange: (Boolean) -> Unit,
     onExternalLinkTargetChange: (ExternalLinkTarget) -> Unit,
     onReportFormatChange: (ReportFormat) -> Unit,
+    onHomePageBarChange: (Boolean) -> Unit,
     onUpdateCheckOnLaunchChange: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier,
@@ -193,6 +195,18 @@ fun SettingsScreen(
                         onSelected = onReportFormatChange,
                     )
                 }
+                SettingsRow(
+                    title = stringResource(R.string.settings_home_page_bar),
+                    subtitle = stringResource(R.string.settings_home_page_bar_hint),
+                    checked = state.settings.homePageBar,
+                    onCheckedChange = onHomePageBarChange,
+                    trailing = {
+                        Switch(
+                            checked = state.settings.homePageBar,
+                            onCheckedChange = null,
+                        )
+                    },
+                )
                 SettingsRow(
                     title = stringResource(R.string.settings_wifi_images),
                     subtitle = stringResource(R.string.settings_wifi_images_hint),
@@ -344,6 +358,7 @@ private fun SettingsPreview() {
             onImagesOnWifiOnlyChange = {},
             onExternalLinkTargetChange = {},
             onReportFormatChange = {},
+            onHomePageBarChange = {},
             onUpdateCheckOnLaunchChange = {},
             onClearCache = {},
         )
