@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Not requested by any code this app calls yet: `:designsys` carries `:core` with it, whose
+        image data-usage policy reads the active network, and lint checks that whole classpath
+        against this manifest. A normal permission, granted at install.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!--
+        No INTERNET permission yet: the app stores nothing but the user's list of sites, so it
+        arrives with the first network call, not before it. When it does, decide the cleartext
+        policy in the same change: normalizeInstanceUrl keeps explicit http:// for self-hosted
+        LAN sites, and usesCleartextTraffic has defaulted to blocked since API 28 — without a
+        policy those sites silently fail to connect.
+
+        Backup is on without exclusions for the same reason — the only state is site URLs the user
+        typed, which is exactly what should survive onto a new device. The moment a credential or
+        cached content appears, revisit this the way `:app` did (backup_rules.xml).
+    -->
+    <application
+        android:name=".Bbs1App"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/bbs1_app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Bbs1">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

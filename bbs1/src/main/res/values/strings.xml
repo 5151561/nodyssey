@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Everything here is prefixed `bbs1_`, including the app name: CI's resource-collision gate
+    compares (type, name) across every module in the repository, and `:app` already owns the
+    unprefixed vocabulary (`app_name`, `action_back`, …).
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- 占位名。正式名称定下来之前不发版；见 bbs1/build.gradle.kts 里关于 applicationId 的注释。 -->
+    <!-- "bbs1" 是论坛程序的本名，不是拼写错误。 -->
+    <string name="bbs1_app_name" tools:ignore="Typos">bbs1 客户端</string>
+
+    <!-- 站点管理 -->
+    <string name="bbs1_instances_title">站点</string>
+    <string name="bbs1_instances_empty_title">还没有站点</string>
+    <string name="bbs1_instances_empty_body">bbs1org 是自部署的论坛程序，每个站点有自己的域名。添加一个，客户端就从它开始。</string>
+    <string name="bbs1_add_instance">添加站点</string>
+    <string name="bbs1_add_dialog_url_label">站点地址</string>
+    <string name="bbs1_add_dialog_url_invalid">填一个站点域名，比如 bbs1.org</string>
+    <string name="bbs1_add_dialog_name_label">名称（可选）</string>
+    <string name="bbs1_action_confirm_add">添加</string>
+    <string name="bbs1_action_cancel">取消</string>
+    <string name="bbs1_action_delete_instance">删除站点</string>
+    <string name="bbs1_current_instance">当前站点</string>
+    <string name="bbs1_action_back">返回</string>
+
+    <!-- 首页占位 -->
+    <string name="bbs1_manage_instances">站点管理</string>
+    <string name="bbs1_home_placeholder_title">还没接上站点数据</string>
+    <string name="bbs1_home_placeholder_body">客户端将通过站点的 API 插件读取内容。插件还没就绪，这里先是占位页。</string>
+    <string name="bbs1_home_no_instance_title">先添加一个站点</string>
+    <string name="bbs1_home_no_instance_body">从站点管理里添加一个 bbs1org 站点。</string>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug-only override of the launcher name, same arrangement as `:app`: the build-type resource
+    wins over `main`, and the `applicationIdSuffix` from `plaza.android.application` is what lets the
+    two builds install side by side.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="bbs1_app_name" tools:ignore="Typos">bbs1·D</string>
+</resources>

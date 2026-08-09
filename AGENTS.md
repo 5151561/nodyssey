@@ -2,9 +2,11 @@
 
 ## Project Structure & Module Organization
 
-Three modules. `:app` is the NodeSeek application: production Kotlin lives under `app/src/main/java/io/github/nodyssey/`, where `core/` contains the site's URL vocabulary, its CSS selectors and its parsers; `data/` owns repositories and Room persistence; `model/` defines domain types; and `ui/` contains Compose screens, view models, and navigation.
+Two application modules and two library modules. `:app` is the NodeSeek application (Nodyssey): production Kotlin lives under `app/src/main/java/io/github/nodyssey/`, where `core/` contains the site's URL vocabulary, its CSS selectors and its parsers; `data/` owns repositories and Room persistence; `model/` defines domain types; and `ui/` contains Compose screens, view models, and navigation.
 
-Two library modules under `io.github.plaza.*` hold what a second forum app would reuse, and **neither can see `:app`** — the dependency runs one way only, so anything site-specific belongs in `:app`:
+`:bbs1` is the second application: a multi-instance client for the bbs1org forum software, where the user adds sites by domain and the data will come from a JSON API plugin rather than scraped HTML. Today it holds instance management and a placeholder home. The two apps deliberately do **not** share a `Site` abstraction — their domain models are too different — so `:bbs1` owns its model/data/ui the same way `:app` does, and anything that turns out to be genuinely generic moves down into the library modules instead of sideways between apps. Its identifiers (`io.github.bbs1`, launcher name, icon) are placeholders; settle the branding before its first release tag.
+
+Two library modules under `io.github.plaza.*` hold what both apps reuse, and **neither can see an application module** — the dependency runs one way only, so anything site-specific belongs in the app that knows it:
 
 - `:designsys` (`designsys/src/main/java/io/github/plaza/designsys/`) — the Compose theme, the shared components, the Markdown editor, the emoji panel and `richtext/` — the post renderer. Components take their copy and their colours as parameters: `StatusView` is told what the state says, `TonalTag` and `BadgeChip` are told which tone to wear, `EmojiPanel` is handed its groups and a slot that fetches a sticker, and `RichContent` is handed slots for the two nodes it cannot draw alone — a live poll, and whatever a particular forum does with a code block. In this app that wrapper is `PostRichContent`, and every screen goes through it.
 - `:core` (`core/src/main/java/io/github/plaza/core/`) — clocks and dispatchers, HTTP against a scraped forum, the cookie store the WebView and OkHttp share, ANSI decoding, the image data-usage policy, the GitHub update check, and `richtext/` — the `RichNode`/`InlineNode` tree a post body is rendered from, plus the small Markdown parser that produces one. **The `@SerialName` on every node is stored inside cached rows; moving those types between packages is safe, renaming a discriminator is not** (`PostDetailCacheTest.every node discriminator still decodes` is the guard). Everything a particular site knows about itself reaches it as a `SiteConfig` value, never as an import; `NodeSeekSite.CONFIG` is the one this app passes.
@@ -17,7 +19,7 @@ The project requires JDK 21 and Android SDK 37. Use the checked-in Gradle wrappe
 
 - `./gradlew :app:assembleDebug` builds the debug APK.
 - `./gradlew testDebugUnitTest` runs JVM, Robolectric, Room, Paging, and Compose tests. Unqualified on purpose — `:app:testDebugUnitTest` compiles the library modules but runs none of their tests.
-- `./gradlew :app:lintDebug` runs Android lint with warnings treated as errors. `checkDependencies` is on, so this one invocation covers every module.
+- `./gradlew :app:lintDebug :bbs1:lintDebug` runs Android lint with warnings treated as errors. `checkDependencies` is on, so each application module's invocation also covers the libraries it depends on.
 - `./gradlew spotlessCheck` verifies formatting; `./gradlew spotlessApply` fixes it.
 - `./gradlew resolveAndLockAll --write-locks` refreshes every module's `gradle.lockfile` after dependency changes. Commit all of them.
 

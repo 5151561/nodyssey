@@ -35,6 +35,12 @@ plugins {
 rootProject.name = "Nodyssey"
 include(":app")
 
+// The second application in this repository: the multi-instance bbs1org client. A separate app with
+// its own applicationId and its own release tags, sharing `:core` and `:designsys` and nothing else —
+// the two forums' domain models are too different to share a Site abstraction, so each app owns its
+// model/data/ui outright.
+include(":bbs1")
+
 // Compose theme and components with no knowledge of any particular forum. Kept as its own module so
 // the compiler, not a review convention, is what stops site-specific types leaking into it.
 include(":designsys")
