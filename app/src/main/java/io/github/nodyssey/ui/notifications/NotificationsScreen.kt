@@ -58,7 +58,7 @@ import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.SignedOutState
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -394,7 +394,7 @@ private val AvatarCapOffset = 3.dp
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun NotificationsPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         NotificationsScreen(
             state =
             NotificationsUiState(

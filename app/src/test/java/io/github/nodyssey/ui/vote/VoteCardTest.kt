@@ -9,7 +9,7 @@ import androidx.compose.ui.test.performClick
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.VoteItem
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -33,7 +33,7 @@ class VoteCardTest {
         onRetry: () -> Unit = {},
     ) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 VoteCard(
                     state = state,
                     onRetry = onRetry,

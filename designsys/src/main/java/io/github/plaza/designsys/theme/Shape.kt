@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
  * defaults, which already match the design doc; read them as `MaterialTheme.shapes.largeIncreased`
  * rather than declaring a parallel constant.
  */
-val NodysseyShapes =
+val PlazaShapes =
     Shapes(
         extraSmall = RoundedCornerShape(4.dp),
         small = RoundedCornerShape(8.dp),

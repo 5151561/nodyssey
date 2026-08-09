@@ -17,8 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 
 /**
@@ -40,7 +40,7 @@ fun VotePlaceholderCard(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             Icon(
-                NodysseyIcons.Poll,
+                PlazaIcons.Poll,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp),
@@ -85,7 +85,7 @@ fun VoteCardSurface(
 @Preview(showBackground = true, widthDp = 360)
 @Composable
 private fun VotePlaceholderCardPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         VotePlaceholderCard(Modifier.padding(Spacing.lg))
     }
 }

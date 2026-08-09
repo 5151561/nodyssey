@@ -41,7 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.settings.OPTIONAL_HOME_BOARD_SLUGS
 import io.github.nodyssey.ui.common.BoardTag
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -324,7 +324,7 @@ private fun optionalBoardTitle(slug: String): String =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun PreferencesPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         PreferencesScreen(
             state =
             PreferencesUiState(

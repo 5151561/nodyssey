@@ -34,8 +34,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.ui.settings.SettingsGroup
 import io.github.nodyssey.ui.settings.SettingsRow
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -147,7 +147,7 @@ fun AccountSettingsScreen(
                     subtitle =
                     state.blockedCount?.let { stringResource(R.string.account_blocked_count, it) },
                     onClick = onOpenBlockList,
-                    leading = { RowIcon(NodysseyIcons.Block) },
+                    leading = { RowIcon(PlazaIcons.Block) },
                     trailing = { Chevron() },
                 )
                 SettingsRow(
@@ -169,7 +169,7 @@ fun AccountSettingsScreen(
                     ),
                     bottom = true,
                     onClick = onOpenNodeImage,
-                    leading = { RowIcon(NodysseyIcons.Image) },
+                    leading = { RowIcon(PlazaIcons.Image) },
                     trailing = { Chevron() },
                 )
             }
@@ -218,7 +218,7 @@ private fun Chevron() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun AccountSettingsPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         AccountSettingsScreen(
             state =
             AccountSettingsUiState(

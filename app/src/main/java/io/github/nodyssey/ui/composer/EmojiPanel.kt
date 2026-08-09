@@ -41,7 +41,7 @@ import coil3.request.ImageRequest
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.image.allowMeteredImage
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Spacing
 
 /**
@@ -315,7 +315,7 @@ private fun RecentRow(
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            imageVector = NodysseyIcons.History,
+            imageVector = PlazaIcons.History,
             contentDescription = null,
             modifier = Modifier.size(15.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -366,7 +366,7 @@ private fun BackspaceKey(onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = NodysseyIcons.Backspace,
+            imageVector = PlazaIcons.Backspace,
             contentDescription = null,
             modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,

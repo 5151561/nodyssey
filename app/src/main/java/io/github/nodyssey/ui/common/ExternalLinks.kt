@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.core.net.toUri
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.settings.ExternalLinkTarget
-import io.github.plaza.designsys.theme.LocalNodysseyDarkTheme
+import io.github.plaza.designsys.theme.LocalPlazaDarkTheme
 
 /**
  * The app's [UriHandler], swapped in over the platform one at the composition root.
@@ -62,7 +62,7 @@ internal fun usesCustomTab(
  *
  * The toolbar reads from [MaterialTheme] rather than a fixed brand colour so the tab matches the app
  * it opened from, including 动态取色. `setColorScheme` is pinned to the app's own resolved
- * [LocalNodysseyDarkTheme] instead of `COLOR_SCHEME_SYSTEM`: 深色 and 定时 make the app dark while
+ * [LocalPlazaDarkTheme] instead of `COLOR_SCHEME_SYSTEM`: 深色 and 定时 make the app dark while
  * the system stays light, and a white toolbar over a dark app is exactly the seam a Custom Tab is
  * supposed to hide.
  */
@@ -70,7 +70,7 @@ internal fun usesCustomTab(
 internal fun rememberExternalUriHandler(target: ExternalLinkTarget): UriHandler {
     val context = LocalContext.current
     val fallback = LocalUriHandler.current
-    val darkTheme = LocalNodysseyDarkTheme.current
+    val darkTheme = LocalPlazaDarkTheme.current
     val colorScheme = MaterialTheme.colorScheme
     val customTabsIntent =
         remember(darkTheme, colorScheme) {

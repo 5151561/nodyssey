@@ -21,7 +21,7 @@ import io.github.nodyssey.data.settings.isTimedNightHour
 import io.github.nodyssey.ui.common.rememberExternalUriHandler
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.richtext.LocalReportFormat
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import kotlinx.coroutines.delay
 import java.util.Calendar
 
@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.TIMED -> isTimedNightNow()
             }
 
-            NodysseyTheme(
+            PlazaTheme(
                 darkTheme = darkTheme,
                 dynamicColor = settings.dynamicColor,
                 fontScale = settings.fontScale,

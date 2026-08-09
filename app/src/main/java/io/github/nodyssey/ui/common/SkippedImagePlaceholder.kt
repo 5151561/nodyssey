@@ -21,8 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 
 /**
@@ -53,7 +53,7 @@ fun SkippedImagePlaceholder(
             modifier = Modifier.padding(horizontal = Spacing.lg),
         ) {
             Icon(
-                imageVector = NodysseyIcons.Image,
+                imageVector = PlazaIcons.Image,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp),
@@ -79,7 +79,7 @@ private val PLACEHOLDER_HEIGHT = 132.dp
 @Preview(showBackground = true, widthDp = 360, name = "图片跳过占位")
 @Composable
 private fun SkippedImagePlaceholderPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         SkippedImagePlaceholder(onLoad = {}, modifier = Modifier.padding(Spacing.lg))
     }
 }

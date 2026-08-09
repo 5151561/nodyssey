@@ -5,7 +5,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.nodyssey.data.update.AppRelease
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -25,7 +25,7 @@ class UpdateReminderDialogTest {
     @Test
     fun `the reminder names the version, the size and what changed`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 UpdateReminderDialog(release = RELEASE, onDownload = {}, onPostpone = {})
             }
         }
@@ -43,7 +43,7 @@ class UpdateReminderDialogTest {
         var downloads = 0
         var postpones = 0
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 UpdateReminderDialog(
                     release = RELEASE,
                     onDownload = { downloads++ },

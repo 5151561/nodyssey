@@ -40,8 +40,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -85,7 +85,7 @@ fun VoteComposeDialog(
 
     AlertDialog(
         onDismissRequest = { if (state !is VoteCreationState.InFlight) onDismiss() },
-        icon = { Icon(NodysseyIcons.Poll, contentDescription = null) },
+        icon = { Icon(PlazaIcons.Poll, contentDescription = null) },
         title = { Text(stringResource(R.string.vote_compose_title)) },
         text = {
             Column(
@@ -176,7 +176,7 @@ fun VoteComposeDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            NodysseyIcons.ErrorCircle,
+                            PlazaIcons.ErrorCircle,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.size(16.dp),
@@ -269,7 +269,7 @@ private const val MAX_OPTIONS = 20
 @Preview(showBackground = true, widthDp = 360)
 @Composable
 private fun VoteComposeDialogPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         VoteComposeDialog(state = VoteCreationState.Idle, onCreate = { _, _, _, _ -> }, onDismiss = {})
     }
 }

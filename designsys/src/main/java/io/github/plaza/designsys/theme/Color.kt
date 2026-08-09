@@ -93,7 +93,7 @@ private val DarkSurfaceContainerHighest = Color(0xFF34343A)
 private val DarkOutline = Color(0xFF8E9099)
 private val DarkOutlineVariant = Color(0xFF44474E)
 
-internal val NodysseyLightColorScheme =
+internal val PlazaLightColorScheme =
     lightColorScheme(
         primary = LightPrimary,
         onPrimary = LightOnPrimary,
@@ -133,7 +133,7 @@ internal val NodysseyLightColorScheme =
         surfaceContainerHighest = LightSurfaceContainerHighest,
     )
 
-internal val NodysseyDarkColorScheme =
+internal val PlazaDarkColorScheme =
     darkColorScheme(
         primary = DarkPrimary,
         onPrimary = DarkOnPrimary,
@@ -191,7 +191,7 @@ internal val NodysseyDarkColorScheme =
  * `onSuccessContainer` would read as ordinary text. `error` already plays this role for the third.
  */
 @Immutable
-data class NodysseyExtraColors(
+data class PlazaExtraColors(
     val warningContainer: Color,
     val onWarningContainer: Color,
     val successContainer: Color,
@@ -201,7 +201,7 @@ data class NodysseyExtraColors(
 )
 
 internal val LightExtraColors =
-    NodysseyExtraColors(
+    PlazaExtraColors(
         warningContainer = Color(0xFFF7E3A6),
         onWarningContainer = Color(0xFF4E3D00),
         successContainer = Color(0xFFBFE9C8),
@@ -211,7 +211,7 @@ internal val LightExtraColors =
     )
 
 internal val DarkExtraColors =
-    NodysseyExtraColors(
+    PlazaExtraColors(
         warningContainer = Color(0xFF4E4426),
         onWarningContainer = Color(0xFFF7E3A6),
         successContainer = Color(0xFF244A2F),
@@ -220,4 +220,4 @@ internal val DarkExtraColors =
         warning = Color(0xFFE5C07B),
     )
 
-val LocalNodysseyExtraColors = staticCompositionLocalOf { LightExtraColors }
+val LocalPlazaExtraColors = staticCompositionLocalOf { LightExtraColors }

@@ -46,9 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.account.BlockedUser
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -185,7 +185,7 @@ fun BlockListScreen(
 
     state.unblocking?.let { target ->
         HighRiskDialog(
-            icon = NodysseyIcons.Block,
+            icon = PlazaIcons.Block,
             title = stringResource(R.string.account_confirm_unblock_title, target.name),
             body = stringResource(R.string.account_confirm_unblock_body),
             confirmLabel = stringResource(R.string.account_confirm_unblock_action),
@@ -326,7 +326,7 @@ private fun BlockedEmptyState() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                NodysseyIcons.VisibilityOff,
+                PlazaIcons.VisibilityOff,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),
@@ -343,7 +343,7 @@ private fun BlockedEmptyState() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun BlockListPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         BlockListScreen(
             state =
             BlockListUiState(

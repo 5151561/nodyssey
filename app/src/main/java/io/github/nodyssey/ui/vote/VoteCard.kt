@@ -58,10 +58,10 @@ import io.github.nodyssey.model.VoteItem
 import io.github.nodyssey.model.totalCount
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.richtext.VoteCardSurface
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -290,7 +290,7 @@ private fun VoteHeader(
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    NodysseyIcons.Poll,
+                    PlazaIcons.Poll,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp),
@@ -560,7 +560,7 @@ private fun VoteResultRow(
             // stays put once open, because by then it is the way back.
             if (togglable) {
                 Icon(
-                    NodysseyIcons.Group,
+                    PlazaIcons.Group,
                     contentDescription = null,
                     tint =
                     if (open) {
@@ -670,7 +670,7 @@ private fun VoterStrip(
 private fun VoteLoading() {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            NodysseyIcons.Poll,
+            PlazaIcons.Poll,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(16.dp),
@@ -703,7 +703,7 @@ private fun VoteLoadFailed(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            NodysseyIcons.Poll,
+            PlazaIcons.Poll,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(18.dp),
@@ -771,7 +771,7 @@ private fun previewVote(
 @Preview(showBackground = true, widthDp = 360, name = "投票 · 未投票")
 @Composable
 private fun VoteCardUnvotedPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         VoteCard(
             state = VoteUiState(vote = previewVote(), isLoading = false, isSignedIn = true),
             onRetry = {},
@@ -791,7 +791,7 @@ private fun VoteCardUnvotedPreview() {
 @Preview(showBackground = true, widthDp = 360, name = "投票 · 已选中")
 @Composable
 private fun VoteCardSelectedPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         VoteCard(
             state =
             VoteUiState(
@@ -817,7 +817,7 @@ private fun VoteCardSelectedPreview() {
 @Preview(showBackground = true, widthDp = 360, name = "投票 · 已投票")
 @Composable
 private fun VoteCardVotedPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         VoteCard(
             state = VoteUiState(vote = previewVote(voted = true), isLoading = false, isSignedIn = true),
             onRetry = {},
@@ -837,7 +837,7 @@ private fun VoteCardVotedPreview() {
 @Preview(showBackground = true, widthDp = 360, name = "投票 · 载入中")
 @Composable
 private fun VoteCardLoadingPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         VoteCard(
             state = VoteUiState(isLoading = true),
             onRetry = {},

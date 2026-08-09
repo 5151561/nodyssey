@@ -67,9 +67,9 @@ import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
 import io.github.nodyssey.ui.postlist.toNodeSeekError
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.digitsOnly
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
@@ -402,10 +402,10 @@ private fun StardustType.icon(): ImageVector =
     when (this) {
         StardustType.UPVOTE -> Icons.Default.ThumbUp
         StardustType.TRANSFER -> Icons.AutoMirrored.Filled.Send
-        StardustType.BUY_CODE -> NodysseyIcons.ConfirmationNumber
+        StardustType.BUY_CODE -> PlazaIcons.ConfirmationNumber
         StardustType.SYSTEM -> Icons.Default.Info
-        StardustType.ADMIN -> NodysseyIcons.Gavel
-        StardustType.UNKNOWN -> NodysseyIcons.Wallet
+        StardustType.ADMIN -> PlazaIcons.Gavel
+        StardustType.UNKNOWN -> PlazaIcons.Wallet
     }
 
 /**
@@ -553,7 +553,7 @@ private fun TransferConfirmDialog(
         stringResource(if (state.isSending) R.string.transfer_sending else R.string.transfer_confirm),
         onConfirm = onConfirm,
         onDismiss = onDismiss,
-        icon = NodysseyIcons.Wallet,
+        icon = PlazaIcons.Wallet,
         shortfall = state.shortfall?.let { stringResource(R.string.transfer_shortfall, it) },
         isSending = state.isSending,
     )
@@ -586,7 +586,7 @@ private val previewEntries =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8e 星辰流水")
 @Composable
 private fun StardustPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         PreviewScreen(
             StardustUiState(isLoadingBalance = false, uid = 52_425, balance = 6),
             flowOf(PagingData.from(previewEntries)),
@@ -597,7 +597,7 @@ private fun StardustPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8e 星辰流水 · dark")
 @Composable
 private fun StardustDarkPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         PreviewScreen(
             StardustUiState(isLoadingBalance = false, uid = 52_425, balance = 6),
             flowOf(PagingData.from(previewEntries)),
@@ -608,7 +608,7 @@ private fun StardustDarkPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8e 星辰流水 · 未登录")
 @Composable
 private fun StardustSignInPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         PreviewScreen(
             StardustUiState(isLoadingBalance = false, error = NodeSeekError.LoginRequired),
             flowOf(PagingData.empty()),

@@ -40,9 +40,9 @@ import io.github.nodyssey.data.FollowUser
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.StatusView
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -177,7 +177,7 @@ fun FollowScreen(
 @Composable
 private fun FollowEmptyState(tab: FollowTab) {
     StatusView(
-        icon = NodysseyIcons.Group,
+        icon = PlazaIcons.Group,
         shape = StatusShapes.Empty,
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -249,7 +249,7 @@ private val previewFollowing =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8c 我的关注")
 @Composable
 private fun FollowListPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         FollowScreen(
             state =
             FollowUiState(
@@ -269,7 +269,7 @@ private fun FollowListPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8c 我的粉丝 · 空态")
 @Composable
 private fun FollowEmptyPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         FollowScreen(
             state =
             FollowUiState(
@@ -290,7 +290,7 @@ private fun FollowEmptyPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8c 接口待接入")
 @Composable
 private fun FollowNotWiredPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         FollowScreen(
             state =
             FollowUiState(

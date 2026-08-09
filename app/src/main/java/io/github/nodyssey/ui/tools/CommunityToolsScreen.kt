@@ -27,9 +27,9 @@ import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
 import io.github.plaza.designsys.component.GroupedColumn
 import io.github.plaza.designsys.component.GroupedRow
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -89,7 +89,7 @@ fun CommunityToolsScreen(
                     GroupedRow(
                         title = stringResource(R.string.tools_award),
                         subtitle = stringResource(R.string.tools_award_subtitle),
-                        icon = NodysseyIcons.MenuBook,
+                        icon = PlazaIcons.MenuBook,
                         first = true,
                         onClick = onAward,
                     )
@@ -102,7 +102,7 @@ fun CommunityToolsScreen(
                     GroupedRow(
                         title = stringResource(R.string.tools_friends),
                         subtitle = stringResource(R.string.tools_friends_subtitle),
-                        icon = NodysseyIcons.Link,
+                        icon = PlazaIcons.Link,
                         last = true,
                         onClick = onFriends,
                     )
@@ -115,14 +115,14 @@ fun CommunityToolsScreen(
                     GroupedRow(
                         title = stringResource(R.string.tools_lucky),
                         subtitle = stringResource(R.string.tools_lucky_subtitle),
-                        icon = NodysseyIcons.Casino,
+                        icon = PlazaIcons.Casino,
                         first = true,
                         onClick = onLucky,
                     )
                     GroupedRow(
                         title = stringResource(R.string.tools_invite),
                         subtitle = stringResource(R.string.tools_invite_subtitle),
-                        icon = NodysseyIcons.ConfirmationNumber,
+                        icon = PlazaIcons.ConfirmationNumber,
                         last = true,
                         onClick = onInvite,
                     )
@@ -134,7 +134,7 @@ fun CommunityToolsScreen(
                 GroupedRow(
                     title = stringResource(R.string.tools_ruling),
                     subtitle = stringResource(R.string.tools_ruling_subtitle),
-                    icon = NodysseyIcons.Gavel,
+                    icon = PlazaIcons.Gavel,
                     first = true,
                     last = true,
                     onClick = onRuling,
@@ -162,7 +162,7 @@ fun CommunityToolsScreen(
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "9a 社区工具")
 @Composable
 private fun CommunityToolsPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         CommunityToolsScreen(
             onBack = {},
             onAward = {},
@@ -179,7 +179,7 @@ private fun CommunityToolsPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "9a 社区工具 · dark")
 @Composable
 private fun CommunityToolsDarkPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         CommunityToolsScreen(
             onBack = {},
             onAward = {},

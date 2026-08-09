@@ -73,9 +73,9 @@ import io.github.nodyssey.ui.composer.collapseMarkdown
 import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.nodyssey.ui.postlist.toNodeSeekError
 import io.github.nodyssey.ui.richtext.RichContent
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
@@ -235,7 +235,7 @@ private fun SpaceOverflowMenu(onOpenBrowser: () -> Unit) {
     Box {
         IconButton(onClick = { open = true }) {
             Icon(
-                NodysseyIcons.OpenInNew,
+                PlazaIcons.OpenInNew,
                 contentDescription = stringResource(R.string.action_more),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
@@ -813,19 +813,19 @@ private val previewPublicState =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8a 我的主页 · 主题帖")
 @Composable
 private fun UserSpaceSelfPreview() {
-    NodysseyTheme { PreviewScreen(previewSelfState) }
+    PlazaTheme { PreviewScreen(previewSelfState) }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8b 公开用户页 · 概况")
 @Composable
 private fun UserSpacePublicPreview() {
-    NodysseyTheme { PreviewScreen(previewPublicState) }
+    PlazaTheme { PreviewScreen(previewPublicState) }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8a 我的主页 · dark")
 @Composable
 private fun UserSpaceSelfDarkPreview() {
-    NodysseyTheme(darkTheme = true) { PreviewScreen(previewSelfState) }
+    PlazaTheme(darkTheme = true) { PreviewScreen(previewSelfState) }
 }
 
 @Composable

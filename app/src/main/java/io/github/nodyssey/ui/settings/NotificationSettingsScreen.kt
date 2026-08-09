@@ -34,8 +34,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.UserSettings
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -199,7 +199,7 @@ fun NotificationSettingsScreen(
                     SettingsRow(
                         title = stringResource(R.string.notifications_mentions),
                         top = true,
-                        leading = { Icon(NodysseyIcons.AlternateEmail, contentDescription = null) },
+                        leading = { Icon(PlazaIcons.AlternateEmail, contentDescription = null) },
                         checked = settings.notifyMentions,
                         onCheckedChange = onNotifyMentionsChange,
                         enabled = enabled,
@@ -213,7 +213,7 @@ fun NotificationSettingsScreen(
                     )
                     SettingsRow(
                         title = stringResource(R.string.notifications_replies),
-                        leading = { Icon(NodysseyIcons.ChatBubble, contentDescription = null) },
+                        leading = { Icon(PlazaIcons.ChatBubble, contentDescription = null) },
                         checked = settings.notifyReplies,
                         onCheckedChange = onNotifyRepliesChange,
                         enabled = enabled,
@@ -271,7 +271,7 @@ private const val DISABLED_ALPHA = 0.5f
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun NotificationSettingsPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         NotificationSettingsScreen(
             settings = UserSettings(notificationsEnabled = true),
             onBack = {},

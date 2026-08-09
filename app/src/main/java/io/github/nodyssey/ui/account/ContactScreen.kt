@@ -47,8 +47,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.account.TelegramBinding
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -201,7 +201,7 @@ fun ContactScreen(
 
     if (state.showUnbindDialog) {
         HighRiskDialog(
-            icon = NodysseyIcons.LinkOff,
+            icon = PlazaIcons.LinkOff,
             title = stringResource(R.string.account_telegram_unbind_title),
             body =
             stringResource(
@@ -241,7 +241,7 @@ private fun CurrentEmailRow(
                 }
                 TextButton(onClick = onChange) {
                     Icon(
-                        NodysseyIcons.OpenInNew,
+                        PlazaIcons.OpenInNew,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                     )
@@ -270,7 +270,7 @@ private fun DisabledPhoneCard() {
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Icon(
-                NodysseyIcons.Sms,
+                PlazaIcons.Sms,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(22.dp),
@@ -379,7 +379,7 @@ private fun TelegramCard(
                 }
             } else {
                 Button(onClick = onRequestBind, enabled = binding != null) {
-                    Icon(NodysseyIcons.Link, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Icon(PlazaIcons.Link, contentDescription = null, modifier = Modifier.size(17.dp))
                     Text(
                         stringResource(R.string.account_telegram_bind),
                         modifier = Modifier.padding(start = Spacing.xs),
@@ -427,7 +427,7 @@ private fun TelegramBindDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(NodysseyIcons.OpenInNew, contentDescription = null) },
+        icon = { Icon(PlazaIcons.OpenInNew, contentDescription = null) },
         title = { Text(stringResource(R.string.account_telegram_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
@@ -498,7 +498,7 @@ private const val DISABLED_CARD_ALPHA = 0.55f
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun ContactPreviewUnbound() {
-    NodysseyTheme {
+    PlazaTheme {
         ContactScreen(
             state =
             ContactUiState(
@@ -524,7 +524,7 @@ private fun ContactPreviewUnbound() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun ContactPreviewBound() {
-    NodysseyTheme {
+    PlazaTheme {
         ContactScreen(
             state =
             ContactUiState(

@@ -9,7 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import io.github.plaza.designsys.editor.EditorToolbarDefaults
 import io.github.plaza.designsys.editor.toolbarLayout
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,7 +34,7 @@ class ReplyComposerScreenTest {
 
     private fun setSheet(state: ReplyComposerUiState) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ReplyComposerHost(
                     state = state,
                     onDismiss = {},

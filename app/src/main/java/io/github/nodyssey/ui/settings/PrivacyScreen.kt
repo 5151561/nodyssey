@@ -49,8 +49,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.model.TermsBlock
 import io.github.nodyssey.model.TermsDocument
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -100,7 +100,7 @@ fun PrivacyScreen(
                     actions = {
                         IconButton(onClick = onOpenOriginal) {
                             Icon(
-                                NodysseyIcons.OpenInNew,
+                                PlazaIcons.OpenInNew,
                                 contentDescription = stringResource(R.string.privacy_open_original),
                             )
                         }
@@ -294,7 +294,7 @@ private fun PrivacyError(
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "f2 隐私协议")
 @Composable
 private fun PrivacyPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         PrivacyScreen(
             state = PrivacyUiState.Content(
                 TermsDocument(

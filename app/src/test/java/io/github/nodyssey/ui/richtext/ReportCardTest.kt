@@ -22,7 +22,7 @@ import io.github.nodyssey.core.html.AnsiParser
 import io.github.nodyssey.core.report.QualityReportParser
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.model.RichNode
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -59,7 +59,7 @@ class ReportCardTest {
     ) {
         val decoded = AnsiParser.decode(code)
         compose.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 CompositionLocalProvider(LocalReportFormat provides format) {
                     // The card is taller than a phone, which is the whole problem it exists for.
                     // Without a scroller the assertions below the fold would fail on layout rather

@@ -73,7 +73,7 @@ import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.ui.vote.VoteComposeDialog
 import io.github.plaza.designsys.component.EditorTextField
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.MarkdownEditorBar
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
@@ -425,7 +425,7 @@ private fun EditorContent(
             trailing = {
                 IconButton(onClick = { composingVote = true }) {
                     Icon(
-                        NodysseyIcons.Poll,
+                        PlazaIcons.Poll,
                         contentDescription = stringResource(R.string.composer_insert_vote),
                     )
                 }
@@ -590,7 +590,7 @@ private fun ComposerOptions(
                 label = permissionLabel(state.permission),
                 filled = false,
                 error = false,
-                leading = NodysseyIcons.Visibility,
+                leading = PlazaIcons.Visibility,
                 onClick = { permissionMenuOpen = true },
             )
             DropdownMenu(expanded = permissionMenuOpen, onDismissRequest = { permissionMenuOpen = false }) {
@@ -703,7 +703,7 @@ private fun DraftRecoveryDialog(
     val title = draft.title.ifBlank { stringResource(R.string.composer_title_hint) }
     AlertDialog(
         onDismissRequest = {},
-        icon = { Icon(NodysseyIcons.Drafts, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        icon = { Icon(PlazaIcons.Drafts, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         title = { Text(stringResource(R.string.composer_restore_title)) },
         text = {
             Text(

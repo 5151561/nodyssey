@@ -25,15 +25,15 @@ import androidx.compose.ui.unit.dp
 import io.github.plaza.designsys.theme.Spacing
 
 /**
- * One thread, as every list of threads in this app draws it: avatar, title, one 12sp meta line.
+ * One thread, as every list of threads draws it: avatar, title, one 12sp meta line.
  *
  * The title is the only thing with visual weight; everything else is metadata under it. That is the
  * whole design of these lists — nine rows fit on an 800dp screen and the title is legible in every
  * one of them.
  *
- * Shared rather than copied because the feed and 浏览历史 list the same objects: two lists of NodeSeek
- * threads that round their gutters differently read as two different apps, and that is exactly what
- * happened when the history screen was built out of `ListItem`. Everything that varies between the
+ * Shared rather than copied because a feed and a history list the same objects: two lists of threads
+ * that round their gutters differently read as two different apps, and that is exactly what happened
+ * when this app's history screen was built out of `ListItem`. Everything that varies between the
  * two — a pin instead of an avatar, a lock beside the title, which counts go on the meta line — is a
  * slot here, so a caller can differ without re-deciding the geometry.
  */

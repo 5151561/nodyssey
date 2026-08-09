@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.github.plaza.designsys.R
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Spacing
 import kotlin.math.roundToInt
 
@@ -218,7 +218,7 @@ private fun EnabledKeys(
 private fun DragHandle(modifier: Modifier = Modifier) {
     val label = stringResource(R.string.composer_toolbar_reorder)
     Icon(
-        imageVector = NodysseyIcons.DragHandle,
+        imageVector = PlazaIcons.DragHandle,
         contentDescription = label,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier.size(HANDLE_SIZE),

@@ -28,7 +28,7 @@ import io.github.nodyssey.core.image.AllowMeteredImage
 import io.github.nodyssey.core.image.ImagesDeferredException
 import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.RichNode
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import kotlinx.coroutines.CompletableDeferred
@@ -72,7 +72,7 @@ class RichContentTest {
     ) {
         imageLoader?.let(SingletonImageLoader::setUnsafe)
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 RichContent(nodes = nodes, onLinkClick = onLinkClick, onImageClick = {})
             }
         }

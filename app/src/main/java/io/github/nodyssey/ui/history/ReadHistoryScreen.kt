@@ -64,12 +64,12 @@ import io.github.nodyssey.ui.common.StatusView
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.MetaText
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
@@ -184,7 +184,7 @@ fun ReadHistoryScreen(
 
                 state.entries.isEmpty() ->
                     StatusView(
-                        icon = NodysseyIcons.History,
+                        icon = PlazaIcons.History,
                         shape = StatusShapes.Empty,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -269,7 +269,7 @@ private fun HistoryMenu(
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.history_limit_title)) },
-                leadingIcon = { Icon(NodysseyIcons.History, contentDescription = null) },
+                leadingIcon = { Icon(PlazaIcons.History, contentDescription = null) },
                 trailingIcon = {
                     Text(
                         text = limitLabel(limit),
@@ -544,7 +544,7 @@ internal fun historySections(
 @Composable
 private fun ReadHistoryScreenPreview() {
     val now = 1_800_000_000_000L
-    NodysseyTheme {
+    PlazaTheme {
         ReadHistoryScreen(
             state =
             ReadHistoryUiState(

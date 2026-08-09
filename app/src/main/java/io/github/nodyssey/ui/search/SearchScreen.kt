@@ -90,9 +90,9 @@ import io.github.nodyssey.ui.postlist.FeedRowPlaceholder
 import io.github.nodyssey.ui.postlist.PostRow
 import io.github.nodyssey.ui.postlist.toNodeSeekError
 import io.github.plaza.designsys.component.ChoiceRow
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -471,7 +471,7 @@ private fun ResultScopeRow(
         Box {
             TextButton(onClick = { showSortMenu = true }) {
                 Icon(
-                    NodysseyIcons.SwapVert,
+                    PlazaIcons.SwapVert,
                     contentDescription = stringResource(R.string.action_sort),
                     modifier = Modifier.size(FilterChipDefaults.IconSize),
                 )
@@ -682,9 +682,9 @@ private fun SearchHistory(
                     leadingContent = {
                         Icon(
                             if (recent.target == SearchTarget.POSTS) {
-                                NodysseyIcons.History
+                                PlazaIcons.History
                             } else {
-                                NodysseyIcons.PersonSearch
+                                PlazaIcons.PersonSearch
                             },
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -859,7 +859,7 @@ private fun BoardRadioGrid(
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun SearchPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         SearchScreen(
             state =
             SearchUiState(

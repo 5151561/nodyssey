@@ -50,8 +50,8 @@ import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeImageSite
 import io.github.nodyssey.data.nodeimage.NodeImageError
 import io.github.nodyssey.data.nodeimage.NodeImageItem
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import java.util.Locale
@@ -219,7 +219,7 @@ fun NodeImageScreen(
 
     if (state.confirmingClearKey) {
         HighRiskDialog(
-            icon = NodysseyIcons.Shield,
+            icon = PlazaIcons.Shield,
             title = stringResource(R.string.nodeimage_clear_key_title),
             body = stringResource(R.string.nodeimage_clear_key_body),
             confirmLabel = stringResource(R.string.nodeimage_clear_key_action),
@@ -463,7 +463,7 @@ private val UNITS = listOf("KB", "MB", "GB")
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun NodeImagePreview() {
-    NodysseyTheme {
+    PlazaTheme {
         NodeImageScreen(
             state = NodeImageUiState(
                 isLoadingKey = false,

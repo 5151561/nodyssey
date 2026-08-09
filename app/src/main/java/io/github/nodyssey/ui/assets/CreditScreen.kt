@@ -40,7 +40,7 @@ import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NoLedgerEntriesState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.postlist.toNodeSeekError
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
@@ -290,7 +290,7 @@ private val previewEntries =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "d3 鸡腿流水")
 @Composable
 private fun CreditPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         CreditScreen(
             state = CreditUiState(level = 1, chickenCount = 384, nextLevelChicken = 400),
             entries = flowOf(PagingData.from(previewEntries)),
@@ -305,7 +305,7 @@ private fun CreditPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "d3 鸡腿流水 · dark")
 @Composable
 private fun CreditDarkPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         CreditScreen(
             state = CreditUiState(level = 2, chickenCount = 1_240),
             entries = flowOf(PagingData.from(previewEntries)),
@@ -320,7 +320,7 @@ private fun CreditDarkPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "d3 鸡腿流水 · 未登录")
 @Composable
 private fun CreditSignInPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         CreditScreen(
             state = CreditUiState(),
             entries =

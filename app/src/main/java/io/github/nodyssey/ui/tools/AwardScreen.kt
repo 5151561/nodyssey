@@ -33,7 +33,7 @@ import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NumericPager
 import io.github.nodyssey.ui.postlist.PostRow
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.readableWidth
 
 @Composable
@@ -173,7 +173,7 @@ private fun previewSummary(
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "9b 推荐阅读")
 @Composable
 private fun AwardPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         AwardScreen(
             state =
             AwardUiState(

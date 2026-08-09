@@ -46,9 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
 import io.github.nodyssey.core.net.NodeSeekError
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.LocalNodysseyExtraColors
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.LocalPlazaExtraColors
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
@@ -216,7 +216,7 @@ fun NodeSeekErrorState(
     onVerify: (() -> Unit)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val extra = LocalNodysseyExtraColors.current
+    val extra = LocalPlazaExtraColors.current
     val retry = StatusAction(stringResource(R.string.action_retry), onRetry)
 
     when (error) {
@@ -358,7 +358,7 @@ fun EmptyFeedState(
 @Composable
 fun NoLedgerEntriesState(modifier: Modifier = Modifier) {
     StatusView(
-        icon = NodysseyIcons.Wallet,
+        icon = PlazaIcons.Wallet,
         shape = StatusShapes.Empty,
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -390,7 +390,7 @@ fun NoSearchResultsState(
     onClearQuery: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val extra = LocalNodysseyExtraColors.current
+    val extra = LocalPlazaExtraColors.current
     StatusView(
         icon = Icons.Default.Search,
         shape = StatusShapes.NoResults,
@@ -491,7 +491,7 @@ fun ComingSoonState(
 @Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Cloudflare")
 @Composable
 private fun ChallengeStatePreview() {
-    NodysseyTheme {
+    PlazaTheme {
         NodeSeekErrorState(error = NodeSeekError.Cloudflare, onRetry = {}, onOpenBrowser = {})
     }
 }
@@ -499,7 +499,7 @@ private fun ChallengeStatePreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Login required · dark")
 @Composable
 private fun SignInStatePreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         NodeSeekErrorState(
             error = NodeSeekError.LoginRequired,
             onRetry = {},
@@ -513,7 +513,7 @@ private fun SignInStatePreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Network error")
 @Composable
 private fun NetworkStatePreview() {
-    NodysseyTheme {
+    PlazaTheme {
         NodeSeekErrorState(error = NodeSeekError.Network, onRetry = {}, onOpenBrowser = {})
     }
 }
@@ -521,38 +521,38 @@ private fun NetworkStatePreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Empty feed")
 @Composable
 private fun EmptyFeedStatePreview() {
-    NodysseyTheme { EmptyFeedState(onBrowseElsewhere = {}) }
+    PlazaTheme { EmptyFeedState(onBrowseElsewhere = {}) }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "No results")
 @Composable
 private fun NoResultsStatePreview() {
-    NodysseyTheme { NoSearchResultsState(onClearQuery = {}) }
+    PlazaTheme { NoSearchResultsState(onClearQuery = {}) }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Signed out")
 @Composable
 private fun SignedOutStatePreview() {
-    NodysseyTheme { SignedOutState(onSignIn = {}) }
+    PlazaTheme { SignedOutState(onSignIn = {}) }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Signed in")
 @Composable
 private fun SignedInStatePreview() {
-    NodysseyTheme { SignedInState(onSignOut = {}) }
+    PlazaTheme { SignedInState(onSignOut = {}) }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Deleted")
 @Composable
 private fun DeletedStatePreview() {
-    NodysseyTheme { DeletedContentState(onBack = {}) }
+    PlazaTheme { DeletedContentState(onBack = {}) }
 }
 
 @Suppress("UnusedPrivateMember")
 @Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Loading")
 @Composable
 private fun LoadingStatePreview() {
-    NodysseyTheme {
+    PlazaTheme {
         Box(Modifier.fillMaxWidth()) { LoadingState() }
     }
 }

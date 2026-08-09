@@ -22,8 +22,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.nodyssey.R
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -104,7 +104,7 @@ fun OpenSourceLicensesScreen(
 @Composable
 private fun LicenseLinkIcon() {
     Icon(
-        NodysseyIcons.OpenInNew,
+        PlazaIcons.OpenInNew,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(Spacing.md),
@@ -131,5 +131,5 @@ private const val APP_LICENSE_URL = "https://github.com/5151561/nodyssey/blob/ma
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun OpenSourceLicensesPreview() {
-    NodysseyTheme { OpenSourceLicensesScreen(onBack = {}, onOpenUri = {}) }
+    PlazaTheme { OpenSourceLicensesScreen(onBack = {}, onOpenUri = {}) }
 }

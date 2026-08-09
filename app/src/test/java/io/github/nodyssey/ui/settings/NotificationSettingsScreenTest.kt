@@ -15,7 +15,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.nodyssey.data.settings.UserSettings
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -37,7 +37,7 @@ class NotificationSettingsScreenTest {
         onEnabledChange: (Boolean) -> Unit = {},
         onPollMinutesChange: (Int) -> Unit = {},
     ) {
-        NodysseyTheme {
+        PlazaTheme {
             NotificationSettingsScreen(
                 settings = settings,
                 onBack = {},

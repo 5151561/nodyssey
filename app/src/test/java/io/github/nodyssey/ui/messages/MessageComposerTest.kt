@@ -17,7 +17,7 @@ import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.ui.composer.EditorActions
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.toolbarLayout
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -51,7 +51,7 @@ class MessageComposerTest {
         composeRule.setContent {
             var isMarkdown by remember { mutableStateOf(markdown) }
             draftState = remember { TextFieldState(draft) }
-            NodysseyTheme {
+            PlazaTheme {
                 MessageThreadScreen(
                     state =
                     MessageThreadUiState(

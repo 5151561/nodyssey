@@ -34,8 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.ui.assets.InviteConfirmDialog
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -111,7 +111,7 @@ fun InviteScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         Icon(
-                            NodysseyIcons.Group,
+                            PlazaIcons.Group,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(26.dp),
@@ -130,7 +130,7 @@ fun InviteScreen(
                         shape = RoundedCornerShape(24.dp),
                     ) {
                         Icon(
-                            NodysseyIcons.ConfirmationNumber,
+                            PlazaIcons.ConfirmationNumber,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
                         )
@@ -166,7 +166,7 @@ fun InviteScreen(
 @Preview(showBackground = true, widthDp = 360, heightDp = 500, name = "9d 邀请好友")
 @Composable
 private fun InvitePreview() {
-    NodysseyTheme {
+    PlazaTheme {
         InviteScreen(chickenCount = 344, onBack = {}, onBuy = {})
     }
 }
@@ -174,7 +174,7 @@ private fun InvitePreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 500, name = "9d 邀请好友 · dark")
 @Composable
 private fun InviteDarkPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         InviteScreen(chickenCount = 1_240, onBack = {}, onBuy = {})
     }
 }

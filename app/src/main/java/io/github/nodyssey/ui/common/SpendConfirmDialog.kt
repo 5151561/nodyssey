@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
@@ -135,7 +135,7 @@ fun SpendConfirmDialog(
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable
 private fun SpendConfirmDialogPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         SpendConfirmDialog(
             title = "确认转账 2 星辰？",
             details =
@@ -156,7 +156,7 @@ private fun SpendConfirmDialogPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 640, name = "余额不足")
 @Composable
 private fun SpendConfirmDialogShortfallPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         SpendConfirmDialog(
             title = "确认转账 7 星辰？",
             details = listOf(SpendDetail("数额", "7 星辰"), SpendDetail("当前余额", "4")),

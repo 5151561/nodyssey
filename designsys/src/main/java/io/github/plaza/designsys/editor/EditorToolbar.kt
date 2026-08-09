@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.plaza.designsys.R
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Spacing
 
 /**
@@ -103,7 +103,7 @@ fun EditorToolbar(
                     }
                     onCustomize?.let { customize ->
                         ToolbarKey(
-                            icon = NodysseyIcons.Build,
+                            icon = PlazaIcons.Build,
                             contentDescription = stringResource(R.string.composer_toolbar_customize),
                             size = keySize,
                             checkable = false,
@@ -191,17 +191,17 @@ object EditorToolbarDefaults {
 
 val EditorAction.icon: ImageVector
     get() = when (this) {
-        EditorAction.BOLD -> NodysseyIcons.FormatBold
-        EditorAction.ITALIC -> NodysseyIcons.FormatItalic
-        EditorAction.STRIKETHROUGH -> NodysseyIcons.StrikethroughS
-        EditorAction.HEADING -> NodysseyIcons.Title
-        EditorAction.CODE -> NodysseyIcons.Code
-        EditorAction.QUOTE -> NodysseyIcons.FormatQuote
-        EditorAction.LIST -> NodysseyIcons.FormatListBulleted
-        EditorAction.LINK -> NodysseyIcons.Link
-        EditorAction.MENTION -> NodysseyIcons.AlternateEmail
-        EditorAction.IMAGE -> NodysseyIcons.Image
-        EditorAction.EMOJI -> NodysseyIcons.Mood
+        EditorAction.BOLD -> PlazaIcons.FormatBold
+        EditorAction.ITALIC -> PlazaIcons.FormatItalic
+        EditorAction.STRIKETHROUGH -> PlazaIcons.StrikethroughS
+        EditorAction.HEADING -> PlazaIcons.Title
+        EditorAction.CODE -> PlazaIcons.Code
+        EditorAction.QUOTE -> PlazaIcons.FormatQuote
+        EditorAction.LIST -> PlazaIcons.FormatListBulleted
+        EditorAction.LINK -> PlazaIcons.Link
+        EditorAction.MENTION -> PlazaIcons.AlternateEmail
+        EditorAction.IMAGE -> PlazaIcons.Image
+        EditorAction.EMOJI -> PlazaIcons.Mood
     }
 
 val EditorAction.labelRes: Int

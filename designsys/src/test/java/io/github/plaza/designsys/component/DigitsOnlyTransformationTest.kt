@@ -14,7 +14,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.TextRange
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -63,7 +63,7 @@ class DigitsOnlyTransformationTest {
         maxLength: Int = 12,
     ) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 focusManager = LocalFocusManager.current
                 OutlinedTextField(
                     state = remember { TextFieldState(initialText, TextRange(caret)) },

@@ -51,9 +51,9 @@ import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.plaza.designsys.component.AvatarShape
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
@@ -102,7 +102,7 @@ internal fun ConversationList(
             modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.lg),
         ) {
             Icon(
-                NodysseyIcons.AddComment,
+                PlazaIcons.AddComment,
                 contentDescription = stringResource(R.string.messages_new_conversation),
             )
         }
@@ -191,7 +191,7 @@ private fun ConversationRow(
                     )
                     if (conversation.isSystem) {
                         Icon(
-                            NodysseyIcons.PushPin,
+                            PlazaIcons.PushPin,
                             contentDescription = stringResource(R.string.messages_pinned),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp),
@@ -374,7 +374,7 @@ internal fun unreadLabel(count: Int, cap: Int): String =
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable
 private fun ConversationListPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         ConversationList(
             state =
             NotificationsUiState(

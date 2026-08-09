@@ -42,7 +42,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.nodyssey.R
 import io.github.nodyssey.model.AnsiSpan
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
@@ -107,7 +107,7 @@ fun ReportSourceDialog(
                         )
                         IconButton(onClick = { copy("report", source, confirmation) }) {
                             Icon(
-                                imageVector = NodysseyIcons.ContentCopy,
+                                imageVector = PlazaIcons.ContentCopy,
                                 contentDescription = stringResource(R.string.action_copy),
                                 tint = ReportTerminalInk,
                                 modifier = Modifier.size(18.dp),
@@ -190,7 +190,7 @@ fun ReportSourceBlock(
             )
             IconButton(onClick = { copy("report", source, confirmation) }) {
                 Icon(
-                    imageVector = NodysseyIcons.ContentCopy,
+                    imageVector = PlazaIcons.ContentCopy,
                     contentDescription = stringResource(R.string.action_copy),
                     tint = ReportTerminalInk,
                     modifier = Modifier.size(18.dp),

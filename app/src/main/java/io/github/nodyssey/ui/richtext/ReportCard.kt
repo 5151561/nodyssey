@@ -48,7 +48,7 @@ import io.github.nodyssey.core.report.QualityReport
 import io.github.plaza.designsys.component.SpecRow
 import io.github.plaza.designsys.component.SpecTable
 import io.github.plaza.designsys.theme.CodeStyle
-import io.github.plaza.designsys.theme.LocalNodysseyExtraColors
+import io.github.plaza.designsys.theme.LocalPlazaExtraColors
 import io.github.plaza.designsys.theme.ReportData
 import io.github.plaza.designsys.theme.ReportLabel
 import io.github.plaza.designsys.theme.Sizes
@@ -269,15 +269,15 @@ private fun FieldRow(field: QualityReport.Block.Field) {
 @Composable
 private fun toneColour(tone: QualityReport.Tone): Color = when (tone) {
     QualityReport.Tone.Neutral -> MaterialTheme.colorScheme.onSurface
-    QualityReport.Tone.Good -> LocalNodysseyExtraColors.current.success
-    QualityReport.Tone.Warn -> LocalNodysseyExtraColors.current.warning
+    QualityReport.Tone.Good -> LocalPlazaExtraColors.current.success
+    QualityReport.Tone.Warn -> LocalPlazaExtraColors.current.warning
     QualityReport.Tone.Bad -> MaterialTheme.colorScheme.error
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BadgeRow(badges: QualityReport.Block.Badges) {
-    val extra = LocalNodysseyExtraColors.current
+    val extra = LocalPlazaExtraColors.current
 
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(

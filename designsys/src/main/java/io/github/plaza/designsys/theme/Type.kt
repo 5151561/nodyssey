@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
  *
  * Sizes are in `sp` throughout so the whole app follows the system font scale.
  */
-val NodysseyTypography =
+val PlazaTypography =
     Typography(
         displayLarge = TextStyle(fontSize = 57.sp, lineHeight = 64.sp, letterSpacing = (-0.25).sp),
         displayMedium = TextStyle(fontSize = 45.sp, lineHeight = 52.sp),
@@ -57,13 +57,13 @@ val NodysseyTypography =
     )
 
 /** Applies the in-app reading-size preference on top of Android's system font scale. */
-fun nodysseyTypography(fontScale: Float): Typography {
+fun plazaTypography(fontScale: Float): Typography {
     val scale = fontScale.coerceIn(0.85f, 1.5f)
     fun TextStyle.scaled() = copy(fontSize = fontSize * scale, lineHeight = lineHeight * scale)
-    return NodysseyTypography.copy(
-        bodyLarge = NodysseyTypography.bodyLarge.scaled(),
-        bodyMedium = NodysseyTypography.bodyMedium.scaled(),
-        bodySmall = NodysseyTypography.bodySmall.scaled(),
+    return PlazaTypography.copy(
+        bodyLarge = PlazaTypography.bodyLarge.scaled(),
+        bodyMedium = PlazaTypography.bodyMedium.scaled(),
+        bodySmall = PlazaTypography.bodySmall.scaled(),
     )
 }
 

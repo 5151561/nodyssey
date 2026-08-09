@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
-import io.github.plaza.designsys.theme.LocalNodysseyExtraColors
+import io.github.plaza.designsys.theme.LocalPlazaExtraColors
 
 /**
  * The board tag that appears on every list row and at the top of every thread.
@@ -97,7 +97,7 @@ internal fun boardFamilyOf(slug: String?, title: String?): BoardFamily =
 @Composable
 internal fun boardFamilyColors(family: BoardFamily): BoardFamilyColors {
     val scheme = MaterialTheme.colorScheme
-    val extra = LocalNodysseyExtraColors.current
+    val extra = LocalPlazaExtraColors.current
     return when (family) {
         BoardFamily.Technical -> BoardFamilyColors(scheme.primaryContainer, scheme.onPrimaryContainer)
         BoardFamily.Trade -> BoardFamilyColors(scheme.tertiaryContainer, scheme.onTertiaryContainer)

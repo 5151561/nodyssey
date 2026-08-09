@@ -67,7 +67,7 @@ import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.plaza.designsys.component.EditorTextField
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.EditorToolbarDefaults
 import io.github.plaza.designsys.editor.MarkdownEditorBar
@@ -236,7 +236,7 @@ private fun ReplyEditorSheet(
                     enabled = !state.isPublishing,
                 ) {
                     Icon(
-                        imageVector = NodysseyIcons.Visibility,
+                        imageVector = PlazaIcons.Visibility,
                         contentDescription = stringResource(R.string.action_preview),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -413,7 +413,7 @@ private fun ReplyTargetChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 2.dp),
         ) {
-            Icon(NodysseyIcons.Reply, contentDescription = null, modifier = Modifier.size(15.dp))
+            Icon(PlazaIcons.Reply, contentDescription = null, modifier = Modifier.size(15.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.post_quote_reply, replyTo.author, "#${replyTo.floor}"),

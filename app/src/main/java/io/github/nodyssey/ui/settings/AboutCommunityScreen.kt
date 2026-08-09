@@ -43,9 +43,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
@@ -129,7 +129,7 @@ fun AboutCommunityScreen(
             AboutActionRow(
                 title = stringResource(R.string.about_site),
                 subtitle = stringResource(R.string.about_site_hint),
-                icon = NodysseyIcons.Article,
+                icon = PlazaIcons.Article,
                 onClick = onOpenAboutSite,
             )
             AboutActionRow(
@@ -141,10 +141,10 @@ fun AboutCommunityScreen(
             AboutActionRow(
                 title = stringResource(R.string.about_rss),
                 subtitle = CommunityLinks.RSS_DISPLAY,
-                icon = NodysseyIcons.Article,
+                icon = PlazaIcons.Article,
                 trailing = {
                     Icon(
-                        NodysseyIcons.ContentCopy,
+                        PlazaIcons.ContentCopy,
                         contentDescription = stringResource(R.string.about_copy_rss),
                     )
                 },
@@ -157,27 +157,27 @@ fun AboutCommunityScreen(
             SectionLabel(stringResource(R.string.about_contact))
             AboutActionRow(
                 title = stringResource(R.string.about_telegram_channel),
-                icon = NodysseyIcons.Campaign,
+                icon = PlazaIcons.Campaign,
                 external = true,
                 onClick = { onOpenUri(CommunityLinks.TELEGRAM_CHANNEL) },
             )
             AboutActionRow(
                 title = stringResource(R.string.about_telegram_group),
-                icon = NodysseyIcons.Group,
+                icon = PlazaIcons.Group,
                 external = true,
                 onClick = { onOpenUri(CommunityLinks.TELEGRAM_GROUP) },
             )
             AboutActionRow(
                 title = stringResource(R.string.about_email),
                 subtitle = CommunityLinks.EMAIL.removePrefix("mailto:"),
-                icon = NodysseyIcons.Campaign,
+                icon = PlazaIcons.Campaign,
                 external = true,
                 onClick = { onOpenUri(CommunityLinks.EMAIL) },
             )
             AboutActionRow(
                 title = stringResource(R.string.about_deepflood),
                 subtitle = stringResource(R.string.about_deepflood_hint),
-                icon = NodysseyIcons.Group,
+                icon = PlazaIcons.Group,
                 external = true,
                 onClick = { onOpenUri(CommunityLinks.DEEPFLOOD) },
             )
@@ -213,7 +213,7 @@ private fun CommunityStats(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Icon(NodysseyIcons.Group, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+            Icon(PlazaIcons.Group, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     text =
@@ -278,7 +278,7 @@ private fun FriendSiteChips(onOpenUri: (String) -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     Text(name, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
-                    Icon(NodysseyIcons.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Icon(PlazaIcons.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
                 }
             }
         }
@@ -301,7 +301,7 @@ internal object CommunityLinks {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "f1 关于 · 社区")
 @Composable
 private fun AboutCommunityPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         AboutCommunityScreen(
             onBack = {},
             onOpenAboutSite = {},

@@ -102,12 +102,12 @@ import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.MetaText
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -622,7 +622,7 @@ private fun HomeTopBar(
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
-                        imageVector = NodysseyIcons.SwapVert,
+                        imageVector = PlazaIcons.SwapVert,
                         contentDescription = stringResource(R.string.action_sort),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -707,7 +707,7 @@ internal fun PostRow(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = NodysseyIcons.PushPin,
+                        imageVector = PlazaIcons.PushPin,
                         contentDescription = stringResource(R.string.post_badge_pinned),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(18.dp),
@@ -1017,7 +1017,7 @@ internal fun previewFeed(): Flow<PagingData<FeedPost>> =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post list")
 @Composable
 private fun PostListScreenPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         PostListScreen(
             state = previewState,
             posts = previewFeed().collectAsLazyPagingItems(),
@@ -1033,7 +1033,7 @@ private fun PostListScreenPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post list · dark")
 @Composable
 private fun PostListScreenDarkPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         PostListScreen(
             state = previewState,
             posts = previewFeed().collectAsLazyPagingItems(),
@@ -1049,5 +1049,5 @@ private fun PostListScreenDarkPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post list · skeleton")
 @Composable
 private fun PostListSkeletonPreview() {
-    NodysseyTheme { FeedSkeleton() }
+    PlazaTheme { FeedSkeleton() }
 }

@@ -12,7 +12,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -36,7 +36,7 @@ class ToolbarCustomizeSheetTest {
         enabled = start
         composeRule.setContent {
             var keys by remember { mutableStateOf(start) }
-            NodysseyTheme {
+            PlazaTheme {
                 ToolbarCustomizeSheet(
                     layout = ToolbarLayout(
                         enabled = keys,

@@ -19,7 +19,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -40,7 +40,7 @@ class SettingsScreenTest {
     fun `theme choice exposes the new selected state`() {
         composeRule.setContent {
             var mode by remember { mutableStateOf(ThemeMode.SYSTEM) }
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(themeMode = mode)),
                     onBack = {},
@@ -64,7 +64,7 @@ class SettingsScreenTest {
     @Test
     fun `theme choices fill the row with equal segments`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings()),
                     onBack = {},
@@ -95,7 +95,7 @@ class SettingsScreenTest {
     fun `wifi image setting toggles from the whole row`() {
         composeRule.setContent {
             var wifiOnly by remember { mutableStateOf(false) }
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(imagesOnWifiOnly = wifiOnly)),
                     onBack = {},
@@ -123,7 +123,7 @@ class SettingsScreenTest {
     fun `external link target defaults to the in-app tab and can be switched`() {
         composeRule.setContent {
             var target by remember { mutableStateOf(UserSettings().externalLinkTarget) }
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(externalLinkTarget = target)),
                     onBack = {},
@@ -148,7 +148,7 @@ class SettingsScreenTest {
     fun `report format defaults to the adapted card and can be switched to the source`() {
         composeRule.setContent {
             var format by remember { mutableStateOf(UserSettings().reportFormat) }
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(reportFormat = format)),
                     onBack = {},
@@ -174,7 +174,7 @@ class SettingsScreenTest {
     fun `the home page bar starts off and toggles from the whole row`() {
         composeRule.setContent {
             var enabled by remember { mutableStateOf(UserSettings().homePageBar) }
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(homePageBar = enabled)),
                     onBack = {},
@@ -202,7 +202,7 @@ class SettingsScreenTest {
     fun `font size label follows drag state without applying it`() {
         var appliedScale: Float? = null
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(fontScale = 1f)),
                     onBack = {},
@@ -235,7 +235,7 @@ class SettingsScreenTest {
     fun `font size applies only after the drag is released`() {
         var appliedScale: Float? = null
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(fontScale = 1f)),
                     onBack = {},
@@ -263,7 +263,7 @@ class SettingsScreenTest {
     fun `the launch update check is on by default and can be switched off`() {
         composeRule.setContent {
             var settings by remember { mutableStateOf(UserSettings()) }
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(settings),
                     onBack = {},
@@ -292,7 +292,7 @@ class SettingsScreenTest {
     @Test
     fun `about row states the installed version`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(versionName = "9.9.9"),
                     onBack = {},
@@ -314,7 +314,7 @@ class SettingsScreenTest {
     @Test
     fun `about row gives up the version line to the update offer`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 SettingsScreen(
                     state = SettingsUiState(versionName = "9.9.9", updateVersionName = "10.0.0"),
                     onBack = {},

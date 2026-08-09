@@ -13,7 +13,7 @@ import androidx.compose.ui.test.swipeLeft
 import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.data.ReadHistoryEntry
 import io.github.nodyssey.data.settings.SettingsRepository
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -41,7 +41,7 @@ class ReadHistoryScreenTest {
         onLimitChange: (Int) -> Unit = {},
     ) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ReadHistoryScreen(
                     state = state,
                     onBack = {},
@@ -231,7 +231,7 @@ class ReadHistoryScreenTest {
                 entry(10, title = "第四条"),
             )
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ReadHistoryScreen(
                     state = ReadHistoryUiState(isLoading = false, entries = entries.toList()),
                     onBack = {},

@@ -20,10 +20,10 @@ import androidx.compose.ui.platform.LocalContext
  * app is leaning — the Custom Tab toolbar, so far — reads this instead of re-deriving the setting
  * and getting a different answer.
  */
-val LocalNodysseyDarkTheme = staticCompositionLocalOf { false }
+val LocalPlazaDarkTheme = staticCompositionLocalOf { false }
 
 @Composable
-fun NodysseyTheme(
+fun PlazaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // The brand palette is the default and the point: the app should be recognisable from a
     // screenshot posted back to the forum. Wallpaper colors stay available, but opt-in.
@@ -37,23 +37,23 @@ fun NodysseyTheme(
         when {
             useDynamic && darkTheme -> dynamicDarkColorScheme(context)
             useDynamic -> dynamicLightColorScheme(context)
-            darkTheme -> NodysseyDarkColorScheme
-            else -> NodysseyLightColorScheme
+            darkTheme -> PlazaDarkColorScheme
+            else -> PlazaLightColorScheme
         }
 
     // The amber board-tag pair has no Material role, so it rides alongside the scheme rather than
     // being read from a global — otherwise it would not follow the theme.
     CompositionLocalProvider(
-        LocalNodysseyExtraColors provides if (darkTheme) DarkExtraColors else LightExtraColors,
-        LocalNodysseyDarkTheme provides darkTheme,
+        LocalPlazaExtraColors provides if (darkTheme) DarkExtraColors else LightExtraColors,
+        LocalPlazaDarkTheme provides darkTheme,
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
             motionScheme = MotionScheme.expressive(),
             // Remembered rather than rebuilt: the scale only moves when the reading-size setting
             // does, and each call copies three TextStyles.
-            typography = remember(fontScale) { nodysseyTypography(fontScale) },
-            shapes = NodysseyShapes,
+            typography = remember(fontScale) { plazaTypography(fontScale) },
+            shapes = PlazaShapes,
             content = content,
         )
     }

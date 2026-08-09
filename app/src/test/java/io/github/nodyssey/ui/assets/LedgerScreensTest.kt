@@ -12,7 +12,7 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.CreditEntry
 import io.github.nodyssey.data.StardustEntry
 import io.github.nodyssey.data.StardustType
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -124,7 +124,7 @@ class LedgerScreensTest {
 
     private fun setCreditContent(state: CreditUiState) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 CreditScreen(
                     state = state,
                     entries = flowOf(PagingData.from(creditEntries)),
@@ -142,7 +142,7 @@ class LedgerScreensTest {
         entries: List<StardustEntry> = stardustEntries,
     ) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 StardustScreen(
                     state = state,
                     entries = flowOf(PagingData.from(entries)),

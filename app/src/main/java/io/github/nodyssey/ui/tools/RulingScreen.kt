@@ -60,11 +60,12 @@ import io.github.nodyssey.data.RulingRecord
 import io.github.nodyssey.data.RulingTarget
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
+import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
 import io.github.plaza.designsys.component.AppendSpinner
-import io.github.plaza.designsys.component.NodysseyIcons
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
@@ -469,11 +470,11 @@ private fun RulingAction.label(boardTitles: Map<String, String>): String =
 
 private fun RulingKind.icon(): ImageVector =
     when (this) {
-        RulingKind.PENALTY -> NodysseyIcons.Gavel
-        RulingKind.BAN -> NodysseyIcons.Block
-        RulingKind.MOVE -> NodysseyIcons.SwapVert
-        RulingKind.PERMISSION -> NodysseyIcons.Visibility
-        RulingKind.REWARD -> NodysseyIcons.ChickenLeg
+        RulingKind.PENALTY -> PlazaIcons.Gavel
+        RulingKind.BAN -> PlazaIcons.Block
+        RulingKind.MOVE -> PlazaIcons.SwapVert
+        RulingKind.PERMISSION -> PlazaIcons.Visibility
+        RulingKind.REWARD -> NodeSeekIcons.ChickenLeg
     }
 
 @Composable
@@ -593,7 +594,7 @@ private val previewState =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "9d 管理记录")
 @Composable
 private fun RulingPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         RulingScreen(
             state = previewState,
             onBack = {},
@@ -611,7 +612,7 @@ private fun RulingPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "9d 管理记录 · 接页中")
 @Composable
 private fun RulingAppendingPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         RulingScreen(
             state = previewState.copy(isAppending = true),
             onBack = {},
@@ -629,7 +630,7 @@ private fun RulingAppendingPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "9d 管理记录 · 未登录")
 @Composable
 private fun RulingSignedOutPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         RulingScreen(
             state = RulingUiState(isLoading = false, error = NodeSeekError.LoginRequired),
             onBack = {},

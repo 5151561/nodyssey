@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.ui.richtext.RichContent
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Spacing
 
@@ -44,7 +44,7 @@ fun RuleReminderCard(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = Spacing.md),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm + 2.dp),
         ) {
-            Icon(NodysseyIcons.Campaign, contentDescription = null, modifier = Modifier.size(20.dp))
+            Icon(PlazaIcons.Campaign, contentDescription = null, modifier = Modifier.size(20.dp))
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
                     text = stringResource(R.string.composer_rule_title),

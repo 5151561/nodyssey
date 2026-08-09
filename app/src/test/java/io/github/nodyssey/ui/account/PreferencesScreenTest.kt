@@ -4,7 +4,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -24,7 +24,7 @@ class PreferencesScreenTest {
     @Test
     fun `night basis choices fill the row with equal segments`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 PreferencesScreen(
                     state = PreferencesUiState(autoNight = true),
                     snackbarHostState = SnackbarHostState(),

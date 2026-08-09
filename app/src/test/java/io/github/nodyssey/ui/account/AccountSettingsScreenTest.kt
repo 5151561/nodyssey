@@ -6,7 +6,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -40,7 +40,7 @@ class AccountSettingsScreenTest {
         onSignOut: () -> Unit = {},
     ) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 AccountSettingsScreen(
                     state = state,
                     onBack = {},

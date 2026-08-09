@@ -64,7 +64,7 @@ import coil3.request.ImageRequest
 import io.github.nodyssey.R
 import io.github.nodyssey.core.image.ImagesDeferredException
 import io.github.nodyssey.core.image.allowMeteredImage
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import kotlin.math.abs
@@ -161,7 +161,7 @@ fun ImageViewerScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 ViewerAction(
-                    icon = NodysseyIcons.Download,
+                    icon = PlazaIcons.Download,
                     label = stringResource(R.string.viewer_save),
                     modifier = Modifier.weight(1f),
                 ) {
@@ -219,7 +219,7 @@ private fun ViewerTopBar(
         )
         IconButton(onClick = onOpenBrowser) {
             Icon(
-                NodysseyIcons.OpenInNew,
+                PlazaIcons.OpenInNew,
                 contentDescription = stringResource(R.string.action_open_in_browser),
                 tint = VIEWER_CONTENT,
                 modifier = Modifier.size(20.dp),

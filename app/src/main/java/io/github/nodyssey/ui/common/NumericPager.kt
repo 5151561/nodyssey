@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
@@ -133,7 +133,7 @@ private fun PageChip(
 @Preview(showBackground = true, widthDp = 360)
 @Composable
 private fun NumericPagerPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         NumericPager(page = 1, totalPages = 104, onPageSelected = {}, approximateTotal = true)
     }
 }

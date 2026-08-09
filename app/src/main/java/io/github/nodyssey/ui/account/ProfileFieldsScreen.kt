@@ -57,11 +57,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.ui.composer.EditorActions
 import io.github.plaza.designsys.component.AvatarShape
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.editor.EditorToolbar
 import io.github.plaza.designsys.editor.applyMarkdown
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
 import io.github.plaza.designsys.theme.readableWidth
@@ -294,7 +294,7 @@ private fun AvatarEditor(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            NodysseyIcons.PhotoCamera,
+                            PlazaIcons.PhotoCamera,
                             contentDescription = stringResource(R.string.account_avatar_change),
                             modifier = Modifier.size(15.dp),
                         )
@@ -303,7 +303,7 @@ private fun AvatarEditor(
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.account_avatar_take_photo)) },
-                        leadingIcon = { Icon(NodysseyIcons.PhotoCamera, contentDescription = null) },
+                        leadingIcon = { Icon(PlazaIcons.PhotoCamera, contentDescription = null) },
                         onClick = {
                             menuOpen = false
                             picker.takePhoto()
@@ -311,7 +311,7 @@ private fun AvatarEditor(
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.account_avatar_pick)) },
-                        leadingIcon = { Icon(NodysseyIcons.Image, contentDescription = null) },
+                        leadingIcon = { Icon(PlazaIcons.Image, contentDescription = null) },
                         onClick = {
                             menuOpen = false
                             picker.pickImage()
@@ -394,7 +394,7 @@ private const val README_MIN_LINES = 5
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun ProfileFieldsPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         ProfileFieldsScreen(
             state =
             ProfileFieldsUiState(

@@ -82,12 +82,12 @@ import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.InlineStyle
 import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.common.SkippedImagePlaceholder
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SpecTable
 import io.github.plaza.designsys.component.asSpecTable
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.theme.CodeStyle
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
@@ -644,7 +644,7 @@ private fun CodeBlock(node: RichNode.CodeBlock) {
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Icon(
-                    imageVector = NodysseyIcons.ContentCopy,
+                    imageVector = PlazaIcons.ContentCopy,
                     contentDescription = null,
                     tint = chrome,
                     modifier = Modifier.size(15.dp),
@@ -1175,11 +1175,11 @@ private fun RichContentSpec() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 1240, name = "Body typography spec")
 @Composable
 private fun RichContentSpecPreview() {
-    NodysseyTheme { RichContentSpec() }
+    PlazaTheme { RichContentSpec() }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 1240, name = "Body typography spec · dark")
 @Composable
 private fun RichContentSpecDarkPreview() {
-    NodysseyTheme(darkTheme = true) { RichContentSpec() }
+    PlazaTheme(darkTheme = true) { RichContentSpec() }
 }

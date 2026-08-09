@@ -79,7 +79,7 @@ import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.nodyssey.ui.composer.toPickedImages
 import io.github.nodyssey.ui.richtext.RichContent
 import io.github.plaza.designsys.component.EditorTextField
-import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.editor.EditorAction
@@ -87,7 +87,7 @@ import io.github.plaza.designsys.editor.MarkdownEditorBar
 import io.github.plaza.designsys.editor.MarkdownEditorState
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.rememberMarkdownEditorState
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
 
@@ -428,7 +428,7 @@ private fun MessageStatusLine(
 
             SendStatus.FAILED -> {
                 Icon(
-                    NodysseyIcons.ErrorCircle,
+                    PlazaIcons.ErrorCircle,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(13.dp),
@@ -708,7 +708,7 @@ private val INPUT_CONTROL_SIZE = 44.dp
 @Composable
 private fun MessageThreadPreview() {
     val now = 1_785_000_000_000L
-    NodysseyTheme {
+    PlazaTheme {
         MessageThreadScreen(
             state =
             MessageThreadUiState(

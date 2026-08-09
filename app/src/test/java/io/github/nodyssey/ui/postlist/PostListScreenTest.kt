@@ -33,7 +33,7 @@ import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -110,7 +110,7 @@ class PostListScreenTest {
         onGoToPage: (Int) -> Unit = {},
     ) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ScreenUnderTest(
                     posts = posts,
                     refresh = refresh,
@@ -233,7 +233,7 @@ class PostListScreenTest {
         val restorationTester = StateRestorationTester(composeRule)
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         restorationTester.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ScreenUnderTest(
                     posts = posts,
                     refresh = LoadState.NotLoading(false),
@@ -266,7 +266,7 @@ class PostListScreenTest {
         lateinit var retainedListState: LazyListState
         composeRule.setContent {
             retainedListState = rememberLazyListState()
-            NodysseyTheme {
+            PlazaTheme {
                 if (showingList) {
                     ScreenUnderTest(
                         posts = posts,
@@ -303,7 +303,7 @@ class PostListScreenTest {
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var state by mutableStateOf(PostListUiState(boards = boards))
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ScreenUnderTest(
                     posts = posts,
                     refresh = LoadState.NotLoading(false),
@@ -331,7 +331,7 @@ class PostListScreenTest {
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var requests by mutableStateOf(0)
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ScreenUnderTest(
                     posts = posts,
                     refresh = LoadState.NotLoading(false),
@@ -364,7 +364,7 @@ class PostListScreenTest {
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var requests by mutableStateOf(0)
         restorationTester.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ScreenUnderTest(
                     posts = posts,
                     refresh = LoadState.NotLoading(false),

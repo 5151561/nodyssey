@@ -18,7 +18,7 @@ import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.RichNode
-import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -73,7 +73,7 @@ class PostDetailScreenTest {
         onCollect: () -> Unit = {},
     ) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 PostDetailScreen(
                     state = state,
                     postUrl = "https://www.nodeseek.com/post-1-1",
@@ -500,7 +500,7 @@ class PostDetailScreenTest {
             ),
         )
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 PostDetailScreen(
                     state = state,
                     postUrl = "https://www.nodeseek.com/post-1-5",
@@ -543,7 +543,7 @@ class PostDetailScreenTest {
             ),
         )
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 PostDetailScreen(
                     state = state,
                     postUrl = "https://www.nodeseek.com/post-1-1",
