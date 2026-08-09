@@ -14,6 +14,13 @@ sealed interface ApiErrorUi {
 
     data object NotBbs1Api : ApiErrorUi
 
+    /**
+     * The credential was refused. Its own case rather than a [Server] message because the app has
+     * already dropped the session by the time this is shown, and the copy has to say so — the
+     * server's own wording is written for a session it assumes the client still has.
+     */
+    data object Unauthorized : ApiErrorUi
+
     /** The plugin's own refusal message, already written for people; shown verbatim. */
     data class Server(val message: String) : ApiErrorUi
 }
@@ -21,6 +28,7 @@ sealed interface ApiErrorUi {
 fun Bbs1ApiException.toUi(): ApiErrorUi = when (this) {
     is Bbs1ApiException.Network -> ApiErrorUi.Network
     is Bbs1ApiException.NotBbs1Api -> ApiErrorUi.NotBbs1Api
+    is Bbs1ApiException.Unauthorized -> ApiErrorUi.Unauthorized
     is Bbs1ApiException.Server -> ApiErrorUi.Server(userMessage)
 }
 
@@ -28,5 +36,6 @@ fun Bbs1ApiException.toUi(): ApiErrorUi = when (this) {
 fun apiErrorText(error: ApiErrorUi): String = when (error) {
     ApiErrorUi.Network -> stringResource(R.string.bbs1_error_network)
     ApiErrorUi.NotBbs1Api -> stringResource(R.string.bbs1_error_not_api)
+    ApiErrorUi.Unauthorized -> stringResource(R.string.bbs1_error_unauthorized)
     is ApiErrorUi.Server -> error.message
 }

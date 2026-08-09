@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup rules for API 31 and above.
+
+    `sessions.preferences_pb` holds one login token per site. Each is a bearer credential the site
+    issued to this device — anyone holding it is that account until the password changes. Letting it
+    into a backup would copy it onto every device the backup is later restored to. Excluding it costs
+    the user one sign-in after a restore; the site list they typed is in `instances.preferences_pb`
+    and still restores.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datastore/sessions.preferences_pb" />
+    </cloud-backup>
+    <!--
+        A device transfer is direct rather than via the cloud, but the token still belongs to the old
+        device's session, so it is excluded there too.
+    -->
+    <device-transfer>
+        <exclude domain="file" path="datastore/sessions.preferences_pb" />
+    </device-transfer>
+</data-extraction-rules>

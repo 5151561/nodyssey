@@ -1,7 +1,7 @@
 package io.github.bbs1.ui.instances
 
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import io.github.bbs1.data.InstanceRepository
+import io.github.bbs1.data.newTestInstanceRepository
 import io.github.bbs1.net.ApiMeta
 import io.github.bbs1.net.ApiSite
 import io.github.bbs1.net.Bbs1ApiException
@@ -26,7 +26,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class InstancesViewModelTest {
@@ -46,11 +45,7 @@ class InstancesViewModelTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
         val scope = CoroutineScope(dispatcher + Job())
-        val store =
-            PreferenceDataStoreFactory.create(scope = scope) {
-                File(tmp.root, "instances.preferences_pb")
-            }
-        return InstancesViewModel(InstanceRepository(store) { "id" }, api) to scope
+        return InstancesViewModel(newTestInstanceRepository(scope, tmp.root), api) to scope
     }
 
     @Test

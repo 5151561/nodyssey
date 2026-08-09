@@ -15,14 +15,17 @@
         default (blocked) would make that site fail with a connection error that looks like a bug.
         Typing http:// is the user's own call, the same way it is in a browser.
 
-        Backup is on without exclusions — the only state is site URLs the user typed, which is
-        exactly what should survive onto a new device. The moment a credential or cached content
-        appears, revisit this the way `:app` did (backup_rules.xml).
+        Backup is on, but the login tokens are excluded. The site URLs the user typed are exactly
+        what should survive onto a new device; the bearer token each site issued to *this* device is
+        exactly what should not, which is why the two live in separate DataStore files.
+        See res/xml/bbs1_backup_rules.xml and res/xml/bbs1_data_extraction_rules.xml.
     -->
     <application
         android:name=".Bbs1App"
         android:usesCleartextTraffic="true"
         android:allowBackup="true"
+        android:fullBackupContent="@xml/bbs1_backup_rules"
+        android:dataExtractionRules="@xml/bbs1_data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/bbs1_app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
