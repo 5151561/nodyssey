@@ -1,0 +1,27 @@
+<!doctype html>
+<!--
+  Trimmed capture of /post-841442-1, read on 2026-08-09 through the account holder's browser while
+  signed in as a Lv2 account. Only the wrapper chain around the refusal is kept; the header, the
+  sidebar and the site's scripts are dropped.
+
+  Two things this fixture exists to pin, both true of the real page:
+  - the refusal is one text node in a bare <div> — nothing wraps `Lv5`, so the level is readable;
+  - the page still carries `id="nsk-body"`, a USABLE_PAGE_MARKER, and does *not* carry
+    需要注册用户才能查看. What used to classify it was the 权限不足 inside the sentence.
+-->
+<html>
+<head>
+    <title>NodeSeek</title>
+</head>
+<body class="bg1">
+    <section id="nsk-frame">
+        <div id="nsk-body" class="nsk-container">
+            <div id="nsk-body-left">
+                <div>
+                    <div>查看本帖需要Lv5，您的权限不足😑，请赚取🍗升级您的用户等级</div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

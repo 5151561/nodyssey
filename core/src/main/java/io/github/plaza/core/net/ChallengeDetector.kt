@@ -12,6 +12,12 @@ class ChallengeDetector(private val markers: PageMarkers) {
 
     /** Returns the reason this response is unusable, or `null` when it carries real content. */
     fun detect(html: String, statusCode: Int, headers: Map<String, String>): SiteError? {
+        // Before the login markers, not after: see [PageMarkers.levelRequired] — the two refusals
+        // can share a phrase, and only the more specific one carries a level to show.
+        markers.levelRequired.firstNotNullOfOrNull { it.find(html) }?.let { match ->
+            return SiteError.LevelRequired(match.groupValues.getOrNull(1)?.toIntOrNull())
+        }
+
         if (markers.loginRequired.any { html.contains(it) }) return SiteError.LoginRequired
 
         // A normal page from a Cloudflare-fronted site also carries `Server: cloudflare`, so only an

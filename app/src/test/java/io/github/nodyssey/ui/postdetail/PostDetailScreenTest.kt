@@ -383,6 +383,28 @@ class PostDetailScreenTest {
         composeRule.onNodeWithText("去验证").assertIsDisplayed()
     }
 
+    /**
+     * The 等级不足 wall names the level and offers the way out — and offers *neither* 登录 nor 重试,
+     * which is the whole reason it is not [SiteError.LoginRequired]: the reader is signed in already
+     * and nothing on this screen raises a level.
+     */
+    @Test
+    fun `a level wall names the level and only offers the way back`() {
+        var backs = 0
+        setScreen(
+            PostDetailUiState(body = null, error = SiteError.LevelRequired(requiredLevel = 5)),
+            onBack = { backs++ },
+        )
+
+        composeRule.onNodeWithText("这帖要 Lv5 才能看").assertIsDisplayed()
+        composeRule.onNodeWithText("登录").assertDoesNotExist()
+        composeRule.onNodeWithText("重试").assertDoesNotExist()
+
+        composeRule.onNodeWithText("返回").performClick()
+
+        assertEquals(1, backs)
+    }
+
     @Test
     fun `retrying from the error state is reported`() {
         var retried = false

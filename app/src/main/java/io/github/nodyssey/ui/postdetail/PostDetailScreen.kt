@@ -395,6 +395,9 @@ fun PostDetailScreen(
                             SiteError.Cloudflare -> onVerify
                             else -> ({ onOpenBrowser(postUrl) })
                         },
+                        // 等级不足 has no action that clears it, so the way out is the only button —
+                        // and this screen, unlike a tab root, always has somewhere to go back to.
+                        onBack = onBack.takeIf { showBackButton },
                     )
 
                 else ->

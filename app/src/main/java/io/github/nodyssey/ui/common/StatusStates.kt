@@ -46,12 +46,23 @@ import io.github.plaza.designsys.theme.StatusShapes
 fun SiteError.shortMessage(): String =
     when (this) {
         SiteError.Cloudflare -> stringResource(R.string.status_challenge_title)
+
         SiteError.LoginRequired -> stringResource(R.string.status_sign_in_title)
+
+        is SiteError.LevelRequired ->
+            requiredLevel?.let { stringResource(R.string.status_level_required_title_level, it) }
+                ?: stringResource(R.string.status_level_required_title)
+
         SiteError.Network -> stringResource(R.string.status_network_title)
+
         SiteError.Unparsable -> stringResource(R.string.status_unparsable_title)
+
         SiteError.RateLimited -> stringResource(R.string.status_rate_limited_title)
+
         is SiteError.Http -> stringResource(R.string.status_http_title, statusCode)
+
         SiteError.NotWired -> stringResource(R.string.status_not_wired_title)
+
         SiteError.Unknown -> stringResource(R.string.status_unknown_title)
     }
 
@@ -76,6 +87,12 @@ fun SiteErrorState(
     onBrowseElsewhere: (() -> Unit)? = null,
     onSignIn: (() -> Unit)? = null,
     onVerify: (() -> Unit)? = null,
+    /**
+     * Leaves the screen. Only [SiteError.LevelRequired] uses it, and only when a caller passes one:
+     * a level wall has no action that clears it, so the honest button is the way out, and a screen
+     * that has nowhere to go back to (a tab root) shows none rather than a button that lies.
+     */
+    onBack: (() -> Unit)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     val extra = LocalPlazaExtraColors.current
@@ -114,6 +131,28 @@ fun SiteErrorState(
                 onBrowseElsewhere?.let {
                     StatusAction(stringResource(R.string.status_sign_in_secondary), it)
                 } ?: retry,
+                modifier = modifier,
+            )
+
+        // 阅读权限, refused. No retry and no browser button: the same wall is on the web page, and
+        // reloading it cannot raise a level. The site's own advice — 赚鸡腿升级 — is the description,
+        // because it is advice rather than something a button here performs.
+        is SiteError.LevelRequired ->
+            StatusView(
+                icon = Icons.Default.Lock,
+                shape = StatusShapes.Locked,
+                containerColor = extra.warningContainer,
+                iconColor = extra.onWarningContainer,
+                title =
+                error.requiredLevel?.let {
+                    stringResource(R.string.status_level_required_title_level, it)
+                } ?: stringResource(R.string.status_level_required_title),
+                description =
+                error.requiredLevel?.let {
+                    stringResource(R.string.status_level_required_body, it)
+                } ?: stringResource(R.string.status_level_required_body_unknown),
+                primaryAction =
+                onBack?.let { StatusAction(stringResource(R.string.status_level_required_action), it) },
                 modifier = modifier,
             )
 
@@ -368,6 +407,19 @@ private fun SignInStatePreview() {
             onOpenBrowser = {},
             boardTitle = "内版",
             onBrowseElsewhere = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Level required")
+@Composable
+private fun LevelRequiredStatePreview() {
+    PlazaTheme {
+        SiteErrorState(
+            error = SiteError.LevelRequired(requiredLevel = 5),
+            onRetry = {},
+            onOpenBrowser = {},
+            onBack = {},
         )
     }
 }

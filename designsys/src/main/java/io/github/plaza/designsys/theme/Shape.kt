@@ -25,13 +25,17 @@ val PlazaShapes =
  *
  * Every empty and error state puts its icon on a soft blob rather than a circle — that asymmetry is
  * most of what makes these screens read as *this* app. Each state gets its own corner rhythm so the
- * eight of them are distinguishable at a glance while staying one family.
+ * nine of them are distinguishable at a glance while staying one family.
  */
 object StatusShapes {
     val Empty = RoundedCornerShape(topStartPercent = 42, topEndPercent = 58, bottomEndPercent = 40, bottomStartPercent = 60)
     val NetworkError = RoundedCornerShape(topStartPercent = 58, topEndPercent = 42, bottomEndPercent = 55, bottomStartPercent = 45)
     val Challenge = RoundedCornerShape(topStartPercent = 38, topEndPercent = 62, bottomEndPercent = 45, bottomStartPercent = 55)
     val SignIn = RoundedCornerShape(topStartPercent = 55, topEndPercent = 45, bottomEndPercent = 60, bottomStartPercent = 40)
+
+    /** A wall the reader cannot clear today — a level floor, as opposed to [SignIn]'s one tap. */
+    val Locked = RoundedCornerShape(topStartPercent = 62, topEndPercent = 38, bottomEndPercent = 48, bottomStartPercent = 52)
+
     val Deleted = RoundedCornerShape(topStartPercent = 45, topEndPercent = 55, bottomEndPercent = 42, bottomStartPercent = 58)
     val NoResults = RoundedCornerShape(topStartPercent = 60, topEndPercent = 40, bottomEndPercent = 55, bottomStartPercent = 45)
     val Welcome = RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 58, bottomStartPercent = 42)
