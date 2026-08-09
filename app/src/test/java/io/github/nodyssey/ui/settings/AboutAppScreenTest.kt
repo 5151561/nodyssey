@@ -7,11 +7,11 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import io.github.nodyssey.data.update.AppRelease
-import io.github.nodyssey.data.update.AppUpdateState
-import io.github.nodyssey.data.update.UpdateCheck
-import io.github.nodyssey.data.update.UpdateDownload
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.core.update.AppRelease
+import io.github.plaza.core.update.AppUpdateState
+import io.github.plaza.core.update.UpdateCheck
+import io.github.plaza.core.update.UpdateDownload
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -31,7 +31,7 @@ class AboutAppScreenTest {
     fun `app page exposes version and license action`() {
         var openedLicenses = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 AboutAppScreen(
                     state = AboutAppUiState(versionName = "9.9", versionCode = 99),
                     onBack = {},
@@ -56,7 +56,7 @@ class AboutAppScreenTest {
     @Test
     fun `community information is absent from the app page`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 AboutAppScreen(
                     state =
                     AboutAppUiState(
@@ -89,7 +89,7 @@ class AboutAppScreenTest {
         var downloaded = false
         var installed = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 val download = remember { mutableStateOf<UpdateDownload>(UpdateDownload.Idle) }
                 AboutAppScreen(
                     state =

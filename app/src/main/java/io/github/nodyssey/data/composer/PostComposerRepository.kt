@@ -6,15 +6,15 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.PostListParser
 import io.github.nodyssey.core.html.Selectors
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.model.FeedSort
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -177,7 +177,7 @@ class DefaultPostComposerRepository(
         val response = try {
             okHttpClient.newCall(request).execute()
         } catch (error: IOException) {
-            throw NodeSeekException(NodeSeekError.Network, error)
+            throw SiteException(SiteError.Network, error)
         }
         response.use {
             val body = it.body.string()
@@ -187,17 +187,17 @@ class DefaultPostComposerRepository(
             val isChallenge =
                 it.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
                     Selectors.CLOUDFLARE_MARKERS.any(body::contains)
-            if (isChallenge) throw NodeSeekException(NodeSeekError.Cloudflare)
+            if (isChallenge) throw SiteException(SiteError.Cloudflare)
             if (it.code == 401 || it.code == 403) {
-                throw NodeSeekException(NodeSeekError.LoginRequired)
+                throw SiteException(SiteError.LoginRequired)
             }
             if (!it.isSuccessful) {
-                throw NodeSeekException(
-                    error = NodeSeekError.Http(it.code),
+                throw SiteException(
+                    error = SiteError.Http(it.code),
                     detail = parseErrorDetail(body),
                 )
             }
-            if (body.trimStart().startsWith("<")) throw NodeSeekException(NodeSeekError.Cloudflare)
+            if (body.trimStart().startsWith("<")) throw SiteException(SiteError.Cloudflare)
             parsePublishResponse(body, it.header("Location")) ?: findPublishedPostId(submission)
         }
     }
@@ -213,7 +213,7 @@ class DefaultPostComposerRepository(
 
     private fun parsePublishResponse(body: String, location: String?): Long? {
         val root = runCatching { json.parseToJsonElement(body).jsonObject }
-            .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
+            .getOrElse { throw SiteException(SiteError.Unparsable, it) }
         val success = root["success"]?.jsonPrimitive?.booleanOrNull ?: false
         val message = root["message"]?.jsonPrimitive?.contentOrNull
         if (!success) error(message ?: "发布失败")

@@ -1,7 +1,7 @@
 package io.github.nodyssey.core.report
 
-import io.github.nodyssey.core.TerminalColumns
-import io.github.nodyssey.model.AnsiSpan
+import io.github.plaza.core.TerminalColumns
+import io.github.plaza.core.ansi.AnsiSpan
 
 /**
  * Reads a [QualityReport] back out of the fixed-width text a Check.Place script drew.

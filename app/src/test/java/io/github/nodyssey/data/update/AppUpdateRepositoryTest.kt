@@ -1,8 +1,16 @@
 package io.github.nodyssey.data.update
 
 import android.content.pm.PackageInstaller
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.AppDispatchers
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.update.AppRelease
+import io.github.plaza.core.update.AppUpdateException
+import io.github.plaza.core.update.InstallFailure
+import io.github.plaza.core.update.ReleaseSource
+import io.github.plaza.core.update.UpdateCheck
+import io.github.plaza.core.update.UpdateCheckRecord
+import io.github.plaza.core.update.UpdateDownload
+import io.github.plaza.core.update.UpdateFailure
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope

@@ -1,13 +1,13 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonPostResponse
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -97,7 +97,7 @@ class AssetsRepositoryTest {
                 runCatching { repository(source).signInForToday(AttendanceMode.RANDOM) }
                     .exceptionOrNull()
 
-            assertEquals(NodeSeekError.Unparsable, (exception as? NodeSeekException)?.error)
+            assertEquals(SiteError.Unparsable, (exception as? SiteException)?.error)
         }
 
     @Test
@@ -109,7 +109,7 @@ class AssetsRepositoryTest {
                 runCatching { repository(source).signInForToday(AttendanceMode.RANDOM) }
                     .exceptionOrNull()
 
-            assertEquals(NodeSeekError.LoginRequired, (exception as? NodeSeekException)?.error)
+            assertEquals(SiteError.LoginRequired, (exception as? SiteException)?.error)
         }
 
     @Test

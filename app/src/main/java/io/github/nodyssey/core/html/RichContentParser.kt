@@ -1,9 +1,10 @@
 package io.github.nodyssey.core.html
 
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.model.InlineNode
-import io.github.nodyssey.model.InlineStyle
-import io.github.nodyssey.model.RichNode
+import io.github.plaza.core.ansi.AnsiDecoder
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.InlineStyle
+import io.github.plaza.core.richtext.RichNode
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
@@ -229,7 +230,7 @@ object RichContentParser {
             ?.removePrefix("language-")
         // Read through [AnsiParser] rather than `wholeText()`: the escapes NodeSeek encodes as empty
         // elements are invisible to it, which leaves their parameters behind as literal `[36m`.
-        val decoded = AnsiParser.decode(AnsiParser.sourceOf(code ?: element))
+        val decoded = AnsiDecoder.decode(AnsiParser.sourceOf(code ?: element))
         return RichNode.CodeBlock(
             code = decoded.text,
             language = language,

@@ -10,7 +10,7 @@ import androidx.compose.ui.test.performClick
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.UploadStatus
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -32,7 +32,7 @@ class PostComposerScreenTest {
 
     private fun setScreen(state: PostComposerUiState) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 PostComposerScreen(
                     state = state,
                     titleState = rememberTextFieldState(state.title),

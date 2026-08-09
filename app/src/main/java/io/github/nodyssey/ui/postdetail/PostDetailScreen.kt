@@ -88,40 +88,41 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.FreeChickenLegs
-import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
-import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.model.countOf
 import io.github.nodyssey.model.hasSpent
-import io.github.nodyssey.ui.common.AppendSpinner
-import io.github.nodyssey.ui.common.AvatarShape
 import io.github.nodyssey.ui.common.BoardTag
-import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.MetaText
-import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
 import io.github.nodyssey.ui.common.RoleBadgeRow
-import io.github.nodyssey.ui.common.SkeletonBar
-import io.github.nodyssey.ui.common.UserAvatar
-import io.github.nodyssey.ui.common.rememberClipboardCopy
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.FloorReference
 import io.github.nodyssey.ui.composer.ReplyComposerHost
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
-import io.github.nodyssey.ui.richtext.RichContent
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.PostTitle
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
-import io.github.nodyssey.ui.theme.asSignature
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.nodyssey.ui.richtext.PostRichContent
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.component.AppendSpinner
+import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.MetaText
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SkeletonBar
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.rememberClipboardCopy
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.PostTitle
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.asSignature
+import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -383,15 +384,15 @@ fun PostDetailScreen(
                 state.body == null && state.isLoading -> ThreadSkeleton()
 
                 state.body == null && error != null ->
-                    NodeSeekErrorState(
+                    SiteErrorState(
                         error = error,
                         onRetry = onRetry,
                         // A locked thread is fixed by signing in, not by loading it again in a
                         // browser; a challenge is fixed on this thread's own URL.
                         onOpenBrowser =
                         when (error) {
-                            NodeSeekError.LoginRequired -> onSignIn
-                            NodeSeekError.Cloudflare -> onVerify
+                            SiteError.LoginRequired -> onSignIn
+                            SiteError.Cloudflare -> onVerify
                             else -> ({ onOpenBrowser(postUrl) })
                         },
                     )
@@ -550,7 +551,7 @@ private fun DetailBottomActions(
                 text = { Text(stringResource(R.string.post_reply_action)) },
                 icon = {
                     Icon(
-                        NodysseyIcons.Reply,
+                        PlazaIcons.Reply,
                         contentDescription = null,
                     )
                 },
@@ -785,7 +786,7 @@ private fun BlockedFloorRow(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Icon(
-            NodysseyIcons.VisibilityOff,
+            PlazaIcons.VisibilityOff,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(16.dp),
@@ -920,7 +921,7 @@ private fun OriginalPost(
                 modifier = Modifier.padding(top = Spacing.md),
             )
         } else {
-            RichContent(
+            PostRichContent(
                 nodes = body.nodes,
                 onLinkClick = onOpenBrowser,
                 onImageClick = onImageClick,
@@ -1066,7 +1067,7 @@ private fun CommentRow(
             }
             comment.floor?.let { FloorLabel(it) }
         }
-        RichContent(
+        PostRichContent(
             nodes = comment.nodes,
             onLinkClick = onOpenBrowser,
             onImageClick = onImageClick,
@@ -1113,7 +1114,7 @@ private fun UserSignature(
         color = MaterialTheme.colorScheme.outlineVariant,
         modifier = Modifier.padding(top = Spacing.md, bottom = Spacing.sm),
     )
-    RichContent(
+    PostRichContent(
         nodes = nodes,
         onLinkClick = onOpenBrowser,
         onImageClick = onImageClick,
@@ -1163,7 +1164,7 @@ private fun ReactionRow(
         // First in an End-arranged row, so it draws leftmost and the three marks keep their places.
         if (collected != null && onCollect != null) {
             QuietReaction(
-                icon = if (collected) Icons.Default.Star else NodysseyIcons.StarBorder,
+                icon = if (collected) Icons.Default.Star else PlazaIcons.StarBorder,
                 label = if (collected) R.string.post_collected_action else R.string.post_collect_action,
                 count = collectionCount?.toString().orEmpty(),
                 selected = collected,
@@ -1191,7 +1192,7 @@ private fun ReactionRow(
         // collapsing them into a single action is what made every answer from here read as a quote.
         onQuote?.let {
             QuietReaction(
-                icon = NodysseyIcons.FormatQuote,
+                icon = PlazaIcons.FormatQuote,
                 label = R.string.post_quote_action,
                 count = "",
                 onClick = it,
@@ -1199,7 +1200,7 @@ private fun ReactionRow(
         }
         onReply?.let {
             QuietReaction(
-                icon = NodysseyIcons.Reply,
+                icon = PlazaIcons.Reply,
                 label = R.string.post_reply_action,
                 count = "",
                 onClick = it,
@@ -1212,8 +1213,8 @@ private fun ReactionRow(
 private val REACTION_ORDER =
     listOf(
         ReactionAction.Upvote to Icons.Default.ThumbUp,
-        ReactionAction.ChickenLeg to NodysseyIcons.ChickenLeg,
-        ReactionAction.Dislike to NodysseyIcons.ThumbDown,
+        ReactionAction.ChickenLeg to NodeSeekIcons.ChickenLeg,
+        ReactionAction.Dislike to PlazaIcons.ThumbDown,
     )
 
 private fun ReactionAction.labelRes(): Int =
@@ -1303,7 +1304,7 @@ private fun ReactionConfirmDialog(
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                if (isChicken) NodysseyIcons.ChickenLeg else NodysseyIcons.ThumbDown,
+                if (isChicken) NodeSeekIcons.ChickenLeg else PlazaIcons.ThumbDown,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -1603,7 +1604,7 @@ internal val previewState =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post detail")
 @Composable
 private fun PostDetailPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         PostDetailScreen(
             state = previewState,
             postUrl = "https://www.nodeseek.com/post-1-1",
@@ -1619,7 +1620,7 @@ private fun PostDetailPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post detail · dark")
 @Composable
 private fun PostDetailDarkPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         PostDetailScreen(
             state = previewState,
             postUrl = "https://www.nodeseek.com/post-1-1",
@@ -1662,12 +1663,12 @@ private fun List<RichNode>.imageUrls(): List<String> =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post detail · skeleton")
 @Composable
 private fun PostDetailSkeletonPreview() {
-    NodysseyTheme { ThreadSkeleton() }
+    PlazaTheme { ThreadSkeleton() }
 }
 
 @Suppress("UnusedPrivateMember")
 @Preview(showBackground = true, widthDp = 360, heightDp = 400, name = "Post detail · loading spinner")
 @Composable
 private fun LoadingStatePreview() {
-    NodysseyTheme { LoadingState() }
+    PlazaTheme { LoadingState() }
 }

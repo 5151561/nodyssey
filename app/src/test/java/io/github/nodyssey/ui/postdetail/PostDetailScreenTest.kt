@@ -11,14 +11,14 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.FreeChickenLegs
-import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
-import io.github.nodyssey.model.RichNode
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -73,7 +73,7 @@ class PostDetailScreenTest {
         onCollect: () -> Unit = {},
     ) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 PostDetailScreen(
                     state = state,
                     postUrl = "https://www.nodeseek.com/post-1-1",
@@ -377,7 +377,7 @@ class PostDetailScreenTest {
 
     @Test
     fun `an error with nothing cached takes over the screen`() {
-        setScreen(PostDetailUiState(body = null, error = NodeSeekError.Cloudflare))
+        setScreen(PostDetailUiState(body = null, error = SiteError.Cloudflare))
 
         composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
         composeRule.onNodeWithText("去验证").assertIsDisplayed()
@@ -387,7 +387,7 @@ class PostDetailScreenTest {
     fun `retrying from the error state is reported`() {
         var retried = false
         setScreen(
-            PostDetailUiState(body = null, error = NodeSeekError.Network),
+            PostDetailUiState(body = null, error = SiteError.Network),
             onRetry = { retried = true },
         )
 
@@ -407,7 +407,7 @@ class PostDetailScreenTest {
                 title = "cached thread",
                 body = content("cached body"),
                 comments = listOf(content("cached reply")),
-                error = NodeSeekError.Network,
+                error = SiteError.Network,
             ),
         )
 
@@ -500,7 +500,7 @@ class PostDetailScreenTest {
             ),
         )
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 PostDetailScreen(
                     state = state,
                     postUrl = "https://www.nodeseek.com/post-1-5",
@@ -543,7 +543,7 @@ class PostDetailScreenTest {
             ),
         )
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 PostDetailScreen(
                     state = state,
                     postUrl = "https://www.nodeseek.com/post-1-1",

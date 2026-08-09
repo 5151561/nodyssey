@@ -1,11 +1,11 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -46,7 +46,7 @@ data class SpacePage<T>(
  * These are the site's own XHR endpoints rather than scraped HTML, because the space page renders
  * client-side: fetching `/space/12` returns an empty shell. The payload shapes are undocumented, so
  * every field is read by candidate name (see [text]) and a response that yields no rows at all is
- * reported as [NodeSeekError.Unparsable] — the screen then offers the web page, which is the truth we
+ * reported as [SiteError.Unparsable] — the screen then offers the web page, which is the truth we
  * can still show.
  */
 interface UserSpaceRepository {
@@ -102,11 +102,11 @@ class NetworkUserSpaceRepository(
         return withContext(dispatchers.default) {
             val root =
                 runCatching { json.parseToJsonElement(body) }
-                    .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
+                    .getOrElse { throw SiteException(SiteError.Unparsable, it) }
             val rows = root.findObjectArray(*arrayNames)
             // An empty array is a real answer ("no topics yet"); no array at all means we guessed the
             // payload shape wrong, and pretending that is an empty list would hide the mismatch.
-            if (rows == null) throw NodeSeekException(NodeSeekError.Unparsable)
+            if (rows == null) throw SiteException(SiteError.Unparsable)
             val items = rows.mapNotNull(map)
             SpacePage(
                 items = items,

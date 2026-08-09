@@ -1,16 +1,16 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.PostDetailParser
 import io.github.nodyssey.core.html.PostListParser
 import io.github.nodyssey.core.html.SearchParser
-import io.github.nodyssey.core.net.MinIntervalGate
-import io.github.nodyssey.core.net.NodeSeekClient
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostDetail
 import io.github.nodyssey.model.PostListPage
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.MinIntervalGate
+import io.github.plaza.core.net.SiteHtmlClient
 import kotlinx.coroutines.withContext
 
 /**
@@ -45,7 +45,7 @@ interface PostRemoteDataSource {
 }
 
 class NetworkPostDataSource(
-    private val client: NodeSeekClient,
+    private val client: SiteHtmlClient,
     private val dispatchers: AppDispatchers,
     clock: AppClock = AppClock.System,
 ) : PostRemoteDataSource {

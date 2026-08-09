@@ -1,11 +1,11 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.net.JsonPostResponse
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -109,7 +109,7 @@ class CreditRepositoryTest {
                     NetworkCreditRepository(FakeCreditPageJsonSource("""{"success":false}"""), dispatchers).page(1)
                 }.exceptionOrNull()
 
-            assertEquals(NodeSeekError.Unparsable, (exception as? NodeSeekException)?.error)
+            assertEquals(SiteError.Unparsable, (exception as? SiteException)?.error)
         }
 
     /** A row missing the change or the reason is dropped; the rest of the page still renders. */

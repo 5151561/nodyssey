@@ -61,13 +61,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.LuckyDraw
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.digitsOnly
-import io.github.nodyssey.ui.common.rememberClipboardCopy
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.digitsOnly
+import io.github.plaza.designsys.component.rememberClipboardCopy
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.readableWidth
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -228,7 +228,7 @@ fun LuckyScreen(
                     .height(48.dp),
                 shape = RoundedCornerShape(24.dp),
             ) {
-                Icon(NodysseyIcons.Link, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(PlazaIcons.Link, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
                     stringResource(R.string.lucky_generate),
                     modifier = Modifier.padding(start = Spacing.sm),
@@ -448,7 +448,7 @@ private fun GeneratedLinkCard(
                     )
                     IconButton(onClick = onCopy) {
                         Icon(
-                            NodysseyIcons.ContentCopy,
+                            PlazaIcons.ContentCopy,
                             contentDescription = stringResource(R.string.action_copy_link),
                             modifier = Modifier.size(19.dp),
                         )
@@ -461,7 +461,7 @@ private fun GeneratedLinkCard(
                         .height(44.dp),
                 ) {
                     Icon(
-                        NodysseyIcons.OpenInNew,
+                        PlazaIcons.OpenInNew,
                         contentDescription = null,
                         modifier = Modifier.size(19.dp),
                     )
@@ -509,7 +509,7 @@ private fun combineTime(currentMillis: Long, hour: Int, minute: Int): Long =
 @Preview(showBackground = true, widthDp = 360, heightDp = 950, name = "9c 幸运抽奖")
 @Composable
 private fun LuckyPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         LuckyScreen(
             state =
             LuckyUiState(

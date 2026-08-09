@@ -50,11 +50,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.paddingWithKeyboard
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.paddingWithKeyboard
+import io.github.plaza.designsys.theme.readableWidth
 
 @Composable
 fun SecurityRoute(
@@ -250,7 +250,7 @@ private fun TwoFactorDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(NodysseyIcons.Shield, contentDescription = null) },
+        icon = { Icon(PlazaIcons.Shield, contentDescription = null) },
         title = { Text(stringResource(R.string.account_confirm_2fa_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
@@ -374,7 +374,7 @@ private fun TwoFactorCard(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 Icon(
-                    NodysseyIcons.Shield,
+                    PlazaIcons.Shield,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
@@ -408,7 +408,7 @@ private fun TwoFactorCard(
                 enabled = !busy,
                 shape = RoundedCornerShape(20.dp),
             ) {
-                Icon(NodysseyIcons.QrCode, contentDescription = null, modifier = Modifier.size(17.dp))
+                Icon(PlazaIcons.QrCode, contentDescription = null, modifier = Modifier.size(17.dp))
                 Text(
                     text =
                     stringResource(
@@ -428,7 +428,7 @@ private fun TwoFactorCard(
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun SecurityPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         SecurityScreen(
             state =
             SecurityUiState(

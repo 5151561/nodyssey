@@ -29,8 +29,8 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          # Matches the jvmToolchain(21) in app/build.gradle.kts. A mismatch here means CI compiles
-          # against a different JDK than everyone's machine does.
+          # Matches the jvmToolchain(21) the convention plugins in `build-logic` set on every module.
+          # A mismatch here means CI compiles against a different JDK than everyone's machine does.
           java-version: '21'
 
       # Deliberately not v6, and the reason is that v5 is strictly the better deal today. v6 split the
@@ -49,7 +49,8 @@ jobs:
 
       # There is deliberately no separate "check the lockfile" step. Dependency locking is in STRICT
       # mode, so every step below that resolves a locked classpath — unit tests, lint, assemble —
-      # already fails on a dependency missing from `app/gradle.lockfile`:
+      # already fails on a dependency missing from that module's `gradle.lockfile` — there is one per
+      # module now, and `plaza.dependency-locking` puts every one of them in STRICT mode:
       #
       #   > Resolved 'com.google.code.gson:gson:2.11.0' which is not part of the dependency lock state
       #
@@ -59,10 +60,14 @@ jobs:
         run: ./gradlew spotlessCheck
 
       # Includes the Room, Paging and Compose tests: they run on Robolectric, so no emulator is needed.
+      # Unqualified so every module runs its own tests — `:app:testDebugUnitTest` would compile the
+      # library modules but never execute a single test of theirs.
       - name: Unit tests
-        run: ./gradlew :app:testDebugUnitTest
+        run: ./gradlew testDebugUnitTest
 
-      # warningsAsErrors is on, so a new lint warning fails the build here.
+      # warningsAsErrors is on, so a new lint warning fails the build here. Still qualified to `:app`
+      # because `plaza.android.application` sets `checkDependencies`, which pulls every module this
+      # one depends on into the same run and the same report.
       - name: Android lint
         run: ./gradlew :app:lintDebug
 
@@ -71,11 +76,47 @@ jobs:
 
       # A Room schema is checked in per version. If codegen produced a different one, the entity change
       # needs either a version bump and a migration, or a deliberate re-export — not a silent diff.
+      #
+      # Any module's `schemas/` directory, not `app/schemas` by name: only `:app` declares a database
+      # today, and a second module that grows one must not be able to add it without this gate
+      # noticing.
+      #
+      # `git status`, not `git diff`: a version bump writes a *new* file, and an untracked file is
+      # invisible to `git diff` — the gate would have passed in silence on exactly the change it
+      # exists to catch. `-uall` so a schema directory that is untracked in its entirety is listed
+      # file by file rather than collapsed to a directory name the pathspec then misses.
       - name: Check the Room schema is committed
         run: |
-          if ! git diff --exit-code -- app/schemas; then
+          pending=$(git status --porcelain -uall -- '*/schemas/*')
+          if [ -n "$pending" ]; then
+            echo "$pending"
+            git diff -- '*/schemas/*'
             echo "::error::The generated Room schema differs from the committed one." >&2
             echo "Bump the database version and export the new schema, or commit the regenerated file." >&2
+            exit 1
+          fi
+
+      # Resource merging is silent about collisions: when two modules declare the same (type, name),
+      # the application module's copy wins and the library's just stops being used — no error, no
+      # warning, and the library file keeps looking editable. It has happened (`composer_emoji_recent`
+      # was declared on both sides with only the designsys one referenced), and prefixes alone cannot
+      # prevent a repeat while `composer_*` names exist in both modules. Nested `<item>` entries are
+      # skipped: they only exist inside a parent (a style, an array) and never merge on their own.
+      - name: Check no two modules declare the same res/values resource
+        run: |
+          declared=$(for dir in */src/*/res/values*; do
+            [ -d "$dir" ] || continue
+            module="${dir%%/*}"
+            grep -rhoE '<[a-z-]+ +name="[^"]+"' "$dir" \
+              | sed -E 's/^<([a-z-]+) +name="([^"]+)".*/\1 \2/' \
+              | grep -v '^item ' \
+              | sed "s/^/$module /"
+          done | sort -u)
+          dups=$(echo "$declared" | awk '{print $2, $3}' | sort | uniq -d)
+          if [ -n "$dups" ]; then
+            echo "$declared" | grep -F "$dups"
+            echo "::error::A resource name is declared by more than one module; the application module's copy silently overrides the library's." >&2
+            echo "Rename one side — the library modules prefix their resources for exactly this reason." >&2
             exit 1
           fi
 
@@ -86,8 +127,8 @@ jobs:
         with:
           name: reports
           path: |
-            app/build/reports/
-            app/build/test-results/
+            */build/reports/
+            */build/test-results/
             app/build/outputs/bundle/release/*.aab
             app/build/outputs/mapping/release/
           retention-days: 14

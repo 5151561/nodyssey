@@ -1,12 +1,12 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -79,7 +79,7 @@ interface StardustRepository {
      * one.
      *
      * A refusal — the uid does not exist, the account cannot receive — arrives as a
-     * [NodeSeekException] carrying the site's own sentence. Null means the call succeeded and simply
+     * [SiteException] carrying the site's own sentence. Null means the call succeeded and simply
      * named nobody, which is not the same thing and must not be shown as an error.
      *
      * [viewerUid] only builds the referer: this runs from the signed-in user's own ledger page.
@@ -106,7 +106,7 @@ interface StardustRepository {
  * The stardust ledger and the two writes that move it, read from the endpoints the site's own pages use.
  *
  * `/stardust/list` renders client-side, so for a long time this repository answered
- * [NodeSeekError.NotWired] rather than guess at a payload. The guessing stopped being necessary on
+ * [SiteError.NotWired] rather than guess at a payload. The guessing stopped being necessary on
  * 2026-07-30: the contract came out of the site's own `stardustList` bundle and was then checked
  * against a live signed-in account, so the field names below are read, not inferred.
  *
@@ -132,11 +132,11 @@ class NetworkStardustRepository(
         return withContext(dispatchers.default) {
             val root =
                 runCatching { json.parseToJsonElement(body) as? JsonObject }
-                    .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
-                    ?: throw NodeSeekException(NodeSeekError.Unparsable)
+                    .getOrElse { throw SiteException(SiteError.Unparsable, it) }
+                    ?: throw SiteException(SiteError.Unparsable)
             val rows =
                 root.findObjectArray("records", "list", "data")
-                    ?: throw NodeSeekException(NodeSeekError.Unparsable)
+                    ?: throw SiteException(SiteError.Unparsable)
             val entries = rows.mapNotNull(JsonObject::toStardustEntry)
             StardustLedgerPage(
                 entries = entries,
@@ -186,8 +186,8 @@ class NetworkStardustRepository(
 
     private fun String.asJsonObject(): JsonObject =
         runCatching { json.parseToJsonElement(this) as? JsonObject }
-            .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
-            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+            .getOrElse { throw SiteException(SiteError.Unparsable, it) }
+            ?: throw SiteException(SiteError.Unparsable)
 
     /**
      * `success:false` is a refusal, not a fault — the site answers it with 200 and a sentence.
@@ -195,9 +195,9 @@ class NetworkStardustRepository(
      * Which makes it the only thing standing between "sent" and "the site said no": a send that reads
      * status alone would report every refusal as a completed transfer.
      */
-    private fun JsonObject.refusal(): NodeSeekException? =
+    private fun JsonObject.refusal(): SiteException? =
         if (bool("success") == false) {
-            NodeSeekException(NodeSeekError.Unknown, detail = text("message"))
+            SiteException(SiteError.Unknown, detail = text("message"))
         } else {
             null
         }

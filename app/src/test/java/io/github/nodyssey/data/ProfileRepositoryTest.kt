@@ -1,13 +1,13 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.html.Fixtures
-import io.github.nodyssey.core.net.HtmlSource
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.HtmlSource
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -71,7 +71,7 @@ class ProfileRepositoryTest {
                     htmlSource = FakeProfileHtmlSource(Fixtures.load("page-1.html")),
                     jsonSource =
                     FakeProfileJsonSource(
-                        error = NodeSeekException(NodeSeekError.Http(500)),
+                        error = SiteException(SiteError.Http(500)),
                     ),
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
@@ -95,7 +95,7 @@ class ProfileRepositoryTest {
             val repository =
                 NetworkProfileRepository(
                     htmlSource = htmlSource,
-                    jsonSource = FakeProfileJsonSource(error = NodeSeekException(NodeSeekError.Http(500))),
+                    jsonSource = FakeProfileJsonSource(error = SiteException(SiteError.Http(500))),
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
                     clock = AppClock { 0L },
@@ -116,7 +116,7 @@ class ProfileRepositoryTest {
             val firstRepository =
                 NetworkProfileRepository(
                     htmlSource = firstSource,
-                    jsonSource = FakeProfileJsonSource(error = NodeSeekException(NodeSeekError.Http(500))),
+                    jsonSource = FakeProfileJsonSource(error = SiteException(SiteError.Http(500))),
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
                     clock = AppClock { 0L },
@@ -145,7 +145,7 @@ class ProfileRepositoryTest {
             val repository =
                 NetworkProfileRepository(
                     htmlSource = FakeProfileHtmlSource(Fixtures.load("page-1.html")),
-                    jsonSource = FakeProfileJsonSource(error = NodeSeekException(NodeSeekError.Http(500))),
+                    jsonSource = FakeProfileJsonSource(error = SiteException(SiteError.Http(500))),
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
                     clock = AppClock { 0L },
@@ -181,7 +181,7 @@ class ProfileRepositoryTest {
             assertEquals("/api/account/getInfo/42?readme=1", jsonSource.requestedPath)
         }
 
-    @Test(expected = NodeSeekException::class)
+    @Test(expected = SiteException::class)
     fun `rejects a page without signed in profile data`() =
         runTest {
             NetworkProfileRepository(

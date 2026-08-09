@@ -2,10 +2,10 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -29,7 +29,7 @@ data class ReactionOutcome(
  * the one that writes the new tally through Room. This class never touches the database.
  *
  * A `success:false` body is a *refusal*, not a fault — "已经进行过加鸡腿操作", "鸡腿不足" — so it
- * throws with the site's sentence in [NodeSeekException.detail] and lets the screen show it verbatim
+ * throws with the site's sentence in [SiteException.detail] and lets the screen show it verbatim
  * rather than mapping it onto a status code the user would have to interpret.
  */
 class PostReactionWriter(
@@ -53,12 +53,12 @@ class PostReactionWriter(
             try {
                 json.parseToJsonElement(answer).jsonObject
             } catch (exception: IllegalArgumentException) {
-                throw NodeSeekException(NodeSeekError.Unparsable, exception)
+                throw SiteException(SiteError.Unparsable, exception)
             }
 
         if (root["success"]?.jsonPrimitive?.booleanOrNull != true) {
-            throw NodeSeekException(
-                NodeSeekError.Unknown,
+            throw SiteException(
+                SiteError.Unknown,
                 detail = root["message"]?.jsonPrimitive?.contentOrNull?.ifBlank { null },
             )
         }
@@ -85,7 +85,7 @@ class PostReactionWriter(
             if (max == null || used == null) null else FreeChickenLegs(max = max, used = used)
         } catch (exception: IllegalArgumentException) {
             null
-        } catch (exception: NodeSeekException) {
+        } catch (exception: SiteException) {
             null
         }
 

@@ -1,15 +1,20 @@
 package io.github.nodyssey.core.html
 
+import io.github.plaza.core.ansi.AnsiDecoder
 import org.jsoup.Jsoup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * What NodeSeek's markup hides, not what the escapes mean — that half is
+ * [io.github.plaza.core.ansi.AnsiDecoderTest].
+ */
 class AnsiParserTest {
 
     private fun code(html: String) = requireNotNull(Jsoup.parse("<pre><code>$html</code></pre>").selectFirst("code"))
 
-    private fun decode(html: String) = AnsiParser.decode(AnsiParser.sourceOf(code(html)))
+    private fun decode(html: String) = AnsiDecoder.decode(AnsiParser.sourceOf(code(html)))
 
     /**
      * The bug this class exists for: the escapes are empty elements, so reading the code element as
@@ -75,28 +80,5 @@ class AnsiParserTest {
         val html = """945<span data-ansicode="8"></span><span data-ansicode="13"></span>|"""
 
         assertEquals("945|", decode(html).text)
-    }
-
-    @Test
-    fun `counts CJK and emoji as two columns`() {
-        // 80 ASCII columns is the report's own rule width.
-        assertEquals(80, AnsiParser.decode("+".repeat(80)).columns)
-        assertEquals(10, AnsiParser.decode("容器虚拟化").columns)
-        assertEquals(2, AnsiParser.decode("💻").columns)
-        // The widest line wins, not the last one.
-        assertEquals(6, AnsiParser.decode("ab\n容器虚\nc").columns)
-    }
-
-    @Test
-    fun `leaves ordinary code alone`() {
-        val decoded = AnsiParser.decode("curl -sL https://run.nodequality.com | bash\n\tindented")
-
-        assertEquals("curl -sL https://run.nodequality.com | bash\n\tindented", decoded.text)
-        assertTrue(decoded.spans.isEmpty())
-    }
-
-    @Test
-    fun `a truncated escape takes its parameters with it`() {
-        assertEquals("done", AnsiParser.decode("done\u001B[36").text)
     }
 }

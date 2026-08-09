@@ -54,21 +54,21 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
-import io.github.nodyssey.ui.common.GroupedColumn
-import io.github.nodyssey.ui.common.GroupedRow
-import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.SectionLabel
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot
-import io.github.nodyssey.ui.common.UserAvatar
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.StatusShapes
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.GroupedColumn
+import io.github.plaza.designsys.component.GroupedRow
+import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.StatusShapes
+import io.github.plaza.designsys.theme.readableWidth
 
 @Composable
 fun ProfileRoute(
@@ -180,7 +180,7 @@ fun ProfileScreen(
         }
 
         if (state.error != null && !state.hasProfile) {
-            NodeSeekErrorState(
+            SiteErrorState(
                 error = state.error,
                 onRetry = onRetry,
                 onOpenBrowser = onOpenWebsite,
@@ -256,10 +256,10 @@ fun ProfileScreen(
                     listOf(
                         ProfileMenuItem(R.string.profile_space, Icons.Default.Person, onOpenSpace),
                         ProfileMenuItem(R.string.profile_collections, Icons.Default.Star, onCollections),
-                        ProfileMenuItem(R.string.profile_history, NodysseyIcons.History, onHistory),
-                        ProfileMenuItem(R.string.profile_follow, NodysseyIcons.Group, onFollow),
-                        ProfileMenuItem(R.string.profile_assets, NodysseyIcons.Wallet, onAssets),
-                        ProfileMenuItem(R.string.profile_tools, NodysseyIcons.MenuBook, onTools),
+                        ProfileMenuItem(R.string.profile_history, PlazaIcons.History, onHistory),
+                        ProfileMenuItem(R.string.profile_follow, PlazaIcons.Group, onFollow),
+                        ProfileMenuItem(R.string.profile_assets, PlazaIcons.Wallet, onAssets),
+                        ProfileMenuItem(R.string.profile_tools, PlazaIcons.MenuBook, onTools),
                     ),
                 )
             }
@@ -269,7 +269,7 @@ fun ProfileScreen(
                     listOf(
                         ProfileMenuItem(
                             R.string.profile_account_settings,
-                            NodysseyIcons.Badge,
+                            PlazaIcons.Badge,
                             onAccountSettings,
                         ),
                         ProfileMenuItem(
@@ -358,7 +358,7 @@ private fun SignedOutProfile(
                     modifier = Modifier.weight(1f),
                 )
                 SignedOutBenefit(
-                    icon = NodysseyIcons.ChatBubble,
+                    icon = PlazaIcons.ChatBubble,
                     title = stringResource(R.string.profile_guest_benefit_messages),
                     subtitle = stringResource(R.string.profile_guest_benefit_messages_hint),
                     shape = RoundedCornerShape(5.dp),
@@ -367,7 +367,7 @@ private fun SignedOutProfile(
                     modifier = Modifier.weight(1f),
                 )
                 SignedOutBenefit(
-                    icon = NodysseyIcons.EventAvailable,
+                    icon = PlazaIcons.EventAvailable,
                     title = stringResource(R.string.profile_guest_benefit_attendance),
                     subtitle = stringResource(R.string.profile_guest_benefit_attendance_hint),
                     shape = RoundedCornerShape(5.dp, 18.dp, 18.dp, 5.dp),
@@ -383,7 +383,7 @@ private fun SignedOutProfile(
                 modifier = Modifier.fillMaxWidth().padding(top = 20.dp).height(Sizes.minTouchTarget),
                 shape = CircleShape,
             ) {
-                Icon(NodysseyIcons.Login, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(PlazaIcons.Login, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
                     text = stringResource(R.string.profile_sign_in),
                     modifier = Modifier.padding(start = Spacing.sm),
@@ -419,7 +419,7 @@ private fun SignedOutProfile(
                         title = stringResource(R.string.profile_tools),
                         subtitle = stringResource(R.string.profile_guest_tools_hint),
                         last = true,
-                        icon = NodysseyIcons.DashboardCustomize,
+                        icon = PlazaIcons.DashboardCustomize,
                         onClick = onTools,
                     )
                 }
@@ -440,7 +440,7 @@ private fun SignedOutIllustration(modifier: Modifier = Modifier) {
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = NodysseyIcons.WavingHand,
+                    imageVector = PlazaIcons.WavingHand,
                     contentDescription = null,
                     modifier = Modifier.size(52.dp),
                 )
@@ -625,7 +625,7 @@ private fun ProfileMenuGroup(items: List<ProfileMenuItem>) {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun ProfileSignedInPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         ProfileScreen(
             state =
             ProfileUiState(
@@ -664,7 +664,7 @@ private fun ProfileSignedInPreview() {
 )
 @Composable
 private fun ProfileSignedOutPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         ProfileScreen(
             state = ProfileUiState(),
             onSignIn = {},

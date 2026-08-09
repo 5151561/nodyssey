@@ -35,17 +35,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.FollowUser
-import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.StatusView
-import io.github.nodyssey.ui.common.UserAvatar
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.StatusShapes
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.StatusView
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.StatusShapes
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
 @Composable
 fun FollowRoute(
@@ -124,7 +124,7 @@ fun FollowScreen(
                 list.isLoading && list.items.isEmpty() -> LoadingState()
 
                 list.error != null && list.items.isEmpty() ->
-                    NodeSeekErrorState(
+                    SiteErrorState(
                         error = list.error,
                         onRetry = { onRetry(state.selectedTab) },
                         onOpenBrowser = {
@@ -177,7 +177,7 @@ fun FollowScreen(
 @Composable
 private fun FollowEmptyState(tab: FollowTab) {
     StatusView(
-        icon = NodysseyIcons.Group,
+        icon = PlazaIcons.Group,
         shape = StatusShapes.Empty,
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -249,7 +249,7 @@ private val previewFollowing =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8c 我的关注")
 @Composable
 private fun FollowListPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         FollowScreen(
             state =
             FollowUiState(
@@ -269,7 +269,7 @@ private fun FollowListPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8c 我的粉丝 · 空态")
 @Composable
 private fun FollowEmptyPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         FollowScreen(
             state =
             FollowUiState(
@@ -290,12 +290,12 @@ private fun FollowEmptyPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8c 接口待接入")
 @Composable
 private fun FollowNotWiredPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         FollowScreen(
             state =
             FollowUiState(
                 followers = SpaceListState(),
-                following = SpaceListState(error = NodeSeekError.NotWired),
+                following = SpaceListState(error = SiteError.NotWired),
             ),
             onBack = {},
             onTabSelected = {},

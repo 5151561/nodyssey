@@ -1,10 +1,10 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -49,8 +49,8 @@ class NetworkSearchRepository(
         return withContext(dispatchers.default) {
             val response =
                 runCatching { json.decodeFromString<UserSearchResponse>(body) }
-                    .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
-            if (!response.success) throw NodeSeekException(NodeSeekError.LoginRequired)
+                    .getOrElse { throw SiteException(SiteError.Unparsable, it) }
+            if (!response.success) throw SiteException(SiteError.LoginRequired)
             response.memberList.map(UserSearchDto::toResult)
         }
     }

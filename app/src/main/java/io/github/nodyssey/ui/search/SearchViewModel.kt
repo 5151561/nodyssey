@@ -11,7 +11,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.FeedPost
@@ -24,7 +23,8 @@ import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.SearchHistoryEntry
 import io.github.nodyssey.model.SearchTarget
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.net.SiteError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -274,7 +274,7 @@ class SearchViewModel(
                 } catch (exception: CancellationException) {
                     throw exception
                 } catch (throwable: Throwable) {
-                    _uiState.update { it.copy(userLoadState = SearchLoadState.Error(throwable.toNodeSeekError())) }
+                    _uiState.update { it.copy(userLoadState = SearchLoadState.Error(throwable.toSiteError())) }
                 }
             }
     }
@@ -301,7 +301,7 @@ sealed interface SearchLoadState {
 
     data object Success : SearchLoadState
 
-    data class Error(val error: NodeSeekError) : SearchLoadState
+    data class Error(val error: SiteError) : SearchLoadState
 }
 
 data class SearchUiState(

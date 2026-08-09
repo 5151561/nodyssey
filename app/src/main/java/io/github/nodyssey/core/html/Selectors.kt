@@ -1,5 +1,7 @@
 package io.github.nodyssey.core.html
 
+import io.github.plaza.core.net.CLOUDFLARE_CHALLENGE_MARKERS
+
 /**
  * Every CSS selector that depends on NodeSeek's markup. When the site changes its templates this
  * is the only file that should need editing — parsers must not inline selector strings.
@@ -100,12 +102,14 @@ object Selectors {
 
     val LOGIN_REQUIRED_MARKERS = listOf("需要注册用户才能查看", "权限不足")
 
-    val CLOUDFLARE_MARKERS = listOf(
-        "/cdn-cgi/challenge-platform/",
-        "cf-browser-verification",
-        "Just a moment...",
-        "Checking your browser before accessing",
-    )
+    /**
+     * Cloudflare's markup, not NodeSeek's, so the list itself lives in `:core`.
+     *
+     * Re-exported under this name because the JSON callers below check a response body for an
+     * interstitial by hand, and they read better checking one file's worth of markers rather than
+     * reaching across modules for half of them.
+     */
+    val CLOUDFLARE_MARKERS = CLOUDFLARE_CHALLENGE_MARKERS
 
     /**
      * NodeSeek's own throttle sentence, served as a JSON body on an HTML route.

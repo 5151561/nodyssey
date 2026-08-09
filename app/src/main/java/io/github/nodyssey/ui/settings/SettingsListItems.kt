@@ -25,9 +25,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.ui.common.GroupSeam
-import io.github.nodyssey.ui.common.groupShape
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.designsys.component.GroupSeam
+import io.github.plaza.designsys.component.groupShape
+import io.github.plaza.designsys.theme.Spacing
 
 /**
  * The grouped-list vocabulary both settings screens are built from.

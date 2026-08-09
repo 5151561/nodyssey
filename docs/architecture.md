@@ -67,7 +67,7 @@
 没有任何办法塞进一个假的 Repository。现在 `AppContainer` 是接口，测试可以整体替换。
 
 **为什么不用 Hilt**：不是技术上不能，是不值得。手工构造器注入同样满足"依赖显式、可替换、作用域正确"，
-官方架构指南也明确接受；当前仍是单模块和一个 `AppContainer`，Hilt 换来的主要是注解与生成代码开销。
+官方架构指南也明确接受；`:app` 仍只有一个 `AppContainer`，Hilt 换来的主要是注解与生成代码开销。
 
 > **KSP 的阻塞条件已经解除。** 原先的判断是 KSP 版本必须与 Kotlin 版本逐段绑定，
 > 但 KSP2 已经**放弃了 `<kotlin 版本>-<ksp 版本>` 的坐标格式**并独立发布。
@@ -155,7 +155,9 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 - **只信 `releases/latest`，不做任何第三方中转。** GitHub 已经把草稿和预发布排除在这个端点之外；
   连不上就明说连不上并给出手动入口，而不是换一条来路不明的下载链路。
 - **比较的是 tag 和 `PackageManager` 报的 versionName**，不是 versionCode——Release 上没有
-  versionCode。`release.yml` 里那道「tag 必须等于 versionName」的闸门是这件事成立的前提。
+  versionCode。`release.yml` 里那道「tag 必须等于 versionName」的闸门是这件事成立的前提，
+  它读的是 `gradle.properties` 的 `nodyssey.versionName`——版本号写在那里而不是模块的构建文件里，
+  因为工作流要在不跑 Gradle 的情况下读到它。
 - **`PackageInstaller` 而不是 `FileProvider` + `ACTION_VIEW`。** 会话直接读我们自己的流，不需要
   导出任何 URI，也不需要给别的应用授权；结果以状态码回到 `ApkInstallResultReceiver`，而不是在
   另一个 Activity 打开的瞬间丢失。**不设 `setAppPackageName`**：debug 构建的 id 带 `.debug` 后缀，
@@ -250,7 +252,7 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 | # | 维度 | 适用性 | 成熟度 | 置信度 | 说明 |
 |---|---|---|---|---|---|
 | 1 | 架构、状态、职责边界 | 适用 | **4**（3） | 高 | SSOT 全部落到 Room；ViewModel 不再持有内容 |
-| 2 | 模块化与依赖边界 | 部分适用 | **2** | 高 | 单模块。包边界清晰，但没有编译期约束防止 ui→core/net 直连 |
+| 2 | 模块化与依赖边界 | 部分适用 | **3** | 中 | 已拆出 `:designsys` 与 `:core`，共享层不含站点类型由编译器保证；`:app` 内部仍无约束防止 ui→data 直连 |
 | 3 | Kotlin、协程、生命周期、DI | 适用 | **3** | 高 | 构造器注入、dispatcher 与时钟均可替换、取消语义正确 |
 | 4 | 数据、同步、后台任务 | 适用 | **3**（1） | 高 | Room + Paging 3 离线优先；WorkManager 轮询未读并按设置投递系统通知 |
 | 5 | UI、Compose、导航、设计系统 | 适用 | **3** | 高 | Compose + M3 + Nav3；批次 F 与主要一、二级页已落地，部分写操作仍待接入 |
@@ -296,7 +298,7 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 
 | 严重度 | 问题 | 计划 |
 |---|---|---|
-| **P2** | 单模块，没有编译期约束防止 `ui/` 直连 `core/net` | 拆 `:core` / `:data` / `:feature:*`，或先上 lint 的依赖规则 |
+| **P2** | `:app` 内部没有编译期约束防止 `ui/` 直连 `data/` | `:core` 已拆出（网络基座与更新检查），站点解析与 Room 仍在 `:app`；再往下要拆 `:data` / `:feature:*` |
 | **P2** | 修改邮箱与绑定 Telegram 只能转网页（Turnstile 与 Telegram 登录挂件） | 想原生化就得在 WebView 里跑挂件并把令牌回传；在此之前保持明确交接，不做能提交却必然失败的表单 |
 | **P3** | 未验证字号缩放 200% 与 TalkBack | 用真实设备和至少一台大屏设备做发布前验收 |
 | **P3** | 邀请码购买只有网页闭环 | 有可靠契约后原生化，接入前保留明确网页交接。星辰转账已按这条路走完（`payment-prepare` / `send`） |
@@ -431,7 +433,7 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 **加一个接口调用** → 优先找 JSON 端点（本地笔记 `docs/private/api-notes.md`），没有才抓 HTML。
 选择器进 `Selectors.kt`，配 fixture 测试。
 
-**站点改版导致解析失败** → 只改 `Selectors.kt`，跑 `./gradlew :app:testDebugUnitTest`。
+**站点改版导致解析失败** → 只改 `Selectors.kt`，跑 `./gradlew testDebugUnitTest`。
 
 **给帖子加一个要持久化的字段** → 改 `PostEntity` + 两个 mapper，`NodeSeekDatabase` 的 `version` 加一。
 schema 会重新导出到 `app/schemas/`，**这个 diff 必须一起提交**，否则 CI 会拦。
@@ -445,8 +447,8 @@ getter 会让调用方把结果存进字段，那就是又一份副本。
 `OfflineFirstPostRepository.THREAD_CACHE_TTL_MILLIS`（帖子，2 分钟）、
 `CategoryRepository.CACHE_TTL_MILLIS`（版块，12 小时）。都由 `AppClock` 驱动，都有测试覆盖。
 
-**动了依赖** → `./gradlew resolveAndLockAll --write-locks`，把 `app/gradle.lockfile` 一起提交。
+**动了依赖** → `./gradlew resolveAndLockAll --write-locks`，把各模块的 `gradle.lockfile` 都提交。
 
 **提交前** → `./gradlew spotlessApply` 然后
-`./gradlew spotlessCheck :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`
+`./gradlew spotlessCheck testDebugUnitTest :app:lintDebug :app:assembleDebug`
 （就是 CI 跑的那几道）。

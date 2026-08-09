@@ -19,11 +19,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.nodyssey.core.update.releaseNotesText
-import io.github.nodyssey.data.update.AppRelease
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.core.update.AppRelease
+import io.github.plaza.core.update.releaseNotesText
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
 
 /**
  * 启动提醒 — the one thing that actually tells the owner of a sideloaded APK that a fix shipped.
@@ -49,7 +49,7 @@ fun UpdateReminderDialog(
         modifier = modifier,
         icon = {
             Icon(
-                NodysseyIcons.Download,
+                PlazaIcons.Download,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -105,7 +105,7 @@ private val NOTES_MAX_HEIGHT = 220.dp
 @Preview(showBackground = true, widthDp = 360, heightDp = 640, name = "启动提醒 · 发现新版本")
 @Composable
 private fun UpdateReminderDialogPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         UpdateReminderDialog(
             release =
             AppRelease(

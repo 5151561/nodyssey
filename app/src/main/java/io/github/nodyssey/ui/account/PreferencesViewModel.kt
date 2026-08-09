@@ -6,12 +6,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.R
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.account.AccountSettingsRepository
 import io.github.nodyssey.data.settings.OPTIONAL_HOME_BOARD_SLUGS
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.di.AppContainer
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

@@ -27,13 +27,13 @@ import androidx.paging.LoadState
 import androidx.paging.LoadStates
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.designsys.theme.PlazaTheme
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -110,7 +110,7 @@ class PostListScreenTest {
         onGoToPage: (Int) -> Unit = {},
     ) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ScreenUnderTest(
                     posts = posts,
                     refresh = refresh,
@@ -233,7 +233,7 @@ class PostListScreenTest {
         val restorationTester = StateRestorationTester(composeRule)
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         restorationTester.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ScreenUnderTest(
                     posts = posts,
                     refresh = LoadState.NotLoading(false),
@@ -266,7 +266,7 @@ class PostListScreenTest {
         lateinit var retainedListState: LazyListState
         composeRule.setContent {
             retainedListState = rememberLazyListState()
-            NodysseyTheme {
+            PlazaTheme {
                 if (showingList) {
                     ScreenUnderTest(
                         posts = posts,
@@ -303,7 +303,7 @@ class PostListScreenTest {
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var state by mutableStateOf(PostListUiState(boards = boards))
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ScreenUnderTest(
                     posts = posts,
                     refresh = LoadState.NotLoading(false),
@@ -331,7 +331,7 @@ class PostListScreenTest {
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var requests by mutableStateOf(0)
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ScreenUnderTest(
                     posts = posts,
                     refresh = LoadState.NotLoading(false),
@@ -364,7 +364,7 @@ class PostListScreenTest {
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var requests by mutableStateOf(0)
         restorationTester.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ScreenUnderTest(
                     posts = posts,
                     refresh = LoadState.NotLoading(false),
@@ -431,7 +431,7 @@ class PostListScreenTest {
     fun `a refresh failure with nothing cached shows the typed error and its recovery action`() {
         setScreen(
             posts = emptyList(),
-            refresh = LoadState.Error(NodeSeekException(NodeSeekError.Cloudflare)),
+            refresh = LoadState.Error(SiteException(SiteError.Cloudflare)),
         )
 
         composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
@@ -443,7 +443,7 @@ class PostListScreenTest {
     fun `a login required error offers signing in rather than a bare retry`() {
         setScreen(
             posts = emptyList(),
-            refresh = LoadState.Error(NodeSeekException(NodeSeekError.LoginRequired)),
+            refresh = LoadState.Error(SiteException(SiteError.LoginRequired)),
         )
 
         composeRule
@@ -464,7 +464,7 @@ class PostListScreenTest {
         var opened = false
         setScreen(
             posts = emptyList(),
-            refresh = LoadState.Error(NodeSeekException(NodeSeekError.Cloudflare)),
+            refresh = LoadState.Error(SiteException(SiteError.Cloudflare)),
             onRecoverInBrowser = { opened = true },
         )
 
@@ -481,7 +481,7 @@ class PostListScreenTest {
     fun `a refresh failure with cached rows keeps the content on screen`() {
         setScreen(
             posts = listOf(feedPost(1, "cached post")),
-            refresh = LoadState.Error(NodeSeekException(NodeSeekError.Network)),
+            refresh = LoadState.Error(SiteException(SiteError.Network)),
         )
 
         composeRule.onNodeWithText("cached post").assertIsDisplayed()
@@ -581,7 +581,7 @@ class PostListScreenTest {
     fun `a locked board names itself in the sign-in state`() {
         setScreen(
             posts = emptyList(),
-            refresh = LoadState.Error(NodeSeekException(NodeSeekError.LoginRequired)),
+            refresh = LoadState.Error(SiteException(SiteError.LoginRequired)),
             state = PostListUiState(boards = boards, categorySlug = "tech"),
         )
 

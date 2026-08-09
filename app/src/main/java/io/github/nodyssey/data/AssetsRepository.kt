@@ -1,13 +1,13 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
-import io.github.nodyssey.core.runCatchingExceptCancellation
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -175,8 +175,8 @@ class NetworkAssetsRepository(
         return withContext(dispatchers.default) {
             val root =
                 runCatching { json.parseToJsonElement(body) as? JsonObject }.getOrNull()
-                    ?: throw NodeSeekException(NodeSeekError.Unparsable)
-            if (root.bool("success") == false) throw NodeSeekException(NodeSeekError.Unparsable)
+                    ?: throw SiteException(SiteError.Unparsable)
+            if (root.bool("success") == false) throw SiteException(SiteError.Unparsable)
             ProgressToday(
                 postCount = root.int("postBonusCount"),
                 postCap = root.int("maxPostBonusCount"),
@@ -263,10 +263,10 @@ class NetworkAssetsRepository(
                 )
             }
             if (response.code == 401 || response.code == 403) {
-                throw NodeSeekException(NodeSeekError.LoginRequired)
+                throw SiteException(SiteError.LoginRequired)
             }
-            if (!response.isSuccessful) throw NodeSeekException(NodeSeekError.Http(response.code))
-            throw NodeSeekException(NodeSeekError.Unparsable)
+            if (!response.isSuccessful) throw SiteException(SiteError.Http(response.code))
+            throw SiteException(SiteError.Unparsable)
         }
         profileRepository.selfUid?.let { uid ->
             val resolvedGain =
@@ -331,10 +331,10 @@ class NetworkAssetsRepository(
         return withContext(dispatchers.default) {
             val root =
                 runCatching { json.parseToJsonElement(body) }
-                    .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
+                    .getOrElse { throw SiteException(SiteError.Unparsable, it) }
             val rows =
                 root.findObjectArray("list", "board", "data")
-                    ?: throw NodeSeekException(NodeSeekError.Unparsable)
+                    ?: throw SiteException(SiteError.Unparsable)
             rows.mapNotNull { row ->
                 val name = row.text("member_name", "username", "name") ?: return@mapNotNull null
                 AttendanceBoardEntry(

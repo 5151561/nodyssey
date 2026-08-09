@@ -62,15 +62,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
-import io.github.nodyssey.ui.common.EditorTextField
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.CommentBody
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.EditorTextField
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.EditorToolbarDefaults
+import io.github.plaza.designsys.editor.MarkdownEditorBar
+import io.github.plaza.designsys.editor.MarkdownEditorState
+import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
+import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.theme.CommentBody
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.readableWidth
 import java.text.DateFormat
 import java.util.Date
 
@@ -230,7 +236,7 @@ private fun ReplyEditorSheet(
                     enabled = !state.isPublishing,
                 ) {
                     Icon(
-                        imageVector = NodysseyIcons.Visibility,
+                        imageVector = PlazaIcons.Visibility,
                         contentDescription = stringResource(R.string.action_preview),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -293,6 +299,14 @@ private fun ReplyEditorSheet(
                 keySize = EditorToolbarDefaults.CompactKeySize,
                 onPickImages = onPickImages,
                 onCustomize = onCustomize,
+                emojiPanel = { panel ->
+                    NodeSeekEmojiPanel(
+                        onInsert = panel.onInsert,
+                        onBackspace = panel.onBackspace,
+                        recent = panel.recent,
+                        onRecentChange = panel.onRecentChange,
+                    )
+                },
                 trailing = {
                     PublishReplyButton(
                         isPublishing = state.isPublishing,
@@ -399,7 +413,7 @@ private fun ReplyTargetChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 2.dp),
         ) {
-            Icon(NodysseyIcons.Reply, contentDescription = null, modifier = Modifier.size(15.dp))
+            Icon(PlazaIcons.Reply, contentDescription = null, modifier = Modifier.size(15.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.post_quote_reply, replyTo.author, "#${replyTo.floor}"),
@@ -457,7 +471,7 @@ private fun ReplyReference(
  */
 @Composable
 private fun ComposerErrorStrip(
-    error: NodeSeekError?,
+    error: SiteError?,
     detail: String?,
     failedUploads: Int,
     uploadFailure: UploadFailure?,
@@ -531,17 +545,17 @@ private fun PublishReplyButton(
 }
 
 @Composable
-private fun replyErrorReason(error: NodeSeekError, detail: String?): String = when (error) {
-    NodeSeekError.Network -> stringResource(R.string.composer_publish_network_failed)
+private fun replyErrorReason(error: SiteError, detail: String?): String = when (error) {
+    SiteError.Network -> stringResource(R.string.composer_publish_network_failed)
 
-    NodeSeekError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
+    SiteError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
 
-    NodeSeekError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
+    SiteError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
 
     // The site's own sentence beats a status code whenever it sent one: a rejected reply comes back
     // as a 400 carrying "内容不能为空" or the duplicate-post refusal, and "服务器返回 HTTP 400"
     // would tell the user nothing they can act on.
-    is NodeSeekError.Http ->
+    is SiteError.Http ->
         detail?.takeIf { it.isNotBlank() }
             ?: stringResource(R.string.composer_publish_http, error.statusCode)
 

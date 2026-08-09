@@ -1,7 +1,7 @@
 package io.github.nodyssey.core.html
 
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import org.jsoup.Jsoup
 
 /** Reads the server-rendered member total from NodeSeek's 用户数目 panel. */
@@ -23,7 +23,7 @@ object CommunityStatsParser {
                 ?.replace(",", "")
                 ?.toLongOrNull()
         if (count == null || count <= 0L) {
-            throw NodeSeekException(NodeSeekError.Unparsable)
+            throw SiteException(SiteError.Unparsable)
         }
         return count
     }

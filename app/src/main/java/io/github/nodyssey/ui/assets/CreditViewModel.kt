@@ -12,11 +12,11 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import androidx.paging.cachedIn
 import io.github.nodyssey.core.net.NodeSeekJsonClient
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.CreditEntry
 import io.github.nodyssey.data.CreditRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow

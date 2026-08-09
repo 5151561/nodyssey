@@ -43,19 +43,19 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
-import io.github.nodyssey.model.InlineNode
-import io.github.nodyssey.model.RichNode
-import io.github.nodyssey.ui.common.AvatarShape
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.common.shortMessage
-import io.github.nodyssey.ui.composer.parseMarkdown
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.core.richtext.parseMarkdown
+import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
 /**
  * Board 7e — the 私信 group of the notification tab.
@@ -102,7 +102,7 @@ internal fun ConversationList(
             modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.lg),
         ) {
             Icon(
-                NodysseyIcons.AddComment,
+                PlazaIcons.AddComment,
                 contentDescription = stringResource(R.string.messages_new_conversation),
             )
         }
@@ -191,7 +191,7 @@ private fun ConversationRow(
                     )
                     if (conversation.isSystem) {
                         Icon(
-                            NodysseyIcons.PushPin,
+                            PlazaIcons.PushPin,
                             contentDescription = stringResource(R.string.messages_pinned),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp),
@@ -374,7 +374,7 @@ internal fun unreadLabel(count: Int, cap: Int): String =
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable
 private fun ConversationListPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         ConversationList(
             state =
             NotificationsUiState(

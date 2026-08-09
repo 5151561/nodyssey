@@ -65,19 +65,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
-import io.github.nodyssey.ui.common.EditorTextField
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.PostBody
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.paddingWithKeyboard
-import io.github.nodyssey.ui.theme.readableWidth
 import io.github.nodyssey.ui.vote.VoteComposeDialog
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.EditorTextField
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.MarkdownEditorBar
+import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
+import io.github.plaza.designsys.editor.ViewModeSwitch
+import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.theme.PostBody
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.paddingWithKeyboard
+import io.github.plaza.designsys.theme.readableWidth
 import java.text.DateFormat
 import java.util.Date
 
@@ -152,8 +157,8 @@ private fun PublishErrorSnackbar(
     val actionLabel = state.publishError?.let { error ->
         stringResource(
             when (error) {
-                NodeSeekError.LoginRequired -> R.string.action_sign_in
-                NodeSeekError.Cloudflare -> R.string.action_verify
+                SiteError.LoginRequired -> R.string.action_sign_in
+                SiteError.Cloudflare -> R.string.action_verify
                 else -> R.string.action_retry
             },
         )
@@ -168,8 +173,8 @@ private fun PublishErrorSnackbar(
         onDismissed()
         if (result == SnackbarResult.ActionPerformed) {
             when (error) {
-                NodeSeekError.LoginRequired -> onSignIn()
-                NodeSeekError.Cloudflare -> onVerify()
+                SiteError.LoginRequired -> onSignIn()
+                SiteError.Cloudflare -> onVerify()
                 else -> onRetry()
             }
         }
@@ -406,13 +411,21 @@ private fun EditorContent(
             // The toolbar takes focus when it is tapped, and a caret the user cannot see is a caret
             // they have lost track of.
             onFormatted = { focusRequester.requestFocus() },
+            emojiPanel = { panel ->
+                NodeSeekEmojiPanel(
+                    onInsert = panel.onInsert,
+                    onBackspace = panel.onBackspace,
+                    recent = panel.recent,
+                    onRecentChange = panel.onRecentChange,
+                )
+            },
             // The strip's trailing slot rather than an [EditorAction]: that enum is the shared pool
             // every editor draws from, and adding to it would put 插入投票 in the message, signature
             // and readme editors too — none of which can carry a vote.
             trailing = {
                 IconButton(onClick = { composingVote = true }) {
                     Icon(
-                        NodysseyIcons.Poll,
+                        PlazaIcons.Poll,
                         contentDescription = stringResource(R.string.composer_insert_vote),
                     )
                 }
@@ -577,7 +590,7 @@ private fun ComposerOptions(
                 label = permissionLabel(state.permission),
                 filled = false,
                 error = false,
-                leading = NodysseyIcons.Visibility,
+                leading = PlazaIcons.Visibility,
                 onClick = { permissionMenuOpen = true },
             )
             DropdownMenu(expanded = permissionMenuOpen, onDismissRequest = { permissionMenuOpen = false }) {
@@ -690,7 +703,7 @@ private fun DraftRecoveryDialog(
     val title = draft.title.ifBlank { stringResource(R.string.composer_title_hint) }
     AlertDialog(
         onDismissRequest = {},
-        icon = { Icon(NodysseyIcons.Drafts, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        icon = { Icon(PlazaIcons.Drafts, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         title = { Text(stringResource(R.string.composer_restore_title)) },
         text = {
             Text(
@@ -713,15 +726,15 @@ private fun DraftRecoveryDialog(
 }
 
 @Composable
-private fun publishErrorMessage(error: NodeSeekError, detail: String?): String {
+private fun publishErrorMessage(error: SiteError, detail: String?): String {
     val reason = when (error) {
-        NodeSeekError.Network -> stringResource(R.string.composer_publish_network_failed)
+        SiteError.Network -> stringResource(R.string.composer_publish_network_failed)
 
-        NodeSeekError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
+        SiteError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
 
-        NodeSeekError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
+        SiteError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
 
-        is NodeSeekError.Http -> {
+        is SiteError.Http -> {
             val status = stringResource(R.string.composer_publish_http, error.statusCode)
             detail?.takeIf { it.isNotBlank() && it != error.toString() }?.let { "$status：$it" } ?: status
         }

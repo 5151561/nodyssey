@@ -1,7 +1,5 @@
 package io.github.nodyssey.ui.composer
 
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.MutableClock
 import io.github.nodyssey.data.composer.CommentComposerRepository
 import io.github.nodyssey.data.composer.CommentDraft
@@ -11,6 +9,8 @@ import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.ui.ViewModels
 import io.github.nodyssey.ui.typeMore
 import io.github.nodyssey.ui.typeText
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -277,7 +277,7 @@ class ReplyComposerViewModelTest {
 
     @Test
     fun `a failed publish keeps the draft and surfaces the reason`() = runTest(dispatcher) {
-        repository.publishError = NodeSeekException(NodeSeekError.Unknown, detail = "评论发布接口尚未接入")
+        repository.publishError = SiteException(SiteError.Unknown, detail = "评论发布接口尚未接入")
         val viewModel = viewModel()
         viewModel.open()
         advanceUntilIdle()
@@ -288,7 +288,7 @@ class ReplyComposerViewModelTest {
         viewModel.publish { error("must not report success") }
         advanceUntilIdle()
 
-        assertEquals(NodeSeekError.Unknown, viewModel.uiState.value.publishError)
+        assertEquals(SiteError.Unknown, viewModel.uiState.value.publishError)
         assertEquals("评论发布接口尚未接入", viewModel.uiState.value.publishErrorDetail)
         assertEquals("这条要留住", viewModel.uiState.value.body)
         assertTrue(viewModel.uiState.value.visible)

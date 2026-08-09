@@ -1,9 +1,9 @@
 package io.github.nodyssey.core.html
 
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.model.PostListPage
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import org.jsoup.Jsoup
 
 object SearchParser {
@@ -23,7 +23,7 @@ object SearchParser {
     fun parsePosts(html: String, page: Int): PostListPage {
         val document = Jsoup.parse(html, NodeSeekSite.BASE_URL)
         if (document.getElementById("nsk-frame") == null) {
-            throw NodeSeekException(NodeSeekError.LoginRequired)
+            throw SiteException(SiteError.LoginRequired)
         }
         // The list parser already reads the pager, "..100"-style elided totals included.
         val parsed = PostListParser.parse(html, page)

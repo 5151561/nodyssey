@@ -15,7 +15,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.nodyssey.data.AttendanceBoardEntry
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -35,7 +35,7 @@ class ProfileScreenTest {
     fun `signed out profile renders c7 and starts sign in`() {
         var signInOpened = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ProfileScreen(
                     state = ProfileUiState(),
                     onSignIn = { signInOpened = true },
@@ -70,7 +70,7 @@ class ProfileScreenTest {
         var settingsOpened = false
         var toolsOpened = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ProfileScreen(
                     state = ProfileUiState(),
                     onSignIn = {},
@@ -101,7 +101,7 @@ class ProfileScreenTest {
     @Test
     fun `signed in profile shows unknown level in the resource cards`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ProfileScreen(
                     state =
                     ProfileUiState(
@@ -134,7 +134,7 @@ class ProfileScreenTest {
     @Test
     fun `signed in profile replaces attendance streak with level`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ProfileScreen(
                     state =
                     ProfileUiState(
@@ -169,7 +169,7 @@ class ProfileScreenTest {
     fun `tapping the header name opens the space page`() {
         var clicked = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ProfileScreen(
                     state = ProfileUiState(isSignedIn = true, displayName = "nodyssey_dev"),
                     onSignIn = {},
@@ -199,7 +199,7 @@ class ProfileScreenTest {
     fun `signed attendance shows gain and opens the board`() {
         var boardOpened = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ProfileScreen(
                     state =
                     ProfileUiState(
@@ -235,7 +235,7 @@ class ProfileScreenTest {
     fun `unsigned attendance opens the sign in flow`() {
         var attendanceOpened = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ProfileScreen(
                     state = ProfileUiState(isSignedIn = true, displayName = "nodyssey_dev"),
                     onSignIn = {},
@@ -264,7 +264,7 @@ class ProfileScreenTest {
     @Test
     fun `attendance board is rendered over the profile screen`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 ProfileScreen(
                     state =
                     ProfileUiState(

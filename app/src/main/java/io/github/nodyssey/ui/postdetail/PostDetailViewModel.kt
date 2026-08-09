@@ -6,9 +6,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.NoReadingPositions
 import io.github.nodyssey.data.PostRepository
@@ -18,7 +15,10 @@ import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.ReactionAction
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -315,10 +315,10 @@ class PostDetailViewModel(
                             pendingReaction = null,
                             reactionFailure =
                             ReactionFailure(
-                                error = throwable.toNodeSeekError(),
+                                error = throwable.toSiteError(),
                                 // The site's own sentence when it sent one — "鸡腿不足" says more
                                 // than any wording of ours could from a status code.
-                                detail = (throwable as? NodeSeekException)?.detail,
+                                detail = (throwable as? SiteException)?.detail,
                             ),
                         )
                     }
@@ -357,8 +357,8 @@ class PostDetailViewModel(
                             collectPending = false,
                             collectFailure =
                             ReactionFailure(
-                                error = throwable.toNodeSeekError(),
-                                detail = (throwable as? NodeSeekException)?.detail,
+                                error = throwable.toSiteError(),
+                                detail = (throwable as? SiteException)?.detail,
                             ),
                         )
                     }
@@ -421,7 +421,7 @@ class PostDetailViewModel(
                         it.copy(
                             isLoading = false,
                             isAppending = false,
-                            error = throwable.toNodeSeekError(),
+                            error = throwable.toSiteError(),
                         )
                     }
                 }
@@ -487,7 +487,7 @@ data class PostDetailUiState(
      * rather than sliding along with the scroll it is offered against.
      */
     val resumePosition: ReadingPosition? = null,
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     /** The floor whose reaction is in flight, so its row can show it and refuse a second tap. */
     val pendingReaction: PendingReaction? = null,
     /** A refused reaction, held until the screen has shown it once. */
@@ -532,6 +532,6 @@ data class PendingScroll(
  * failures that never reached the site at all.
  */
 data class ReactionFailure(
-    val error: NodeSeekError,
+    val error: SiteError,
     val detail: String?,
 )

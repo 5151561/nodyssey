@@ -7,10 +7,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.LuckyDraw
 import io.github.nodyssey.core.LuckyDrawParams
 import io.github.nodyssey.di.AppContainer
+import io.github.plaza.core.AppClock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

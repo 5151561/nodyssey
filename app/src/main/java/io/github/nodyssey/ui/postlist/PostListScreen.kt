@@ -93,25 +93,25 @@ import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
-import io.github.nodyssey.ui.common.AppendSpinner
-import io.github.nodyssey.ui.common.AvatarCapOffset
-import io.github.nodyssey.ui.common.AvatarShape
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
-import io.github.nodyssey.ui.common.MetaText
-import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
-import io.github.nodyssey.ui.common.SkeletonBar
-import io.github.nodyssey.ui.common.ThreadRow
-import io.github.nodyssey.ui.common.ThreadRowTitle
-import io.github.nodyssey.ui.common.UserAvatar
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.plaza.designsys.component.AppendSpinner
+import io.github.plaza.designsys.component.AvatarCapOffset
+import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.MetaText
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SkeletonBar
+import io.github.plaza.designsys.component.ThreadRow
+import io.github.plaza.designsys.component.ThreadRowTitle
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -356,8 +356,8 @@ fun PostListScreen(
                     // An error only takes over the screen when there is nothing cached to show. With
                     // rows on screen the failure is not worth losing the content over.
                     posts.itemCount == 0 && refreshState is LoadState.Error -> {
-                        val error = refreshState.error.toNodeSeekError()
-                        NodeSeekErrorState(
+                        val error = refreshState.error.toSiteError()
+                        SiteErrorState(
                             error = error,
                             onRetry = posts::refresh,
                             // Both recoveries open a browser, but not the same page: a challenge is
@@ -622,7 +622,7 @@ private fun HomeTopBar(
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
-                        imageVector = NodysseyIcons.SwapVert,
+                        imageVector = PlazaIcons.SwapVert,
                         contentDescription = stringResource(R.string.action_sort),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -707,7 +707,7 @@ internal fun PostRow(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = NodysseyIcons.PushPin,
+                        imageVector = PlazaIcons.PushPin,
                         contentDescription = stringResource(R.string.post_badge_pinned),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(18.dp),
@@ -1017,7 +1017,7 @@ internal fun previewFeed(): Flow<PagingData<FeedPost>> =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post list")
 @Composable
 private fun PostListScreenPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         PostListScreen(
             state = previewState,
             posts = previewFeed().collectAsLazyPagingItems(),
@@ -1033,7 +1033,7 @@ private fun PostListScreenPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post list · dark")
 @Composable
 private fun PostListScreenDarkPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         PostListScreen(
             state = previewState,
             posts = previewFeed().collectAsLazyPagingItems(),
@@ -1049,5 +1049,5 @@ private fun PostListScreenDarkPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post list · skeleton")
 @Composable
 private fun PostListSkeletonPreview() {
-    NodysseyTheme { FeedSkeleton() }
+    PlazaTheme { FeedSkeleton() }
 }

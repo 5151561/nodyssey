@@ -41,11 +41,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.nodyssey.R
-import io.github.nodyssey.model.AnsiSpan
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.rememberClipboardCopy
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.core.ansi.AnsiSpan
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TerminalGround
+import io.github.plaza.designsys.component.TerminalInk
+import io.github.plaza.designsys.component.rememberClipboardCopy
+import io.github.plaza.designsys.component.rememberTerminalText
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
 
 /**
  * The report exactly as it was posted, on a terminal ground, pinchable.
@@ -90,7 +93,7 @@ fun ReportSourceDialog(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(ReportTerminalGround),
+                    .background(TerminalGround),
             ) {
                 Column(Modifier.systemBarsPadding()) {
                     Row(
@@ -102,14 +105,14 @@ fun ReportSourceDialog(
                         Text(
                             text = title,
                             style = MaterialTheme.typography.titleSmall,
-                            color = ReportTerminalInk,
+                            color = TerminalInk,
                             modifier = Modifier.weight(1f),
                         )
                         IconButton(onClick = { copy("report", source, confirmation) }) {
                             Icon(
-                                imageVector = NodysseyIcons.ContentCopy,
+                                imageVector = PlazaIcons.ContentCopy,
                                 contentDescription = stringResource(R.string.action_copy),
-                                tint = ReportTerminalInk,
+                                tint = TerminalInk,
                                 modifier = Modifier.size(18.dp),
                             )
                         }
@@ -117,7 +120,7 @@ fun ReportSourceDialog(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = stringResource(R.string.action_close),
-                                tint = ReportTerminalInk,
+                                tint = TerminalInk,
                             )
                         }
                     }
@@ -126,7 +129,7 @@ fun ReportSourceDialog(
                         Text(
                             text = coloured,
                             style = ReportTerminalStyle.scaledBy(fontScale),
-                            color = ReportTerminalInk,
+                            color = TerminalInk,
                             softWrap = false,
                         )
                     }
@@ -172,7 +175,7 @@ fun ReportSourceBlock(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .background(ReportTerminalGround),
+            .background(TerminalGround),
     ) {
         Row(
             modifier = Modifier
@@ -183,16 +186,16 @@ fun ReportSourceBlock(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelSmall,
-                color = ReportTerminalInk,
+                color = TerminalInk,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = { copy("report", source, confirmation) }) {
                 Icon(
-                    imageVector = NodysseyIcons.ContentCopy,
+                    imageVector = PlazaIcons.ContentCopy,
                     contentDescription = stringResource(R.string.action_copy),
-                    tint = ReportTerminalInk,
+                    tint = TerminalInk,
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -214,7 +217,7 @@ fun ReportSourceBlock(
                 Text(
                     text = coloured,
                     style = ReportTerminalStyle.scaledBy(fitted * zoom),
-                    color = ReportTerminalInk,
+                    color = TerminalInk,
                     softWrap = false,
                 )
             }
@@ -231,7 +234,7 @@ fun ReportSourceBlock(
             Text(
                 text = stringResource(R.string.report_open_fullscreen),
                 style = MaterialTheme.typography.labelLarge,
-                color = ReportTerminalInk,
+                color = TerminalInk,
             )
         }
     }

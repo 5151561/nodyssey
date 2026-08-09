@@ -57,22 +57,22 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.R
-import io.github.nodyssey.core.TimeFormat
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.StardustEntry
 import io.github.nodyssey.data.StardustType
-import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NoLedgerEntriesState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
-import io.github.nodyssey.ui.common.digitsOnly
-import io.github.nodyssey.ui.postlist.toNodeSeekError
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.digitsOnly
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -128,10 +128,10 @@ private fun stardustMessageText(message: StardustMessage): String =
         is StardustMessage.Failed ->
             message.detail ?: stringResource(
                 when (message.error) {
-                    NodeSeekError.Cloudflare -> R.string.status_challenge_title
-                    NodeSeekError.LoginRequired -> R.string.status_sign_in_title
-                    NodeSeekError.Network -> R.string.status_network_title
-                    NodeSeekError.RateLimited -> R.string.status_rate_limited_title
+                    SiteError.Cloudflare -> R.string.status_challenge_title
+                    SiteError.LoginRequired -> R.string.status_sign_in_title
+                    SiteError.Network -> R.string.status_network_title
+                    SiteError.RateLimited -> R.string.status_rate_limited_title
                     else -> R.string.transfer_failed
                 },
             )
@@ -271,14 +271,14 @@ private fun StardustLedger(
     // The profile error comes first because it is upstream of everything: without a uid the ledger was
     // never requested, so Paging is sitting in its initial Loading state and would otherwise show a
     // spinner that can never resolve.
-    val error = state.error ?: (refresh as? LoadState.Error)?.error?.toNodeSeekError()
+    val error = state.error ?: (refresh as? LoadState.Error)?.error?.toSiteError()
     val retry = {
         onRetry()
         rows.retry()
     }
     when {
         error != null && rows.itemCount == 0 ->
-            NodeSeekErrorState(
+            SiteErrorState(
                 error = error,
                 onRetry = retry,
                 onOpenBrowser = onOpenBrowser,
@@ -402,10 +402,10 @@ private fun StardustType.icon(): ImageVector =
     when (this) {
         StardustType.UPVOTE -> Icons.Default.ThumbUp
         StardustType.TRANSFER -> Icons.AutoMirrored.Filled.Send
-        StardustType.BUY_CODE -> NodysseyIcons.ConfirmationNumber
+        StardustType.BUY_CODE -> PlazaIcons.ConfirmationNumber
         StardustType.SYSTEM -> Icons.Default.Info
-        StardustType.ADMIN -> NodysseyIcons.Gavel
-        StardustType.UNKNOWN -> NodysseyIcons.Wallet
+        StardustType.ADMIN -> PlazaIcons.Gavel
+        StardustType.UNKNOWN -> PlazaIcons.Wallet
     }
 
 /**
@@ -553,7 +553,7 @@ private fun TransferConfirmDialog(
         stringResource(if (state.isSending) R.string.transfer_sending else R.string.transfer_confirm),
         onConfirm = onConfirm,
         onDismiss = onDismiss,
-        icon = NodysseyIcons.Wallet,
+        icon = PlazaIcons.Wallet,
         shortfall = state.shortfall?.let { stringResource(R.string.transfer_shortfall, it) },
         isSending = state.isSending,
     )
@@ -586,7 +586,7 @@ private val previewEntries =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8e 星辰流水")
 @Composable
 private fun StardustPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         PreviewScreen(
             StardustUiState(isLoadingBalance = false, uid = 52_425, balance = 6),
             flowOf(PagingData.from(previewEntries)),
@@ -597,7 +597,7 @@ private fun StardustPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8e 星辰流水 · dark")
 @Composable
 private fun StardustDarkPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         PreviewScreen(
             StardustUiState(isLoadingBalance = false, uid = 52_425, balance = 6),
             flowOf(PagingData.from(previewEntries)),
@@ -608,9 +608,9 @@ private fun StardustDarkPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8e 星辰流水 · 未登录")
 @Composable
 private fun StardustSignInPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         PreviewScreen(
-            StardustUiState(isLoadingBalance = false, error = NodeSeekError.LoginRequired),
+            StardustUiState(isLoadingBalance = false, error = SiteError.LoginRequired),
             flowOf(PagingData.empty()),
         )
     }

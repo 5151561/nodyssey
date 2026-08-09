@@ -1,6 +1,11 @@
 package io.github.nodyssey.core
 
+import io.github.nodyssey.core.html.Selectors
 import io.github.nodyssey.model.FeedSort
+import io.github.plaza.core.net.PageMarkers
+import io.github.plaza.core.net.SiteConfig
+import io.github.plaza.core.net.resolveUserAgent
+import io.github.plaza.designsys.component.UserAvatar
 import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -31,6 +36,29 @@ object NodeSeekSite {
 
     const val HTML_ACCEPT =
         "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+
+    /**
+     * What `:core` is told about this site, and the only channel it has: nothing in that module may
+     * import from this one.
+     *
+     * Assembled here rather than in the DI container so the values sit beside the notes explaining
+     * them — the fallback UA's warning is three lines up, and the marker lists carry the measurements
+     * that produced them over in [Selectors].
+     */
+    val CONFIG =
+        SiteConfig(
+            baseUrl = BASE_URL,
+            fallbackUserAgent = FALLBACK_USER_AGENT,
+            htmlAccept = HTML_ACCEPT,
+            // The site sets `session`; the JWT-style `token` shows up on some deployments.
+            sessionCookieNames = listOf("session", "token"),
+            markers =
+            PageMarkers(
+                usablePage = Selectors.USABLE_PAGE_MARKERS,
+                loginRequired = Selectors.LOGIN_REQUIRED_MARKERS,
+                rateLimit = Selectors.RATE_LIMIT_MARKERS,
+            ),
+        )
 
     val categories: List<Category> = listOf(
         Category(slug = null, title = "综合"),
@@ -165,7 +193,7 @@ object NodeSeekSite {
     const val SETTING_PREFERENCE = "preference"
     const val SETTING_HOMEPAGE = "homepage"
 
-    /** Accounts without an upload 404 here; [io.github.nodyssey.ui.common.UserAvatar] draws the initial instead. */
+    /** Accounts without an upload 404 here; [UserAvatar] draws the initial instead. */
     fun avatarUrl(uid: Long): String? = absoluteUrl("/avatar/$uid.png")
 
     /**

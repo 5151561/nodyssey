@@ -7,12 +7,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.core.AppVersion
 import io.github.nodyssey.data.update.ApkInstaller
 import io.github.nodyssey.data.update.AppUpdateRepository
-import io.github.nodyssey.data.update.AppUpdateState
-import io.github.nodyssey.data.update.UpdateDownload
 import io.github.nodyssey.di.AppContainer
+import io.github.plaza.core.AppVersion
+import io.github.plaza.core.update.AppUpdateState
+import io.github.plaza.core.update.UpdateDownload
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

@@ -21,9 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
 /**
  * The site's numeric pager, for the lists that have one instead of infinite scroll.
@@ -133,7 +133,7 @@ private fun PageChip(
 @Preview(showBackground = true, widthDp = 360)
 @Composable
 private fun NumericPagerPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         NumericPager(page = 1, totalPages = 104, onPageSelected = {}, approximateTotal = true)
     }
 }

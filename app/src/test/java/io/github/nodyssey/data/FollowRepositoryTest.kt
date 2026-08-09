@@ -1,11 +1,11 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -88,7 +88,7 @@ class FollowRepositoryTest {
             val exception =
                 runCatching { repository(api, signedIn = false).following() }.exceptionOrNull()
 
-            assertEquals(NodeSeekError.LoginRequired, (exception as? NodeSeekException)?.error)
+            assertEquals(SiteError.LoginRequired, (exception as? SiteException)?.error)
             assertEquals("no request should have been sent", null, api.requestedPath)
         }
 
@@ -101,7 +101,7 @@ class FollowRepositoryTest {
                     repository(FakeFansApi("""{"success":true,"someOtherKey":{"a":1}}""")).following()
                 }.exceptionOrNull()
 
-            assertEquals(NodeSeekError.Unparsable, (exception as? NodeSeekException)?.error)
+            assertEquals(SiteError.Unparsable, (exception as? SiteException)?.error)
         }
 
     @Test
@@ -112,7 +112,7 @@ class FollowRepositoryTest {
                     repository(FakeFansApi("""{"success":false,"message":"用户未登录"}""")).following()
                 }.exceptionOrNull()
 
-            assertEquals("用户未登录", (exception as? NodeSeekException)?.detail)
+            assertEquals("用户未登录", (exception as? SiteException)?.detail)
         }
 
     @Test
@@ -147,7 +147,7 @@ class FollowRepositoryTest {
                     repository(FakeFansApi("""{"success":false,"message":"对方已屏蔽你"}""")).follow(1)
                 }.exceptionOrNull()
 
-            assertEquals("对方已屏蔽你", (exception as? NodeSeekException)?.detail)
+            assertEquals("对方已屏蔽你", (exception as? SiteException)?.detail)
         }
 }
 

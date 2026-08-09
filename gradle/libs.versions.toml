@@ -64,6 +64,8 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidxDatastore" }
 androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "androidxWork" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+# The request/interceptor half without Compose, for the module that owns the data-usage policy.
+coil-core = { module = "io.coil-kt.coil3:coil-core", version.ref = "coil" }
 coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
@@ -79,6 +81,9 @@ androidx-paging-testing = { module = "androidx.paging:paging-testing", version.r
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 [plugins]
+# No `android-library` alias: the library modules apply `com.android.library` through
+# `plaza.android.library`, where it comes off `build-logic`'s own classpath rather than through this
+# catalog. An alias nobody resolves is a version declaration that cannot be trusted to mean anything.
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

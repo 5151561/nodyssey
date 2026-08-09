@@ -5,15 +5,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AttendanceBoardEntry
 import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.DailyQuota
 import io.github.nodyssey.data.GrowthSnapshot
 import io.github.nodyssey.di.AppContainer
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 
 data class AssetsUiState(
     val isLoading: Boolean = true,
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     val level: Int? = null,
     val chickenCount: Int? = null,
     val starCount: Int? = null,
@@ -49,7 +49,7 @@ data class AssetsUiState(
     val boardOpen: Boolean = false,
     val isLoadingBoard: Boolean = false,
     val board: List<AttendanceBoardEntry> = emptyList(),
-    val boardError: NodeSeekError? = null,
+    val boardError: SiteError? = null,
 ) {
     val hasData: Boolean get() = chickenCount != null || starCount != null || level != null
 
@@ -116,7 +116,7 @@ class AssetsViewModel(
                 runCatchingExceptCancellation { repository.growth() }
                     .onSuccess { snapshot -> _uiState.update { it.withGrowth(snapshot) } }
                     .onFailure { throwable ->
-                        _uiState.update { it.copy(isLoading = false, error = throwable.toNodeSeekError()) }
+                        _uiState.update { it.copy(isLoading = false, error = throwable.toSiteError()) }
                     }
             }
     }
@@ -151,7 +151,7 @@ class AssetsViewModel(
                         refresh()
                     }.onFailure { throwable ->
                         _uiState.update {
-                            it.copy(isSigningIn = false, error = throwable.toNodeSeekError())
+                            it.copy(isSigningIn = false, error = throwable.toSiteError())
                         }
                     }
             }
@@ -176,7 +176,7 @@ class AssetsViewModel(
                     _uiState.update { it.copy(isLoadingBoard = false, board = entries) }
                 }.onFailure { throwable ->
                     _uiState.update {
-                        it.copy(isLoadingBoard = false, boardError = throwable.toNodeSeekError())
+                        it.copy(isLoadingBoard = false, boardError = throwable.toSiteError())
                     }
                 }
         }

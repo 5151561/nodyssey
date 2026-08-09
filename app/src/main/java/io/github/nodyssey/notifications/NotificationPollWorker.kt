@@ -15,10 +15,10 @@ import androidx.work.WorkerParameters
 import io.github.nodyssey.MainActivity
 import io.github.nodyssey.NodysseyApp
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.ZoneId
@@ -45,8 +45,8 @@ class NotificationPollWorker(
         val counts =
             try {
                 container.notificationRepository.refreshCounts()
-            } catch (e: NodeSeekException) {
-                return if (e.error is NodeSeekError.Network) Result.retry() else Result.success()
+            } catch (e: SiteException) {
+                return if (e.error is SiteError.Network) Result.retry() else Result.success()
             }
 
         val previous = container.settingsRepository.notificationSeenCounts()

@@ -1,8 +1,10 @@
 package io.github.nodyssey.core.net
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.Selectors
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -25,7 +27,7 @@ data class JsonPostResponse(
  *
  * Endpoints under `/api/notification`, `/api/statistics` and `/api/admin` answer **500 when
  * unauthenticated** rather than 401. [NodeSeekJsonClient] maps that quirk to
- * [NodeSeekError.LoginRequired] itself, so callers see the same error a 401 would have produced.
+ * [SiteError.LoginRequired] itself, so callers see the same error a 401 would have produced.
  */
 interface JsonSource {
     suspend fun getJson(path: String, referer: String = NodeSeekSite.BASE_URL + "/"): String
@@ -33,7 +35,7 @@ interface JsonSource {
     /**
      * POST to a JSON endpoint with the same headers and challenge classification as [getJson].
      *
-     * Unlike [getJson] the answer comes back with its status code instead of a thrown [NodeSeekError.Http]:
+     * Unlike [getJson] the answer comes back with its status code instead of a thrown [SiteError.Http]:
      * NodeSeek's write endpoints put meaningful JSON bodies on non-2xx statuses (a repeat sign-in is
      * an HTTP 500 whose body carries the sentence to show), so status-versus-body is the caller's
      * contract. Transport failures and Cloudflare interception still throw.
@@ -50,7 +52,7 @@ interface JsonWriteSource {
     /**
      * Sends a JSON body and returns the JSON answer.
      *
-     * Unlike [JsonSource.getJson] this maps 401/403 to [NodeSeekError.LoginRequired]: a write is the
+     * Unlike [JsonSource.getJson] this maps 401/403 to [SiteError.LoginRequired]: a write is the
      * one moment where a session that quietly expired has to be told apart from a server fault,
      * because the recovery is "sign in and send again" rather than "retry".
      */
@@ -67,7 +69,7 @@ interface JsonWriteSource {
      * The vote family is the reason this exists: refusing a lock answers 403, a bad option id answers
      * 422, and a delete without moderator rights answers 500 — each with the sentence to show in
      * `{"success":false,"message":…}`. Through [postJson] the first of those would surface as
-     * [NodeSeekError.LoginRequired] and tell a signed-in reader to sign in.
+     * [SiteError.LoginRequired] and tell a signed-in reader to sign in.
      *
      * [method] is a parameter rather than there being one function per verb because the vote writes
      * are POST and DELETE with identical handling — `DELETE /api/vote/info/{id}` carries a body, which
@@ -119,9 +121,9 @@ class NodeSeekJsonClient(
                 // Session-scoped endpoints answer 500, not 401, when the cookie is missing or stale.
                 // "服务器错误" with a retry button would hide the one action that fixes it: signing in.
                 if (it.code == 500 && isSessionScoped(path)) {
-                    throw NodeSeekException(NodeSeekError.LoginRequired)
+                    throw SiteException(SiteError.LoginRequired)
                 }
-                if (!it.isSuccessful) throw NodeSeekException(NodeSeekError.Http(it.code))
+                if (!it.isSuccessful) throw SiteException(SiteError.Http(it.code))
                 body
             }
         }
@@ -159,7 +161,7 @@ class NodeSeekJsonClient(
         try {
             okHttpClient.newCall(request).execute()
         } catch (e: IOException) {
-            throw NodeSeekException(NodeSeekError.Network, e)
+            throw SiteException(SiteError.Network, e)
         }
 
     /**
@@ -173,7 +175,7 @@ class NodeSeekJsonClient(
                 Selectors.CLOUDFLARE_MARKERS.any(body::contains) ||
                 // An HTML body on a JSON endpoint means Cloudflare intercepted the call.
                 body.trimStart().startsWith("<")
-        if (isChallenge) throw NodeSeekException(NodeSeekError.Cloudflare)
+        if (isChallenge) throw SiteException(SiteError.Cloudflare)
     }
 
     /** The endpoint families that only answer for a signed-in session — see the interface KDoc. */
@@ -197,9 +199,9 @@ class NodeSeekJsonClient(
                 val payload = it.body.string()
                 throwIfChallenge(it.header("cf-mitigated"), payload)
                 if (it.code == 401 || it.code == 403) {
-                    throw NodeSeekException(NodeSeekError.LoginRequired)
+                    throw SiteException(SiteError.LoginRequired)
                 }
-                if (!it.isSuccessful) throw NodeSeekException(NodeSeekError.Http(it.code))
+                if (!it.isSuccessful) throw SiteException(SiteError.Http(it.code))
                 payload
             }
         }
@@ -260,9 +262,9 @@ class NodeSeekJsonClient(
                 val payload = it.body.string()
                 throwIfChallenge(it.header("cf-mitigated"), payload)
                 if (it.code == 401 || it.code == 403) {
-                    throw NodeSeekException(NodeSeekError.LoginRequired)
+                    throw SiteException(SiteError.LoginRequired)
                 }
-                if (!it.isSuccessful) throw NodeSeekException(NodeSeekError.Http(it.code))
+                if (!it.isSuccessful) throw SiteException(SiteError.Http(it.code))
                 payload
             }
         }

@@ -6,7 +6,7 @@ import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostSummary
-import io.github.nodyssey.model.RichNode
+import io.github.plaza.core.richtext.RichNode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first

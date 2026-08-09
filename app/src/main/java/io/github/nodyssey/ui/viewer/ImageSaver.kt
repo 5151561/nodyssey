@@ -9,8 +9,8 @@ import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.toBitmap
-import io.github.nodyssey.core.AppDispatchers
-import io.github.nodyssey.core.runCatchingExceptCancellation
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.withContext
 import java.io.OutputStream
 

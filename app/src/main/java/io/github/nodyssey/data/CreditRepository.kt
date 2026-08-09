@@ -1,12 +1,12 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -69,9 +69,9 @@ class NetworkCreditRepository(
         return withContext(dispatchers.default) {
             val root =
                 runCatching { json.parseToJsonElement(body) as? JsonObject }
-                    .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
-                    ?: throw NodeSeekException(NodeSeekError.Unparsable)
-            val rows = root["data"] as? JsonArray ?: throw NodeSeekException(NodeSeekError.Unparsable)
+                    .getOrElse { throw SiteException(SiteError.Unparsable, it) }
+                    ?: throw SiteException(SiteError.Unparsable)
+            val rows = root["data"] as? JsonArray ?: throw SiteException(SiteError.Unparsable)
             val entries =
                 rows.mapNotNull { element ->
                     val row = element as? JsonArray ?: return@mapNotNull null

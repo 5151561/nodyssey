@@ -50,20 +50,21 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.DailyQuota
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
-import io.github.nodyssey.ui.common.GroupedRow
-import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.NodeSeekIcons
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.GroupedRow
+import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.readableWidth
 
 /** What buying an invite code costs, and the reason the confirm dialog exists at all. */
 const val INVITE_CODE_CHICKEN_COST = 1_000
@@ -140,7 +141,7 @@ fun AssetsScreen(
             return@Scaffold
         }
         if (state.error != null && !state.hasData) {
-            NodeSeekErrorState(
+            SiteErrorState(
                 error = state.error,
                 onRetry = onRetry,
                 onOpenBrowser = onOpenBrowser,
@@ -188,7 +189,7 @@ fun AssetsScreen(
             GroupedRow(
                 title = stringResource(R.string.assets_board),
                 subtitle = stringResource(R.string.assets_board_subtitle),
-                icon = NodysseyIcons.Group,
+                icon = PlazaIcons.Group,
                 first = true,
                 last = true,
                 onClick = onOpenBoard,
@@ -227,7 +228,7 @@ private fun AttendanceModeDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(NodysseyIcons.ChickenLeg, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        icon = { Icon(NodeSeekIcons.ChickenLeg, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         title = { Text(stringResource(R.string.assets_sign_in_choice_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -298,7 +299,7 @@ fun InviteConfirmDialog(
         confirmLabel = stringResource(R.string.invite_confirm),
         onConfirm = onConfirm,
         onDismiss = onDismiss,
-        icon = NodysseyIcons.ConfirmationNumber,
+        icon = PlazaIcons.ConfirmationNumber,
         shortfall = shortfall?.let { stringResource(R.string.invite_shortfall, it) },
     )
 }
@@ -535,7 +536,7 @@ private fun AttendanceButton(
             }
 
             else -> {
-                Icon(NodysseyIcons.ChickenLeg, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(NodeSeekIcons.ChickenLeg, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
                     stringResource(R.string.assets_sign_in),
                     modifier = Modifier.padding(start = Spacing.sm),
@@ -587,13 +588,13 @@ private val previewState =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8d 账户与成长")
 @Composable
 private fun AssetsPreview() {
-    NodysseyTheme { PreviewScreen(previewState) }
+    PlazaTheme { PreviewScreen(previewState) }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8d 额度读不到 · dark")
 @Composable
 private fun AssetsUnknownQuotaPreview() {
-    NodysseyTheme(darkTheme = true) {
+    PlazaTheme(darkTheme = true) {
         PreviewScreen(
             previewState.copy(
                 postQuota = DailyQuota(null, 20),

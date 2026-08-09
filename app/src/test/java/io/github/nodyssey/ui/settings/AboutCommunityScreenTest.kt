@@ -6,7 +6,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -30,7 +30,7 @@ class AboutCommunityScreenTest {
         var copiedRss = false
         val openedUris = mutableListOf<String>()
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 AboutCommunityScreen(
                     statsState = CommunityStatsUiState.Content(70_123),
                     onBack = {},
@@ -57,7 +57,7 @@ class AboutCommunityScreenTest {
     @Test
     fun `friend sites are chips and telegram support is absent`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 AboutCommunityScreen(
                     statsState = CommunityStatsUiState.Content(70_123),
                     onBack = {},
@@ -78,7 +78,7 @@ class AboutCommunityScreenTest {
     @Test
     fun `app information is absent from the community page`() {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 AboutCommunityScreen(
                     onBack = {},
                     onOpenAboutSite = {},
@@ -101,7 +101,7 @@ class AboutCommunityScreenTest {
     fun `failed stats expose retry without a stale count`() {
         var retried = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 AboutCommunityScreen(
                     statsState = CommunityStatsUiState.Error,
                     onBack = {},

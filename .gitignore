@@ -9,7 +9,14 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+# Unanchored as well, so a new module's output is ignored without anyone remembering to add a
+# `.gitignore` to it. `app/.gitignore` was the only thing covering module output before, which meant
+# the first module added after it committed its entire build directory.
+build/
 /captures
+
+# Heap dumps a Gradle OOM leaves behind, which are ~1 GB each.
+*.hprof
 .externalNativeBuild
 .cxx
 local.properties

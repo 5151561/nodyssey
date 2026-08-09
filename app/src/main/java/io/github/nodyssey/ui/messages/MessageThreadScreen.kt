@@ -67,27 +67,29 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.TimeFormat
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
-import io.github.nodyssey.ui.common.EditorTextField
-import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.UserAvatar
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.composer.AttachmentTray
-import io.github.nodyssey.ui.composer.EditorAction
-import io.github.nodyssey.ui.composer.MarkdownEditorBar
-import io.github.nodyssey.ui.composer.MarkdownEditorState
-import io.github.nodyssey.ui.composer.ToolbarCustomizeSheet
-import io.github.nodyssey.ui.composer.parseMarkdown
-import io.github.nodyssey.ui.composer.rememberMarkdownEditorState
+import io.github.nodyssey.ui.composer.NodeSeekEmojiPanel
 import io.github.nodyssey.ui.composer.toPickedImages
-import io.github.nodyssey.ui.richtext.RichContent
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.paddingWithKeyboard
+import io.github.nodyssey.ui.richtext.PostRichContent
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.richtext.parseMarkdown
+import io.github.plaza.designsys.component.EditorTextField
+import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.ThreadRow
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.MarkdownEditorBar
+import io.github.plaza.designsys.editor.MarkdownEditorState
+import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
+import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.paddingWithKeyboard
 
 @Composable
 fun MessageThreadRoute(
@@ -203,11 +205,11 @@ fun MessageThreadScreen(
                     state.isLoading && state.messages.isEmpty() -> LoadingState()
 
                     state.error != null && state.messages.isEmpty() ->
-                        NodeSeekErrorState(
+                        SiteErrorState(
                             error = state.error,
                             onRetry = onRetryLoad,
                             onOpenBrowser = {
-                                if (state.error == NodeSeekError.LoginRequired) onSignIn() else onVerify()
+                                if (state.error == SiteError.LoginRequired) onSignIn() else onVerify()
                             },
                         )
 
@@ -386,7 +388,7 @@ private fun MessageBubbleRow(
                     },
                 )
             if (message.isMarkdown) {
-                RichContent(
+                PostRichContent(
                     nodes = parseMarkdown(message.content),
                     onLinkClick = onOpenBrowser,
                     onImageClick = onOpenBrowser,
@@ -426,7 +428,7 @@ private fun MessageStatusLine(
 
             SendStatus.FAILED -> {
                 Icon(
-                    NodysseyIcons.ErrorCircle,
+                    PlazaIcons.ErrorCircle,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(13.dp),
@@ -621,6 +623,14 @@ private fun MessageComposer(
                     picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
                 onCustomize = onCustomize,
+                emojiPanel = { panel ->
+                    NodeSeekEmojiPanel(
+                        onInsert = panel.onInsert,
+                        onBackspace = panel.onBackspace,
+                        recent = panel.recent,
+                        onRecentChange = panel.onRecentChange,
+                    )
+                },
                 content = { inputBar() },
             )
         } else {
@@ -698,7 +708,7 @@ private val INPUT_CONTROL_SIZE = 44.dp
 @Composable
 private fun MessageThreadPreview() {
     val now = 1_785_000_000_000L
-    NodysseyTheme {
+    PlazaTheme {
         MessageThreadScreen(
             state =
             MessageThreadUiState(

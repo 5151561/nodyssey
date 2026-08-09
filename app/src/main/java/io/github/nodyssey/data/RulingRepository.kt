@@ -1,12 +1,12 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -115,7 +115,7 @@ interface RulingRepository {
 /**
  * 管理记录, read out of the site's own `ruling` bundle on 2026-08-02.
  *
- * `/ruling` renders client-side, so this repository answered [NodeSeekError.NotWired] for as long as
+ * `/ruling` renders client-side, so this repository answered [SiteError.NotWired] for as long as
  * the payload behind it was a guess — the same place `/stardust/list` and `/fans` were in before it.
  * The guessing stopped being necessary once the bundle was read: the table is one call to
  * `/api/admin/ruling/page-N` answering `{"success":true,"data":[…],"total":30212}`, and every row's
@@ -125,7 +125,7 @@ interface RulingRepository {
  * `admin` in the path is the endpoint's name, not a permission: any signed-in account reads the log,
  * and the site only shows the extra search box and edit column to `isAdmin` users. Signed out is an
  * HTTP 500 rather than an empty list — see [NodeSeekJsonClient] for where that becomes
- * [NodeSeekError.LoginRequired] — so unlike `/fans` this needs no guard of its own to avoid reporting
+ * [SiteError.LoginRequired] — so unlike `/fans` this needs no guard of its own to avoid reporting
  * a signed-out reader an empty log.
  */
 class NetworkRulingRepository(
@@ -146,17 +146,17 @@ class NetworkRulingRepository(
         return withContext(dispatchers.default) {
             val root =
                 runCatching { json.parseToJsonElement(body) as? JsonObject }
-                    .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
-                    ?: throw NodeSeekException(NodeSeekError.Unparsable)
+                    .getOrElse { throw SiteException(SiteError.Unparsable, it) }
+                    ?: throw SiteException(SiteError.Unparsable)
             if (root.bool("success") == false) {
-                throw NodeSeekException(NodeSeekError.Unknown, detail = root.text("message"))
+                throw SiteException(SiteError.Unknown, detail = root.text("message"))
             }
             // An empty `data` is a real answer for a page past the end; a missing one means the shape
             // changed, and reporting that as "no decisions" is the lie this screen refused to tell
             // while it was unwired.
             val rows =
                 root.findObjectArray("data")
-                    ?: throw NodeSeekException(NodeSeekError.Unparsable)
+                    ?: throw SiteException(SiteError.Unparsable)
             RulingPage(
                 records = rows.mapNotNull { it.toRulingRecord(json) },
                 page = requested,

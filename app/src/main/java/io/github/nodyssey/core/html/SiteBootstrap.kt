@@ -1,7 +1,7 @@
 package io.github.nodyssey.core.html
 
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.nio.charset.StandardCharsets
@@ -27,16 +27,16 @@ internal object SiteBootstrap {
      *
      * A page with no bootstrap element is how the site looks to a signed-out visitor, not how a
      * redesign would look — a redesign would still carry *something* where the account was — so that
-     * case is [NodeSeekError.LoginRequired] rather than [NodeSeekError.Unparsable].
+     * case is [SiteError.LoginRequired] rather than [SiteError.Unparsable].
      */
     fun decode(html: String): String {
         val encoded = encodedText(Jsoup.parse(html))
-        if (encoded.isEmpty()) throw NodeSeekException(NodeSeekError.LoginRequired)
+        if (encoded.isEmpty()) throw SiteException(SiteError.LoginRequired)
 
         return try {
             decodeBase64(encoded)
         } catch (exception: IllegalArgumentException) {
-            throw NodeSeekException(NodeSeekError.Unparsable, exception)
+            throw SiteException(SiteError.Unparsable, exception)
         }
     }
 

@@ -47,17 +47,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.core.update.releaseNotesText
-import io.github.nodyssey.data.update.AppRelease
-import io.github.nodyssey.data.update.AppUpdateState
-import io.github.nodyssey.data.update.InstallFailure
-import io.github.nodyssey.data.update.UpdateCheck
-import io.github.nodyssey.data.update.UpdateDownload
-import io.github.nodyssey.data.update.UpdateFailure
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.core.update.AppRelease
+import io.github.plaza.core.update.AppUpdateState
+import io.github.plaza.core.update.InstallFailure
+import io.github.plaza.core.update.UpdateCheck
+import io.github.plaza.core.update.UpdateDownload
+import io.github.plaza.core.update.UpdateFailure
+import io.github.plaza.core.update.releaseNotesText
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.readableWidth
 import kotlin.math.roundToInt
 
 @Composable
@@ -163,26 +163,26 @@ fun AboutAppScreen(
             AboutActionRow(
                 title = stringResource(R.string.about_project_home),
                 subtitle = "github.com/5151561/nodyssey",
-                icon = NodysseyIcons.Code,
+                icon = PlazaIcons.Code,
                 external = true,
                 onClick = { onOpenUri(AppLinks.PROJECT_HOME) },
             )
             AboutActionRow(
                 title = stringResource(R.string.about_feedback),
                 subtitle = stringResource(R.string.about_feedback_hint),
-                icon = NodysseyIcons.Campaign,
+                icon = PlazaIcons.Campaign,
                 external = true,
                 onClick = { onOpenUri(AppLinks.ISSUES) },
             )
             AboutActionRow(
                 title = stringResource(R.string.about_changelog),
-                icon = NodysseyIcons.History,
+                icon = PlazaIcons.History,
                 onClick = onOpenChangelog,
             )
             AboutActionRow(
                 title = stringResource(R.string.settings_licenses),
                 subtitle = stringResource(R.string.about_licenses_hint),
-                icon = NodysseyIcons.Code,
+                icon = PlazaIcons.Code,
                 onClick = onOpenLicenses,
             )
             Text(
@@ -240,7 +240,7 @@ private fun AppIdentity(
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
-                    Icon(NodysseyIcons.History, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(PlazaIcons.History, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
                 Spacer(Modifier.width(Spacing.sm))
                 Text(stringResource(R.string.about_check_updates))
@@ -360,7 +360,7 @@ private fun UpdateCard(
                         modifier = Modifier.fillMaxWidth(),
                         contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                     ) {
-                        Icon(NodysseyIcons.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(PlazaIcons.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(Spacing.sm))
                         Text(
                             stringResource(
@@ -476,7 +476,7 @@ internal object AppLinks {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "f1 关于 Nodyssey")
 @Composable
 private fun AboutAppPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         AboutAppScreen(
             state = AboutAppUiState(versionName = "1.0.0", versionCode = 100),
             onBack = {},
@@ -495,7 +495,7 @@ private fun AboutAppPreview() {
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "f1 关于 Nodyssey · 有新版本")
 @Composable
 private fun AboutAppUpdatePreview() {
-    NodysseyTheme {
+    PlazaTheme {
         AboutAppScreen(
             state =
             AboutAppUiState(

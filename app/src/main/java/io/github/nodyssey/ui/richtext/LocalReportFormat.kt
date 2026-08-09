@@ -2,6 +2,7 @@ package io.github.nodyssey.ui.richtext
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import io.github.nodyssey.data.settings.ReportFormat
+import io.github.plaza.designsys.richtext.RichContent
 
 /**
  * 测评报告 = 适配格式 / 原文, as seen by whatever is drawing a post body.

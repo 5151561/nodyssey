@@ -5,9 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.MessageRepository
@@ -18,7 +15,10 @@ import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.di.AppContainer
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -101,7 +101,7 @@ class NotificationsViewModel(
                         )
                     }
                 }.onFailure { throwable ->
-                    _uiState.update { it.copy(isLoading = false, error = throwable.toNodeSeekError()) }
+                    _uiState.update { it.copy(isLoading = false, error = throwable.toSiteError()) }
                 }
             }
     }
@@ -216,7 +216,7 @@ class NotificationsViewModel(
                                 newConversation =
                                 it.newConversation.copy(
                                     isSearching = false,
-                                    error = throwable.toNodeSeekError(),
+                                    error = throwable.toSiteError(),
                                 ),
                             )
                         }
@@ -257,7 +257,7 @@ data class NewConversationState(
     val query: String = "",
     val results: List<UserSearchResult> = emptyList(),
     val isSearching: Boolean = false,
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
 )
 
 data class NotificationsUiState(
@@ -267,7 +267,7 @@ data class NotificationsUiState(
     val items: List<ForumNotification> = emptyList(),
     val conversations: List<MessageConversation> = emptyList(),
     val isLoading: Boolean = false,
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     /** Stamped when the list loaded, so relative labels stay stable across recomposition. */
     val nowMillis: Long = 0L,
     val newConversation: NewConversationState = NewConversationState(),

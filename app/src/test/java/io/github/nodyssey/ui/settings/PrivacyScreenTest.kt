@@ -7,7 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.nodyssey.model.TermsBlock
 import io.github.nodyssey.model.TermsDocument
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -27,7 +27,7 @@ class PrivacyScreenTest {
     fun `content follows f2 hierarchy and original action`() {
         var opened = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 PrivacyScreen(
                     state = PrivacyUiState.Content(
                         TermsDocument(
@@ -57,7 +57,7 @@ class PrivacyScreenTest {
     fun `web fallback is only offered after native load failure`() {
         var openedFallback = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 PrivacyScreen(
                     state = PrivacyUiState.Error,
                     onBack = {},

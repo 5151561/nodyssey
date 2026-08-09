@@ -2,9 +2,11 @@ package io.github.nodyssey.ui.composer
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.text.TextRange
-import io.github.nodyssey.ui.common.appendBlock
-import io.github.nodyssey.ui.common.deleteBackwards
-import io.github.nodyssey.ui.common.removeBlock
+import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.appendBlock
+import io.github.plaza.designsys.editor.applyMarkdown
+import io.github.plaza.designsys.editor.deleteBackwards
+import io.github.plaza.designsys.editor.removeBlock
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

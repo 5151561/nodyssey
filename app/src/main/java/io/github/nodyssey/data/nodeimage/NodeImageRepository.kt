@@ -7,9 +7,11 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeImageSite
 import io.github.nodyssey.core.html.Selectors
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.theme.Sizes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -78,7 +80,7 @@ data class NodeImageItem(
 /**
  * Why a NodeImage call could not be completed.
  *
- * Separate from `NodeSeekError` on purpose: the recoveries do not overlap. A NodeSeek 401 means
+ * Separate from `SiteError` on purpose: the recoveries do not overlap. A NodeSeek 401 means
  * "sign in to the forum", a NodeImage 401 means "your API key is wrong" — sending the user to the
  * forum's login page for that would be actively unhelpful.
  */

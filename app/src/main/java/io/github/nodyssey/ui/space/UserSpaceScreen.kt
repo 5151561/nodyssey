@@ -62,23 +62,23 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.ui.common.BoardTag
-import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.UserAvatar
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
-import io.github.nodyssey.ui.composer.collapseMarkdown
-import io.github.nodyssey.ui.composer.parseMarkdown
-import io.github.nodyssey.ui.postlist.toNodeSeekError
-import io.github.nodyssey.ui.richtext.RichContent
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.nodyssey.ui.richtext.PostRichContent
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.richtext.collapseMarkdown
+import io.github.plaza.core.richtext.parseMarkdown
+import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.flowOf
 
 @Composable
@@ -187,7 +187,7 @@ fun UserSpaceScreen(
             return@Scaffold
         }
         if (state.error != null && !state.hasProfile) {
-            NodeSeekErrorState(
+            SiteErrorState(
                 error = state.error,
                 onRetry = onRetryProfile,
                 onOpenBrowser = { onOpenBrowser(spaceUrl) },
@@ -235,7 +235,7 @@ private fun SpaceOverflowMenu(onOpenBrowser: () -> Unit) {
     Box {
         IconButton(onClick = { open = true }) {
             Icon(
-                NodysseyIcons.OpenInNew,
+                PlazaIcons.OpenInNew,
                 contentDescription = stringResource(R.string.action_more),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
@@ -271,7 +271,7 @@ private fun FollowFailureEffect(
     val signInLabel = stringResource(R.string.action_sign_in)
     LaunchedEffect(failure) {
         if (failure == null) return@LaunchedEffect
-        val needsSignIn = failure.error == NodeSeekError.LoginRequired
+        val needsSignIn = failure.error == SiteError.LoginRequired
         val result =
             snackbarHostState.showSnackbar(
                 message = failure.detail?.takeIf { it.isNotBlank() } ?: fallback.orEmpty(),
@@ -540,7 +540,7 @@ private fun GeneralTab(
                         if (readmeExpanded) readme else collapseMarkdown(readme, README_COLLAPSED_LINES)
                     parseMarkdown(markdown)
                 }
-                RichContent(
+                PostRichContent(
                     nodes = nodes,
                     onLinkClick = onOpenBrowser,
                     onImageClick = onOpenBrowser,
@@ -616,8 +616,8 @@ private fun <T : Any> SpaceListTab(
             LoadState.Loading -> LoadingState(modifier)
 
             is LoadState.Error ->
-                NodeSeekErrorState(
-                    error = refresh.error.toNodeSeekError(),
+                SiteErrorState(
+                    error = refresh.error.toSiteError(),
                     onRetry = list::retry,
                     onOpenBrowser = { onOpenBrowser(NodeSeekSite.BASE_URL) },
                     onSignIn = onSignIn,
@@ -813,19 +813,19 @@ private val previewPublicState =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8a 我的主页 · 主题帖")
 @Composable
 private fun UserSpaceSelfPreview() {
-    NodysseyTheme { PreviewScreen(previewSelfState) }
+    PlazaTheme { PreviewScreen(previewSelfState) }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8b 公开用户页 · 概况")
 @Composable
 private fun UserSpacePublicPreview() {
-    NodysseyTheme { PreviewScreen(previewPublicState) }
+    PlazaTheme { PreviewScreen(previewPublicState) }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "8a 我的主页 · dark")
 @Composable
 private fun UserSpaceSelfDarkPreview() {
-    NodysseyTheme(darkTheme = true) { PreviewScreen(previewSelfState) }
+    PlazaTheme(darkTheme = true) { PreviewScreen(previewSelfState) }
 }
 
 @Composable

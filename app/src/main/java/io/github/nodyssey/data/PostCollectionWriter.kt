@@ -2,9 +2,9 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -30,7 +30,7 @@ data class CollectionOutcome(
  * caller owns the thread and does the Room write. This class never touches the database.
  *
  * Unlike the three reactions this one is reversible, so a refusal is worth showing verbatim rather
- * than treating as a spent action — hence the site's own sentence in [NodeSeekException.detail].
+ * than treating as a spent action — hence the site's own sentence in [SiteException.detail].
  */
 class PostCollectionWriter(
     private val api: JsonApi,
@@ -52,12 +52,12 @@ class PostCollectionWriter(
             try {
                 json.parseToJsonElement(answer).jsonObject
             } catch (exception: IllegalArgumentException) {
-                throw NodeSeekException(NodeSeekError.Unparsable, exception)
+                throw SiteException(SiteError.Unparsable, exception)
             }
 
         if (root["success"]?.jsonPrimitive?.booleanOrNull != true) {
-            throw NodeSeekException(
-                NodeSeekError.Unknown,
+            throw SiteException(
+                SiteError.Unknown,
                 detail = root["message"]?.jsonPrimitive?.contentOrNull?.ifBlank { null },
             )
         }

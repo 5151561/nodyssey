@@ -43,11 +43,11 @@ import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
-import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.UpdateDot
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.readableWidth
 import kotlin.math.roundToInt
 
 @Composable
@@ -175,7 +175,7 @@ fun SettingsScreen(
             SettingsSectionTitle(stringResource(R.string.settings_content))
             SettingsGroup {
                 SettingsBlock(
-                    icon = { Icon(NodysseyIcons.OpenInNew, contentDescription = null) },
+                    icon = { Icon(PlazaIcons.OpenInNew, contentDescription = null) },
                     title = stringResource(R.string.settings_external_link),
                     subtitle = stringResource(R.string.settings_external_link_hint),
                     top = true,
@@ -186,7 +186,7 @@ fun SettingsScreen(
                     )
                 }
                 SettingsBlock(
-                    icon = { Icon(NodysseyIcons.Code, contentDescription = null) },
+                    icon = { Icon(PlazaIcons.Code, contentDescription = null) },
                     title = stringResource(R.string.settings_report_format),
                     subtitle = stringResource(R.string.settings_report_format_hint),
                 ) {
@@ -349,7 +349,7 @@ private fun bodySizeToFontScale(bodySize: Float): Float =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun SettingsPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         SettingsScreen(
             state = SettingsUiState(versionName = "1.1.1"),
             onBack = {},

@@ -2,11 +2,8 @@ package io.github.nodyssey.data.account
 
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.SiteBootstrap
-import io.github.nodyssey.core.net.HtmlSource
 import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.core.net.MultipartWriteSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.bool
@@ -15,6 +12,9 @@ import io.github.nodyssey.data.long
 import io.github.nodyssey.data.obj
 import io.github.nodyssey.data.settings.OPTIONAL_HOME_BOARD_SLUGS
 import io.github.nodyssey.data.text
+import io.github.plaza.core.net.HtmlSource
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -195,7 +195,7 @@ class NetworkAccountSettingsRepository(
                 operation = "profileFields",
             )
         val detail = root.obj("detail", "data", "account", "result")
-            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+            ?: throw SiteException(SiteError.Unparsable)
         return AccountProfileFields(
             bio = detail.text("bio", "introduction").orEmpty(),
             signature = detail.text("signature_markdown", "signature", "signatureMarkdown").orEmpty(),
@@ -259,7 +259,7 @@ class NetworkAccountSettingsRepository(
                 path = NodeSeekJsonClient.PATH_ACCOUNT_OTP_STATUS,
                 operation = "twoFactor",
             )
-        val enabled = root.bool("enabled") ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        val enabled = root.bool("enabled") ?: throw SiteException(SiteError.Unparsable)
         return TwoFactorState(enabled)
     }
 
@@ -278,7 +278,7 @@ class NetworkAccountSettingsRepository(
             )
         // The response also carries the bare `secret` the site prints as a backup code. It is not
         // read here: the app hands the URI to an authenticator and keeps no copy of either.
-        return root.text("uri") ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        return root.text("uri") ?: throw SiteException(SiteError.Unparsable)
     }
 
     override suspend fun contact(): AccountContact {
@@ -313,11 +313,11 @@ class NetworkAccountSettingsRepository(
                 referer = SETTINGS_REFERER,
             )
         if (response.code == HTTP_UNAUTHORIZED || response.code == HTTP_FORBIDDEN) {
-            throw NodeSeekException(NodeSeekError.LoginRequired)
+            throw SiteException(SiteError.LoginRequired)
         }
         // Body first: a refusal arrives as JSON carrying the sentence to show, whatever the status.
         parseObject(response.body, "unbindTelegram")
-        if (!response.isSuccessful) throw NodeSeekException(NodeSeekError.Http(response.code))
+        if (!response.isSuccessful) throw SiteException(SiteError.Http(response.code))
     }
 
     override suspend fun remotePreferences(): RemoteAccountPreferences {
@@ -337,7 +337,7 @@ class NetworkAccountSettingsRepository(
             )
         val holidayTheme =
             preference.obj("data")?.bool(REMOTE_HOLIDAY_THEME_KEY)
-                ?: throw NodeSeekException(NodeSeekError.Unparsable)
+                ?: throw SiteException(SiteError.Unparsable)
 
         val homepage =
             getObject(
@@ -345,7 +345,7 @@ class NetworkAccountSettingsRepository(
                 operation = "remotePreferences",
             )
         val rows = homepage.findObjectArray("data")
-            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+            ?: throw SiteException(SiteError.Unparsable)
         val hiddenBoards =
             rows.mapNotNullTo(mutableSetOf()) { row ->
                 val slug = row.text("category") ?: return@mapNotNullTo null
@@ -398,7 +398,7 @@ class NetworkAccountSettingsRepository(
                 operation = "blockedUsers",
             )
         val rows = root.findObjectArray("data", "list", "blocked", "blockList")
-            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+            ?: throw SiteException(SiteError.Unparsable)
         val users =
             rows.mapNotNull { row ->
                 /*
@@ -418,7 +418,7 @@ class NetworkAccountSettingsRepository(
                     avatarUrl = NodeSeekSite.absoluteUrl("/avatar/$uid.png"),
                 )
             }
-        if (rows.isNotEmpty() && users.isEmpty()) throw NodeSeekException(NodeSeekError.Unparsable)
+        if (rows.isNotEmpty() && users.isEmpty()) throw SiteException(SiteError.Unparsable)
         return users
     }
 
@@ -452,9 +452,9 @@ class NetworkAccountSettingsRepository(
             try {
                 json.parseToJsonElement(bootstrap) as? JsonObject
             } catch (exception: IllegalArgumentException) {
-                throw NodeSeekException(NodeSeekError.Unparsable, exception)
-            } ?: throw NodeSeekException(NodeSeekError.Unparsable)
-        return root.obj("user") ?: throw NodeSeekException(NodeSeekError.LoginRequired)
+                throw SiteException(SiteError.Unparsable, exception)
+            } ?: throw SiteException(SiteError.Unparsable)
+        return root.obj("user") ?: throw SiteException(SiteError.LoginRequired)
     }
 
     private suspend fun getObject(path: String, operation: String): JsonObject {
@@ -481,11 +481,11 @@ class NetworkAccountSettingsRepository(
             try {
                 json.parseToJsonElement(body) as? JsonObject
             } catch (exception: IllegalArgumentException) {
-                throw NodeSeekException(NodeSeekError.Unparsable, exception)
-            } ?: throw NodeSeekException(NodeSeekError.Unparsable)
+                throw SiteException(SiteError.Unparsable, exception)
+            } ?: throw SiteException(SiteError.Unparsable)
         if (root.bool("success") == false) {
-            throw NodeSeekException(
-                error = NodeSeekError.Unknown,
+            throw SiteException(
+                error = SiteError.Unknown,
                 detail = root.text("message", "error", "detail") ?: operation,
             )
         }

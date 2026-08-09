@@ -9,7 +9,7 @@ import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -48,7 +48,7 @@ class NotificationsScreenTest {
     fun `an unread conversation counts towards mark all read`() {
         var markedAllRead = false
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 NotificationsScreen(
                     state =
                     state(
@@ -120,7 +120,7 @@ class NotificationsScreenTest {
 
     private fun setContent(state: NotificationsUiState) {
         composeRule.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 NotificationsScreen(
                     state = state,
                     onSignIn = {},
@@ -201,6 +201,6 @@ class NotificationsScreenTest {
 
     private companion object {
         /** 2026-07-26 10:22:03 in the JVM default zone the test runs in. */
-        val NOW = io.github.nodyssey.core.TimeFormat.parseTimestamp("2026-07-26 10:22:03")!!
+        val NOW = io.github.plaza.core.TimeFormat.parseTimestamp("2026-07-26 10:22:03")!!
     }
 }

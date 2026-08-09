@@ -2,11 +2,11 @@ package io.github.nodyssey.data.composer
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -79,7 +79,7 @@ class CommentComposerRepositoryTest {
             ),
         )
 
-        assertEquals(NodeSeekError.Http(400), exception.error)
+        assertEquals(SiteError.Http(400), exception.error)
         assertEquals("内容不能为空", exception.detail)
     }
 
@@ -104,7 +104,7 @@ class CommentComposerRepositoryTest {
             ),
         )
 
-        assertEquals(NodeSeekError.Cloudflare, exception.error)
+        assertEquals(SiteError.Cloudflare, exception.error)
     }
 
     @Test
@@ -113,7 +113,7 @@ class CommentComposerRepositoryTest {
             RecordingCommentInterceptor(code = 401, body = """{"success":false}"""),
         )
 
-        assertEquals(NodeSeekError.LoginRequired, exception.error)
+        assertEquals(SiteError.LoginRequired, exception.error)
     }
 
     private fun TestScope.repository(interceptor: Interceptor) =
@@ -126,11 +126,11 @@ class CommentComposerRepositoryTest {
             )
         }
 
-    private suspend fun TestScope.publishExpecting(interceptor: Interceptor): NodeSeekException =
+    private suspend fun TestScope.publishExpecting(interceptor: Interceptor): SiteException =
         try {
             repository(interceptor).publish(CommentSubmission(postId = 1L, body = "x"))
             throw AssertionError("publish should have failed")
-        } catch (exception: NodeSeekException) {
+        } catch (exception: SiteException) {
             exception
         }
 }

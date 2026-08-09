@@ -83,18 +83,18 @@ import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.SearchHistoryEntry
 import io.github.nodyssey.model.SearchTarget
-import io.github.nodyssey.ui.common.ChoiceRow
-import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NoSearchResultsState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.UserAvatar
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.postlist.FeedRowPlaceholder
 import io.github.nodyssey.ui.postlist.PostRow
-import io.github.nodyssey.ui.postlist.toNodeSeekError
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.designsys.component.ChoiceRow
+import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.readableWidth
 
 @Composable
 fun SearchRoute(
@@ -471,7 +471,7 @@ private fun ResultScopeRow(
         Box {
             TextButton(onClick = { showSortMenu = true }) {
                 Icon(
-                    NodysseyIcons.SwapVert,
+                    PlazaIcons.SwapVert,
                     contentDescription = stringResource(R.string.action_sort),
                     modifier = Modifier.size(FilterChipDefaults.IconSize),
                 )
@@ -509,7 +509,7 @@ private fun SearchResults(
             -> LoadingState()
 
             is SearchLoadState.Error ->
-                NodeSeekErrorState(
+                SiteErrorState(
                     error = loadState.error,
                     onRetry = onRetry,
                     onOpenBrowser = onVerify,
@@ -533,8 +533,8 @@ private fun SearchResults(
         LoadState.Loading -> LoadingState()
 
         is LoadState.Error ->
-            NodeSeekErrorState(
-                error = refresh.error.toNodeSeekError(),
+            SiteErrorState(
+                error = refresh.error.toSiteError(),
                 onRetry = posts::retry,
                 onOpenBrowser = onVerify,
                 onSignIn = onSignIn,
@@ -682,9 +682,9 @@ private fun SearchHistory(
                     leadingContent = {
                         Icon(
                             if (recent.target == SearchTarget.POSTS) {
-                                NodysseyIcons.History
+                                PlazaIcons.History
                             } else {
-                                NodysseyIcons.PersonSearch
+                                PlazaIcons.PersonSearch
                             },
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -859,7 +859,7 @@ private fun BoardRadioGrid(
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun SearchPreview() {
-    NodysseyTheme {
+    PlazaTheme {
         SearchScreen(
             state =
             SearchUiState(

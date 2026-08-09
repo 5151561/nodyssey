@@ -6,16 +6,16 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.core.net.NodeSeekJsonClient
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.RulingPage
 import io.github.nodyssey.data.RulingRecord
 import io.github.nodyssey.data.RulingRepository
 import io.github.nodyssey.di.AppContainer
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +29,7 @@ data class RulingUiState(
     val isLoading: Boolean = true,
     /** The next page joining the tail. Kept apart from [isLoading] so appending never blanks the list. */
     val isAppending: Boolean = false,
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     val records: List<RulingRecord> = emptyList(),
     /** The site page each record came from, index-aligned with [records]. */
     val recordPages: List<Int> = emptyList(),
@@ -152,7 +152,7 @@ class RulingViewModel(
                             it.copy(
                                 isLoading = false,
                                 isAppending = false,
-                                error = throwable.toNodeSeekError(),
+                                error = throwable.toSiteError(),
                             )
                         }
                     }

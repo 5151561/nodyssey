@@ -8,10 +8,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.DirectMessage
 import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.NotificationCategory
@@ -25,14 +21,19 @@ import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.ComposerSurface
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
-import io.github.nodyssey.ui.common.appendBlock
-import io.github.nodyssey.ui.common.editFromViewModel
-import io.github.nodyssey.ui.common.removeBlock
-import io.github.nodyssey.ui.composer.EditorAction
 import io.github.nodyssey.ui.composer.EditorActions
-import io.github.nodyssey.ui.composer.ToolbarLayout
-import io.github.nodyssey.ui.composer.toolbarLayout
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
+import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
+import io.github.plaza.designsys.editor.ToolbarLayout
+import io.github.plaza.designsys.editor.appendBlock
+import io.github.plaza.designsys.editor.editFromViewModel
+import io.github.plaza.designsys.editor.removeBlock
+import io.github.plaza.designsys.editor.toolbarLayout
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -135,7 +136,7 @@ class MessageThreadViewModel(
 
     fun refresh() {
         if (!session.state.value.isSignedIn) {
-            _uiState.update { it.copy(error = NodeSeekError.LoginRequired) }
+            _uiState.update { it.copy(error = SiteError.LoginRequired) }
             return
         }
         loadJob?.cancel()
@@ -162,7 +163,7 @@ class MessageThreadViewModel(
                         markRead(thread.unreadIds)
                     }.onFailure { throwable ->
                         _uiState.update {
-                            it.copy(isLoading = false, error = throwable.toNodeSeekError())
+                            it.copy(isLoading = false, error = throwable.toSiteError())
                         }
                     }
             }
@@ -240,7 +241,7 @@ class MessageThreadViewModel(
                         status = SendStatus.FAILED,
                         // "对方已屏蔽你" is not something retrying will fix, and it is the only way
                         // the user finds that out — a bare 发送失败 invites tapping 重试 forever.
-                        failureReason = (throwable as? NodeSeekException)?.detail,
+                        failureReason = (throwable as? SiteException)?.detail,
                     )
                 }
             }
@@ -319,7 +320,7 @@ data class MessageThreadUiState(
     val level: Int? = null,
     val messages: List<MessageBubble> = emptyList(),
     val isLoading: Boolean = false,
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     /** Mirrored out of [MessageThreadViewModel.draftState]; the text itself is not UiState. */
     val hasDraftText: Boolean = false,
     val attachments: List<ImageAttachment> = emptyList(),

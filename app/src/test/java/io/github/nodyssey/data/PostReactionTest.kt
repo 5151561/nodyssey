@@ -1,9 +1,9 @@
 package io.github.nodyssey.data
 
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -77,7 +77,7 @@ class PostReactionTest {
                 )
 
             val thrown =
-                assertThrows(NodeSeekException::class.java) {
+                assertThrows(SiteException::class.java) {
                     kotlinx.coroutines.runBlocking {
                         writer.react(postId = 1L, commentId = 99L, action = ReactionAction.ChickenLeg)
                     }

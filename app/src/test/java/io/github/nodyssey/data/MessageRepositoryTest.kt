@@ -1,9 +1,9 @@
 package io.github.nodyssey.data
 
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -267,9 +267,9 @@ class MessageRepositoryTest {
 
             val failure =
                 runCatching { repository(api).send(4471, "在吗", markdown = false) }
-                    .exceptionOrNull() as NodeSeekException
+                    .exceptionOrNull() as SiteException
 
-            assertEquals(NodeSeekError.Unknown, failure.error)
+            assertEquals(SiteError.Unknown, failure.error)
             assertEquals("对方已屏蔽你", failure.message)
         }
 

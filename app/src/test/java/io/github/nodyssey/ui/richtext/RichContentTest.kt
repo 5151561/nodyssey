@@ -24,13 +24,13 @@ import coil3.intercept.Interceptor
 import coil3.request.ErrorResult
 import coil3.request.ImageResult
 import coil3.request.SuccessResult
-import io.github.nodyssey.core.image.AllowMeteredImage
-import io.github.nodyssey.core.image.ImagesDeferredException
-import io.github.nodyssey.model.InlineNode
-import io.github.nodyssey.model.RichNode
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.core.image.AllowMeteredImage
+import io.github.plaza.core.image.ImagesDeferredException
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -72,8 +72,8 @@ class RichContentTest {
     ) {
         imageLoader?.let(SingletonImageLoader::setUnsafe)
         composeRule.setContent {
-            NodysseyTheme {
-                RichContent(nodes = nodes, onLinkClick = onLinkClick, onImageClick = {})
+            PlazaTheme {
+                PostRichContent(nodes = nodes, onLinkClick = onLinkClick, onImageClick = {})
             }
         }
     }

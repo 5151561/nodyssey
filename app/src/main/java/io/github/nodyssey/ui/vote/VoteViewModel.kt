@@ -5,10 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.VoteRepository
 import io.github.nodyssey.data.session.SessionState
@@ -17,7 +14,10 @@ import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.canManage
 import io.github.nodyssey.model.hasVoted
 import io.github.nodyssey.ui.postdetail.ReactionFailure
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,7 +49,7 @@ data class VoteUiState(
     val vote: Vote? = null,
     val isLoading: Boolean = true,
     /** Why the vote could not be read. Distinct from [failure], which is a refused write. */
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     /** Ticked but not yet submitted. At most one entry for a single-choice vote. */
     val selectedIds: Set<Long> = emptySet(),
     val isSubmitting: Boolean = false,
@@ -132,7 +132,7 @@ class VoteViewModel(
                         )
                     }
                 }.onFailure { throwable ->
-                    _uiState.update { it.copy(isLoading = false, error = throwable.toNodeSeekError()) }
+                    _uiState.update { it.copy(isLoading = false, error = throwable.toSiteError()) }
                 }
         }
     }
@@ -274,9 +274,9 @@ class VoteViewModel(
             reset(it).copy(
                 failure =
                 ReactionFailure(
-                    error = throwable.toNodeSeekError(),
+                    error = throwable.toSiteError(),
                     // "You are not the owner of vote" says more than any wording of ours.
-                    detail = (throwable as? NodeSeekException)?.detail,
+                    detail = (throwable as? SiteException)?.detail,
                 ),
             )
         }

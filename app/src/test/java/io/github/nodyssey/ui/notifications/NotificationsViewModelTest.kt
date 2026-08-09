@@ -1,10 +1,8 @@
 package io.github.nodyssey.ui.notifications
 
 import android.webkit.CookieManager
-import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.WebViewCookieJar
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.MessageThread
@@ -12,6 +10,8 @@ import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.data.session.SessionRepository
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.WebViewCookieJar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -111,7 +111,7 @@ class NotificationsViewModelTest {
             repository = notifications,
             messages = NoMessages,
             search = NoSearch,
-            session = SessionRepository(WebViewCookieJar(cookieManager)),
+            session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookieManager)),
             clock = AppClock { 1_785_000_000_000L },
         )
     }

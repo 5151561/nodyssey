@@ -2,8 +2,6 @@ package io.github.nodyssey.ui.postlist
 
 import androidx.paging.testing.asSnapshot
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.FakePostRemoteDataSource
 import io.github.nodyssey.data.MutableClock
@@ -13,6 +11,8 @@ import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.testSettingsRepository
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,7 +57,7 @@ class PostListViewModelTest {
             override suspend fun getJson(
                 path: String,
                 referer: String,
-            ): String = throw NodeSeekException(NodeSeekError.Network)
+            ): String = throw SiteException(SiteError.Network)
         }
 
     @Before

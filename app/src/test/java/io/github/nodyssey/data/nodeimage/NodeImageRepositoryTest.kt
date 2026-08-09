@@ -2,8 +2,8 @@ package io.github.nodyssey.data.nodeimage
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeImageSite
+import io.github.plaza.core.AppDispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope

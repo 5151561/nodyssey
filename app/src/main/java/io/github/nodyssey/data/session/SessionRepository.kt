@@ -1,6 +1,6 @@
 package io.github.nodyssey.data.session
 
-import io.github.nodyssey.core.net.WebViewCookieJar
+import io.github.plaza.core.net.WebViewCookieJar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

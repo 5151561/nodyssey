@@ -45,13 +45,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
 import io.github.nodyssey.core.report.QualityReport
-import io.github.nodyssey.ui.theme.CodeStyle
-import io.github.nodyssey.ui.theme.LocalNodysseyExtraColors
-import io.github.nodyssey.ui.theme.ReportData
-import io.github.nodyssey.ui.theme.ReportLabel
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.component.SpecRow
+import io.github.plaza.designsys.component.SpecTable
+import io.github.plaza.designsys.theme.CodeStyle
+import io.github.plaza.designsys.theme.LocalPlazaExtraColors
+import io.github.plaza.designsys.theme.ReportData
+import io.github.plaza.designsys.theme.ReportLabel
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
 /**
  * A NodeQuality benchmark report, rebuilt out of ordinary rows instead of the terminal art it
@@ -267,15 +269,15 @@ private fun FieldRow(field: QualityReport.Block.Field) {
 @Composable
 private fun toneColour(tone: QualityReport.Tone): Color = when (tone) {
     QualityReport.Tone.Neutral -> MaterialTheme.colorScheme.onSurface
-    QualityReport.Tone.Good -> LocalNodysseyExtraColors.current.success
-    QualityReport.Tone.Warn -> LocalNodysseyExtraColors.current.warning
+    QualityReport.Tone.Good -> LocalPlazaExtraColors.current.success
+    QualityReport.Tone.Warn -> LocalPlazaExtraColors.current.warning
     QualityReport.Tone.Bad -> MaterialTheme.colorScheme.error
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BadgeRow(badges: QualityReport.Block.Badges) {
-    val extra = LocalNodysseyExtraColors.current
+    val extra = LocalPlazaExtraColors.current
 
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -376,10 +378,6 @@ private fun SourceAction(onShowSource: () -> Unit) {
         )
     }
 }
-
-internal val ReportTerminalGround = Color(0xFF282C34)
-
-internal val ReportTerminalInk = Color(0xFFD7DAE0)
 
 internal val ReportTerminalStyle =
     androidx.compose.ui.text.TextStyle(

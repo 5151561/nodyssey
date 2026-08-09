@@ -1,10 +1,10 @@
 package io.github.nodyssey.ui.account
 
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.account.BlockedUser
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.testSettingsRepository
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -148,7 +148,7 @@ class BlockListViewModelTest {
         runTest(dispatcher) {
             val repository =
                 FakeAccountSettingsRepository(
-                    failWith = { NodeSeekException(NodeSeekError.Unknown, detail = "用户不存在") },
+                    failWith = { SiteException(SiteError.Unknown, detail = "用户不存在") },
                 )
             val vm = viewModel(repository)
             collectState(vm)

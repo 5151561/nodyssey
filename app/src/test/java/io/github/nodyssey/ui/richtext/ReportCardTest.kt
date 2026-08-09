@@ -21,8 +21,9 @@ import androidx.compose.ui.test.performTouchInput
 import io.github.nodyssey.core.html.AnsiParser
 import io.github.nodyssey.core.report.QualityReportParser
 import io.github.nodyssey.data.settings.ReportFormat
-import io.github.nodyssey.model.RichNode
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.core.ansi.AnsiDecoder
+import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -57,15 +58,15 @@ class ReportCardTest {
         language: String? = "ansi",
         format: ReportFormat = ReportFormat.ADAPTED,
     ) {
-        val decoded = AnsiParser.decode(code)
+        val decoded = AnsiDecoder.decode(code)
         compose.setContent {
-            NodysseyTheme {
+            PlazaTheme {
                 CompositionLocalProvider(LocalReportFormat provides format) {
                     // The card is taller than a phone, which is the whole problem it exists for.
                     // Without a scroller the assertions below the fold would fail on layout rather
                     // than content.
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        RichContent(
+                        PostRichContent(
                             nodes = listOf(
                                 RichNode.CodeBlock(
                                     code = decoded.text,

@@ -4,6 +4,7 @@ import android.content.Context
 import android.webkit.WebSettings
 import androidx.test.core.app.ApplicationProvider
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.plaza.core.net.resolveUserAgent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -25,7 +26,7 @@ class UserAgentTest {
 
     @Test
     fun `reads the user agent off the WebView`() {
-        val resolved = resolveUserAgent(context)
+        val resolved = resolveUserAgent(context, NodeSeekSite.CONFIG)
 
         assertEquals(WebSettings.getDefaultUserAgent(context), resolved.value)
     }
@@ -37,12 +38,12 @@ class UserAgentTest {
      */
     @Test
     fun `the WebView needs no override when the UA came from it`() {
-        assertTrue(resolveUserAgent(context).isWebViewDefault)
+        assertTrue(resolveUserAgent(context, NodeSeekSite.CONFIG).isWebViewDefault)
     }
 
     /** The spoof is gone from the normal path; the hardcoded string is a last resort and nothing else. */
     @Test
     fun `does not send the hardcoded fallback when a WebView can be asked`() {
-        assertNotEquals(NodeSeekSite.FALLBACK_USER_AGENT, resolveUserAgent(context).value)
+        assertNotEquals(NodeSeekSite.FALLBACK_USER_AGENT, resolveUserAgent(context, NodeSeekSite.CONFIG).value)
     }
 }

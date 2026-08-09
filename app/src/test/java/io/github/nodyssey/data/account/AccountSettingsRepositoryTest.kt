@@ -1,15 +1,15 @@
 package io.github.nodyssey.data.account
 
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.HtmlSource
 import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.core.net.JsonPostResponse
 import io.github.nodyssey.core.net.MultipartWriteSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.UserProfile
+import io.github.plaza.core.net.HtmlSource
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -113,7 +113,7 @@ class AccountSettingsRepositoryTest {
                         .blockedUsers()
                 }.exceptionOrNull()
 
-            assertEquals(NodeSeekError.Unparsable, (failure as? NodeSeekException)?.error)
+            assertEquals(SiteError.Unparsable, (failure as? SiteException)?.error)
         }
 
     @Test
@@ -208,7 +208,7 @@ class AccountSettingsRepositoryTest {
 
             val failure = runCatching { repository(source).contact() }.exceptionOrNull()
 
-            assertEquals(NodeSeekError.LoginRequired, (failure as? NodeSeekException)?.error)
+            assertEquals(SiteError.LoginRequired, (failure as? SiteException)?.error)
         }
 
     @Test
@@ -361,7 +361,7 @@ class AccountSettingsRepositoryTest {
 
             val failure = runCatching { repository(source).block("nobody") }.exceptionOrNull()
 
-            assertEquals("用户不存在", (failure as? NodeSeekException)?.detail)
+            assertEquals("用户不存在", (failure as? SiteException)?.detail)
         }
 
     @Test
@@ -384,8 +384,8 @@ class AccountSettingsRepositoryTest {
                 runCatching { repository(source).setHolidayTheme(true) }
                     .exceptionOrNull()
 
-            assertEquals(NodeSeekError.Unknown, (failure as? NodeSeekException)?.error)
-            assertEquals("拒绝修改", (failure as? NodeSeekException)?.detail)
+            assertEquals(SiteError.Unknown, (failure as? SiteException)?.error)
+            assertEquals("拒绝修改", (failure as? SiteException)?.detail)
         }
 
     private fun repository(source: FakeSettingsJsonSource) =

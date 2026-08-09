@@ -1,7 +1,5 @@
 package io.github.nodyssey.ui.postdetail
 
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.FakePostRemoteDataSource
 import io.github.nodyssey.data.MutableClock
 import io.github.nodyssey.data.NoReadingPositions
@@ -13,6 +11,8 @@ import io.github.nodyssey.data.inMemoryDatabase
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.model.ReactionAction
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -271,12 +271,12 @@ class PostDetailViewModelTest {
             val vm = viewModel()
             advanceUntilIdle()
 
-            remote.detailError = NodeSeekException(NodeSeekError.Network)
+            remote.detailError = SiteException(SiteError.Network)
             vm.refresh()
             advanceUntilIdle()
 
             val state = vm.uiState.value
-            assertEquals(NodeSeekError.Network, state.error)
+            assertEquals(SiteError.Network, state.error)
             assertEquals(2, state.comments.size)
             assertNotNull(state.body)
         }
@@ -284,12 +284,12 @@ class PostDetailViewModelTest {
     @Test
     fun `surfaces a typed error rather than a message string`() =
         runTest(dispatcher) {
-            remote.detailError = NodeSeekException(NodeSeekError.LoginRequired)
+            remote.detailError = SiteException(SiteError.LoginRequired)
 
             val vm = viewModel()
             advanceUntilIdle()
 
-            assertEquals(NodeSeekError.LoginRequired, vm.uiState.value.error)
+            assertEquals(SiteError.LoginRequired, vm.uiState.value.error)
             assertFalse(vm.uiState.value.isLoading)
             assertNull(vm.uiState.value.body)
         }
@@ -302,7 +302,7 @@ class PostDetailViewModelTest {
             val vm = viewModel()
             advanceUntilIdle()
 
-            assertEquals(NodeSeekError.Unknown, vm.uiState.value.error)
+            assertEquals(SiteError.Unknown, vm.uiState.value.error)
         }
 
     /**
@@ -351,13 +351,13 @@ class PostDetailViewModelTest {
     @Test
     fun `a thread that failed to load and has no cache is not marked read`() =
         runTest(dispatcher) {
-            remote.detailError = NodeSeekException(NodeSeekError.Network)
+            remote.detailError = SiteException(SiteError.Network)
 
             val vm = viewModel(postId = 42)
             advanceUntilIdle()
 
             assertNull(vm.uiState.value.body)
-            assertEquals(NodeSeekError.Network, vm.uiState.value.error)
+            assertEquals(SiteError.Network, vm.uiState.value.error)
             assertNull("marked read despite showing only an error", database.readMarkDao().find(42))
         }
 
@@ -370,7 +370,7 @@ class PostDetailViewModelTest {
             }
             repository.refreshThread(postId = 42, page = 1)
 
-            remote.detailError = NodeSeekException(NodeSeekError.Network)
+            remote.detailError = SiteException(SiteError.Network)
             clock.advanceBy(OfflineFirstPostRepository.THREAD_CACHE_TTL_MILLIS + 1)
             val vm = viewModel(postId = 42)
             advanceUntilIdle()
@@ -691,7 +691,7 @@ class PostDetailViewModelTest {
             val reactions =
                 GatedReactionRepository(
                     repository,
-                    failure = NodeSeekException(NodeSeekError.Unknown, detail = "鸡腿不足"),
+                    failure = SiteException(SiteError.Unknown, detail = "鸡腿不足"),
                 )
             val vm = PostDetailViewModel(42, reactions, session)
             advanceUntilIdle()
@@ -792,7 +792,7 @@ class PostDetailViewModelTest {
             val collecting =
                 CollectingRepository(
                     repository,
-                    failure = NodeSeekException(NodeSeekError.Unknown, detail = "收藏夹已满"),
+                    failure = SiteException(SiteError.Unknown, detail = "收藏夹已满"),
                 )
             val vm = PostDetailViewModel(42, collecting, session)
             advanceUntilIdle()

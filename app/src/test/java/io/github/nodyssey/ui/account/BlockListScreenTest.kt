@@ -11,7 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import io.github.nodyssey.data.account.BlockedUser
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -34,7 +34,7 @@ class BlockListScreenTest {
     private fun setContent(state: BlockListUiState) {
         composeRule.setContent {
             var nameInput by remember { mutableStateOf("") }
-            NodysseyTheme {
+            PlazaTheme {
                 BlockListScreen(
                     state = state.copy(nameInput = nameInput),
                     snackbarHostState = SnackbarHostState(),

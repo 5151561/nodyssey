@@ -1,7 +1,7 @@
 package io.github.nodyssey.core.html
 
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
@@ -33,8 +33,8 @@ class CommunityStatsParserTest {
         try {
             CommunityStatsParser.parseMemberCount("<div>目前论坛共有99999位seeker</div>")
             fail("Expected an unparsable response")
-        } catch (exception: NodeSeekException) {
-            assertEquals(NodeSeekError.Unparsable, exception.error)
+        } catch (exception: SiteException) {
+            assertEquals(SiteError.Unparsable, exception.error)
         }
     }
 }
