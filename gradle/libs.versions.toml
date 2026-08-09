@@ -81,8 +81,10 @@ androidx-paging-testing = { module = "androidx.paging:paging-testing", version.r
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 [plugins]
+# No `android-library` alias: the library modules apply `com.android.library` through
+# `plaza.android.library`, where it comes off `build-logic`'s own classpath rather than through this
+# catalog. An alias nobody resolves is a version declaration that cannot be trusted to mean anything.
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
-android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

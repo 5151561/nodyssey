@@ -193,7 +193,7 @@ object NodeSeekSite {
     const val SETTING_PREFERENCE = "preference"
     const val SETTING_HOMEPAGE = "homepage"
 
-    /** Accounts without an upload 404 here; [io.github.nodyssey.ui.common.UserAvatar] draws the initial instead. */
+    /** Accounts without an upload 404 here; [UserAvatar] draws the initial instead. */
     fun avatarUrl(uid: Long): String? = absoluteUrl("/avatar/$uid.png")
 
     /**

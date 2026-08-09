@@ -29,8 +29,8 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          # Matches the jvmToolchain(21) in app/build.gradle.kts. A mismatch here means CI compiles
-          # against a different JDK than everyone's machine does.
+          # Matches the jvmToolchain(21) the convention plugins in `build-logic` set on every module.
+          # A mismatch here means CI compiles against a different JDK than everyone's machine does.
           java-version: '21'
 
       # Deliberately not v6, and the reason is that v5 is strictly the better deal today. v6 split the
@@ -49,7 +49,8 @@ jobs:
 
       # There is deliberately no separate "check the lockfile" step. Dependency locking is in STRICT
       # mode, so every step below that resolves a locked classpath — unit tests, lint, assemble —
-      # already fails on a dependency missing from `app/gradle.lockfile`:
+      # already fails on a dependency missing from that module's `gradle.lockfile` — there is one per
+      # module now, and `plaza.dependency-locking` puts every one of them in STRICT mode:
       #
       #   > Resolved 'com.google.code.gson:gson:2.11.0' which is not part of the dependency lock state
       #
@@ -79,9 +80,17 @@ jobs:
       # Any module's `schemas/` directory, not `app/schemas` by name: only `:app` declares a database
       # today, and a second module that grows one must not be able to add it without this gate
       # noticing.
+      #
+      # `git status`, not `git diff`: a version bump writes a *new* file, and an untracked file is
+      # invisible to `git diff` — the gate would have passed in silence on exactly the change it
+      # exists to catch. `-uall` so a schema directory that is untracked in its entirety is listed
+      # file by file rather than collapsed to a directory name the pathspec then misses.
       - name: Check the Room schema is committed
         run: |
-          if ! git diff --exit-code -- '*/schemas/*'; then
+          pending=$(git status --porcelain -uall -- '*/schemas/*')
+          if [ -n "$pending" ]; then
+            echo "$pending"
+            git diff -- '*/schemas/*'
             echo "::error::The generated Room schema differs from the committed one." >&2
             echo "Bump the database version and export the new schema, or commit the regenerated file." >&2
             exit 1
