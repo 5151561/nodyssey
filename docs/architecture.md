@@ -155,7 +155,9 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 - **只信 `releases/latest`，不做任何第三方中转。** GitHub 已经把草稿和预发布排除在这个端点之外；
   连不上就明说连不上并给出手动入口，而不是换一条来路不明的下载链路。
 - **比较的是 tag 和 `PackageManager` 报的 versionName**，不是 versionCode——Release 上没有
-  versionCode。`release.yml` 里那道「tag 必须等于 versionName」的闸门是这件事成立的前提。
+  versionCode。`release.yml` 里那道「tag 必须等于 versionName」的闸门是这件事成立的前提，
+  它读的是 `gradle.properties` 的 `nodyssey.versionName`——版本号写在那里而不是模块的构建文件里，
+  因为工作流要在不跑 Gradle 的情况下读到它。
 - **`PackageInstaller` 而不是 `FileProvider` + `ACTION_VIEW`。** 会话直接读我们自己的流，不需要
   导出任何 URI，也不需要给别的应用授权；结果以状态码回到 `ApkInstallResultReceiver`，而不是在
   另一个 Activity 打开的瞬间丢失。**不设 `setAppPackageName`**：debug 构建的 id 带 `.debug` 后缀，

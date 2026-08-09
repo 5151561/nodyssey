@@ -28,8 +28,10 @@ android {
     namespace = "io.github.nodyssey"
     defaultConfig {
         applicationId = "io.github.nodyssey"
-        versionCode = 11
-        versionName = "1.2.4"
+        // Declared in `gradle.properties`; see the note there for why not here. Read through
+        // `providers` so the configuration cache records the property as an input.
+        versionCode = providers.gradleProperty("nodyssey.versionCode").get().toInt()
+        versionName = providers.gradleProperty("nodyssey.versionName").get()
     }
 
     signingConfigs {

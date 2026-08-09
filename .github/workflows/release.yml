@@ -45,11 +45,18 @@ jobs:
       # A tag that disagrees with the APK it would contain is worth failing over: the store listing,
       # the in-app "about" screen and the download name all read the version from different places,
       # and this is the one moment they can be compared.
+      #
+      # Read from `gradle.properties` rather than from a module's build file: one key, one app, and no
+      # guessing about which module a future glob would have matched.
       - name: Check versionName matches the tag
         run: |
-          declared=$(grep -oE 'versionName = "[^"]+"' app/build.gradle.kts | head -1 | cut -d'"' -f2)
+          declared=$(sed -n 's/^nodyssey\.versionName=//p' gradle.properties | head -1)
+          if [ -z "$declared" ]; then
+            echo "::error::gradle.properties declares no nodyssey.versionName." >&2
+            exit 1
+          fi
           if [ "$declared" != "${{ steps.version.outputs.version }}" ]; then
-            echo "::error::Tag ${{ steps.version.outputs.tag }} wants versionName ${{ steps.version.outputs.version }}, but app/build.gradle.kts declares $declared." >&2
+            echo "::error::Tag ${{ steps.version.outputs.tag }} wants versionName ${{ steps.version.outputs.version }}, but gradle.properties declares $declared." >&2
             exit 1
           fi
           echo "versionName $declared matches the tag."
