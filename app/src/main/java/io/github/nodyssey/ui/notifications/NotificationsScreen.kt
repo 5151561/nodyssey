@@ -51,12 +51,12 @@ import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
 import io.github.nodyssey.data.UserSearchResult
-import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.SignedOutState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AvatarCapOffset
+import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes

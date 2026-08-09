@@ -69,16 +69,16 @@ import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
-import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.composer.AttachmentTray
-import io.github.nodyssey.ui.composer.EmojiPanel
+import io.github.nodyssey.ui.composer.NodeSeekEmojiPanel
 import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.nodyssey.ui.composer.toPickedImages
 import io.github.nodyssey.ui.richtext.RichContent
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
+import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.UserAvatar
@@ -624,7 +624,7 @@ private fun MessageComposer(
                 },
                 onCustomize = onCustomize,
                 emojiPanel = { panel ->
-                    EmojiPanel(
+                    NodeSeekEmojiPanel(
                         onInsert = panel.onInsert,
                         onBackspace = panel.onBackspace,
                         recent = panel.recent,

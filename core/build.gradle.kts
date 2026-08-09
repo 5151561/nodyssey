@@ -14,8 +14,10 @@ dependencies {
     api(libs.kotlinx.coroutines.core)
     api(libs.okhttp)
 
-    // Only the update source parses JSON, and only its own DTOs, which never leave this module.
-    implementation(libs.kotlinx.serialization.json)
+    // `api` because `AnsiSpan` is `@Serializable` and a consumer nests it inside its own serializable
+    // types — the generated serializer is part of this module's surface, not an implementation detail.
+    // The update source's own DTOs never leave here, and would have been happy with `implementation`.
+    api(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

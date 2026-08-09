@@ -41,9 +41,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.nodyssey.R
-import io.github.nodyssey.model.AnsiSpan
+import io.github.plaza.core.ansi.AnsiSpan
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TerminalGround
 import io.github.plaza.designsys.component.rememberClipboardCopy
+import io.github.plaza.designsys.component.rememberTerminalText
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 
@@ -90,7 +92,7 @@ fun ReportSourceDialog(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(ReportTerminalGround),
+                    .background(TerminalGround),
             ) {
                 Column(Modifier.systemBarsPadding()) {
                     Row(
@@ -172,7 +174,7 @@ fun ReportSourceBlock(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .background(ReportTerminalGround),
+            .background(TerminalGround),
     ) {
         Row(
             modifier = Modifier

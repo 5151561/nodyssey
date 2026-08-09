@@ -300,7 +300,7 @@ private fun ReplyEditorSheet(
                 onPickImages = onPickImages,
                 onCustomize = onCustomize,
                 emojiPanel = { panel ->
-                    EmojiPanel(
+                    NodeSeekEmojiPanel(
                         onInsert = panel.onInsert,
                         onBackspace = panel.onBackspace,
                         recent = panel.recent,

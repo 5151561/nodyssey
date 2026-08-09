@@ -1,10 +1,13 @@
 package io.github.nodyssey.ui.composer
 
+import io.github.plaza.designsys.editor.EmojiEntry
+import io.github.plaza.designsys.editor.EmojiGroup
+import io.github.plaza.designsys.editor.insertion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class EmojiPanelTest {
+class NodeSeekEmojiTest {
     @Test
     fun `offers all three NodeSeek sticker groups`() {
         assertEquals(listOf(149, 22, 32), NodeSeekEmojiGroups.take(3).map { it.entries.size })

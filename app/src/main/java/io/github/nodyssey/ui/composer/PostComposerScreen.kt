@@ -412,7 +412,7 @@ private fun EditorContent(
             // they have lost track of.
             onFormatted = { focusRequester.requestFocus() },
             emojiPanel = { panel ->
-                EmojiPanel(
+                NodeSeekEmojiPanel(
                     onInsert = panel.onInsert,
                     onBackspace = panel.onBackspace,
                     recent = panel.recent,

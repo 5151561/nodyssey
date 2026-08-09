@@ -1,5 +1,6 @@
 package io.github.nodyssey.model
 
+import io.github.plaza.core.ansi.AnsiSpan
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -330,23 +331,6 @@ sealed interface RichNode {
     @SerialName("hr")
     data object Divider : RichNode
 }
-
-/**
- * One run of SGR-styled text inside a [RichNode.CodeBlock], as a half-open range into its code.
- *
- * [fg] and [bg] are palette indices 0–15 (the eight ANSI colours then their bright variants), not
- * packed colours: the report's `✔ 解锁` green has to become the *theme's* green, and only the
- * renderer knows what that is.
- */
-@Serializable
-data class AnsiSpan(
-    val start: Int,
-    val end: Int,
-    val fg: Int? = null,
-    val bg: Int? = null,
-    val bold: Boolean = false,
-    val underline: Boolean = false,
-)
 
 /** Inline pieces inside a paragraph. */
 @Serializable

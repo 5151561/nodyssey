@@ -6,8 +6,8 @@ Three modules. `:app` is the NodeSeek application: production Kotlin lives under
 
 Two library modules under `io.github.plaza.*` hold what a second forum app would reuse, and **neither can see `:app`** — the dependency runs one way only, so anything site-specific belongs in `:app`:
 
-- `:designsys` (`designsys/src/main/java/io/github/plaza/designsys/`) — the Compose theme, the shared components, and the Markdown editor.
-- `:core` (`core/src/main/java/io/github/plaza/core/`) — clocks and dispatchers, HTTP against a scraped forum, the cookie store the WebView and OkHttp share, and the GitHub update check. Everything a particular site knows about itself reaches it as a `SiteConfig` value, never as an import; `NodeSeekSite.CONFIG` is the one this app passes.
+- `:designsys` (`designsys/src/main/java/io/github/plaza/designsys/`) — the Compose theme, the shared components, the Markdown editor and the emoji panel. Components take their copy and their colours as parameters: `StatusView` is told what the state says, `TonalTag` and `BadgeChip` are told which tone to wear, `EmojiPanel` is handed its groups and a slot that fetches a sticker.
+- `:core` (`core/src/main/java/io/github/plaza/core/`) — clocks and dispatchers, HTTP against a scraped forum, the cookie store the WebView and OkHttp share, ANSI decoding, and the GitHub update check. Everything a particular site knows about itself reaches it as a `SiteConfig` value, never as an import; `NodeSeekSite.CONFIG` is the one this app passes.
 
 Shared Android configuration lives in `build-logic/` as three convention plugins (`plaza.android.application`, `plaza.android.library`, `plaza.android.compose`); a module's own build file should carry only what genuinely differs. Android resources are in each module's `src/main/res`. JVM and Robolectric tests mirror production packages under `src/test/java`, with captured HTML in `app/src/test/resources/fixtures`. Instrumented tests belong in `app/src/androidTest`. Room schemas are versioned in each module's `schemas/` — only `:app` has one today; architecture and design context lives in `docs/`.
 

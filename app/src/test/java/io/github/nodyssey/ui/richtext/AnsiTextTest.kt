@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import io.github.nodyssey.core.html.AnsiParser
+import io.github.plaza.core.ansi.AnsiDecoder
+import io.github.plaza.designsys.component.rememberTerminalText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -34,7 +36,7 @@ class AnsiTextTest {
      * source here is a single escaped run by construction.
      */
     private fun styleOf(vararg sources: String): List<SpanStyle> {
-        val decoded = sources.map { AnsiParser.decode(it) }
+        val decoded = sources.map { AnsiDecoder.decode(it) }
         val drawn = mutableListOf<AnnotatedString>()
         compose.setContent { decoded.forEach { drawn += rememberTerminalText(it.text, it.spans) } }
         compose.waitForIdle()

@@ -56,7 +56,6 @@ import io.github.nodyssey.data.RulingAction
 import io.github.nodyssey.data.RulingKind
 import io.github.nodyssey.data.RulingRecord
 import io.github.nodyssey.data.RulingTarget
-import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
@@ -64,6 +63,7 @@ import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AppendSpinner
+import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing

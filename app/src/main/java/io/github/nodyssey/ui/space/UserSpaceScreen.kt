@@ -65,7 +65,6 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.ui.common.BoardTag
-import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.collapseMarkdown
@@ -73,6 +72,7 @@ import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.richtext.RichContent
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.PlazaTheme

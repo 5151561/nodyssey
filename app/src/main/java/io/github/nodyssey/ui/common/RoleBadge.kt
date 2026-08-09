@@ -1,21 +1,15 @@
 package io.github.nodyssey.ui.common
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
+import io.github.plaza.designsys.component.BadgeChip
+import io.github.plaza.designsys.component.BadgeTone
 
 /**
  * The role badge family on a floor header — b1 §8.
@@ -82,7 +76,7 @@ fun RoleBadgeRow(
         if (folded > 0) {
             BadgeChip(
                 text = stringResource(R.string.post_badge_more, folded),
-                style = RoleBadgeStyle.RETIRED,
+                tone = RoleBadgeStyle.RETIRED.tone,
             )
         }
     }
@@ -93,41 +87,21 @@ fun RoleBadge(
     label: String,
     modifier: Modifier = Modifier,
 ) {
-    BadgeChip(text = label, style = roleBadgeStyleOf(label), modifier = modifier)
+    BadgeChip(text = label, tone = roleBadgeStyleOf(label).tone, modifier = modifier)
 }
 
-@Composable
-private fun BadgeChip(
-    text: String,
-    style: RoleBadgeStyle,
-    modifier: Modifier = Modifier,
-) {
-    val scheme = MaterialTheme.colorScheme
-    val (container, content) =
-        when (style) {
-            RoleBadgeStyle.ORIGINAL_POSTER -> scheme.primaryContainer to scheme.onPrimaryContainer
-            RoleBadgeStyle.STAFF -> scheme.tertiaryContainer to scheme.onTertiaryContainer
-            RoleBadgeStyle.RETIRED -> Color.Transparent to scheme.onSurfaceVariant
-            RoleBadgeStyle.BANNED -> scheme.errorContainer to scheme.onErrorContainer
-            RoleBadgeStyle.SCAMMER -> scheme.error to scheme.onError
-            RoleBadgeStyle.NEUTRAL -> scheme.secondaryContainer to scheme.onSecondaryContainer
-        }
-    val shape = RoundedCornerShape(6.dp)
-    val outlined =
-        if (style == RoleBadgeStyle.RETIRED) {
-            Modifier.border(1.dp, scheme.outlineVariant, shape)
-        } else {
-            Modifier
-        }
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-        color = content,
-        modifier =
-        modifier
-            .clip(shape)
-            .then(outlined)
-            .background(container)
-            .padding(horizontal = 7.dp, vertical = 1.dp),
-    )
-}
+/**
+ * How loudly each of the six speaks, which is the only part of this a shared chip can know.
+ *
+ * 骗子 gets [BadgeTone.Critical] rather than a second warning tone on purpose: it is the one badge a
+ * reader is about to lose money by missing.
+ */
+private val RoleBadgeStyle.tone: BadgeTone
+    get() = when (this) {
+        RoleBadgeStyle.ORIGINAL_POSTER -> BadgeTone.Primary
+        RoleBadgeStyle.STAFF -> BadgeTone.Accent
+        RoleBadgeStyle.RETIRED -> BadgeTone.Muted
+        RoleBadgeStyle.BANNED -> BadgeTone.Warning
+        RoleBadgeStyle.SCAMMER -> BadgeTone.Critical
+        RoleBadgeStyle.NEUTRAL -> BadgeTone.Neutral
+    }

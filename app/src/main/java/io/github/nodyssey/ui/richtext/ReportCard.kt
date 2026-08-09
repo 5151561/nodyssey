@@ -379,8 +379,6 @@ private fun SourceAction(onShowSource: () -> Unit) {
     }
 }
 
-internal val ReportTerminalGround = Color(0xFF282C34)
-
 internal val ReportTerminalInk = Color(0xFFD7DAE0)
 
 internal val ReportTerminalStyle =

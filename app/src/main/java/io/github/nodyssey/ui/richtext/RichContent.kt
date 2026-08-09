@@ -84,8 +84,10 @@ import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.common.SkippedImagePlaceholder
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SpecTable
+import io.github.plaza.designsys.component.TerminalGround
 import io.github.plaza.designsys.component.asSpecTable
 import io.github.plaza.designsys.component.rememberClipboardCopy
+import io.github.plaza.designsys.component.rememberTerminalText
 import io.github.plaza.designsys.theme.CodeStyle
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.PostBody
@@ -607,7 +609,7 @@ private fun CodeBlock(node: RichNode.CodeBlock) {
     // surface. Ordinary code keeps the app's surface, where it has always been.
     val terminal = node.spans.isNotEmpty()
     val code = rememberTerminalText(node.code, node.spans)
-    val ground = if (terminal) ReportTerminalGround else MaterialTheme.colorScheme.surfaceContainer
+    val ground = if (terminal) TerminalGround else MaterialTheme.colorScheme.surfaceContainer
     val ink = if (terminal) ReportTerminalInk else MaterialTheme.colorScheme.onSurface
     val chrome = if (terminal) ReportTerminalInk.copy(alpha = TERMINAL_CHROME_ALPHA) else MaterialTheme.colorScheme.onSurfaceVariant
 

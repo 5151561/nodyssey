@@ -1,4 +1,4 @@
-package io.github.nodyssey.ui.richtext
+package io.github.plaza.designsys.component
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -10,20 +10,27 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-import io.github.nodyssey.model.AnsiSpan
+import io.github.plaza.core.ansi.AnsiSpan
 
 /**
- * Paints the colour runs [io.github.nodyssey.core.html.AnsiParser] recovered back onto the text.
+ * The ground a terminal block is drawn on, in both themes.
  *
- * The report cards read the colours for their *meaning* — a red 高风险 becomes the theme's error
- * colour — but a terminal block is not a card: it is the output as posted, and the only honest way to
- * draw it is with the palette a terminal would have used. That is why this always renders on
- * [ReportTerminalGround] rather than on the app's surface, in both themes. ANSI has no way to say
- * "and my background is light", so a script that writes white on green assumes a dark ground; put the
- * same escape on a light surface and the white disappears.
+ * One Dark's background, which is where [rememberTerminalText]'s palette came from too. ANSI has no
+ * way to say "and my background is light", so a script that writes white on green assumes a dark
+ * ground; put the same escape on a light surface and the white disappears.
+ */
+val TerminalGround = Color(0xFF282C34)
+
+/**
+ * Paints the colour runs an ANSI decoder recovered back onto the text.
+ *
+ * A card that reads a report's colours for their *meaning* — a red 高风险 becoming the theme's error
+ * colour — is a different job, and belongs to the app that knows what the report says. This is the
+ * other one: the output as posted, drawn with the palette a terminal would have used, on
+ * [TerminalGround].
  */
 @Composable
-internal fun rememberTerminalText(
+fun rememberTerminalText(
     text: String,
     spans: List<AnsiSpan>,
 ): AnnotatedString = remember(text, spans) {
@@ -88,7 +95,7 @@ private const val MIN_INK_CONTRAST = 4.5f
 private const val CONTRAST_OFFSET = 0.05f
 
 /**
- * The sixteen colours, as text on [ReportTerminalGround].
+ * The sixteen colours, as text on [TerminalGround].
  *
  * One Dark's palette, which is where the ground itself came from. Index 0 is grey rather than black:
  * a terminal's own black is its background, so `ESC[30m` drawn literally would be invisible, and the

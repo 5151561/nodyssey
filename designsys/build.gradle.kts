@@ -8,6 +8,10 @@ android {
 }
 
 dependencies {
+    // `api` because `rememberTerminalText` takes `AnsiSpan` in its signature: a consumer building the
+    // list has to be able to name the type. Nothing else here reaches into `:core`.
+    api(project(":core"))
+
     // `api`, not `implementation`: a consumer writes Compose against these types in its own source,
     // and both sides have to agree on one BOM or two Compose versions end up on the same classpath.
     api(platform(libs.androidx.compose.bom))
@@ -18,6 +22,10 @@ dependencies {
 
     // `BackHandler`: the emoji panel stands in for the keyboard, so back has to dismiss it first.
     implementation(libs.androidx.activity.compose)
+
+    // Custom Tabs: a thread is mostly other people's links, and handing each one to the system
+    // browser puts a task switch between the reader and the thread they were in.
+    implementation(libs.androidx.browser)
 
     // Avatars load over the network. Only `coil-compose` — the GIF and SVG decoders are a decision
     // about a particular site's content, so they stay with the app that needs them.

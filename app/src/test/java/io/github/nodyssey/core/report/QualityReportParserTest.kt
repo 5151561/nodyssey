@@ -1,6 +1,7 @@
 package io.github.nodyssey.core.report
 
 import io.github.nodyssey.core.html.AnsiParser
+import io.github.plaza.core.ansi.AnsiDecoder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -51,7 +52,7 @@ class QualityReportParserTest {
                 "        报告时间：2026-07-28 12:14:43 CST  脚本版本：v2026-03-29",
                 "++++++++",
             )
-        val decoded = AnsiParser.decode((banner + body + "========").joinToString("\n"))
+        val decoded = AnsiDecoder.decode((banner + body + "========").joinToString("\n"))
         return checkNotNull(QualityReportParser.parse(decoded.text, decoded.spans))
     }
 

@@ -28,11 +28,11 @@ import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.PostSummary
-import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NumericPager
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.postlist.PostRow
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.readableWidth
 

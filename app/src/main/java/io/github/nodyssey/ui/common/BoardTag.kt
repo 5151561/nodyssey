@@ -1,20 +1,13 @@
 package io.github.nodyssey.ui.common
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.theme.LocalPlazaExtraColors
 
 /**
@@ -109,9 +102,9 @@ internal fun boardFamilyColors(family: BoardFamily): BoardFamilyColors {
 /**
  * A tonal board tag.
  *
- * The site's markup drops the board on some pages, so callers pass a nullable title and this draws
- * nothing at all when it is missing — the meta row keeps its height either way, which is what stops
- * the list from twitching as pages load.
+ * The site's markup drops the board on some pages, so callers pass a nullable title and
+ * [TonalTag] draws nothing at all when it is missing — the meta row keeps its height either way,
+ * which is what stops the list from twitching as pages load.
  */
 @Composable
 fun BoardTag(
@@ -123,16 +116,10 @@ fun BoardTag(
 
     val colors = boardFamilyColors(boardFamilyOf(slug, title))
 
-    Text(
+    TonalTag(
         text = title,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        fontWeight = FontWeight.Medium,
-        color = colors.content,
-        modifier =
-        modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(colors.container)
-            .padding(horizontal = 7.dp, vertical = 1.dp),
+        containerColor = colors.container,
+        contentColor = colors.content,
+        modifier = modifier,
     )
 }
