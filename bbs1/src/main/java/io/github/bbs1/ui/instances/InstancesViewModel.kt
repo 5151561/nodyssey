@@ -15,7 +15,9 @@ import kotlinx.coroutines.launch
  *   yet" apart from "not read yet" and not flash the empty state at every launch.
  */
 data class InstancesUiState(
-    val loading: Boolean = false,
+    // No default: both construction sites below say which side of the first read they are on, and a
+    // defaulted `false` would misread as "the usual state" when the initial state is loading.
+    val loading: Boolean,
     val instances: List<ForumInstance> = emptyList(),
     val currentId: String? = null,
 ) {

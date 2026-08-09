@@ -10,7 +10,10 @@
 
     <!--
         No INTERNET permission yet: the app stores nothing but the user's list of sites, so it
-        arrives with the first network call, not before it.
+        arrives with the first network call, not before it. When it does, decide the cleartext
+        policy in the same change: normalizeInstanceUrl keeps explicit http:// for self-hosted
+        LAN sites, and usesCleartextTraffic has defaulted to blocked since API 28 — without a
+        policy those sites silently fail to connect.
 
         Backup is on without exclusions for the same reason — the only state is site URLs the user
         typed, which is exactly what should survive onto a new device. The moment a credential or

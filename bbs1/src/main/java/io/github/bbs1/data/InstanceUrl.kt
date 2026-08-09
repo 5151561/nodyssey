@@ -42,5 +42,15 @@ fun normalizeInstanceUrl(input: String): String? {
     }
 }
 
-/** The host of a normalized origin — the default display name for a site the user did not name. */
-fun instanceHost(baseUrl: String): String = URI(baseUrl).host ?: baseUrl
+/**
+ * The host of a normalized origin — the default display name for a site the user did not name.
+ *
+ * Falls back to the input instead of throwing: the repository calls this inside a DataStore edit,
+ * which is the wrong place to discover that a caller skipped [normalizeInstanceUrl].
+ */
+fun instanceHost(baseUrl: String): String =
+    try {
+        URI(baseUrl).host ?: baseUrl
+    } catch (_: URISyntaxException) {
+        baseUrl
+    }

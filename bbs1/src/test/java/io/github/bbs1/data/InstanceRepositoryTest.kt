@@ -1,6 +1,8 @@
 package io.github.bbs1.data
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -98,6 +100,43 @@ class InstanceRepositoryTest {
 
         repository.select("no-such-id")
         assertEquals(first, repository.snapshot.first().currentId)
+        scope.cancel()
+    }
+
+    @Test
+    fun `removing a site that is not current leaves the selection alone`() = runTest {
+        val (repository, scope) = newRepository()
+        repository.add("https://a.example.com", name = null)
+        repository.add("https://b.example.com", name = null)
+
+        val current = repository.snapshot.first().currentId!!
+        val other = repository.snapshot.first().instances.first { it.id != current }.id
+        repository.remove(other)
+
+        val snapshot = repository.snapshot.first()
+        assertEquals(current, snapshot.currentId)
+        assertEquals("https://b.example.com", snapshot.current?.baseUrl)
+        scope.cancel()
+    }
+
+    @Test
+    fun `a stored list that no longer decodes reads as empty instead of throwing`() = runTest {
+        val scope = CoroutineScope(StandardTestDispatcher(testScheduler) + Job())
+        val store =
+            PreferenceDataStoreFactory.create(scope = scope) {
+                File(tmp.root, "corrupt.preferences_pb")
+            }
+        // Same key the repository writes under; the value is what a bad migration or a hand-edited
+        // backup would leave behind.
+        store.edit { it[stringPreferencesKey("instances")] = "{definitely not json" }
+
+        val repository = InstanceRepository(store) { "id" }
+        val snapshot = repository.snapshot.first()
+        assertEquals(emptyList<Any>(), snapshot.instances)
+
+        // And the store still accepts new sites afterwards.
+        repository.add("https://bbs1.org", name = null)
+        assertEquals("bbs1.org", repository.snapshot.first().current?.name)
         scope.cancel()
     }
 

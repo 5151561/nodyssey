@@ -59,4 +59,9 @@ class InstanceUrlTest {
         assertEquals("bbs1.org", instanceHost("https://bbs1.org"))
         assertEquals("bbs.example.com", instanceHost("https://bbs.example.com:8443"))
     }
+
+    @Test
+    fun `instanceHost returns unparseable input as-is rather than throwing mid-write`() {
+        assertEquals("not a url", instanceHost("not a url"))
+    }
 }

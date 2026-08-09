@@ -9,7 +9,6 @@ import io.github.bbs1.model.ForumInstance
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.util.UUID
@@ -100,8 +99,12 @@ class InstanceRepository(
         if (raw.isNullOrEmpty()) return emptyList()
         return try {
             json.decodeFromString(raw)
-        } catch (_: SerializationException) {
-            // A list that stopped decoding is data loss either way; an empty list at least starts.
+        } catch (_: IllegalArgumentException) {
+            // decodeFromString's documented contract: SerializationException for a decoding error,
+            // IllegalArgumentException for JSON that parses but is not a valid instance — and the
+            // former subclasses the latter, so one catch covers both. Either way the list is data
+            // loss already; an empty list at least lets the app start instead of throwing on every
+            // launch from a flow that exists to survive exactly this.
             emptyList()
         }
     }

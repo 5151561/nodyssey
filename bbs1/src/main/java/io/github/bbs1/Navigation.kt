@@ -35,7 +35,10 @@ fun Bbs1AppUi(container: AppContainer) {
     val backStack = rememberNavBackStack(if (startAtHome) HomeKey else InstancesKey)
 
     // Selecting or adding a site should land on it: pop back to the home already under the switcher,
-    // or grow the stack when the switcher is the root.
+    // or grow the stack when the switcher is the root. Relies on the stack holding at most one
+    // HomeKey — true today because Home only ever enters through here, and this pushes only when no
+    // Home is present. A deeper hierarchy that adds another way onto Home must keep that invariant,
+    // or this pop lands on the wrong entry.
     fun showCurrent() {
         if (HomeKey in backStack) backStack.removeLastOrNull() else backStack.add(HomeKey)
     }
