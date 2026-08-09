@@ -65,14 +65,16 @@ jobs:
       - name: Unit tests
         run: ./gradlew testDebugUnitTest
 
-      # warningsAsErrors is on, so a new lint warning fails the build here. Still qualified to `:app`
-      # because `plaza.android.application` sets `checkDependencies`, which pulls every module this
-      # one depends on into the same run and the same report.
+      # warningsAsErrors is on, so a new lint warning fails the build here. Qualified to the
+      # application modules because `plaza.android.application` sets `checkDependencies`, which pulls
+      # every module an app depends on into that app's run and report — the two invocations together
+      # cover every module in the repository.
       - name: Android lint
-        run: ./gradlew :app:lintDebug
+        run: ./gradlew :app:lintDebug :bbs1:lintDebug
 
+      # `:bbs1` has no release pipeline yet, so its debug APK is what proves it still assembles.
       - name: Assemble debug APK and optimized release bundle
-        run: ./gradlew :app:assembleDebug :app:bundleRelease
+        run: ./gradlew :app:assembleDebug :app:bundleRelease :bbs1:assembleDebug
 
       # A Room schema is checked in per version. If codegen produced a different one, the entity change
       # needs either a version bump and a migration, or a deliberate re-export — not a silent diff.

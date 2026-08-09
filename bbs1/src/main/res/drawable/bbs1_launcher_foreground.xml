@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 占位图标：白色对话气泡加一个点。正式视觉定稿时整体替换。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,34c-11.6,0 -21,7.8 -21,17.4c0,5.6 3.2,10.6 8.2,13.8l-2.8,8.8l10.2,-4.9c1.7,0.3 3.5,0.5 5.4,0.5c11.6,0 21,-7.8 21,-17.4S65.6,34 54,34z" />
+    <path
+        android:fillColor="@color/bbs1_launcher_background"
+        android:pathData="M54,51.4m-4.2,0a4.2,4.2 0,1 1,8.4 0a4.2,4.2 0,1 1,-8.4 0" />
+</vector>
