@@ -18,8 +18,13 @@ interface AppContainer {
 // factory throws on the second instance over the same file.
 private val Context.instancesDataStore by preferencesDataStore(name = "instances")
 
+// The login tokens, deliberately a separate file: the backup rules exclude this one by name and
+// keep the site list above. See res/xml/bbs1_data_extraction_rules.xml.
+private val Context.sessionsDataStore by preferencesDataStore(name = "sessions")
+
 class DefaultAppContainer(context: Context) : AppContainer {
-    override val instanceRepository = InstanceRepository(context.instancesDataStore)
+    override val instanceRepository =
+        InstanceRepository(context.instancesDataStore, context.sessionsDataStore)
 
     // One client for every site: OkHttp pools connections per host on its own, and the sites share
     // nothing else (no cookies, no auth yet). The defaults — 10s connect/read — fit self-hosted

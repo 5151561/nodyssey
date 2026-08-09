@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,7 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -42,6 +46,7 @@ import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaText
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.ThreadRow
@@ -64,13 +69,33 @@ fun HomeScreen(
     onLoadMore: () -> Unit,
     onRetryAppend: () -> Unit,
     onRefresh: () -> Unit,
+    onSignIn: () -> Unit,
+    onSignOut: () -> Unit,
+    onCompose: () -> Unit,
 ) {
+    var accountOpen by rememberSaveable { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(state.instance?.name ?: stringResource(R.string.bbs1_app_name)) },
                 actions = {
                     if (state.instance != null) {
+                        val session = state.session
+                        IconButton(onClick = { if (session == null) onSignIn() else accountOpen = true }) {
+                            if (session == null) {
+                                Icon(
+                                    PlazaIcons.Login,
+                                    contentDescription = stringResource(R.string.bbs1_login_title),
+                                )
+                            } else {
+                                UserAvatar(
+                                    url = session.avatarUrl.takeIf { it.isNotBlank() },
+                                    name = session.username,
+                                    size = Sizes.avatarComment,
+                                )
+                            }
+                        }
                         IconButton(onClick = onRefresh) {
                             Icon(
                                 Icons.Default.Refresh,
@@ -87,7 +112,29 @@ fun HomeScreen(
                 },
             )
         },
+        floatingActionButton = {
+            if (state.canPost) {
+                FloatingActionButton(onClick = onCompose) {
+                    Icon(
+                        PlazaIcons.AddComment,
+                        contentDescription = stringResource(R.string.bbs1_compose_topic_title),
+                    )
+                }
+            }
+        },
     ) { padding ->
+        val session = state.session
+        if (accountOpen && session != null) {
+            AccountSheet(
+                session = session,
+                siteName = state.instance?.name.orEmpty(),
+                onDismiss = { accountOpen = false },
+                onSignOut = {
+                    accountOpen = false
+                    onSignOut()
+                },
+            )
+        }
         Box(Modifier.fillMaxSize().padding(padding)) {
             when {
                 state.instance == null ->

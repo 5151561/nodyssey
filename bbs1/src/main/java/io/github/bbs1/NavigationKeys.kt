@@ -15,3 +15,17 @@ data object InstancesKey : NavKey
  */
 @Serializable
 data class TopicKey(val id: Long) : NavKey
+
+/** Signing in to the current site. */
+@Serializable
+data object LoginKey : NavKey
+
+/**
+ * Writing a new thread on the current site.
+ *
+ * @property forumId The board the feed was filtered to when the composer opened, so the picker starts
+ *   where the reader already was. Null — the "全部" filter — means the composer picks the first board
+ *   this account may post in.
+ */
+@Serializable
+data class ComposeTopicKey(val forumId: Long?) : NavKey

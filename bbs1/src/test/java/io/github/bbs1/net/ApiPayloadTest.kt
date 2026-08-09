@@ -52,8 +52,75 @@ class ApiPayloadTest {
 
         assertEquals("正文", page.topic.body)
         assertEquals(1, page.replies.single().floor)
+        assertTrue(page.canReply)
         assertTrue(page.hasNextPage)
         assertFalse(page.copy(page = 3).hasNextPage)
+    }
+
+    @Test
+    fun `forum list carries this identity's write permissions`() {
+        val raw = """
+            {"ok":1,"forums":[
+                {"id":1,"name":"公告","description":"","sort":0,"can_view":true,"can_post":false,"can_reply":true},
+                {"id":2,"name":"水区","description":"","sort":1,"can_view":true,"can_post":true,"can_reply":true}
+            ]}
+        """.trimIndent()
+
+        val forums = decodeApiPayload<ApiForumsPage>(raw).forums
+
+        assertEquals(listOf(false, true), forums.map { it.canPost })
+        assertEquals(listOf(true, true), forums.map { it.canReply })
+    }
+
+    @Test
+    fun `login answers with a token and the user it belongs to`() {
+        val raw = """
+            {"ok":1,"token":"2.1786000000.abcd","token_expires_at":1786000000,
+             "user":{"id":2,"username":"alice","avatar":{"style":"dylan","seed":"a","url":"https://cdn/a.png"},
+                     "group_id":1,"group_name":"用户","points":3,"is_banned":0,"is_muted":0,
+                     "email":"a@example.com","bio":"","created_at":1,"unread_notifications":0,
+                     "can_manage":false,"can_admin":false,"can_speak":true}}
+        """.trimIndent()
+
+        val auth = decodeApiPayload<ApiAuth>(raw)
+
+        assertEquals("2.1786000000.abcd", auth.token)
+        assertEquals(1786000000L, auth.tokenExpiresAt)
+        assertEquals("alice", auth.user.username)
+        assertEquals("https://cdn/a.png", auth.user.avatar.url)
+        assertTrue(auth.user.canSpeak)
+    }
+
+    @Test
+    fun `a created reply arrives without the floor the thread numbers it by`() {
+        val raw = """
+            {"ok":1,"topic_id":7,"reply_id":42,
+             "reply":{"id":42,"body":"回","body_html":"<p>回</p>","created_at":9,"updated_at":9,
+                      "author":{"id":6,"username":"bob"}}}
+        """.trimIndent()
+
+        val created = decodeApiPayload<ApiReplyCreated>(raw)
+
+        assertEquals(42L, created.replyId)
+        assertEquals(7L, created.topicId)
+        // Not a decode quirk to work around later: the endpoint genuinely does not number the floor,
+        // so whoever shows the reply computes it.
+        assertEquals(0, created.reply.floor)
+    }
+
+    @Test
+    fun `a refused credential is told apart from any other refusal`() {
+        val e = assertThrows(Bbs1ApiException.Unauthorized::class.java) {
+            decodeApiPayload<ApiMeta>("""{"ok":0,"message":"登录凭证无效或已过期"}""", httpCode = 401)
+        }
+        assertEquals("登录凭证无效或已过期", e.userMessage)
+    }
+
+    @Test
+    fun `a refusal with any other status stays a plain server refusal`() {
+        assertThrows(Bbs1ApiException.Server::class.java) {
+            decodeApiPayload<ApiMeta>("""{"ok":0,"message":"无权限"}""", httpCode = 403)
+        }
     }
 
     @Test

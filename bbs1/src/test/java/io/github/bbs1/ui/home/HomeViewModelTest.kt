@@ -1,7 +1,7 @@
 package io.github.bbs1.ui.home
 
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import io.github.bbs1.data.InstanceRepository
+import io.github.bbs1.data.newTestInstanceRepository
 import io.github.bbs1.net.ApiForum
 import io.github.bbs1.net.ApiTopicSummary
 import io.github.bbs1.net.ApiTopicsPage
@@ -27,7 +27,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -51,12 +50,8 @@ class HomeViewModelTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
         val scope = CoroutineScope(dispatcher + Job())
-        val store =
-            PreferenceDataStoreFactory.create(scope = scope) {
-                File(tmp.root, "instances.preferences_pb")
-            }
         var next = 0
-        val repository = InstanceRepository(store) { "id-${next++}" }
+        val repository = newTestInstanceRepository(scope, tmp.root) { "id-${next++}" }
         val viewModel = HomeViewModel(repository, api)
         // The init collector subscribes eagerly, so tests drive it through repository writes alone.
         return Fixture(repository, viewModel, scope)

@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Warning
@@ -19,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -26,7 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -60,7 +67,24 @@ fun TopicScreen(
     onLoadMore: () -> Unit,
     onRetryAppend: () -> Unit,
     onRefresh: () -> Unit,
+    onSubmitReply: (String) -> Unit,
+    onReplyPosted: () -> Unit,
+    onReplyErrorConsumed: () -> Unit,
+    onSignIn: () -> Unit,
 ) {
+    // Owned here rather than in the sheet: the sheet leaves the composition every time it closes,
+    // and a draft is the last thing that should go with it.
+    val replyDraft = rememberTextFieldState()
+    var composing by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(state.replyPosted) {
+        if (state.replyPosted) {
+            replyDraft.clearText()
+            composing = false
+            onReplyPosted()
+        }
+    }
+
     // Custom Tabs speak http(s) only; anything else falls back to whichever app claimed the scheme.
     val uriHandler = rememberExternalUriHandler { it.startsWith("http://") || it.startsWith("https://") }
     // The plugin hands over Markdown as written, so a link can be site-relative the way the web
@@ -94,7 +118,27 @@ fun TopicScreen(
                 },
             )
         },
+        bottomBar = {
+            if (state.topic != null) {
+                ReplyBar(
+                    state = state,
+                    onCompose = { composing = true },
+                    onSignIn = onSignIn,
+                )
+            }
+        },
     ) { padding ->
+        if (composing) {
+            ReplySheet(
+                state = state,
+                bodyState = replyDraft,
+                onDismiss = {
+                    composing = false
+                    onReplyErrorConsumed()
+                },
+                onSubmit = onSubmitReply,
+            )
+        }
         Box(Modifier.fillMaxSize().padding(padding)) {
             when {
                 state.loading -> LoadingState()
@@ -112,6 +156,67 @@ fun TopicScreen(
 
                 state.topic != null ->
                     TopicContent(state, state.topic, openLink, onLoadMore, onRetryAppend)
+            }
+        }
+    }
+}
+
+/**
+ * The strip under the thread, saying which of the three situations the reader is in: not signed in,
+ * free to reply, or signed in somewhere the forum does not let them speak.
+ *
+ * The third is worth a line of its own rather than an absent bar — a board that allows nobody to
+ * reply and an app that forgot to draw the button look identical otherwise.
+ */
+@Composable
+private fun ReplyBar(
+    state: TopicUiState,
+    onCompose: () -> Unit,
+    onSignIn: () -> Unit,
+) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+        Row(
+            modifier =
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            when {
+                !state.signedIn -> {
+                    Text(
+                        text = stringResource(R.string.bbs1_reply_sign_in_prompt),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onSignIn) {
+                        Text(stringResource(R.string.bbs1_login_title))
+                    }
+                }
+
+                state.canReply ->
+                    Surface(
+                        onClick = onCompose,
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.bbs1_reply_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                        )
+                    }
+
+                else ->
+                    Text(
+                        text = stringResource(R.string.bbs1_reply_not_allowed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
             }
         }
     }

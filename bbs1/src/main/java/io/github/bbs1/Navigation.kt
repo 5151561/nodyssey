@@ -16,6 +16,11 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.github.bbs1.di.AppContainer
+import io.github.bbs1.model.ForumInstance
+import io.github.bbs1.ui.auth.LoginScreen
+import io.github.bbs1.ui.auth.LoginViewModel
+import io.github.bbs1.ui.composer.ComposeTopicScreen
+import io.github.bbs1.ui.composer.ComposeTopicViewModel
 import io.github.bbs1.ui.home.HomeScreen
 import io.github.bbs1.ui.home.HomeViewModel
 import io.github.bbs1.ui.instances.InstancesScreen
@@ -36,6 +41,13 @@ fun Bbs1AppUi(container: AppContainer) {
         Box(Modifier.fillMaxSize())
         return
     }
+
+    // Held here rather than in the Home entry, next to the instance list and for the same reason:
+    // both are views of the current site, and screens that are not Home have to reach the feed —
+    // the composer refreshes it after publishing, which an entry-scoped view model could not be told.
+    val homeViewModel: HomeViewModel =
+        viewModel { HomeViewModel(container.instanceRepository, container.api) }
+    val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
     // Evaluated once, at the first composition after loading: a user with a site lands on it, a new
     // user lands on the site list. Later changes navigate; they do not re-root the stack.
@@ -65,9 +77,6 @@ fun Bbs1AppUi(container: AppContainer) {
         entryProvider =
         entryProvider {
             entry<HomeKey> {
-                val homeViewModel: HomeViewModel =
-                    viewModel { HomeViewModel(container.instanceRepository, container.api) }
-                val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
                 HomeScreen(
                     state = homeState,
                     onOpenInstances = { backStack.add(InstancesKey) },
@@ -76,26 +85,88 @@ fun Bbs1AppUi(container: AppContainer) {
                     onLoadMore = homeViewModel::loadMore,
                     onRetryAppend = homeViewModel::retryAppend,
                     onRefresh = homeViewModel::refresh,
+                    onSignIn = { backStack.add(LoginKey) },
+                    onSignOut = homeViewModel::signOut,
+                    onCompose = { backStack.add(ComposeTopicKey(homeState.selectedForumId)) },
                 )
             }
             entry<TopicKey> { key ->
-                val baseUrl = state.current?.baseUrl
-                if (baseUrl == null) {
-                    // The site vanished under a restored stack (removed on another device before a
-                    // backup restore, say). There is nothing to load this thread from; leave.
-                    LaunchedEffect(Unit) { backStack.removeLastOrNull() }
-                    Box(Modifier.fillMaxSize())
-                } else {
+                CurrentInstance(state.current, { backStack.removeLastOrNull() }) { instance ->
                     val topicViewModel: TopicViewModel =
-                        viewModel { TopicViewModel(container.api, baseUrl, key.id) }
+                        viewModel {
+                            TopicViewModel(
+                                container.api,
+                                container.instanceRepository,
+                                instance.id,
+                                instance.baseUrl,
+                                key.id,
+                            )
+                        }
                     val topicState by topicViewModel.uiState.collectAsStateWithLifecycle()
                     TopicScreen(
                         state = topicState,
-                        baseUrl = baseUrl,
+                        baseUrl = instance.baseUrl,
                         onBack = { backStack.removeLastOrNull() },
                         onLoadMore = topicViewModel::loadMore,
                         onRetryAppend = topicViewModel::retryAppend,
                         onRefresh = topicViewModel::refresh,
+                        onSubmitReply = topicViewModel::submitReply,
+                        onReplyPosted = topicViewModel::consumeReplyPosted,
+                        onReplyErrorConsumed = topicViewModel::consumeReplyError,
+                        onSignIn = { backStack.add(LoginKey) },
+                    )
+                }
+            }
+            entry<LoginKey> {
+                CurrentInstance(state.current, { backStack.removeLastOrNull() }) { instance ->
+                    val loginViewModel: LoginViewModel =
+                        viewModel {
+                            LoginViewModel(
+                                container.api,
+                                container.instanceRepository,
+                                instance.id,
+                                instance.baseUrl,
+                            )
+                        }
+                    val loginState by loginViewModel.uiState.collectAsStateWithLifecycle()
+                    LoginScreen(
+                        state = loginState,
+                        siteName = instance.name,
+                        onBack = { backStack.removeLastOrNull() },
+                        onSubmit = loginViewModel::submit,
+                        // Nothing else to do on success: the credential is in the repository, and
+                        // every screen that cares is watching it.
+                        onSucceeded = { backStack.removeLastOrNull() },
+                        onErrorConsumed = loginViewModel::consumeError,
+                    )
+                }
+            }
+            entry<ComposeTopicKey> { key ->
+                CurrentInstance(state.current, { backStack.removeLastOrNull() }) { instance ->
+                    val composeViewModel: ComposeTopicViewModel =
+                        viewModel {
+                            ComposeTopicViewModel(
+                                container.api,
+                                container.instanceRepository,
+                                instance.id,
+                                instance.baseUrl,
+                                key.forumId,
+                            )
+                        }
+                    val composeState by composeViewModel.uiState.collectAsStateWithLifecycle()
+                    ComposeTopicScreen(
+                        state = composeState,
+                        onClose = { backStack.removeLastOrNull() },
+                        onSelectForum = composeViewModel::selectForum,
+                        onSubmit = composeViewModel::submit,
+                        onCreated = { topicId ->
+                            // The new thread belongs at the top of the feed the reader returns to,
+                            // and the feed has no other way to hear about it.
+                            homeViewModel.refresh()
+                            backStack.removeLastOrNull()
+                            backStack.add(TopicKey(topicId))
+                        },
+                        onRetryForums = composeViewModel::loadForums,
                     )
                 }
             }
@@ -117,4 +188,25 @@ fun Bbs1AppUi(container: AppContainer) {
             }
         },
     )
+}
+
+/**
+ * Draws [content] for the current site, or leaves when there is none.
+ *
+ * Every screen below Home needs the same guard: the site can vanish under a restored back stack —
+ * removed on another device before a backup restore, say — and none of these screens has anything to
+ * show without one.
+ */
+@Composable
+private fun CurrentInstance(
+    instance: ForumInstance?,
+    onMissing: () -> Unit,
+    content: @Composable (ForumInstance) -> Unit,
+) {
+    if (instance == null) {
+        LaunchedEffect(Unit) { onMissing() }
+        Box(Modifier.fillMaxSize())
+    } else {
+        content(instance)
+    }
 }

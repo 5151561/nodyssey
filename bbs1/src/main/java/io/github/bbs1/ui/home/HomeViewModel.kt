@@ -3,7 +3,9 @@ package io.github.bbs1.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.bbs1.data.InstanceRepository
+import io.github.bbs1.data.authed
 import io.github.bbs1.model.ForumInstance
+import io.github.bbs1.model.InstanceSession
 import io.github.bbs1.net.ApiForum
 import io.github.bbs1.net.ApiTopicSummary
 import io.github.bbs1.net.Bbs1Api
@@ -34,15 +36,28 @@ data class HomeUiState(
     val hasNextPage: Boolean = false,
     val appending: Boolean = false,
     val error: ApiErrorUi? = null,
-)
+) {
+    val session: InstanceSession? get() = instance?.session
+
+    /**
+     * Whether to offer the compose button at all: the server answers `can_post` per board and per
+     * identity, so an account with no board open to it gets no button rather than a button that
+     * opens a composer with an empty picker.
+     */
+    val canPost: Boolean get() = session != null && forums.any { it.canPost }
+}
 
 /**
  * The feed of whichever site is current. Watches the instance repository rather than taking a site
  * as a parameter: switching sites in the switcher must swap this screen's content out from under it,
  * and one collector resetting state is how that stays one code path.
+ *
+ * Signing in and out go down that same path, because the credential is part of the instance: the
+ * server answers permissions per identity, so a login is a different set of forums and a different
+ * feed, not the same one with a name attached.
  */
 class HomeViewModel(
-    repository: InstanceRepository,
+    private val repository: InstanceRepository,
     private val api: Bbs1Api,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -89,7 +104,10 @@ class HomeViewModel(
         _uiState.value = state.copy(appending = true)
         loadJob = viewModelScope.launch {
             try {
-                val page = api.topics(instance.baseUrl, state.selectedForumId, nextPage)
+                val page =
+                    repository.authed(instance.id) {
+                        api.topics(instance.baseUrl, state.selectedForumId, nextPage, state.session?.token)
+                    }
                 nextPage++
                 _uiState.value = _uiState.value.copy(
                     topics = _uiState.value.topics + page.topics,
@@ -100,6 +118,15 @@ class HomeViewModel(
                 _uiState.value = _uiState.value.copy(appending = false, error = e.toUi())
             }
         }
+    }
+
+    /**
+     * Signs out of the current site. Nothing else is needed: dropping the credential changes the
+     * instance, the collector above sees it, and the feed reloads as an anonymous reader would see it.
+     */
+    fun signOut() {
+        val instance = _uiState.value.instance ?: return
+        viewModelScope.launch { repository.clearSession(instance.id) }
     }
 
     /** Clears a footer error so the next scroll to the end retries the append. */
@@ -113,22 +140,26 @@ class HomeViewModel(
     private fun loadFirstPage() {
         val instance = _uiState.value.instance ?: return
         val forumId = _uiState.value.selectedForumId
+        val token = _uiState.value.session?.token
         nextPage = 1
         _uiState.value = _uiState.value.copy(loading = true, error = null)
         loadJob = viewModelScope.launch {
             try {
-                coroutineScope {
-                    // The forum list is per-site, not per-filter: only fetch it when it is missing.
-                    val forums = _uiState.value.forums.ifEmpty { null }
-                    val forumsDeferred = if (forums == null) async { api.forums(instance.baseUrl) } else null
-                    val topicsPage = api.topics(instance.baseUrl, forumId, 1)
-                    nextPage = 2
-                    _uiState.value = _uiState.value.copy(
-                        loading = false,
-                        forums = forumsDeferred?.await() ?: _uiState.value.forums,
-                        topics = topicsPage.topics,
-                        hasNextPage = topicsPage.hasNextPage,
-                    )
+                repository.authed(instance.id) {
+                    coroutineScope {
+                        // The forum list is per-site, not per-filter: only fetch it when it is missing.
+                        val forums = _uiState.value.forums.ifEmpty { null }
+                        val forumsDeferred =
+                            if (forums == null) async { api.forums(instance.baseUrl, token) } else null
+                        val topicsPage = api.topics(instance.baseUrl, forumId, 1, token)
+                        nextPage = 2
+                        _uiState.value = _uiState.value.copy(
+                            loading = false,
+                            forums = forumsDeferred?.await() ?: _uiState.value.forums,
+                            topics = topicsPage.topics,
+                            hasNextPage = topicsPage.hasNextPage,
+                        )
+                    }
                 }
             } catch (e: Bbs1ApiException) {
                 _uiState.value = _uiState.value.copy(loading = false, error = e.toUi())

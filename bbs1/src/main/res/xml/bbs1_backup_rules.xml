@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup rules for API 30 and below. `bbs1_data_extraction_rules.xml` supersedes this from API 31
+    on, so the two files have to stay in agreement — the exclusion below mirrors it exactly.
+
+    minSdk is 26, so this file still applies on real devices and is not dead weight.
+-->
+<full-backup-content>
+    <!--
+        The login tokens, one per site. They are bearer credentials issued to this device; a cloud
+        backup would copy them onto every device the backup is restored to. The site list lives in a
+        separate store (`instances.preferences_pb`) precisely so it can still be restored.
+    -->
+    <exclude domain="file" path="datastore/sessions.preferences_pb" />
+</full-backup-content>
