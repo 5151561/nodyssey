@@ -123,6 +123,10 @@ fun RichContent(
      * space readmes, none of which has a ViewModel and none of which should be issuing requests. The
      * thread screen passes a real card; everywhere else gets the static placeholder.
      *
+     * Reaches nested nodes too — a vote inside a quote, a list item or a tab is the same vote, and
+     * has to be the same card. It did not, once: the recursion relied on this default instead of
+     * passing the caller's slot down, so a quoted vote quietly became a dead placeholder.
+     *
      * Deliberately not a `CompositionLocal`. Forgetting to provide one is invisible to the compiler
      * and to lint, and would show up only as a silently inert card at runtime.
      */
@@ -158,9 +162,12 @@ private fun RichBlockColumn(
     onImageClick: (String) -> Unit,
     onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
     textStyle: TextStyle,
+    // No defaults on the private helpers, deliberately. Both slots recurse, and a default here is
+    // what let a vote nested inside a quote silently fall back to the static card: the call site had
+    // simply forgotten to pass it, and nothing said so. Required parameters make that a compile error.
+    voteContent: @Composable (Long) -> Unit,
+    codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit,
     modifier: Modifier = Modifier,
-    voteContent: @Composable (Long) -> Unit = { VotePlaceholderCard() },
-    codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit = { CodeBlockView(it) },
 ) {
     Column(modifier = modifier) {
         nodes.forEachIndexed { index, node ->
@@ -194,8 +201,8 @@ private fun RichBlock(
     onImageClick: (String) -> Unit,
     onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
     textStyle: TextStyle,
-    voteContent: @Composable (Long) -> Unit = { VotePlaceholderCard() },
-    codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit = { CodeBlockView(it) },
+    voteContent: @Composable (Long) -> Unit,
+    codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit,
 ) {
     when (node) {
         is RichNode.VotePlaceholder -> voteContent(node.voteId)
@@ -267,6 +274,7 @@ private fun RichBlock(
                                 fontSize = textStyle.fontSize * 0.94f,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             ),
+                            voteContent = voteContent,
                             codeBlockContent = codeBlockContent,
                         )
                     }
@@ -298,6 +306,7 @@ private fun RichBlock(
                                     onImageClick = onImageClick,
                                     onQuoteRefClick = onQuoteRefClick,
                                     textStyle = textStyle,
+                                    voteContent = voteContent,
                                     codeBlockContent = codeBlockContent,
                                 )
                             }
@@ -315,6 +324,7 @@ private fun RichBlock(
                 onImageClick = onImageClick,
                 onQuoteRefClick = onQuoteRefClick,
                 textStyle = textStyle,
+                voteContent = voteContent,
                 codeBlockContent = codeBlockContent,
             )
 
@@ -340,6 +350,7 @@ private fun TabGroup(
     onImageClick: (String) -> Unit,
     onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
     textStyle: TextStyle,
+    voteContent: @Composable (Long) -> Unit,
     codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit,
 ) {
     if (node.tabs.isEmpty()) return
@@ -383,6 +394,7 @@ private fun TabGroup(
             onImageClick = onImageClick,
             onQuoteRefClick = onQuoteRefClick,
             textStyle = textStyle,
+            voteContent = voteContent,
             codeBlockContent = codeBlockContent,
             modifier = Modifier.padding(Spacing.md),
         )
