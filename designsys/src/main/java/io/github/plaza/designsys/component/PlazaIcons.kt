@@ -44,7 +44,7 @@ object PlazaIcons {
         )
     }
 
-    /** Calendar check used for the daily chicken-leg benefit in the signed-out profile. */
+    /** Calendar check used for the daily check-in benefit in the signed-out profile. */
     val EventAvailable: ImageVector by lazy {
         materialIcon(
             name = "EventAvailable",
@@ -148,7 +148,7 @@ object PlazaIcons {
         )
     }
 
-    /** Copies a code block, which is most of what people come to this forum for. */
+    /** Copies a code block, which is most of what people come to these forums for. */
     val ContentCopy: ImageVector by lazy {
         materialIcon(
             name = "ContentCopy",

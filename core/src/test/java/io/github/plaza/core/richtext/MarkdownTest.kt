@@ -96,7 +96,7 @@ class MarkdownTest {
                 """
                 |区域|价格|报告|
                 |---|---:|---|
-                |沪日IX|￥10/月|[NQ](https://nodequality.com/r/abc)|
+                |沪日IX|￥10/月|[NQ](https://example.com/r/abc)|
                 """.trimIndent(),
             ).single() as RichNode.Table
 
@@ -105,7 +105,7 @@ class MarkdownTest {
         assertEquals("￥10/月", (table.content[1][1].single() as InlineNode.Text).text)
         val link = table.content[1][2].single() as InlineNode.Link
         assertEquals("NQ", link.text)
-        assertEquals("https://nodequality.com/r/abc", link.url)
+        assertEquals("https://example.com/r/abc", link.url)
     }
 
     /** A line that merely contains a pipe is prose; only an underline of its own width makes a table. */

@@ -46,6 +46,9 @@
     <string name="richtext_action_copy">复制</string>
     <string name="richtext_quote_reply">@%1$s %2$s</string>
     <string name="richtext_sticker_description">表情</string>
+    <!-- Names the 「仅 Wi-Fi 加载图片」 setting by its label. An app consuming this module signs up
+         to calling that setting the same thing; one that names it differently has to override this
+         copy, not hope nobody notices the mismatch. -->
     <string name="richtext_image_skipped_title">已开启「仅 Wi-Fi 加载图片」，当前不是 Wi-Fi</string>
     <string name="richtext_image_skipped_action">点按加载这张图</string>
     <string name="richtext_poll_title">投票</string>

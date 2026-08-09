@@ -1,7 +1,6 @@
 package io.github.plaza.core.update
 
 import io.github.plaza.core.AppDispatchers
-import io.github.plaza.core.update.versionNameOfTag
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext

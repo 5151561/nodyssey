@@ -657,9 +657,9 @@ fun CodeBlockView(node: RichNode.CodeBlock) {
  * Tables are rare here and mostly numeric — latency, packet loss, prices.
  *
  * They get a border and a header fill so the columns stay legible while scrolling sideways, and
- * tabular figures so the numbers line up on their decimal point. Cells keep their links: a 拼车
- * post files its NodeQuality reports in a table column, and a link the reader can see but not
- * follow is the same as no link at all.
+ * tabular figures so the numbers line up on their decimal point. Cells keep their links: on the
+ * forums this was written against, a group-buy post files its benchmark reports in a table column,
+ * and a link the reader can see but not follow is the same as no link at all.
  */
 @Composable
 private fun DataTable(
@@ -1064,7 +1064,7 @@ private fun specNodes(): List<RichNode> =
                     "这是一段标准正文。中文长文阅读是这个客户端的核心场景，行高 1.69、段间距 10dp，" +
                         "保证连续阅读半小时不累。行内可以出现 ",
                 ),
-                InlineNode.Link(text = "nodequality.app", url = "https://nodequality.app"),
+                InlineNode.Link(text = "example.com", url = "https://example.com"),
                 InlineNode.Text(" 这样的链接，以及表情 "),
                 InlineNode.Sticker(url = "https://example.invalid/sticker/1.png", alt = "笑"),
                 InlineNode.Text(" 与文字基线对齐、不撑高行高。"),
@@ -1090,7 +1090,7 @@ private fun specNodes(): List<RichNode> =
         ),
         RichNode.BlockImage(url = "https://example.invalid/demo.png", alt = "示例截图"),
         RichNode.CodeBlock(
-            code = "curl -sL https://run.nodequality.com/v1 | bash\n# 输出结果复制为 Markdown，横向滚动不换行 →→→→→→→→",
+            code = "curl -sL https://get.example.com/v1 | bash\n# 输出结果复制为 Markdown，横向滚动不换行 →→→→→→→→",
             language = "bash",
         ),
         RichNode.Quote(
@@ -1120,7 +1120,7 @@ private fun specNodes(): List<RichNode> =
                     listOf(InlineNode.Text("东京 TRI")),
                     listOf(InlineNode.Text("48ms")),
                     listOf(InlineNode.Text("0%")),
-                    listOf(InlineNode.Link(text = "NQ", url = "https://nodequality.com/r/demo")),
+                    listOf(InlineNode.Link(text = "报告", url = "https://example.com/r/demo")),
                 ),
                 listOf("洛杉矶 4837", "152ms", "1.2%", "—").map { listOf(InlineNode.Text(it)) },
             ),

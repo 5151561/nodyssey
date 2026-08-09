@@ -96,6 +96,30 @@ jobs:
             exit 1
           fi
 
+      # Resource merging is silent about collisions: when two modules declare the same (type, name),
+      # the application module's copy wins and the library's just stops being used — no error, no
+      # warning, and the library file keeps looking editable. It has happened (`composer_emoji_recent`
+      # was declared on both sides with only the designsys one referenced), and prefixes alone cannot
+      # prevent a repeat while `composer_*` names exist in both modules. Nested `<item>` entries are
+      # skipped: they only exist inside a parent (a style, an array) and never merge on their own.
+      - name: Check no two modules declare the same res/values resource
+        run: |
+          declared=$(for dir in */src/*/res/values*; do
+            [ -d "$dir" ] || continue
+            module="${dir%%/*}"
+            grep -rhoE '<[a-z-]+ +name="[^"]+"' "$dir" \
+              | sed -E 's/^<([a-z-]+) +name="([^"]+)".*/\1 \2/' \
+              | grep -v '^item ' \
+              | sed "s/^/$module /"
+          done | sort -u)
+          dups=$(echo "$declared" | awk '{print $2, $3}' | sort | uniq -d)
+          if [ -n "$dups" ]; then
+            echo "$declared" | grep -F "$dups"
+            echo "::error::A resource name is declared by more than one module; the application module's copy silently overrides the library's." >&2
+            echo "Rename one side — the library modules prefix their resources for exactly this reason." >&2
+            exit 1
+          fi
+
       - name: Upload test and lint reports
         # Reports matter most when something failed, so this runs regardless of the outcome.
         if: always()
