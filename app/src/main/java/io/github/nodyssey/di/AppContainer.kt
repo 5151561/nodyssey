@@ -387,6 +387,7 @@ class DefaultAppContainer(
                 dispatchers = dispatchers,
                 userAgent = "Nodyssey/${appVersion.name} (+https://github.com/${NodysseyRelease.REPOSITORY})",
                 repository = NodysseyRelease.REPOSITORY,
+                assetNamePrefix = NodysseyRelease.ASSET_NAME_PREFIX,
             ),
             store = settingsRepository,
             clock = clock,

@@ -44,13 +44,19 @@ interface ReleaseSource {
  * unauthenticated — 60 requests an hour per address, against a check that runs at most every six
  * hours — so no token is needed and none is stored.
  *
- * @param repository `owner/name`, the only thing here that is about one particular app.
+ * @param repository `owner/name`, one of the two things here that are about one particular app.
+ * @param assetNamePrefix what this app's own APK is named after. `releases/latest` answers for the
+ * *repository*, not for an app, so when two apps publish to one repository the newest release can
+ * easily be the other one's — and an APK with a different `applicationId` is either "app not
+ * installed" or a second copy of a different app. No default: an app that has not stated which asset
+ * is its own has not thought about the question, and the failure it invites lands on a user's phone.
  */
 class GitHubReleaseSource(
     private val okHttpClient: OkHttpClient,
     private val dispatchers: AppDispatchers,
     private val userAgent: String,
     private val repository: String,
+    private val assetNamePrefix: String,
 ) : ReleaseSource {
     private val releasesUrl = releasesUrl(repository)
     private val latestReleaseUrl = "https://api.github.com/repos/$repository/releases/latest"
@@ -70,7 +76,7 @@ class GitHubReleaseSource(
                 if (!response.isSuccessful) {
                     throw AppUpdateException(UpdateFailure.Server(response.code))
                 }
-                GitHubReleases.parseLatest(payload, releasesUrl)
+                GitHubReleases.parseLatest(payload, releasesUrl, assetNamePrefix)
             }
         }
 
@@ -146,7 +152,7 @@ class GitHubReleaseSource(
 internal object GitHubReleases {
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun parseLatest(payload: String, releasesUrl: String): AppRelease? {
+    fun parseLatest(payload: String, releasesUrl: String, assetNamePrefix: String): AppRelease? {
         val release =
             try {
                 json.decodeFromString<ReleaseDto>(payload)
@@ -157,9 +163,13 @@ internal object GitHubReleases {
         // not publish must never be pushed at a user as an update.
         if (release.draft || release.prerelease) return null
 
+        // Both halves of the name matter. `.apk` alone would take a sibling app's build off a release
+        // this app has nothing to do with; the prefix alone would take a mapping file or a checksum.
         val asset =
             release.assets.firstOrNull {
-                it.name.endsWith(".apk", ignoreCase = true) && it.browserDownloadUrl.isNotBlank()
+                it.name.startsWith(assetNamePrefix, ignoreCase = true) &&
+                    it.name.endsWith(".apk", ignoreCase = true) &&
+                    it.browserDownloadUrl.isNotBlank()
             } ?: return null
         val versionName = versionNameOfTag(release.tagName)
         if (versionName.isBlank()) return null
