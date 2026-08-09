@@ -5,11 +5,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.FollowRepository
 import io.github.nodyssey.data.FollowUser
 import io.github.nodyssey.di.AppContainer
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,7 +87,7 @@ class FollowViewModel(
                     _uiState.update {
                         it.write(
                             tab,
-                            it.listFor(tab).copy(isLoading = false, error = throwable.toNodeSeekError()),
+                            it.listFor(tab).copy(isLoading = false, error = throwable.toSiteError()),
                         )
                     }
                 }

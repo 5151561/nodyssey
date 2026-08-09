@@ -1,9 +1,9 @@
 package io.github.nodyssey.data
 
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.TimeFormat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

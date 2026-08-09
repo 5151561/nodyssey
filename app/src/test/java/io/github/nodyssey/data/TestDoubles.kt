@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.model.FeedSort
@@ -13,6 +12,7 @@ import io.github.nodyssey.model.PostDetail
 import io.github.nodyssey.model.PostListPage
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.model.RichNode
+import io.github.plaza.core.AppClock
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

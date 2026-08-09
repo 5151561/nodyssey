@@ -65,13 +65,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.ui.vote.VoteComposeDialog
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.editor.EditorAction
@@ -157,8 +157,8 @@ private fun PublishErrorSnackbar(
     val actionLabel = state.publishError?.let { error ->
         stringResource(
             when (error) {
-                NodeSeekError.LoginRequired -> R.string.action_sign_in
-                NodeSeekError.Cloudflare -> R.string.action_verify
+                SiteError.LoginRequired -> R.string.action_sign_in
+                SiteError.Cloudflare -> R.string.action_verify
                 else -> R.string.action_retry
             },
         )
@@ -173,8 +173,8 @@ private fun PublishErrorSnackbar(
         onDismissed()
         if (result == SnackbarResult.ActionPerformed) {
             when (error) {
-                NodeSeekError.LoginRequired -> onSignIn()
-                NodeSeekError.Cloudflare -> onVerify()
+                SiteError.LoginRequired -> onSignIn()
+                SiteError.Cloudflare -> onVerify()
                 else -> onRetry()
             }
         }
@@ -726,15 +726,15 @@ private fun DraftRecoveryDialog(
 }
 
 @Composable
-private fun publishErrorMessage(error: NodeSeekError, detail: String?): String {
+private fun publishErrorMessage(error: SiteError, detail: String?): String {
     val reason = when (error) {
-        NodeSeekError.Network -> stringResource(R.string.composer_publish_network_failed)
+        SiteError.Network -> stringResource(R.string.composer_publish_network_failed)
 
-        NodeSeekError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
+        SiteError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
 
-        NodeSeekError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
+        SiteError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
 
-        is NodeSeekError.Http -> {
+        is SiteError.Http -> {
             val status = stringResource(R.string.composer_publish_http, error.statusCode)
             detail?.takeIf { it.isNotBlank() && it != error.toString() }?.let { "$status：$it" } ?: status
         }

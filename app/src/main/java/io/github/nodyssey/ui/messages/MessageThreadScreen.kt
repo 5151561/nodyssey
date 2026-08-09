@@ -67,17 +67,17 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.TimeFormat
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.composer.AttachmentTray
 import io.github.nodyssey.ui.composer.EmojiPanel
 import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.nodyssey.ui.composer.toPickedImages
 import io.github.nodyssey.ui.richtext.RichContent
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.ThreadRow
@@ -205,11 +205,11 @@ fun MessageThreadScreen(
                     state.isLoading && state.messages.isEmpty() -> LoadingState()
 
                     state.error != null && state.messages.isEmpty() ->
-                        NodeSeekErrorState(
+                        SiteErrorState(
                             error = state.error,
                             onRetry = onRetryLoad,
                             onOpenBrowser = {
-                                if (state.error == NodeSeekError.LoginRequired) onSignIn() else onVerify()
+                                if (state.error == SiteError.LoginRequired) onSignIn() else onVerify()
                             },
                         )
 

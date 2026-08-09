@@ -1,16 +1,16 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.SiteBootstrap
-import io.github.nodyssey.core.net.HtmlSource
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.local.ProfileDao
 import io.github.nodyssey.data.local.SelfProfileEntity
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.HtmlSource
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -164,7 +164,7 @@ class NetworkProfileRepository(
         val bootstrap = parseProfilePage(htmlSource.getHtml("/"))
         // The page parsed but named no account: the session cookie is missing or stale. Reporting
         // that as Unparsable sent users to a "站点改版" card whose retry can never succeed.
-        val uid = bootstrap.uid ?: throw NodeSeekException(NodeSeekError.LoginRequired)
+        val uid = bootstrap.uid ?: throw SiteException(SiteError.LoginRequired)
         selfUid = uid
         val account =
             runCatchingExceptCancellation {
@@ -189,21 +189,21 @@ class NetworkProfileRepository(
                 path = NodeSeekJsonClient.accountInfoPath(uid),
                 referer = NodeSeekSite.BASE_URL + NodeSeekSite.spacePath(uid),
             )
-        val raw = parseProfileJson(body) ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        val raw = parseProfileJson(body) ?: throw SiteException(SiteError.Unparsable)
         // The endpoint omits the uid on some accounts, and the caller already knows it.
         return raw.copy(uid = raw.uid ?: uid).toProfile()
     }
 
     internal fun parseProfilePage(html: String): RawProfile =
         parseProfileJson(SiteBootstrap.decode(html))
-            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+            ?: throw SiteException(SiteError.Unparsable)
 
     internal fun parseProfileJson(body: String): RawProfile? {
         val root =
             try {
                 json.parseToJsonElement(body)
             } catch (exception: IllegalArgumentException) {
-                throw NodeSeekException(NodeSeekError.Unparsable, exception)
+                throw SiteException(SiteError.Unparsable, exception)
             }
         return root.findProfileObject()?.toRawProfile()
     }
@@ -228,8 +228,8 @@ class NetworkProfileRepository(
     }
 
     private fun RawProfile.toProfile(): UserProfile {
-        val resolvedUid = uid ?: throw NodeSeekException(NodeSeekError.Unparsable)
-        val resolvedName = name?.takeIf(String::isNotBlank) ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        val resolvedUid = uid ?: throw SiteException(SiteError.Unparsable)
+        val resolvedName = name?.takeIf(String::isNotBlank) ?: throw SiteException(SiteError.Unparsable)
         return UserProfile(
             uid = resolvedUid,
             name = resolvedName,

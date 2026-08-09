@@ -14,15 +14,15 @@ import androidx.paging.PagingData
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import androidx.paging.cachedIn
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.StardustEntry
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.di.AppContainer
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -80,7 +80,7 @@ sealed interface StardustMessage {
     data class Sent(val amount: Int) : StardustMessage
 
     /** [detail] is the refusal in the site's own words, which is more use than anything we'd write. */
-    data class Failed(val error: NodeSeekError, val detail: String?) : StardustMessage
+    data class Failed(val error: SiteError, val detail: String?) : StardustMessage
 }
 
 data class StardustUiState(
@@ -92,7 +92,7 @@ data class StardustUiState(
      * It still has to be visible somewhere: without a uid the ledger cannot be requested at all, so
      * this is the error the screen shows when there are no rows to show instead.
      */
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     /** Needed to request the ledger, and to reach the site's own page, whose URL is per-member. */
     val uid: Long? = null,
     val balance: Int? = null,
@@ -186,7 +186,7 @@ class StardustViewModel(
                         }
                     }.onFailure { throwable ->
                         _uiState.update {
-                            it.copy(isLoadingBalance = false, error = throwable.toNodeSeekError())
+                            it.copy(isLoadingBalance = false, error = throwable.toSiteError())
                         }
                     }
             }
@@ -227,7 +227,7 @@ class StardustViewModel(
                                 name?.let(RecipientCheck::Named) ?: RecipientCheck.Unnamed(null)
                             },
                             onFailure = { throwable ->
-                                RecipientCheck.Unnamed((throwable as? NodeSeekException)?.detail)
+                                RecipientCheck.Unnamed((throwable as? SiteException)?.detail)
                             },
                         )
                     }
@@ -301,8 +301,8 @@ class StardustViewModel(
                             recipient = null,
                             message =
                             StardustMessage.Failed(
-                                error = throwable.toNodeSeekError(),
-                                detail = (throwable as? NodeSeekException)?.detail,
+                                error = throwable.toSiteError(),
+                                detail = (throwable as? SiteException)?.detail,
                             ),
                         )
                     }

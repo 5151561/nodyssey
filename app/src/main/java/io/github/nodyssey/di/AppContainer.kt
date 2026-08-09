@@ -4,18 +4,10 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.AppDispatchers
-import io.github.nodyssey.core.AppVersion
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.NodysseyRelease
 import io.github.nodyssey.core.net.DynamicSignInterceptor
-import io.github.nodyssey.core.net.NodeSeekClient
 import io.github.nodyssey.core.net.NodeSeekJsonClient
-import io.github.nodyssey.core.net.UserAgent
-import io.github.nodyssey.core.net.WebViewCookieJar
-import io.github.nodyssey.core.net.resolveUserAgent
-import io.github.nodyssey.core.readAppVersion
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
 import io.github.nodyssey.data.CategoryRepository
@@ -68,7 +60,16 @@ import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.update.ApkInstaller
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.data.update.DefaultAppUpdateRepository
-import io.github.nodyssey.data.update.GitHubReleaseSource
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.AppVersion
+import io.github.plaza.core.net.SiteHtmlClient
+import io.github.plaza.core.net.UserAgent
+import io.github.plaza.core.net.WebViewCookieJar
+import io.github.plaza.core.net.resolveUserAgent
+import io.github.plaza.core.readAppVersion
+import io.github.plaza.core.runCatchingExceptCancellation
+import io.github.plaza.core.update.GitHubReleaseSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -152,9 +153,9 @@ class DefaultAppContainer(
 ) : AppContainer {
     private val appContext = context.applicationContext
 
-    override val cookieJar: WebViewCookieJar by lazy { WebViewCookieJar() }
+    override val cookieJar: WebViewCookieJar by lazy { WebViewCookieJar(NodeSeekSite.CONFIG) }
 
-    override val userAgent: UserAgent by lazy { resolveUserAgent(appContext) }
+    override val userAgent: UserAgent by lazy { resolveUserAgent(appContext, NodeSeekSite.CONFIG) }
 
     override val okHttpClient: OkHttpClient by lazy {
         OkHttpClient
@@ -180,7 +181,7 @@ class DefaultAppContainer(
             .build()
     }
 
-    private val htmlClient by lazy { NodeSeekClient(okHttpClient, dispatchers) }
+    private val htmlClient by lazy { SiteHtmlClient(okHttpClient, dispatchers, NodeSeekSite.CONFIG) }
 
     private val jsonClient by lazy { NodeSeekJsonClient(okHttpClient, dispatchers) }
 
@@ -384,7 +385,8 @@ class DefaultAppContainer(
             GitHubReleaseSource(
                 okHttpClient = gitHubClient,
                 dispatchers = dispatchers,
-                userAgent = "Nodyssey/${appVersion.name} (+https://github.com/${GitHubReleaseSource.REPOSITORY})",
+                userAgent = "Nodyssey/${appVersion.name} (+https://github.com/${NodysseyRelease.REPOSITORY})",
+                repository = NodysseyRelease.REPOSITORY,
             ),
             store = settingsRepository,
             clock = clock,

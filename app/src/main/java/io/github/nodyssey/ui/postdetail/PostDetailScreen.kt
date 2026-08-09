@@ -88,7 +88,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
@@ -99,16 +98,17 @@ import io.github.nodyssey.model.countOf
 import io.github.nodyssey.model.hasSpent
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
 import io.github.nodyssey.ui.common.RoleBadgeRow
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.FloorReference
 import io.github.nodyssey.ui.composer.ReplyComposerHost
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
 import io.github.nodyssey.ui.richtext.RichContent
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.MetaText
@@ -384,15 +384,15 @@ fun PostDetailScreen(
                 state.body == null && state.isLoading -> ThreadSkeleton()
 
                 state.body == null && error != null ->
-                    NodeSeekErrorState(
+                    SiteErrorState(
                         error = error,
                         onRetry = onRetry,
                         // A locked thread is fixed by signing in, not by loading it again in a
                         // browser; a challenge is fixed on this thread's own URL.
                         onOpenBrowser =
                         when (error) {
-                            NodeSeekError.LoginRequired -> onSignIn
-                            NodeSeekError.Cloudflare -> onVerify
+                            SiteError.LoginRequired -> onSignIn
+                            SiteError.Cloudflare -> onVerify
                             else -> ({ onOpenBrowser(postUrl) })
                         },
                     )

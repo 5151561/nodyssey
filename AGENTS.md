@@ -2,16 +2,21 @@
 
 ## Project Structure & Module Organization
 
-Two modules. `:app` is the NodeSeek application: production Kotlin lives under `app/src/main/java/io/github/nodyssey/`, where `core/` contains networking, parsing, and shared utilities; `data/` owns repositories and Room persistence; `model/` defines domain types; and `ui/` contains Compose screens, view models, and navigation. `:designsys` (`designsys/src/main/java/io/github/plaza/designsys/`) holds the Compose theme, the shared components, and the Markdown editor — **it knows nothing about any particular forum, and the dependency runs one way only, so anything site-specific belongs in `:app`**. Its symbols are prefixed `Plaza`, not `Nodyssey`, because a second forum app is meant to consume it.
+Three modules. `:app` is the NodeSeek application: production Kotlin lives under `app/src/main/java/io/github/nodyssey/`, where `core/` contains the site's URL vocabulary, its CSS selectors and its parsers; `data/` owns repositories and Room persistence; `model/` defines domain types; and `ui/` contains Compose screens, view models, and navigation.
 
-Shared Android configuration lives in `build-logic/` as three convention plugins (`plaza.android.application`, `plaza.android.library`, `plaza.android.compose`); a module's own build file should carry only what genuinely differs. Android resources are in each module's `src/main/res`. JVM and Robolectric tests mirror production packages under `src/test/java`, with captured HTML in `app/src/test/resources/fixtures`. Instrumented tests belong in `app/src/androidTest`. Room schemas are versioned in `app/schemas`; architecture and design context lives in `docs/`.
+Two library modules under `io.github.plaza.*` hold what a second forum app would reuse, and **neither can see `:app`** — the dependency runs one way only, so anything site-specific belongs in `:app`:
+
+- `:designsys` (`designsys/src/main/java/io/github/plaza/designsys/`) — the Compose theme, the shared components, and the Markdown editor.
+- `:core` (`core/src/main/java/io/github/plaza/core/`) — clocks and dispatchers, HTTP against a scraped forum, the cookie store the WebView and OkHttp share, and the GitHub update check. Everything a particular site knows about itself reaches it as a `SiteConfig` value, never as an import; `NodeSeekSite.CONFIG` is the one this app passes.
+
+Shared Android configuration lives in `build-logic/` as three convention plugins (`plaza.android.application`, `plaza.android.library`, `plaza.android.compose`); a module's own build file should carry only what genuinely differs. Android resources are in each module's `src/main/res`. JVM and Robolectric tests mirror production packages under `src/test/java`, with captured HTML in `app/src/test/resources/fixtures`. Instrumented tests belong in `app/src/androidTest`. Room schemas are versioned in each module's `schemas/` — only `:app` has one today; architecture and design context lives in `docs/`.
 
 ## Build, Test, and Development Commands
 
 The project requires JDK 21 and Android SDK 37. Use the checked-in Gradle wrapper:
 
 - `./gradlew :app:assembleDebug` builds the debug APK.
-- `./gradlew testDebugUnitTest` runs JVM, Robolectric, Room, Paging, and Compose tests. Unqualified on purpose — `:app:testDebugUnitTest` compiles `:designsys` but runs none of its tests.
+- `./gradlew testDebugUnitTest` runs JVM, Robolectric, Room, Paging, and Compose tests. Unqualified on purpose — `:app:testDebugUnitTest` compiles the library modules but runs none of their tests.
 - `./gradlew :app:lintDebug` runs Android lint with warnings treated as errors. `checkDependencies` is on, so this one invocation covers every module.
 - `./gradlew spotlessCheck` verifies formatting; `./gradlew spotlessApply` fixes it.
 - `./gradlew resolveAndLockAll --write-locks` refreshes every module's `gradle.lockfile` after dependency changes. Commit all of them.

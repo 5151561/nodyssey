@@ -1,10 +1,10 @@
 package io.github.nodyssey.data
 
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -122,7 +122,7 @@ class PostReactionWriteBackTest {
             repository.refreshThread(postId = 42, page = 1)
             val target = requireNotNull(requireNotNull(repository.thread(42).first()).comments[0].commentId)
 
-            assertThrows(NodeSeekException::class.java) {
+            assertThrows(SiteException::class.java) {
                 kotlinx.coroutines.runBlocking {
                     repository.react(postId = 42, commentId = target, action = ReactionAction.ChickenLeg)
                 }
@@ -153,7 +153,7 @@ class PostReactionWriteBackTest {
             val repository = OfflineFirstPostRepository(database, remote, clock)
             repository.refreshThread(postId = 42, page = 1)
 
-            assertThrows(NodeSeekException::class.java) {
+            assertThrows(SiteException::class.java) {
                 kotlinx.coroutines.runBlocking {
                     repository.react(postId = 42, commentId = 1L, action = ReactionAction.Upvote)
                 }

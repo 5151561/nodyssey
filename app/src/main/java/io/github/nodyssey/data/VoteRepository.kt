@@ -2,11 +2,11 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.core.net.JsonPostResponse
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.VoteItem
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -71,7 +71,7 @@ class NetworkVoteRepository(
     override suspend fun info(voteId: Long): Vote {
         val root = parse(api.getJson(NodeSeekJsonClient.voteInfoPath(voteId)))
         requireSuccess(root)
-        val vote = root["vote"]?.jsonObject ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        val vote = root["vote"]?.jsonObject ?: throw SiteException(SiteError.Unparsable)
         return Vote(
             id = vote.long("id") ?: voteId,
             title = vote.text("title").orEmpty(),
@@ -122,7 +122,7 @@ class NetworkVoteRepository(
         val root = write(METHOD_POST, NodeSeekJsonClient.PATH_VOTE_CREATE, payload)
         // The site's own client reads `vote.id` here and nothing else, so a missing one means the
         // answer is not the shape we know — inserting a marker pointing at nothing would be worse.
-        return root["vote"]?.jsonObject?.long("id") ?: throw NodeSeekException(NodeSeekError.Unparsable)
+        return root["vote"]?.jsonObject?.long("id") ?: throw SiteException(SiteError.Unparsable)
     }
 
     override suspend fun setLocked(
@@ -164,8 +164,8 @@ class NetworkVoteRepository(
                 json.parseToJsonElement(response.body).jsonObject
             } catch (exception: IllegalArgumentException) {
                 // No JSON at all: fall back to the status, which is then the only thing we know.
-                if (!response.isSuccessful) throw NodeSeekException(NodeSeekError.Http(response.code), exception)
-                throw NodeSeekException(NodeSeekError.Unparsable, exception)
+                if (!response.isSuccessful) throw SiteException(SiteError.Http(response.code), exception)
+                throw SiteException(SiteError.Unparsable, exception)
             }
         requireSuccess(root)
         return root
@@ -175,13 +175,13 @@ class NetworkVoteRepository(
         try {
             json.parseToJsonElement(payload).jsonObject
         } catch (exception: IllegalArgumentException) {
-            throw NodeSeekException(NodeSeekError.Unparsable, exception)
+            throw SiteException(SiteError.Unparsable, exception)
         }
 
     private fun requireSuccess(root: JsonObject) {
         if (root.bool("success") == true) return
-        throw NodeSeekException(
-            NodeSeekError.Unknown,
+        throw SiteException(
+            SiteError.Unknown,
             detail = root.text("message"),
         )
     }

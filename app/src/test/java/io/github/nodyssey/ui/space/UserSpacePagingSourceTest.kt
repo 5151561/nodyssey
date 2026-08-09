@@ -1,9 +1,9 @@
 package io.github.nodyssey.ui.space
 
 import androidx.paging.PagingSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.SpacePage
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -35,7 +35,7 @@ class UserSpacePagingSourceTest {
         runTest {
             val source =
                 UserSpacePagingSource<String> {
-                    throw NodeSeekException(NodeSeekError.Network)
+                    throw SiteException(SiteError.Network)
                 }
 
             assertTrue(source.load(refresh()) is PagingSource.LoadResult.Error)

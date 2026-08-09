@@ -5,7 +5,6 @@ import androidx.paging.LoadType
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.room.withTransaction
-import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.data.local.FeedPositionEntity
 import io.github.nodyssey.data.local.FeedPostRow
 import io.github.nodyssey.data.local.FeedRemoteKeyEntity
@@ -13,6 +12,8 @@ import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostListPage
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.CancellationException
 
 /**

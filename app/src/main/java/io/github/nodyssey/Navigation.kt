@@ -44,7 +44,6 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.account.AccountSettingsRoute
@@ -119,6 +118,7 @@ import io.github.nodyssey.ui.viewer.ImageViewerScreen
 import io.github.nodyssey.ui.viewer.ImageViewerViewModel
 import io.github.nodyssey.ui.vote.VoteCard
 import io.github.nodyssey.ui.vote.VoteViewModel
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)

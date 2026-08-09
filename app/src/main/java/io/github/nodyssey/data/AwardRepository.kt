@@ -1,10 +1,10 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.PostListParser
-import io.github.nodyssey.core.net.HtmlSource
 import io.github.nodyssey.model.PostListPage
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.HtmlSource
 import kotlinx.coroutines.withContext
 
 /**

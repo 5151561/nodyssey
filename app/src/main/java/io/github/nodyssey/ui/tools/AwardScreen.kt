@@ -26,13 +26,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NumericPager
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.postlist.PostRow
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -107,7 +107,7 @@ fun AwardScreen(
                 state.isLoading && state.posts.isEmpty() -> LoadingState(Modifier.fillMaxSize())
 
                 state.error != null && state.posts.isEmpty() ->
-                    NodeSeekErrorState(
+                    SiteErrorState(
                         error = state.error,
                         onRetry = onRetry,
                         onOpenBrowser = onOpenBrowser,

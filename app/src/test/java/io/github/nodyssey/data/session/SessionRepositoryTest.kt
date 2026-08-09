@@ -2,7 +2,7 @@ package io.github.nodyssey.data.session
 
 import android.webkit.CookieManager
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.WebViewCookieJar
+import io.github.plaza.core.net.WebViewCookieJar
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -27,7 +27,7 @@ class SessionRepositoryTest {
     @Before
     fun setUp() {
         cookieManager.removeAllCookies(null)
-        repository = SessionRepository(WebViewCookieJar(cookieManager))
+        repository = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookieManager))
     }
 
     @After

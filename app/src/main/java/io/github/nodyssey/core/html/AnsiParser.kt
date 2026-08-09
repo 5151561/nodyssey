@@ -1,7 +1,7 @@
 package io.github.nodyssey.core.html
 
-import io.github.nodyssey.core.TerminalColumns
 import io.github.nodyssey.model.AnsiSpan
+import io.github.plaza.core.TerminalColumns
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode

@@ -62,17 +62,17 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.collapseMarkdown
 import io.github.nodyssey.ui.composer.parseMarkdown
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.richtext.RichContent
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -187,7 +187,7 @@ fun UserSpaceScreen(
             return@Scaffold
         }
         if (state.error != null && !state.hasProfile) {
-            NodeSeekErrorState(
+            SiteErrorState(
                 error = state.error,
                 onRetry = onRetryProfile,
                 onOpenBrowser = { onOpenBrowser(spaceUrl) },
@@ -271,7 +271,7 @@ private fun FollowFailureEffect(
     val signInLabel = stringResource(R.string.action_sign_in)
     LaunchedEffect(failure) {
         if (failure == null) return@LaunchedEffect
-        val needsSignIn = failure.error == NodeSeekError.LoginRequired
+        val needsSignIn = failure.error == SiteError.LoginRequired
         val result =
             snackbarHostState.showSnackbar(
                 message = failure.detail?.takeIf { it.isNotBlank() } ?: fallback.orEmpty(),
@@ -616,8 +616,8 @@ private fun <T : Any> SpaceListTab(
             LoadState.Loading -> LoadingState(modifier)
 
             is LoadState.Error ->
-                NodeSeekErrorState(
-                    error = refresh.error.toNodeSeekError(),
+                SiteErrorState(
+                    error = refresh.error.toSiteError(),
                     onRetry = list::retry,
                     onOpenBrowser = { onOpenBrowser(NodeSeekSite.BASE_URL) },
                     onSignIn = onSignIn,

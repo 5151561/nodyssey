@@ -43,13 +43,13 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.parseMarkdown
+import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar

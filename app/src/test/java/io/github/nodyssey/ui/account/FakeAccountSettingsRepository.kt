@@ -1,7 +1,5 @@
 package io.github.nodyssey.ui.account
 
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.account.AccountContact
 import io.github.nodyssey.data.account.AccountProfileFields
 import io.github.nodyssey.data.account.AccountSettingsRepository
@@ -10,6 +8,8 @@ import io.github.nodyssey.data.account.BlockedUser
 import io.github.nodyssey.data.account.RemoteAccountPreferences
 import io.github.nodyssey.data.account.TelegramBinding
 import io.github.nodyssey.data.account.TwoFactorState
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 
 /**
  * An [AccountSettingsRepository] whose reads are canned and whose writes are recorded.
@@ -129,7 +129,7 @@ internal class FakeAccountSettingsRepository(
         /** Every call fails the way a dropped connection would — the shared unhappy path. */
         fun failing() =
             FakeAccountSettingsRepository(
-                failWith = { NodeSeekException(NodeSeekError.Network) },
+                failWith = { SiteException(SiteError.Network) },
             )
     }
 }

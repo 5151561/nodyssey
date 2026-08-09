@@ -54,11 +54,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
 import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.GroupedColumn
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.PlazaIcons
@@ -180,7 +180,7 @@ fun ProfileScreen(
         }
 
         if (state.error != null && !state.hasProfile) {
-            NodeSeekErrorState(
+            SiteErrorState(
                 error = state.error,
                 onRetry = onRetry,
                 onOpenBrowser = onOpenWebsite,

@@ -85,10 +85,10 @@ import io.github.nodyssey.model.SearchHistoryEntry
 import io.github.nodyssey.model.SearchTarget
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NoSearchResultsState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.postlist.FeedRowPlaceholder
 import io.github.nodyssey.ui.postlist.PostRow
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
@@ -509,7 +509,7 @@ private fun SearchResults(
             -> LoadingState()
 
             is SearchLoadState.Error ->
-                NodeSeekErrorState(
+                SiteErrorState(
                     error = loadState.error,
                     onRetry = onRetry,
                     onOpenBrowser = onVerify,
@@ -533,8 +533,8 @@ private fun SearchResults(
         LoadState.Loading -> LoadingState()
 
         is LoadState.Error ->
-            NodeSeekErrorState(
-                error = refresh.error.toNodeSeekError(),
+            SiteErrorState(
+                error = refresh.error.toSiteError(),
                 onRetry = posts::retry,
                 onOpenBrowser = onVerify,
                 onSignIn = onSignIn,

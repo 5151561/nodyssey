@@ -1,10 +1,10 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -192,7 +192,7 @@ class RulingRepositoryTest {
                     repository(FakeRulingSource("""{"success":true,"somethingElse":{"a":1}}""")).records()
                 }.exceptionOrNull()
 
-            assertEquals(NodeSeekError.Unparsable, (exception as? NodeSeekException)?.error)
+            assertEquals(SiteError.Unparsable, (exception as? SiteException)?.error)
         }
 
     @Test
@@ -203,7 +203,7 @@ class RulingRepositoryTest {
                     repository(FakeRulingSource("""{"success":false,"message":"max page is 100"}""")).records()
                 }.exceptionOrNull()
 
-            assertEquals("max page is 100", (exception as? NodeSeekException)?.detail)
+            assertEquals("max page is 100", (exception as? SiteException)?.detail)
         }
 
     /** The icon is all a compound decision gets, so a silencing has to outrank the 鸡腿 beside it. */

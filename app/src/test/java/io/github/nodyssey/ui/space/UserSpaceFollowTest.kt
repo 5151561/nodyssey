@@ -1,8 +1,5 @@
 package io.github.nodyssey.ui.space
 
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.FollowRepository
 import io.github.nodyssey.data.FollowUser
 import io.github.nodyssey.data.ProfileRepository
@@ -11,6 +8,9 @@ import io.github.nodyssey.data.SpacePage
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.data.UserProfile
 import io.github.nodyssey.data.UserSpaceRepository
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -111,7 +111,7 @@ class UserSpaceFollowTest {
         runTest(dispatcher) {
             val vm = viewModel()
             advanceUntilIdle()
-            follow.error = NodeSeekException(NodeSeekError.Unknown, detail = "对方已屏蔽你")
+            follow.error = SiteException(SiteError.Unknown, detail = "对方已屏蔽你")
 
             vm.toggleFollow()
             advanceUntilIdle()

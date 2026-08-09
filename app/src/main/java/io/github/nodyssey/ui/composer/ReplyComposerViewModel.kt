@@ -8,11 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.composer.CommentComposerRepository
 import io.github.nodyssey.data.composer.CommentDraft
 import io.github.nodyssey.data.composer.CommentSubmission
@@ -25,6 +21,10 @@ import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.data.settings.ComposerSurface
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.ToolbarLayout
@@ -213,7 +213,7 @@ class ReplyComposerViewModel(
                 _uiState.update {
                     it.copy(
                         isPublishing = false,
-                        publishError = (throwable as? NodeSeekException)?.error ?: NodeSeekError.Unknown,
+                        publishError = (throwable as? SiteException)?.error ?: SiteError.Unknown,
                         publishErrorDetail = throwable.message,
                     )
                 }
@@ -286,7 +286,7 @@ data class ReplyComposerUiState(
     val replyTo: FloorReference? = null,
     val savedAtMillis: Long? = null,
     val isPublishing: Boolean = false,
-    val publishError: NodeSeekError? = null,
+    val publishError: SiteError? = null,
     val publishErrorDetail: String? = null,
     val attachments: List<ImageAttachment> = emptyList(),
     /** The formatting strip's keys and the wrench panel's pool. Defaults until settings arrive. */

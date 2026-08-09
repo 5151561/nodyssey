@@ -11,7 +11,7 @@ import android.provider.Settings
 import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import io.github.nodyssey.NodysseyApp
-import io.github.nodyssey.core.AppDispatchers
+import io.github.plaza.core.AppDispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException

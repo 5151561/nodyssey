@@ -33,13 +33,14 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.R
-import io.github.nodyssey.core.TimeFormat
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.CreditEntry
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NoLedgerEntriesState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -196,8 +197,8 @@ private fun CreditLedger(
         refresh is LoadState.Loading && rows.itemCount == 0 -> LoadingState(modifier)
 
         refresh is LoadState.Error && rows.itemCount == 0 ->
-            NodeSeekErrorState(
-                error = refresh.error.toNodeSeekError(),
+            SiteErrorState(
+                error = refresh.error.toSiteError(),
                 onRetry = {
                     onRetry()
                     rows.retry()
@@ -328,7 +329,7 @@ private fun CreditSignInPreview() {
                 PagingData.empty(
                     sourceLoadStates =
                     androidx.paging.LoadStates(
-                        refresh = LoadState.Error(io.github.nodyssey.core.net.NodeSeekException(NodeSeekError.LoginRequired)),
+                        refresh = LoadState.Error(SiteException(SiteError.LoginRequired)),
                         prepend = LoadState.NotLoading(true),
                         append = LoadState.NotLoading(true),
                     ),

@@ -19,8 +19,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.nodyssey.core.update.releaseNotesText
-import io.github.nodyssey.data.update.AppRelease
+import io.github.plaza.core.update.AppRelease
+import io.github.plaza.core.update.releaseNotesText
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing

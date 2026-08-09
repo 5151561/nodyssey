@@ -2,9 +2,9 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.core.net.JsonPostResponse
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.model.hasVoted
 import io.github.nodyssey.model.totalCount
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -94,7 +94,7 @@ class VoteRepositoryTest {
                 )
 
             val thrown =
-                assertThrows(NodeSeekException::class.java) {
+                assertThrows(SiteException::class.java) {
                     runTestBlocking { NetworkVoteRepository(api).setLocked(2871, true) }
                 }
 
@@ -154,7 +154,7 @@ class VoteRepositoryTest {
                 )
 
             val thrown =
-                assertThrows(NodeSeekException::class.java) {
+                assertThrows(SiteException::class.java) {
                     runTestBlocking { NetworkVoteRepository(api).delete(2871) }
                 }
 

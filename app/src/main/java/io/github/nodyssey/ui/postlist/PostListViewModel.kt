@@ -8,8 +8,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.FeedPost
@@ -22,6 +20,8 @@ import io.github.nodyssey.data.settings.homeBoardArrangement
 import io.github.nodyssey.data.settings.visibleHomeBoards
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.model.FeedSort
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -292,4 +292,4 @@ data class PostListUiState(
         get() = categorySlug?.let { slug -> boards.firstOrNull { it.slug == slug }?.title }
 }
 
-internal fun Throwable.toNodeSeekError(): NodeSeekError = (this as? NodeSeekException)?.error ?: NodeSeekError.Unknown
+internal fun Throwable.toSiteError(): SiteError = (this as? SiteException)?.error ?: SiteError.Unknown

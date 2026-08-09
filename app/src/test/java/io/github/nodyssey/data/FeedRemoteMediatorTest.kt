@@ -5,11 +5,12 @@ import androidx.paging.LoadType
 import androidx.paging.PagingConfig
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.local.FeedPostRow
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.model.FeedSort
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -369,14 +370,14 @@ class FeedRemoteMediatorTest {
     @Test
     fun `a network failure is reported as an error, not a crash`() =
         runTest {
-            remote.listError = NodeSeekException(NodeSeekError.Cloudflare)
+            remote.listError = SiteException(SiteError.Cloudflare)
 
             val result = load(LoadType.REFRESH)
 
             assertTrue(result is RemoteMediator.MediatorResult.Error)
             assertEquals(
-                NodeSeekError.Cloudflare,
-                ((result as RemoteMediator.MediatorResult.Error).throwable as NodeSeekException).error,
+                SiteError.Cloudflare,
+                ((result as RemoteMediator.MediatorResult.Error).throwable as SiteException).error,
             )
         }
 
@@ -407,7 +408,7 @@ class FeedRemoteMediatorTest {
             }
             load(LoadType.REFRESH)
 
-            remote.listError = NodeSeekException(NodeSeekError.Network)
+            remote.listError = SiteException(SiteError.Network)
             load(LoadType.REFRESH)
 
             // This is what makes aeroplane mode readable rather than blank.

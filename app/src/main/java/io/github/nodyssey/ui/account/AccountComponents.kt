@@ -15,8 +15,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.Spacing
 
 /** The radius every field, card and sheet on these screens rounds to. */
@@ -28,7 +28,7 @@ internal val AccountFieldShape = RoundedCornerShape(14.dp)
 sealed interface AccountMessage {
     data class Info(@StringRes val textRes: Int) : AccountMessage
 
-    data class Failure(val error: NodeSeekError) : AccountMessage
+    data class Failure(val error: SiteError) : AccountMessage
 
     /**
      * The site's own sentence for a refusal it explained itself.
@@ -40,7 +40,7 @@ sealed interface AccountMessage {
 }
 
 /** Turns a thrown load/save failure into something sayable. */
-fun Throwable.toAccountMessage(): AccountMessage = AccountMessage.Failure(toNodeSeekError())
+fun Throwable.toAccountMessage(): AccountMessage = AccountMessage.Failure(toSiteError())
 
 @Composable
 internal fun accountMessageText(message: AccountMessage): String =
@@ -51,15 +51,15 @@ internal fun accountMessageText(message: AccountMessage): String =
     }
 
 @Composable
-private fun NodeSeekError.messageRes(): Int =
+private fun SiteError.messageRes(): Int =
     when (this) {
-        NodeSeekError.Cloudflare -> R.string.status_challenge_title
-        NodeSeekError.LoginRequired -> R.string.status_sign_in_title
-        NodeSeekError.Network -> R.string.status_network_title
-        NodeSeekError.Unparsable -> R.string.status_unparsable_title
-        NodeSeekError.NotWired -> R.string.status_not_wired_title
-        NodeSeekError.RateLimited -> R.string.status_rate_limited_title
-        is NodeSeekError.Http, NodeSeekError.Unknown -> R.string.status_unknown_title
+        SiteError.Cloudflare -> R.string.status_challenge_title
+        SiteError.LoginRequired -> R.string.status_sign_in_title
+        SiteError.Network -> R.string.status_network_title
+        SiteError.Unparsable -> R.string.status_unparsable_title
+        SiteError.NotWired -> R.string.status_not_wired_title
+        SiteError.RateLimited -> R.string.status_rate_limited_title
+        is SiteError.Http, SiteError.Unknown -> R.string.status_unknown_title
     }
 
 /**

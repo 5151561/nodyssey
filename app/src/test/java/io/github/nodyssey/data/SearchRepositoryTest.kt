@@ -1,8 +1,8 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.html.Fixtures
 import io.github.nodyssey.core.net.JsonSource
+import io.github.plaza.core.AppDispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

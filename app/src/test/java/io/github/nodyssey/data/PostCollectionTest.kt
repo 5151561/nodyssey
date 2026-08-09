@@ -1,9 +1,9 @@
 package io.github.nodyssey.data
 
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -137,7 +137,7 @@ class PostCollectionTest {
             repository.refreshThread(postId = 42, page = 1)
 
             val thrown =
-                assertThrows(NodeSeekException::class.java) {
+                assertThrows(SiteException::class.java) {
                     runBlocking { repository.setCollected(postId = 42, collected = true) }
                 }
 
@@ -153,11 +153,11 @@ class PostCollectionTest {
             val repository = OfflineFirstPostRepository(database, remote, clock)
 
             val thrown =
-                assertThrows(NodeSeekException::class.java) {
+                assertThrows(SiteException::class.java) {
                     runBlocking { repository.setCollected(postId = 42, collected = true) }
                 }
 
-            assertEquals(NodeSeekError.NotWired, thrown.error)
+            assertEquals(SiteError.NotWired, thrown.error)
         }
 
     /**

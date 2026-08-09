@@ -1,11 +1,11 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -36,7 +36,7 @@ interface FollowRepository {
     /** Accounts that follow the signed-in user. */
     suspend fun followers(): List<FollowUser>
 
-    /** Starts following [uid]. A refusal carries the site's sentence in [NodeSeekException.detail]. */
+    /** Starts following [uid]. A refusal carries the site's sentence in [SiteException.detail]. */
     suspend fun follow(uid: Long)
 
     suspend fun unfollow(uid: Long)
@@ -45,7 +45,7 @@ interface FollowRepository {
 /**
  * The lists and the follow button, read out of the site's own `fans` bundle on 2026-08-02.
  *
- * `/fans` renders client-side, so this repository used to answer [NodeSeekError.NotWired] rather than
+ * `/fans` renders client-side, so this repository used to answer [SiteError.NotWired] rather than
  * guess at a payload — the same place `/stardust/list` was in before it. The guessing stopped being
  * necessary once the bundle was read: `/api/fans/{follow|fans}` answers
  * `{"success":true,"memberList":[…]}` and the card that consumes a row addresses it as `member_id` /
@@ -69,7 +69,7 @@ class NetworkFollowRepository(
     override suspend fun followers(): List<FollowUser> = list(followers = true)
 
     private suspend fun list(followers: Boolean): List<FollowUser> {
-        if (!isSignedIn()) throw NodeSeekException(NodeSeekError.LoginRequired)
+        if (!isSignedIn()) throw SiteException(SiteError.LoginRequired)
         val body =
             api.getJson(
                 path = NodeSeekJsonClient.fansListPath(followers),
@@ -83,7 +83,7 @@ class NetworkFollowRepository(
             // it was unwired.
             val rows =
                 root.findObjectArray("memberList")
-                    ?: throw NodeSeekException(NodeSeekError.Unparsable)
+                    ?: throw SiteException(SiteError.Unparsable)
             rows.mapNotNull(JsonObject::toFollowUser)
         }
     }
@@ -106,17 +106,17 @@ class NetworkFollowRepository(
 
     private fun String.asJsonObject(): JsonObject =
         runCatching { json.parseToJsonElement(this) as? JsonObject }
-            .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
-            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+            .getOrElse { throw SiteException(SiteError.Unparsable, it) }
+            ?: throw SiteException(SiteError.Unparsable)
 
     /**
      * `success:false` is a refusal, not a fault — the site answers it with 200 and a sentence.
      *
      * Returned rather than thrown so both the read and the write path raise it at their own call site.
      */
-    private fun JsonObject.refusal(): NodeSeekException? =
+    private fun JsonObject.refusal(): SiteException? =
         if (bool("success") == false) {
-            NodeSeekException(NodeSeekError.Unknown, detail = text("message"))
+            SiteException(SiteError.Unknown, detail = text("message"))
         } else {
             null
         }

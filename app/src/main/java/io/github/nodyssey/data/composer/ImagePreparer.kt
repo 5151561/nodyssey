@@ -8,10 +8,10 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.data.nodeimage.NodeImageError
 import io.github.nodyssey.data.nodeimage.NodeImageException
 import io.github.nodyssey.data.nodeimage.NodeImageUpload
+import io.github.plaza.core.AppDispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import kotlin.math.max

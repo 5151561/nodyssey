@@ -1,8 +1,8 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.data.local.ReadingPositionDao
 import io.github.nodyssey.data.local.ReadingPositionEntity
+import io.github.plaza.core.AppClock
 
 /**
  * Where a reader left a thread, so 上次阅读 has somewhere to go on the next visit.

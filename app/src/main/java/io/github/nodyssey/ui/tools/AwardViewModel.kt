@@ -5,12 +5,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.AwardRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.model.PostSummary
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 data class AwardUiState(
     val isLoading: Boolean = true,
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     val posts: List<PostSummary> = emptyList(),
     val page: Int = 1,
     val totalPages: Int = 1,
@@ -66,7 +66,7 @@ class AwardViewModel(
                         }
                     }.onFailure { throwable ->
                         _uiState.update {
-                            it.copy(isLoading = false, error = throwable.toNodeSeekError())
+                            it.copy(isLoading = false, error = throwable.toSiteError())
                         }
                     }
             }

@@ -1,11 +1,11 @@
 package io.github.nodyssey.data
 
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -139,7 +139,7 @@ class NetworkMessageRepository(
                 referer = NodeSeekSite.BASE_URL + NodeSeekSite.messageThreadWebPath(uid),
             )
         val root = json.parseToJsonElement(body) as? JsonObject
-            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+            ?: throw SiteException(SiteError.Unparsable)
         val header = root["talkTo"] as? JsonObject
         val messages =
             root
@@ -190,13 +190,13 @@ class NetworkMessageRepository(
                 referer = NodeSeekSite.BASE_URL + NodeSeekSite.messageThreadWebPath(uid),
             )
         val root = json.parseToJsonElement(body) as? JsonObject
-            ?: throw NodeSeekException(NodeSeekError.Unparsable)
+            ?: throw SiteException(SiteError.Unparsable)
         // `success: false` carries a human-readable reason — a blocked recipient, a rate limit — and
         // that reason is worth more to the user than the retry affordance alone.
         val success = root["success"]?.jsonPrimitive?.booleanOrNull ?: true
         if (!success) {
-            throw NodeSeekException(
-                error = NodeSeekError.Unknown,
+            throw SiteException(
+                error = SiteError.Unknown,
                 detail = root.text("message", "error"),
             )
         }

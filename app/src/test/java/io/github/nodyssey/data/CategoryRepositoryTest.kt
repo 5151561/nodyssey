@@ -1,9 +1,9 @@
 package io.github.nodyssey.data
 
 import io.github.nodyssey.core.net.JsonSource
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -107,7 +107,7 @@ class CategoryRepositoryTest {
                         override suspend fun getJson(
                             path: String,
                             referer: String,
-                        ): String = throw NodeSeekException(NodeSeekError.Network)
+                        ): String = throw SiteException(SiteError.Network)
                     },
                 )
 
@@ -124,7 +124,7 @@ class CategoryRepositoryTest {
             var fail = false
             val client =
                 RecordingJsonSource {
-                    if (fail) throw NodeSeekException(NodeSeekError.Cloudflare) else successBody("daily", "tech")
+                    if (fail) throw SiteException(SiteError.Cloudflare) else successBody("daily", "tech")
                 }
             val repository = repository(client)
             repository.refreshIfNeeded()

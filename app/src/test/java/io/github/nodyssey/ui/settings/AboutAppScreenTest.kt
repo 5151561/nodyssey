@@ -7,10 +7,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import io.github.nodyssey.data.update.AppRelease
-import io.github.nodyssey.data.update.AppUpdateState
-import io.github.nodyssey.data.update.UpdateCheck
-import io.github.nodyssey.data.update.UpdateDownload
+import io.github.plaza.core.update.AppRelease
+import io.github.plaza.core.update.AppUpdateState
+import io.github.plaza.core.update.UpdateCheck
+import io.github.plaza.core.update.UpdateDownload
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule

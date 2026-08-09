@@ -9,12 +9,12 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.nodyssey.data.NotificationCounts
-import io.github.nodyssey.data.update.AppRelease
-import io.github.nodyssey.data.update.UpdateCheckRecord
 import io.github.nodyssey.data.update.UpdateCheckStore
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.SearchHistoryEntry
 import io.github.nodyssey.model.SearchTarget
+import io.github.plaza.core.update.AppRelease
+import io.github.plaza.core.update.UpdateCheckRecord
 import io.github.plaza.designsys.editor.EditorAction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

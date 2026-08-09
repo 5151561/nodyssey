@@ -75,9 +75,13 @@ jobs:
 
       # A Room schema is checked in per version. If codegen produced a different one, the entity change
       # needs either a version bump and a migration, or a deliberate re-export — not a silent diff.
+      #
+      # Any module's `schemas/` directory, not `app/schemas` by name: only `:app` declares a database
+      # today, and a second module that grows one must not be able to add it without this gate
+      # noticing.
       - name: Check the Room schema is committed
         run: |
-          if ! git diff --exit-code -- app/schemas; then
+          if ! git diff --exit-code -- '*/schemas/*'; then
             echo "::error::The generated Room schema differs from the committed one." >&2
             echo "Bump the database version and export the new schema, or commit the regenerated file." >&2
             exit 1

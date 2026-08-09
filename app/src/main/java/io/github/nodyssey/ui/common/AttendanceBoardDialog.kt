@@ -24,8 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.AttendanceBoardEntry
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
@@ -34,7 +34,7 @@ import io.github.plaza.designsys.theme.TABULAR_FIGURES
 fun AttendanceBoardDialog(
     isLoading: Boolean,
     entries: List<AttendanceBoardEntry>,
-    error: NodeSeekError?,
+    error: SiteError?,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,

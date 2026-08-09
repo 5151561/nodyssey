@@ -52,17 +52,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.TimeFormat
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.RulingAction
 import io.github.nodyssey.data.RulingKind
 import io.github.nodyssey.data.RulingRecord
 import io.github.nodyssey.data.RulingTarget
 import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
+import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -222,7 +222,7 @@ fun RulingScreen(
                 state.isLoading && state.records.isEmpty() -> LoadingState(Modifier.fillMaxSize())
 
                 state.error != null && state.records.isEmpty() ->
-                    NodeSeekErrorState(
+                    SiteErrorState(
                         error = state.error,
                         onRetry = onRetry,
                         onOpenBrowser = { onOpenBrowser(1) },
@@ -632,7 +632,7 @@ private fun RulingAppendingPreview() {
 private fun RulingSignedOutPreview() {
     PlazaTheme(darkTheme = true) {
         RulingScreen(
-            state = RulingUiState(isLoading = false, error = NodeSeekError.LoginRequired),
+            state = RulingUiState(isLoading = false, error = SiteError.LoginRequired),
             onBack = {},
             onLoadMore = {},
             onLoadPage = {},

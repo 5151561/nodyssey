@@ -37,9 +37,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.UserAgent
-import io.github.nodyssey.core.net.resolveUserAgent
 import io.github.nodyssey.data.session.SessionRepository
+import io.github.plaza.core.net.UserAgent
+import io.github.plaza.core.net.resolveUserAgent
 import kotlinx.coroutines.delay
 
 /** Why the WebView was opened, which is also the condition for closing it again. */

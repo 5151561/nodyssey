@@ -1,12 +1,12 @@
 package io.github.nodyssey.ui.assets
 
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.StardustLedgerPage
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.data.UserProfile
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -86,7 +86,7 @@ class StardustTransferTest {
     @Test
     fun `still sends when the recipient lookup is refused`() =
         runTest(dispatcher) {
-            stardust.lookupError = NodeSeekException(NodeSeekError.Unknown, detail = "用户不存在")
+            stardust.lookupError = SiteException(SiteError.Unknown, detail = "用户不存在")
             val vm = viewModel()
             advanceUntilIdle()
             vm.fillForm()
@@ -199,7 +199,7 @@ class StardustTransferTest {
     @Test
     fun `keeps the typed form and the site's sentence when the send is refused`() =
         runTest(dispatcher) {
-            stardust.sendError = NodeSeekException(NodeSeekError.Unknown, detail = "余额不足")
+            stardust.sendError = SiteException(SiteError.Unknown, detail = "余额不足")
             val vm = viewModel()
             advanceUntilIdle()
             vm.fillForm()
@@ -210,7 +210,7 @@ class StardustTransferTest {
             advanceUntilIdle()
 
             val state = vm.uiState.value
-            assertEquals(StardustMessage.Failed(NodeSeekError.Unknown, "余额不足"), state.message)
+            assertEquals(StardustMessage.Failed(SiteError.Unknown, "余额不足"), state.message)
             assertTrue(state.transferOpen)
             assertFalse(state.confirmOpen)
             assertFalse(state.isSending)

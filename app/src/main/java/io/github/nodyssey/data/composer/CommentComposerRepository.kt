@@ -6,12 +6,12 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.Selectors
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -78,7 +78,7 @@ interface CommentComposerRepository {
  * somebody else's reply.
  *
  * Rejections arrive as HTTP 400 with `{"success":false,"message":"内容不能为空"}`; the site's own
- * sentence is passed through as [NodeSeekException.detail] because it is more specific than anything
+ * sentence is passed through as [SiteException.detail] because it is more specific than anything
  * this layer could infer (it also carries the duplicate-reply and rate-limit refusals).
  */
 class DefaultCommentComposerRepository(
@@ -132,7 +132,7 @@ class DefaultCommentComposerRepository(
         val response = try {
             okHttpClient.newCall(request).execute()
         } catch (error: IOException) {
-            throw NodeSeekException(NodeSeekError.Network, error)
+            throw SiteException(SiteError.Network, error)
         }
         response.use {
             val body = it.body.string()
@@ -142,13 +142,13 @@ class DefaultCommentComposerRepository(
                 it.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
                     Selectors.CLOUDFLARE_MARKERS.any(body::contains) ||
                     body.trimStart().startsWith("<")
-            if (isChallenge) throw NodeSeekException(NodeSeekError.Cloudflare)
+            if (isChallenge) throw SiteException(SiteError.Cloudflare)
             if (it.code == 401 || it.code == 403) {
-                throw NodeSeekException(NodeSeekError.LoginRequired)
+                throw SiteException(SiteError.LoginRequired)
             }
             if (!it.isSuccessful) {
-                throw NodeSeekException(
-                    error = NodeSeekError.Http(it.code),
+                throw SiteException(
+                    error = SiteError.Http(it.code),
                     detail = parseMessage(body),
                 )
             }
@@ -169,11 +169,11 @@ class DefaultCommentComposerRepository(
      */
     private fun parsePublishResponse(body: String): Int? {
         val root = runCatching { json.parseToJsonElement(body).jsonObject }
-            .getOrElse { throw NodeSeekException(NodeSeekError.Unparsable, it) }
+            .getOrElse { throw SiteException(SiteError.Unparsable, it) }
         val success = root["success"]?.jsonPrimitive?.booleanOrNull ?: false
         if (!success) {
-            throw NodeSeekException(
-                error = NodeSeekError.Unknown,
+            throw SiteException(
+                error = SiteError.Unknown,
                 detail = root["message"]?.jsonPrimitive?.contentOrNull,
             )
         }

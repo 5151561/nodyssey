@@ -95,9 +95,9 @@ import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.AvatarShape
@@ -356,8 +356,8 @@ fun PostListScreen(
                     // An error only takes over the screen when there is nothing cached to show. With
                     // rows on screen the failure is not worth losing the content over.
                     posts.itemCount == 0 && refreshState is LoadState.Error -> {
-                        val error = refreshState.error.toNodeSeekError()
-                        NodeSeekErrorState(
+                        val error = refreshState.error.toSiteError()
+                        SiteErrorState(
                             error = error,
                             onRetry = posts::refresh,
                             // Both recoveries open a browser, but not the same page: a challenge is

@@ -84,7 +84,7 @@ class NotificationRepositoryTest {
 
             assertEquals("2026-07-26 09:56:03", item.createdAtText)
             assertEquals(
-                io.github.nodyssey.core.TimeFormat.parseTimestamp("2026-07-26 09:56:03"),
+                io.github.plaza.core.TimeFormat.parseTimestamp("2026-07-26 09:56:03"),
                 item.createdAtMillis,
             )
             assertEquals("https://www.nodeseek.com/avatar/12.png", item.avatarUrl)

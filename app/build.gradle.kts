@@ -74,6 +74,11 @@ dependencies {
     // of it by compilation rather than by review.
     implementation(project(":designsys"))
 
+    // The same rule for the non-visual half: HTTP, the WebView cookie bridge, the update check. What
+    // `:core` needs to know about nodeseek.com reaches it as `NodeSeekSite.CONFIG`, never as an
+    // import.
+    implementation(project(":core"))
+
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)

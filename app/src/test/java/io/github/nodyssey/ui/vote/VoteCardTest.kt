@@ -6,9 +6,9 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.VoteItem
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -130,7 +130,7 @@ class VoteCardTest {
     @Test
     fun `a failed read offers a retry without taking over`() {
         var retries = 0
-        setCard(VoteUiState(vote = null, isLoading = false, error = NodeSeekError.Network), onRetry = { retries++ })
+        setCard(VoteUiState(vote = null, isLoading = false, error = SiteError.Network), onRetry = { retries++ })
 
         composeRule.onNodeWithText("重试").performClick()
 

@@ -46,16 +46,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.core.TimeFormat
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.SignedOutState
+import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -186,7 +186,7 @@ fun NotificationsScreen(
                     state.isLoading && state.isEmpty -> LoadingState()
 
                     state.error != null && state.isEmpty ->
-                        NodeSeekErrorState(
+                        SiteErrorState(
                             error = state.error,
                             onRetry = onRetry,
                             onOpenBrowser = onVerify,

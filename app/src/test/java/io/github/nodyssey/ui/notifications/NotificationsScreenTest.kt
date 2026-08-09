@@ -201,6 +201,6 @@ class NotificationsScreenTest {
 
     private companion object {
         /** 2026-07-26 10:22:03 in the JVM default zone the test runs in. */
-        val NOW = io.github.nodyssey.core.TimeFormat.parseTimestamp("2026-07-26 10:22:03")!!
+        val NOW = io.github.plaza.core.TimeFormat.parseTimestamp("2026-07-26 10:22:03")!!
     }
 }

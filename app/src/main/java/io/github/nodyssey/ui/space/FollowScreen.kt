@@ -35,11 +35,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.FollowUser
 import io.github.nodyssey.ui.common.LoadingState
-import io.github.nodyssey.ui.common.NodeSeekErrorState
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.StatusView
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -124,7 +124,7 @@ fun FollowScreen(
                 list.isLoading && list.items.isEmpty() -> LoadingState()
 
                 list.error != null && list.items.isEmpty() ->
-                    NodeSeekErrorState(
+                    SiteErrorState(
                         error = list.error,
                         onRetry = { onRetry(state.selectedTab) },
                         onOpenBrowser = {
@@ -295,7 +295,7 @@ private fun FollowNotWiredPreview() {
             state =
             FollowUiState(
                 followers = SpaceListState(),
-                following = SpaceListState(error = NodeSeekError.NotWired),
+                following = SpaceListState(error = SiteError.NotWired),
             ),
             onBack = {},
             onTabSelected = {},

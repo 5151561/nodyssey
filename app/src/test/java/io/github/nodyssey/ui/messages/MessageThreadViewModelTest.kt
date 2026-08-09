@@ -2,18 +2,18 @@ package io.github.nodyssey.ui.messages
 
 import android.webkit.CookieManager
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import io.github.nodyssey.core.AppClock
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
-import io.github.nodyssey.core.net.WebViewCookieJar
 import io.github.nodyssey.data.DirectMessage
 import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.MessageThread
 import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.session.SessionRepository
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.net.WebViewCookieJar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -69,7 +69,7 @@ class MessageThreadViewModelTest {
     @Test
     fun `a failed send keeps the text and can be retried`() =
         runTest(dispatcher) {
-            val repository = FakeMessageRepository(sendError = NodeSeekException(NodeSeekError.Network))
+            val repository = FakeMessageRepository(sendError = SiteException(SiteError.Network))
             val viewModel = viewModel(repository)
             advanceUntilIdle()
 
@@ -93,7 +93,7 @@ class MessageThreadViewModelTest {
     @Test
     fun `reloading the thread keeps a message that has not been delivered`() =
         runTest(dispatcher) {
-            val repository = FakeMessageRepository(sendError = NodeSeekException(NodeSeekError.Network))
+            val repository = FakeMessageRepository(sendError = SiteException(SiteError.Network))
             val viewModel = viewModel(repository)
             advanceUntilIdle()
 
@@ -150,7 +150,7 @@ class MessageThreadViewModelTest {
     ) = MessageThreadViewModel(
         repository = repository,
         notifications = notifications,
-        session = SessionRepository(WebViewCookieJar(cookieManager)),
+        session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookieManager)),
         clock = AppClock { NOW },
         uploader = ImageUploader { _, _ -> "https://cdn.nodeimage.com/i/x.webp" },
         uid = 4471,

@@ -62,10 +62,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.editor.EditorAction
@@ -471,7 +471,7 @@ private fun ReplyReference(
  */
 @Composable
 private fun ComposerErrorStrip(
-    error: NodeSeekError?,
+    error: SiteError?,
     detail: String?,
     failedUploads: Int,
     uploadFailure: UploadFailure?,
@@ -545,17 +545,17 @@ private fun PublishReplyButton(
 }
 
 @Composable
-private fun replyErrorReason(error: NodeSeekError, detail: String?): String = when (error) {
-    NodeSeekError.Network -> stringResource(R.string.composer_publish_network_failed)
+private fun replyErrorReason(error: SiteError, detail: String?): String = when (error) {
+    SiteError.Network -> stringResource(R.string.composer_publish_network_failed)
 
-    NodeSeekError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
+    SiteError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
 
-    NodeSeekError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
+    SiteError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
 
     // The site's own sentence beats a status code whenever it sent one: a rejected reply comes back
     // as a 400 carrying "内容不能为空" or the duplicate-post refusal, and "服务器返回 HTTP 400"
     // would tell the user nothing they can act on.
-    is NodeSeekError.Http ->
+    is SiteError.Http ->
         detail?.takeIf { it.isNotBlank() }
             ?: stringResource(R.string.composer_publish_http, error.statusCode)
 

@@ -45,7 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekError
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.LocalPlazaExtraColors
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -181,16 +181,16 @@ fun LoadingState(modifier: Modifier = Modifier) {
  * about the same failure.
  */
 @Composable
-fun NodeSeekError.shortMessage(): String =
+fun SiteError.shortMessage(): String =
     when (this) {
-        NodeSeekError.Cloudflare -> stringResource(R.string.status_challenge_title)
-        NodeSeekError.LoginRequired -> stringResource(R.string.status_sign_in_title)
-        NodeSeekError.Network -> stringResource(R.string.status_network_title)
-        NodeSeekError.Unparsable -> stringResource(R.string.status_unparsable_title)
-        NodeSeekError.RateLimited -> stringResource(R.string.status_rate_limited_title)
-        is NodeSeekError.Http -> stringResource(R.string.status_http_title, statusCode)
-        NodeSeekError.NotWired -> stringResource(R.string.status_not_wired_title)
-        NodeSeekError.Unknown -> stringResource(R.string.status_unknown_title)
+        SiteError.Cloudflare -> stringResource(R.string.status_challenge_title)
+        SiteError.LoginRequired -> stringResource(R.string.status_sign_in_title)
+        SiteError.Network -> stringResource(R.string.status_network_title)
+        SiteError.Unparsable -> stringResource(R.string.status_unparsable_title)
+        SiteError.RateLimited -> stringResource(R.string.status_rate_limited_title)
+        is SiteError.Http -> stringResource(R.string.status_http_title, statusCode)
+        SiteError.NotWired -> stringResource(R.string.status_not_wired_title)
+        SiteError.Unknown -> stringResource(R.string.status_unknown_title)
     }
 
 /**
@@ -205,8 +205,8 @@ fun NodeSeekError.shortMessage(): String =
  * `if (LoginRequired) …` at every call site is exactly the copy that goes stale.
  */
 @Composable
-fun NodeSeekErrorState(
-    error: NodeSeekError,
+fun SiteErrorState(
+    error: SiteError,
     onRetry: () -> Unit,
     onOpenBrowser: () -> Unit,
     modifier: Modifier = Modifier,
@@ -220,7 +220,7 @@ fun NodeSeekErrorState(
     val retry = StatusAction(stringResource(R.string.action_retry), onRetry)
 
     when (error) {
-        NodeSeekError.Cloudflare ->
+        SiteError.Cloudflare ->
             StatusView(
                 icon = Icons.Default.CheckCircle,
                 shape = StatusShapes.Challenge,
@@ -234,7 +234,7 @@ fun NodeSeekErrorState(
                 modifier = modifier,
             )
 
-        NodeSeekError.LoginRequired ->
+        SiteError.LoginRequired ->
             StatusView(
                 icon = Icons.Default.Lock,
                 shape = StatusShapes.SignIn,
@@ -255,7 +255,7 @@ fun NodeSeekErrorState(
                 modifier = modifier,
             )
 
-        NodeSeekError.Network ->
+        SiteError.Network ->
             StatusView(
                 icon = Icons.Default.Warning,
                 shape = StatusShapes.NetworkError,
@@ -269,7 +269,7 @@ fun NodeSeekErrorState(
 
         // The site changed shape under us. Retrying will not fix that, so the web view — which
         // renders whatever the new markup is — is the useful action.
-        NodeSeekError.Unparsable ->
+        SiteError.Unparsable ->
             StatusView(
                 icon = Icons.Default.Info,
                 shape = StatusShapes.Deleted,
@@ -285,7 +285,7 @@ fun NodeSeekErrorState(
 
         // The site's own throttle, not Cloudflare's — so no verify button. Waiting is the whole fix,
         // and offering the web page would just spend another request against the same limit.
-        NodeSeekError.RateLimited ->
+        SiteError.RateLimited ->
             StatusView(
                 icon = Icons.Default.Info,
                 shape = StatusShapes.NetworkError,
@@ -297,7 +297,7 @@ fun NodeSeekErrorState(
                 modifier = modifier,
             )
 
-        is NodeSeekError.Http ->
+        is SiteError.Http ->
             StatusView(
                 icon = Icons.Default.Warning,
                 shape = StatusShapes.NetworkError,
@@ -312,9 +312,9 @@ fun NodeSeekErrorState(
             )
 
         // Nothing was requested, so "重试" would be a lie: the only move is the site's own page.
-        NodeSeekError.NotWired -> NotWiredState(onOpenBrowser = onOpenBrowser, modifier = modifier)
+        SiteError.NotWired -> NotWiredState(onOpenBrowser = onOpenBrowser, modifier = modifier)
 
-        NodeSeekError.Unknown ->
+        SiteError.Unknown ->
             StatusView(
                 icon = Icons.Default.Warning,
                 shape = StatusShapes.NetworkError,
@@ -492,7 +492,7 @@ fun ComingSoonState(
 @Composable
 private fun ChallengeStatePreview() {
     PlazaTheme {
-        NodeSeekErrorState(error = NodeSeekError.Cloudflare, onRetry = {}, onOpenBrowser = {})
+        SiteErrorState(error = SiteError.Cloudflare, onRetry = {}, onOpenBrowser = {})
     }
 }
 
@@ -500,8 +500,8 @@ private fun ChallengeStatePreview() {
 @Composable
 private fun SignInStatePreview() {
     PlazaTheme(darkTheme = true) {
-        NodeSeekErrorState(
-            error = NodeSeekError.LoginRequired,
+        SiteErrorState(
+            error = SiteError.LoginRequired,
             onRetry = {},
             onOpenBrowser = {},
             boardTitle = "内版",
@@ -514,7 +514,7 @@ private fun SignInStatePreview() {
 @Composable
 private fun NetworkStatePreview() {
     PlazaTheme {
-        NodeSeekErrorState(error = NodeSeekError.Network, onRetry = {}, onOpenBrowser = {})
+        SiteErrorState(error = SiteError.Network, onRetry = {}, onOpenBrowser = {})
     }
 }
 

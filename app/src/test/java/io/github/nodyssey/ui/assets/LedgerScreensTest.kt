@@ -8,10 +8,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.paging.PagingData
-import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.CreditEntry
 import io.github.nodyssey.data.StardustEntry
 import io.github.nodyssey.data.StardustType
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.PlazaTheme
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
@@ -113,7 +113,7 @@ class LedgerScreensTest {
     @Test
     fun `a sign-in failure is shown rather than an endless spinner`() {
         setStardustContent(
-            state = StardustUiState(isLoadingBalance = false, error = NodeSeekError.LoginRequired),
+            state = StardustUiState(isLoadingBalance = false, error = SiteError.LoginRequired),
             entries = emptyList(),
         )
 

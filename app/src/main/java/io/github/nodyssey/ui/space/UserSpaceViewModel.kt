@@ -11,10 +11,6 @@ import androidx.paging.PagingData
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import androidx.paging.cachedIn
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.FollowRepository
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.SpaceComment
@@ -22,7 +18,11 @@ import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.data.UserProfile
 import io.github.nodyssey.data.UserSpaceRepository
 import io.github.nodyssey.di.AppContainer
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -53,7 +53,7 @@ enum class SpaceTab {
 data class SpaceListState<T>(
     val items: List<T> = emptyList(),
     val isLoading: Boolean = false,
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     val page: Int = 0,
     val hasNextPage: Boolean = false,
     val loaded: Boolean = false,
@@ -63,7 +63,7 @@ data class UserSpaceUiState(
     val uid: Long,
     val isSelf: Boolean,
     val isLoadingProfile: Boolean = true,
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     val name: String = "",
     val avatarUrl: String? = null,
     val level: Int? = null,
@@ -104,7 +104,7 @@ data class UserSpaceUiState(
  * the screen turns into an action rather than a plain message.
  */
 data class FollowFailure(
-    val error: NodeSeekError,
+    val error: SiteError,
     val detail: String?,
 )
 
@@ -163,7 +163,7 @@ class UserSpaceViewModel(
                     .onSuccess { profile -> _uiState.update { it.withProfile(profile) } }
                     .onFailure { throwable ->
                         _uiState.update {
-                            it.copy(isLoadingProfile = false, error = throwable.toNodeSeekError())
+                            it.copy(isLoadingProfile = false, error = throwable.toSiteError())
                         }
                     }
             }
@@ -199,8 +199,8 @@ class UserSpaceViewModel(
                             followPending = false,
                             followFailure =
                             FollowFailure(
-                                error = throwable.toNodeSeekError(),
-                                detail = (throwable as? NodeSeekException)?.detail,
+                                error = throwable.toSiteError(),
+                                detail = (throwable as? SiteException)?.detail,
                             ),
                         )
                     }

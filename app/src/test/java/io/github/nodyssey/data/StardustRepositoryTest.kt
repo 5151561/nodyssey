@@ -1,11 +1,11 @@
 package io.github.nodyssey.data
 
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonApi
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -176,7 +176,7 @@ class StardustRepositoryTest {
                     ).entries(1)
                 }.exceptionOrNull()
 
-            assertEquals(NodeSeekError.Unparsable, (exception as? NodeSeekException)?.error)
+            assertEquals(SiteError.Unparsable, (exception as? SiteException)?.error)
         }
 
     @Test
@@ -233,7 +233,7 @@ class StardustRepositoryTest {
                     ).recipientName(recipientUid = 1, viewerUid = 52_425)
                 }.exceptionOrNull()
 
-            assertEquals("用户不存在", (exception as? NodeSeekException)?.detail)
+            assertEquals("用户不存在", (exception as? SiteException)?.detail)
         }
 
     /**
@@ -271,7 +271,7 @@ class StardustRepositoryTest {
                     ).send(recipientUid = 9, amount = 999, refId = 1, viewerUid = 52_425)
                 }.exceptionOrNull()
 
-            assertEquals("余额不足", (exception as? NodeSeekException)?.detail)
+            assertEquals("余额不足", (exception as? SiteException)?.detail)
         }
 }
 

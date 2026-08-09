@@ -1,7 +1,5 @@
 package io.github.nodyssey.ui.composer
 
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.MutableClock
 import io.github.nodyssey.data.ProfileRepository
@@ -20,6 +18,8 @@ import io.github.nodyssey.model.Vote
 import io.github.nodyssey.ui.ViewModels
 import io.github.nodyssey.ui.typeText
 import io.github.nodyssey.ui.vote.VoteCreationState
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -121,7 +121,7 @@ class PostComposerViewModelTest {
         val votes =
             FakeVoteRepository(
                 newId = 3001,
-                failure = NodeSeekException(NodeSeekError.Unknown, detail = "没有发起投票的权限"),
+                failure = SiteException(SiteError.Unknown, detail = "没有发起投票的权限"),
             )
         val viewModel = viewModel(votes = votes)
         advanceUntilIdle()
@@ -255,7 +255,7 @@ class PostComposerViewModelTest {
 
     @Test
     fun `publish failure keeps the draft and exposes a retryable error`() = runTest(dispatcher) {
-        repository.publishError = NodeSeekException(NodeSeekError.Network)
+        repository.publishError = SiteException(SiteError.Network)
         val viewModel = viewModel()
         advanceUntilIdle()
         viewModel.titleState.typeText("标题")
@@ -267,7 +267,7 @@ class PostComposerViewModelTest {
         viewModel.publish { error("must not publish") }
         advanceUntilIdle()
 
-        assertEquals(NodeSeekError.Network, viewModel.uiState.value.publishError)
+        assertEquals(SiteError.Network, viewModel.uiState.value.publishError)
         assertFalse(viewModel.uiState.value.isPublishing)
         assertEquals(0, repository.deleteCount)
         assertEquals("正文", viewModel.uiState.value.body)
@@ -365,7 +365,7 @@ private class FakeProfileRepository(
     private val fails: Boolean = false,
 ) : ProfileRepository {
     override suspend fun profile(refresh: Boolean): UserProfile {
-        if (fails) throw NodeSeekException(NodeSeekError.Network)
+        if (fails) throw SiteException(SiteError.Network)
         return UserProfile(uid = 1L, name = "我", avatarUrl = "", rank = rank)
     }
 
@@ -381,7 +381,7 @@ private class FakeImageUploader : ImageUploader {
     ): String {
         if (failures > 0) {
             failures--
-            throw NodeSeekException(NodeSeekError.Network)
+            throw SiteException(SiteError.Network)
         }
         onProgress(1f)
         return "https://cdn.nodeimage.com/i/fake.webp"

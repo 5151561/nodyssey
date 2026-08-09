@@ -8,9 +8,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import androidx.room.withTransaction
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.local.CacheSessionEntity
 import io.github.nodyssey.data.local.CommentEntity
 import io.github.nodyssey.data.local.FeedPostRow
@@ -26,6 +23,9 @@ import io.github.nodyssey.model.PostListPage
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.ThreadSnapshot
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -579,7 +579,7 @@ class OfflineFirstPostRepository(
         commentId: Long,
         action: ReactionAction,
     ) {
-        val writer = reactions ?: throw NodeSeekException(NodeSeekError.NotWired)
+        val writer = reactions ?: throw SiteException(SiteError.NotWired)
         val outcome = writer.react(postId = postId, commentId = commentId, action = action)
         database.postDetailDao().updateReactions(postId, commentId) { previous ->
             previous.applying(action, outcome)
@@ -592,7 +592,7 @@ class OfflineFirstPostRepository(
         postId: Long,
         collected: Boolean,
     ) {
-        val writer = collections ?: throw NodeSeekException(NodeSeekError.NotWired)
+        val writer = collections ?: throw SiteException(SiteError.NotWired)
         val outcome = writer.setCollected(postId = postId, collected = collected)
         // The site's echo, not the request: see [CollectionOutcome.collected].
         database.postDetailDao().updateCollection(postId, outcome.collected, outcome.postCollectionCount)

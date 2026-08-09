@@ -5,8 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AttendanceBoardEntry
 import io.github.nodyssey.data.AttendanceStatus
@@ -15,7 +13,9 @@ import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.UserProfile
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.di.AppContainer
-import io.github.nodyssey.ui.postlist.toNodeSeekError
+import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -149,7 +149,7 @@ class ProfileViewModel(
                 }
                     .onFailure { throwable ->
                         _uiState.update {
-                            it.copy(isLoading = false, error = throwable.toNodeSeekError())
+                            it.copy(isLoading = false, error = throwable.toSiteError())
                         }
                     }
             }
@@ -214,7 +214,7 @@ class ProfileViewModel(
                         _uiState.update {
                             it.copy(
                                 isLoadingBoard = false,
-                                boardError = throwable.toNodeSeekError(),
+                                boardError = throwable.toSiteError(),
                             )
                         }
                     }
@@ -275,7 +275,7 @@ private fun UserProfile.memberSinceLabel(): String {
 data class ProfileUiState(
     val isSignedIn: Boolean = false,
     val isLoading: Boolean = false,
-    val error: NodeSeekError? = null,
+    val error: SiteError? = null,
     val uid: Long? = null,
     val displayName: String = "",
     val avatarUrl: String? = null,
@@ -291,7 +291,7 @@ data class ProfileUiState(
     val boardOpen: Boolean = false,
     val isLoadingBoard: Boolean = false,
     val board: List<AttendanceBoardEntry> = emptyList(),
-    val boardError: NodeSeekError? = null,
+    val boardError: SiteError? = null,
 ) {
     val hasProfile: Boolean
         get() = uid != null && displayName.isNotBlank()

@@ -1,13 +1,13 @@
 package io.github.nodyssey.ui.vote
 
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.UserProfile
 import io.github.nodyssey.data.VoteRepository
 import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.VoteItem
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -150,7 +150,7 @@ class VoteViewModelTest {
             val repository =
                 FakeVoteRepository(
                     vote = unvoted(),
-                    failure = NodeSeekException(NodeSeekError.Unknown, detail = "投票已结束"),
+                    failure = SiteException(SiteError.Unknown, detail = "投票已结束"),
                 )
             val vm = viewModel(repository)
             advanceUntilIdle()
@@ -169,12 +169,12 @@ class VoteViewModelTest {
     @Test
     fun `a read failure is held apart from a write failure`() =
         runTest(dispatcher) {
-            val repository = FakeVoteRepository(vote = null, readFailure = NodeSeekException(NodeSeekError.Network))
+            val repository = FakeVoteRepository(vote = null, readFailure = SiteException(SiteError.Network))
 
             val vm = viewModel(repository)
             advanceUntilIdle()
 
-            assertEquals(NodeSeekError.Network, vm.uiState.value.error)
+            assertEquals(SiteError.Network, vm.uiState.value.error)
             assertNull(vm.uiState.value.failure)
             assertNull(vm.uiState.value.vote)
         }

@@ -2,11 +2,11 @@ package io.github.nodyssey.data.composer
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import io.github.nodyssey.core.AppClock
-import io.github.nodyssey.core.AppDispatchers
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.core.net.NodeSeekException
+import io.github.plaza.core.AppClock
+import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -116,7 +116,7 @@ class PostComposerRepositoryTest {
                         headers = mapOf("cf-mitigated" to "challenge"),
                     ),
                 )
-            assertEquals(NodeSeekError.Cloudflare, error)
+            assertEquals(SiteError.Cloudflare, error)
         }
 
     @Test
@@ -126,7 +126,7 @@ class PostComposerRepositoryTest {
                 publishExpectingError(
                     StaticResponseInterceptor(code = 403, body = """{"success":false}"""),
                 )
-            assertEquals(NodeSeekError.LoginRequired, error)
+            assertEquals(SiteError.LoginRequired, error)
         }
 
     @Test
@@ -150,7 +150,7 @@ class PostComposerRepositoryTest {
         assertEquals(listOf(0, 255), PostPermission.options(selfRank = 0).map { it.wireValue })
     }
 
-    private suspend fun TestScope.publishExpectingError(interceptor: Interceptor): NodeSeekError {
+    private suspend fun TestScope.publishExpectingError(interceptor: Interceptor): SiteError {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val repository =
             DefaultPostComposerRepository(
@@ -169,7 +169,7 @@ class PostComposerRepositoryTest {
                 ),
             )
             throw AssertionError("publish should have failed")
-        } catch (exception: NodeSeekException) {
+        } catch (exception: SiteException) {
             exception.error
         }
     }

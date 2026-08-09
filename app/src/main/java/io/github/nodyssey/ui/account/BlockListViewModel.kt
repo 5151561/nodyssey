@@ -6,12 +6,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.R
-import io.github.nodyssey.core.net.NodeSeekException
-import io.github.nodyssey.core.runCatchingExceptCancellation
 import io.github.nodyssey.data.account.AccountSettingsRepository
 import io.github.nodyssey.data.account.BlockedUser
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -104,7 +104,7 @@ class BlockListViewModel(
 
     /** The site says why it refused a name — 用户不存在 and the like — so that sentence wins. */
     private fun Throwable.toBlockMessage(): AccountMessage =
-        (this as? NodeSeekException)?.detail?.let(AccountMessage::Detail) ?: toAccountMessage()
+        (this as? SiteException)?.detail?.let(AccountMessage::Detail) ?: toAccountMessage()
 
     fun requestUnblock(user: BlockedUser) = local.update { it.copy(unblocking = user) }
 
