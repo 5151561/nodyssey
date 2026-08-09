@@ -103,6 +103,44 @@ class PostComposerViewModelTest {
         assertEquals(VoteCreationState.Idle, viewModel.uiState.value.voteCreation)
     }
 
+    // --- 插入星辰收款码 -------------------------------------------------------
+
+    /**
+     * A receive code is pure text: no request, and the payee is always the author.
+     *
+     * Reading the uid from anywhere but the session would make it possible to post a code that
+     * collects into somebody else's account, which is the one mistake here that cannot be undone by
+     * editing the post.
+     */
+    @Test
+    fun `inserting a receive code writes the marker with this account as the payee`() = runTest(dispatcher) {
+        val viewModel = viewModel(profiles = FakeProfileRepository(rank = 3, selfUid = 52_425))
+        advanceUntilIdle()
+
+        viewModel.insertReceiveCode(amount = 2, refId = 100, description = "请我喝杯咖啡", onetime = true)
+        advanceUntilIdle()
+
+        val body = viewModel.bodyState.text.toString()
+        assertTrue(body, body.contains("nsapp://stardust-receive?member_id=52425"))
+        assertTrue(body, body.contains("&diff=2"))
+        assertTrue(body, body.contains("&onetime=true"))
+        // Mirrored too, or the draft would autosave the text without the code.
+        assertTrue(viewModel.uiState.value.body.contains("nsapp://stardust-receive"))
+    }
+
+    /** Without a uid there is nobody to collect for, and a marker naming nobody is worse than none. */
+    @Test
+    fun `inserting a receive code does nothing when the account is not known yet`() = runTest(dispatcher) {
+        val viewModel = viewModel(profiles = FakeProfileRepository(rank = 3, selfUid = null))
+        advanceUntilIdle()
+
+        assertNull(viewModel.receiveCodePayeeUid())
+        viewModel.insertReceiveCode(amount = 2, refId = 100, description = "", onetime = false)
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.bodyState.text.toString())
+    }
+
     /** The mirrored `body` has to see it too, or the draft would autosave the text without the vote. */
     @Test
     fun `the inserted marker reaches the mirrored body state`() = runTest(dispatcher) {
@@ -363,6 +401,7 @@ class PostComposerViewModelTest {
 private class FakeProfileRepository(
     private val rank: Int?,
     private val fails: Boolean = false,
+    override var selfUid: Long? = null,
 ) : ProfileRepository {
     override suspend fun profile(refresh: Boolean): UserProfile {
         if (fails) throw SiteException(SiteError.Network)

@@ -1,6 +1,8 @@
 package io.github.nodyssey.ui.composer
 
 import io.github.nodyssey.data.MutableClock
+import io.github.nodyssey.data.ProfileRepository
+import io.github.nodyssey.data.UserProfile
 import io.github.nodyssey.data.composer.CommentComposerRepository
 import io.github.nodyssey.data.composer.CommentDraft
 import io.github.nodyssey.data.composer.CommentSubmission
@@ -49,8 +51,53 @@ class ReplyComposerViewModelTest {
 
     private val viewModels = ViewModels()
 
-    private fun viewModel(postId: Long = 1L) =
-        viewModels.track(ReplyComposerViewModel(postId, repository, clock, uploader))
+    private fun viewModel(
+        postId: Long = 1L,
+        profiles: ProfileRepository? = null,
+    ) = viewModels.track(
+        ReplyComposerViewModel(
+            postId,
+            repository,
+            clock,
+            uploader,
+            profileRepository = profiles,
+        ),
+    )
+
+    /**
+     * The reply box carries the APP menu too, because the site's own always has.
+     *
+     * Same marker as the post editor writes — the two share `StardustReceiveMarkup` precisely so a
+     * code inserted from a floor cannot come out shaped differently from one in an opening post.
+     */
+    @Test
+    fun `inserting a receive code from the reply sheet writes the same marker`() = runTest(dispatcher) {
+        val viewModel = viewModel(profiles = FakeReplyProfileRepository(selfUid = 52_425))
+        viewModel.open()
+        advanceUntilIdle()
+
+        viewModel.insertReceiveCode(amount = 5, refId = 7, description = "拼车 第 3 期", onetime = false)
+        advanceUntilIdle()
+
+        val body = viewModel.bodyState.text.toString()
+        assertTrue(body, body.contains("nsapp://stardust-receive?member_id=52425&ref_id=7"))
+        assertTrue(body, body.contains("&onetime=false"))
+        assertTrue(viewModel.uiState.value.body.contains("nsapp://stardust-receive"))
+    }
+
+    /** No uid, no payee — and the sheet says so rather than writing a code that collects for nobody. */
+    @Test
+    fun `the reply sheet declines a receive code before the account is known`() = runTest(dispatcher) {
+        val viewModel = viewModel(profiles = FakeReplyProfileRepository(selfUid = null))
+        viewModel.open()
+        advanceUntilIdle()
+
+        assertNull(viewModel.receiveCodePayeeUid())
+        viewModel.insertReceiveCode(amount = 5, refId = 7, description = "", onetime = false)
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.bodyState.text.toString())
+    }
 
     @Test
     fun `closing the sheet keeps the reply, and reopening restores the stored draft`() = runTest(dispatcher) {
@@ -324,6 +371,16 @@ class ReplyComposerViewModelTest {
         assertNull(repository.saved[1L])
         assertNull(viewModel.uiState.value.savedAtMillis)
     }
+}
+
+/** Only [selfUid] matters here — the reply sheet asks the profile for nothing else. */
+private class FakeReplyProfileRepository(
+    override val selfUid: Long?,
+) : ProfileRepository {
+    override suspend fun profile(refresh: Boolean): UserProfile =
+        UserProfile(uid = selfUid ?: 0L, name = "我", avatarUrl = "", rank = 3)
+
+    override suspend fun profile(uid: Long): UserProfile = profile(refresh = false)
 }
 
 private class FakeCommentComposerRepository : CommentComposerRepository {

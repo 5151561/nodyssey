@@ -142,6 +142,7 @@ fun PostDetailRoute(
     onAuthorClick: (Long) -> Unit = {},
     /** Draws the votes embedded in the thread; see [PostDetailScreen]. */
     voteContent: @Composable (Long) -> Unit = {},
+    stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val replyState by replyViewModel.uiState.collectAsStateWithLifecycle()
@@ -179,6 +180,7 @@ fun PostDetailRoute(
         onCollect = viewModel::toggleCollect,
         onCollectFailureShown = viewModel::onCollectFailureShown,
         voteContent = voteContent,
+        stardustContent = stardustContent,
         replyOpen = replyState.visible,
         modifier = modifier,
     )
@@ -197,6 +199,10 @@ fun PostDetailRoute(
         onClearError = replyViewModel::clearPublishError,
         onToolbarChange = replyViewModel::setToolbar,
         onToolbarReset = replyViewModel::resetToolbar,
+        onCreateVote = replyViewModel::createVote,
+        onDismissVoteCreation = replyViewModel::dismissVoteCreation,
+        payeeUid = replyViewModel::receiveCodePayeeUid,
+        onInsertReceiveCode = replyViewModel::insertReceiveCode,
     )
 }
 
@@ -243,6 +249,7 @@ fun PostDetailScreen(
      * build a per-vote ViewModel. Defaults to nothing, which is what a preview or a screen test wants.
      */
     voteContent: @Composable (Long) -> Unit = {},
+    stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)? = null,
     /** Hides the bottom toolbar while the editor covers it. */
     replyOpen: Boolean = false,
     /** Body/comment links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
@@ -441,6 +448,7 @@ fun PostDetailScreen(
                         // action, not after a rejection that also spent the tap.
                         onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
                         voteContent = voteContent,
+                        stardustContent = stardustContent,
                         modifier =
                         Modifier.floatingToolbarVerticalNestedScroll(
                             expanded = toolbarExpanded,
@@ -687,6 +695,7 @@ private fun ThreadList(
     onAuthorClick: (Long) -> Unit,
     onCollect: () -> Unit,
     voteContent: @Composable (Long) -> Unit,
+    stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -716,6 +725,7 @@ private fun ThreadList(
                         collectPending = state.collectPending,
                         onCollect = onCollect,
                         voteContent = voteContent,
+                        stardustContent = stardustContent,
                     )
                 }
             }
@@ -741,6 +751,7 @@ private fun ThreadList(
                     onQuote = { comment.toFloorReference()?.let(onQuoteFloor) },
                     onAuthorClick = onAuthorClick,
                     voteContent = voteContent,
+                    stardustContent = stardustContent,
                 )
             }
         }
@@ -875,6 +886,7 @@ private fun OriginalPost(
     collectPending: Boolean,
     onCollect: () -> Unit,
     voteContent: @Composable (Long) -> Unit,
+    stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
 ) {
     Column(
         modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = 12.dp),
@@ -931,6 +943,7 @@ private fun OriginalPost(
                 onQuoteRefClick = { onJumpToFloor(it.floor) },
                 textStyle = MaterialTheme.typography.bodyLarge,
                 voteContent = voteContent,
+                stardustContent = stardustContent,
                 modifier = Modifier.padding(top = Spacing.md),
             )
         }
@@ -1021,6 +1034,7 @@ private fun CommentRow(
     onQuote: () -> Unit,
     onAuthorClick: (Long) -> Unit,
     voteContent: @Composable (Long) -> Unit,
+    stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
 ) {
     Column(
         modifier = Modifier.padding(
@@ -1077,6 +1091,7 @@ private fun CommentRow(
             onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
             textStyle = MaterialTheme.typography.bodyMedium,
             voteContent = voteContent,
+            stardustContent = stardustContent,
             modifier = Modifier.padding(top = Spacing.sm),
         )
         UserSignature(

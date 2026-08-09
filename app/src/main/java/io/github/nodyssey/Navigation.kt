@@ -105,6 +105,8 @@ import io.github.nodyssey.ui.space.FollowRoute
 import io.github.nodyssey.ui.space.FollowViewModel
 import io.github.nodyssey.ui.space.UserSpaceRoute
 import io.github.nodyssey.ui.space.UserSpaceViewModel
+import io.github.nodyssey.ui.stardust.StardustReceiveCard
+import io.github.nodyssey.ui.stardust.StardustReceiveViewModel
 import io.github.nodyssey.ui.tools.AwardRoute
 import io.github.nodyssey.ui.tools.AwardViewModel
 import io.github.nodyssey.ui.tools.CommunityToolsScreen
@@ -830,6 +832,20 @@ fun MainNavigation(
                             ),
                             onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                             onUserClick = openSpace,
+                        )
+                    },
+                    // Keyed by payee *and* Ref ID, for the same reason a vote is keyed by its id: one
+                    // post may carry several codes, and a shared ViewModel would show one code's
+                    // tally under another's amount.
+                    stardustContent = { node ->
+                        StardustReceiveCard(
+                            node = node,
+                            viewModel =
+                            viewModel(
+                                key = "stardust-${node.memberId}-${node.refId}",
+                                factory = StardustReceiveViewModel.factory(container, node),
+                            ),
+                            onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                         )
                     },
                 )

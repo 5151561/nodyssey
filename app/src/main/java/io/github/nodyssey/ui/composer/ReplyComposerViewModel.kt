@@ -9,6 +9,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.StardustReceiveMarkup
+import io.github.nodyssey.core.VoteMarkup
+import io.github.nodyssey.data.ProfileRepository
+import io.github.nodyssey.data.VoteRepository
 import io.github.nodyssey.data.composer.CommentComposerRepository
 import io.github.nodyssey.data.composer.CommentDraft
 import io.github.nodyssey.data.composer.CommentSubmission
@@ -21,6 +25,7 @@ import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.data.settings.ComposerSurface
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.vote.VoteCreationState
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
@@ -30,6 +35,7 @@ import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.ToolbarLayout
 import io.github.plaza.designsys.editor.appendBlock
 import io.github.plaza.designsys.editor.editFromViewModel
+import io.github.plaza.designsys.editor.insertText
 import io.github.plaza.designsys.editor.removeBlock
 import io.github.plaza.designsys.editor.toolbarLayout
 import kotlinx.coroutines.Job
@@ -79,6 +85,14 @@ class ReplyComposerViewModel(
     uploader: ImageUploader,
     /** Null in tests; the sheet then shows [EditorActions.Reply] and offers no wrench. */
     private val settings: SettingsRepository? = null,
+    /**
+     * Null wherever the APP menu is not offered — tests, and any build that has not wired it.
+     *
+     * The reply sheet gained the menu at the same time as the post editor, because the site's own
+     * reply box has always had it: 投票 and 收款码 belong to a floor as much as to an opening post.
+     */
+    private val voteRepository: VoteRepository? = null,
+    private val profileRepository: ProfileRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ReplyComposerUiState(postId = postId))
     val uiState: StateFlow<ReplyComposerUiState> = _uiState.asStateFlow()
@@ -161,6 +175,66 @@ class ReplyComposerViewModel(
                 body = stored.body,
                 savedAtMillis = stored.savedAtMillis.takeIf { millis -> millis > 0 },
                 replyTo = stored.toReplyTarget(),
+            )
+        }
+    }
+
+    /**
+     * Creates a vote and splices its marker in at the caret.
+     *
+     * The post editor's `createVote` with the sheet's own state; see it for why the two steps must
+     * not come apart — the vote exists server-side before the body mentions it, so only a success
+     * touches [bodyState] and only then does [onInserted] close the dialog.
+     */
+    fun createVote(
+        title: String,
+        multiple: Boolean,
+        isPublic: Boolean,
+        items: List<String>,
+        onInserted: () -> Unit,
+    ) {
+        val votes = voteRepository ?: return
+        if (_uiState.value.voteCreation is VoteCreationState.InFlight) return
+        _uiState.update { it.copy(voteCreation = VoteCreationState.InFlight) }
+        viewModelScope.launch {
+            runCatchingExceptCancellation { votes.create(title, multiple, isPublic, items) }
+                .onSuccess { voteId ->
+                    bodyState.editFromViewModel { insertText(VoteMarkup.marker(voteId)) }
+                    _uiState.update { it.copy(voteCreation = VoteCreationState.Idle) }
+                    onInserted()
+                }.onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(voteCreation = VoteCreationState.Failed((throwable as? SiteException)?.detail))
+                    }
+                }
+        }
+    }
+
+    /** Puts the creation state back to idle — the dialog closing without having created anything. */
+    fun dismissVoteCreation() {
+        _uiState.update { it.copy(voteCreation = VoteCreationState.Idle) }
+    }
+
+    /** The uid a 收款码 would collect for, or null when the app does not know it yet. */
+    fun receiveCodePayeeUid(): Long? = profileRepository?.selfUid
+
+    /** Splices a 收款码 in at the caret. No request; see the post editor's `insertReceiveCode`. */
+    fun insertReceiveCode(
+        amount: Int,
+        refId: Long,
+        description: String,
+        onetime: Boolean,
+    ) {
+        val payee = profileRepository?.selfUid ?: return
+        bodyState.editFromViewModel {
+            insertText(
+                StardustReceiveMarkup.marker(
+                    memberId = payee,
+                    refId = refId,
+                    amount = amount,
+                    description = description,
+                    onetime = onetime,
+                ),
             )
         }
     }
@@ -270,6 +344,8 @@ class ReplyComposerViewModel(
                     clock = container.clock,
                     uploader = container.imageUploader,
                     settings = container.settingsRepository,
+                    voteRepository = container.voteRepository,
+                    profileRepository = container.profileRepository,
                 )
             }
         }
@@ -291,6 +367,7 @@ data class ReplyComposerUiState(
     val attachments: List<ImageAttachment> = emptyList(),
     /** The formatting strip's keys and the wrench panel's pool. Defaults until settings arrive. */
     val toolbar: ToolbarLayout = toolbarLayout(emptyList(), EditorActions.Reply),
+    val voteCreation: VoteCreationState = VoteCreationState.Idle,
 ) {
     val failedUploadCount: Int get() = attachments.count { it.status == UploadStatus.FAILED }
 

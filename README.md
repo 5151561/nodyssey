@@ -25,6 +25,9 @@ scrolling stays in one list, and the UI follows the system theme.
   哪一楼（只存本机），下次打开点「上次阅读」回到那一楼，按钮上直接写着要去第几页
 - 投票帖原生渲染：一个选项一行的投票卡片，支持投票、楼主锁定、管理员解锁与删除，公开投票可展开
   投票人列表，发帖时也能带一个投票；未投票时不显示票数和百分比，投票不入本地缓存
+- 星辰收款码原生渲染：卡片写明收款人、数额、备注、Ref ID 与是否一次性，下方是你付没付、
+  几人付款、共收到多少；付款走站点同一个 `send` 接口并先弹确认，自己的码与读不出收款情况时不给按钮。
+  发帖与回复的底栏合成一个 APP 菜单，投票和收款码都从这里插入
 - WebView 登录 / Cloudflare 验证，Cookie 与 OkHttp 共享
 - 帖子 / 用户搜索：输入框常驻顶部，先选版块和类型再搜；与论坛列表共享同一条管线，
   因此结果行有一致的已读态与新回复角标，并高亮命中的关键词
@@ -142,6 +145,7 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 - [x] 应用内检查更新、下载与安装（GitHub `releases/latest` + `PackageInstaller`）
 - [x] 星辰转账原生化（`payment-prepare` 回显收款人 + `send` 提交）
 - [x] 投票帖阅读、投票、创建、锁定 / 解锁 / 删除与投票人列表（`/api/vote/*`）
+- [x] 星辰收款码渲染、付款与生成（`nsapp://stardust-receive` 标记 + `/api/stardust/list` 统计）
 - [x] 帖子收藏（`/api/statistics/collection`）与「我的收藏」入口
 - [x] 本机浏览历史与每帖阅读位置（Room，保留条数可调）
 

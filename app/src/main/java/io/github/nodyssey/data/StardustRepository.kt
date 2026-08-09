@@ -93,13 +93,33 @@ interface StardustRepository {
      * Sends [amount] stardust to [recipientUid], quoting [refId].
      *
      * Returns normally only when the site said it landed. There is no undo on either side.
+     *
+     * [onetime] is the 收款码's own flag, passed through so the server can refuse a second payment
+     * from this account against this [refId]. It is the server's check, not ours: only it knows what
+     * has already been paid from every device this account has.
      */
     suspend fun send(
         recipientUid: Long,
         amount: Int,
         refId: Long,
         viewerUid: Long,
+        onetime: Boolean = false,
     )
+
+    /**
+     * What has been paid against one 收款码 — [memberId]'s code numbered [refId].
+     *
+     * [peerId] narrows it to a single payer, which is how a card answers "have I paid this?".
+     *
+     * Returns the rows rather than a tally so the caller can say both things the card says: how many
+     * paid, and how much arrived. See [NodeSeekJsonClient.stardustReceiptsPath] for why the query is
+     * not narrowed by `type` even though it could be.
+     */
+    suspend fun receipts(
+        memberId: Long,
+        refId: Long,
+        peerId: Long? = null,
+    ): List<StardustEntry>
 }
 
 /**
@@ -172,15 +192,39 @@ class NetworkStardustRepository(
         amount: Int,
         refId: Long,
         viewerUid: Long,
+        onetime: Boolean,
     ) {
         val answer =
             api.postJson(
                 path = NodeSeekJsonClient.PATH_STARDUST_SEND,
-                body = """{"member_id":$recipientUid,"diff":$amount,"ref_id":$refId}""",
+                body =
+                """{"member_id":$recipientUid,"diff":$amount,"ref_id":$refId,"onetime":$onetime}""",
                 referer = NodeSeekSite.BASE_URL + NodeSeekSite.stardustPath(viewerUid),
             )
         withContext(dispatchers.default) {
             answer.asJsonObject().refusal()?.let { throw it }
+        }
+    }
+
+    override suspend fun receipts(
+        memberId: Long,
+        refId: Long,
+        peerId: Long?,
+    ): List<StardustEntry> {
+        val body =
+            api.getJson(
+                path = NodeSeekJsonClient.stardustReceiptsPath(memberId, refId, peerId),
+                referer = NodeSeekSite.BASE_URL + NodeSeekSite.stardustPath(memberId),
+            )
+        return withContext(dispatchers.default) {
+            val root =
+                runCatching { json.parseToJsonElement(body) as? JsonObject }
+                    .getOrElse { throw SiteException(SiteError.Unparsable, it) }
+                    ?: throw SiteException(SiteError.Unparsable)
+            val rows =
+                root.findObjectArray("records", "list", "data")
+                    ?: throw SiteException(SiteError.Unparsable)
+            rows.mapNotNull(JsonObject::toStardustEntry)
         }
     }
 
@@ -204,16 +248,16 @@ class NetworkStardustRepository(
 
     companion object {
         /**
-         * The `origin` `payment-prepare` asks for, which the API note records the *name* of but not
-         * its accepted values.
+         * The `origin` `payment-prepare` asks for: a web origin, not a name for the movement.
          *
-         * This is the site's own word for the movement in the ledger (`type: "transfer"`, beside
-         * `buyCode` — the other thing that spends stardust, which is the likely reason one lookup
-         * endpoint takes an origin at all). It is a guess, and it is deliberately a cheap one to be
-         * wrong about: a rejected lookup costs the name echo on the confirmation step and nothing
-         * else, because [send] does not depend on it.
+         * This used to be the guess `"transfer"`, on the theory that it named the ledger `type`.
+         * It does not. Read off the site's own `stardustPayment` bundle, which passes the calling
+         * page's `location.origin`, and confirmed against the live endpoint on 2026-08-09: the site
+         * origin answers `allowedOrigin: true` and anything else — `"transfer"` included — answers
+         * `false`. Every one of them still returns `receiver_name`, which is why the wrong value was
+         * invisible: `allowedOrigin` gates the site's own popup flow, and this app has no popup.
          */
-        internal const val TRANSFER_ORIGIN = "transfer"
+        internal const val TRANSFER_ORIGIN = NodeSeekSite.BASE_URL
     }
 }
 

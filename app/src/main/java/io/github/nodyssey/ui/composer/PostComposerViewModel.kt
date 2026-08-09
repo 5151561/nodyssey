@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nodyssey.core.StardustReceiveMarkup
 import io.github.nodyssey.core.VoteMarkup
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.ProfileRepository
@@ -337,6 +338,43 @@ class PostComposerViewModel(
     /** Puts the creation state back to idle — the dialog closing without having created anything. */
     fun dismissVoteCreation() {
         _uiState.update { it.copy(voteCreation = VoteCreationState.Idle) }
+    }
+
+    /**
+     * The uid a 收款码 would collect for, or null when the app does not know it yet.
+     *
+     * Read at the moment the dialog opens rather than held in [uiState], because it is a session fact
+     * that may still be arriving — the same reason `VoteViewModel` re-reads it on every load.
+     */
+    fun receiveCodePayeeUid(): Long? = profileRepository?.selfUid
+
+    /**
+     * Splices a 收款码 in at the caret.
+     *
+     * No request, unlike [createVote]: the marker is the whole code, and the site is not told about it
+     * until somebody pays. Which is why this returns nothing to wait for and cannot fail — the only
+     * way it declines is a missing [receiveCodePayeeUid], and the dialog says so before offering 插入.
+     */
+    fun insertReceiveCode(
+        amount: Int,
+        refId: Long,
+        description: String,
+        onetime: Boolean,
+    ) {
+        val payee = profileRepository?.selfUid ?: return
+        // `editFromViewModel` for the same reason [createVote] uses it: without the apply notification
+        // the body's snapshotFlow mirror never sees the marker and the draft autosaves the old text.
+        bodyState.editFromViewModel {
+            insertText(
+                StardustReceiveMarkup.marker(
+                    memberId = payee,
+                    refId = refId,
+                    amount = amount,
+                    description = description,
+                    onetime = onetime,
+                ),
+            )
+        }
     }
 
     companion object {

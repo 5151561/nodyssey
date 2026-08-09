@@ -4,6 +4,7 @@ import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import org.jsoup.Jsoup
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -178,7 +179,7 @@ class RichContentParserTest {
         assertTrue("got ${link.url}", link.url.endsWith("/jump?to=https%3A%2F%2Fnodequality.com%2Fr%2Fabc"))
     }
 
-    /** Only `nsapp://vote` is ours. Another app scheme is an ordinary link and stays one. */
+    /** Only the kinds we draw are ours. An unknown app scheme is an ordinary link and stays one. */
     @Test
     fun `another nsapp scheme is left as a link`() {
         val nodes = parse("""<p><a href="/somewhere" data-href="nsapp://other?id=1">别的</a></p>""")
@@ -186,5 +187,81 @@ class RichContentParserTest {
         assertEquals(1, nodes.filterIsInstance<RichNode.Paragraph>().size)
         assertTrue(nodes.filterIsInstance<RichNode.VotePlaceholder>().isEmpty())
         assertEquals("别的", (inlinesOf(nodes).first() as InlineNode.Link).text)
+    }
+
+    // --- 星辰收款码 -----------------------------------------------------------
+
+    /**
+     * The marker as the site's own editor writes it, key order and all.
+     *
+     * Everything the card shows comes out of this one string — there is no second request that could
+     * correct a field read wrong, and the numbers are money.
+     */
+    @Test
+    fun `a receive code marker becomes a block carrying every field`() {
+        val nodes =
+            parse(
+                """<p><a href="javascript://void(0)" data-href="nsapp://stardust-receive?""" +
+                    """member_id=52425&amp;ref_id=100&amp;description=%E8%AF%B7%E6%88%91%E5%96%9D%E6%9D%AF""" +
+                    """%20%E5%92%96%E5%95%A1&amp;diff=2&amp;onetime=true">x</a></p>""",
+            )
+
+        assertEquals(
+            RichNode.StardustReceive(
+                memberId = 52425,
+                refId = 100,
+                amount = 2,
+                description = "请我喝杯 咖啡",
+                onetime = true,
+            ),
+            nodes.single(),
+        )
+    }
+
+    /** `onetime=false` is the ordinary code, and absent means the same thing. */
+    @Test
+    fun `a receive code without onetime is not one-off`() {
+        val nodes =
+            parse(
+                """<a href="javascript://void(0)" data-href=
+                   "nsapp://stardust-receive?member_id=9&amp;ref_id=1&amp;description=&amp;diff=5">x</a>""",
+            )
+
+        val code = nodes.single() as RichNode.StardustReceive
+        assertFalse(code.onetime)
+        assertEquals("", code.description)
+    }
+
+    /**
+     * The site abandons a marker whose `member_id`, `ref_id` or `diff` is not a bare run of digits,
+     * and leaves it on the page as a link. Drawing a card where the web shows text would mean the two
+     * disagree about what somebody is being asked to pay.
+     */
+    @Test
+    fun `a receive code with a non-numeric field stays an ordinary link`() {
+        val nodes =
+            parse(
+                """<p><a href="/somewhere" data-href=
+                   "nsapp://stardust-receive?member_id=52425&amp;ref_id=abc&amp;diff=2">别的</a></p>""",
+            )
+
+        assertTrue(nodes.filterIsInstance<RichNode.StardustReceive>().isEmpty())
+        assertEquals("别的", (inlinesOf(nodes).first() as InlineNode.Link).text)
+    }
+
+    /** Wrapped in emphasis it still must not reach the inline flow as raw `nsapp://` text. */
+    @Test
+    fun `a receive code nested inside emphasis is dropped rather than linked`() {
+        val nodes =
+            parse(
+                """<p><strong><a href="javascript://void(0)" data-href=
+                   "nsapp://stardust-receive?member_id=9&amp;ref_id=1&amp;diff=5">x</a></strong>后文</p>""",
+            )
+
+        val inlines = nodes.filterIsInstance<RichNode.Paragraph>().flatMap { it.inlines }
+        assertTrue(inlines.filterIsInstance<InlineNode.Link>().isEmpty())
+        assertTrue(inlines.filterIsInstance<InlineNode.Text>().none { it.text.contains("nsapp") })
+        // Lifted out of the emphasis and drawn as its own card, exactly as a nested vote marker is.
+        assertEquals(1, nodes.filterIsInstance<RichNode.StardustReceive>().size)
     }
 }

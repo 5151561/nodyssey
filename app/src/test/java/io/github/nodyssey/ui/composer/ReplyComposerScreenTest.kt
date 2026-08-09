@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import io.github.plaza.designsys.editor.EditorToolbarDefaults
 import io.github.plaza.designsys.editor.toolbarLayout
@@ -49,6 +50,10 @@ class ReplyComposerScreenTest {
                     onClearError = {},
                     onToolbarChange = {},
                     onToolbarReset = {},
+                    onCreateVote = { _, _, _, _, _ -> },
+                    onDismissVoteCreation = {},
+                    payeeUid = { 52_425L },
+                    onInsertReceiveCode = { _, _, _, _ -> },
                 )
             }
         }
@@ -87,6 +92,24 @@ class ReplyComposerScreenTest {
         // Reachable, but only by scrolling past the six formatting keys — 发布 keeps the one pinned
         // slot, and the wrench is the key nobody reaches for mid-sentence.
         composeRule.onNodeWithContentDescription("自定义工具栏").assertExists()
+    }
+
+    /**
+     * The reply box carries the APP menu, and it sits with the wrench rather than in the pinned slot.
+     *
+     * The site's own reply editor has always offered 投票 and 收款码; this app only grew the entry with
+     * the 收款码, and the reply sheet is the half that is easy to forget because 发布 owns its one
+     * pinned slot and the menu had to go behind the swipe instead.
+     */
+    @Test
+    fun `the APP menu is offered in the reply sheet and opens both entries`() {
+        setSheet(draft())
+
+        composeRule.onNodeWithContentDescription("APP").assertExists()
+        composeRule.onNodeWithContentDescription("APP").performClick()
+
+        composeRule.onNodeWithText("插入投票").assertIsDisplayed()
+        composeRule.onNodeWithText("插入星辰收款码").assertIsDisplayed()
     }
 
     @Test
