@@ -62,6 +62,36 @@ sealed interface RichNode {
         val voteId: Long,
     ) : RichNode
 
+    /**
+     * A 星辰收款码: an amount someone is asking to be paid, embedded in their own post.
+     *
+     * The opposite of [VotePlaceholder] in what it stores. A poll's body marker carries only an id
+     * because everything worth showing about a poll changes; a receive code's marker carries the
+     * whole card — who is collecting, how much, what for — and none of it can change afterwards,
+     * because the marker *is* the request. Caching these fields stores the article, not an answer.
+     * Only the tally of who has paid is live, and that is not here.
+     *
+     * Which is why this node, unlike a poll, has a renderer default worth having: a body restored
+     * from cache with no network still shows the reader exactly what is being asked of them.
+     *
+     * [amount] is an `Int` because the site's own parser rejects a marker whose `diff` is not a run
+     * of digits, and [refId] is the payee's own reference for the thing being paid for — their order
+     * number, not ours.
+     *
+     * Note for the next migration: this discriminator did not exist before v1.2.5, so a *downgrade*
+     * would fail to decode bodies cached by a newer build. Reading old rows is unaffected.
+     */
+    @Serializable
+    @SerialName("stardust")
+    data class StardustReceive(
+        val memberId: Long,
+        val refId: Long,
+        val amount: Int,
+        val description: String = "",
+        /** Whether the site refuses a second payment from the same account against this [refId]. */
+        val onetime: Boolean = false,
+    ) : RichNode
+
     @Serializable
     @SerialName("code")
     data class CodeBlock(

@@ -8,12 +8,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.report.QualityReportParser
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.richtext.CodeBlockView
 import io.github.plaza.designsys.richtext.RichContent
+import io.github.plaza.designsys.richtext.StardustReceiveCard
 import io.github.plaza.designsys.richtext.VotePlaceholderCard
 import io.github.plaza.designsys.theme.PostBody
 
@@ -38,6 +40,19 @@ fun PostRichContent(
     textStyle: TextStyle = PostBody,
     onQuoteRefClick: (InlineNode.QuoteRef) -> Unit = { onLinkClick(it.url) },
     voteContent: @Composable (Long) -> Unit = { VotePlaceholderCard() },
+    /**
+     * Draws a 收款码, or null for the static card without the live tally or the 付款 button.
+     *
+     * Unlike [voteContent] the fallback is worth having everywhere: the marker carries the whole ask,
+     * so a signature or a direct message still shows who is collecting how much and what for. What it
+     * adds over `:designsys`'s own default is the avatar, because turning a uid into a picture URL is
+     * a fact about NodeSeek and belongs on this side of the module line.
+     *
+     * Nullable rather than defaulted because the thread screen hands it down through five layers of
+     * private composables that have no business restating what the fallback is. Null means "whatever
+     * this wrapper thinks", which is exactly what those layers know.
+     */
+    stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)? = null,
 ) {
     RichContent(
         nodes = nodes,
@@ -48,6 +63,7 @@ fun PostRichContent(
         onQuoteRefClick = onQuoteRefClick,
         voteContent = voteContent,
         codeBlockContent = { CodeOrReport(it) },
+        stardustContent = stardustContent ?: { StardustReceiveCard(it, avatarUrl = NodeSeekSite.avatarUrl(it.memberId)) },
     )
 }
 

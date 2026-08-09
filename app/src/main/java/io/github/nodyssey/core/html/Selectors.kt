@@ -69,14 +69,19 @@ object Selectors {
     const val CONTENT_SIGNATURE = "div.signature"
 
     /**
-     * The `nsapp://vote?id=2871` marker a vote leaves in the body.
+     * The markers the site's own script replaces with a widget — `nsapp://vote?id=2871` for a poll,
+     * `nsapp://stardust-receive?…` for a 收款码.
      *
      * The scheme is on `data-href`, not `href` — the anchor's own `href` is `javascript://void(0)`,
      * because the site's script intercepts the click. Matching on `href` finds nothing.
+     *
+     * [APP_MARKER] matches the whole family rather than one kind, which is what the site's own
+     * mount does (`.post-content a[data-href^="nsapp://"]`). Which kind it is comes out of the
+     * `data-href` afterwards, so a scheme we do not know stays an ordinary anchor.
      */
-    const val VOTE_PLACEHOLDER_ATTR = "data-href"
-    const val VOTE_PLACEHOLDER_SCHEME = "nsapp://vote"
-    const val VOTE_PLACEHOLDER = "a[$VOTE_PLACEHOLDER_ATTR^=$VOTE_PLACEHOLDER_SCHEME]"
+    const val APP_MARKER_ATTR = "data-href"
+    const val APP_MARKER_SCHEME = "nsapp://"
+    const val APP_MARKER = "a[$APP_MARKER_ATTR^=$APP_MARKER_SCHEME]"
 
     // --- Page-level state ---------------------------------------------------
 

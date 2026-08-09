@@ -408,6 +408,43 @@ class NodeSeekJsonClient(
 
         const val STARDUST_PAGE_SIZE = 20
 
+        /**
+         * Everything paid against one 收款码: the same ledger, narrowed to a payee and their `ref_id`.
+         *
+         * [peerId] narrows it further to one payer, which is how a card knows whether *you* have
+         * already paid — a non-empty answer is a yes.
+         *
+         * Deliberately not narrowed by `type`, though the whitelist above would allow it. The site's
+         * own card does not, and every `upvote` row carries `ref_id` 10, so a code whose Ref ID is 10
+         * counts other people's likes as payments — on the web too. Filtering here would make this
+         * app disagree with the page the payee is looking at, about money, and being quietly right is
+         * worth less than the two of them matching.
+         *
+         * No cursor: a card shows a total, and one page of it is what the site shows. [count] is the
+         * one lever, and it is already five times the site's own.
+         */
+        fun stardustReceiptsPath(
+            memberId: Long,
+            refId: Long,
+            peerId: Long? = null,
+            count: Int = STARDUST_RECEIPT_LIMIT,
+        ): String {
+            val query =
+                StringBuilder(
+                    "/api/stardust/list?member_id=$memberId&ref_id=$refId&count=${count.coerceAtLeast(1)}",
+                )
+            peerId?.let { query.append("&peer_id=$it") }
+            return query.toString()
+        }
+
+        /**
+         * How many payments a card will count.
+         *
+         * The site asks for its default page and reports `records.length`, so a popular code
+         * under-reports there. Asking for more is free and the answer is a count either way.
+         */
+        const val STARDUST_RECEIPT_LIMIT = 100
+
         /*
          * 星辰转账: the two writes behind the site's own transfer layer.
          *

@@ -2,6 +2,7 @@ package io.github.nodyssey.ui.assets
 
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import io.github.nodyssey.data.ProfileRepository
+import io.github.nodyssey.data.StardustEntry
 import io.github.nodyssey.data.StardustLedgerPage
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.data.UserProfile
@@ -260,11 +261,18 @@ private class FakeStardustRepository : StardustRepository {
         amount: Int,
         refId: Long,
         viewerUid: Long,
+        onetime: Boolean,
     ) {
         sendGate?.await()
         sendError?.let { throw it }
         sent += Sent(recipientUid, amount, refId)
     }
+
+    override suspend fun receipts(
+        memberId: Long,
+        refId: Long,
+        peerId: Long?,
+    ): List<StardustEntry> = emptyList()
 }
 
 private class FakeProfileRepository : ProfileRepository {

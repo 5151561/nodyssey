@@ -58,6 +58,11 @@ import io.github.plaza.designsys.theme.Spacing
  * strip is user-arranged pass it. It rides at the end of the *scrolling* keys rather than pinned
  * beside [trailing]: it is the one key nobody reaches for mid-sentence, so it is the right thing to
  * put behind a swipe, and the reply sheet has exactly one pinned slot and 发布 has it.
+ *
+ * [appMenu] sits just ahead of the wrench, and for the second half of that reason rather than the
+ * first: the things it opens — a poll, a 收款码 — are worth reaching for, but the reply sheet's one
+ * pinned slot is spoken for, and putting the menu there in the post editor and behind a swipe in the
+ * reply sheet would mean the same control lived in two different places.
  */
 @Composable
 fun EditorToolbar(
@@ -70,6 +75,7 @@ fun EditorToolbar(
     color: Color = MaterialTheme.colorScheme.surface,
     shape: Shape = RectangleShape,
     onCustomize: (() -> Unit)? = null,
+    appMenu: (@Composable () -> Unit)? = null,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     Surface(color = color, shape = shape, modifier = modifier) {
@@ -101,6 +107,7 @@ fun EditorToolbar(
                             onClick = { onAction(action) },
                         )
                     }
+                    appMenu?.invoke()
                     onCustomize?.let { customize ->
                         ToolbarKey(
                             icon = PlazaIcons.Build,

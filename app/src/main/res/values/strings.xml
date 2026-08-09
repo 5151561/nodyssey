@@ -865,6 +865,47 @@
     <string name="vote_compose_confirm_body">创建后标题和选项都不能修改。</string>
     <string name="vote_compose_failed">创建投票失败</string>
 
+    <!-- 星辰收款码 — a payment request embedded in a post. Reading it needs nothing; paying it spends
+         stardust and cannot be undone, so every string below has to be unambiguous about direction:
+         what leaves this account, and whose it goes to. -->
+    <string name="stardust_receive_pay">付款</string>
+    <string name="stardust_receive_sign_in_first">登录后付款</string>
+    <string name="stardust_receive_retry">重试</string>
+    <string name="stardust_receive_loading">正在读取收款情况…</string>
+    <string name="stardust_receive_load_failed">收款情况读取失败</string>
+    <string name="stardust_receive_paid">你已付款</string>
+    <string name="stardust_receive_unpaid">你未付款</string>
+    <string name="stardust_receive_payers">共 %1$d 人付款</string>
+    <string name="stardust_receive_total">收到 %1$d 🌌</string>
+    <string name="stardust_receive_confirm_title">确认付款 %1$d 星辰？</string>
+    <string name="stardust_receive_confirm_amount_label">数额</string>
+    <string name="stardust_receive_confirm_amount">%1$d 星辰</string>
+    <string name="stardust_receive_confirm_payee_label">收款人</string>
+    <string name="stardust_receive_confirm_ref_label">Ref ID</string>
+    <string name="stardust_receive_confirm_note_label">备注</string>
+    <string name="stardust_receive_confirm_caution">星辰转出后无法撤回，也无法由对方退还。</string>
+    <!-- A one-off code is the case where paying twice is impossible to fix by paying again -->
+    <string name="stardust_receive_confirm_caution_onetime">这是一次性收款码，同一账号只能付一次。星辰转出后无法撤回。</string>
+    <string name="stardust_receive_confirm_ok">确认付款</string>
+
+    <!-- 插入星辰收款码, in the editors' APP menu -->
+    <string name="composer_app_menu">APP</string>
+    <string name="composer_insert_stardust">插入星辰收款码</string>
+    <string name="stardust_compose_title">插入星辰收款码</string>
+    <string name="stardust_compose_amount">数额</string>
+    <string name="stardust_compose_amount_hint">要收多少星辰</string>
+    <string name="stardust_compose_ref">Ref ID</string>
+    <!-- Only ever seen if the payee clears the seeded number; the site's own field is a positive integer -->
+    <string name="stardust_compose_ref_hint">你自己的编号，正整数</string>
+    <!-- Says what the number is for, because it is pre-filled and most people should leave it alone -->
+    <string name="stardust_compose_ref_support">已自动生成，收款情况按它统计；同一个编号会共用一份收款记录</string>
+    <string name="stardust_compose_note">备注</string>
+    <string name="stardust_compose_note_hint">收这笔钱是为了什么</string>
+    <string name="stardust_compose_onetime">一次性付款</string>
+    <string name="stardust_compose_onetime_body">开启后同一个账号只能付一次。</string>
+    <string name="stardust_compose_insert">插入</string>
+    <string name="stardust_compose_needs_sign_in">还不知道你的 UID，登录后再插入收款码。</string>
+
     <!-- 浏览历史 — device-local; the site has no such list -->
     <string name="history_title">浏览历史</string>
     <string name="history_empty_title">还没有看过帖子</string>

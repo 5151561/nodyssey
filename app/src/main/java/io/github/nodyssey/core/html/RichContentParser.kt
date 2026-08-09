@@ -1,6 +1,7 @@
 package io.github.nodyssey.core.html
 
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.StardustReceiveMarkup
 import io.github.plaza.core.ansi.AnsiDecoder
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.InlineStyle
@@ -100,9 +101,9 @@ object RichContentParser {
 
         "img" -> if (isSticker(element)) null else listOf(blockImage(element))
 
-        // A vote marker that was not wrapped in a paragraph — the markdown renderer usually wraps it,
+        // An app marker that was not wrapped in a paragraph — the markdown renderer usually wraps it,
         // but a body that is nothing but the marker leaves it hanging directly off the article.
-        "a" -> element.voteId()?.let { listOf(RichNode.VotePlaceholder(it)) }
+        "a" -> element.appMarker()?.let(::listOf)
 
         else -> null
     }
@@ -125,14 +126,14 @@ object RichContentParser {
         }
 
         element.childNodes().forEach { child ->
-            // Checked before the image, because a vote marker is an anchor and `blockImageElement`
+            // Checked before the image, because an app marker is an anchor and `blockImageElement`
             // accepts `<a><img></a>` — an unlucky marker containing an image would be read as one.
-            val voteId = child.voteId()
-            val image = if (voteId == null) child.blockImageElement() else null
+            val marker = child.appMarker()
+            val image = if (marker == null) child.blockImageElement() else null
             when {
-                voteId != null -> {
+                marker != null -> {
                     flushInlineNodes()
-                    blocks += RichNode.VotePlaceholder(voteId)
+                    blocks += marker
                 }
 
                 image != null -> {
@@ -148,21 +149,38 @@ object RichContentParser {
     }
 
     /**
-     * Matches the id in `nsapp://vote?id=2871`.
+     * Splits `nsapp://stardust-receive?member_id=52425&…` into its kind and its query.
      *
-     * A regex rather than URI parsing: `nsapp://` is not a scheme any URI parser handles usefully,
-     * and the only field that has ever appeared is this one.
+     * The site's own, character for character. A regex rather than URI parsing: `nsapp://` is not a
+     * scheme any URI parser handles usefully. Note `\S+` — a marker whose query contains whitespace
+     * is not one the web would mount either, and neither half may be empty.
      */
+    private val APP_MARKER_URI = Regex("""^nsapp://([-a-z0-9]+)\?(\S+)$""")
+
+    /** Matches the id in `nsapp://vote?id=2871`. */
     private val VOTE_ID = Regex("""\bid=(\d+)""")
 
-    /** This node's vote id, or null when it is not a vote marker. */
-    private fun Node.voteId(): Long? {
+    /** The `vote` in `nsapp://vote?id=2871`, beside [StardustReceiveMarkup.KIND]. */
+    private const val VOTE_KIND = "vote"
+
+    /**
+     * The block this node's `nsapp://` marker stands for, or null when it is not one we draw.
+     *
+     * Null covers three different things on purpose, because the site treats them alike: not a
+     * marker at all, a marker of a kind we do not know (a newer widget, say), and a 收款码 whose
+     * numbers do not parse. All three stay ordinary inline content, which is what the web shows.
+     */
+    private fun Node.appMarker(): RichNode? {
         val element = this as? Element ?: return null
         val anchor =
-            if (element.tagName() == "a") element else element.selectFirst(Selectors.VOTE_PLACEHOLDER)
-        val href = anchor?.attr(Selectors.VOTE_PLACEHOLDER_ATTR).orEmpty()
-        if (!href.startsWith(Selectors.VOTE_PLACEHOLDER_SCHEME)) return null
-        return VOTE_ID.find(href)?.groupValues?.get(1)?.toLongOrNull()
+            if (element.tagName() == "a") element else element.selectFirst(Selectors.APP_MARKER)
+        val href = anchor?.attr(Selectors.APP_MARKER_ATTR).orEmpty()
+        val (kind, query) = APP_MARKER_URI.find(href)?.destructured ?: return null
+        return when (kind) {
+            VOTE_KIND -> VOTE_ID.find(query)?.groupValues?.get(1)?.toLongOrNull()?.let(RichNode::VotePlaceholder)
+            StardustReceiveMarkup.KIND -> StardustReceiveMarkup.parse(query)
+            else -> null
+        }
     }
 
     /** Accepts both a bare image and the common `<a><img></a>` image-link markup. */
@@ -284,12 +302,12 @@ object RichContentParser {
                     "code" -> result += InlineNode.Text(node.wholeText(), style.copy(code = true))
 
                     /*
-                     * A vote marker that reached the inline flow anyway — wrapped in `<strong>`, say,
+                     * An app marker that reached the inline flow anyway — wrapped in `<strong>`, say,
                      * so neither block path caught it. Dropped rather than linked: its `href` is
                      * `javascript://void(0)` and its text is the raw `nsapp://vote?id=2871`, which is
                      * exactly the broken rendering this parser exists to stop.
                      */
-                    "a" -> if (node.voteId() == null) result += link(node, style)
+                    "a" -> if (node.appMarker() == null) result += link(node, style)
 
                     "img" ->
                         if (isSticker(node)) {

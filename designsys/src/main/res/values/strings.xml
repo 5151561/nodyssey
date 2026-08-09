@@ -53,4 +53,10 @@
     <string name="richtext_image_skipped_action">点按加载这张图</string>
     <string name="richtext_poll_title">投票</string>
     <string name="richtext_poll_body">在帖子里查看并参与</string>
+
+    <!-- 收款码. "Ref ID" stays in the site's own Latin form: it is what the payee typed into the
+         generator and what they will look for in their ledger, so translating it would break the
+         one string that has to match on both ends of a payment. -->
+    <string name="richtext_stardust_ref_id">Ref ID %1$d</string>
+    <string name="richtext_stardust_onetime">一次性</string>
 </resources>

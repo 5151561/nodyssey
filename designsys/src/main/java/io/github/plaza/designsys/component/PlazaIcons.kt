@@ -569,6 +569,16 @@ object PlazaIcons {
                 "M13,17h2v2h-2V17zM15,19h2v2h-2V19zM17,17h2v2h-2V17zM17,13h2v2h-2V13zM19,15h2v2h-2V15z",
         )
     }
+
+    /** Material's `apps` grid — the editors' menu of things a forum can embed in a post. */
+    val Apps: ImageVector by lazy {
+        materialIcon(
+            name = "Apps",
+            pathData =
+            "M4,8h4V4H4V8zM10,20h4v-4h-4V20zM4,20h4v-4H4V20zM4,14h4v-4H4V14zM10,14h4v-4h-4V14z" +
+                "M16,4v4h4V4H16zM10,8h4V4h-4V8zM16,14h4v-4h-4V14zM16,20h4v-4h-4V20z",
+        )
+    }
 }
 
 /**

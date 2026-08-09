@@ -204,7 +204,7 @@ class StardustRepositoryTest {
 
             assertEquals("站长", name)
             assertEquals("/api/stardust/payment-prepare", api.postedPath)
-            assertEquals("""{"receiver_id":9,"origin":"transfer"}""", api.postedBody)
+            assertEquals("""{"receiver_id":9,"origin":"https://www.nodeseek.com"}""", api.postedBody)
             // The lookup runs from the sender's own ledger page, which is where the site's layer opens.
             assertEquals(NodeSeekSite.BASE_URL + "/stardust/list?member_id=52425", api.postedReferer)
         }
@@ -251,7 +251,67 @@ class StardustRepositoryTest {
                 .send(recipientUid = 9, amount = 2, refId = 866_042, viewerUid = 52_425)
 
             assertEquals("/api/stardust/send", api.postedPath)
-            assertEquals("""{"member_id":9,"diff":2,"ref_id":866042}""", api.postedBody)
+            assertEquals("""{"member_id":9,"diff":2,"ref_id":866042,"onetime":false}""", api.postedBody)
+        }
+
+    /**
+     * 收款码 payments carry the code's own `onetime`, which is what lets the server refuse a second one.
+     *
+     * The flag belongs to the marker in the post, not to the payer's screen, so it has to survive the
+     * whole way from the parsed body to this body — dropping it silently turns a one-off code into
+     * one anybody can pay twice.
+     */
+    @Test
+    fun `passes the receive code's onetime flag through to the send`() =
+        runTest {
+            val api = FakeStardustJsonSource("""{"success":true}""")
+
+            NetworkStardustRepository(api, dispatchers)
+                .send(recipientUid = 9, amount = 2, refId = 100, viewerUid = 52_425, onetime = true)
+
+            assertEquals("""{"member_id":9,"diff":2,"ref_id":100,"onetime":true}""", api.postedBody)
+        }
+
+    /**
+     * A card's tally asks the ledger for one payee's one `ref_id`, and nothing else narrows it.
+     *
+     * Not `type=transfer`, though the server would accept it: the site's own card does not filter,
+     * and matching its arithmetic matters more here than being right about it. See
+     * [NodeSeekJsonClient.stardustReceiptsPath].
+     */
+    @Test
+    fun `reads one receive code's payments off the ledger`() =
+        runTest {
+            val api =
+                FakeStardustJsonSource(
+                    """{"success":true,"records":[
+                       {"id":1,"member_id":52425,"peer_id":9,"type":"transfer","diff":2,"ref_id":100},
+                       {"id":2,"member_id":52425,"peer_id":11,"type":"transfer","diff":3,"ref_id":100}
+                    ]}""",
+                )
+
+            val rows = NetworkStardustRepository(api, dispatchers).receipts(memberId = 52_425, refId = 100)
+
+            assertEquals(
+                "/api/stardust/list?member_id=52425&ref_id=100&count=100",
+                api.requestedPath,
+            )
+            assertEquals(listOf(2, 3), rows.map { it.diff })
+        }
+
+    /** The "have I paid this one?" question is the same read with the payer pinned. */
+    @Test
+    fun `narrows a receive code's payments to one payer`() =
+        runTest {
+            val api = FakeStardustJsonSource("""{"success":true,"records":[]}""")
+
+            NetworkStardustRepository(api, dispatchers)
+                .receipts(memberId = 52_425, refId = 100, peerId = 9)
+
+            assertEquals(
+                "/api/stardust/list?member_id=52425&ref_id=100&count=100&peer_id=9",
+                api.requestedPath,
+            )
         }
 
     /**

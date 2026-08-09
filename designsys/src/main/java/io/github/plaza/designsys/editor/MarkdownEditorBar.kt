@@ -107,6 +107,8 @@ fun MarkdownEditorBar(
     onFormatted: () -> Unit = {},
     /** Adds the wrench at the end of the keys. Only the two surfaces with an arranged strip pass it. */
     onCustomize: (() -> Unit)? = null,
+    /** Rides at the end of the keys, ahead of the wrench; see [EditorToolbar]. */
+    appMenu: (@Composable () -> Unit)? = null,
     trailing: @Composable RowScope.() -> Unit = {},
     /** Drawn in the keyboard's place while [EditorAction.EMOJI] is lit. Empty means no emoji key. */
     emojiPanel: @Composable (EmojiPanelScope) -> Unit = {},
@@ -124,6 +126,7 @@ fun MarkdownEditorBar(
             showDivider = showDivider,
             keySize = keySize,
             onCustomize = onCustomize,
+            appMenu = appMenu,
             onAction = { action ->
                 when (action) {
                     EditorAction.EMOJI -> {

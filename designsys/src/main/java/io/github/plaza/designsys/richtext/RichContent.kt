@@ -132,6 +132,18 @@ fun RichContent(
      */
     voteContent: @Composable (Long) -> Unit = { VotePlaceholderCard() },
     codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit = { CodeBlockView(it) },
+    /**
+     * Draws a [RichNode.StardustReceive].
+     *
+     * A slot for the same reason [voteContent] is one, but with a default that is the whole card
+     * rather than a stand-in: a receive code's marker carries everything the card says, so the five
+     * callers with no ViewModel lose only the live tally and the 付款 button. The thread screen
+     * passes a version that has both.
+     *
+     * The default draws no avatar. Turning a uid into a picture URL is a fact about a particular
+     * forum, and this module does not know one — see the app's `PostRichContent`, which does.
+     */
+    stardustContent: @Composable (RichNode.StardustReceive) -> Unit = { StardustReceiveCard(it) },
 ) {
     // Reading upgrades happen here, at the display seam, so the same styles stay safe to reuse in
     // editors — see `TextStyle.asProse` for why an editor must never inherit them.
@@ -145,6 +157,7 @@ fun RichContent(
             textStyle = prose,
             voteContent = voteContent,
             codeBlockContent = codeBlockContent,
+            stardustContent = stardustContent,
         )
     }
 }
@@ -167,6 +180,7 @@ private fun RichBlockColumn(
     // simply forgotten to pass it, and nothing said so. Required parameters make that a compile error.
     voteContent: @Composable (Long) -> Unit,
     codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit,
+    stardustContent: @Composable (RichNode.StardustReceive) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -180,6 +194,7 @@ private fun RichBlockColumn(
                 textStyle = textStyle,
                 voteContent = voteContent,
                 codeBlockContent = codeBlockContent,
+                stardustContent = stardustContent,
             )
         }
     }
@@ -203,9 +218,12 @@ private fun RichBlock(
     textStyle: TextStyle,
     voteContent: @Composable (Long) -> Unit,
     codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit,
+    stardustContent: @Composable (RichNode.StardustReceive) -> Unit,
 ) {
     when (node) {
         is RichNode.VotePlaceholder -> voteContent(node.voteId)
+
+        is RichNode.StardustReceive -> stardustContent(node)
 
         is RichNode.Paragraph -> InlineText(node.inlines, textStyle, onLinkClick, onQuoteRefClick)
 
@@ -276,6 +294,7 @@ private fun RichBlock(
                             ),
                             voteContent = voteContent,
                             codeBlockContent = codeBlockContent,
+                            stardustContent = stardustContent,
                         )
                     }
                 }
@@ -308,6 +327,7 @@ private fun RichBlock(
                                     textStyle = textStyle,
                                     voteContent = voteContent,
                                     codeBlockContent = codeBlockContent,
+                                    stardustContent = stardustContent,
                                 )
                             }
                         }
@@ -326,6 +346,7 @@ private fun RichBlock(
                 textStyle = textStyle,
                 voteContent = voteContent,
                 codeBlockContent = codeBlockContent,
+                stardustContent = stardustContent,
             )
 
         RichNode.Divider ->
@@ -352,6 +373,7 @@ private fun TabGroup(
     textStyle: TextStyle,
     voteContent: @Composable (Long) -> Unit,
     codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit,
+    stardustContent: @Composable (RichNode.StardustReceive) -> Unit,
 ) {
     if (node.tabs.isEmpty()) return
 
@@ -396,6 +418,7 @@ private fun TabGroup(
             textStyle = textStyle,
             voteContent = voteContent,
             codeBlockContent = codeBlockContent,
+            stardustContent = stardustContent,
             modifier = Modifier.padding(Spacing.md),
         )
     }

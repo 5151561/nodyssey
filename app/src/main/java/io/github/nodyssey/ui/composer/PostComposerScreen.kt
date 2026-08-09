@@ -70,6 +70,7 @@ import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
+import io.github.nodyssey.ui.stardust.StardustReceiveComposeDialog
 import io.github.nodyssey.ui.vote.VoteComposeDialog
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
@@ -140,6 +141,8 @@ fun PostComposerRoute(
         onToolbarReset = viewModel::resetToolbar,
         onCreateVote = viewModel::createVote,
         onDismissVoteCreation = viewModel::dismissVoteCreation,
+        payeeUid = viewModel::receiveCodePayeeUid,
+        onInsertReceiveCode = viewModel::insertReceiveCode,
         modifier = modifier,
     )
 }
@@ -229,6 +232,8 @@ fun PostComposerScreen(
      */
     onCreateVote: (String, Boolean, Boolean, List<String>, () -> Unit) -> Unit = { _, _, _, _, _ -> },
     onDismissVoteCreation: () -> Unit = {},
+    payeeUid: () -> Long? = { null },
+    onInsertReceiveCode: (Int, Long, String, Boolean) -> Unit = { _, _, _, _ -> },
 ) {
     // While a publish is in flight the request may already have created the topic; leaving now would
     // cancel the ViewModel, keep the draft, and set up a duplicate post on the next attempt. Preview
@@ -266,6 +271,8 @@ fun PostComposerScreen(
                 onToolbarReset = onToolbarReset,
                 onCreateVote = onCreateVote,
                 onDismissVoteCreation = onDismissVoteCreation,
+                payeeUid = payeeUid,
+                onInsertReceiveCode = onInsertReceiveCode,
                 modifier = Modifier.paddingWithKeyboard(padding),
             )
         }
@@ -379,12 +386,15 @@ private fun EditorContent(
     onToolbarReset: () -> Unit,
     onCreateVote: (String, Boolean, Boolean, List<String>, () -> Unit) -> Unit,
     onDismissVoteCreation: () -> Unit,
+    payeeUid: () -> Long?,
+    onInsertReceiveCode: (Int, Long, String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val editorState = rememberMarkdownEditorState()
     val focusRequester = remember { FocusRequester() }
     var customizing by rememberSaveable { mutableStateOf(false) }
     var composingVote by rememberSaveable { mutableStateOf(false) }
+    var composingReceiveCode by rememberSaveable { mutableStateOf(false) }
 
     // The keyboard padding is the caller's — [paddingWithKeyboard] has to sit next to the Scaffold
     // padding it consumes, and applying `imePadding` again here would put the gap right back.
@@ -419,16 +429,14 @@ private fun EditorContent(
                     onRecentChange = panel.onRecentChange,
                 )
             },
-            // The strip's trailing slot rather than an [EditorAction]: that enum is the shared pool
+            // The strip's own APP slot rather than an [EditorAction]: that enum is the shared pool
             // every editor draws from, and adding to it would put 插入投票 in the message, signature
-            // and readme editors too — none of which can carry a vote.
-            trailing = {
-                IconButton(onClick = { composingVote = true }) {
-                    Icon(
-                        PlazaIcons.Poll,
-                        contentDescription = stringResource(R.string.composer_insert_vote),
-                    )
-                }
+            // and readme editors too — none of which can carry a vote or a 收款码.
+            appMenu = {
+                ComposerAppMenu(
+                    onInsertVote = { composingVote = true },
+                    onInsertStardust = { composingReceiveCode = true },
+                )
             },
         )
     }
@@ -443,6 +451,17 @@ private fun EditorContent(
                 composingVote = false
                 onDismissVoteCreation()
             },
+        )
+    }
+
+    if (composingReceiveCode) {
+        StardustReceiveComposeDialog(
+            needsSignIn = payeeUid() == null,
+            onInsert = { amount, refId, description, onetime ->
+                composingReceiveCode = false
+                onInsertReceiveCode(amount, refId, description, onetime)
+            },
+            onDismiss = { composingReceiveCode = false },
         )
     }
 

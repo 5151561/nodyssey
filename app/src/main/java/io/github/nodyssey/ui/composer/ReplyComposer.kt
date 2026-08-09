@@ -65,6 +65,8 @@ import io.github.nodyssey.R
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
+import io.github.nodyssey.ui.stardust.StardustReceiveComposeDialog
+import io.github.nodyssey.ui.vote.VoteComposeDialog
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.PlazaIcons
@@ -103,6 +105,11 @@ fun ReplyComposerHost(
     onClearError: () -> Unit,
     onToolbarChange: (List<EditorAction>) -> Unit,
     onToolbarReset: () -> Unit,
+    onCreateVote: (String, Boolean, Boolean, List<String>, () -> Unit) -> Unit,
+    onDismissVoteCreation: () -> Unit,
+    /** Null while the app does not know the account; the 收款码 dialog then explains itself. */
+    payeeUid: () -> Long?,
+    onInsertReceiveCode: (Int, Long, String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Above the early return on purpose: the host stays composed while the sheet is closed, so
@@ -116,6 +123,10 @@ fun ReplyComposerHost(
     // inside another sheet's content stacks two dialog windows for no reason. As siblings the wrench
     // panel simply covers the editor, which is what it should look like anyway.
     var customizing by rememberSaveable { mutableStateOf(false) }
+    // Siblings of the sheet for the same reason the wrench panel is one: a dialog opened from inside
+    // a ModalBottomSheet's content stacks two windows, and the sheet's own scrim ends up over it.
+    var composingVote by rememberSaveable { mutableStateOf(false) }
+    var composingReceiveCode by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(MAX_IMAGES_PER_PICK),
@@ -159,6 +170,8 @@ fun ReplyComposerHost(
             onClearError = onClearError,
             editorState = editorState,
             onCustomize = { customizing = true },
+            onInsertVote = { composingVote = true },
+            onInsertStardust = { composingReceiveCode = true },
         )
     }
 
@@ -168,6 +181,30 @@ fun ReplyComposerHost(
             onChange = onToolbarChange,
             onReset = onToolbarReset,
             onDismiss = { customizing = false },
+        )
+    }
+
+    if (composingVote) {
+        VoteComposeDialog(
+            state = state.voteCreation,
+            onCreate = { title, multiple, isPublic, items ->
+                onCreateVote(title, multiple, isPublic, items) { composingVote = false }
+            },
+            onDismiss = {
+                composingVote = false
+                onDismissVoteCreation()
+            },
+        )
+    }
+
+    if (composingReceiveCode) {
+        StardustReceiveComposeDialog(
+            needsSignIn = payeeUid() == null,
+            onInsert = { amount, refId, description, onetime ->
+                composingReceiveCode = false
+                onInsertReceiveCode(amount, refId, description, onetime)
+            },
+            onDismiss = { composingReceiveCode = false },
         )
     }
 }
@@ -188,6 +225,8 @@ private fun ReplyEditorSheet(
     onClearError: () -> Unit,
     editorState: MarkdownEditorState,
     onCustomize: () -> Unit,
+    onInsertVote: () -> Unit,
+    onInsertStardust: () -> Unit,
 ) {
     val keyboard = LocalSoftwareKeyboardController.current
 
@@ -299,6 +338,13 @@ private fun ReplyEditorSheet(
                 keySize = EditorToolbarDefaults.CompactKeySize,
                 onPickImages = onPickImages,
                 onCustomize = onCustomize,
+                appMenu = {
+                    ComposerAppMenu(
+                        onInsertVote = onInsertVote,
+                        onInsertStardust = onInsertStardust,
+                        keySize = EditorToolbarDefaults.CompactKeySize,
+                    )
+                },
                 emojiPanel = { panel ->
                     NodeSeekEmojiPanel(
                         onInsert = panel.onInsert,
