@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -36,17 +37,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import io.github.nodyssey.R
+import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.image.allowMeteredImage
 import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.theme.Spacing
 
 /**
  * One of the five groups NodeSeek's own editor offers.
  *
- * The first three are NodeSeek's image stickers. Their previews ship in `assets/stickers`, while the
- * editor inserts the site's native shortcode (`:ac01:` etc.). Keeping those two concerns separate
- * means opening this panel never spends mobile data and published posts still use NodeSeek's own
- * renderer instead of a guessed Markdown image URL.
+ * The first three are NodeSeek's image stickers. Their previews come from the site's own
+ * `/static/image/sticker/` — the same URLs post bodies already render — while the editor inserts the
+ * site's native shortcode (`:ac01:` etc.). Keeping those two concerns separate means a published
+ * post still uses NodeSeek's renderer instead of a guessed Markdown image URL.
+ *
+ * The previews used to ship in `assets/stickers`, which cost 1.7 MB of APK for images the app was
+ * downloading anyway the moment a post used one. Fetching them means one Coil-cached copy serves
+ * both the panel and the thread, at the price of a first open that needs the network.
  */
 data class EmojiGroup(
     @param:StringRes val titleRes: Int,
@@ -60,7 +68,7 @@ sealed interface EmojiEntry {
     data class Sticker(
         val name: String,
         val shortcode: String,
-        val assetPath: String,
+        val url: String,
     ) : EmojiEntry
 }
 
@@ -122,7 +130,7 @@ private fun siteSticker(
 ) = EmojiEntry.Sticker(
     name = group + code,
     shortcode = " :$group$code: ",
-    assetPath = "file:///android_asset/stickers/$group/$code.$extension",
+    url = NodeSeekSite.stickerUrl(group = group, code = code, extension = extension),
 )
 
 /**
@@ -264,13 +272,38 @@ private fun EmojiCell(
         when (entry) {
             is EmojiEntry.Unicode -> Text(entry.character, fontSize = 24.sp)
 
-            is EmojiEntry.Sticker -> AsyncImage(
-                model = entry.assetPath,
+            is EmojiEntry.Sticker -> StickerImage(
+                sticker = entry,
                 contentDescription = null,
                 modifier = Modifier.size(STICKER_SIZE),
             )
         }
     }
+}
+
+/**
+ * A sticker preview, fetched from the site.
+ *
+ * Waived past 仅 Wi-Fi 加载图片 on the same grounds as a tap on a skipped image: opening the panel is
+ * the user asking for these, they are a few KB each, and the grid only requests the cells on screen.
+ * Respecting the switch here would instead leave a permanently blank panel for anyone whose network
+ * never reports NOT_METERED — a VPN tunnel, for instance.
+ */
+@Composable
+private fun StickerImage(
+    sticker: EmojiEntry.Sticker,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val request = remember(sticker.url) {
+        ImageRequest
+            .Builder(context)
+            .data(sticker.url)
+            .allowMeteredImage(true)
+            .build()
+    }
+    AsyncImage(model = request, contentDescription = contentDescription, modifier = modifier)
 }
 
 @Composable
@@ -304,8 +337,8 @@ private fun RecentRow(
             ) {
                 when (entry) {
                     is EmojiEntry.Sticker ->
-                        AsyncImage(
-                            model = entry.assetPath,
+                        StickerImage(
+                            sticker = entry,
                             contentDescription = entry.name,
                             modifier = Modifier.size(RECENT_STICKER_SIZE),
                         )
