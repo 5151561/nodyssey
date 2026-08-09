@@ -56,15 +56,15 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.VoteItem
 import io.github.nodyssey.model.totalCount
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.SkeletonBar
-import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.richtext.VoteCardSurface
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.SkeletonBar
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
 @Composable
 fun VoteCard(

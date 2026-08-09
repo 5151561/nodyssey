@@ -64,9 +64,9 @@ import coil3.request.ImageRequest
 import io.github.nodyssey.R
 import io.github.nodyssey.core.image.ImagesDeferredException
 import io.github.nodyssey.core.image.allowMeteredImage
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import kotlin.math.abs
 
 /**

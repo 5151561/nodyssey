@@ -1,6 +1,7 @@
 package io.github.nodyssey.core
 
 import io.github.nodyssey.model.FeedSort
+import io.github.plaza.designsys.component.UserAvatar
 import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder

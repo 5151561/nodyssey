@@ -45,13 +45,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
 import io.github.nodyssey.core.report.QualityReport
-import io.github.nodyssey.ui.theme.CodeStyle
-import io.github.nodyssey.ui.theme.LocalNodysseyExtraColors
-import io.github.nodyssey.ui.theme.ReportData
-import io.github.nodyssey.ui.theme.ReportLabel
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.component.SpecRow
+import io.github.plaza.designsys.component.SpecTable
+import io.github.plaza.designsys.theme.CodeStyle
+import io.github.plaza.designsys.theme.LocalNodysseyExtraColors
+import io.github.plaza.designsys.theme.ReportData
+import io.github.plaza.designsys.theme.ReportLabel
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
 /**
  * A NodeQuality benchmark report, rebuilt out of ordinary rows instead of the terminal art it

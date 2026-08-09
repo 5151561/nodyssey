@@ -54,16 +54,16 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.DailyQuota
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
-import io.github.nodyssey.ui.common.GroupedRow
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.component.GroupedRow
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.readableWidth
 
 /** What buying an invite code costs, and the reason the confirm dialog exists at all. */
 const val INVITE_CODE_CHICKEN_COST = 1_000

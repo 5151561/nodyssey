@@ -13,7 +13,7 @@ import androidx.compose.ui.test.swipeLeft
 import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.data.ReadHistoryEntry
 import io.github.nodyssey.data.settings.SettingsRepository
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.NodysseyTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

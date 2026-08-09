@@ -22,7 +22,7 @@ import io.github.nodyssey.core.html.AnsiParser
 import io.github.nodyssey.core.report.QualityReportParser
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.model.RichNode
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.NodysseyTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

@@ -82,7 +82,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.github.nodyssey.R
 import io.github.nodyssey.data.Board
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.designsys.theme.Spacing
 import kotlinx.coroutines.launch
 
 /**

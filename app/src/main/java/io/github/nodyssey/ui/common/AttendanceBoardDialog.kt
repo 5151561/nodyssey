@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.AttendanceBoardEntry
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
 /** 今日签到榜，共享给“我的”和“账户与成长”，不附带任何页面导航行为。 */
 @Composable

@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.ui.postlist.toNodeSeekError
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.designsys.theme.Spacing
 
 /** The radius every field, card and sheet on these screens rounds to. */
 internal val AccountFieldShape = RoundedCornerShape(14.dp)

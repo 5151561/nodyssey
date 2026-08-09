@@ -39,13 +39,13 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.FollowUser
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.StatusView
-import io.github.nodyssey.ui.common.UserAvatar
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.StatusShapes
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.StatusShapes
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
 @Composable
 fun FollowRoute(

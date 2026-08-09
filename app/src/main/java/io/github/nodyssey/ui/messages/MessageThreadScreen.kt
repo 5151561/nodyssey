@@ -71,23 +71,25 @@ import io.github.nodyssey.core.TimeFormat
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
-import io.github.nodyssey.ui.common.EditorTextField
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.composer.AttachmentTray
-import io.github.nodyssey.ui.composer.EditorAction
-import io.github.nodyssey.ui.composer.MarkdownEditorBar
-import io.github.nodyssey.ui.composer.MarkdownEditorState
-import io.github.nodyssey.ui.composer.ToolbarCustomizeSheet
+import io.github.nodyssey.ui.composer.EmojiPanel
 import io.github.nodyssey.ui.composer.parseMarkdown
-import io.github.nodyssey.ui.composer.rememberMarkdownEditorState
 import io.github.nodyssey.ui.composer.toPickedImages
 import io.github.nodyssey.ui.richtext.RichContent
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.paddingWithKeyboard
+import io.github.plaza.designsys.component.EditorTextField
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.ThreadRow
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.MarkdownEditorBar
+import io.github.plaza.designsys.editor.MarkdownEditorState
+import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
+import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.paddingWithKeyboard
 
 @Composable
 fun MessageThreadRoute(
@@ -621,6 +623,14 @@ private fun MessageComposer(
                     picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
                 onCustomize = onCustomize,
+                emojiPanel = { panel ->
+                    EmojiPanel(
+                        onInsert = panel.onInsert,
+                        onBackspace = panel.onBackspace,
+                        recent = panel.recent,
+                        onRecentChange = panel.onRecentChange,
+                    )
+                },
                 content = { inputBar() },
             )
         } else {

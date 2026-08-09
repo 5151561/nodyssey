@@ -59,10 +59,14 @@ jobs:
         run: ./gradlew spotlessCheck
 
       # Includes the Room, Paging and Compose tests: they run on Robolectric, so no emulator is needed.
+      # Unqualified so every module runs its own tests — `:app:testDebugUnitTest` would compile the
+      # library modules but never execute a single test of theirs.
       - name: Unit tests
-        run: ./gradlew :app:testDebugUnitTest
+        run: ./gradlew testDebugUnitTest
 
-      # warningsAsErrors is on, so a new lint warning fails the build here.
+      # warningsAsErrors is on, so a new lint warning fails the build here. Still qualified to `:app`
+      # because `plaza.android.application` sets `checkDependencies`, which pulls every module this
+      # one depends on into the same run and the same report.
       - name: Android lint
         run: ./gradlew :app:lintDebug
 
@@ -86,8 +90,8 @@ jobs:
         with:
           name: reports
           path: |
-            app/build/reports/
-            app/build/test-results/
+            */build/reports/
+            */build/test-results/
             app/build/outputs/bundle/release/*.aab
             app/build/outputs/mapping/release/
           retention-days: 14

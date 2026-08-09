@@ -58,16 +58,16 @@ import io.github.nodyssey.data.RulingAction
 import io.github.nodyssey.data.RulingKind
 import io.github.nodyssey.data.RulingRecord
 import io.github.nodyssey.data.RulingTarget
-import io.github.nodyssey.ui.common.AppendSpinner
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.component.AppendSpinner
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
 
 @Composable

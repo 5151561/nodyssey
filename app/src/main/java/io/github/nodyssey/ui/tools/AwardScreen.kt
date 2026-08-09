@@ -33,8 +33,8 @@ import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NumericPager
 import io.github.nodyssey.ui.postlist.PostRow
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.readableWidth
 
 @Composable
 fun AwardRoute(

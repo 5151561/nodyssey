@@ -11,7 +11,7 @@ import io.github.nodyssey.data.update.AppRelease
 import io.github.nodyssey.data.update.AppUpdateState
 import io.github.nodyssey.data.update.UpdateCheck
 import io.github.nodyssey.data.update.UpdateDownload
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.NodysseyTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test

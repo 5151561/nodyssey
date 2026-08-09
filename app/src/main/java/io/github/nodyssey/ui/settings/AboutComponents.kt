@@ -20,8 +20,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.theme.Spacing
 
 /** 软件与社区关于页共用的导航动作行。 */
 @Composable

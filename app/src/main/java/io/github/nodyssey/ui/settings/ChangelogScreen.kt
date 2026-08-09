@@ -18,8 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.github.nodyssey.R
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.readableWidth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

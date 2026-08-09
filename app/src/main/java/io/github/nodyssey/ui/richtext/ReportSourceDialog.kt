@@ -42,10 +42,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.nodyssey.R
 import io.github.nodyssey.model.AnsiSpan
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.rememberClipboardCopy
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.rememberClipboardCopy
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
 
 /**
  * The report exactly as it was posted, on a terminal ground, pinchable.

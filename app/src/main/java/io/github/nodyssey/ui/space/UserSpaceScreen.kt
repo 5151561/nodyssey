@@ -68,17 +68,17 @@ import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.collapseMarkdown
 import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.nodyssey.ui.postlist.toNodeSeekError
 import io.github.nodyssey.ui.richtext.RichContent
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.TABULAR_FIGURES
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.flowOf
 
 @Composable

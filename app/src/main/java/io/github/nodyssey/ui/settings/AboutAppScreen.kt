@@ -54,10 +54,10 @@ import io.github.nodyssey.data.update.InstallFailure
 import io.github.nodyssey.data.update.UpdateCheck
 import io.github.nodyssey.data.update.UpdateDownload
 import io.github.nodyssey.data.update.UpdateFailure
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.readableWidth
 import kotlin.math.roundToInt
 
 @Composable

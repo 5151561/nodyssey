@@ -41,8 +41,8 @@ import coil3.request.ImageRequest
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.image.allowMeteredImage
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.theme.Spacing
 
 /**
  * One of the five groups NodeSeek's own editor offers.

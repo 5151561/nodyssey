@@ -55,16 +55,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
-import io.github.nodyssey.ui.common.AvatarShape
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.UserAvatar
 import io.github.nodyssey.ui.composer.EditorActions
-import io.github.nodyssey.ui.composer.EditorToolbar
-import io.github.nodyssey.ui.composer.applyMarkdown
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.paddingWithKeyboard
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.editor.EditorToolbar
+import io.github.plaza.designsys.editor.applyMarkdown
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.paddingWithKeyboard
+import io.github.plaza.designsys.theme.readableWidth
 
 @Composable
 fun ProfileFieldsRoute(

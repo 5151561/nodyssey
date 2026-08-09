@@ -38,7 +38,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.designsys.theme.Spacing
 
 /*
  * The page control for the screens that read a paged site list as one continuous scroll.

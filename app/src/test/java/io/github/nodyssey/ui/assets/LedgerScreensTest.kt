@@ -12,7 +12,7 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.CreditEntry
 import io.github.nodyssey.data.StardustEntry
 import io.github.nodyssey.data.StardustType
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.NodysseyTheme
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Rule

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Wording that belongs to the shared components, not to any one app.
+
+  A Markdown toolbar labels the same eleven keys whichever forum it is editing for, so the labels
+  travel with the toolbar. Anything naming a site, a board or a currency stays in the app module.
+-->
+<resources>
+    <!-- Toolbar keys. Content descriptions, so they read as the action the key performs. -->
+    <string name="composer_format_bold">加粗</string>
+    <string name="composer_format_italic">斜体</string>
+    <string name="composer_format_strikethrough">删除线</string>
+    <string name="composer_format_heading">二级标题</string>
+    <string name="composer_format_code">行内代码</string>
+    <string name="composer_format_quote">引用</string>
+    <string name="composer_format_list">无序列表</string>
+    <string name="composer_format_link">链接</string>
+    <string name="composer_format_mention">提到某人</string>
+    <string name="composer_format_image">图片</string>
+    <string name="composer_format_emoji">表情</string>
+
+    <!-- The wrench at the end of a composer strip, and the panel it opens -->
+    <string name="composer_toolbar_customize">自定义工具栏</string>
+    <string name="composer_toolbar_enabled">工具栏上的按键</string>
+    <string name="composer_toolbar_available">可添加</string>
+    <string name="composer_toolbar_reorder">拖动排序</string>
+    <string name="composer_toolbar_remove">移出工具栏</string>
+    <string name="composer_toolbar_add">加入工具栏</string>
+    <string name="composer_toolbar_reset">恢复默认</string>
+</resources>

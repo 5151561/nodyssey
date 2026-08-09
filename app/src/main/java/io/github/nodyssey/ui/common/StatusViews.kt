@@ -46,11 +46,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
 import io.github.nodyssey.core.net.NodeSeekError
-import io.github.nodyssey.ui.theme.LocalNodysseyExtraColors
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.StatusShapes
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.theme.LocalNodysseyExtraColors
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.StatusShapes
 
 /**
  * Every empty, error and blocked state in the app is this one composable.

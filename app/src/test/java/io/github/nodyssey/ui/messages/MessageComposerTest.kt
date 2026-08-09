@@ -14,10 +14,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.UploadStatus
-import io.github.nodyssey.ui.composer.EditorAction
 import io.github.nodyssey.ui.composer.EditorActions
-import io.github.nodyssey.ui.composer.toolbarLayout
-import io.github.nodyssey.ui.theme.NodysseyTheme
+import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.toolbarLayout
+import io.github.plaza.designsys.theme.NodysseyTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -56,19 +56,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
-import io.github.nodyssey.ui.common.GroupedColumn
-import io.github.nodyssey.ui.common.GroupedRow
 import io.github.nodyssey.ui.common.LoadingState
 import io.github.nodyssey.ui.common.NodeSeekErrorState
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.common.SectionLabel
 import io.github.nodyssey.ui.common.UpdateDot
-import io.github.nodyssey.ui.common.UserAvatar
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Sizes
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.StatusShapes
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.component.GroupedColumn
+import io.github.plaza.designsys.component.GroupedRow
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Sizes
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.StatusShapes
+import io.github.plaza.designsys.theme.readableWidth
 
 @Composable
 fun ProfileRoute(

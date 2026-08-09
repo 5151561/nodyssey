@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
-import io.github.nodyssey.ui.theme.LocalNodysseyExtraColors
+import io.github.plaza.designsys.theme.LocalNodysseyExtraColors
 
 /**
  * The board tag that appears on every list row and at the top of every thread.

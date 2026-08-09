@@ -71,13 +71,18 @@ import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
-import io.github.nodyssey.ui.common.EditorTextField
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.PostBody
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.paddingWithKeyboard
-import io.github.nodyssey.ui.theme.readableWidth
 import io.github.nodyssey.ui.vote.VoteComposeDialog
+import io.github.plaza.designsys.component.EditorTextField
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.MarkdownEditorBar
+import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
+import io.github.plaza.designsys.editor.ViewModeSwitch
+import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.theme.PostBody
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.paddingWithKeyboard
+import io.github.plaza.designsys.theme.readableWidth
 import java.text.DateFormat
 import java.util.Date
 
@@ -406,6 +411,14 @@ private fun EditorContent(
             // The toolbar takes focus when it is tapped, and a caret the user cannot see is a caret
             // they have lost track of.
             onFormatted = { focusRequester.requestFocus() },
+            emojiPanel = { panel ->
+                EmojiPanel(
+                    onInsert = panel.onInsert,
+                    onBackspace = panel.onBackspace,
+                    recent = panel.recent,
+                    onRecentChange = panel.onRecentChange,
+                )
+            },
             // The strip's trailing slot rather than an [EditorAction]: that enum is the shared pool
             // every editor draws from, and adding to it would put 插入投票 in the message, signature
             // and readme editors too — none of which can carry a vote.

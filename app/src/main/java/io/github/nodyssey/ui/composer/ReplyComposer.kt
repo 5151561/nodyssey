@@ -66,11 +66,17 @@ import io.github.nodyssey.core.net.NodeSeekError
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
-import io.github.nodyssey.ui.common.EditorTextField
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.CommentBody
-import io.github.nodyssey.ui.theme.Spacing
-import io.github.nodyssey.ui.theme.readableWidth
+import io.github.plaza.designsys.component.EditorTextField
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.EditorToolbarDefaults
+import io.github.plaza.designsys.editor.MarkdownEditorBar
+import io.github.plaza.designsys.editor.MarkdownEditorState
+import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
+import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.theme.CommentBody
+import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.readableWidth
 import java.text.DateFormat
 import java.util.Date
 
@@ -293,6 +299,14 @@ private fun ReplyEditorSheet(
                 keySize = EditorToolbarDefaults.CompactKeySize,
                 onPickImages = onPickImages,
                 onCustomize = onCustomize,
+                emojiPanel = { panel ->
+                    EmojiPanel(
+                        onInsert = panel.onInsert,
+                        onBackspace = panel.onBackspace,
+                        recent = panel.recent,
+                        onRecentChange = panel.onRecentChange,
+                    )
+                },
                 trailing = {
                     PublishReplyButton(
                         isPublishing = state.isPublishing,

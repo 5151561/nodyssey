@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.core.net.toUri
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.settings.ExternalLinkTarget
-import io.github.nodyssey.ui.theme.LocalNodysseyDarkTheme
+import io.github.plaza.designsys.theme.LocalNodysseyDarkTheme
 
 /**
  * The app's [UriHandler], swapped in over the platform one at the composition root.

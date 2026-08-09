@@ -1,4 +1,7 @@
 pluginManagement {
+    // The convention plugins that carry the Android configuration every module shares.
+    includeBuild("build-logic")
+
     repositories {
         google {
             content {
@@ -31,3 +34,7 @@ plugins {
 
 rootProject.name = "Nodyssey"
 include(":app")
+
+// Compose theme and components with no knowledge of any particular forum. Kept as its own module so
+// the compiler, not a review convention, is what stops site-specific types leaking into it.
+include(":designsys")

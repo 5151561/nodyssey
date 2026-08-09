@@ -21,9 +21,9 @@ import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
 import io.github.nodyssey.core.update.releaseNotesText
 import io.github.nodyssey.data.update.AppRelease
-import io.github.nodyssey.ui.common.NodysseyIcons
-import io.github.nodyssey.ui.theme.NodysseyTheme
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.theme.NodysseyTheme
+import io.github.plaza.designsys.theme.Spacing
 
 /**
  * 启动提醒 — the one thing that actually tells the owner of a sideloaded APK that a fix shipped.

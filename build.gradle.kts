@@ -45,10 +45,15 @@ val ktlintRules =
 // version catalog so every machine and CI agent formats identically.
 spotless {
     kotlin {
-        // The project is single-module, so constrain discovery to source roots. Walking the whole
-        // repository races AGP while it replaces incremental resource directories during a
-        // combined CI invocation, even when build/** is later excluded from formatting.
-        target("app/src/**/*.kt")
+        // Constrained to module source roots. Walking the whole repository races AGP while it
+        // replaces incremental resource directories during a combined CI invocation, even when
+        // build/** is later excluded from formatting.
+        //
+        // The single `*` is what keeps it constrained: it matches a module directory and nothing
+        // deeper, so a new module is covered automatically but no `build/` tree is ever entered.
+        // `.gradle.kts` files are `.kts`, not `.kt`, so the convention plugins fall to
+        // `kotlinGradle` below rather than here.
+        target("*/src/**/*.kt")
         ktlint(libs.versions.ktlint.get()).editorConfigOverride(ktlintRules)
     }
     kotlinGradle {

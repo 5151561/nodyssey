@@ -21,10 +21,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.ui.common.NodysseyIcons
 import io.github.nodyssey.ui.richtext.RichContent
-import io.github.nodyssey.ui.theme.PostBody
-import io.github.nodyssey.ui.theme.Spacing
+import io.github.plaza.designsys.component.NodysseyIcons
+import io.github.plaza.designsys.theme.PostBody
+import io.github.plaza.designsys.theme.Spacing
 
 /**
  * The site's right-hand rules card, moved to the top of the publish preview.

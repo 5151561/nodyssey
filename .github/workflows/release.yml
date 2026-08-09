@@ -96,8 +96,9 @@ jobs:
       - name: Check formatting
         run: ./gradlew spotlessCheck
 
+      # Unqualified so every module runs its own tests, not just `:app`.
       - name: Unit tests
-        run: ./gradlew :app:testDebugUnitTest
+        run: ./gradlew testDebugUnitTest
 
       - name: Android lint
         run: ./gradlew :app:lintDebug
