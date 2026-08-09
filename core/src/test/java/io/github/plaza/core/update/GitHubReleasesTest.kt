@@ -18,7 +18,7 @@ class GitHubReleasesTest {
     fun `the APK asset is picked, not the first one`() {
         val release =
             requireNotNull(
-                GitHubReleases.parseLatest(load("github-release-latest.json"), releasesUrl),
+                GitHubReleases.parseLatest(load("github-release-latest.json"), releasesUrl, PREFIX),
             )
 
         assertEquals("1.2.0", release.versionName)
@@ -42,12 +42,53 @@ class GitHubReleasesTest {
               "tag_name": "v1.2.0",
               "html_url": "",
               "assets": [
-                {"name": "a.apk", "size": 10, "browser_download_url": "https://example.invalid/a.apk"}
+                {"name": "plaza-a.apk", "size": 10, "browser_download_url": "https://example.invalid/a.apk"}
               ]
             }
             """.trimIndent()
 
-        assertEquals(releasesUrl, GitHubReleases.parseLatest(payload, releasesUrl)?.htmlUrl)
+        assertEquals(releasesUrl, GitHubReleases.parseLatest(payload, releasesUrl, PREFIX)?.htmlUrl)
+    }
+
+    /**
+     * The case a repository with two apps in it creates: `releases/latest` answers for the repository,
+     * so the newest release is regularly the sibling's, and its APK carries a different
+     * `applicationId`. Offering it would end as "app not installed" on every phone that took it.
+     */
+    @Test
+    fun `a sibling app's release is not offered as this app's update`() {
+        val payload =
+            """
+            {
+              "tag_name": "other-v9.9.9",
+              "draft": false,
+              "prerelease": false,
+              "assets": [
+                {"name": "other-v9.9.9.apk", "size": 10, "browser_download_url": "https://example.invalid/other.apk"}
+              ]
+            }
+            """.trimIndent()
+
+        assertNull(GitHubReleases.parseLatest(payload, releasesUrl, PREFIX))
+    }
+
+    /** And when one release carries both apps, the prefix is what tells them apart. */
+    @Test
+    fun `the APK belonging to this app is picked out of several`() {
+        val payload =
+            """
+            {
+              "tag_name": "v1.2.0",
+              "draft": false,
+              "prerelease": false,
+              "assets": [
+                {"name": "other-v1.2.0.apk", "size": 10, "browser_download_url": "https://example.invalid/other.apk"},
+                {"name": "plaza-v1.2.0.apk", "size": 20, "browser_download_url": "https://example.invalid/plaza.apk"}
+              ]
+            }
+            """.trimIndent()
+
+        assertEquals("plaza-v1.2.0.apk", GitHubReleases.parseLatest(payload, releasesUrl, PREFIX)?.assetName)
     }
 
     @Test
@@ -59,12 +100,12 @@ class GitHubReleasesTest {
               "draft": false,
               "prerelease": false,
               "assets": [
-                {"name": "source.zip", "size": 10, "browser_download_url": "https://example.invalid/source.zip"}
+                {"name": "plaza-source.zip", "size": 10, "browser_download_url": "https://example.invalid/source.zip"}
               ]
             }
             """.trimIndent()
 
-        assertNull(GitHubReleases.parseLatest(payload, releasesUrl))
+        assertNull(GitHubReleases.parseLatest(payload, releasesUrl, PREFIX))
     }
 
     @Test
@@ -80,11 +121,12 @@ class GitHubReleasesTest {
             }
             """.trimIndent()
 
-        assertNull(GitHubReleases.parseLatest(draft, releasesUrl))
+        assertNull(GitHubReleases.parseLatest(draft, releasesUrl, PREFIX))
         assertNull(
             GitHubReleases.parseLatest(
                 draft.replace("\"draft\": true", "\"prerelease\": true"),
                 releasesUrl,
+                PREFIX,
             ),
         )
     }
@@ -93,7 +135,7 @@ class GitHubReleasesTest {
     fun `something other than the release JSON is reported as unreadable`() {
         val failure =
             assertThrows(AppUpdateException::class.java) {
-                GitHubReleases.parseLatest("<html>rate limited</html>", releasesUrl)
+                GitHubReleases.parseLatest("<html>rate limited</html>", releasesUrl, PREFIX)
             }
 
         assertEquals(UpdateFailure.Unreadable, failure.failure)
@@ -106,5 +148,6 @@ class GitHubReleasesTest {
 
     private companion object {
         const val REPOSITORY = "example/plaza"
+        const val PREFIX = "plaza-"
     }
 }
