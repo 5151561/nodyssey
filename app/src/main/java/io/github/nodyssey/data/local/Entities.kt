@@ -147,6 +147,15 @@ data class FeedPositionEntity(
     val feedKey: String,
     val postId: Long,
     val sortIndex: Int,
+    /**
+     * Which of the site's pages this row arrived on.
+     *
+     * [sortIndex] cannot answer that: pages are not a fixed number of rows once置顶 and blocked rows
+     * are counted, and the window need not start at page 1. The column is what lets 首页翻页栏 name
+     * the page under the reader's thumb, and it follows the same "first sighting wins" rule the index
+     * does — a post that reappears on the next page keeps the page it was first seen on.
+     */
+    val page: Int = 1,
 )
 
 /**
@@ -161,6 +170,13 @@ data class FeedRemoteKeyEntity(
     @PrimaryKey val feedKey: String,
     val nextPage: Int?,
     val refreshedAtMillis: Long,
+    /**
+     * Highest page the site's pager offered when this feed was last written.
+     *
+     * Only 首页翻页栏 reads it, and only to draw "第 3 / 217 页" — the scroll itself still ends where
+     * `nextPage == null` says it does. 1 means the pager offered nothing, which is a one-page feed.
+     */
+    val totalPages: Int = 1,
 )
 
 // ---------------------------------------------------------------------------------------------

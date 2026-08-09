@@ -13,6 +13,7 @@ import io.github.nodyssey.core.net.NodeSeekException
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.FeedPost
+import io.github.nodyssey.data.FeedRemoteMediator
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.session.SessionState
@@ -47,6 +48,7 @@ import kotlinx.coroutines.launch
  * page to double-start, and no late response from the previous board to leak into the new one,
  * because switching boards replaces the stream instead of mutating a list.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class PostListViewModel(
     private val repository: PostRepository,
     private val categoryRepository: CategoryRepository,
@@ -72,15 +74,14 @@ class PostListViewModel(
      * a post and back. Without it, returning to the list restarts paging at page one and the scroll
      * position goes with it — the exact regression phase two exists to fix.
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
     val feed: Flow<PagingData<FeedPost>> =
         combine(
-            uiState.map { it.categorySlug to it.sort },
+            uiState.map { FeedKey(it.categorySlug, it.sort, it.startPage, 0) },
             feedGeneration,
-        ) { (slug, sort), generation -> FeedKey(slug, sort, generation) }
+        ) { key, generation -> key.copy(sessionGeneration = generation) }
             .filter { it.sessionGeneration >= 0 }
             .distinctUntilChanged()
-            .flatMapLatest { key -> repository.feed(key.categorySlug, key.sort) }
+            .flatMapLatest { key -> repository.feed(key.categorySlug, key.sort, key.startPage) }
             .cachedIn(viewModelScope)
 
     init {
@@ -120,6 +121,28 @@ class PostListViewModel(
             }
         }.launchIn(viewModelScope)
 
+        settingsRepository.settings
+            .map { it.homePageBar }
+            .distinctUntilChanged()
+            .onEach { enabled ->
+                // Turning the bar off also gives up the page it had travelled to: with no control on
+                // screen there is no way back from page 40, and a feed silently stuck there is worse
+                // than the one the switch was turned off to get.
+                _uiState.update { state ->
+                    state.copy(
+                        pageBarEnabled = enabled,
+                        startPage = if (enabled) state.startPage else FeedRemoteMediator.FIRST_PAGE,
+                    )
+                }
+            }.launchIn(viewModelScope)
+
+        uiState
+            .map { it.categorySlug to it.sort }
+            .distinctUntilChanged()
+            .flatMapLatest { (slug, sort) -> repository.feedTotalPages(slug, sort) }
+            .onEach { total -> _uiState.update { it.copy(totalPages = total) } }
+            .launchIn(viewModelScope)
+
         // Reconcile the first cookie snapshot before opening a Pager. Later generations either
         // invalidate authenticated data or clear it when the user becomes signed out.
         session
@@ -149,7 +172,7 @@ class PostListViewModel(
     fun selectCategory(slug: String?) {
         // The guard stays: re-emitting the same slug rebuilds the pager and drops the position.
         if (_uiState.value.categorySlug == slug) return
-        _uiState.update { it.copy(categorySlug = slug) }
+        _uiState.update { it.copy(categorySlug = slug, startPage = FeedRemoteMediator.FIRST_PAGE) }
     }
 
     /**
@@ -161,7 +184,21 @@ class PostListViewModel(
      */
     fun selectSort(sort: FeedSort) {
         if (_uiState.value.sort == sort) return
-        _uiState.update { it.copy(sort = sort) }
+        _uiState.update { it.copy(sort = sort, startPage = FeedRemoteMediator.FIRST_PAGE) }
+    }
+
+    /**
+     * Sends 首页 to a page it is not currently holding.
+     *
+     * The screen calls this only when the target is genuinely absent — a page already in the loaded
+     * window is a scroll, not a fetch, and going through here would throw away everything after it
+     * for no reason. What lands is a new window starting at [page]: the site pages forwards only, so
+     * arriving at page 40 means holding page 40 onwards and nothing before it.
+     */
+    fun goToPage(page: Int) {
+        val target = page.coerceIn(FeedRemoteMediator.FIRST_PAGE, _uiState.value.totalPages.coerceAtLeast(1))
+        if (_uiState.value.startPage == target) return
+        _uiState.update { it.copy(startPage = target) }
     }
 
     /**
@@ -211,6 +248,8 @@ class PostListViewModel(
 private data class FeedKey(
     val categorySlug: String?,
     val sort: FeedSort,
+    /** A jump is a different pager, for the same reason a different board is: the rows are replaced. */
+    val startPage: Int,
     val sessionGeneration: Int,
 )
 
@@ -231,6 +270,17 @@ data class PostListUiState(
     val parkedBoards: List<Board> = emptyList(),
     val categorySlug: String? = null,
     val sort: FeedSort = FeedSort.LAST_REPLY,
+    /** 设置 › 首页翻页栏. Off is the default; see [io.github.nodyssey.data.settings.UserSettings.homePageBar]. */
+    val pageBarEnabled: Boolean = false,
+    /**
+     * Where the loaded window starts — 1 unless 翻页栏 has sent the feed somewhere.
+     *
+     * Part of the state rather than a field because it selects the pager: changing it is what makes
+     * the mediator replace the stored rows instead of appending to them.
+     */
+    val startPage: Int = FeedRemoteMediator.FIRST_PAGE,
+    /** How many pages the site says this feed has, as of the last page stored. */
+    val totalPages: Int = 1,
 ) {
     /**
      * The selected board's name, or null on the mixed front page.

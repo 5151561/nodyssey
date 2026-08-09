@@ -70,6 +70,10 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setReportFormat(value) }
     }
 
+    fun setHomePageBar(value: Boolean) {
+        viewModelScope.launch { settings.setHomePageBar(value) }
+    }
+
     fun setUpdateCheckOnLaunch(value: Boolean) {
         viewModelScope.launch { settings.setUpdateCheckOnLaunch(value) }
     }

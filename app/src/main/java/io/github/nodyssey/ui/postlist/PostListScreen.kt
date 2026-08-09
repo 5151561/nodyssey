@@ -39,6 +39,7 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -60,6 +61,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -99,6 +101,8 @@ import io.github.nodyssey.ui.common.EmptyFeedState
 import io.github.nodyssey.ui.common.MetaText
 import io.github.nodyssey.ui.common.NodeSeekErrorState
 import io.github.nodyssey.ui.common.NodysseyIcons
+import io.github.nodyssey.ui.common.PageJumpSheet
+import io.github.nodyssey.ui.common.PageJumpToolbarContent
 import io.github.nodyssey.ui.common.SkeletonBar
 import io.github.nodyssey.ui.common.ThreadRow
 import io.github.nodyssey.ui.common.ThreadRowTitle
@@ -139,6 +143,7 @@ fun PostListRoute(
         onBoardClick = viewModel::selectCategory,
         onArrangementChange = viewModel::saveBoardArrangement,
         onSortChange = viewModel::selectSort,
+        onGoToPage = viewModel::goToPage,
         onSignInClick = onSignIn,
         // The challenge is cleared on the URL that failed, so the WebView loads the same list page the
         // request did — a different page can be served without a challenge and prove nothing.
@@ -167,6 +172,11 @@ fun PostListScreen(
     onSignInClick: () -> Unit,
     onRecoverInBrowser: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Reloads the feed from a page it is not currently holding. Only 首页翻页栏 calls it, and only
+     * when the target is genuinely absent — a page already in the window is scrolled to instead.
+     */
+    onGoToPage: (Int) -> Unit = {},
     listState: LazyListState = rememberLazyListState(),
     /** Commits an edit made on the board strip itself: the pill order, and which boards are parked. */
     onArrangementChange: (order: List<String>, parked: Set<String>) -> Unit = { _, _ -> },
@@ -202,7 +212,7 @@ fun PostListScreen(
      * what tells a real switch apart from a return.
      */
     var lastResetFeed by rememberSaveable { mutableStateOf(feedIdentity(state)) }
-    LaunchedEffect(state.categorySlug, state.sort) {
+    LaunchedEffect(state.categorySlug, state.sort, state.startPage) {
         val feed = feedIdentity(state)
         if (feed != lastResetFeed) {
             lastResetFeed = feed
@@ -253,6 +263,46 @@ fun PostListScreen(
     val refreshState = posts.loadState.refresh
     val appendState = posts.loadState.append
 
+    /*
+     * 首页翻页栏 — off unless 设置 asks for it, and hidden while there is only one page to be on.
+     *
+     * It does not replace the scroll: pages still append as the reader reaches the foot, exactly as
+     * they did before. What it adds is a way to *arrive* — the same pairing the comment thread and
+     * 管理记录 use, and the reason the control is shared with them rather than written again here.
+     */
+    var showPageSheet by remember { mutableStateOf(false) }
+    val showPageBar = state.pageBarEnabled && state.totalPages > 1 && posts.itemCount > 0
+
+    /*
+     * The page the reader is looking at, which on an appending list is not the page most recently
+     * fetched. Held rather than derived because a row can be a placeholder: outside the loaded window
+     * there is no page to read off, and the last real answer beats a guess.
+     */
+    var visiblePage by remember { mutableIntStateOf(state.startPage) }
+    LaunchedEffect(posts, listState, state.startPage) {
+        // A jump names its destination before the rows arrive, which is the one moment the reader is
+        // watching the bar for confirmation that the tap landed.
+        visiblePage = state.startPage
+        snapshotFlow { listState.firstVisibleItemIndex to posts.itemCount }
+            .collect { (index, count) ->
+                if (index >= count) return@collect
+                // Rows from before the jump are still on screen while the replacement loads. The
+                // window can never begin before the page it was sent to, so anything earlier than
+                // that is a leftover rather than an answer.
+                posts.peek(index)?.page?.takeIf { it >= state.startPage }?.let { visiblePage = it }
+            }
+    }
+
+    /** Scrolls when the page is already in the window, and reloads from it when it is not. */
+    fun goToPage(target: Int) {
+        val index = posts.itemSnapshotList.indexOfFirst { it?.page == target }
+        if (index >= 0) {
+            scope.launch { listState.animateScrollToItem(index) }
+        } else {
+            onGoToPage(target)
+        }
+    }
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -272,19 +322,29 @@ fun PostListScreen(
             }
         },
         floatingActionButton = {
-            // Follow the same sticky direction state as the navigation bar. Stopping cannot briefly
-            // flip this value, so the built-in extended-FAB animation gets one stable target.
-            ExtendedFloatingActionButton(
-                onClick = onCreatePost,
-                expanded = !navigationBarHidden,
-                icon = {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                },
-                text = { Text(stringResource(R.string.action_create_post)) },
-            )
+            // With 翻页栏 on, 发帖 moves *into* the toolbar's own FAB slot rather than standing beside
+            // it — two floating things in the same corner is what Material's slot exists to prevent,
+            // and it is the arrangement the thread already ships with its 回复 button.
+            if (!showPageBar) {
+                // Follow the same sticky direction state as the navigation bar. Stopping cannot
+                // briefly flip this value, so the built-in extended-FAB animation gets one stable
+                // target.
+                ExtendedFloatingActionButton(
+                    onClick = onCreatePost,
+                    expanded = !navigationBarHidden,
+                    icon = {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                    },
+                    text = { Text(stringResource(R.string.action_create_post)) },
+                )
+            }
         },
     ) { padding ->
-        Box(Modifier.padding(padding)) {
+        Box(
+            Modifier
+                .padding(padding)
+                .fillMaxSize(),
+        ) {
             val showSkeleton = posts.itemCount == 0 && refreshState is LoadState.Loading
 
             // Crossfade rather than a hard swap: a skeleton that snaps to content flashes, and the
@@ -354,17 +414,113 @@ fun PostListScreen(
                         }
                 }
             }
+
+            if (showPageBar) {
+                FeedPageBar(
+                    // The same sticky direction state the FAB follows, rather than a second nested
+                    // scroll connection of the toolbar's own: two of them reading the same gesture
+                    // would disagree at the threshold and the bar would collapse out of step with
+                    // the navigation bar it sits above.
+                    expanded = !navigationBarHidden || showPageSheet,
+                    page = visiblePage,
+                    totalPages = state.totalPages,
+                    onPrevious = { goToPage((visiblePage - 1).coerceAtLeast(1)) },
+                    onNext = { goToPage((visiblePage + 1).coerceAtMost(state.totalPages)) },
+                    onPageClick = { showPageSheet = true },
+                    onCreatePost = onCreatePost,
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                )
+            }
         }
+    }
+
+    if (showPageSheet) {
+        PageJumpSheet(
+            page = visiblePage,
+            totalPages = state.totalPages,
+            progress =
+            stringResource(
+                R.string.feed_page_progress,
+                visiblePage,
+                state.totalPages,
+                posts.itemCount,
+            ),
+            // No 上次阅读 here, unlike the thread: the feed keeps no place, and the furthest page it
+            // reached is not one either — a jump replaces the window, so the page it would offer has
+            // already been thrown away by the time the offer could be taken.
+            onDismiss = { showPageSheet = false },
+            onGo = { target ->
+                showPageSheet = false
+                goToPage(target.coerceIn(1, state.totalPages.coerceAtLeast(1)))
+            },
+        )
     }
 }
 
 /**
- * Which feed the rows on screen belong to — the board and the order, as one saveable value.
+ * 首页翻页栏: `‹ 第 3 / 217 页 ›`, with 发帖 riding in the toolbar's own FAB slot.
+ *
+ * The row itself is [PageJumpToolbarContent], shared with the comment thread and 管理记录 so the
+ * wording and the shortcuts cannot drift between the three screens that have it.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FeedPageBar(
+    expanded: Boolean,
+    page: Int,
+    totalPages: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onPageClick: () -> Unit,
+    onCreatePost: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    HorizontalFloatingToolbar(
+        expanded = expanded,
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                text = { Text(stringResource(R.string.action_create_post)) },
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                onClick = onCreatePost,
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(18.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            )
+        },
+        // The thread's measurements, for the same reason it needed them: Material's 64dp container
+        // stands taller than the FAB inside it, so a collapsed FAB would hang 12dp below the bar
+        // without the extra bottom margin.
+        modifier = modifier
+            .padding(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                top = Spacing.sm,
+                bottom = Spacing.sm + 12.dp,
+            ).height(56.dp),
+    ) {
+        PageJumpToolbarContent(
+            page = page,
+            totalPages = totalPages,
+            onPrevious = onPrevious,
+            onNext = onNext,
+            onPageClick = onPageClick,
+        )
+    }
+}
+
+/**
+ * Which feed the rows on screen belong to — the board, the order and the page it starts at, as one
+ * saveable value.
+ *
+ * The start page counts because a jump replaces every row: the offset that was restored belonged to
+ * a window that no longer exists, so keeping it would land the reader in the middle of page 40.
  *
  * A plain string rather than the pair itself so it goes into a `Bundle` unchanged, and so comparing
  * "the same feed as before" cannot depend on how a null slug or an enum happens to be stored.
  */
-private fun feedIdentity(state: PostListUiState): String = "${state.categorySlug.orEmpty()}/${state.sort.name}"
+private fun feedIdentity(state: PostListUiState): String =
+    "${state.categorySlug.orEmpty()}/${state.sort.name}/${state.startPage}"
 
 private val NavigationDirectionThreshold = 16.dp
 
