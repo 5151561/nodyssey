@@ -75,6 +75,33 @@ class ChallengeDetectorTest {
         )
     }
 
+    /**
+     * The level wall says 权限不足 too, which is one of the login markers — so this pins the order as
+     * much as the marker: read as a login wall, it offers 登录 to a reader who is already signed in.
+     */
+    @Test
+    fun `a level wall is its own state and carries the level`() {
+        assertEquals(
+            SiteError.LevelRequired(requiredLevel = 5),
+            detector.detect(Fixtures.load("post-level-required.html"), 200, emptyMap()),
+        )
+    }
+
+    /**
+     * The captured page keeps the sentence in one text node, so this is the shape we do *not* have:
+     * a re-render that wraps the number still has to classify, level or no level. Losing 「Lv5」 off
+     * a title is a worse screen; falling back to the login wall would be a wrong one.
+     */
+    @Test
+    fun `a level wall whose number is wrapped in markup classifies without one`() {
+        val html =
+            """
+            <html><body><div id="nsk-body"><h1>查看本帖需要<b>Lv5</b>，您的权限不足😑，
+            请赚取🍗升级您的用户等级</h1></div></body></html>
+            """.trimIndent()
+        assertEquals(SiteError.LevelRequired(requiredLevel = null), detector.detect(html, 200, emptyMap()))
+    }
+
     @Test
     fun `an unexpected status is reported as blocked`() {
         assertEquals(

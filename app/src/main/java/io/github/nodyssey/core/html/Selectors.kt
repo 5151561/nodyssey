@@ -103,6 +103,32 @@ object Selectors {
     val LOGIN_REQUIRED_MARKERS = listOf("需要注册用户才能查看", "权限不足")
 
     /**
+     * 阅读权限 refused: 「查看本帖需要Lv5，您的权限不足😑，请赚取🍗升级您的用户等级」.
+     *
+     * Checked before [LOGIN_REQUIRED_MARKERS] — see [io.github.plaza.core.net.PageMarkers.levelRequired]
+     * — because that sentence contains 权限不足, which on its own sends a signed-in Lv3 reader to the
+     * sign-in page for a wall no login clears.
+     *
+     * That order costs signed-out readers nothing: the site checks the session before the rank, so a
+     * visitor with no account gets 需要注册用户才能查看 on the very same thread and never reaches this
+     * sentence — the account holder's own answer, and why the screen this produces offers no 登录
+     * button.
+     *
+     * Captured from `/post-841442-1` on 2026-08-09 through the account holder's browser, signed in
+     * as Lv2, and the capture is `post-level-required.html`: the sentence is a single text node in
+     * an unclassed `<div>`, so the first pattern reads the level; the page carries `id="nsk-body"`
+     * and no 需要注册用户才能查看, which leaves the 权限不足 *inside this sentence* as the only thing
+     * that used to classify it. The second pattern is insurance rather than an observation — a
+     * re-render that wraps `Lv5` in a tag would defeat the first, and a level wall read as a login
+     * wall is the worse failure. It is the same 阅读权限 the feed badges as 「N 级可见」
+     * ([PostListParser] reads that one off the lock icon).
+     */
+    val LEVEL_REQUIRED_MARKERS = listOf(
+        Regex("""查看本帖需要\s*Lv\s*(\d+)"""),
+        Regex("""升级您的用户等级"""),
+    )
+
+    /**
      * Cloudflare's markup, not NodeSeek's, so the list itself lives in `:core`.
      *
      * Re-exported under this name because the JSON callers below check a response body for an

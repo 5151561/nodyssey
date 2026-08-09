@@ -53,6 +53,18 @@ data class PageMarkers(
     val usablePage: List<String>,
     /** The site's own wording for "this needs an account". */
     val loginRequired: List<String>,
+    /**
+     * The site's own wording for "your level is too low", consulted *before* [loginRequired].
+     *
+     * Order is the point: a forum that words both refusals as some flavour of 权限不足 would otherwise
+     * have every level wall read as a login wall, and offer a signed-in reader the sign-in page.
+     *
+     * Patterns rather than plain strings because the level is a number *inside* the sentence, and a
+     * screen that can name it says something the reader can act on. The first group of whichever
+     * pattern matches first is that number; a pattern with no group classifies without one, which is
+     * why a list that carries both should put the capturing one first.
+     */
+    val levelRequired: List<Regex> = emptyList(),
     /** The site's own throttle sentence, which can arrive on a 200 as easily as on a 429. */
     val rateLimit: List<String>,
     /** Left at the default unless a site fronts itself with something other than Cloudflare. */

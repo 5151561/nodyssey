@@ -54,11 +54,21 @@ internal fun accountMessageText(message: AccountMessage): String =
 private fun SiteError.messageRes(): Int =
     when (this) {
         SiteError.Cloudflare -> R.string.status_challenge_title
+
         SiteError.LoginRequired -> R.string.status_sign_in_title
+
+        // The level, where the page named one, is lost on purpose: this is a snackbar line, and no
+        // account setting is behind a reader level anyway.
+        is SiteError.LevelRequired -> R.string.status_level_required_title
+
         SiteError.Network -> R.string.status_network_title
+
         SiteError.Unparsable -> R.string.status_unparsable_title
+
         SiteError.NotWired -> R.string.status_not_wired_title
+
         SiteError.RateLimited -> R.string.status_rate_limited_title
+
         is SiteError.Http, SiteError.Unknown -> R.string.status_unknown_title
     }
 

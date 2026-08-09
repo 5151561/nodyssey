@@ -15,6 +15,18 @@ sealed interface SiteError {
     data object LoginRequired : SiteError
 
     /**
+     * The post is behind a reader-level floor this account has not reached.
+     *
+     * Apart from [LoginRequired] because the two have nothing in common but the wall: a site that
+     * can tell the reader their level has already accepted their session, so the reader is signed in
+     * and simply too low, and the only thing that clears it is whatever that site makes levels out
+     * of — which no button on a screen of ours can do.
+     *
+     * [requiredLevel] is the level the page named, `null` when the page refused without naming one.
+     */
+    data class LevelRequired(val requiredLevel: Int?) : SiteError
+
+    /**
      * The site's own throttle, not Cloudflare's.
      *
      * Kept apart from [Http] because the recovery is "wait a moment", not "retry now" — and apart
