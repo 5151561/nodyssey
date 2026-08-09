@@ -3,10 +3,11 @@ name: Release
 # Pushing a `v*` tag is the whole trigger: it builds that tag, signs it, and publishes the release.
 # Nothing here reads the working tree of `main`, so a tag can be cut from any commit that deserves one.
 #
-# `v*` belongs to Nodyssey alone. A second app in this repository releases under a tag of its own
-# shape — `bbs1-v0.1.0` — which this glob does not match and which its own workflow would claim. Two
-# apps sharing one tag namespace would mean the day their version numbers coincide, the gate below
-# passes and this workflow publishes Nodyssey's APK under the other app's tag.
+# `v*` belongs to Nodyssey alone, and the shape check in the first step below is what enforces it.
+# That guard was written when a second app shared this repository and needed a tag namespace of its
+# own; it is kept now that it does not, because `v*` also matches things that are not releases at all
+# — `v2-experiment`, a tag someone pushes to mark a branch point — and publishing a signed APK off
+# one of those is the failure it actually prevents.
 on:
   push:
     tags: ['v*']
@@ -157,8 +158,9 @@ jobs:
           echo "Signing certificate matches the published one."
 
       # The `nodyssey-` prefix is load-bearing, not decoration: the in-app update check picks the asset
-      # by it (`NodysseyRelease.ASSET_NAME_PREFIX`), because `releases/latest` answers for the whole
-      # repository and the newest release in it may belong to a different app. Rename one, rename both.
+      # by it (`NodysseyRelease.ASSET_NAME_PREFIX`), and a release carries more than one file — a
+      # mapping, a checksum — so "the .apk on the newest release" is not specific enough on its own.
+      # Rename one, rename both.
       - name: Name the APK after the release
         id: apk
         run: |
