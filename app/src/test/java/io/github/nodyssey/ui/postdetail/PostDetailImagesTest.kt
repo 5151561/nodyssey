@@ -1,8 +1,8 @@
 package io.github.nodyssey.ui.postdetail
 
-import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
-import io.github.nodyssey.model.RichNode
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.RichNode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

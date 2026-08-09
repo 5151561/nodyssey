@@ -121,9 +121,6 @@
     <string name="post_comments_empty_hint">来做第一个吧——不过 v1 还是只读的</string>
     <string name="post_link_copied">链接已复制</string>
     <string name="post_code_copied">代码已复制</string>
-    <string name="post_image_view_full">点击查看全图</string>
-    <string name="image_skipped_wifi_only">已开启「仅 Wi-Fi 加载图片」，当前不是 Wi-Fi</string>
-    <string name="image_skipped_tap_to_load">点按加载这张图</string>
     <string name="post_quote_reply">@%1$s %2$s</string>
     <string name="post_auto_paging">自动续页</string>
     <string name="post_reply_action">回复</string>
@@ -580,8 +577,6 @@
     <string name="status_not_wired_title">这一页还没接进 App</string>
     <string name="status_not_wired_body">NodeSeek 这一页是网页端渲染的，没有可读的接口，App 不会拿猜出来的数据糊弄你。先到网页里看，接口对上就会补进来。</string>
 
-    <string name="image_description_sticker">表情</string>
-    <string name="image_loading">图片加载中…</string>
 
     <!-- Two-pane home on tablets and unfolded foldables -->
     <string name="home_pane_empty">选一个帖子，正文会显示在这里</string>
@@ -816,7 +811,6 @@
 
     <!-- 投票帖 — a vote lives in the body as an `nsapp://vote?id=N` marker and is fetched separately -->
     <string name="vote_placeholder_title">投票</string>
-    <string name="vote_placeholder_body">在帖子里查看并参与</string>
     <string name="vote_single_choice">单选</string>
     <string name="vote_multiple_choice">多选</string>
     <string name="vote_locked">已锁定</string>

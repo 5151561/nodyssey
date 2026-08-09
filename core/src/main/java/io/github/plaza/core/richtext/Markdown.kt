@@ -1,18 +1,15 @@
-package io.github.nodyssey.ui.composer
-
-import io.github.nodyssey.model.InlineNode
-import io.github.nodyssey.model.InlineStyle
-import io.github.nodyssey.model.RichNode
+package io.github.plaza.core.richtext
 
 /**
- * Small, deterministic Markdown subset, used by the editor previews and by the fields the site hands
- * over as Markdown rather than as HTML — a space page's Readme above all.
+ * Small, deterministic Markdown subset, used by editor previews and by the fields a site hands over
+ * as Markdown rather than as HTML — a profile page's Readme above all.
  *
- * What it is aiming at is what NodeSeek itself runs, `markdownit({breaks: true})`: the default
- * preset, so tables and strikethrough are in, `linkify` is **off** — a bare URL stays text on the
- * site, so it stays text here — and a single newline is a line break rather than a space.
+ * What it is aiming at is `markdownit({breaks: true})`, which is what the forums this was written
+ * against run: the default preset, so tables and strikethrough are in, `linkify` is **off** — a bare
+ * URL stays text on the site, so it stays text here — and a single newline is a line break rather
+ * than a space.
  */
-internal fun parseMarkdown(markdown: String): List<RichNode> {
+fun parseMarkdown(markdown: String): List<RichNode> {
     val lines = markdown.lines()
     val result = mutableListOf<RichNode>()
     var index = 0
@@ -107,7 +104,7 @@ internal fun parseMarkdown(markdown: String): List<RichNode> {
  * them and a collapsed Readme shows `|区域|价格|月流量|` as prose. Rows are a single line each, so
  * finishing the table costs the preview far less height than the alternative reads as a bug.
  */
-internal fun collapseMarkdown(
+fun collapseMarkdown(
     markdown: String,
     limit: Int,
 ): String {

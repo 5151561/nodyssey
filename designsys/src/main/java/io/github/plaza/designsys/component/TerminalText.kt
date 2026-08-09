@@ -22,6 +22,15 @@ import io.github.plaza.core.ansi.AnsiSpan
 val TerminalGround = Color(0xFF282C34)
 
 /**
+ * The default ink on [TerminalGround] — One Dark's foreground, the same colour [FOREGROUND]'s
+ * unstyled runs fall back to.
+ *
+ * A block drawn on the ground has to state it: `MaterialTheme.colorScheme.onSurface` is near-black
+ * in a light theme, which on this ground is unreadable.
+ */
+val TerminalInk = Color(0xFFD7DAE0)
+
+/**
  * Paints the colour runs an ANSI decoder recovered back onto the text.
  *
  * A card that reads a report's colours for their *meaning* — a red 高风险 becoming the theme's error

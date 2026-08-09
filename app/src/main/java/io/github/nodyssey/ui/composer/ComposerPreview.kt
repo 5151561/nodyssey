@@ -21,7 +21,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.ui.richtext.RichContent
+import io.github.nodyssey.ui.richtext.PostRichContent
+import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Spacing
@@ -86,7 +87,7 @@ fun MarkdownPreviewBody(
     val openExternally: (String) -> Unit = { url ->
         if (NodeSeekSite.isExternalWebUrl(url)) runCatching { uriHandler.openUri(url) }
     }
-    RichContent(
+    PostRichContent(
         nodes = nodes,
         onLinkClick = openExternally,
         onImageClick = openExternally,

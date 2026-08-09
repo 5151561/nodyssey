@@ -4,8 +4,8 @@ import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.RichContentJson
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.data.local.toSnapshot
-import io.github.nodyssey.model.InlineNode
-import io.github.nodyssey.model.RichNode
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.RichNode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -333,6 +333,66 @@ class PostDetailCacheTest {
                 listOf(listOf(InlineNode.Text("东京")), listOf(InlineNode.Text("48ms"))),
             ),
             table.content,
+        )
+    }
+
+    /**
+     * Every discriminator a cached body can carry, decoded from JSON written by hand.
+     *
+     * Not a round trip: a round trip passes whatever the current code encodes back into the current
+     * code, so it stays green through a rename that makes every row already on disk unreadable. These
+     * fifteen strings are the actual contract with the cache, and the AST moving between modules —
+     * which it did, out of `:app` and into `:core` — must not touch one of them.
+     *
+     * `alt` is spelled out because it is nullable *without* a default, so it is written on every row
+     * and required on read. Leaving it out of this fixture is what proved that.
+     */
+    @Test
+    fun `every node discriminator still decodes`() {
+        val stored =
+            """
+            [
+              {"type":"p","inlines":[{"type":"t","text":"x"},{"type":"a","text":"y","url":"https://example.invalid"},
+                {"type":"sticker","url":"https://example.invalid/s.png","alt":null},
+                {"type":"qref","name":"n","floor":"#3","url":"https://example.invalid/p-1"},{"type":"br"}]},
+              {"type":"h","level":2,"inlines":[]},
+              {"type":"img","url":"https://example.invalid/i.png","alt":null},
+              {"type":"vote","voteId":2871},
+              {"type":"code","code":"ls","language":"sh"},
+              {"type":"quote","children":[]},
+              {"type":"tabs","tabs":[{"title":"t","children":[]}]},
+              {"type":"list","ordered":true,"items":[]},
+              {"type":"table"},
+              {"type":"hr"}
+            ]
+            """.trimIndent()
+
+        val nodes = RichContentJson.format.decodeFromString<List<RichNode>>(stored)
+
+        assertEquals(
+            listOf(
+                RichNode.Paragraph::class,
+                RichNode.Heading::class,
+                RichNode.BlockImage::class,
+                RichNode.VotePlaceholder::class,
+                RichNode.CodeBlock::class,
+                RichNode.Quote::class,
+                RichNode.Tabs::class,
+                RichNode.ListBlock::class,
+                RichNode.Table::class,
+                RichNode.Divider::class,
+            ),
+            nodes.map { it::class },
+        )
+        assertEquals(
+            listOf(
+                InlineNode.Text::class,
+                InlineNode.Link::class,
+                InlineNode.Sticker::class,
+                InlineNode.QuoteRef::class,
+                InlineNode.LineBreak::class,
+            ),
+            (nodes.first() as RichNode.Paragraph).inlines.map { it::class },
         )
     }
 

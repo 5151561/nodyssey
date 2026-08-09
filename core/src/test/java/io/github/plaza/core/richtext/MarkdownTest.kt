@@ -1,12 +1,10 @@
-package io.github.nodyssey.ui.composer
+package io.github.plaza.core.richtext
 
-import io.github.nodyssey.model.InlineNode
-import io.github.nodyssey.model.RichNode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class MarkdownPreviewTest {
+class MarkdownTest {
     @Test
     fun `parses the editor syntax used by the preview`() {
         val nodes = parseMarkdown(

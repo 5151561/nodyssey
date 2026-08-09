@@ -12,12 +12,12 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.nodyssey.data.FreeChickenLegs
-import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
-import io.github.nodyssey.model.RichNode
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule

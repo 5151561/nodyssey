@@ -1,4 +1,4 @@
-package io.github.nodyssey.core.image
+package io.github.plaza.core.image
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -10,7 +10,6 @@ import coil3.request.CachePolicy
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
 import coil3.request.ImageResult
-import io.github.nodyssey.data.settings.UserSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.io.IOException
@@ -29,13 +28,19 @@ val AllowMeteredImage = Extras.Key(default = false)
 fun ImageRequest.Builder.allowMeteredImage(allow: Boolean): ImageRequest.Builder =
     apply { extras.set(AllowMeteredImage, allow) }
 
-/** Applies the image data-usage preference at the last boundary before Coil can use the network. */
+/**
+ * Applies the image data-usage preference at the last boundary before Coil can use the network.
+ *
+ * [imagesOnWifiOnly] is a flow rather than a boolean because the setting is observable and this is
+ * consulted per request; where that flow comes from — which DataStore key, under which name — is the
+ * app's business, and the interceptor is deliberately not told.
+ */
 class ImageNetworkPolicyInterceptor internal constructor(
-    private val settings: Flow<UserSettings>,
+    private val imagesOnWifiOnly: Flow<Boolean>,
     private val hasUnmeteredNetwork: () -> Boolean,
 ) : Interceptor {
-    constructor(context: Context, settings: Flow<UserSettings>) : this(
-        settings = settings,
+    constructor(context: Context, imagesOnWifiOnly: Flow<Boolean>) : this(
+        imagesOnWifiOnly = imagesOnWifiOnly,
         hasUnmeteredNetwork = context::hasValidatedUnmeteredNetwork,
     )
 
@@ -43,7 +48,7 @@ class ImageNetworkPolicyInterceptor internal constructor(
         val deferred =
             shouldDeferImage(
                 request = chain.request,
-                imagesOnWifiOnly = settings.first().imagesOnWifiOnly,
+                imagesOnWifiOnly = imagesOnWifiOnly.first(),
                 hasUnmeteredNetwork = hasUnmeteredNetwork(),
             )
         val request = if (deferred) chain.request.withoutNetwork() else chain.request

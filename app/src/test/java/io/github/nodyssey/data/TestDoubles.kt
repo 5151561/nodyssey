@@ -11,8 +11,8 @@ import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostDetail
 import io.github.nodyssey.model.PostListPage
 import io.github.nodyssey.model.PostSummary
-import io.github.nodyssey.model.RichNode
 import io.github.plaza.core.AppClock
+import io.github.plaza.core.richtext.RichNode
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

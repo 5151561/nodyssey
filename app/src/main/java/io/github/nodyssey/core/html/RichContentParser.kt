@@ -1,10 +1,10 @@
 package io.github.nodyssey.core.html
 
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.model.InlineNode
-import io.github.nodyssey.model.InlineStyle
-import io.github.nodyssey.model.RichNode
 import io.github.plaza.core.ansi.AnsiDecoder
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.InlineStyle
+import io.github.plaza.core.richtext.RichNode
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode

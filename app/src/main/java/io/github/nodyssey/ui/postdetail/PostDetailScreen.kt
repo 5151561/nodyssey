@@ -89,11 +89,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.FreeChickenLegs
-import io.github.nodyssey.model.InlineNode
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
-import io.github.nodyssey.model.RichNode
 import io.github.nodyssey.model.countOf
 import io.github.nodyssey.model.hasSpent
 import io.github.nodyssey.ui.common.BoardTag
@@ -106,8 +104,10 @@ import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.FloorReference
 import io.github.nodyssey.ui.composer.ReplyComposerHost
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
-import io.github.nodyssey.ui.richtext.RichContent
+import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.LoadingState
@@ -921,7 +921,7 @@ private fun OriginalPost(
                 modifier = Modifier.padding(top = Spacing.md),
             )
         } else {
-            RichContent(
+            PostRichContent(
                 nodes = body.nodes,
                 onLinkClick = onOpenBrowser,
                 onImageClick = onImageClick,
@@ -1067,7 +1067,7 @@ private fun CommentRow(
             }
             comment.floor?.let { FloorLabel(it) }
         }
-        RichContent(
+        PostRichContent(
             nodes = comment.nodes,
             onLinkClick = onOpenBrowser,
             onImageClick = onImageClick,
@@ -1114,7 +1114,7 @@ private fun UserSignature(
         color = MaterialTheme.colorScheme.outlineVariant,
         modifier = Modifier.padding(top = Spacing.md, bottom = Spacing.sm),
     )
-    RichContent(
+    PostRichContent(
         nodes = nodes,
         onLinkClick = onOpenBrowser,
         onImageClick = onImageClick,

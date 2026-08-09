@@ -62,8 +62,8 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import io.github.nodyssey.R
-import io.github.nodyssey.core.image.ImagesDeferredException
-import io.github.nodyssey.core.image.allowMeteredImage
+import io.github.plaza.core.image.ImagesDeferredException
+import io.github.plaza.core.image.allowMeteredImage
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES

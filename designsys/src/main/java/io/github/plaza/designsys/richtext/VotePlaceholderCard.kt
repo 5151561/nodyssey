@@ -1,4 +1,4 @@
-package io.github.nodyssey.ui.richtext
+package io.github.plaza.designsys.richtext
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
+import io.github.plaza.designsys.R
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -47,11 +47,11 @@ fun VotePlaceholderCard(modifier: Modifier = Modifier) {
             )
             Column {
                 Text(
-                    stringResource(R.string.vote_placeholder_title),
+                    stringResource(R.string.richtext_poll_title),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    stringResource(R.string.vote_placeholder_body),
+                    stringResource(R.string.richtext_poll_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -44,6 +44,7 @@ import io.github.nodyssey.R
 import io.github.plaza.core.ansi.AnsiSpan
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.TerminalGround
+import io.github.plaza.designsys.component.TerminalInk
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberTerminalText
 import io.github.plaza.designsys.theme.Sizes
@@ -104,14 +105,14 @@ fun ReportSourceDialog(
                         Text(
                             text = title,
                             style = MaterialTheme.typography.titleSmall,
-                            color = ReportTerminalInk,
+                            color = TerminalInk,
                             modifier = Modifier.weight(1f),
                         )
                         IconButton(onClick = { copy("report", source, confirmation) }) {
                             Icon(
                                 imageVector = PlazaIcons.ContentCopy,
                                 contentDescription = stringResource(R.string.action_copy),
-                                tint = ReportTerminalInk,
+                                tint = TerminalInk,
                                 modifier = Modifier.size(18.dp),
                             )
                         }
@@ -119,7 +120,7 @@ fun ReportSourceDialog(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = stringResource(R.string.action_close),
-                                tint = ReportTerminalInk,
+                                tint = TerminalInk,
                             )
                         }
                     }
@@ -128,7 +129,7 @@ fun ReportSourceDialog(
                         Text(
                             text = coloured,
                             style = ReportTerminalStyle.scaledBy(fontScale),
-                            color = ReportTerminalInk,
+                            color = TerminalInk,
                             softWrap = false,
                         )
                     }
@@ -185,7 +186,7 @@ fun ReportSourceBlock(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelSmall,
-                color = ReportTerminalInk,
+                color = TerminalInk,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
@@ -194,7 +195,7 @@ fun ReportSourceBlock(
                 Icon(
                     imageVector = PlazaIcons.ContentCopy,
                     contentDescription = stringResource(R.string.action_copy),
-                    tint = ReportTerminalInk,
+                    tint = TerminalInk,
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -216,7 +217,7 @@ fun ReportSourceBlock(
                 Text(
                     text = coloured,
                     style = ReportTerminalStyle.scaledBy(fitted * zoom),
-                    color = ReportTerminalInk,
+                    color = TerminalInk,
                     softWrap = false,
                 )
             }
@@ -233,7 +234,7 @@ fun ReportSourceBlock(
             Text(
                 text = stringResource(R.string.report_open_fullscreen),
                 style = MaterialTheme.typography.labelLarge,
-                color = ReportTerminalInk,
+                color = TerminalInk,
             )
         }
     }

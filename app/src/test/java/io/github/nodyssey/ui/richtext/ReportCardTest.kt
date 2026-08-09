@@ -21,8 +21,8 @@ import androidx.compose.ui.test.performTouchInput
 import io.github.nodyssey.core.html.AnsiParser
 import io.github.nodyssey.core.report.QualityReportParser
 import io.github.nodyssey.data.settings.ReportFormat
-import io.github.nodyssey.model.RichNode
 import io.github.plaza.core.ansi.AnsiDecoder
+import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -66,7 +66,7 @@ class ReportCardTest {
                     // Without a scroller the assertions below the fold would fail on layout rather
                     // than content.
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        RichContent(
+                        PostRichContent(
                             nodes = listOf(
                                 RichNode.CodeBlock(
                                     code = decoded.text,

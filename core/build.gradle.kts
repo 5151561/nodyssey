@@ -19,6 +19,15 @@ dependencies {
     // The update source's own DTOs never leave here, and would have been happy with `implementation`.
     api(libs.kotlinx.serialization.json)
 
+    // The image data-usage policy is a Coil interceptor. Only `coil-core` — how an image is *drawn*
+    // is a Compose question and belongs to the module that draws it.
+    api(libs.coil.core)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // The interceptor reads ConnectivityManager, so its test needs a Context.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
 }

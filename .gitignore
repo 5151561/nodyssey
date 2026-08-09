@@ -14,6 +14,9 @@
 # the first module added after it committed its entire build directory.
 build/
 /captures
+
+# Heap dumps a Gradle OOM leaves behind, which are ~1 GB each.
+*.hprof
 .externalNativeBuild
 .cxx
 local.properties

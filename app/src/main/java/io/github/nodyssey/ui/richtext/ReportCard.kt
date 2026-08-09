@@ -379,8 +379,6 @@ private fun SourceAction(onShowSource: () -> Unit) {
     }
 }
 
-internal val ReportTerminalInk = Color(0xFFD7DAE0)
-
 internal val ReportTerminalStyle =
     androidx.compose.ui.text.TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,

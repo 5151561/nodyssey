@@ -57,10 +57,10 @@ import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.VoteItem
 import io.github.nodyssey.model.totalCount
 import io.github.nodyssey.ui.common.shortMessage
-import io.github.nodyssey.ui.richtext.VoteCardSurface
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.richtext.VoteCardSurface
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing

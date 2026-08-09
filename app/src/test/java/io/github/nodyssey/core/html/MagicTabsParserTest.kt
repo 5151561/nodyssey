@@ -1,6 +1,7 @@
 package io.github.nodyssey.core.html
 
-import io.github.nodyssey.model.RichNode
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.RichNode
 import org.jsoup.Jsoup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

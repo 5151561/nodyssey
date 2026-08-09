@@ -11,11 +11,11 @@ import coil3.gif.GifDecoder
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
-import io.github.nodyssey.core.image.ImageNetworkPolicyInterceptor
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.di.DefaultAppContainer
 import io.github.nodyssey.notifications.NotificationChannels
 import io.github.nodyssey.notifications.NotificationPollScheduler
+import io.github.plaza.core.image.ImageNetworkPolicyInterceptor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -85,7 +85,14 @@ open class NodysseyApp :
         ImageLoader
             .Builder(context)
             .components {
-                add(ImageNetworkPolicyInterceptor(context, container.settingsRepository.settings))
+                add(
+                    ImageNetworkPolicyInterceptor(
+                        context = context,
+                        // The interceptor is `:core`'s and knows nothing about this app's
+                        // settings; which key means 仅 Wi-Fi 加载图片 is decided here.
+                        imagesOnWifiOnly = container.settingsRepository.settings.map { it.imagesOnWifiOnly },
+                    ),
+                )
                 add(OkHttpNetworkFetcherFactory(callFactory = { container.okHttpClient }))
                 // An account that never uploaded a picture is served a generated cartoon *SVG* from
                 // `/avatar/<uid>.png` — the extension lies, the Content-Type does not. Without this

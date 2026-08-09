@@ -67,11 +67,11 @@ import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
-import io.github.nodyssey.ui.composer.collapseMarkdown
-import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.nodyssey.ui.postlist.toSiteError
-import io.github.nodyssey.ui.richtext.RichContent
+import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.richtext.collapseMarkdown
+import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
@@ -540,7 +540,7 @@ private fun GeneralTab(
                         if (readmeExpanded) readme else collapseMarkdown(readme, README_COLLAPSED_LINES)
                     parseMarkdown(markdown)
                 }
-                RichContent(
+                PostRichContent(
                     nodes = nodes,
                     onLinkClick = onOpenBrowser,
                     onImageClick = onOpenBrowser,

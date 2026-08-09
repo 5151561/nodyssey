@@ -72,11 +72,11 @@ import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.composer.AttachmentTray
 import io.github.nodyssey.ui.composer.NodeSeekEmojiPanel
-import io.github.nodyssey.ui.composer.parseMarkdown
 import io.github.nodyssey.ui.composer.toPickedImages
-import io.github.nodyssey.ui.richtext.RichContent
+import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
@@ -388,7 +388,7 @@ private fun MessageBubbleRow(
                     },
                 )
             if (message.isMarkdown) {
-                RichContent(
+                PostRichContent(
                     nodes = parseMarkdown(message.content),
                     onLinkClick = onOpenBrowser,
                     onImageClick = onOpenBrowser,

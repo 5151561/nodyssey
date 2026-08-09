@@ -1,4 +1,4 @@
-package io.github.nodyssey.ui.richtext
+package io.github.plaza.designsys.richtext
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -73,18 +73,17 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import io.github.nodyssey.R
-import io.github.nodyssey.core.image.ImagesDeferredException
-import io.github.nodyssey.core.image.allowMeteredImage
-import io.github.nodyssey.core.report.QualityReportParser
-import io.github.nodyssey.data.settings.ReportFormat
-import io.github.nodyssey.model.InlineNode
-import io.github.nodyssey.model.InlineStyle
-import io.github.nodyssey.model.RichNode
-import io.github.nodyssey.ui.common.SkippedImagePlaceholder
+import io.github.plaza.core.image.ImagesDeferredException
+import io.github.plaza.core.image.allowMeteredImage
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.InlineStyle
+import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.R
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SkippedImagePlaceholder
 import io.github.plaza.designsys.component.SpecTable
 import io.github.plaza.designsys.component.TerminalGround
+import io.github.plaza.designsys.component.TerminalInk
 import io.github.plaza.designsys.component.asSpecTable
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberTerminalText
@@ -128,6 +127,7 @@ fun RichContent(
      * and to lint, and would show up only as a silently inert card at runtime.
      */
     voteContent: @Composable (Long) -> Unit = { VotePlaceholderCard() },
+    codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit = { CodeBlockView(it) },
 ) {
     // Reading upgrades happen here, at the display seam, so the same styles stay safe to reuse in
     // editors — see `TextStyle.asProse` for why an editor must never inherit them.
@@ -140,6 +140,7 @@ fun RichContent(
             onQuoteRefClick = onQuoteRefClick,
             textStyle = prose,
             voteContent = voteContent,
+            codeBlockContent = codeBlockContent,
         )
     }
 }
@@ -159,6 +160,7 @@ private fun RichBlockColumn(
     textStyle: TextStyle,
     modifier: Modifier = Modifier,
     voteContent: @Composable (Long) -> Unit = { VotePlaceholderCard() },
+    codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit = { CodeBlockView(it) },
 ) {
     Column(modifier = modifier) {
         nodes.forEachIndexed { index, node ->
@@ -170,6 +172,7 @@ private fun RichBlockColumn(
                 onQuoteRefClick = onQuoteRefClick,
                 textStyle = textStyle,
                 voteContent = voteContent,
+                codeBlockContent = codeBlockContent,
             )
         }
     }
@@ -192,6 +195,7 @@ private fun RichBlock(
     onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
     textStyle: TextStyle,
     voteContent: @Composable (Long) -> Unit = { VotePlaceholderCard() },
+    codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit = { CodeBlockView(it) },
 ) {
     when (node) {
         is RichNode.VotePlaceholder -> voteContent(node.voteId)
@@ -231,7 +235,7 @@ private fun RichBlock(
 
         is RichNode.BlockImage -> BlockImage(node = node, onImageClick = onImageClick)
 
-        is RichNode.CodeBlock -> CodeOrReport(node)
+        is RichNode.CodeBlock -> codeBlockContent(node)
 
         is RichNode.Quote ->
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -263,6 +267,7 @@ private fun RichBlock(
                                 fontSize = textStyle.fontSize * 0.94f,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             ),
+                            codeBlockContent = codeBlockContent,
                         )
                     }
                 }
@@ -293,6 +298,7 @@ private fun RichBlock(
                                     onImageClick = onImageClick,
                                     onQuoteRefClick = onQuoteRefClick,
                                     textStyle = textStyle,
+                                    codeBlockContent = codeBlockContent,
                                 )
                             }
                         }
@@ -309,6 +315,7 @@ private fun RichBlock(
                 onImageClick = onImageClick,
                 onQuoteRefClick = onQuoteRefClick,
                 textStyle = textStyle,
+                codeBlockContent = codeBlockContent,
             )
 
         RichNode.Divider ->
@@ -320,9 +327,9 @@ private fun RichBlock(
 }
 
 /**
- * NodeSeek's own tab group, which on the review board holds the four halves of a benchmark report.
+ * A tab group, one tab visible at a time.
  *
- * Showing one tab at a time is the whole point of the node: a NodeQuality post carries four reports
+ * Showing one at a time is the whole point of the node: the posts that use it carry several reports
  * of a couple of hundred lines each, and the site files them behind tabs for the same reason. The
  * strip scrolls rather than wrapping or squeezing — four labels do not fit across 360dp.
  */
@@ -333,6 +340,7 @@ private fun TabGroup(
     onImageClick: (String) -> Unit,
     onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
     textStyle: TextStyle,
+    codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit,
 ) {
     if (node.tabs.isEmpty()) return
 
@@ -375,6 +383,7 @@ private fun TabGroup(
             onImageClick = onImageClick,
             onQuoteRefClick = onQuoteRefClick,
             textStyle = textStyle,
+            codeBlockContent = codeBlockContent,
             modifier = Modifier.padding(Spacing.md),
         )
     }
@@ -483,7 +492,7 @@ private fun BlockImage(
                     ) {
                         CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
                         Text(
-                            text = stringResource(R.string.image_loading),
+                            text = stringResource(R.string.richtext_image_loading),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -505,7 +514,7 @@ private fun BlockImage(
                     contentAlignment = Alignment.BottomCenter,
                 ) {
                     Text(
-                        text = stringResource(R.string.post_image_view_full),
+                        text = stringResource(R.string.richtext_image_view_full),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                         color = Color.White,
                         modifier = Modifier.padding(bottom = 6.dp),
@@ -532,12 +541,12 @@ private fun InlineImageError(onRetry: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             Text(
-                text = stringResource(R.string.viewer_load_failed),
+                text = stringResource(R.string.richtext_image_load_failed),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = stringResource(R.string.action_retry),
+                text = stringResource(R.string.richtext_action_retry),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -553,56 +562,16 @@ private val INLINE_IMAGE_LOADING_HEIGHT = 132.dp
 private const val TERMINAL_CHROME_ALPHA = 0.7f
 
 /**
- * Draws a benchmark report as a report and everything else as code.
+ * A fenced code block, or terminal output when it carries colour runs.
  *
- * The test is whether [QualityReportParser] can make sense of the text, not what language the site
- * tagged it with: `language-ansi` is also how an unrelated coloured terminal paste arrives, and that
- * is not a report. Parsing is cheap next to the layout it feeds and is remembered on the node, so a
- * scroll past a thread of them does not repeat it.
- *
- * It is still parsed under 原文 ([ReportFormat.SOURCE]): the parse is what says this block is a
- * report at all rather than an ordinary code block, and its title is what the inline block is
- * labelled with.
+ * Public because it is [RichContent]'s default `codeBlockContent`, and a caller that overrides the
+ * slot for *some* blocks needs a way to say "draw the rest normally".
  */
 @Composable
-private fun CodeOrReport(node: RichNode.CodeBlock) {
-    val report = remember(node) { QualityReportParser.parse(node.code, node.spans) }
-    if (report == null) {
-        CodeBlock(node)
-        return
-    }
-
-    var showingSource by rememberSaveable(node.code) { mutableStateOf(false) }
-
-    when (LocalReportFormat.current) {
-        ReportFormat.ADAPTED -> ReportCard(report = report, onShowSource = { showingSource = true })
-
-        ReportFormat.SOURCE ->
-            ReportSourceBlock(
-                title = report.title,
-                source = node.code,
-                spans = node.spans,
-                columns = node.columns,
-                onExpand = { showingSource = true },
-            )
-    }
-
-    if (showingSource) {
-        ReportSourceDialog(
-            title = report.title,
-            source = node.code,
-            spans = node.spans,
-            columns = node.columns,
-            onDismiss = { showingSource = false },
-        )
-    }
-}
-
-@Composable
-private fun CodeBlock(node: RichNode.CodeBlock) {
+fun CodeBlockView(node: RichNode.CodeBlock) {
     val copy = rememberClipboardCopy()
-    val confirmation = stringResource(R.string.post_code_copied)
-    val copyLabel = stringResource(R.string.action_copy)
+    val confirmation = stringResource(R.string.richtext_code_copied)
+    val copyLabel = stringResource(R.string.richtext_action_copy)
 
     // A block carrying colour runs is terminal output, and it is drawn on the terminal's own ground
     // in both themes — see [rememberTerminalText] for why that palette cannot move onto a light
@@ -610,8 +579,8 @@ private fun CodeBlock(node: RichNode.CodeBlock) {
     val terminal = node.spans.isNotEmpty()
     val code = rememberTerminalText(node.code, node.spans)
     val ground = if (terminal) TerminalGround else MaterialTheme.colorScheme.surfaceContainer
-    val ink = if (terminal) ReportTerminalInk else MaterialTheme.colorScheme.onSurface
-    val chrome = if (terminal) ReportTerminalInk.copy(alpha = TERMINAL_CHROME_ALPHA) else MaterialTheme.colorScheme.onSurfaceVariant
+    val ink = if (terminal) TerminalInk else MaterialTheme.colorScheme.onSurface
+    val chrome = if (terminal) TerminalInk.copy(alpha = TERMINAL_CHROME_ALPHA) else MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(
         modifier =
@@ -705,7 +674,7 @@ private fun DataTable(
     val content = node.content
     val quoteLabels =
         content.flatten().flatten().filterIsInstance<InlineNode.QuoteRef>().associateWith { ref ->
-            stringResource(R.string.post_quote_reply, ref.name, ref.floor)
+            stringResource(R.string.richtext_quote_reply, ref.name, ref.floor)
         }
     val cells =
         remember(content, linkStyles, codeBackground, linkListener, quoteLabels) {
@@ -787,7 +756,7 @@ private fun InlineText(
         )
     val quoteLabels =
         inlines.filterIsInstance<InlineNode.QuoteRef>().associateWith { ref ->
-            stringResource(R.string.post_quote_reply, ref.name, ref.floor)
+            stringResource(R.string.richtext_quote_reply, ref.name, ref.floor)
         }
 
     /*
@@ -949,10 +918,10 @@ private fun InlineText(
                 ) {
                     AsyncImage(
                         model = sticker.url,
-                        // NodeSeek's sticker markup often has no alt text, and an image with no
+                        // Sticker markup often has no alt text, and an image with no
                         // content description is silent to a screen reader.
                         contentDescription =
-                        sticker.alt ?: stringResource(R.string.image_description_sticker),
+                        sticker.alt ?: stringResource(R.string.richtext_sticker_description),
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -1085,7 +1054,7 @@ private fun specNodes(): List<RichNode> =
                 ),
                 InlineNode.Link(text = "nodequality.app", url = "https://nodequality.app"),
                 InlineNode.Text(" 这样的链接，以及表情 "),
-                InlineNode.Sticker(url = "https://www.nodeseek.com/static/image/sticker/1.png", alt = "笑"),
+                InlineNode.Sticker(url = "https://example.invalid/sticker/1.png", alt = "笑"),
                 InlineNode.Text(" 与文字基线对齐、不撑高行高。"),
             ),
         ),
@@ -1107,7 +1076,7 @@ private fun specNodes(): List<RichNode> =
                 ),
             ),
         ),
-        RichNode.BlockImage(url = "https://www.nodeseek.com/static/image/demo.png", alt = "示例截图"),
+        RichNode.BlockImage(url = "https://example.invalid/demo.png", alt = "示例截图"),
         RichNode.CodeBlock(
             code = "curl -sL https://run.nodequality.com/v1 | bash\n# 输出结果复制为 Markdown，横向滚动不换行 →→→→→→→→",
             language = "bash",

@@ -1,4 +1,4 @@
-package io.github.nodyssey.core.image
+package io.github.plaza.core.image
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -8,7 +8,6 @@ import coil3.request.ErrorResult
 import coil3.request.ImageRequest
 import coil3.request.ImageResult
 import coil3.size.Size
-import io.github.nodyssey.data.settings.UserSettings
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -66,7 +65,7 @@ class ImageNetworkPolicyInterceptorTest {
     }
 
     /**
-     * 仅 Wi-Fi 加载图片 stops the app spending data on its own; it is not meant to stop the user.
+     * The wifi-only setting stops the app spending data on its own; it is not meant to stop the user.
      *
      * Without the opt-out the switch was a wall — a tap on a skipped image was refused just like the
      * automatic load was, and the only way to see one picture was to turn the preference off.
@@ -86,7 +85,7 @@ class ImageNetworkPolicyInterceptorTest {
     fun `a hand-requested image reaches the network through the interceptor`() = runTest {
         val chain = FakeChain(imageRequest(allowMetered = true))
         val interceptor = ImageNetworkPolicyInterceptor(
-            settings = flowOf(UserSettings(imagesOnWifiOnly = true)),
+            imagesOnWifiOnly = flowOf(true),
             hasUnmeteredNetwork = { false },
         )
 
@@ -107,7 +106,7 @@ class ImageNetworkPolicyInterceptorTest {
     fun `a skipped image is reported as skipped, not as a load failure`() = runTest {
         val chain = FakeChain(imageRequest())
         val interceptor = ImageNetworkPolicyInterceptor(
-            settings = flowOf(UserSettings(imagesOnWifiOnly = true)),
+            imagesOnWifiOnly = flowOf(true),
             hasUnmeteredNetwork = { false },
         )
 
@@ -126,7 +125,7 @@ class ImageNetworkPolicyInterceptorTest {
         val cause = IOException("connection reset")
         val chain = FakeChain(imageRequest(), failWith = cause)
         val interceptor = ImageNetworkPolicyInterceptor(
-            settings = flowOf(UserSettings(imagesOnWifiOnly = true)),
+            imagesOnWifiOnly = flowOf(true),
             hasUnmeteredNetwork = { true },
         )
 
@@ -138,7 +137,7 @@ class ImageNetworkPolicyInterceptorTest {
     private fun imageRequest(allowMetered: Boolean = false) =
         ImageRequest
             .Builder(context)
-            .data("https://www.nodeseek.com/avatar/1.png")
+            .data("https://example.invalid/avatar/1.png")
             .allowMeteredImage(allowMetered)
             .build()
 

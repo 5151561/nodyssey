@@ -1,4 +1,4 @@
-package io.github.nodyssey.ui.common
+package io.github.plaza.designsys.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,7 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
+import io.github.plaza.designsys.R
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -59,13 +59,13 @@ fun SkippedImagePlaceholder(
                 modifier = Modifier.size(24.dp),
             )
             Text(
-                text = stringResource(R.string.image_skipped_wifi_only),
+                text = stringResource(R.string.richtext_image_skipped_title),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = stringResource(R.string.image_skipped_tap_to_load),
+                text = stringResource(R.string.richtext_image_skipped_action),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
