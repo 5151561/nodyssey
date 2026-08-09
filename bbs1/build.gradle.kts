@@ -25,6 +25,10 @@ dependencies {
     // The Compose theme and components shared with every app in this repository. The dependency only
     // goes this way: `:designsys` cannot see this module.
     implementation(project(":designsys"))
+    // Stated even though `:designsys` already carries it: this module's own code imports from it
+    // (dispatchers, Markdown parsing, time formatting), and a dependency used directly is declared
+    // directly rather than borrowed through someone else's api().
+    implementation(project(":core"))
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
@@ -50,11 +54,17 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.navigation3.runtime)
+    // Scopes a ViewModel to its back-stack entry, so a thread's state dies with its screen.
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
     // The instance list is small and read as a whole, so it lives in DataStore as JSON rather than
     // in a database. Room enters when per-site content caching does.
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
+
+    // The API plugin speaks plain JSON over one route, so OkHttp alone is enough — no Retrofit-style
+    // layer for a client whose endpoints are discovered at runtime rather than declared at compile time.
+    implementation(libs.okhttp)
 
     // Local tests: plain JVM — DataStore's preferences core runs without Android, so no Robolectric.
     testImplementation(libs.junit)

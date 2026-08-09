@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -26,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -35,6 +38,8 @@ import androidx.compose.ui.res.stringResource
 import io.github.bbs1.R
 import io.github.bbs1.data.normalizeInstanceUrl
 import io.github.bbs1.model.ForumInstance
+import io.github.bbs1.ui.common.apiErrorText
+import io.github.plaza.designsys.component.APPEND_SPINNER_SIZE
 import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.component.StatusView
 
@@ -42,13 +47,28 @@ import io.github.plaza.designsys.component.StatusView
 @Composable
 fun InstancesScreen(
     state: InstancesUiState,
+    addState: AddInstanceUiState,
     canNavigateBack: Boolean,
     onBack: () -> Unit,
     onSelect: (String) -> Unit,
-    onAdd: (baseUrl: String, name: String?) -> Unit,
+    onAddSubmit: (baseUrl: String, name: String?) -> Unit,
+    /** The add attempt saved; navigate to the new current site. */
+    onAdded: () -> Unit,
+    /** Acknowledge a finished attempt so the state machine returns to idle. */
+    onAddConsumed: () -> Unit,
     onRemove: (String) -> Unit,
 ) {
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
+
+    // At the screen, not inside the dialog: success must navigate even if the dialog was dismissed
+    // while the probe was still in flight.
+    LaunchedEffect(addState.succeeded) {
+        if (addState.succeeded) {
+            showAddDialog = false
+            onAddConsumed()
+            onAdded()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -107,11 +127,13 @@ fun InstancesScreen(
 
     if (showAddDialog) {
         AddInstanceDialog(
-            onConfirm = { baseUrl, name ->
+            addState = addState,
+            onConfirm = onAddSubmit,
+            onEdit = { if (addState.error != null) onAddConsumed() },
+            onDismiss = {
                 showAddDialog = false
-                onAdd(baseUrl, name)
+                onAddConsumed()
             },
-            onDismiss = { showAddDialog = false },
         )
     }
 }
@@ -156,15 +178,20 @@ private fun InstanceRow(
 
 @Composable
 private fun AddInstanceDialog(
+    addState: AddInstanceUiState,
     onConfirm: (baseUrl: String, name: String?) -> Unit,
+    /** The user is typing again; a shown probe failure no longer describes the field's content. */
+    onEdit: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var urlInput by rememberSaveable { mutableStateOf("") }
     var nameInput by rememberSaveable { mutableStateOf("") }
 
-    // Validation is the pure function the tests cover; the dialog just asks it live.
+    // Validation is the pure function the tests cover; the dialog just asks it live. The probe
+    // result speaks about the same field, so both errors share the URL field's supporting text.
     val normalized = normalizeInstanceUrl(urlInput)
-    val showError = urlInput.isNotBlank() && normalized == null
+    val formatError = urlInput.isNotBlank() && normalized == null
+    val probeError = addState.error
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -173,11 +200,17 @@ private fun AddInstanceDialog(
             Column {
                 OutlinedTextField(
                     value = urlInput,
-                    onValueChange = { urlInput = it },
+                    onValueChange = {
+                        urlInput = it
+                        onEdit()
+                    },
                     label = { Text(stringResource(R.string.bbs1_add_dialog_url_label)) },
-                    isError = showError,
+                    isError = formatError || probeError != null,
                     supportingText = {
-                        if (showError) Text(stringResource(R.string.bbs1_add_dialog_url_invalid))
+                        when {
+                            formatError -> Text(stringResource(R.string.bbs1_add_dialog_url_invalid))
+                            probeError != null -> Text(apiErrorText(probeError))
+                        }
                     },
                     singleLine = true,
                 )
@@ -191,10 +224,14 @@ private fun AddInstanceDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = normalized != null,
+                enabled = normalized != null && !addState.probing,
                 onClick = { normalized?.let { onConfirm(it, nameInput.takeIf(String::isNotBlank)) } },
             ) {
-                Text(stringResource(R.string.bbs1_action_confirm_add))
+                if (addState.probing) {
+                    CircularProgressIndicator(Modifier.size(APPEND_SPINNER_SIZE))
+                } else {
+                    Text(stringResource(R.string.bbs1_action_confirm_add))
+                }
             }
         },
         dismissButton = {

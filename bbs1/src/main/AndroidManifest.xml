@@ -7,20 +7,21 @@
         against this manifest. A normal permission, granted at install.
     -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
-        No INTERNET permission yet: the app stores nothing but the user's list of sites, so it
-        arrives with the first network call, not before it. When it does, decide the cleartext
-        policy in the same change: normalizeInstanceUrl keeps explicit http:// for self-hosted
-        LAN sites, and usesCleartextTraffic has defaulted to blocked since API 28 — without a
-        policy those sites silently fail to connect.
+        Cleartext is allowed app-wide because the address field is the app: normalizeInstanceUrl
+        accepts an explicit http:// exactly so a self-hosted LAN site can be added, and the API-28
+        default (blocked) would make that site fail with a connection error that looks like a bug.
+        Typing http:// is the user's own call, the same way it is in a browser.
 
-        Backup is on without exclusions for the same reason — the only state is site URLs the user
-        typed, which is exactly what should survive onto a new device. The moment a credential or
-        cached content appears, revisit this the way `:app` did (backup_rules.xml).
+        Backup is on without exclusions — the only state is site URLs the user typed, which is
+        exactly what should survive onto a new device. The moment a credential or cached content
+        appears, revisit this the way `:app` did (backup_rules.xml).
     -->
     <application
         android:name=".Bbs1App"
+        android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/bbs1_app_name"
