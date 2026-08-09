@@ -2,17 +2,19 @@
 
 ## Project Structure & Module Organization
 
-This is a single-module Android application. Production Kotlin lives under `app/src/main/java/io/github/nodyssey/`: `core/` contains networking, parsing, and shared utilities; `data/` owns repositories and Room persistence; `model/` defines domain types; and `ui/` contains Compose screens, view models, navigation, and theme code. Android resources are in `app/src/main/res`. JVM and Robolectric tests mirror production packages under `app/src/test/java`, with captured HTML in `app/src/test/resources/fixtures`. Instrumented tests belong in `app/src/androidTest`. Room schemas are versioned in `app/schemas`; architecture and design context lives in `docs/`.
+Two modules. `:app` is the NodeSeek application: production Kotlin lives under `app/src/main/java/io/github/nodyssey/`, where `core/` contains networking, parsing, and shared utilities; `data/` owns repositories and Room persistence; `model/` defines domain types; and `ui/` contains Compose screens, view models, and navigation. `:designsys` (`designsys/src/main/java/io/github/plaza/designsys/`) holds the Compose theme, the shared components, and the Markdown editor — **it knows nothing about any particular forum, and the dependency runs one way only, so anything site-specific belongs in `:app`**. Its symbols are prefixed `Plaza`, not `Nodyssey`, because a second forum app is meant to consume it.
+
+Shared Android configuration lives in `build-logic/` as three convention plugins (`plaza.android.application`, `plaza.android.library`, `plaza.android.compose`); a module's own build file should carry only what genuinely differs. Android resources are in each module's `src/main/res`. JVM and Robolectric tests mirror production packages under `src/test/java`, with captured HTML in `app/src/test/resources/fixtures`. Instrumented tests belong in `app/src/androidTest`. Room schemas are versioned in `app/schemas`; architecture and design context lives in `docs/`.
 
 ## Build, Test, and Development Commands
 
 The project requires JDK 21 and Android SDK 37. Use the checked-in Gradle wrapper:
 
 - `./gradlew :app:assembleDebug` builds the debug APK.
-- `./gradlew :app:testDebugUnitTest` runs JVM, Robolectric, Room, Paging, and Compose tests.
-- `./gradlew :app:lintDebug` runs Android lint with warnings treated as errors.
+- `./gradlew testDebugUnitTest` runs JVM, Robolectric, Room, Paging, and Compose tests. Unqualified on purpose — `:app:testDebugUnitTest` compiles `:designsys` but runs none of its tests.
+- `./gradlew :app:lintDebug` runs Android lint with warnings treated as errors. `checkDependencies` is on, so this one invocation covers every module.
 - `./gradlew spotlessCheck` verifies formatting; `./gradlew spotlessApply` fixes it.
-- `./gradlew resolveAndLockAll --write-locks` refreshes `app/gradle.lockfile` after dependency changes.
+- `./gradlew resolveAndLockAll --write-locks` refreshes every module's `gradle.lockfile` after dependency changes. Commit all of them.
 
 Before submitting, run the same gates as `.github/workflows/ci.yml`. After builds, run `./gradlew --stop` so Gradle daemons do not remain in memory.
 
@@ -22,7 +24,8 @@ Before submitting, run the same gates as `.github/workflows/ci.yml`. After build
 on purpose: AGP 9.2.1 / Kotlin 2.4.10 / Compose BOM 2026.06.00 / Material 3 1.5.0-alpha24 /
 Navigation 3 / OkHttp 5 / Coil 3 / Room 2.8 / Paging 3.5 / coroutines 1.11, on JDK 21, compileSdk 37,
 minSdk 26, targetSdk 36. Never inline a version in a build file, and run
-`./gradlew resolveAndLockAll --write-locks` after any dependency change.
+`./gradlew resolveAndLockAll --write-locks` after any dependency change. The SDK levels and the JDK
+now live in the `build-logic` convention plugins rather than in a module's build file.
 
 Before writing code against any of these libraries, find out what the **pinned** version actually
 offers — read its release notes or the resolved sources, do not code from memory of an older

@@ -67,7 +67,7 @@
 没有任何办法塞进一个假的 Repository。现在 `AppContainer` 是接口，测试可以整体替换。
 
 **为什么不用 Hilt**：不是技术上不能，是不值得。手工构造器注入同样满足"依赖显式、可替换、作用域正确"，
-官方架构指南也明确接受；当前仍是单模块和一个 `AppContainer`，Hilt 换来的主要是注解与生成代码开销。
+官方架构指南也明确接受；`:app` 仍只有一个 `AppContainer`，Hilt 换来的主要是注解与生成代码开销。
 
 > **KSP 的阻塞条件已经解除。** 原先的判断是 KSP 版本必须与 Kotlin 版本逐段绑定，
 > 但 KSP2 已经**放弃了 `<kotlin 版本>-<ksp 版本>` 的坐标格式**并独立发布。
@@ -250,7 +250,7 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 | # | 维度 | 适用性 | 成熟度 | 置信度 | 说明 |
 |---|---|---|---|---|---|
 | 1 | 架构、状态、职责边界 | 适用 | **4**（3） | 高 | SSOT 全部落到 Room；ViewModel 不再持有内容 |
-| 2 | 模块化与依赖边界 | 部分适用 | **2** | 高 | 单模块。包边界清晰，但没有编译期约束防止 ui→core/net 直连 |
+| 2 | 模块化与依赖边界 | 部分适用 | **3** | 中 | 已拆出 `:designsys`，共享层不含站点类型由编译器保证；`:app` 内部仍无约束防止 ui→core/net 直连 |
 | 3 | Kotlin、协程、生命周期、DI | 适用 | **3** | 高 | 构造器注入、dispatcher 与时钟均可替换、取消语义正确 |
 | 4 | 数据、同步、后台任务 | 适用 | **3**（1） | 高 | Room + Paging 3 离线优先；WorkManager 轮询未读并按设置投递系统通知 |
 | 5 | UI、Compose、导航、设计系统 | 适用 | **3** | 高 | Compose + M3 + Nav3；批次 F 与主要一、二级页已落地，部分写操作仍待接入 |
@@ -296,7 +296,7 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 
 | 严重度 | 问题 | 计划 |
 |---|---|---|
-| **P2** | 单模块，没有编译期约束防止 `ui/` 直连 `core/net` | 拆 `:core` / `:data` / `:feature:*`，或先上 lint 的依赖规则 |
+| **P2** | `:app` 内部没有编译期约束防止 `ui/` 直连 `core/net` | 下一轮拆 `:core`（网络/存储基建），细节见 `AGENTS.md` 的模块说明 |
 | **P2** | 修改邮箱与绑定 Telegram 只能转网页（Turnstile 与 Telegram 登录挂件） | 想原生化就得在 WebView 里跑挂件并把令牌回传；在此之前保持明确交接，不做能提交却必然失败的表单 |
 | **P3** | 未验证字号缩放 200% 与 TalkBack | 用真实设备和至少一台大屏设备做发布前验收 |
 | **P3** | 邀请码购买只有网页闭环 | 有可靠契约后原生化，接入前保留明确网页交接。星辰转账已按这条路走完（`payment-prepare` / `send`） |
@@ -431,7 +431,7 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 **加一个接口调用** → 优先找 JSON 端点（本地笔记 `docs/private/api-notes.md`），没有才抓 HTML。
 选择器进 `Selectors.kt`，配 fixture 测试。
 
-**站点改版导致解析失败** → 只改 `Selectors.kt`，跑 `./gradlew :app:testDebugUnitTest`。
+**站点改版导致解析失败** → 只改 `Selectors.kt`，跑 `./gradlew testDebugUnitTest`。
 
 **给帖子加一个要持久化的字段** → 改 `PostEntity` + 两个 mapper，`NodeSeekDatabase` 的 `version` 加一。
 schema 会重新导出到 `app/schemas/`，**这个 diff 必须一起提交**，否则 CI 会拦。
@@ -445,8 +445,8 @@ getter 会让调用方把结果存进字段，那就是又一份副本。
 `OfflineFirstPostRepository.THREAD_CACHE_TTL_MILLIS`（帖子，2 分钟）、
 `CategoryRepository.CACHE_TTL_MILLIS`（版块，12 小时）。都由 `AppClock` 驱动，都有测试覆盖。
 
-**动了依赖** → `./gradlew resolveAndLockAll --write-locks`，把 `app/gradle.lockfile` 一起提交。
+**动了依赖** → `./gradlew resolveAndLockAll --write-locks`，把各模块的 `gradle.lockfile` 都提交。
 
 **提交前** → `./gradlew spotlessApply` 然后
-`./gradlew spotlessCheck :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`
+`./gradlew spotlessCheck testDebugUnitTest :app:lintDebug :app:assembleDebug`
 （就是 CI 跑的那几道）。
