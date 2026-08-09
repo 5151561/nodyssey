@@ -168,6 +168,19 @@ object NodeSeekSite {
     /** Accounts without an upload 404 here; [io.github.nodyssey.ui.common.UserAvatar] draws the initial instead. */
     fun avatarUrl(uid: Long): String? = absoluteUrl("/avatar/$uid.png")
 
+    /**
+     * Where the site keeps its own stickers, e.g. `ac/01.png`.
+     *
+     * Post bodies already point here — the parser recognises an inline sticker by this very path
+     * ([io.github.nodyssey.core.html.RichContentParser]) — so the emoji panel using it too means one
+     * cached copy serves both, instead of the panel shipping a second copy inside the APK.
+     */
+    fun stickerUrl(
+        group: String,
+        code: String,
+        extension: String,
+    ): String = "$BASE_URL/static/image/sticker/$group/$code.$extension"
+
     const val NOTIFICATION_PATH = "/notification"
 
     /** The web conversation, for the "open in browser" escape hatch on the message thread. */
