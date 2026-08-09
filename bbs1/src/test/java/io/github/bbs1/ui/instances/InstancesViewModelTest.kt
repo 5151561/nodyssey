@@ -2,6 +2,11 @@ package io.github.bbs1.ui.instances
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import io.github.bbs1.data.InstanceRepository
+import io.github.bbs1.net.ApiMeta
+import io.github.bbs1.net.ApiSite
+import io.github.bbs1.net.Bbs1ApiException
+import io.github.bbs1.net.FakeBbs1Api
+import io.github.bbs1.ui.common.ApiErrorUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,7 +38,9 @@ class InstancesViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun TestScope.newViewModel(): Pair<InstancesViewModel, CoroutineScope> {
+    private fun TestScope.newViewModel(
+        api: FakeBbs1Api = FakeBbs1Api(),
+    ): Pair<InstancesViewModel, CoroutineScope> {
         // Unconfined everywhere so viewModelScope launches and DataStore reads run to completion as
         // the test body advances, without a Robolectric main looper.
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
@@ -43,7 +50,7 @@ class InstancesViewModelTest {
             PreferenceDataStoreFactory.create(scope = scope) {
                 File(tmp.root, "instances.preferences_pb")
             }
-        return InstancesViewModel(InstanceRepository(store) { "id" }) to scope
+        return InstancesViewModel(InstanceRepository(store) { "id" }, api) to scope
     }
 
     @Test
@@ -58,12 +65,46 @@ class InstancesViewModelTest {
         assertFalse(viewModel.uiState.value.loading)
         assertEquals(emptyList<Any>(), viewModel.uiState.value.instances)
 
-        viewModel.add("https://bbs1.org", name = null)
+        viewModel.add("https://bbs1.org", name = "自己起的名")
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals("bbs1.org", state.current?.name)
+        assertEquals("自己起的名", state.current?.name)
         assertEquals("https://bbs1.org", state.current?.baseUrl)
+        assertTrue(viewModel.addState.value.succeeded)
+        scope.cancel()
+    }
+
+    @Test
+    fun `a blank name falls back to the probed site name`() = runTest {
+        val api = FakeBbs1Api().apply { metaResult = { ApiMeta(ApiSite(name = "海角论坛")) } }
+        val (viewModel, scope) = newViewModel(api)
+        backgroundScope.launch { viewModel.uiState.collect {} }
+
+        viewModel.add("https://bbs1.org", name = null)
+        advanceUntilIdle()
+
+        assertEquals("海角论坛", viewModel.uiState.value.current?.name)
+        scope.cancel()
+    }
+
+    @Test
+    fun `a failed probe reports the error and saves nothing`() = runTest {
+        val api = FakeBbs1Api().apply {
+            metaResult = { throw Bbs1ApiException.Server("站点已关闭") }
+        }
+        val (viewModel, scope) = newViewModel(api)
+        backgroundScope.launch { viewModel.uiState.collect {} }
+
+        viewModel.add("https://bbs1.org", name = null)
+        advanceUntilIdle()
+
+        assertEquals(ApiErrorUi.Server("站点已关闭"), viewModel.addState.value.error)
+        assertFalse(viewModel.addState.value.succeeded)
+        assertEquals(emptyList<Any>(), viewModel.uiState.value.instances)
+
+        viewModel.consumeAdd()
+        assertEquals(AddInstanceUiState(), viewModel.addState.value)
         scope.cancel()
     }
 }

@@ -23,10 +23,29 @@
     <string name="bbs1_current_instance">当前站点</string>
     <string name="bbs1_action_back">返回</string>
 
-    <!-- 首页占位 -->
+    <!-- 首页 -->
     <string name="bbs1_manage_instances">站点管理</string>
-    <string name="bbs1_home_placeholder_title">还没接上站点数据</string>
-    <string name="bbs1_home_placeholder_body">客户端将通过站点的 API 插件读取内容。插件还没就绪，这里先是占位页。</string>
     <string name="bbs1_home_no_instance_title">先添加一个站点</string>
     <string name="bbs1_home_no_instance_body">从站点管理里添加一个 bbs1org 站点。</string>
+    <string name="bbs1_action_refresh">刷新</string>
+    <string name="bbs1_forum_all">全部</string>
+    <string name="bbs1_home_empty_title">这里还没有帖子</string>
+    <string name="bbs1_home_empty_body">这个版块暂时是空的。</string>
+    <string name="bbs1_home_error_title">加载失败</string>
+    <string name="bbs1_action_retry">重试</string>
+    <string name="bbs1_topic_pinned">置顶</string>
+    <string name="bbs1_meta_replies">%1$d 回复</string>
+
+    <!-- 帖子详情 -->
+    <string name="bbs1_topic_error_title">帖子加载失败</string>
+    <string name="bbs1_meta_views">%1$d 浏览</string>
+    <string name="bbs1_reply_floor">%1$d 楼</string>
+    <string name="bbs1_topic_replies_header">%1$d 条回复</string>
+    <string name="bbs1_topic_no_replies">还没有回复</string>
+
+    <!--
+        探测失败的两种「服务端没话说」情形；服务端有话说时（ok:0 带 message）原样展示它的话。
+    -->
+    <string name="bbs1_error_network">连不上站点，检查网络或地址后重试</string>
+    <string name="bbs1_error_not_api">这个地址不是开启了「论坛 API」插件的 bbs1org 站点</string>
 </resources>
