@@ -20,8 +20,8 @@ import java.time.temporal.ChronoUnit
  * The wording is Chinese and hardcoded, which is the one place this app lets a data-shaped class
  * decide copy. It holds only for a Chinese-language forum with no localised build;
  * adding a second language means moving these strings to resources and the formatting to the UI.
- * And because this module is shared, every app in this repository inherits this exact wording —
- * an app whose copy should differ has to move the strings out, not edit them here.
+ * This module is also copied into https://github.com/5151561/plaza, as a copy rather than a
+ * dependency — so that app inherits this wording as of the copy and nothing here reaches it since.
  */
 object TimeFormat {
 

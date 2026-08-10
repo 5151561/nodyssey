@@ -35,14 +35,14 @@ plugins {
 rootProject.name = "Nodyssey"
 include(":app")
 
-// The second application in this repository: the multi-instance bbs1org client. A separate app with
-// its own applicationId and its own release tags, sharing `:core` and `:designsys` and nothing else —
-// the two forums' domain models are too different to share a Site abstraction, so each app owns its
-// model/data/ui outright.
-include(":bbs1")
-
 // Compose theme and components with no knowledge of any particular forum. Kept as its own module so
 // the compiler, not a review convention, is what stops site-specific types leaking into it.
+//
+// `:designsys` and `:core` were extracted when a second application — the bbs1org client — shared
+// this repository. That app is now https://github.com/5151561/plaza, carrying a *copy* of both
+// modules rather than a dependency on these; edits here do not reach it. The boundary is still
+// worth keeping on its own terms: it is what makes the site-specific half of this app visible as a
+// thing with edges.
 include(":designsys")
 
 // The non-visual half of the same boundary: HTTP against a scraped forum, the cookie bridge the
