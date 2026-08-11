@@ -50,19 +50,24 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
@@ -83,6 +88,9 @@ import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.SearchHistoryEntry
 import io.github.nodyssey.model.SearchTarget
+import io.github.nodyssey.ui.common.CollapsingHeader
+import io.github.nodyssey.ui.common.NavigationBarScrollConnection
+import io.github.nodyssey.ui.common.NavigationDirectionThreshold
 import io.github.nodyssey.ui.common.NoSearchResultsState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.postlist.FeedRowPlaceholder
@@ -104,6 +112,7 @@ fun SearchRoute(
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val postResults = viewModel.postResults.collectAsLazyPagingItems()
@@ -124,6 +133,7 @@ fun SearchRoute(
         onSignIn = onSignIn,
         onVerify = { onVerify(viewModel.challengeUrl()) },
         modifier = modifier,
+        onNavigationBarHiddenChanged = onNavigationBarHiddenChanged,
     )
 }
 
@@ -155,40 +165,95 @@ fun SearchScreen(
     postResults: LazyPagingItems<FeedPost>? = null,
     onBoardChange: (String?) -> Unit = {},
     onSortChange: (FeedSort) -> Unit = {},
+    /** Keeps the host navigation bar hidden until the user deliberately scrolls back up. */
+    onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
 ) {
     var showBoardSheet by remember { mutableStateOf(false) }
+
+    /*
+     * The chrome above the results folds away as they scroll, which on a phone is the difference
+     * between five results and seven: the field, the tabs and the scope row cost ~170dp of an 800dp
+     * screen and none of them is being read while the reader is going down a list.
+     *
+     * The same `enterAlways` the home feed's title bar uses, so a short drag back up returns the lot.
+     */
+    val headerScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    // The bar at the bottom answers the same gesture, through the same connection the feed uses, so
+    // the two screens hide it on the same 16dp of committed direction.
+    val directionThresholdPx = with(LocalDensity.current) { NavigationDirectionThreshold.toPx() }
+    val currentOnNavigationBarHiddenChanged by rememberUpdatedState(onNavigationBarHiddenChanged)
+    val navigationBarScrollConnection =
+        remember(directionThresholdPx) {
+            // Called through the updated-state holder rather than handed the callback directly: the
+            // connection outlives the recompositions that hand this screen a fresh lambda.
+            NavigationBarScrollConnection(directionThresholdPx) { hidden ->
+                currentOnNavigationBarHiddenChanged(hidden)
+            }
+        }
+    // The host must not stay stuck bar-less if this screen leaves the composition.
+    DisposableEffect(Unit) { onDispose { currentOnNavigationBarHiddenChanged(false) } }
+
+    /*
+     * Anything that replaces the list under the header also unfolds it, and brings the bar back.
+     *
+     * Submitting, switching tab, and re-scoping all throw the rows away, so the scroll they were
+     * folded by is gone too. Clearing the query matters most: the setup screen underneath may have
+     * nothing scrollable on it at all, and a header left folded there would take the search field off
+     * the screen with no gesture left that could bring it back.
+     */
+    LaunchedEffect(state.submittedQuery, state.target, state.selectedBoard, state.sort) {
+        headerScrollBehavior.state.heightOffset = 0f
+        headerScrollBehavior.state.contentOffset = 0f
+        navigationBarScrollConnection.reveal()
+    }
 
     Scaffold(modifier = modifier) { padding ->
         Column(
             modifier = Modifier.padding(padding).fillMaxSize().readableWidth(),
         ) {
-            SearchInputField(
-                queryState = queryState,
-                placeholder = searchPlaceholder(state),
-                // Arriving with nothing searched yet means arriving to type; arriving back on a
-                // result list does not, and a keyboard over the results would only hide them.
-                autoFocus = state.submittedQuery == null,
-                onSearch = onSearch,
-            )
+            CollapsingHeader(headerScrollBehavior) {
+                SearchInputField(
+                    queryState = queryState,
+                    placeholder = searchPlaceholder(state),
+                    // Arriving with nothing searched yet means arriving to type; arriving back on a
+                    // result list does not, and a keyboard over the results would only hide them.
+                    autoFocus = state.submittedQuery == null,
+                    onSearch = onSearch,
+                )
 
-            PrimaryTabRow(selectedTabIndex = state.target.ordinal) {
-                SearchTab(
-                    selected = state.target == SearchTarget.POSTS,
-                    title = stringResource(R.string.search_posts_tab),
-                    // No count: `/search` never returns a total, and the number of rows loaded so
-                    // far is not one — it grows as you scroll, which reads as the site changing.
-                    count = null,
-                    onClick = { onTargetChange(SearchTarget.POSTS) },
-                )
-                SearchTab(
-                    selected = state.target == SearchTarget.USERS,
-                    title = stringResource(R.string.search_users_tab),
-                    count = state.userResults.size.takeIf { state.userLoadState == SearchLoadState.Success },
-                    onClick = { onTargetChange(SearchTarget.USERS) },
-                )
+                PrimaryTabRow(selectedTabIndex = state.target.ordinal) {
+                    SearchTab(
+                        selected = state.target == SearchTarget.POSTS,
+                        title = stringResource(R.string.search_posts_tab),
+                        // No count: `/search` never returns a total, and the number of rows loaded so
+                        // far is not one — it grows as you scroll, which reads as the site changing.
+                        count = null,
+                        onClick = { onTargetChange(SearchTarget.POSTS) },
+                    )
+                    SearchTab(
+                        selected = state.target == SearchTarget.USERS,
+                        title = stringResource(R.string.search_users_tab),
+                        count = state.userResults.size.takeIf { state.userLoadState == SearchLoadState.Success },
+                        onClick = { onTargetChange(SearchTarget.USERS) },
+                    )
+                }
+
+                // Part of the header rather than of the results, because it is chrome for them: the
+                // board and the order the list on screen was fetched with.
+                if (state.submittedQuery != null && state.target == SearchTarget.POSTS) {
+                    ResultScopeRow(
+                        state = state,
+                        onOpenBoardSheet = { showBoardSheet = true },
+                        onSortChange = onSortChange,
+                    )
+                }
             }
 
             if (state.submittedQuery == null) {
+                // No connection here on purpose. The setup screen is where a query is written, and
+                // the field it is written in must not be scrollable off the top by the history list
+                // sitting under it.
                 SearchSetup(
                     state = state,
                     onBoardChange = onBoardChange,
@@ -197,23 +262,28 @@ fun SearchScreen(
                     onClearHistory = onClearHistory,
                 )
             } else {
-                if (state.target == SearchTarget.POSTS) {
-                    ResultScopeRow(
+                // On the wrapper rather than on each list: posts and users are two different
+                // composables with a list each, and nested scroll reaches this from either.
+                //
+                // The direction detector goes outside the header's connection for the same reason it
+                // does on the feed — nested inside, the header would eat the first ~180dp of every
+                // downward scroll and the bar below would only start hiding once it had finished.
+                Box(
+                    Modifier
+                        .nestedScroll(navigationBarScrollConnection)
+                        .nestedScroll(headerScrollBehavior.nestedScrollConnection),
+                ) {
+                    SearchResults(
                         state = state,
-                        onOpenBoardSheet = { showBoardSheet = true },
-                        onSortChange = onSortChange,
+                        queryState = queryState,
+                        onPostClick = onPostClick,
+                        onUserClick = onUserClick,
+                        postResults = postResults,
+                        onRetry = onRetry,
+                        onSignIn = onSignIn,
+                        onVerify = onVerify,
                     )
                 }
-                SearchResults(
-                    state = state,
-                    queryState = queryState,
-                    onPostClick = onPostClick,
-                    onUserClick = onUserClick,
-                    postResults = postResults,
-                    onRetry = onRetry,
-                    onSignIn = onSignIn,
-                    onVerify = onVerify,
-                )
             }
         }
     }

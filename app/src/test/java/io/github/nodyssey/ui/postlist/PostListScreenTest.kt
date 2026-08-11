@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyDescendant
@@ -23,6 +24,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
 import androidx.paging.PagingData
@@ -409,6 +412,55 @@ class PostListScreenTest {
         composeRule.onNode(scrollToTopAffordance).performClick()
 
         composeRule.onNodeWithText("post 1").assertIsDisplayed()
+    }
+
+    /**
+     * The title folds away with the feed; the board strip does not.
+     *
+     * A real swipe rather than `performScrollToIndex`, which drives the list through its semantics
+     * action and dispatches no nested scroll at all — the app bar would stay open however far such a
+     * scroll went, and the test would pass without the behaviour existing.
+     */
+    @Test
+    fun `scrolling the feed folds the title away and keeps the board strip`() {
+        setScreen((1..40).map { feedPost(it.toLong(), "post $it") })
+
+        composeRule.onNode(feedList).performTouchInput { swipeUp() }
+
+        composeRule.onNode(scrollToTopAffordance).assertIsNotDisplayed()
+        composeRule.onNodeWithText("综合").assertIsDisplayed()
+        composeRule.onNodeWithText("技术").assertIsDisplayed()
+    }
+
+    /**
+     * Switching boards puts the list back at its first row, and the title has to come back with it:
+     * that scroll is programmatic, so it produces no upward delta for the bar to unfold against.
+     */
+    @Test
+    fun `switching boards unfolds the title again`() {
+        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
+        var state by mutableStateOf(PostListUiState(boards = boards))
+        composeRule.setContent {
+            PlazaTheme {
+                ScreenUnderTest(
+                    posts = posts,
+                    refresh = LoadState.NotLoading(false),
+                    append = LoadState.NotLoading(true),
+                    state = state,
+                    onPostClick = {},
+                    onBoardClick = {},
+                    onSortChange = {},
+                    onRecoverInBrowser = {},
+                )
+            }
+        }
+
+        composeRule.onNode(feedList).performTouchInput { swipeUp() }
+        composeRule.onNode(scrollToTopAffordance).assertIsNotDisplayed()
+
+        state = state.copy(categorySlug = "tech")
+
+        composeRule.onNode(scrollToTopAffordance).assertIsDisplayed()
     }
 
     /**

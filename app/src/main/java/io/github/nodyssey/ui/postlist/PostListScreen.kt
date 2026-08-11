@@ -49,6 +49,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -65,10 +66,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -80,7 +78,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
@@ -95,6 +92,8 @@ import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
+import io.github.nodyssey.ui.common.NavigationBarScrollConnection
+import io.github.nodyssey.ui.common.NavigationDirectionThreshold
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
 import io.github.nodyssey.ui.common.SiteErrorState
@@ -115,7 +114,6 @@ import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 /**
  * Stateful entry point. It only wires the ViewModel to the stateless [PostListScreen] below, which is
@@ -196,11 +194,32 @@ fun PostListScreen(
     var navigationBarHidden by remember { mutableStateOf(false) }
     val navigationBarScrollConnection =
         remember(directionThresholdPx) {
-            FeedNavigationBarScrollConnection(directionThresholdPx) { hidden ->
+            NavigationBarScrollConnection(directionThresholdPx) { hidden ->
                 navigationBarHidden = hidden
                 currentOnNavigationBarHiddenChanged(hidden)
             }
         }
+
+    /*
+     * The wordmark row rides the scroll; the board strip under it does not.
+     *
+     * Only the 大标题栏 is given a scroll behaviour, so the strip — which is navigation, and the one
+     * thing a reader reaches for mid-feed — stays put while the title and 排序 fold away. `enterAlways`
+     * rather than the navigation bar's sticky threshold: the bar is what the sort action lives in, and
+     * a short drag back up has to be enough to reach it.
+     */
+    val topBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    /**
+     * Unfolds the title without a gesture, for the jumps that put the list back at its first row.
+     *
+     * The bar collapses only against scroll deltas it has consumed, so a programmatic scroll leaves it
+     * folded at the top of the feed — the one place there is nothing left to scroll back up through.
+     */
+    fun revealTopBar() {
+        topBarScrollBehavior.state.heightOffset = 0f
+        topBarScrollBehavior.state.contentOffset = 0f
+    }
 
     /*
      * Switching boards or sort order is the one case where the previous scroll offset is meaningless.
@@ -216,15 +235,11 @@ fun PostListScreen(
         val feed = feedIdentity(state)
         if (feed != lastResetFeed) {
             lastResetFeed = feed
+            revealTopBar()
             listState.scrollToItem(0)
         }
     }
 
-    val scrollActive = listState.isScrollInProgress
-    // Ending a gesture clears only its partial distance. It deliberately does not reveal the bar.
-    LaunchedEffect(scrollActive) {
-        if (!scrollActive) navigationBarScrollConnection.resetGesture()
-    }
     // The host must not stay stuck bar-less if this screen leaves the composition.
     DisposableEffect(Unit) { onDispose { currentOnNavigationBarHiddenChanged(false) } }
 
@@ -238,6 +253,7 @@ fun PostListScreen(
     val scope = rememberCoroutineScope()
     suspend fun scrollToTop() {
         navigationBarScrollConnection.reveal()
+        revealTopBar()
         // Animating hundreds of rows past would take seconds and show nothing. Jumping to the last
         // screenful first costs the same gesture a fixed, short animation however deep the user is.
         if (listState.firstVisibleItemIndex > SCROLL_TO_TOP_ANIMATED_ITEMS) {
@@ -311,6 +327,7 @@ fun PostListScreen(
                     sort = state.sort,
                     onSortChange = onSortChange,
                     onTitleClick = { scope.launch { scrollToTop() } },
+                    scrollBehavior = topBarScrollBehavior,
                 )
                 BoardStrip(
                     boards = state.boards,
@@ -383,7 +400,12 @@ fun PostListScreen(
                                 state = listState,
                                 modifier = Modifier
                                     .fillMaxHeight()
+                                    // The direction detector goes outside the app bar's connection so
+                                    // it reads the raw gesture. Nested first, the app bar would eat
+                                    // the first 64dp of every downward scroll into its own collapse
+                                    // and the navigation bar would only start hiding afterwards.
                                     .nestedScroll(navigationBarScrollConnection)
+                                    .nestedScroll(topBarScrollBehavior.nestedScrollConnection)
                                     .readableWidth(),
                             ) {
                                 items(
@@ -522,74 +544,17 @@ private fun FeedPageBar(
 private fun feedIdentity(state: PostListUiState): String =
     "${state.categorySlug.orEmpty()}/${state.sort.name}/${state.startPage}"
 
-private val NavigationDirectionThreshold = 16.dp
-
 /** How much of the feed a "back to the top" actually animates past; anything beyond it is a jump. */
 private const val SCROLL_TO_TOP_ANIMATED_ITEMS = 12
-
-/**
- * Turns deliberate user scroll direction into a sticky navigation-bar state.
- *
- * A negative Y delta advances the feed and hides the bar. A positive delta moves back toward earlier
- * rows and reveals it. Fling/programmatic deltas are ignored, so neither momentum nor coming to rest
- * can reveal the bar on the user's behalf.
- */
-internal class FeedNavigationBarScrollConnection(
-    private val directionThresholdPx: Float,
-    private val onHiddenChanged: (Boolean) -> Unit,
-) : NestedScrollConnection {
-    private var accumulatedDeltaY = 0f
-    private var isHidden = false
-
-    init {
-        require(directionThresholdPx > 0f)
-    }
-
-    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        val deltaY = available.y
-        if (source != NestedScrollSource.UserInput || deltaY == 0f) return Offset.Zero
-
-        if (accumulatedDeltaY != 0f && accumulatedDeltaY * deltaY < 0f) {
-            accumulatedDeltaY = 0f
-        }
-        accumulatedDeltaY += deltaY
-
-        if (abs(accumulatedDeltaY) >= directionThresholdPx) {
-            val shouldHide = accumulatedDeltaY < 0f
-            accumulatedDeltaY = 0f
-            if (shouldHide != isHidden) {
-                isHidden = shouldHide
-                onHiddenChanged(shouldHide)
-            }
-        }
-        return Offset.Zero
-    }
-
-    fun resetGesture() {
-        accumulatedDeltaY = 0f
-    }
-
-    /**
-     * Puts the bar back without a gesture having asked for it.
-     *
-     * Only for jumps the user initiated elsewhere — a programmatic scroll produces no user deltas, so
-     * without this the connection would still believe it is hidden and the next downward scroll would
-     * have nothing left to hide.
-     */
-    fun reveal() {
-        accumulatedDeltaY = 0f
-        if (isHidden) {
-            isHidden = false
-            onHiddenChanged(false)
-        }
-    }
-}
 
 /**
  * The home app bar carries the wordmark and exactly one action.
  *
  * Account and search both have their own tab at the bottom, so putting them up here as well would be
  * two ways to reach the same place. Sort has nowhere else to live.
+ *
+ * [scrollBehavior] folds the whole row away as the feed advances. It is measured out of the layout
+ * rather than merely hidden, which is what lets the board strip below it ride up into the space.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -597,6 +562,7 @@ private fun HomeTopBar(
     sort: FeedSort,
     onSortChange: (FeedSort) -> Unit,
     onTitleClick: () -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
 
@@ -642,7 +608,12 @@ private fun HomeTopBar(
         colors =
         TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
+            // The default scrolled container tints the bar as it collapses. Here the strip below it
+            // keeps the same surface throughout, and a bar that darkened on its way out would draw a
+            // band across the top of the screen that then vanished.
+            scrolledContainerColor = MaterialTheme.colorScheme.surface,
         ),
+        scrollBehavior = scrollBehavior,
     )
 }
 

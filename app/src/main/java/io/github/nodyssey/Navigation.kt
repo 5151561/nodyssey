@@ -182,8 +182,16 @@ fun MainNavigation(
 
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
 
-    // Transient by design: rotation should not restore a navigation bar hidden by an old gesture.
-    var feedNavigationBarHidden by remember { mutableStateOf(false) }
+    /*
+     * Set by whichever tab root is currently reading a long list — the feed and search both do.
+     *
+     * One flag rather than one per tab because only one of them is on screen at a time, and each
+     * clears it on the way out: leaving the composition is what a tab switch looks like from inside a
+     * screen, so the tab being switched *to* never inherits a bar the previous one had hidden.
+     *
+     * Transient by design: rotation should not restore a navigation bar hidden by an old gesture.
+     */
+    var tabBarHiddenByScroll by remember { mutableStateOf(false) }
 
     /*
      * Tapping 首页 while already on 首页 is the platform's "back to the top" gesture, and until now it
@@ -218,7 +226,7 @@ fun MainNavigation(
     // view are full-screen by design — showing a tab bar under them would invite leaving mid-read.
     val atTabRoot = TopLevelDestination.forKey(backStack.lastOrNull()) != null
     val showNavigationSuite =
-        (atTabRoot && (!feedNavigationBarHidden || isListDetailExpanded)) ||
+        (atTabRoot && (!tabBarHiddenByScroll || isListDetailExpanded)) ||
             (
                 currentTab == TopLevelDestination.HOME &&
                     isListDetailExpanded &&
@@ -291,7 +299,7 @@ fun MainNavigation(
                         backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE))
                     },
                     onNavigationBarHiddenChanged = { hidden ->
-                        if (!currentListDetailExpanded) feedNavigationBarHidden = hidden
+                        if (!currentListDetailExpanded) tabBarHiddenByScroll = hidden
                     },
                     scrollToTopRequests = homeScrollToTopRequests,
                 )
@@ -312,6 +320,9 @@ fun MainNavigation(
                     },
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                     onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
+                    onNavigationBarHiddenChanged = { hidden ->
+                        if (!currentListDetailExpanded) tabBarHiddenByScroll = hidden
+                    },
                 )
             }
 
