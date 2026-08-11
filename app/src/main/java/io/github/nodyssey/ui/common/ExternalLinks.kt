@@ -26,6 +26,11 @@ internal fun rememberExternalUriHandler(target: ExternalLinkTarget): UriHandler 
  * `mailto:`, `tg://` and `otpauth://` therefore fall through to the platform handler, which still
  * throws when nothing on the device can take the link — callers such as the 两步验证 screen read that
  * failure to tell the user so.
+ *
+ * nodeseek.com is not filtered out here even though the app routes its own pages to the session's
+ * web view instead: that routing happens upstream in `Navigation`, and the few site URLs that
+ * deliberately reach a browser anyway — an image being shared, the terms of service — should still
+ * get the Custom Tab the user asked for rather than a bare browser task.
  */
 internal fun usesCustomTab(
     uri: String,

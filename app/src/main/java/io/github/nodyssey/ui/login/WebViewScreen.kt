@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -157,6 +158,13 @@ fun WebViewRoute(
 
             WebViewGoal.SIGN_IN, WebViewGoal.CHALLENGE -> NodeSeekSite::isTrustedWebViewUrl
         },
+        // 管理 pages only. Now that every nodeseek.com link opens here rather than in a Custom Tab,
+        // a page this view renders badly — or that the user would rather read with their browser's
+        // own tools — would otherwise have no way out. The other three goals must not offer it: each
+        // one exists to put a cookie in *this* jar, and finishing the errand in the browser would
+        // write it somewhere the app cannot read, which is the failure this screen was built to
+        // avoid.
+        canLeaveToBrowser = goal == WebViewGoal.MANAGE,
         modifier = modifier,
     )
 }
@@ -196,11 +204,16 @@ private fun WebViewScreen(
      * followed out, and is handed to the browser.
      */
     isInScope: (String) -> Boolean = NodeSeekSite::isTrustedWebViewUrl,
+    /** Whether the toolbar offers a way out to a real browser; see the caller for why it is not always. */
+    canLeaveToBrowser: Boolean = false,
 ) {
     var webView by remember { mutableStateOf<WebView?>(null) }
     var popup by remember { mutableStateOf<WebView?>(null) }
     var loading by remember { mutableStateOf(true) }
     var canGoBack by remember { mutableStateOf(false) }
+    // Where the user actually is, not where they came in — they may have followed links since, and
+    // the handoff to the browser should carry the page they are looking at.
+    var currentUrl by remember { mutableStateOf(url) }
 
     // Back dismisses the popup first — it is the topmost thing on screen, and the page underneath is
     // still where the user was.
@@ -248,6 +261,17 @@ private fun WebViewScreen(
                         )
                     }
                 },
+                actions = {
+                    if (canLeaveToBrowser) {
+                        IconButton(onClick = { openExternal(currentUrl) }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription =
+                                stringResource(R.string.action_open_in_external_browser),
+                            )
+                        }
+                    }
+                },
             )
         },
     ) { padding ->
@@ -263,6 +287,7 @@ private fun WebViewScreen(
                             onPageLoaded = { view ->
                                 loading = false
                                 canGoBack = view.canGoBack()
+                                view.url?.let { currentUrl = it }
                             },
                             onOpenPopup = { child -> popup = child },
                             onClosePopup = { popup = null },
