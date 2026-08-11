@@ -138,6 +138,13 @@ fun MainNavigation(
     val privacyTitle = stringResource(R.string.about_privacy)
     val rssLabel = stringResource(R.string.about_rss)
     val uriHandler = LocalUriHandler.current
+    /*
+     * Hands a link to the browser — a Custom Tab or the system one, per the user's setting.
+     *
+     * Narrow on purpose. Anything on nodeseek.com should go through `openWebUrl` below instead; what
+     * is left here is the handful of links that genuinely want a browser: an image the user means to
+     * download or share, the terms of service, and the escape hatch out of the web view itself.
+     */
     val openExternalUrl: (String) -> Unit = remember(uriHandler) {
         { url ->
             if (NodeSeekSite.isExternalWebUrl(url)) {
@@ -237,9 +244,35 @@ fun MainNavigation(
         if (showNavigationSuite) navigationSuiteState.show() else navigationSuiteState.hide()
     }
 
-    // Content links only: our own post/space/mention URLs stay in the app; everything else leaves
-    // it. Explicit "open in browser" actions keep openExternalUrl, or they would loop back here.
     val scope = rememberCoroutineScope()
+
+    /*
+     * Opening a web page, routed by host: nodeseek.com stays in the app's own web view, everything
+     * else goes to the browser.
+     *
+     * This is a cookie decision, not a cosmetic one. A Custom Tab is the browser doing the browsing —
+     * its process, and crucially its cookie jar — where this account is not signed in. A site page
+     * opened out there shows the user a logged-out stranger's view of their own forum, and a
+     * Cloudflare pass earned out there lands in a jar the app cannot read, so the app's own requests
+     * keep failing afterwards.
+     *
+     * By host rather than page by page because "does this one need the session" is a judgement we get
+     * wrong: an 内版 thread is an ordinary `/post-` URL right up until it 404s, and the site's own
+     * pages move between public and gated without telling us.
+     *
+     * [WebViewGoal.MANAGE] because there is no cookie to wait for here — the user is done when they
+     * say so. The web view carries its own way back out to a real browser; see `WebViewScreen`.
+     */
+    val openWebUrl: (String) -> Unit = { url ->
+        if (NodeSeekSite.isTrustedWebViewUrl(url)) {
+            backStack.add(WebKey(url, siteTitle, WebViewGoal.MANAGE))
+        } else {
+            openExternalUrl(url)
+        }
+    }
+
+    // Content links: our own post/space/mention URLs get a native screen, and everything else —
+    // including the rest of nodeseek.com — goes through the routing above.
     val openSpace: (Long) -> Unit = { uid ->
         backStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid))
     }
@@ -258,11 +291,11 @@ fun MainNavigation(
                         name = route.name,
                         searchUsers = container.searchRepository::searchUsers,
                         onResolved = openSpace,
-                        onFailure = { openExternalUrl(url) },
+                        onFailure = { openWebUrl(url) },
                     )
                 }
 
-            null -> openExternalUrl(NodeSeekSite.unwrapJumpUrl(url))
+            null -> openWebUrl(NodeSeekSite.unwrapJumpUrl(url))
         }
     }
 
@@ -366,7 +399,7 @@ fun MainNavigation(
                             ),
                         )
                     },
-                    onOpenBrowser = openExternalUrl,
+                    onOpenBrowser = openWebUrl,
                     onLinkClick = openContentUrl,
                 )
             }
@@ -383,7 +416,7 @@ fun MainNavigation(
                     onSettings = { backStack.add(SettingsKey) },
                     hasAppUpdate = updateState.available != null,
                     onAccountSettings = { backStack.add(AccountSettingsKey) },
-                    onOpenWebsite = { openExternalUrl(NodeSeekSite.BASE_URL) },
+                    onOpenWebsite = { openWebUrl(NodeSeekSite.BASE_URL) },
                     onOpenSpace = { uid -> backStack.add(UserSpaceKey(uid, isSelf = true)) },
                     // 我的收藏 is the space page's own 收藏 tab, opened directly. A separate screen
                     // would be the same list rendered twice from the same endpoint.
@@ -473,6 +506,10 @@ fun MainNavigation(
                 PrivacyRoute(
                     viewModel = privacyViewModel,
                     onBack = { backStack.removeLastOrNull() },
+                    // 「在浏览器中打开原文」 says the browser and means it — the terms are a public
+                    // page, and a reader checking what they agreed to may well want it outside the
+                    // app that is quoting it. The web view below is the fallback for when no
+                    // browser takes the intent.
                     onOpenOriginal = {
                         openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH)
                     },
@@ -529,7 +566,7 @@ fun MainNavigation(
                     },
                     // 空间页右上角的笔是「编辑资料」，直接进资料编辑页，不是账号设置的目录页。
                     onEditProfile = { backStack.add(AccountProfileFieldsKey) },
-                    onOpenBrowser = openExternalUrl,
+                    onOpenBrowser = openWebUrl,
                     onLinkClick = openContentUrl,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                 )
@@ -726,8 +763,8 @@ fun MainNavigation(
                 CommunityToolsScreen(
                     onBack = { backStack.removeLastOrNull() },
                     onAward = { backStack.add(AwardKey) },
-                    onProviders = { openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.PROVIDERS_PATH) },
-                    onFriends = { openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.FRIENDS_PATH) },
+                    onProviders = { openWebUrl(NodeSeekSite.BASE_URL + NodeSeekSite.PROVIDERS_PATH) },
+                    onFriends = { openWebUrl(NodeSeekSite.BASE_URL + NodeSeekSite.FRIENDS_PATH) },
                     onLucky = { backStack.add(LuckyKey) },
                     onInvite = { backStack.add(InviteKey) },
                     onRuling = { backStack.add(RulingKey) },
@@ -742,7 +779,7 @@ fun MainNavigation(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
                     onPostClick = { backStack.add(PostDetailKey(it)) },
-                    onOpenBrowser = openExternalUrl,
+                    onOpenBrowser = openWebUrl,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                 )
             }
@@ -753,7 +790,7 @@ fun MainNavigation(
                 LuckyRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
-                    onOpenBrowser = openExternalUrl,
+                    onOpenBrowser = openWebUrl,
                 )
             }
 
@@ -777,7 +814,7 @@ fun MainNavigation(
                         backStack.add(PostDetailKey(postId, floor = floor?.toString()))
                     },
                     onUserClick = openSpace,
-                    onOpenBrowser = openExternalUrl,
+                    onOpenBrowser = openWebUrl,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                 )
             }
@@ -791,6 +828,9 @@ fun MainNavigation(
                     urls = key.urls,
                     initialIndex = key.index,
                     onClose = { backStack.removeLastOrNull() },
+                    // The browser, even for an image hosted on nodeseek.com: this one is the user
+                    // reaching for downloading and sharing, which is the browser's job and not
+                    // something the session's web view does better.
                     onOpenBrowser = openExternalUrl,
                     saveOutcome = saveOutcome,
                     onSave = viewModel::save,
@@ -825,7 +865,7 @@ fun MainNavigation(
                     showBackButton =
                     !(currentListDetailExpanded && backStack.firstOrNull() == PostListKey),
                     onBack = { backStack.removeLastOrNull() },
-                    onOpenBrowser = openExternalUrl,
+                    onOpenBrowser = openWebUrl,
                     onLinkClick = openContentUrl,
                     onAuthorClick = openSpace,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },

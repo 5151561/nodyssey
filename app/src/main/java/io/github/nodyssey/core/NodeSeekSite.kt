@@ -348,7 +348,15 @@ object NodeSeekSite {
         }
     }
 
-    /** Only these URLs may execute JavaScript inside the authenticated WebView. */
+    /**
+     * Our own site: the only URLs allowed to execute JavaScript inside the authenticated WebView, and
+     * — the same question asked the other way round — the ones that open there rather than in a
+     * browser.
+     *
+     * Both readings need the same answer, which is why one predicate serves both. A site page handed
+     * to a Custom Tab is a page in the browser's cookie jar, where this account is not signed in and
+     * where a Cloudflare pass lands out of the app's reach; see `openWebUrl` in `Navigation`.
+     */
     fun isTrustedWebViewUrl(url: String): Boolean = isHttpsHost(url, TRUSTED_WEBVIEW_HOSTS)
 
     /**

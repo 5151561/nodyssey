@@ -15,6 +15,8 @@
     <string name="action_sign_out">退出登录</string>
     <string name="action_verify">去验证</string>
     <string name="action_open_in_browser">在网页中打开</string>
+    <!-- 站内页现在都在 App 内的网页视图里打开，这是从那里跳到真浏览器的出口 -->
+    <string name="action_open_in_external_browser">用浏览器打开</string>
     <string name="action_copy">复制</string>
     <string name="action_copy_link">复制链接</string>
     <string name="action_share">分享</string>
