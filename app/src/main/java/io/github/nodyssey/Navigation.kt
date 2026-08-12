@@ -53,8 +53,8 @@ import io.github.nodyssey.ui.account.BlockListRoute
 import io.github.nodyssey.ui.account.BlockListViewModel
 import io.github.nodyssey.ui.account.ContactRoute
 import io.github.nodyssey.ui.account.ContactViewModel
-import io.github.nodyssey.ui.account.NodeImageRoute
-import io.github.nodyssey.ui.account.NodeImageViewModel
+import io.github.nodyssey.ui.account.ImageHostRoute
+import io.github.nodyssey.ui.account.ImageHostViewModel
 import io.github.nodyssey.ui.account.PreferencesRoute
 import io.github.nodyssey.ui.account.PreferencesViewModel
 import io.github.nodyssey.ui.account.ProfileFieldsRoute
@@ -687,18 +687,18 @@ fun MainNavigation(
                     // 常用偏好 and 首页版块 share one page (d6 5/5): three of their rows are the
                     // same account-side switches, and splitting them would leave two stub screens.
                     onOpenPreferences = { backStack.add(AccountPreferencesKey) },
-                    onOpenNodeImage = { backStack.add(AccountNodeImageKey) },
+                    onOpenImageHost = { backStack.add(AccountImageHostKey) },
                 )
             }
 
-            entry<AccountNodeImageKey> {
-                val viewModel: NodeImageViewModel =
-                    viewModel(factory = NodeImageViewModel.factory(container))
-                NodeImageRoute(
+            entry<AccountImageHostKey> {
+                val viewModel: ImageHostViewModel =
+                    viewModel(factory = ImageHostViewModel.factory(container))
+                ImageHostRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
-                    // nodeimage.com is a different site with a different session; the in-app web view
-                    // exists to carry NodeSeek's cookies and has no business holding these.
+                    // Every image host is a different site with a different session; the in-app web
+                    // view exists to carry NodeSeek's cookies and has no business holding these.
                     onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
                 )
             }

@@ -9,6 +9,9 @@ package io.github.nodyssey.core
  * its own object rather than folded into [NodeSeekSite] to make that boundary hard to blur: nothing
  * here may be sent a NodeSeek cookie, and nothing in [NodeSeekSite] may be sent the API key.
  *
+ * It is the default of six hosts the app can be pointed at, not the only one — the rest are described
+ * in `data/imagehost/`, and this file stays the one place nodeimage.com's own vocabulary lives.
+ *
  * The endpoints are the ones nodeimage.com documents on its own API page (read 2026-07-28). The web
  * uploader uses a different, cookie-authenticated path (`POST /upload`); the app deliberately takes
  * the documented key-authenticated one instead, because it needs no OAuth round trip through NodeSeek

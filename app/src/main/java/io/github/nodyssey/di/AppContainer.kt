@@ -49,12 +49,13 @@ import io.github.nodyssey.data.composer.CommentComposerRepository
 import io.github.nodyssey.data.composer.DefaultCommentComposerRepository
 import io.github.nodyssey.data.composer.DefaultImagePreparer
 import io.github.nodyssey.data.composer.DefaultPostComposerRepository
+import io.github.nodyssey.data.composer.ImageHostUploader
 import io.github.nodyssey.data.composer.ImageUploader
-import io.github.nodyssey.data.composer.NodeImageUploader
 import io.github.nodyssey.data.composer.PostComposerRepository
+import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
+import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
+import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.local.NodeSeekDatabase
-import io.github.nodyssey.data.nodeimage.DefaultNodeImageRepository
-import io.github.nodyssey.data.nodeimage.NodeImageRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.update.ApkInstaller
@@ -107,8 +108,8 @@ interface AppContainer {
     val commentComposerRepository: CommentComposerRepository
     val imageUploader: ImageUploader
 
-    /** nodeimage.com — a service of its own, with its own credential. See [NodeImageRepository]. */
-    val nodeImageRepository: NodeImageRepository
+    /** The selected image host — a service of its own, with its own credential. See [ImageHostRepository]. */
+    val imageHostRepository: ImageHostRepository
     val sessionRepository: SessionRepository
     val userSpaceRepository: UserSpaceRepository
     val assetsRepository: AssetsRepository
@@ -307,7 +308,7 @@ class DefaultAppContainer(
      * about a browsing session it has no part in. The connection pool is shared because pooling is
      * per-host anyway, so nothing crosses between them.
      */
-    private val nodeImageClient: OkHttpClient by lazy {
+    private val imageHostClient: OkHttpClient by lazy {
         OkHttpClient
             .Builder()
             .connectionPool(okHttpClient.connectionPool)
@@ -316,10 +317,12 @@ class DefaultAppContainer(
             // page read ever does.
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
-            // The UA is shared but the cookie jar is not. `api.nodeimage.com` is behind a Cloudflare
-            // managed challenge, and OkHttp's default `okhttp/4.x` is the single most reliable way
-            // to be served the interstitial instead of JSON. The device's real browser UA is what
-            // the challenge expects to see; no cookie or referrer rides along with it.
+            // The UA is shared but the cookie jar is not, and that is the point: every host this
+            // client reaches is a third party holding a bearer-equivalent secret, so the forum's
+            // session must never ride along. `api.nodeimage.com` is behind a Cloudflare managed
+            // challenge and OkHttp's default `okhttp/4.x` is the single most reliable way to be
+            // served the interstitial instead of JSON, and a self-hosted host may well be behind one
+            // too; the device's real browser UA is what a challenge expects to see.
             .addInterceptor { chain ->
                 val request = chain.request()
                 chain.proceed(
@@ -332,13 +335,17 @@ class DefaultAppContainer(
             }.build()
     }
 
-    override val nodeImageRepository: NodeImageRepository by lazy {
-        DefaultNodeImageRepository(appContext, nodeImageClient, dispatchers)
+    override val imageHostRepository: ImageHostRepository by lazy {
+        DefaultImageHostRepository(
+            settings = DataStoreImageHostSettings(appContext),
+            http = imageHostClient,
+            dispatchers = dispatchers,
+        )
     }
 
     override val imageUploader: ImageUploader by lazy {
-        NodeImageUploader(
-            repository = nodeImageRepository,
+        ImageHostUploader(
+            repository = imageHostRepository,
             preparer = DefaultImagePreparer(appContext, dispatchers),
         )
     }
@@ -354,7 +361,7 @@ class DefaultAppContainer(
     /**
      * A third client, for github.com only.
      *
-     * Same reasoning as [nodeImageClient]: [okHttpClient] carries the NodeSeek session cookies and
+     * Same reasoning as [imageHostClient]: [okHttpClient] carries the NodeSeek session cookies and
      * stamps `Referer: nodeseek.com` on anything without one, and neither belongs on a call to a
      * host that has no part in that session. The User-Agent names the app and its version instead of
      * borrowing the device's browser UA — GitHub's API asks callers to identify themselves, and

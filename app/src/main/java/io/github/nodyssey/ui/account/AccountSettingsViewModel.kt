@@ -8,7 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.account.AccountSettingsRepository
-import io.github.nodyssey.data.nodeimage.NodeImageRepository
+import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.plaza.core.runCatchingExceptCancellation
@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
  * State holder for 账号设置 (8g).
  *
  * The screen is a destination hub. Page-level summaries are static; only the blocked-user count and
- * NodeImage connection state are live values, so opening the hub does not prefetch data owned by its
+ * image-host connection state are live values, so opening the hub does not prefetch data owned by its
  * profile, security, contact, and preference destinations.
  *
  * A failure to read the blocked-user count is not an error state. The row still navigates, because a
@@ -36,7 +36,7 @@ class AccountSettingsViewModel(
     private val profiles: ProfileRepository,
     private val posts: PostRepository,
     private val session: SessionRepository,
-    nodeImage: NodeImageRepository,
+    imageHost: ImageHostRepository,
 ) : ViewModel() {
     private val remote = MutableStateFlow(RemoteAccountState())
     private val signedOut = MutableStateFlow(false)
@@ -47,12 +47,12 @@ class AccountSettingsViewModel(
         combine(
             remote,
             signedOut,
-            nodeImage.apiKey,
-        ) { site, isSignedOut, imageHostKey ->
+            imageHost.current,
+        ) { site, isSignedOut, imageHostConfig ->
             AccountSettingsUiState(
                 blockedCount = site.blockedCount,
                 signedOut = isSignedOut,
-                imageHostConnected = imageHostKey != null,
+                imageHostConnected = imageHostConfig.isConfigured,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -104,7 +104,7 @@ class AccountSettingsViewModel(
                         profiles = container.profileRepository,
                         posts = container.postRepository,
                         session = container.sessionRepository,
-                        nodeImage = container.nodeImageRepository,
+                        imageHost = container.imageHostRepository,
                     )
                 }
             }
@@ -120,6 +120,6 @@ data class AccountSettingsUiState(
     val blockedCount: Int? = null,
     /** Set once sign-out has committed; the screen pops itself on it. See `signOut`. */
     val signedOut: Boolean = false,
-    /** Whether a NodeImage API key is stored — the 图床 row's subtitle, and nothing more of it. */
+    /** Whether the selected image host is usable — the 图床 row's subtitle, and nothing more of it. */
     val imageHostConnected: Boolean = false,
 )
