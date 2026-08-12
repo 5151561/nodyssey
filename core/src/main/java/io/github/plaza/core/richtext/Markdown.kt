@@ -252,9 +252,9 @@ private fun parseInlines(
                     index++
                 } else {
                     flush()
-                    // Only the site's own stickers render inline, so an image inside a sentence
-                    // becomes a link to it, labelled with its alt text.
-                    result += InlineNode.Link(span.label.ifBlank { IMAGE_LABEL }, span.url, style)
+                    // Kept as an image node; the renderer decides per surface whether that means a
+                    // thumbnail (a table cell) or a labelled link (running text).
+                    result += InlineNode.Image(span.url, span.label.ifBlank { null })
                     index = span.end
                 }
             }
@@ -471,6 +471,3 @@ private val ORDERED_LIST = Regex("^\\s*\\d+[.)]\\s+(.+)$")
 private val BLOCK_IMAGE = Regex("^!\\[([^]]*)]\\(([^)]+)\\)$")
 private val LINKED_BLOCK_IMAGE = Regex("^\\[!\\[([^]]*)]\\(([^)]+)\\)]\\([^)]+\\)$")
 private val TABLE_UNDERLINE = Regex("^\\|?\\s*:?-+:?\\s*(\\|\\s*:?-+:?\\s*)*\\|?$")
-
-/** Stands in for an inline image, which only the site's own stickers get to be. */
-private const val IMAGE_LABEL = "图片"

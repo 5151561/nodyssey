@@ -205,6 +205,26 @@ sealed interface InlineNode {
     ) : InlineNode
 
     /**
+     * An ordinary image that could not be promoted to a [RichNode.BlockImage] because it lives in a
+     * context that has no blocks — a table cell, or a sentence whose formatting wraps the image.
+     *
+     * Distinct from [Sticker] on purpose: a sticker is emoji-sized and always safe to lay into a
+     * line of text, while this is a real image whose size is unknown until it loads. The renderer
+     * decides per surface — a table cell shows a thumbnail, running text shows a link to it.
+     * Before this node existed the parsers simply dropped such images, which is how a post whose
+     * screenshots sat in a 2×2 table lost all four of them.
+     *
+     * Note for the next migration: this discriminator did not exist before 1.2.7, so a *downgrade*
+     * would fail to decode bodies cached by a newer build. Reading old rows is unaffected.
+     */
+    @Serializable
+    @SerialName("iimg")
+    data class Image(
+        val url: String,
+        val alt: String?,
+    ) : InlineNode
+
+    /**
      * A reply pointing at another floor, written as `@name` followed by `#3`.
      *
      * A site emits this as two ordinary anchors; folding them into one node is what lets the renderer

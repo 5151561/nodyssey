@@ -29,13 +29,15 @@ import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
 /**
- * The one table in this app.
+ * The single-line table: for grids read by comparing one row against another.
  *
  * Material 3 has no data table, so this is filling a gap rather than replacing a component — but it
  * had been filled twice, once for report cards and once for tables in a post body, and the two copies
  * had already drifted apart on column width, header container colour and whether a cell may wrap.
  * Both surfaces render the same kind of thing: benchmark output, wider than the screen, read by
- * comparing one row against another.
+ * comparing one row against another. Content that reads cell by cell — prose columns, cells holding
+ * images — belongs in [WrapTable] instead; [specTableFits] is how a caller with mixed content
+ * decides, and a post body's tables go through exactly that check.
  *
  * The first column is pinned and the rest scroll under it. That is what makes a wide table readable
  * on a phone — scroll to the far column and you can still see which row you are on.
@@ -162,6 +164,50 @@ fun List<List<AnnotatedString>>.asSpecTable(): Pair<List<AnnotatedString>, List<
     val header = firstOrNull().orEmpty()
     return header.drop(1) to
         drop(1).map { SpecRow(it.firstOrNull() ?: AnnotatedString(""), it.drop(1)) }
+}
+
+/**
+ * Whether [SpecTable] could draw this grid at [available] width without ellipsizing a cell — that
+ * is, no column's natural width exceeds its cap. The measurement mirrors [SpecTable]'s own: the
+ * same styles, the same padding, the same caps, so the answer cannot drift from what the table
+ * would actually do.
+ *
+ * This is the routing question, not a layout: a grid that fits is one SpecTable shows whole (if
+ * wide, behind a horizontal scroll), and a grid that does not is one SpecTable would truncate —
+ * which a caller can avoid by sending it to [WrapTable], where cells wrap instead.
+ */
+@Composable
+fun specTableFits(
+    columns: List<AnnotatedString>,
+    rows: List<SpecRow>,
+    available: Dp,
+): Boolean {
+    if (rows.isEmpty()) return true
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val labelStyle = MaterialTheme.typography.bodySmall
+    val headerStyle = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold)
+    val cellStyle = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES)
+    return remember(columns, rows, available, density, labelStyle, headerStyle, cellStyle) {
+        fun intrinsic(
+            text: AnnotatedString,
+            style: TextStyle,
+        ): Dp = with(density) {
+            measurer.measure(text = text, style = style, softWrap = false, maxLines = 1).size.width.toDp()
+        }
+
+        val padding = Spacing.sm * 2
+        val label = rows.maxOf { intrinsic(it.label, labelStyle) } + padding
+        if (label > available * MAX_LABEL_FRACTION) return@remember false
+        columns.indices.all { index ->
+            val widest =
+                rows.fold(intrinsic(columns[index], headerStyle)) { acc, row ->
+                    val cell = row.cells.getOrNull(index) ?: return@fold acc
+                    maxOf(acc, intrinsic(cell, cellStyle))
+                }
+            widest + padding <= available * MAX_CELL_FRACTION
+        }
+    }
 }
 
 private class ColumnWidths(

@@ -39,6 +39,8 @@
          application module silently override a library's string of the same name, so a shared name
          would make this file look editable when it is not. -->
     <string name="richtext_image_loading">图片加载中…</string>
+    <!-- Stands in for an image met where only text can go — running prose whose alt text is blank. -->
+    <string name="richtext_image_label">图片</string>
     <string name="richtext_image_view_full">点击查看全图</string>
     <string name="richtext_image_load_failed">图片加载失败</string>
     <string name="richtext_action_retry">重试</string>

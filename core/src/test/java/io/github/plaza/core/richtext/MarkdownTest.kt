@@ -38,6 +38,34 @@ class MarkdownTest {
         assertEquals("https://example.com/a.png", image.url)
     }
 
+    /** An image inside a sentence survives as an image node; the renderer decides how to draw it. */
+    @Test
+    fun `keeps an image inside a sentence as an inline image`() {
+        val paragraph =
+            parseMarkdown("徽章 ![runs](https://example.com/b.svg) 在行内").single() as RichNode.Paragraph
+
+        val image = paragraph.inlines.filterIsInstance<InlineNode.Image>().single()
+        assertEquals("https://example.com/b.svg", image.url)
+        assertEquals("runs", image.alt)
+    }
+
+    /** A table cell has no block position, so its images must survive in the inline flow. */
+    @Test
+    fun `keeps an image inside a table cell`() {
+        val table =
+            parseMarkdown(
+                """
+                |结果|说明|
+                |---|---|
+                |![IPv4](https://example.com/v4.png)|文字|
+                """.trimIndent(),
+            ).single() as RichNode.Table
+
+        val image = table.content[1][0].filterIsInstance<InlineNode.Image>().single()
+        assertEquals("https://example.com/v4.png", image.url)
+        assertEquals("IPv4", image.alt)
+    }
+
     /**
      * A space Readme's own shape: an image wrapped in a link, with a title on the link.
      *

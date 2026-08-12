@@ -354,6 +354,7 @@ class PostDetailCacheTest {
             [
               {"type":"p","inlines":[{"type":"t","text":"x"},{"type":"a","text":"y","url":"https://example.invalid"},
                 {"type":"sticker","url":"https://example.invalid/s.png","alt":null},
+                {"type":"iimg","url":"https://example.invalid/c.png","alt":null},
                 {"type":"qref","name":"n","floor":"#3","url":"https://example.invalid/p-1"},{"type":"br"}]},
               {"type":"h","level":2,"inlines":[]},
               {"type":"img","url":"https://example.invalid/i.png","alt":null},
@@ -389,6 +390,7 @@ class PostDetailCacheTest {
                 InlineNode.Text::class,
                 InlineNode.Link::class,
                 InlineNode.Sticker::class,
+                InlineNode.Image::class,
                 InlineNode.QuoteRef::class,
                 InlineNode.LineBreak::class,
             ),
