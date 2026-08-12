@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -155,6 +156,13 @@ fun MainNavigation(
     val notificationsViewModel: NotificationsViewModel =
         viewModel(factory = NotificationsViewModel.factory(container))
     val notificationsState by notificationsViewModel.uiState.collectAsStateWithLifecycle()
+    // The tab badge is only as fresh as the last count fetch, and nothing used to fetch again once
+    // the app was running. This root outlives every tab, so its ON_RESUME is "the app came back to
+    // the foreground" — the moment a badge grown stale overnight is most visibly wrong.
+    LifecycleResumeEffect(Unit) {
+        notificationsViewModel.refreshIfStale()
+        onPauseOrDispose {}
+    }
 
     /*
      * One back stack per tab, rather than one shared stack that gets cleared on every switch.

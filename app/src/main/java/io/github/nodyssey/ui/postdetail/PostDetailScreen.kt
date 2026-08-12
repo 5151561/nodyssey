@@ -57,6 +57,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -162,6 +163,8 @@ fun PostDetailRoute(
         onVerify = { onVerify(postUrl) },
         onImageClick = { url -> onImageClick(images.ifEmpty { listOf(url) }, url) },
         onRetry = viewModel::refresh,
+        onPullRefresh = viewModel::pullRefresh,
+        onRefreshPage = viewModel::refreshPage,
         onLoadMore = viewModel::loadNextPage,
         onLoadPage = viewModel::loadPage,
         onJumpToFloor = viewModel::jumpToFloor,
@@ -217,6 +220,10 @@ fun PostDetailScreen(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
+    /** [onRetry] as a pull gesture; separate so the view model can route it to its own indicator. */
+    onPullRefresh: () -> Unit = onRetry,
+    /** Re-fetches the given page in place — the 刷新 menu item, aimed at the page on screen. */
+    onRefreshPage: (Int) -> Unit = { onRetry() },
     onLoadPage: (Int) -> Unit = { onLoadMore() },
     /** Scrolls to a floor, fetching its page first when that floor is not loaded. */
     onJumpToFloor: (String) -> Unit = {},
@@ -381,6 +388,7 @@ fun PostDetailScreen(
                 postUrl = postUrl,
                 onBack = onBack,
                 onOpenInBrowser = { onOpenBrowser(postUrl) },
+                onRefresh = { onRefreshPage(visiblePage) },
                 showBackButton = showBackButton,
             )
         },
@@ -408,60 +416,66 @@ fun PostDetailScreen(
                     )
 
                 else ->
-                    ThreadList(
-                        state = state,
-                        listState = listState,
-                        onOpenBrowser = onLinkClick,
-                        onImageClick = onImageClick,
-                        onJumpToFloor = { floor ->
-                            // A quote can point anywhere in the thread, including pages nobody has
-                            // opened. Scroll when it is here, fetch its page when it is not.
-                            val index = state.indexOfFloor(floor)
-                            if (index != null) {
-                                scope.launch { listState.animateScrollToItem(index) }
-                            } else {
-                                onJumpToFloor(floor)
-                            }
-                        },
-                        onReact = { content, action ->
-                            val commentId = content.commentId
-                            when {
-                                // Same rule as the editor: the account has to exist before the
-                                // action, not after a rejection that also spent the tap.
-                                !state.isSignedIn -> onSignIn()
-
-                                commentId == null -> Unit
-
-                                // 点赞 costs nothing and the site does not confirm it either.
-                                action == ReactionAction.Upvote -> onReact(commentId, action)
-
-                                else -> {
-                                    confirmTarget = ReactionConfirm(content, commentId, action)
-                                    if (action == ReactionAction.ChickenLeg) onLoadFreeChickenLegs()
+                    PullToRefreshBox(
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = onPullRefresh,
+                    ) {
+                        ThreadList(
+                            state = state,
+                            listState = listState,
+                            onOpenBrowser = onLinkClick,
+                            onImageClick = onImageClick,
+                            onJumpToFloor = { floor ->
+                                // A quote can point anywhere in the thread, including pages nobody
+                                // has opened. Scroll when it is here, fetch its page when it is not.
+                                val index = state.indexOfFloor(floor)
+                                if (index != null) {
+                                    scope.launch { listState.animateScrollToItem(index) }
+                                } else {
+                                    onJumpToFloor(floor)
                                 }
-                            }
-                        },
-                        onReplyToFloor = onReply,
-                        onQuoteFloor = onQuote,
-                        onAuthorClick = onAuthorClick,
-                        // Same gate as the editor and the marks: the account has to exist before the
-                        // action, not after a rejection that also spent the tap.
-                        onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
-                        voteContent = voteContent,
-                        stardustContent = stardustContent,
-                        modifier =
-                        Modifier.floatingToolbarVerticalNestedScroll(
-                            expanded = toolbarExpanded,
-                            onExpand = { pageToolbarExpanded = true },
-                            onCollapse = { pageToolbarExpanded = false },
-                        ),
-                    )
+                            },
+                            onReact = { content, action ->
+                                val commentId = content.commentId
+                                when {
+                                    // Same rule as the editor: the account has to exist before the
+                                    // action, not after a rejection that also spent the tap.
+                                    !state.isSignedIn -> onSignIn()
+
+                                    commentId == null -> Unit
+
+                                    // 点赞 costs nothing and the site does not confirm it either.
+                                    action == ReactionAction.Upvote -> onReact(commentId, action)
+
+                                    else -> {
+                                        confirmTarget = ReactionConfirm(content, commentId, action)
+                                        if (action == ReactionAction.ChickenLeg) onLoadFreeChickenLegs()
+                                    }
+                                }
+                            },
+                            onReplyToFloor = onReply,
+                            onQuoteFloor = onQuote,
+                            onAuthorClick = onAuthorClick,
+                            // Same gate as the editor and the marks: the account has to exist before
+                            // the action, not after a rejection that also spent the tap.
+                            onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
+                            voteContent = voteContent,
+                            stardustContent = stardustContent,
+                            modifier =
+                            Modifier.floatingToolbarVerticalNestedScroll(
+                                expanded = toolbarExpanded,
+                                onExpand = { pageToolbarExpanded = true },
+                                onCollapse = { pageToolbarExpanded = false },
+                            ),
+                        )
+                    }
             }
 
             // A jump replaces the whole list, so the append spinner at its foot would be pointing at
             // content that is on its way out. This says "a different page is coming" where the reader
             // is already looking — and it is the only feedback between the tap and the new page.
-            if (state.isLoading && state.body != null) {
+            // A pull-to-refresh is the one load excused: its own indicator is already saying it.
+            if (state.isLoading && !state.isRefreshing && state.body != null) {
                 LinearProgressIndicator(
                     modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter),
                 )
@@ -603,6 +617,7 @@ private fun DetailTopBar(
     postUrl: String,
     onBack: () -> Unit,
     onOpenInBrowser: () -> Unit,
+    onRefresh: () -> Unit,
     showBackButton: Boolean,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -647,6 +662,15 @@ private fun DetailTopBar(
                     )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    // The menu twin of pull-to-refresh, for the reader who is thirty floors down and
+                    // not about to scroll back up to pull.
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_refresh)) },
+                        onClick = {
+                            menuOpen = false
+                            onRefresh()
+                        },
+                    )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_copy_link)) },
                         onClick = {

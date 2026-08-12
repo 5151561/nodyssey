@@ -204,6 +204,26 @@ class PostDetailViewModel(
     fun refresh() = load(page = _uiState.value.firstLoadedPage, replacesWindow = true)
 
     /**
+     * [refresh], with the pull indicator owning the feedback instead of the bar under the app bar.
+     *
+     * Same load, different announcement: the reader's finger is already on the indicator, so also
+     * drawing the jump-style progress bar would show one gesture as two loads.
+     */
+    fun pullRefresh() {
+        _uiState.update { it.copy(isRefreshing = true) }
+        refresh()
+    }
+
+    /**
+     * Re-fetches [page] as the whole window.
+     *
+     * The 刷新 menu item, aimed at the page on screen rather than the window's first: a reader deep
+     * in a thread is asking for the newest state of what they are looking at — at the thread's end,
+     * the replies that arrived since — not to be carried back to where the window began.
+     */
+    fun refreshPage(page: Int) = load(page = page.coerceAtLeast(1), replacesWindow = true)
+
+    /**
      * Comments are paginated on the site but read as one thread on a phone, so the next page is
      * appended to the same list rather than replacing it. The append itself happens in the database.
      */
@@ -413,6 +433,7 @@ class PostDetailViewModel(
                         it.copy(
                             isLoading = false,
                             isAppending = false,
+                            isRefreshing = false,
                             pendingScroll = scrollTo ?: it.pendingScroll,
                         )
                     }
@@ -421,6 +442,7 @@ class PostDetailViewModel(
                         it.copy(
                             isLoading = false,
                             isAppending = false,
+                            isRefreshing = false,
                             error = throwable.toSiteError(),
                         )
                     }
@@ -475,6 +497,8 @@ data class PostDetailUiState(
     val hasNextPage: Boolean = false,
     val isLoading: Boolean = false,
     val isAppending: Boolean = false,
+    /** The load is a pull-to-refresh; its own indicator shows it, so no other progress bar should. */
+    val isRefreshing: Boolean = false,
     val isSignedIn: Boolean = false,
     /** 临时显示被屏蔽内容 — draws the blocked floors instead of collapsing them. */
     val showBlockedContent: Boolean = false,

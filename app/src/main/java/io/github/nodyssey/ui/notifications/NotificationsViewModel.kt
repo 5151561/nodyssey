@@ -107,6 +107,22 @@ class NotificationsViewModel(
     }
 
     /**
+     * [refresh], unless what is on screen is recent enough to stand.
+     *
+     * Called every time the screen comes back into view — the tab bar, Back from a thread, the app
+     * returning to the foreground. This view model lives at the navigation root and survives all of
+     * those, so nothing recreates it and init's one refresh was the only load a session ever ran.
+     * The throttle is what keeps tab-hopping from turning into a request per tap; only a successful
+     * load stamps [NotificationsUiState.nowMillis], so a failed one retries on the next return
+     * instead of waiting out the interval.
+     */
+    fun refreshIfStale() {
+        if (loadJob?.isActive == true) return
+        if (clock.nowMillis() - _uiState.value.nowMillis < REFRESH_THROTTLE_MILLIS) return
+        refresh()
+    }
+
+    /**
      * Clears the group, optimistically and then for real.
      *
      * The local update lands first because the button should not feel like a network round trip; the
@@ -231,6 +247,9 @@ class NotificationsViewModel(
     )
 
     companion object {
+        /** How recent "recent enough" is; see [refreshIfStale]. */
+        private const val REFRESH_THROTTLE_MILLIS = 30_000L
+
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
