@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -48,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -68,6 +71,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -84,9 +88,13 @@ import io.github.plaza.designsys.component.SkippedImagePlaceholder
 import io.github.plaza.designsys.component.SpecTable
 import io.github.plaza.designsys.component.TerminalGround
 import io.github.plaza.designsys.component.TerminalInk
+import io.github.plaza.designsys.component.WrapCell
+import io.github.plaza.designsys.component.WrapCellImage
+import io.github.plaza.designsys.component.WrapTable
 import io.github.plaza.designsys.component.asSpecTable
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberTerminalText
+import io.github.plaza.designsys.component.specTableFits
 import io.github.plaza.designsys.theme.CodeStyle
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.PostBody
@@ -183,19 +191,59 @@ private fun RichBlockColumn(
     stardustContent: @Composable (RichNode.StardustReceive) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Consecutive images are one unit, not a stack of blocks. A run of badges — the `runs` and
+    // `license` shields at the top of half the script posts here — is written as images side by
+    // side, and giving each its own row read as a column of banners where the site shows one line
+    // of small marks. Inside the unit they flow: small images share a row, a full-width screenshot
+    // still takes its own.
+    val units =
+        remember(nodes) {
+            buildList<MutableList<RichNode>> {
+                nodes.forEach { node ->
+                    if (node is RichNode.BlockImage && lastOrNull()?.last() is RichNode.BlockImage) {
+                        last() += node
+                    } else {
+                        add(mutableListOf(node))
+                    }
+                }
+            }
+        }
     Column(modifier = modifier) {
-        nodes.forEachIndexed { index, node ->
-            if (index > 0) Spacer(Modifier.height(blockSpacing(nodes[index - 1], node)))
-            RichBlock(
-                node = node,
-                onLinkClick = onLinkClick,
-                onImageClick = onImageClick,
-                onQuoteRefClick = onQuoteRefClick,
-                textStyle = textStyle,
-                voteContent = voteContent,
-                codeBlockContent = codeBlockContent,
-                stardustContent = stardustContent,
-            )
+        units.forEachIndexed { index, unit ->
+            if (index > 0) Spacer(Modifier.height(blockSpacing(units[index - 1].last(), unit.first())))
+            val images = unit.filterIsInstance<RichNode.BlockImage>()
+            if (images.size > 1) {
+                ImageFlow(images = images, onImageClick = onImageClick)
+            } else {
+                RichBlock(
+                    node = unit.single(),
+                    onLinkClick = onLinkClick,
+                    onImageClick = onImageClick,
+                    onQuoteRefClick = onQuoteRefClick,
+                    textStyle = textStyle,
+                    voteContent = voteContent,
+                    codeBlockContent = codeBlockContent,
+                    stardustContent = stardustContent,
+                )
+            }
+        }
+    }
+}
+
+/** A run of adjacent images: badges flow onto one line, full-width screenshots keep their own. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ImageFlow(
+    images: List<RichNode.BlockImage>,
+    onImageClick: (String) -> Unit,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        images.forEach { image ->
+            BlockImage(node = image, onImageClick = onImageClick)
         }
     }
 }
@@ -335,7 +383,7 @@ private fun RichBlock(
                 }
             }
 
-        is RichNode.Table -> DataTable(node = node, onLinkClick = onLinkClick)
+        is RichNode.Table -> DataTable(node = node, onLinkClick = onLinkClick, onImageClick = onImageClick)
 
         is RichNode.Tabs ->
             TabGroup(
@@ -425,11 +473,16 @@ private fun TabGroup(
 }
 
 /**
- * A full-width image, capped in height.
+ * An image on its own line: screen-wide when it is a screenshot, natural size when it is not.
  *
  * Screenshots of benchmark output are the single most common attachment on this forum and are often
  * three screens tall; letting one push the whole thread out of view is worse than cropping it. The
  * crop keeps the top — where the interesting part always is — and says so.
+ *
+ * An image *narrower* than the column keeps its own size instead of being stretched: the other
+ * common attachment here is a 20-pixel-tall repository badge, and scaled to fill the column it
+ * became a blurry banner. Source pixels are read as dp, which is exactly how the site's own pages
+ * size an `<img>` — CSS pixels — so the two renderings agree on how big "small" is.
  *
  * When 仅 Wi-Fi 加载图片 skips the image it is replaced by [SkippedImagePlaceholder] rather than by
  * nothing, and a tap on that placeholder re-requests the image with the preference waived for this
@@ -440,7 +493,7 @@ private fun BlockImage(
     node: RichNode.BlockImage,
     onImageClick: (String) -> Unit,
 ) {
-    var cropped by remember(node.url) { mutableStateOf(false) }
+    var naturalSize by remember(node.url) { mutableStateOf<IntSize?>(null) }
     var allowMetered by remember(node.url) { mutableStateOf(false) }
     var retryToken by remember(node.url) { mutableIntStateOf(0) }
     var phase by remember(node.url, allowMetered, retryToken) {
@@ -448,14 +501,6 @@ private fun BlockImage(
     }
 
     val context = LocalContext.current
-    val request =
-        remember(node.url, allowMetered, retryToken) {
-            ImageRequest
-                .Builder(context)
-                .data(node.url)
-                .allowMeteredImage(allowMetered)
-                .build()
-        }
 
     when (phase) {
         InlineImagePhase.Deferred -> {
@@ -471,12 +516,47 @@ private fun BlockImage(
         else -> Unit
     }
 
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
+    // No `fillMaxWidth` on the constraints box: in an [ImageFlow] row the composable must report
+    // its true width or two badges could never share a line.
+    BoxWithConstraints {
         val availableWidth = maxWidth
+        val natural = naturalSize
+        val displayWidth =
+            if (natural != null && natural.width.dp < availableWidth) natural.width.dp else availableWidth
+        val cropped =
+            natural != null &&
+                displayWidth * (natural.height.toFloat() / natural.width.toFloat()) > Sizes.maxInlineImageHeight
+        val density = LocalDensity.current
+        val request =
+            remember(node.url, allowMetered, retryToken, natural, displayWidth, density) {
+                ImageRequest
+                    .Builder(context)
+                    .data(node.url)
+                    .allowMeteredImage(allowMetered)
+                    .apply {
+                        // A bitmap decodes at its own size or smaller, so the decoded dimensions
+                        // *are* the source's and the default constraint sizing can stand. A vector
+                        // rasterises at whatever size it is asked for, which made "how big is this
+                        // SVG" come back as "as big as the column" — the badges this fix exists for
+                        // measured 360dp wide and stacked one per line. So an SVG is first decoded
+                        // at its declared size to learn it, then redrawn at the width it will
+                        // actually occupy so the raster stays sharp on dense screens.
+                        if (node.url.isSvgUrl()) {
+                            if (natural == null) {
+                                size(coil3.size.Size.ORIGINAL)
+                            } else {
+                                with(density) {
+                                    val height = displayWidth * (natural.height.toFloat() / natural.width.toFloat())
+                                    size(displayWidth.roundToPx(), height.roundToPx())
+                                }
+                            }
+                        }
+                    }.build()
+            }
         Box(
             modifier =
             Modifier
-                .fillMaxWidth()
+                .width(displayWidth)
                 .clip(MaterialTheme.shapes.medium)
                 .clickable { onImageClick(node.url) },
         ) {
@@ -489,9 +569,11 @@ private fun BlockImage(
                     onSuccess = { success ->
                         phase = InlineImagePhase.Success
                         val image = success.result.image
-                        if (image.width > 0) {
-                            val scaled = availableWidth * (image.height.toFloat() / image.width.toFloat())
-                            cropped = scaled > Sizes.maxInlineImageHeight
+                        // First write wins: an SVG's second, sharp decode comes back at display
+                        // size in physical pixels, and recording that as "natural" would grow the
+                        // image a density-multiple per pass.
+                        if (naturalSize == null && image.width > 0 && image.height > 0) {
+                            naturalSize = IntSize(image.width, image.height)
                         }
                     },
                     onError = { error ->
@@ -591,6 +673,9 @@ private fun InlineImageError(onRetry: () -> Unit) {
 
 private enum class InlineImagePhase { Loading, Success, Deferred, Error }
 
+/** True when the URL's path names an SVG; the query string and fragment don't get a say. */
+private fun String.isSvgUrl(): Boolean = substringBefore('#').substringBefore('?').endsWith(".svg", ignoreCase = true)
+
 private val INLINE_IMAGE_LOADING_HEIGHT = 132.dp
 
 /** The language tag and the copy button on a terminal ground: present, but not competing with it. */
@@ -677,17 +762,29 @@ fun CodeBlockView(node: RichNode.CodeBlock) {
 }
 
 /**
- * Tables are rare here and mostly numeric — latency, packet loss, prices.
+ * Tables are two kinds of thing on this forum, and each kind gets the layout built for it.
  *
- * They get a border and a header fill so the columns stay legible while scrolling sideways, and
- * tabular figures so the numbers line up on their decimal point. Cells keep their links: on the
- * forums this was written against, a group-buy post files its benchmark reports in a table column,
- * and a link the reader can see but not follow is the same as no link at all.
+ * A *numeric* table — latency, packet loss, prices — reads row against row, so it goes to
+ * [SpecTable]: one line per cell, tabular figures, the first column pinned while the rest scroll.
+ * A *prose* table — plans, terms, notes, or the 2×2 grid of screenshots half the script posts
+ * lay their results out in — reads cell by cell, and a single-line grid either truncates it or
+ * puts most of it a screen away. Those go to [WrapTable], which does what the site's own
+ * stylesheet does: fit the whole table to the screen and let cells wrap.
+ *
+ * The split is decided by measurement, not by guessing at content: a table goes to [SpecTable]
+ * exactly when SpecTable could show every cell whole — nothing past a column cap, nothing to
+ * ellipsize — and holds no images. So the one grid that truncates is only ever given tables it
+ * cannot truncate.
+ *
+ * Cells keep their links either way: on the forums this was written against, a group-buy post
+ * files its benchmark reports in a table column, and a link the reader can see but not follow is
+ * the same as no link at all.
  */
 @Composable
 private fun DataTable(
     node: RichNode.Table,
     onLinkClick: (String) -> Unit,
+    onImageClick: (String) -> Unit,
 ) {
     val linkStyles =
         TextLinkStyles(
@@ -714,20 +811,38 @@ private fun DataTable(
     val cells =
         remember(content, linkStyles, codeBackground, linkListener, quoteLabels) {
             content.map { row ->
-                row.map { cellText(it, linkStyles, codeBackground, linkListener, quoteLabels) }
+                row.map { inlines ->
+                    WrapCell(
+                        text = cellText(inlines, linkStyles, codeBackground, linkListener, quoteLabels),
+                        images =
+                        inlines.filterIsInstance<InlineNode.Image>().map {
+                            WrapCellImage(url = it.url, alt = it.alt)
+                        },
+                    )
+                }
             }
         }
-    val (columns, rows) = cells.asSpecTable()
-    SpecTable(columns = columns, rows = rows)
+    val hasImages = remember(cells) { cells.any { row -> row.any { it.images.isNotEmpty() } } }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val available = maxWidth
+        val texts = remember(cells) { cells.map { row -> row.map(WrapCell::text) } }
+        val (columns, rows) = texts.asSpecTable()
+        if (!hasImages && rows.isNotEmpty() && specTableFits(columns, rows, available)) {
+            SpecTable(columns = columns, rows = rows)
+        } else {
+            WrapTable(rows = cells, onImageClick = onImageClick)
+        }
+    }
 }
 
 /**
- * One table cell's inline content, flattened to a single line.
+ * One table cell's inline content, flattened to a single string.
  *
- * A cell is a fixed-width box on one line, so the two nodes that need a layout of their own are
- * reduced to their text — a sticker to its alt, a quote reference to its label — rather than being
- * given a placeholder that would make the row taller than the rest of the grid. Links keep their
- * annotation, which is the whole reason a cell carries inline content instead of a string.
+ * The nodes that need a layout of their own are reduced to their text — a sticker to its alt, a
+ * quote reference to its label — rather than being given a placeholder that would make the row
+ * taller than the rest of the grid; an ordinary image contributes nothing here because [DataTable]
+ * lifts it out and hands it to [WrapTable] whole. Links keep their annotation, which is the whole
+ * reason a cell carries inline content instead of a string.
  */
 private fun cellText(
     inlines: List<InlineNode>,
@@ -752,6 +867,11 @@ private fun cellText(
                 }
 
             is InlineNode.Sticker -> append(inline.alt.orEmpty())
+
+            // Not flattened to text: the cell's images are lifted out beside this string and drawn
+            // as thumbnails by [WrapTable] — see [DataTable], which routes any table holding one
+            // off the single-line grid.
+            is InlineNode.Image -> Unit
 
             is InlineNode.QuoteRef -> append(quoteLabels[inline].orEmpty())
 
@@ -793,6 +913,10 @@ private fun InlineText(
         inlines.filterIsInstance<InlineNode.QuoteRef>().associateWith { ref ->
             stringResource(R.string.richtext_quote_reply, ref.name, ref.floor)
         }
+    val imageLabels =
+        inlines.filterIsInstance<InlineNode.Image>().associateWith { image ->
+            image.alt ?: stringResource(R.string.richtext_image_label)
+        }
 
     /*
      * One listener per kind, remembered, rather than a fresh lambda per annotation.
@@ -833,6 +957,7 @@ private fun InlineText(
             quoteLinkStyles,
             codeBackground,
             quoteLabels,
+            imageLabels,
             linkListener,
             quoteListener,
         ) {
@@ -906,6 +1031,24 @@ private fun InlineText(
                                 )
                                 prevChar = '\u0000'
                                 prevIsCode = false
+                            }
+
+                            // An ordinary image caught inside running text. Its real surfaces —
+                            // block position, table cell — draw the pixels; here there is only a
+                            // line of type to join, so it joins as a link named by its alt text.
+                            is InlineNode.Image -> {
+                                val label = imageLabels.getValue(inline)
+                                appendWithPangu(label, false) {
+                                    withLink(
+                                        LinkAnnotation.Url(
+                                            url = inline.url,
+                                            styles = linkStyles,
+                                            linkInteractionListener = linkListener,
+                                        ),
+                                    ) {
+                                        append(label)
+                                    }
+                                }
                             }
 
                             is InlineNode.QuoteRef -> {

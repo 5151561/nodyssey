@@ -309,11 +309,18 @@ object RichContentParser {
                      */
                     "a" -> if (node.appMarker() == null) result += link(node, style)
 
+                    // Ordinary images stay in the tree too — a table cell has no block to promote
+                    // them into, and dropping them here is how a post whose screenshots sat in a
+                    // 2×2 layout table lost all four.
                     "img" ->
-                        if (isSticker(node)) {
-                            NodeSeekSite.absoluteUrl(node.attr("src"))?.let {
-                                result += InlineNode.Sticker(it, node.attr("alt").ifBlank { null })
-                            }
+                        NodeSeekSite.absoluteUrl(node.attr("src"))?.let {
+                            val alt = node.attr("alt").ifBlank { null }
+                            result +=
+                                if (isSticker(node)) {
+                                    InlineNode.Sticker(it, alt)
+                                } else {
+                                    InlineNode.Image(it, alt)
+                                }
                         }
 
                     else -> result += parseInlines(node.childNodes(), style)

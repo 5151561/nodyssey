@@ -41,6 +41,10 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.androidx.compose.ui.test.junit4)
 
+    // The fake Coil engine: image-size-dependent layout — a badge kept at natural size, two badges
+    // sharing a row — cannot be asserted against an image that never arrives.
+    testImplementation(libs.coil.test)
+
     // Not optional, and not inherited from the app: `ui-test-junit4` launches its host activity from
     // the manifest this contributes, so a module running Compose tests has to declare it itself.
     debugImplementation(libs.androidx.compose.ui.test.manifest)

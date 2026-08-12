@@ -90,6 +90,33 @@ class RichContentParserTest {
         assertEquals(1, inlines.filterIsInstance<InlineNode.Sticker>().size)
     }
 
+    /**
+     * The shape of `/post-287967-1`: result screenshots filed in a 2×2 layout table. A cell has no
+     * block to promote an image into, and dropping it there lost all four screenshots.
+     */
+    @Test
+    fun `keeps an ordinary image inside a table cell`() {
+        val nodes =
+            parse(
+                """<table><tbody><tr><td><img src="/attachments/v4.png" alt="IPv4测试结果"></td>""" +
+                    """<td>文字说明</td></tr></tbody></table>""",
+            )
+
+        val table = nodes.single() as RichNode.Table
+        val image = table.content[0][0].filterIsInstance<InlineNode.Image>().single()
+        assertTrue(image.url.endsWith("/attachments/v4.png"))
+        assertEquals("IPv4测试结果", image.alt)
+    }
+
+    /** Formatting around an image keeps it in the inline flow, where it must survive as an image. */
+    @Test
+    fun `keeps an image nested in formatting as an inline image`() {
+        val nodes = parse("""<p><strong>看<img src="/attachments/badge.svg"></strong>后文</p>""")
+
+        val image = inlinesOf(nodes).filterIsInstance<InlineNode.Image>().single()
+        assertTrue(image.url.endsWith("/attachments/badge.svg"))
+    }
+
     @Test
     fun `renders every bare ordinary image as its own block`() {
         val nodes =

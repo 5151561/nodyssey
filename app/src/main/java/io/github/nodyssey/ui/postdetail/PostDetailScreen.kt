@@ -1695,8 +1695,21 @@ private fun List<RichNode>.imageUrls(): List<String> =
     flatMap { node ->
         when (node) {
             is RichNode.BlockImage -> listOf(node.url)
+
             is RichNode.Quote -> node.children.imageUrls()
+
             is RichNode.ListBlock -> node.items.flatMap { it.imageUrls() }
+
+            // Cell thumbnails open the same viewer, so they page with everything else. Left out,
+            // a tapped screenshot was "not in the list" and the viewer fell back to page one —
+            // every image in a layout table opened as the post's first badge.
+            is RichNode.Table ->
+                node.content.flatten().flatMap { cell ->
+                    cell.filterIsInstance<InlineNode.Image>().map { it.url }
+                }
+
+            is RichNode.Tabs -> node.tabs.flatMap { it.children.imageUrls() }
+
             else -> emptyList()
         }
     }
