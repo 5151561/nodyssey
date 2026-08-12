@@ -21,6 +21,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -191,8 +192,9 @@ private fun CellContent(
  * image that grew on arrival would shove the rows below it mid-read.
  *
  * Honours 仅 Wi-Fi 加载图片 the same way the full-size image does — skipped rather than fetched,
- * with a tap loading this one image anyway. Only that one case earns a placeholder; a plain load
- * failure keeps the (empty) frame, whose tap still opens the viewer and its own retry.
+ * with a tap loading this one image anyway. A plain load failure says so and offers a retry: an
+ * empty frame in a grid of screenshots does not read as "one failed", it reads as "the grid is
+ * 1×2" — a cell must never fail invisibly.
  */
 @Composable
 private fun CellThumbnail(
@@ -200,37 +202,39 @@ private fun CellThumbnail(
     onImageClick: (String) -> Unit,
 ) {
     var allowMetered by remember(image.url) { mutableStateOf(false) }
-    var deferred by remember(image.url) { mutableStateOf(false) }
+    var retryToken by remember(image.url) { mutableIntStateOf(0) }
+    var failure by remember(image.url, allowMetered, retryToken) {
+        mutableStateOf<CellImageFailure?>(null)
+    }
     val context = LocalContext.current
     val request =
-        remember(image.url, allowMetered) {
+        remember(image.url, allowMetered, retryToken) {
             ImageRequest
                 .Builder(context)
                 .data(image.url)
                 .allowMeteredImage(allowMetered)
                 .build()
         }
-    if (deferred) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(THUMBNAIL_HEIGHT)
-                .clip(MaterialTheme.shapes.extraSmall)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .clickable {
-                    deferred = false
-                    allowMetered = true
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
+    when (failure) {
+        CellImageFailure.Deferred -> {
+            ThumbnailNotice(
                 text = stringResource(R.string.richtext_image_skipped_action),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+                onClick = { allowMetered = true },
             )
+            return
         }
-        return
+
+        CellImageFailure.Failed -> {
+            ThumbnailNotice(
+                text =
+                stringResource(R.string.richtext_image_load_failed) + "\n" +
+                    stringResource(R.string.richtext_action_retry),
+                onClick = { retryToken++ },
+            )
+            return
+        }
+
+        null -> Unit
     }
     key(request) {
         AsyncImage(
@@ -238,13 +242,43 @@ private fun CellThumbnail(
             contentDescription = image.alt,
             contentScale = ContentScale.Fit,
             onError = { error ->
-                if (error.result.throwable is ImagesDeferredException) deferred = true
+                failure = if (error.result.throwable is ImagesDeferredException) {
+                    CellImageFailure.Deferred
+                } else {
+                    CellImageFailure.Failed
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(THUMBNAIL_HEIGHT)
                 .clip(MaterialTheme.shapes.extraSmall)
                 .clickable { onImageClick(image.url) },
+        )
+    }
+}
+
+private enum class CellImageFailure { Deferred, Failed }
+
+/** The thumbnail frame with words in it: what happened, and that a tap acts on it. */
+@Composable
+private fun ThumbnailNotice(
+    text: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(THUMBNAIL_HEIGHT)
+            .clip(MaterialTheme.shapes.extraSmall)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
         )
     }
 }

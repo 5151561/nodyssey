@@ -55,6 +55,34 @@ class PostDetailImagesTest {
         assertEquals(listOf("quoted.png", "listed.png"), state.imageUrls())
     }
 
+    /**
+     * `/post-287967-1`: screenshots filed in a layout table. Left out of this list, a tapped
+     * thumbnail was "not in the list" and the viewer opened page one — the post's first badge.
+     */
+    @Test
+    fun `reaches images inside table cells and tabs`() {
+        val state =
+            PostDetailUiState(
+                body =
+                content(
+                    RichNode.Table(
+                        cells = listOf(
+                            listOf(listOf(InlineNode.Text("IPv4")), listOf(InlineNode.Text("IPv6"))),
+                            listOf(
+                                listOf(InlineNode.Image("v4.png", null)),
+                                listOf(InlineNode.Image("v6.png", null)),
+                            ),
+                        ),
+                    ),
+                    RichNode.Tabs(
+                        tabs = listOf(RichNode.Tabs.Tab(title = "一", children = listOf(image("tabbed.png")))),
+                    ),
+                ),
+            )
+
+        assertEquals(listOf("v4.png", "v6.png", "tabbed.png"), state.imageUrls())
+    }
+
     /** A screenshot quoted by three people is one image, or the page count would lie. */
     @Test
     fun `keeps one entry per url`() {

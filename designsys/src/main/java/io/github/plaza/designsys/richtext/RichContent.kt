@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -500,14 +501,6 @@ private fun BlockImage(
     }
 
     val context = LocalContext.current
-    val request =
-        remember(node.url, allowMetered, retryToken) {
-            ImageRequest
-                .Builder(context)
-                .data(node.url)
-                .allowMeteredImage(allowMetered)
-                .build()
-        }
 
     when (phase) {
         InlineImagePhase.Deferred -> {
@@ -533,6 +526,33 @@ private fun BlockImage(
         val cropped =
             natural != null &&
                 displayWidth * (natural.height.toFloat() / natural.width.toFloat()) > Sizes.maxInlineImageHeight
+        val density = LocalDensity.current
+        val request =
+            remember(node.url, allowMetered, retryToken, natural, displayWidth, density) {
+                ImageRequest
+                    .Builder(context)
+                    .data(node.url)
+                    .allowMeteredImage(allowMetered)
+                    .apply {
+                        // A bitmap decodes at its own size or smaller, so the decoded dimensions
+                        // *are* the source's and the default constraint sizing can stand. A vector
+                        // rasterises at whatever size it is asked for, which made "how big is this
+                        // SVG" come back as "as big as the column" — the badges this fix exists for
+                        // measured 360dp wide and stacked one per line. So an SVG is first decoded
+                        // at its declared size to learn it, then redrawn at the width it will
+                        // actually occupy so the raster stays sharp on dense screens.
+                        if (node.url.isSvgUrl()) {
+                            if (natural == null) {
+                                size(coil3.size.Size.ORIGINAL)
+                            } else {
+                                with(density) {
+                                    val height = displayWidth * (natural.height.toFloat() / natural.width.toFloat())
+                                    size(displayWidth.roundToPx(), height.roundToPx())
+                                }
+                            }
+                        }
+                    }.build()
+            }
         Box(
             modifier =
             Modifier
@@ -549,7 +569,10 @@ private fun BlockImage(
                     onSuccess = { success ->
                         phase = InlineImagePhase.Success
                         val image = success.result.image
-                        if (image.width > 0 && image.height > 0) {
+                        // First write wins: an SVG's second, sharp decode comes back at display
+                        // size in physical pixels, and recording that as "natural" would grow the
+                        // image a density-multiple per pass.
+                        if (naturalSize == null && image.width > 0 && image.height > 0) {
                             naturalSize = IntSize(image.width, image.height)
                         }
                     },
@@ -649,6 +672,9 @@ private fun InlineImageError(onRetry: () -> Unit) {
 }
 
 private enum class InlineImagePhase { Loading, Success, Deferred, Error }
+
+/** True when the URL's path names an SVG; the query string and fragment don't get a say. */
+private fun String.isSvgUrl(): Boolean = substringBefore('#').substringBefore('?').endsWith(".svg", ignoreCase = true)
 
 private val INLINE_IMAGE_LOADING_HEIGHT = 132.dp
 

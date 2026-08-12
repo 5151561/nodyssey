@@ -2,16 +2,24 @@ package io.github.plaza.designsys.richtext
 
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.TextLayoutResult
+import coil3.ColorImage
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.annotation.ExperimentalCoilApi
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.test.FakeImageLoaderEngine
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,6 +36,7 @@ import org.robolectric.annotation.GraphicsMode
  * routing is not cosmetic: `SpecTable` cuts what it cannot fit, so a prose table sent there loses
  * content with no way to reach it, which is the bug this split exists to close.
  */
+@OptIn(ExperimentalCoilApi::class)
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w360dp-h800dp")
@@ -35,10 +44,20 @@ class DataTableRoutingTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    // See BlockImageLayoutTest: the singleton loader outlives a test, so each test resets it and
+    // supplies its own — every URL resolves to a small solid image, enough for a thumbnail to
+    // exist and be measured.
+    @Before
+    fun resetImageLoader() = SingletonImageLoader.reset()
+
     private fun cell(text: String): List<InlineNode> = listOf(InlineNode.Text(text))
 
     private fun setContent(table: RichNode.Table) {
+        val engine = FakeImageLoaderEngine.Builder().default(ColorImage(width = 160, height = 200)).build()
         composeRule.setContent {
+            setSingletonImageLoaderFactory { context ->
+                ImageLoader.Builder(context).components { add(engine) }.build()
+            }
             PlazaTheme {
                 RichContent(nodes = listOf(table), onLinkClick = {}, onImageClick = {})
             }
@@ -89,6 +108,30 @@ class DataTableRoutingTest {
         val layout = layoutOf("56.4")
         assertTrue(layout.lineCount == 1)
         assertFalse(layout.hasVisualOverflow)
+    }
+
+    /**
+     * `/post-287967-1` 成绩表的精确结构：thead 两个文字表头 + 一行两张截图。
+     * 两张缩略图必须左右并排在同一行，而不是叠成一列。
+     */
+    @Test
+    fun `two image cells in one row sit side by side`() {
+        setContent(
+            RichNode.Table(
+                cells = listOf(
+                    listOf(cell("IPv4测试结果"), cell("IPv6测试结果")),
+                    listOf(
+                        listOf(InlineNode.Image("https://example.invalid/v4.png", "IPv4")),
+                        listOf(InlineNode.Image("https://example.invalid/v6.png", "IPv6")),
+                    ),
+                ),
+            ),
+        )
+
+        val left = composeRule.onNodeWithContentDescription("IPv4").getUnclippedBoundsInRoot()
+        val right = composeRule.onNodeWithContentDescription("IPv6").getUnclippedBoundsInRoot()
+        assertTrue("cells share one row", left.top == right.top)
+        assertTrue("cells must not overlap", right.left >= left.right)
     }
 
     /** 单元格里的截图必须画出来 — `/post-287967-1` 的 2×2 成绩表在这之前整个消失。 */
