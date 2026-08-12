@@ -38,7 +38,8 @@ scrolling stays in one list, and the UI follows the system theme.
 - 帖子收藏与收藏人数，「我的」里的「我的收藏」直达空间收藏列表；是否已收藏以站点回应为准
 - 浏览历史（只在本机）：与信息流一致的行样式，按今天 / 昨天 / 最近七天 / 更早分组吸顶，
   左滑删单条可撤销、右上角菜单全部清除，保留条数可选 100 / 300 / 1000 / 无上限
-- NodeImage 图床：图片按最长边 2048 转 WebP 后上传，API Key 只存本机
+- 图床可选六家：NodeImage、兰空 Lsky Pro、简单图床 EasyImage、SM.MS、imgbb，以及按上传地址和
+  取值路径手填的自定义图床；图片按最长边 2048 转 WebP 后上传，密钥按图床分别存在本机
 - 用户空间、账号设置二级页（资料、头像、密码、2FA、绑定状态、偏好、屏蔽列表）与 Telegram 流程
 - 屏蔽按站点的判定生效：被屏蔽者的帖子不进列表，楼层折叠成一行可单条展开，「临时显示被屏蔽内容」
   只是本机的一次性开关；名单跟着账号走，在页内可按用户名添加或解除
@@ -71,7 +72,7 @@ carry cookies obtained from a WebView.
 app/src/main/java/io/github/nodyssey/
 ├── core/
 │   ├── NodeSeekSite.kt          URL vocabulary and route parsing
-│   ├── NodeImageSite.kt         NodeImage upload host (off-site, user API key)
+│   ├── NodeImageSite.kt         nodeimage.com's own vocabulary (off-site, user API key)
 │   ├── html/
 │   │   ├── Selectors.kt         shared site selectors
 │   │   ├── SiteBootstrap.kt     the base64 `__config__` every page carries
@@ -128,7 +129,7 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 ## Roadmap
 
 - [x] 原生发帖、Markdown 编辑 / 预览、表情与草稿
-- [x] 评论发布（`/api/content/new-comment`）与 NodeImage 图床上传
+- [x] 评论发布（`/api/content/new-comment`）与六选一的图床上传
 - [x] 点赞 / 反对 / 投喂鸡腿（`/api/statistics/{upvote,like,dislike}`）
 - [x] 消息通知、未读数、私信列表 / 会话 / 发送
 - [x] 每日签到（`/api/attendance`）

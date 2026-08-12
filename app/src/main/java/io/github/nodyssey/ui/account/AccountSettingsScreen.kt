@@ -48,7 +48,7 @@ fun AccountSettingsRoute(
     onOpenContact: () -> Unit,
     onOpenBlockList: () -> Unit,
     onOpenPreferences: () -> Unit,
-    onOpenNodeImage: () -> Unit,
+    onOpenImageHost: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -67,7 +67,7 @@ fun AccountSettingsRoute(
         onOpenContact = onOpenContact,
         onOpenBlockList = onOpenBlockList,
         onOpenPreferences = onOpenPreferences,
-        onOpenNodeImage = onOpenNodeImage,
+        onOpenImageHost = onOpenImageHost,
         onSignOut = viewModel::signOut,
         modifier = modifier,
     )
@@ -89,7 +89,7 @@ fun AccountSettingsScreen(
     onOpenContact: () -> Unit,
     onOpenBlockList: () -> Unit,
     onOpenPreferences: () -> Unit,
-    onOpenNodeImage: () -> Unit,
+    onOpenImageHost: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -158,17 +158,17 @@ fun AccountSettingsScreen(
                     trailing = { Chevron() },
                 )
                 SettingsRow(
-                    title = stringResource(R.string.nodeimage_title),
+                    title = stringResource(R.string.imagehost_title),
                     subtitle =
                     stringResource(
                         if (state.imageHostConnected) {
-                            R.string.nodeimage_connected
+                            R.string.imagehost_connected
                         } else {
-                            R.string.nodeimage_not_connected
+                            R.string.imagehost_not_connected
                         },
                     ),
                     bottom = true,
-                    onClick = onOpenNodeImage,
+                    onClick = onOpenImageHost,
                     leading = { RowIcon(PlazaIcons.Image) },
                     trailing = { Chevron() },
                 )
@@ -231,7 +231,7 @@ private fun AccountSettingsPreview() {
             onOpenContact = {},
             onOpenBlockList = {},
             onOpenPreferences = {},
-            onOpenNodeImage = {},
+            onOpenImageHost = {},
             onSignOut = {},
         )
     }

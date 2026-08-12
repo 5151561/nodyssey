@@ -1,9 +1,9 @@
 package io.github.nodyssey.data.composer
 
 import androidx.compose.runtime.Immutable
-import io.github.nodyssey.data.nodeimage.NodeImageError
-import io.github.nodyssey.data.nodeimage.NodeImageException
-import io.github.nodyssey.data.nodeimage.NodeImageRepository
+import io.github.nodyssey.data.imagehost.ImageHostError
+import io.github.nodyssey.data.imagehost.ImageHostException
+import io.github.nodyssey.data.imagehost.ImageHostRepository
 
 /** Where an attachment is in its trip to the image host. Board C5 draws one cell per value. */
 enum class UploadStatus { WAITING, UPLOADING, UPLOADED, FAILED }
@@ -18,12 +18,12 @@ enum class UploadStatus { WAITING, UPLOADING, UPLOADED, FAILED }
 enum class UploadFailure { NOT_CONFIGURED, INVALID_KEY, REJECTED, CHALLENGE, NETWORK, UNKNOWN }
 
 internal fun Throwable.toUploadFailure(): UploadFailure =
-    when ((this as? NodeImageException)?.error) {
-        NodeImageError.NotConfigured -> UploadFailure.NOT_CONFIGURED
-        NodeImageError.InvalidKey -> UploadFailure.INVALID_KEY
-        is NodeImageError.Rejected -> UploadFailure.REJECTED
-        NodeImageError.Cloudflare -> UploadFailure.CHALLENGE
-        NodeImageError.Network -> UploadFailure.NETWORK
+    when ((this as? ImageHostException)?.error) {
+        ImageHostError.NotConfigured -> UploadFailure.NOT_CONFIGURED
+        ImageHostError.InvalidKey -> UploadFailure.INVALID_KEY
+        is ImageHostError.Rejected -> UploadFailure.REJECTED
+        ImageHostError.Cloudflare -> UploadFailure.CHALLENGE
+        ImageHostError.Network -> UploadFailure.NETWORK
         else -> UploadFailure.UNKNOWN
     }
 
@@ -72,8 +72,8 @@ data class ImageAttachment(
  * Uploads one image and reports progress.
  *
  * Still an interface: the host is a third-party service the app has no control over, and the editor
- * has no business knowing which one it is. [NodeImageUploader] is the only implementation that
- * ships, but tests substitute here rather than standing up an HTTP server.
+ * has no business knowing which one it is — the user picks it in 图床设置. [ImageHostUploader] is the
+ * only implementation that ships, but tests substitute here rather than standing up an HTTP server.
  */
 fun interface ImageUploader {
     /**
@@ -87,15 +87,19 @@ fun interface ImageUploader {
 }
 
 /**
- * Uploads to nodeimage.com, the host NodeSeek's own editor uses through a browser extension.
+ * Uploads to whichever host 图床设置 has selected.
  *
  * Two steps, and the first is the one that matters on a phone: [ImagePreparer] decodes the picked
  * URI at a bounded size and re-encodes it, so a 12-megapixel camera photo goes out as a few hundred
- * kilobytes instead of eight megabytes of someone's mobile data. The host would accept the original
- * — its cap is 100 MB — but nobody wants to spend a minute uploading a forum reply.
+ * kilobytes instead of eight megabytes of someone's mobile data. Every host here would take the
+ * original — their caps run from 5 MB to 100 MB — but nobody wants to spend a minute uploading a
+ * forum reply, and the self-hosted ones are paying for that bandwidth themselves.
+ *
+ * Which host it is stays behind [ImageHostRepository]. This class does not branch on it, and neither
+ * does anything above it.
  */
-class NodeImageUploader(
-    private val repository: NodeImageRepository,
+class ImageHostUploader(
+    private val repository: ImageHostRepository,
     private val preparer: ImagePreparer,
 ) : ImageUploader {
     override suspend fun upload(

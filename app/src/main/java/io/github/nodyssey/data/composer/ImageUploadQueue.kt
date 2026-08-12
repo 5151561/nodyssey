@@ -1,6 +1,6 @@
 package io.github.nodyssey.data.composer
 
-import io.github.nodyssey.data.nodeimage.NodeImageException
+import io.github.nodyssey.data.imagehost.ImageHostException
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -129,7 +129,7 @@ class ImageUploadQueue(
                             it.copy(
                                 status = UploadStatus.FAILED,
                                 failure = throwable.toUploadFailure(),
-                                errorDetail = (throwable as? NodeImageException)?.detail,
+                                errorDetail = (throwable as? ImageHostException)?.detail,
                             )
                         }
                     }

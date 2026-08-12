@@ -68,13 +68,13 @@ data object AccountBlockListKey : NavKey
 data object AccountPreferencesKey : NavKey
 
 /**
- * 图床 — the nodeimage.com connection.
+ * 图床 — which image host is connected, and with what.
  *
  * Under 账号设置 rather than the app's own [SettingsKey] because it is a credential for an account,
  * not a display preference; it sits beside 联系方式 for the same reason those do.
  */
 @Serializable
-data object AccountNodeImageKey : NavKey
+data object AccountImageHostKey : NavKey
 
 @Serializable
 data object PostComposerKey : NavKey

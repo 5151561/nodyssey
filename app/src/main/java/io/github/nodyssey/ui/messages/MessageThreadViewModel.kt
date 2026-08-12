@@ -71,7 +71,7 @@ class MessageThreadViewModel(
     val draftState = TextFieldState()
 
     /**
-     * The same queue the two composers use, and the same NodeImage host behind it.
+     * The same queue the two composers use, and whichever image host 图床设置 has selected behind it.
      *
      * There is nothing message-shaped about an image here: `message/send` carries one `content`
      * string, so an image in a private message is `![](…)` spliced into that string exactly the way

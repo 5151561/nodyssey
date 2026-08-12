@@ -8,9 +8,9 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
-import io.github.nodyssey.data.nodeimage.NodeImageError
-import io.github.nodyssey.data.nodeimage.NodeImageException
-import io.github.nodyssey.data.nodeimage.NodeImageUpload
+import io.github.nodyssey.data.imagehost.ImageHostError
+import io.github.nodyssey.data.imagehost.ImageHostException
+import io.github.nodyssey.data.imagehost.ImageHostUpload
 import io.github.plaza.core.AppDispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -18,7 +18,7 @@ import kotlin.math.max
 
 /** Turns whatever the photo picker handed back into bytes an image host will take. */
 fun interface ImagePreparer {
-    suspend fun prepare(source: String, displayName: String): NodeImageUpload
+    suspend fun prepare(source: String, displayName: String): ImageHostUpload
 }
 
 /**
@@ -26,8 +26,9 @@ fun interface ImagePreparer {
  *
  * The two-pass `inJustDecodeBounds` read is what keeps a settings-screen-sized heap from meeting a
  * 50-megapixel photo: the second pass subsamples during decode, so the full-resolution bitmap never
- * exists. WebP rather than JPEG because the host converts to it anyway (its own uploader renames
- * every file to `.webp`), so encoding twice would only cost quality.
+ * exists. WebP rather than JPEG because it is the smallest format all six hosts accept, and because
+ * nodeimage.com re-encodes to it regardless (its own uploader renames every file to `.webp`) — a
+ * JPEG would simply be encoded twice for nothing.
  *
  * Animated GIFs are the deliberate exception and pass through untouched — decoding one to a Bitmap
  * would silently upload a still frame, which is worse than uploading a large file.
@@ -38,24 +39,24 @@ class DefaultImagePreparer(
 ) : ImagePreparer {
     private val resolver: ContentResolver = context.applicationContext.contentResolver
 
-    override suspend fun prepare(source: String, displayName: String): NodeImageUpload =
+    override suspend fun prepare(source: String, displayName: String): ImageHostUpload =
         withContext(dispatchers.io) {
             val uri = runCatching { source.toUri() }.getOrNull()
-                ?: throw NodeImageException(NodeImageError.Unparsable, detail = displayName)
+                ?: throw ImageHostException(ImageHostError.Unparsable, detail = displayName)
             val mimeType = runCatching { resolver.getType(uri) }.getOrNull().orEmpty()
 
             if (mimeType == MIME_GIF) {
                 val bytes = readAll(uri, displayName)
-                return@withContext NodeImageUpload(bytes, displayName.withExtension("gif"), MIME_GIF)
+                return@withContext ImageHostUpload(bytes, displayName.withExtension("gif"), MIME_GIF)
             }
 
             val bitmap = decodeBounded(uri)
                 ?: return@withContext readAll(uri, displayName).let { bytes ->
                     // Undecodable but readable: hand the original over and let the host judge it.
-                    NodeImageUpload(bytes, displayName, mimeType.ifBlank { MIME_OCTET })
+                    ImageHostUpload(bytes, displayName, mimeType.ifBlank { MIME_OCTET })
                 }
 
-            NodeImageUpload(
+            ImageHostUpload(
                 bytes = bitmap.encodeWebp(),
                 fileName = displayName.withExtension("webp"),
                 mimeType = MIME_WEBP,
@@ -65,7 +66,7 @@ class DefaultImagePreparer(
     private fun readAll(uri: Uri, displayName: String): ByteArray =
         runCatching { resolver.openInputStream(uri)?.use { it.readBytes() } }
             .getOrNull()
-            ?: throw NodeImageException(NodeImageError.Unparsable, detail = displayName)
+            ?: throw ImageHostException(ImageHostError.Unparsable, detail = displayName)
 
     private fun decodeBounded(uri: Uri): Bitmap? = runCatching {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

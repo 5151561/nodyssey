@@ -105,7 +105,7 @@ data/        Repository。隐藏数据源，暴露领域模型
   ├ ProfileRepository       我的资料离线优先：按会话指纹隔离，Room 先显示、网络后刷新
   ├ local/                  Room：实体、DAO、TypeConverter
   ├ session/                共享 cookie store 的读模型（登录态 + 人机验证态）
-  ├ nodeimage/              站外图床 nodeimage.com：API Key + 上传/列表/删除
+  ├ imagehost/              站外图床（六选一）：凭证存储 + 上传/列表/删除，每家一个 client
   ├ update/                 GitHub Releases 查询、APK 下载与 PackageInstaller 会话
   └ settings/               DataStore，SSOT
 
@@ -127,29 +127,44 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
   缓存新鲜度决定"打开这个屏幕要不要发请求"，那是真逻辑，必须能测；
   而需要真的 sleep 才能测的过期逻辑，等于没人会测。
 
-**站外服务约定（nodeimage.com）**：
+**站外图床约定**：
 - NodeSeek 自己**没有图床**——帖子里只存 Markdown，图片全是外链，网页版编辑器上那句
   「NodeImage已就绪」来自浏览器扩展而不是站点。所以图床是一个独立账号的独立服务，
-  URL 词表单独放在 `core/NodeImageSite.kt`，不并进 `NodeSeekSite`。
-- **它用自己的 `OkHttpClient`，不复用 `AppContainer.okHttpClient`。** 后者挂着 WebView 的
+  用哪一家是用户的选择：`data/imagehost/` 里放着六个 client（nodeimage、兰空 Lsky Pro、
+  简单图床 EasyImage、sm.ms、imgbb、自定义），一次生效一个。
+- **协议只在 client 里。** 编辑器、附件栏、图床设置页都只跟 `ImageHostRepository` 说话，
+  它拿字节换回一个 URL；哪一家产生的这个 URL，上面没有任何一层有资格问。加一家 = 加一个
+  `ImageHostClient` + 一个枚举项，编辑器一行都不用动。
+- **凭证按图床分开存**（DataStore `imagehost`，key 前缀是 `ImageHostProvider.id`），换回去不用重贴。
+  枚举里的 `id` 是写进存储的字符串，改名等于让所有选了那家的人静默掉线。
+- **一次性迁移**：旧版本只有 nodeimage 一家，Key 存在自己的 `nodeimage` 文件里的 `api-key`。
+  `LegacyNodeImageKeyMigration` 把它搬进新库一次，否则升级等于把已经配好的人全部断开，
+  而他们第一次听说这事会是在写帖子写到一半配图失败的时候。
+- **它们共用一个自己的 `OkHttpClient`，不复用 `AppContainer.okHttpClient`。** 后者挂着 WebView 的
   cookie jar，并且给每个没写 Referer 的请求补上 `Referer: nodeseek.com`。把这两样发给一个
   我们交了 API Key 的第三方主机，等于白送它一份与它无关的浏览会话信息。
   连接池是共享的——连接池本来就按 host 分桶，不会串。
-- 错误类型也是分开的（`NodeImageError`，不是 `NodeSeekError`）：NodeSeek 的 401 意思是
-  "去论坛登录"，NodeImage 的 401 意思是"你的 Key 不对"，把后者导去论坛登录页是帮倒忙。
-- **四个端点里只有上传真的认 API Key。** 站点 API 页面把 Key 写成通用凭证，但真机实测
+- 错误类型也是分开的（`ImageHostError`，不是 `NodeSeekError`）：NodeSeek 的 401 意思是
+  "去论坛登录"，图床的 401 意思是"你的凭证不对"，把后者导去论坛登录页是帮倒忙。
+- **nodeimage 四个端点里只有上传真的认 API Key。** 站点 API 页面把 Key 写成通用凭证，但真机实测
   （2026-07-28）：同一把刚上传成功的 Key，`GET /api/images` 返回 401
-  `{"error":"未认证，请先通过NodeSeek授权登录"}`。所以 `execute()` 带一个 `keyIsEnough` 参数决定
+  `{"error":"未认证，请先通过NodeSeek授权登录"}`。所以 `readBody()` 带一个 `keyIsEnough` 参数决定
   401 的**含义**——上传的 401 是 `InvalidKey`，列表/删除的 401 是 `SessionRequired`，图床页对后者
   显示"要去网页操作"并给出站点入口，而不是让用户去重新生成一把本来能用的 Key。
-- **上传响应有两种形状，两种都要读。** Key 认证的 `/api/upload` 回 snake_case 且 URL 嵌在
+- **nodeimage 上传响应有两种形状，两种都要读。** Key 认证的 `/api/upload` 回 snake_case 且 URL 嵌在
   `links.direct` 里；网页版 cookie 认证的 `/upload` 回扁平的 `url`。只读后者，就是"图床已经存下了
   图，App 却报上传失败"那个 bug。
+- **每家都有一处会被通用实现做错的地方**，各自有回归测试兜着：兰空的 `size` 单位是 **KB**
+  （上游存的是 `getSize() / 1024`），简单图床**从不设置 HTTP 状态码**、失败也是 200，
+  sm.ms 的 `Authorization` **不带 `Bearer` 前缀**，imgbb 的 key 走 **query string**，
+  自定义图床则是取值路径找不到时把原始响应带进错误里——那是用户唯一能据此改对路径的东西。
+- **没有列表接口的图床要说出来**（`ImageHostProvider.browsable`）。简单图床和 imgbb 只有上传端点，
+  画一个空相册会被读成"图床把我的图弄丢了"，而这两件事的处理方式完全不同。
 
 **应用内更新约定（github.com）**：
 - 分发渠道就是本项目的 GitHub Releases，所以「更新」= 下载那个 Release 上的签名 APK 并交给系统
   安装器。数据层在 `data/update/`，纯粹的版本号比较在 `core/update/VersionNames.kt`。
-- **第三个 `OkHttpClient`。** 理由和 nodeimage 那条一样：`AppContainer.okHttpClient` 挂着 WebView 的
+- **第三个 `OkHttpClient`。** 理由和图床那条一样：`AppContainer.okHttpClient` 挂着 WebView 的
   cookie jar 并补 `Referer: nodeseek.com`，这两样发给 GitHub 都没道理。User-Agent 这里写的是
   `Nodyssey/<版本>`——GitHub API 要求调用方自报家门，而这里没有需要伪装成浏览器的挑战。
 - **只信 `releases/latest`，不做任何第三方中转。** GitHub 已经把草稿和预发布排除在这个端点之外；

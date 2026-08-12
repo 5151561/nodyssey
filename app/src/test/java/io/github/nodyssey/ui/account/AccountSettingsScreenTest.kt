@@ -36,7 +36,7 @@ class AccountSettingsScreenTest {
         onOpenContact: () -> Unit = {},
         onOpenBlockList: () -> Unit = {},
         onOpenPreferences: () -> Unit = {},
-        onOpenNodeImage: () -> Unit = {},
+        onOpenImageHost: () -> Unit = {},
         onSignOut: () -> Unit = {},
     ) {
         composeRule.setContent {
@@ -49,7 +49,7 @@ class AccountSettingsScreenTest {
                     onOpenContact = onOpenContact,
                     onOpenBlockList = onOpenBlockList,
                     onOpenPreferences = onOpenPreferences,
-                    onOpenNodeImage = onOpenNodeImage,
+                    onOpenImageHost = onOpenImageHost,
                     onSignOut = onSignOut,
                 )
             }
@@ -60,7 +60,7 @@ class AccountSettingsScreenTest {
     fun `shows exactly one entry for each destination`() {
         setContent()
 
-        listOf("个人信息", "安全", "联系方式", "屏蔽用户", "偏好与首页版块", "NodeImage 图床")
+        listOf("个人信息", "安全", "联系方式", "屏蔽用户", "偏好与首页版块", "图床")
             .forEach { destination ->
                 composeRule.onAllNodesWithText(destination).assertCountEquals(1)
             }
@@ -105,7 +105,7 @@ class AccountSettingsScreenTest {
             onOpenContact = { opened += "contact" },
             onOpenBlockList = { opened += "block" },
             onOpenPreferences = { opened += "preferences" },
-            onOpenNodeImage = { opened += "nodeimage" },
+            onOpenImageHost = { opened += "imagehost" },
         )
 
         composeRule.onNodeWithText("个人信息").performScrollTo().performClick()
@@ -113,10 +113,10 @@ class AccountSettingsScreenTest {
         composeRule.onNodeWithText("联系方式").performScrollTo().performClick()
         composeRule.onNodeWithText("屏蔽用户").performScrollTo().performClick()
         composeRule.onNodeWithText("偏好与首页版块").performScrollTo().performClick()
-        composeRule.onNodeWithText("NodeImage 图床").performScrollTo().performClick()
+        composeRule.onNodeWithText("图床").performScrollTo().performClick()
 
         assertEquals(
-            listOf("profile", "security", "contact", "block", "preferences", "nodeimage"),
+            listOf("profile", "security", "contact", "block", "preferences", "imagehost"),
             opened,
         )
     }
