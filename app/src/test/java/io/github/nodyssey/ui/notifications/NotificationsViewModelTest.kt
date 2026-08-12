@@ -101,9 +101,35 @@ class NotificationsViewModelTest {
             assertEquals(3, viewModel.uiState.value.counts.messages)
         }
 
+    /**
+     * Every return to the screen calls this, so the throttle carries the difference between "timely"
+     * and "a request per tab tap": straight back is served from what is showing, a stale return
+     * re-reads the server.
+     */
+    @Test
+    fun `coming back into view refreshes only once the last load is stale`() =
+        runTest(dispatcher) {
+            var now = 1_785_000_000_000L
+            val api = FakeApi(counts = """{"atMe":2}""")
+            val viewModel = viewModel(api, clock = { now })
+            advanceUntilIdle()
+            assertEquals(2, viewModel.uiState.value.counts.mentions)
+
+            api.counts = """{"atMe":5}"""
+            viewModel.refreshIfStale()
+            advanceUntilIdle()
+            assertEquals(2, viewModel.uiState.value.counts.mentions)
+
+            now += 30_000L
+            viewModel.refreshIfStale()
+            advanceUntilIdle()
+            assertEquals(5, viewModel.uiState.value.counts.mentions)
+        }
+
     private fun viewModel(
         api: FakeApi,
         unread: Boolean = true,
+        clock: AppClock = AppClock { 1_785_000_000_000L },
     ): NotificationsViewModel {
         val notifications = NotificationRepository(api)
         api.mentionUnread = unread
@@ -112,7 +138,7 @@ class NotificationsViewModelTest {
             messages = NoMessages,
             search = NoSearch,
             session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookieManager)),
-            clock = AppClock { 1_785_000_000_000L },
+            clock = clock,
         )
     }
 }

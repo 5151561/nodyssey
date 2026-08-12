@@ -30,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.ForumNotification
@@ -74,6 +76,13 @@ fun NotificationsRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // Coming back into view is the refresh trigger this screen was missing: the view model outlives
+    // every tab switch, so nothing recreates it, and ON_RESUME is the one signal that covers all the
+    // ways back — the tab bar, Back from a thread, the app returning to the foreground.
+    LifecycleResumeEffect(Unit) {
+        viewModel.refreshIfStale()
+        onPauseOrDispose {}
+    }
     NotificationsScreen(
         state = state,
         onSignIn = onSignIn,
@@ -179,7 +188,14 @@ fun NotificationsScreen(
                 }
             }
 
-            Box(Modifier.fillMaxSize()) {
+            // `isEmpty` keeps the first load out of the indicator: that one already draws
+            // [LoadingState] in the middle of the screen, and a spinner above a spinner reads as two
+            // different loads.
+            PullToRefreshBox(
+                isRefreshing = state.isLoading && !state.isEmpty,
+                onRefresh = onRetry,
+                modifier = Modifier.fillMaxSize(),
+            ) {
                 when {
                     !state.isSignedIn -> SignedOutState(onSignIn = onSignIn)
 

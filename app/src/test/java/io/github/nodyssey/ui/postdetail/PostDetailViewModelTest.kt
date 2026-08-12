@@ -180,6 +180,55 @@ class PostDetailViewModelTest {
             assertEquals(before, remote.detailRequests.size)
         }
 
+    /** The pull gesture's indicator is its own feedback; it must rise with the load and fall with it. */
+    @Test
+    fun `a pull refresh raises its indicator and lowers it when the load lands`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            vm.pullRefresh()
+            assertTrue(vm.uiState.value.isRefreshing)
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.isRefreshing)
+            assertNull(vm.uiState.value.error)
+        }
+
+    @Test
+    fun `a failed pull refresh lowers the indicator and reports the error`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            remote.detailError = SiteException(SiteError.Network)
+
+            vm.pullRefresh()
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.isRefreshing)
+            assertEquals(SiteError.Network, vm.uiState.value.error)
+        }
+
+    /** 刷新 aims at the page on screen, not at the window's first — see [PostDetailViewModel.refreshPage]. */
+    @Test
+    fun `refreshing a page re-fetches that page rather than the window's first`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 3)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+            vm.loadNextPage()
+            advanceUntilIdle()
+
+            vm.refreshPage(2)
+            advanceUntilIdle()
+
+            assertEquals(42L to 2, remote.detailRequests.last())
+            assertEquals(2, vm.uiState.value.firstLoadedPage)
+            assertEquals(2, vm.uiState.value.lastLoadedPage)
+        }
+
     /**
      * The point of phase two: a thread read moments ago paints from the database and issues no
      * request at all.
