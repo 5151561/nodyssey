@@ -37,7 +37,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -57,6 +59,7 @@ import io.github.nodyssey.data.imagehost.HostedImage
 import io.github.nodyssey.data.imagehost.ImageHostError
 import io.github.nodyssey.data.imagehost.ImageHostProvider
 import io.github.plaza.designsys.component.ChoiceRow
+import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -603,11 +606,20 @@ private fun ImageRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        AsyncImage(
-            model = item.url,
-            contentDescription = item.fileName,
-            modifier = Modifier.size(44.dp),
-        )
+        // A host that has lost the file, or one whose links need a referer this app does not send,
+        // otherwise shows a row that is all filename and no picture — and the reader cannot tell
+        // that from a row still loading.
+        var failed by remember(item.url) { mutableStateOf(false) }
+        if (failed) {
+            ImageFallback(modifier = Modifier.size(44.dp))
+        } else {
+            AsyncImage(
+                model = item.url,
+                contentDescription = item.fileName,
+                onError = { failed = true },
+                modifier = Modifier.size(44.dp),
+            )
+        }
         Column(
             Modifier
                 .weight(1f)

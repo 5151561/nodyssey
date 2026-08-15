@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -83,6 +84,7 @@ import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.InlineStyle
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.R
+import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SkippedImagePlaceholder
 import io.github.plaza.designsys.component.SpecTable
@@ -1094,14 +1096,34 @@ private fun InlineText(
                         placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter,
                     ),
                 ) {
-                    AsyncImage(
-                        model = sticker.url,
-                        // Sticker markup often has no alt text, and an image with no
-                        // content description is silent to a screen reader.
-                        contentDescription =
-                        sticker.alt ?: stringResource(R.string.richtext_sticker_description),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    // A sticker that fails leaves a mark, the same as a block image does. It used to
+                    // leave the 20sp box empty, which is indistinguishable from a space: a reply
+                    // that is nothing but 表情 came out blank, and 仅 Wi-Fi 加载图片 emptied every
+                    // sticker in the thread with nothing to say it had.
+                    var failure by remember(sticker.url) { mutableStateOf<StickerFailure?>(null) }
+                    val failed = failure
+                    if (failed == null) {
+                        AsyncImage(
+                            model = sticker.url,
+                            // Sticker markup often has no alt text, and an image with no
+                            // content description is silent to a screen reader.
+                            contentDescription =
+                            sticker.alt ?: stringResource(R.string.richtext_sticker_description),
+                            onError = { error ->
+                                failure = if (error.result.throwable is ImagesDeferredException) {
+                                    StickerFailure.Deferred
+                                } else {
+                                    StickerFailure.Failed
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        ImageFallback(
+                            modifier = Modifier.fillMaxSize(),
+                            deferred = failed == StickerFailure.Deferred,
+                        )
+                    }
                 }
         }
 
@@ -1144,6 +1166,9 @@ private fun InlineText(
         },
     )
 }
+
+/** Why a sticker is not on screen, kept apart for the reason [ImageFallback] states. */
+private enum class StickerFailure { Deferred, Failed }
 
 private val STICKER_SIZE = 20.sp
 private val QUOTE_HEIGHT = 22.sp

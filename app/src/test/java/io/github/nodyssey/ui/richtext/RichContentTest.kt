@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -40,6 +41,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.io.IOException
 import kotlin.math.abs
 
 /**
@@ -228,6 +230,49 @@ class RichContentTest {
         assertTrue("expected a request that waives the preference", interceptor.sawAllowedRequest)
     }
 
+    /**
+     * The other half of the same rule, and the one the deferred tests never covered: an image whose
+     * fetch is *tried* and fails must leave the failure on screen, with the retry that fixes it.
+     */
+    @Test
+    fun `a block image that fails leaves a failure notice and a retry`() {
+        setContent(
+            nodes = listOf(RichNode.BlockImage(url = IMAGE_URL, alt = null)),
+            imageLoader = imageLoader(FailingInterceptor()),
+        )
+
+        composeRule.onNodeWithText("图片加载失败").assertIsDisplayed()
+        composeRule.onNodeWithText("重试").assertIsDisplayed()
+    }
+
+    /**
+     * A sticker had no failure state at all: `AsyncImage` draws nothing on error, so the 20sp box
+     * stayed empty and a reply written entirely in 表情 came out blank — indistinguishable from a
+     * post with nothing in it. Under 仅 Wi-Fi 加载图片 that was every sticker in the thread.
+     */
+    @Test
+    fun `a sticker that fails leaves a mark rather than a gap`() {
+        setContent(
+            nodes = listOf(RichNode.Paragraph(listOf(InlineNode.Sticker(url = IMAGE_URL, alt = ":ac01:")))),
+            imageLoader = imageLoader(FailingInterceptor()),
+        )
+
+        composeRule.onNodeWithContentDescription("图片加载失败").assertIsDisplayed()
+    }
+
+    /** A skipped sticker says it was skipped, not that it broke — the two have different fixes. */
+    @Test
+    fun `a skipped sticker is marked as skipped rather than as broken`() {
+        setContent(
+            nodes = listOf(RichNode.Paragraph(listOf(InlineNode.Sticker(url = IMAGE_URL, alt = ":ac01:")))),
+            imageLoader = imageLoader(DeferringInterceptor()),
+        )
+
+        composeRule
+            .onNodeWithContentDescription("已开启「仅 Wi-Fi 加载图片」，当前不是 Wi-Fi")
+            .assertIsDisplayed()
+    }
+
     @Test
     fun `tapping the placeholder keeps a visible loading surface until the image arrives`() {
         val allowedRequest = CompletableDeferred<Unit>()
@@ -248,6 +293,16 @@ class RichContentTest {
             .Builder(ApplicationProvider.getApplicationContext<Context>())
             .components { add(interceptor) }
             .build()
+
+    /** An ordinary transport failure: the fetch was attempted and did not come back with pixels. */
+    private class FailingInterceptor : Interceptor {
+        override suspend fun intercept(chain: Interceptor.Chain): ImageResult =
+            ErrorResult(
+                image = null,
+                request = chain.request,
+                throwable = IOException("no route to host"),
+            )
+    }
 
     /**
      * Stands in for [io.github.nodyssey.core.image.ImageNetworkPolicyInterceptor] on a metered

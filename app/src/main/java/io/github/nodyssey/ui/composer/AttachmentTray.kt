@@ -22,6 +22,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +44,7 @@ import io.github.nodyssey.R
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.data.composer.UploadStatus
+import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Spacing
 import kotlin.math.roundToInt
@@ -202,12 +207,21 @@ private fun Thumbnail(
     attachment: ImageAttachment,
     dimmed: Boolean,
 ) {
-    AsyncImage(
-        model = attachment.source,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.size(THUMBNAIL),
-    )
+    // An unreadable pick — a URI the picker handed back and the provider has since revoked — leaves
+    // the frame's status label and remove badge hanging around nothing at all. The mark says which
+    // of the tray's squares is the one that cannot be shown.
+    var failed by remember(attachment.source) { mutableStateOf(false) }
+    if (failed) {
+        ImageFallback(modifier = Modifier.size(THUMBNAIL))
+    } else {
+        AsyncImage(
+            model = attachment.source,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            onError = { failed = true },
+            modifier = Modifier.size(THUMBNAIL),
+        )
+    }
     if (dimmed) {
         Box(Modifier.size(THUMBNAIL).background(Color.Black.copy(alpha = SCRIM_ALPHA)))
     }
