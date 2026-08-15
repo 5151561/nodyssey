@@ -1,7 +1,10 @@
 package io.github.nodyssey.ui.composer
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -10,6 +13,7 @@ import coil3.request.ImageRequest
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.plaza.core.image.allowMeteredImage
+import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.editor.EmojiEntry
 import io.github.plaza.designsys.editor.EmojiGroup
 import io.github.plaza.designsys.editor.EmojiPanel
@@ -106,7 +110,19 @@ fun NodeSeekStickerImage(
             .allowMeteredImage(true)
             .build()
     }
-    AsyncImage(model = request, contentDescription = contentDescription, modifier = modifier)
+    // A cell whose preview fails is not an empty cell: it would read as a sticker that exists and
+    // draws nothing, and the grid would silently lose a column's worth of them on a bad connection.
+    var failed by remember(sticker.url) { mutableStateOf(false) }
+    if (failed) {
+        ImageFallback(modifier = modifier)
+    } else {
+        AsyncImage(
+            model = request,
+            contentDescription = contentDescription,
+            onError = { failed = true },
+            modifier = modifier,
+        )
+    }
 }
 
 /**

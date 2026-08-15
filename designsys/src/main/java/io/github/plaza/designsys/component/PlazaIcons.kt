@@ -437,6 +437,22 @@ object PlazaIcons {
     }
 
     /**
+     * A picture that did not arrive — the mark [ImageFallback] leaves where one was expected.
+     *
+     * Deliberately the torn version of [Image] rather than [Image] itself: the two stand side by
+     * side in a post, one saying "skipped, tap to load" and one saying "this one failed", and a
+     * reader has to be able to tell them apart at 20sp without reading a word.
+     */
+    val BrokenImage: ImageVector by lazy {
+        materialIcon(
+            name = "BrokenImage",
+            pathData =
+            "M21,5v6.59l-3,-3.01 -4,4.01 -4,-4 -4,4 -3,-3.01V5c0,-1.1 0.9,-2 2,-2h14c1.1,0 2,0.9 2,2z" +
+                "M18,11.42l3,3.01V19c0,1.1 -0.9,2 -2,2H5c-1.1,0 -2,-0.9 -2,-2v-6.58l3,2.99 4,-4 4,4 4,-3.99z",
+        )
+    }
+
+    /**
      * The key that opens the toolbar's own settings, at the end of the strip.
      *
      * A wrench rather than Material's `tune` sliders: `tune` sits in a row of formatting glyphs and
