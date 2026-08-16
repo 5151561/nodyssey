@@ -55,6 +55,11 @@
     <string name="richtext_image_skipped_action">点按加载这张图</string>
     <string name="richtext_poll_title">投票</string>
     <string name="richtext_poll_body">在帖子里查看并参与</string>
+    <!-- 折叠 with an empty <summary>. The browser labels such a block "详细信息"; this says what the
+         reader gets by tapping instead, because unlike a browser we have room for nothing else. -->
+    <string name="richtext_fold_title_fallback">折叠内容</string>
+    <string name="richtext_fold_expand">展开</string>
+    <string name="richtext_fold_collapse">收起</string>
 
     <!-- 收款码. "Ref ID" stays in the site's own Latin form: it is what the payee typed into the
          generator and what they will look for in their ledger, so translating it would break the

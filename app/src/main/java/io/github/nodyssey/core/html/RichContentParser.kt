@@ -92,6 +92,8 @@ object RichContentParser {
 
         "table" -> listOf(table(element))
 
+        "details" -> listOf(fold(element))
+
         "div" ->
             when {
                 element.hasClass("quote") -> listOf(RichNode.Quote(parseBlocks(element.childNodes())))
@@ -239,6 +241,26 @@ object RichContentParser {
         // old flattening beats rendering an empty tab strip.
         if (tabs.isEmpty()) return paragraphBlocks(element)
         return parseBlocks(orphans) + RichNode.Tabs(tabs)
+    }
+
+    /**
+     * `<details><summary>标题</summary>…</details>` — what the editor's 折叠 button writes.
+     *
+     * The summary is lifted out of the children rather than parsed alongside them: it is the label
+     * of the block, and left where it stands it renders as an ordinary paragraph sitting above the
+     * content it is supposed to be hiding.
+     *
+     * The body goes through [parseBlocks] like any other container, which is what keeps a tab group
+     * or a code block inside a fold from being flattened along with it — post 876332 is two folds
+     * with a `nsk-magic-tabs` group in each.
+     */
+    private fun fold(element: Element): RichNode {
+        val summary = element.children().firstOrNull { it.tagName() == "summary" }
+        return RichNode.Fold(
+            title = summary?.text()?.trim().orEmpty(),
+            children = parseBlocks(element.childNodes().filterNot { it === summary }),
+            open = element.hasAttr("open"),
+        )
     }
 
     private fun codeBlock(element: Element): RichNode {

@@ -1,5 +1,7 @@
 package io.github.plaza.designsys.richtext
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -25,6 +27,8 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -403,6 +408,18 @@ private fun RichBlock(
                 stardustContent = stardustContent,
             )
 
+        is RichNode.Fold ->
+            FoldBlock(
+                node = node,
+                onLinkClick = onLinkClick,
+                onImageClick = onImageClick,
+                onQuoteRefClick = onQuoteRefClick,
+                textStyle = textStyle,
+                voteContent = voteContent,
+                codeBlockContent = codeBlockContent,
+                stardustContent = stardustContent,
+            )
+
         RichNode.Divider ->
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant,
@@ -475,6 +492,102 @@ private fun TabGroup(
             stardustContent = stardustContent,
             modifier = Modifier.padding(Spacing.md),
         )
+    }
+}
+
+/**
+ * A `<details>` block, closed until the reader asks for it.
+ *
+ * Starting closed is the point of the node — the author folded this away — so the summary is all
+ * that is on screen, and everything below it is drawn only once the block is open. That also keeps
+ * a fold holding a tab group or a 200-line report off the first frame of a long thread.
+ *
+ * Hand-rolled rather than composed out of an official component: Material 3 1.5.0-alpha24 ships no
+ * disclosure/accordion — `ExpandedListTokens` exists in `material3.tokens` but no composable reads
+ * it, so there is nothing public to call. Replace this with that component when one lands. The
+ * shape, the container colour and the chevron behaviour are deliberately the same as
+ * `ReportCard`'s, which is the app's other collapsible block.
+ */
+@Composable
+private fun FoldBlock(
+    node: RichNode.Fold,
+    onLinkClick: (String) -> Unit,
+    onImageClick: (String) -> Unit,
+    onQuoteRefClick: (InlineNode.QuoteRef) -> Unit,
+    textStyle: TextStyle,
+    voteContent: @Composable (Long) -> Unit,
+    codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit,
+    stardustContent: @Composable (RichNode.StardustReceive) -> Unit,
+) {
+    var expanded by rememberSaveable(node.title) { mutableStateOf(node.open) }
+    // The chevron turns rather than flipping, for the reason `ReportCard` gives: an indicator that
+    // snaps while the block below it slides reads as two separate events.
+    val chevronAngle by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "fold-chevron",
+    )
+
+    Column(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Row(
+            modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .defaultMinSize(minHeight = Sizes.minTouchTarget)
+                .padding(start = Spacing.md, end = Spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                // A `<summary>` may be empty, and an unlabelled row gives the reader nothing to
+                // decide with — the browser falls back to its own word here for the same reason.
+                text = node.title.ifBlank { stringResource(R.string.richtext_fold_title_fallback) },
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = Spacing.sm),
+            )
+            Box(
+                modifier = Modifier.size(Sizes.minTouchTarget),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription =
+                    stringResource(
+                        if (expanded) R.string.richtext_fold_collapse else R.string.richtext_fold_expand,
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(chevronAngle),
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = expanded) {
+            Column {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                RichBlockColumn(
+                    nodes = node.children,
+                    onLinkClick = onLinkClick,
+                    onImageClick = onImageClick,
+                    onQuoteRefClick = onQuoteRefClick,
+                    textStyle = textStyle,
+                    voteContent = voteContent,
+                    codeBlockContent = codeBlockContent,
+                    stardustContent = stardustContent,
+                    modifier = Modifier.padding(Spacing.md),
+                )
+            }
+        }
     }
 }
 
@@ -1318,6 +1431,15 @@ private fun specNodes(): List<RichNode> =
                     listOf(InlineNode.Link(text = "报告", url = "https://example.com/r/demo")),
                 ),
                 listOf("洛杉矶 4837", "152ms", "1.2%", "—").map { listOf(InlineNode.Text(it)) },
+            ),
+        ),
+        RichNode.Fold(
+            title = "折叠：默认收起，点击标题展开",
+            children =
+            listOf(
+                RichNode.Paragraph(
+                    listOf(InlineNode.Text("折叠里的内容照常渲染，标签页、代码块、表格都不会被摊平。")),
+                ),
             ),
         ),
         RichNode.Divider,

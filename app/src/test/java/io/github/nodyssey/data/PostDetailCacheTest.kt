@@ -341,7 +341,7 @@ class PostDetailCacheTest {
      *
      * Not a round trip: a round trip passes whatever the current code encodes back into the current
      * code, so it stays green through a rename that makes every row already on disk unreadable. These
-     * fifteen strings are the actual contract with the cache, and the AST moving between modules —
+     * sixteen strings are the actual contract with the cache, and the AST moving between modules —
      * which it did, out of `:app` and into `:core` — must not touch one of them.
      *
      * `alt` is spelled out because it is nullable *without* a default, so it is written on every row
@@ -362,6 +362,7 @@ class PostDetailCacheTest {
               {"type":"code","code":"ls","language":"sh"},
               {"type":"quote","children":[]},
               {"type":"tabs","tabs":[{"title":"t","children":[]}]},
+              {"type":"fold","title":"t","children":[]},
               {"type":"list","ordered":true,"items":[]},
               {"type":"table"},
               {"type":"hr"}
@@ -379,6 +380,7 @@ class PostDetailCacheTest {
                 RichNode.CodeBlock::class,
                 RichNode.Quote::class,
                 RichNode.Tabs::class,
+                RichNode.Fold::class,
                 RichNode.ListBlock::class,
                 RichNode.Table::class,
                 RichNode.Divider::class,
