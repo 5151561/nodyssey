@@ -81,12 +81,21 @@ val CommentBody = TextStyle(fontSize = 15.sp, lineHeight = 25.sp, letterSpacing 
 /**
  * Upgrades a body style for long-form reading. Applied by `RichContent`, never by an editor.
  *
- * [LineBreak.Paragraph] turns on the platform's optimal line breaker — the Knuth-Plass family of
- * algorithms, which minimises raggedness over the whole paragraph instead of greedily filling one
- * line at a time. Pure Chinese barely changes (every hanzi is a break point), but the mixed
- * Chinese-Latin lines this forum is made of — model names, bandwidth figures, URLs — stop leaving
- * one long word stranded on a line of its own. [Hyphens.Auto] lets long Latin words break cleanly
- * instead of bouncing whole to the next line.
+ * [LineBreak.Simple] is the greedy breaker: fill each line as far as it goes, then move on. It is
+ * what every browser does, and matching it is the point — the site is read on both.
+ *
+ * This used to be [LineBreak.Paragraph], the platform's optimal breaker. Optimal breaking spends
+ * its budget minimising raggedness across a whole paragraph, which pays off in justified Latin
+ * setting and costs in Chinese: a reader of a solid block of hanzi expects a flush right edge and
+ * reads evenly distributed slack as every line stopping short. Measured on post-584268's heading
+ * at the 1.2 system font scale, greedy fills the opening line to 0.94 of the column where optimal
+ * left it at 0.76. The trade is real and known — a paragraph carrying a long unbreakable token,
+ * a URL most often, keeps that token whole and so leaves a wider gap on the line above it than
+ * optimal would; see `ProseLineBreakTest`, which pins both halves.
+ *
+ * Strictness stays at [LineBreak.Simple]'s Normal rather than Strict for the same reason: Normal
+ * is CSS `line-break: auto`, which is what the site's stylesheet resolves to. Baseline UAX#14
+ * already keeps `。，）` off the head of a line; Strict only adds rules Japanese needs.
  *
  * The centred, untrimmed [LineHeightStyle] replaces the default Proportional + Trim.Both, under
  * which a paragraph's first and last half-leading were cut off and the gap between two paragraphs
@@ -94,12 +103,11 @@ val CommentBody = TextStyle(fontSize = 15.sp, lineHeight = 25.sp, letterSpacing 
  * between blocks read as block spacing *plus* line rhythm, which is what gives long posts their
  * paragraph structure back.
  *
- * This must stay off text *fields*: re-optimising the whole paragraph on every keystroke makes
- * already-laid-out lines jump while typing, which is why the editors keep [PostBody] as is.
+ * This must stay off text *fields*, whose [LineHeightStyle] an editor should not inherit.
  */
 fun TextStyle.asProse(): TextStyle =
     copy(
-        lineBreak = LineBreak.Paragraph,
+        lineBreak = LineBreak.Simple,
         hyphens = Hyphens.Auto,
         lineHeightStyle =
         LineHeightStyle(
@@ -131,15 +139,19 @@ private const val SIGNATURE_SCALE = 0.85f
 /**
  * The full title on the detail screen, where it may wrap to several lines.
  *
- * [LineBreak.Heading] balances the wrapped lines instead of filling the first and leaving a couple
- * of characters widowed on the second.
+ * Greedy, for [asProse]'s reason and more sharply. This was [LineBreak.Heading], whose Balanced
+ * strategy equalises the wrapped lines; on a two-line Chinese title that means halving it, and
+ * `NodeSeek 签到脚本更新，支持自动随机延迟` came out filling 0.60 of the first line with the rest
+ * of the column empty beside it. Greedy puts the same title at 0.97. A balanced heading is a
+ * typographic nicety for a Latin display face and reads as a layout fault in hanzi, which have no
+ * word spaces for the eye to forgive.
  */
 val PostTitle =
     TextStyle(
         fontSize = 20.sp,
         lineHeight = 28.sp,
         fontWeight = FontWeight.Bold,
-        lineBreak = LineBreak.Heading,
+        lineBreak = LineBreak.Simple,
     )
 
 /**

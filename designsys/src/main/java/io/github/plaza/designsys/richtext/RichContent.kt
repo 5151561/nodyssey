@@ -65,7 +65,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -112,7 +111,8 @@ import io.github.plaza.designsys.theme.asProse
  * own typography and theme instead of the site's stylesheet.
  *
  * The typographic rules here are the ones that decide whether this app is worth opening daily:
- * 16sp on a 27sp line laid out by the platform's optimal (Knuth-Plass family) line breaker, a
+ * 16sp on a 27sp line broken greedily, the way a browser breaks it and for the reason spelled out
+ * in `TextStyle.asProse` — headings included, which is why nothing here overrides `lineBreak`. A
  * hair of air where hanzi meets Latin, block spacing that breathes around headings instead of
  * metering out a flat 10dp, code that scrolls rather than wraps, and never an italic — Chinese
  * has no italic form and synthesised slant is unreadable at body size.
@@ -300,9 +300,13 @@ private fun RichBlock(
                     // Weight, never size alone: a level-4 heading and body text are two points
                     // apart and would otherwise be indistinguishable in Chinese.
                     fontWeight = FontWeight.Bold,
-                    // Balanced rather than optimal: a two-line heading with one stranded word
-                    // looks worse than two even lines.
-                    lineBreak = LineBreak.Heading,
+                    // No line-break override: a heading breaks the way the body around it does,
+                    // which `asProse` has already set to greedy. This used to force
+                    // `LineBreak.Heading`, whose Balanced strategy evens the lines out — and even
+                    // lines in Chinese means a short one. post-584268's `GitHub项目地址（欢迎Star
+                    // 关注）： <url>` came out filling 0.69 of the column against greedy's 0.92,
+                    // with `关注）：` pushed onto the next line while 305px sat empty beside it.
+                    // See `ProseLineBreakTest`.
                 ),
                 onLinkClick = onLinkClick,
                 onQuoteRefClick = onQuoteRefClick,

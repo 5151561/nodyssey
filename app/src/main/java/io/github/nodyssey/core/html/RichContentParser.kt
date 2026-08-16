@@ -346,7 +346,47 @@ object RichContentParser {
         element.hasClass(STICKER_CLASS) || element.attr("src").contains("/static/image/sticker/")
 
     /** Everything a finished run of inline content needs: trimmed, with quote references folded. */
-    private fun finishInlines(inlines: List<InlineNode>): List<InlineNode> = foldQuoteRefs(trimInlines(inlines))
+    private fun finishInlines(inlines: List<InlineNode>): List<InlineNode> =
+        foldQuoteRefs(dropSpaceAfterBreaks(trimInlines(inlines)))
+
+    /**
+     * Drops the space a source newline leaves at the head of a line.
+     *
+     * The site writes its hard breaks as `<br>` followed by a real newline, and jsoup folds that
+     * newline into a leading space on the text after it. A browser never draws that space —
+     * collapsible whitespace at the start of a line box is thrown away — so keeping it indented
+     * every line after a `<br>` by a space the web does not show. Measured against the site on
+     * post-584268, whose opening paragraph carries three of them.
+     */
+    private fun dropSpaceAfterBreaks(inlines: List<InlineNode>): List<InlineNode> {
+        val result = mutableListOf<InlineNode>()
+        var atLineStart = false
+        for (node in inlines) {
+            when {
+                node is InlineNode.LineBreak -> {
+                    atLineStart = true
+                    result += node
+                }
+
+                !atLineStart -> result += node
+
+                node is InlineNode.Text -> {
+                    val trimmed = node.text.trimStart()
+                    // An all-whitespace node leaves the line still unstarted, so the next one is
+                    // trimmed too: `<br>` followed by a newline and then an indent is one head.
+                    if (trimmed.isEmpty()) continue
+                    atLineStart = false
+                    result += node.copy(text = trimmed)
+                }
+
+                else -> {
+                    atLineStart = false
+                    result += node
+                }
+            }
+        }
+        return result
+    }
 
     private val FLOOR_LABEL = Regex("""^#\d+$""")
 

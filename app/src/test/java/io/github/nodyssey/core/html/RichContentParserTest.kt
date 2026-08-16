@@ -47,6 +47,31 @@ class RichContentParserTest {
         assertEquals("zhh123", (inlines.first() as InlineNode.QuoteRef).name)
     }
 
+    /**
+     * `<br>` and the newline the site writes after it are one break, not a break and an indent.
+     *
+     * jsoup folds that source newline into a leading space on the text that follows, and keeping
+     * it indented every line after a `<br>` by a space no browser draws — collapsible whitespace
+     * at the head of a line box is thrown away. Measured on post-584268, whose opening paragraph
+     * carries three of them.
+     */
+    @Test
+    fun `drops the space a source newline leaves after a hard break`() {
+        val nodes = parse("<p>\u4eca\u5e74\u53ef\u4ee5\u5148\u884c\u8eba\u5e73\u4e86\u3002<br>\n\u8bf4\u5230\u8eba\u5e73\uff0c\u8bb2\u771f\u3002</p>")
+
+        val inlines = inlinesOf(nodes)
+        assertEquals(InlineNode.LineBreak, inlines[1])
+        assertEquals("\u8bf4\u5230\u8eba\u5e73\uff0c\u8bb2\u771f\u3002", (inlines[2] as InlineNode.Text).text)
+    }
+
+    /** A space the author actually typed mid-line is content, and survives. */
+    @Test
+    fun `keeps a space that is not at the head of a line`() {
+        val nodes = parse("<p>\u524d\u9762 \u540e\u9762</p>")
+
+        assertEquals("\u524d\u9762 \u540e\u9762", (inlinesOf(nodes).single() as InlineNode.Text).text)
+    }
+
     /** A bare mention is still just a link; only the pair means "replying to that floor". */
     @Test
     fun `leaves a mention with no floor link alone`() {
