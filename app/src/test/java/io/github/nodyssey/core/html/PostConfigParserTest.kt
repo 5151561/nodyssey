@@ -102,6 +102,40 @@ class PostConfigParserTest {
         assertEquals(setOf(2L), config.blockedCommentIds)
     }
 
+    /**
+     * `poster.isMe` is the site's own answer to "did I write this", and the only thing that puts
+     * 编辑 on a floor. A page with no blob claims nothing, which is the same as owning nothing.
+     */
+    @Test
+    fun `reads which floors this account wrote`() {
+        val config =
+            parse(
+                postData =
+                """
+                "comments":[
+                  {"commentId":1,"poster":{"name":"a","isMe":true}},
+                  {"commentId":2,"poster":{"name":"b","isMe":false}},
+                  {"commentId":3,"poster":{"name":"c"}},
+                  {"commentId":4}
+                ]
+                """.trimIndent(),
+            )
+
+        assertEquals(setOf(1L), config.ownCommentIds)
+    }
+
+    /** A reshaped `poster` must cost the ownership flag and nothing else on the page. */
+    @Test
+    fun `a poster that is not an object leaves the tallies intact`() {
+        val config =
+            parse(
+                postData = """"comments":[{"commentId":1,"poster":"nssk","likeCount":3}]""",
+            )
+
+        assertTrue(config.ownCommentIds.isEmpty())
+        assertEquals(3, requireNotNull(config.reactions[1L]).likeCount)
+    }
+
     /** Unreadable JSON must not throw: the article is worth showing without the tallies. */
     @Test
     fun `a malformed blob yields an empty config`() {

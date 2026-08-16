@@ -14,6 +14,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -129,6 +130,82 @@ class PostComposerRepositoryTest {
             assertEquals(SiteError.LoginRequired, error)
         }
 
+    /**
+     * The `edit-discussion` contract, read off the site's own editor bundle: one payload, a `mode`
+     * discriminator, and `postId`/`title`/`rank` beside the content. No `category` — that field
+     * exists only on `new-discussion`.
+     */
+    @Test
+    fun `edit uses the site's edit-discussion contract`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val recorder = StaticResponseInterceptor(code = 200, body = """{"success":true}""")
+            val requests = RequestCaptor()
+            val repository =
+                DefaultPostComposerRepository(
+                    context = context,
+                    okHttpClient =
+                    OkHttpClient.Builder().addInterceptor(requests).addInterceptor(recorder).build(),
+                    dispatchers = AppDispatchers(dispatcher, dispatcher),
+                    clock = AppClock { 0L },
+                )
+
+            repository.edit(
+                PostEditSubmission(
+                    postId = 876332,
+                    title = " 新标题 ",
+                    body = " 新正文 ",
+                    permission = PostPermission(2),
+                ),
+            )
+
+            val request = requests.request!!
+            assertEquals(NodeSeekSite.EDIT_DISCUSSION_API_PATH, request.url.encodedPath)
+            assertEquals(NodeSeekSite.BASE_URL + "/post-876332-1", request.header("Referer"))
+            assertEquals(16, request.header("Csrf-Token")?.length)
+
+            val payload = Json.parseToJsonElement(request.bodyUtf8()).jsonObject
+            assertEquals("edit-discussion", payload.getValue("mode").jsonPrimitive.content)
+            assertEquals(876332L, payload.getValue("postId").jsonPrimitive.long)
+            assertEquals("新标题", payload.getValue("title").jsonPrimitive.content)
+            assertEquals("新正文", payload.getValue("content").jsonPrimitive.content)
+            assertEquals(2, payload.getValue("rank").jsonPrimitive.int)
+            assertTrue("edit-discussion takes no board", "category" !in payload)
+        }
+
+    /** A 200 carrying `success:false` is a refusal, and the site's sentence is the only explanation. */
+    @Test
+    fun `an edit the board refuses fails with the site's own message`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository =
+                DefaultPostComposerRepository(
+                    context = context,
+                    okHttpClient =
+                    OkHttpClient.Builder()
+                        .addInterceptor(
+                            StaticResponseInterceptor(
+                                code = 200,
+                                body = """{"success":false,"message":"帖子已锁定"}""",
+                            ),
+                        ).build(),
+                    dispatchers = AppDispatchers(dispatcher, dispatcher),
+                    clock = AppClock { 0L },
+                )
+
+            val exception =
+                try {
+                    repository.edit(
+                        PostEditSubmission(1, "t", "b", PostPermission.PUBLIC),
+                    )
+                    throw AssertionError("edit should have failed")
+                } catch (exception: SiteException) {
+                    exception
+                }
+
+            assertEquals("帖子已锁定", exception.detail)
+        }
+
     @Test
     fun `a draft written before 阅读权限 became a range still opens`() {
         val json = Json { ignoreUnknownKeys = true }
@@ -190,6 +267,16 @@ private class StaticResponseInterceptor(
             .body(body.toResponseBody(mediaType.toMediaType()))
         headers.forEach { (name, value) -> builder.header(name, value) }
         return builder.build()
+    }
+}
+
+/** Records the request without answering it, so it can be stacked in front of a canned response. */
+private class RequestCaptor : Interceptor {
+    var request: Request? = null
+
+    override fun intercept(chain: Interceptor.Chain): Response {
+        request = chain.request()
+        return chain.proceed(chain.request())
     }
 }
 

@@ -137,6 +137,26 @@ sealed interface RichNode {
         )
     }
 
+    /**
+     * A `<details>` block — 折叠 in the site's editor — shown as a summary the reader taps to open.
+     *
+     * The same argument as [Tabs]: an unrecognised wrapper is flattened, and flattening this one
+     * puts the summary line and everything it was hiding on screen as one run-on paragraph, taking
+     * any structure inside it (a tab group, a code block) down with it.
+     *
+     * [open] mirrors the attribute of the same name. The site's editor does not write it today, so
+     * it is false on every post we have seen; it is here because the tag has it and a body that does
+     * carry it is asking for the block to start open.
+     */
+    @Serializable
+    @SerialName("fold")
+    data class Fold(
+        /** The `<summary>`, or empty when the block had none — the renderer then labels it itself. */
+        val title: String,
+        val children: List<RichNode>,
+        val open: Boolean = false,
+    ) : RichNode
+
     @Serializable
     @SerialName("list")
     data class ListBlock(

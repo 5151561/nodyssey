@@ -98,6 +98,9 @@ object PostDetailParser {
             isBlocked =
             element.hasClass(Selectors.BLOCKED_COMMENT_CLASS) ||
                 commentId in config.blockedCommentIds,
+            // Blob only. The markup says nothing about who is reading it, and a floor whose id we
+            // could not read is one we could not address an edit to either.
+            isMine = commentId != null && commentId in config.ownCommentIds,
         )
     }
 

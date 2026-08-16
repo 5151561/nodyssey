@@ -21,6 +21,15 @@ internal data class PostConfig(
     val reactions: Map<Long, PostReactions> = emptyMap(),
     val blockedCommentIds: Set<Long> = emptySet(),
     /**
+     * The floors this account wrote, as the *server* labelled them (`comments[].poster.isMe`).
+     *
+     * Empty when the page carried no blob, which for this one is the right answer rather than a lost
+     * one: no blob means nobody is signed in, and a signed-out reader owns no floor. Not derived by
+     * comparing uids on the device — the same reasoning as [blockedCommentIds], and the site's own
+     * client puts 编辑 behind exactly this flag.
+     */
+    val ownCommentIds: Set<Long> = emptySet(),
+    /**
      * Whether this account has the thread in its collection.
      *
      * Null when the page carried no blob — which is not "not collected". The site has no endpoint
@@ -58,6 +67,7 @@ internal object PostConfigParser {
 
         val reactions = mutableMapOf<Long, PostReactions>()
         val blocked = mutableSetOf<Long>()
+        val own = mutableSetOf<Long>()
         // Absent on a reshaped page, which costs the tallies but must not cost the thread-level
         // state sitting next to them — hence a loop over nothing rather than an early return.
         postData["comments"]?.jsonArray.orEmpty().forEach { entry ->
@@ -73,10 +83,14 @@ internal object PostConfigParser {
                     upvoted = comment.bool("upvoted"),
                 )
             if (comment.bool("blocked")) blocked += commentId
+            // Safe cast, not `jsonObject`: that accessor throws on a reshaped `poster`, and this
+            // loop is inside the pass that must not cost the page its tallies.
+            if ((comment["poster"] as? JsonObject)?.bool("isMe") == true) own += commentId
         }
         return PostConfig(
             reactions = reactions,
             blockedCommentIds = blocked,
+            ownCommentIds = own,
             // Thread-level, so they sit on `postData` itself rather than inside `comments`.
             collected = postData.boolOrNull("collected"),
             collectionCount = postData.intOrNull("collectionCount"),

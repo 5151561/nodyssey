@@ -64,7 +64,7 @@ class PostDetailViewModel(
     /** Where this thread was left off last time, and where this read's own place is written. */
     private val readingPositions: ReadingPositionStore = NoReadingPositions,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(PostDetailUiState())
+    private val _uiState = MutableStateFlow(PostDetailUiState(postId = postId))
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
 
     private var loadJob: Job? = null
@@ -484,6 +484,8 @@ class PostDetailViewModel(
 }
 
 data class PostDetailUiState(
+    /** The thread on screen. Zero only in the default state, which is never rendered with content. */
+    val postId: Long = 0,
     val title: String = "",
     val body: PostContent? = null,
     val comments: List<PostContent> = emptyList(),

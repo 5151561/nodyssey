@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
@@ -90,6 +91,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.FreeChickenLegs
+import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
@@ -141,6 +143,8 @@ fun PostDetailRoute(
     onLinkClick: (String) -> Unit = onOpenBrowser,
     /** Opens the tapped author's space. */
     onAuthorClick: (Long) -> Unit = {},
+    /** Opens the editor on a floor this account wrote. */
+    onEdit: (PostEditTarget) -> Unit = {},
     /** Draws the votes embedded in the thread; see [PostDetailScreen]. */
     voteContent: @Composable (Long) -> Unit = {},
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)? = null,
@@ -177,6 +181,7 @@ fun PostDetailRoute(
         onReply = { target -> if (state.isSignedIn) replyViewModel.open(target) else onSignIn() },
         // 引用 needs the account for the same reason 回复 does, and it writes into the same editor.
         onQuote = { floor -> if (state.isSignedIn) replyViewModel.quote(floor) else onSignIn() },
+        onEdit = onEdit,
         onReact = viewModel::react,
         onLoadFreeChickenLegs = viewModel::loadFreeChickenLegs,
         onReactionFailureShown = viewModel::onReactionFailureShown,
@@ -241,6 +246,11 @@ fun PostDetailScreen(
     onReply: (FloorReference?) -> Unit = {},
     /** Appends one more 引用 block to whatever the editor already holds. */
     onQuote: (FloorReference) -> Unit = {},
+    /**
+     * 编辑. Offered only where [PostContent.isMine] says the site itself would offer it, which is
+     * also the only case where the endpoint would accept the write.
+     */
+    onEdit: (PostEditTarget) -> Unit = {},
     /** Spends one mark on a floor. Confirmation, where the site has one, happens before this. */
     onReact: (Long, ReactionAction) -> Unit = { _, _ -> },
     /** Asked for when a 投喂 confirmation opens, so it can say whether this one is free. */
@@ -455,6 +465,11 @@ fun PostDetailScreen(
                             },
                             onReplyToFloor = onReply,
                             onQuoteFloor = onQuote,
+                            onEditFloor = { target ->
+                                // Same gate as everything else that writes: an expired session is
+                                // discovered before the editor opens, not after a save is refused.
+                                if (state.isSignedIn) onEdit(target) else onSignIn()
+                            },
                             onAuthorClick = onAuthorClick,
                             // Same gate as the editor and the marks: the account has to exist before
                             // the action, not after a rejection that also spent the tap.
@@ -716,6 +731,7 @@ private fun ThreadList(
     onReact: (PostContent, ReactionAction) -> Unit,
     onReplyToFloor: (FloorReference?) -> Unit,
     onQuoteFloor: (FloorReference) -> Unit,
+    onEditFloor: (PostEditTarget) -> Unit,
     onAuthorClick: (Long) -> Unit,
     onCollect: () -> Unit,
     voteContent: @Composable (Long) -> Unit,
@@ -744,6 +760,21 @@ private fun ThreadList(
                         pendingReaction = state.pendingReactionFor(body),
                         onReact = { action -> onReact(body, action) },
                         onAuthorClick = onAuthorClick,
+                        // The opening post is always on page 1, wherever the reader currently is.
+                        onEdit = body.commentId
+                            ?.takeIf { body.isMine }
+                            ?.let { id ->
+                                {
+                                    onEditFloor(
+                                        PostEditTarget(
+                                            postId = state.postId,
+                                            commentId = id,
+                                            page = 1,
+                                            isOpeningPost = true,
+                                        ),
+                                    )
+                                }
+                            },
                         collected = state.collected,
                         collectionCount = state.collectionCount,
                         collectPending = state.collectPending,
@@ -762,7 +793,7 @@ private fun ThreadList(
         itemsIndexed(
             items = state.comments,
             key = { index, comment -> comment.commentId ?: -index.toLong() - 1 },
-        ) { _, comment ->
+        ) { index, comment ->
             BlockAware(content = comment, revealed = state.showBlockedContent) {
                 CommentRow(
                     comment = comment,
@@ -773,6 +804,24 @@ private fun ThreadList(
                     onReact = { action -> onReact(comment, action) },
                     onReply = { onReplyToFloor(comment.toFloorReference()) },
                     onQuote = { comment.toFloorReference()?.let(onQuoteFloor) },
+                    // The site page this floor came from, which is the only page whose `__config__`
+                    // carries its Markdown. Read from the index rather than derived from the floor
+                    // number: the list is one scroll over several pages, and the two disagree as
+                    // soon as a floor above has been deleted.
+                    onEdit = comment.commentId
+                        ?.takeIf { comment.isMine }
+                        ?.let { id ->
+                            {
+                                onEditFloor(
+                                    PostEditTarget(
+                                        postId = state.postId,
+                                        commentId = id,
+                                        page = state.commentPages.getOrNull(index) ?: state.lastLoadedPage,
+                                        isOpeningPost = false,
+                                    ),
+                                )
+                            }
+                        },
                     onAuthorClick = onAuthorClick,
                     voteContent = voteContent,
                     stardustContent = stardustContent,
@@ -904,6 +953,8 @@ private fun OriginalPost(
     pendingReaction: ReactionAction?,
     onReact: (ReactionAction) -> Unit,
     onAuthorClick: (Long) -> Unit,
+    /** 编辑, null unless this account wrote the thread. */
+    onEdit: (() -> Unit)?,
     /* Collection is whole-thread, so it belongs on the opening post and nowhere else. */
     collected: Boolean?,
     collectionCount: Int?,
@@ -982,6 +1033,7 @@ private fun OriginalPost(
             reactions = body.reactions,
             pending = pendingReaction,
             onReact = onReact,
+            onEdit = onEdit,
             collected = collected,
             collectionCount = collectionCount,
             collectPending = collectPending,
@@ -1056,6 +1108,7 @@ private fun CommentRow(
     onReact: (ReactionAction) -> Unit,
     onReply: () -> Unit,
     onQuote: () -> Unit,
+    onEdit: (() -> Unit)?,
     onAuthorClick: (Long) -> Unit,
     voteContent: @Composable (Long) -> Unit,
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
@@ -1129,8 +1182,11 @@ private fun CommentRow(
             reactions = comment.reactions,
             pending = pendingReaction,
             onReact = onReact,
-            onReply = onReply,
+            // 回复 gives way to 编辑 on this account's own floor, which is what the site does — and
+            // what keeps the row at five buttons instead of a sixth that does not fit on a phone.
+            onReply = onReply.takeIf { onEdit == null },
             onQuote = onQuote,
+            onEdit = onEdit,
         )
     }
 }
@@ -1182,6 +1238,8 @@ private fun ReactionRow(
     modifier: Modifier = Modifier,
     onReply: (() -> Unit)? = null,
     onQuote: (() -> Unit)? = null,
+    /** 编辑 — null on every floor this account did not write. */
+    onEdit: (() -> Unit)? = null,
     /*
      * Collection is whole-thread on NodeSeek, so only the opening post passes these; every comment
      * row leaves them at their defaults and the star simply is not drawn. Null [collected] is the
@@ -1244,6 +1302,14 @@ private fun ReactionRow(
             QuietReaction(
                 icon = PlazaIcons.Reply,
                 label = R.string.post_reply_action,
+                count = "",
+                onClick = it,
+            )
+        }
+        onEdit?.let {
+            QuietReaction(
+                icon = Icons.Default.Edit,
+                label = R.string.post_edit_action,
                 count = "",
                 onClick = it,
             )

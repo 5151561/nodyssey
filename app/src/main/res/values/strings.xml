@@ -29,6 +29,8 @@
     <string name="action_hide_all_boards">收起版块</string>
     <string name="action_create_post">发帖</string>
     <string name="action_publish">发布</string>
+    <!-- 编辑 mode's version of 发布: the post already exists, so this writes over it. -->
+    <string name="action_save">保存</string>
     <string name="action_preview">预览</string>
 
     <!-- Sort order: the site offers both, and heavy users switch between them -->
@@ -76,6 +78,7 @@
     <string name="composer_draft_saved">草稿 %1$s</string>
     <string name="composer_draft_saving">草稿自动保存</string>
     <string name="composer_publishing">发布中</string>
+    <string name="composer_saving">保存中</string>
     <!-- The site's own right-hand rules card, verbatim in substance; shown on every board -->
     <string name="composer_rule_title">重要提醒</string>
     <string name="composer_rule_body">敏感话题请发内版 · 发卡站 / 大量出售必须发推广 · 禁止人身攻击 · 违规将受惩罚</string>
@@ -128,6 +131,9 @@
     <string name="post_quote_reply">@%1$s %2$s</string>
     <string name="post_auto_paging">自动续页</string>
     <string name="post_reply_action">回复</string>
+    <!-- Own floors only. Takes 回复's place on them, as it does on the site — there is no replying
+         to yourself there either. -->
+    <string name="post_edit_action">编辑</string>
     <string name="post_quote_action">引用</string>
     <!-- Shared by the paged-and-appending lists: the comment thread and 管理记录 -->
     <string name="page_jump_previous">上一页</string>

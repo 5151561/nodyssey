@@ -46,6 +46,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.UserSearchResult
+import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.account.AccountSettingsRoute
 import io.github.nodyssey.ui.account.AccountSettingsViewModel
@@ -332,7 +333,7 @@ fun MainNavigation(
                     viewModel = viewModel,
                     listState = homeListState,
                     onPostClick = { backStack.add(PostDetailKey(it)) },
-                    onCreatePost = { backStack.add(PostComposerKey) },
+                    onCreatePost = { backStack.add(PostComposerKey()) },
                     onSignIn = {
                         backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
                     },
@@ -879,6 +880,7 @@ fun MainNavigation(
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                     onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                     onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
+                    onEdit = { target -> backStack.add(PostComposerKey(target)) },
                     // Supplied here because this is the only layer that can reach the container.
                     // Keyed by vote id and not merely by post: a thread may embed more than one, and
                     // without the key they would share a single ViewModel and each other's state.
@@ -910,9 +912,19 @@ fun MainNavigation(
                 )
             }
 
-            entry<PostComposerKey> {
+            entry<PostComposerKey> { key ->
                 val viewModel: PostComposerViewModel =
-                    viewModel(factory = PostComposerViewModel.factory(container))
+                    viewModel(
+                        // Keyed by what is being written, or two edits opened in one session would
+                        // share the first one's ViewModel — and therefore the first one's text.
+                        key = "composer-${key.edit?.commentId ?: "new"}",
+                        factory = PostComposerViewModel.factory(container, key.edit),
+                    )
+                // Whatever this editor is about: the thread when editing, the new-post page otherwise.
+                val webUrl =
+                    key.edit
+                        ?.let { NodeSeekSite.BASE_URL + NodeSeekSite.postPath(it.postId, it.page) }
+                        ?: (NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH)
                 PostComposerRoute(
                     viewModel = viewModel,
                     onClose = { backStack.removeLastOrNull() },
@@ -920,17 +932,16 @@ fun MainNavigation(
                         backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
                     },
                     onVerify = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH,
-                                siteTitle,
-                                WebViewGoal.CHALLENGE,
-                            ),
-                        )
+                        backStack.add(WebKey(webUrl, siteTitle, WebViewGoal.CHALLENGE))
+                    },
+                    onOpenBrowser = {
+                        backStack.add(WebKey(webUrl, siteTitle, WebViewGoal.MANAGE))
                     },
                     onPublished = { postId ->
                         backStack.removeLastOrNull()
-                        postId?.let { backStack.add(PostDetailKey(it)) }
+                        // An edit returns to the thread it came from, which is already underneath —
+                        // pushing it again would stack a second copy of the screen being updated.
+                        if (key.edit == null) postId?.let { backStack.add(PostDetailKey(it)) }
                     },
                 )
             }

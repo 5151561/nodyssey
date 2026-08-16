@@ -65,6 +65,16 @@ interface CommentComposerRepository {
 
     /** @return the new floor number when the site reports one. */
     suspend fun publish(submission: CommentSubmission): Int?
+
+    /**
+     * Rewrites a reply this account wrote. Addressed by `commentId` rather than by floor, because
+     * that is what the site's endpoint takes and floors renumber when one above is removed.
+     *
+     * [postId] is only the `Referer`; the endpoint does not read it. Defaulted so the read-only and
+     * publish-only test doubles stay small.
+     */
+    suspend fun edit(postId: Long, commentId: Long, body: String): Unit =
+        throw UnsupportedOperationException("This repository does not edit comments")
 }
 
 /**
@@ -114,20 +124,7 @@ class DefaultCommentComposerRepository(
                 postId = submission.postId,
             ),
         )
-        val postUrl = NodeSeekSite.BASE_URL + NodeSeekSite.postPath(submission.postId)
-        val request = Request.Builder()
-            .url(
-                NodeSeekSite.absoluteUrl(NodeSeekSite.NEW_COMMENT_API_PATH)
-                    ?: error("Invalid comment path"),
-            ).header("Accept", "application/json, text/plain, */*")
-            .header("X-Requested-With", "XMLHttpRequest")
-            // Presence is what the server checks — the site's own editor sends a fresh random value
-            // per page load and never echoes one back from a cookie.
-            .header("Csrf-Token", UUID.randomUUID().toString().replace("-", "").take(CSRF_TOKEN_LENGTH))
-            .header("Origin", NodeSeekSite.BASE_URL)
-            .header("Referer", postUrl)
-            .post(payload.toRequestBody(JSON_MEDIA_TYPE))
-            .build()
+        val request = requestTo(NodeSeekSite.NEW_COMMENT_API_PATH, submission.postId, payload)
 
         val response = try {
             okHttpClient.newCall(request).execute()
@@ -136,13 +133,7 @@ class DefaultCommentComposerRepository(
         }
         response.use {
             val body = it.body.string()
-            // Cloudflare answers a blocked write with 403 plus challenge HTML, so this runs before
-            // the status check: "please verify" and "please sign in" are different recoveries.
-            val isChallenge =
-                it.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
-                    Selectors.CLOUDFLARE_MARKERS.any(body::contains) ||
-                    body.trimStart().startsWith("<")
-            if (isChallenge) throw SiteException(SiteError.Cloudflare)
+            throwIfChallenge(it.header("cf-mitigated"), body)
             if (it.code == 401 || it.code == 403) {
                 throw SiteException(SiteError.LoginRequired)
             }
@@ -155,6 +146,79 @@ class DefaultCommentComposerRepository(
             parsePublishResponse(body)
         }
     }
+
+    override suspend fun edit(postId: Long, commentId: Long, body: String): Unit = withContext(dispatchers.io) {
+        val payload = json.encodeToString(
+            EditPayload(
+                content = body.trim(),
+                mode = NodeSeekSite.EDIT_COMMENT_MODE,
+                commentId = commentId,
+            ),
+        )
+        val request = requestTo(NodeSeekSite.EDIT_COMMENT_API_PATH, postId, payload)
+
+        val response = try {
+            okHttpClient.newCall(request).execute()
+        } catch (error: IOException) {
+            throw SiteException(SiteError.Network, error)
+        }
+        response.use {
+            val body = it.body.string()
+            throwIfChallenge(it.header("cf-mitigated"), body)
+            if (it.code == 401 || it.code == 403) {
+                throw SiteException(SiteError.LoginRequired)
+            }
+            if (!it.isSuccessful) {
+                throw SiteException(error = SiteError.Http(it.code), detail = parseMessage(body))
+            }
+            // Same reason [parsePublishResponse] re-reads a 200: a refusal the board makes rather
+            // than the router arrives as `success:false` with the sentence to show.
+            val root = runCatching { json.parseToJsonElement(body).jsonObject }
+                .getOrElse { throw SiteException(SiteError.Unparsable, it) }
+            if (root["success"]?.jsonPrimitive?.booleanOrNull != true) {
+                throw SiteException(
+                    error = SiteError.Unknown,
+                    detail = root["message"]?.jsonPrimitive?.contentOrNull,
+                )
+            }
+        }
+    }
+
+    /**
+     * The request both writes send — same headers, same origin, only the path and the body differ.
+     *
+     * `Csrf-Token` is present rather than correct: the server checks that a value arrived, and the
+     * site's own editor sends a fresh random one per page load without ever echoing a cookie back.
+     */
+    private fun requestTo(path: String, postId: Long, payload: String): Request =
+        Request.Builder()
+            .url(NodeSeekSite.absoluteUrl(path) ?: error("Invalid comment path"))
+            .header("Accept", "application/json, text/plain, */*")
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Csrf-Token", UUID.randomUUID().toString().replace("-", "").take(CSRF_TOKEN_LENGTH))
+            .header("Origin", NodeSeekSite.BASE_URL)
+            .header("Referer", NodeSeekSite.BASE_URL + NodeSeekSite.postPath(postId))
+            .post(payload.toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+
+    /**
+     * Cloudflare answers a blocked write with 403 plus challenge HTML, so this runs before any
+     * status handling: "please verify" and "please sign in" are different recoveries.
+     */
+    private fun throwIfChallenge(cfMitigated: String?, body: String) {
+        val isChallenge =
+            cfMitigated?.equals("challenge", ignoreCase = true) == true ||
+                Selectors.CLOUDFLARE_MARKERS.any(body::contains) ||
+                body.trimStart().startsWith("<")
+        if (isChallenge) throw SiteException(SiteError.Cloudflare)
+    }
+
+    @Serializable
+    private data class EditPayload(
+        val content: String,
+        val mode: String,
+        val commentId: Long,
+    )
 
     @Serializable
     private data class CommentPayload(

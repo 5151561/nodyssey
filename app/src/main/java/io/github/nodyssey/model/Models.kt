@@ -140,6 +140,15 @@ data class PostContent(
      * [PostSummary.isBlocked].
      */
     val isBlocked: Boolean = false,
+    /**
+     * This account wrote this floor, as the *server* said (`__config__`'s `poster.isMe`).
+     *
+     * What puts 编辑 in the floor's menu, and nothing else — the same condition the site's own client
+     * uses. Not derived from [authorUid]: a signed-out read carries no blob and therefore no claim of
+     * ownership, and comparing uids on the device would offer the action to a reader whose session
+     * has quietly expired, whose only feedback would be a refusal after they had finished typing.
+     */
+    val isMine: Boolean = false,
 )
 
 /**
@@ -199,3 +208,28 @@ fun PostReactions.countOf(action: ReactionAction): Int =
         ReactionAction.ChickenLeg -> likeCount
         ReactionAction.Dislike -> dislikeCount
     }
+
+/**
+ * The Markdown one page of a thread was written in, for the editor to load.
+ *
+ * Read from the post page's own `__config__` — see [io.github.nodyssey.core.html.PostSourceParser]
+ * for why the rendered HTML cannot stand in for it. [title] and [rank] describe the thread and are
+ * only meaningful when the 主楼 is being edited; the site requires both back on every such save, so
+ * an editor that never showed them would still have to send them.
+ */
+data class PostSource(
+    val postId: Long,
+    val title: String,
+    /** 阅读权限 as the wire spells it; see `PostPermission`. */
+    val rank: Int,
+    val floors: List<PostSourceFloor>,
+) {
+    fun floor(commentId: Long): PostSourceFloor? = floors.firstOrNull { it.commentId == commentId }
+}
+
+data class PostSourceFloor(
+    val commentId: Long,
+    val isOpeningPost: Boolean,
+    val markdown: String,
+    val isMine: Boolean,
+)

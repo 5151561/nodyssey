@@ -3,10 +3,12 @@ package io.github.nodyssey.data
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.PostDetailParser
 import io.github.nodyssey.core.html.PostListParser
+import io.github.nodyssey.core.html.PostSourceParser
 import io.github.nodyssey.core.html.SearchParser
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostDetail
 import io.github.nodyssey.model.PostListPage
+import io.github.nodyssey.model.PostSource
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.MinIntervalGate
@@ -42,6 +44,19 @@ interface PostRemoteDataSource {
         postId: Long,
         page: Int,
     ): PostDetail
+
+    /**
+     * The Markdown behind one page of a thread, for the editor.
+     *
+     * Always a live request, never the cache — see [PostSourceParser]. Defaulted so the many
+     * read-only test doubles of this interface do not have to answer a question they are never asked.
+     *
+     * @return null when the page carried no readable `__config__`.
+     */
+    suspend fun loadSource(
+        postId: Long,
+        page: Int,
+    ): PostSource? = throw UnsupportedOperationException("This data source does not read post sources")
 }
 
 class NetworkPostDataSource(
@@ -86,6 +101,14 @@ class NetworkPostDataSource(
     ): PostDetail {
         val html = client.getHtml(NodeSeekSite.postPath(postId, page))
         return withContext(dispatchers.default) { PostDetailParser.parse(html, postId, page) }
+    }
+
+    override suspend fun loadSource(
+        postId: Long,
+        page: Int,
+    ): PostSource? {
+        val html = client.getHtml(NodeSeekSite.postPath(postId, page))
+        return withContext(dispatchers.default) { PostSourceParser.parse(html, postId) }
     }
 
     companion object {
