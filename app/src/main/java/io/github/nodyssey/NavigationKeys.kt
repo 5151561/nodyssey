@@ -1,6 +1,7 @@
 package io.github.nodyssey
 
 import androidx.navigation3.runtime.NavKey
+import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.ui.login.WebViewGoal
 import kotlinx.serialization.Serializable
 
@@ -76,8 +77,17 @@ data object AccountPreferencesKey : NavKey
 @Serializable
 data object AccountImageHostKey : NavKey
 
+/**
+ * The editor.
+ *
+ * [edit] null is 发布新帖; non-null rewrites a floor that is already up. Same screen either way —
+ * the differences are small enough (no board, no draft, and no title on a reply) that a second one
+ * would be the same 800 lines with three `if`s deleted.
+ */
 @Serializable
-data object PostComposerKey : NavKey
+data class PostComposerKey(
+    val edit: PostEditTarget? = null,
+) : NavKey
 
 /**
  * A private-message conversation (board 7f).

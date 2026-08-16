@@ -70,6 +70,43 @@ class CommentComposerRepositoryTest {
         assertNull(floor)
     }
 
+    /**
+     * `edit-comment` addresses the floor by `commentId` and carries nothing else — no `postId`, no
+     * title, no rank. The post id is only the `Referer`.
+     */
+    @Test
+    fun `edit sends the site's own edit-comment payload`() = runTest {
+        val recorder = RecordingCommentInterceptor(body = """{"success":true}""")
+
+        repository(recorder).edit(postId = 841108L, commentId = 55L, body = "  改过的回复  ")
+
+        val request = recorder.request!!
+        assertEquals(NodeSeekSite.EDIT_COMMENT_API_PATH, request.url.encodedPath)
+        assertEquals("https://www.nodeseek.com/post-841108-1", request.header("Referer"))
+        assertEquals(16, request.header("Csrf-Token")?.length)
+
+        val payload = Json.parseToJsonElement(request.bodyUtf8()).jsonObject
+        assertEquals("改过的回复", payload.getValue("content").jsonPrimitive.content)
+        assertEquals("edit-comment", payload.getValue("mode").jsonPrimitive.content)
+        assertEquals(55L, payload.getValue("commentId").jsonPrimitive.long)
+        assertNull("edit-comment is addressed by comment, not by post", payload["postId"])
+    }
+
+    @Test
+    fun `a refused edit keeps the site's own sentence`() = runTest {
+        val exception =
+            try {
+                repository(
+                    RecordingCommentInterceptor(body = """{"success":false,"message":"超过编辑时限"}"""),
+                ).edit(postId = 1L, commentId = 2L, body = "x")
+                throw AssertionError("edit should have failed")
+            } catch (exception: SiteException) {
+                exception
+            }
+
+        assertEquals("超过编辑时限", exception.detail)
+    }
+
     @Test
     fun `a rejection keeps the site's own sentence`() = runTest {
         val exception = publishExpecting(

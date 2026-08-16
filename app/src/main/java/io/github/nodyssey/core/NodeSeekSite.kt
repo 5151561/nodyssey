@@ -228,6 +228,28 @@ object NodeSeekSite {
 
     const val NEW_COMMENT_MODE = "new-comment"
 
+    /**
+     * Rewriting what is already posted. Two endpoints because the site has two: the opening post
+     * carries a title and a 阅读权限 and is addressed by `postId`, a reply carries neither and is
+     * addressed by `commentId`.
+     *
+     * Read off the site's own editor bundle (`markdownEditor-*.js`, 2026-08-16) rather than guessed:
+     * it builds one payload with a `mode` discriminator and adds `{title, postId, rank}` for
+     * `edit-discussion` and `{commentId}` for `edit-comment`. Both answer in the same
+     * `{success, message}` shape the two `new-*` endpoints do, and neither returns the new body.
+     *
+     * The site's client shows 编辑 on the condition `logined && isMe` alone — there is no time
+     * window and no edit count in it — so the app offers it on the same condition and lets the
+     * server refuse anything it refuses.
+     */
+    const val EDIT_DISCUSSION_API_PATH = "/api/content/edit-discussion"
+
+    const val EDIT_DISCUSSION_MODE = "edit-discussion"
+
+    const val EDIT_COMMENT_API_PATH = "/api/content/edit-comment"
+
+    const val EDIT_COMMENT_MODE = "edit-comment"
+
     /** `"#3"` → `3`. Anything else is a shape we did not expect, and the caller falls back to null. */
     fun parseFloorHash(hash: String?): Int? = hash?.trimStart('#')?.trim()?.toIntOrNull()
 

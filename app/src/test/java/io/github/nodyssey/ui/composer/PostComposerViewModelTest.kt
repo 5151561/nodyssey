@@ -10,6 +10,9 @@ import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostDraft
+import io.github.nodyssey.data.composer.PostEditContent
+import io.github.nodyssey.data.composer.PostEditTarget
+import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.PostSubmission
 import io.github.nodyssey.data.composer.UploadStatus
@@ -20,6 +23,7 @@ import io.github.nodyssey.ui.typeText
 import io.github.nodyssey.ui.vote.VoteCreationState
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -63,6 +67,8 @@ class PostComposerViewModelTest {
     private fun viewModel(
         profiles: ProfileRepository? = null,
         votes: VoteRepository? = null,
+        editTarget: PostEditTarget? = null,
+        editor: PostEditor? = null,
     ) = viewModels.track(
         PostComposerViewModel(
             repository,
@@ -72,8 +78,118 @@ class PostComposerViewModelTest {
             uploader,
             profiles,
             voteRepository = votes,
+            editTarget = editTarget,
+            editor = editor,
         ),
     )
+
+    // --- 编辑 ----------------------------------------------------------------
+
+    private val openingPost = PostEditTarget(postId = 876332, commentId = 9, page = 1, isOpeningPost = true)
+    private val reply = PostEditTarget(postId = 876332, commentId = 10, page = 3, isOpeningPost = false)
+
+    /** The editor opens on what is currently posted, not on an empty form. */
+    @Test
+    fun `edit mode fills the fields from the site`() = runTest(dispatcher) {
+        val editor = FakePostEditor(PostEditContent("原标题", PostPermission(2), "原正文"))
+        val viewModel = viewModel(editTarget = openingPost, editor = editor)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("原标题", state.title)
+        assertEquals("原正文", state.body)
+        assertEquals(PostPermission(2), state.permission)
+        assertEquals("原标题", viewModel.titleState.text.toString())
+        assertEquals("原正文", viewModel.bodyState.text.toString())
+        assertFalse(state.isLoadingEdit)
+    }
+
+    /**
+     * The window that would replace a post with nothing: until the current text lands the body is
+     * empty, and an enabled 保存 there overwrites the post with the empty form on screen.
+     */
+    @Test
+    fun `saving is refused while the current text is still loading`() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        val editor = FakePostEditor(PostEditContent("原标题", PostPermission.PUBLIC, "原正文"), loadGate = gate)
+        val viewModel = viewModel(editTarget = openingPost, editor = editor)
+        runCurrent()
+
+        assertTrue(viewModel.uiState.value.isLoadingEdit)
+        assertFalse(viewModel.uiState.value.canPublish)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.canPublish)
+    }
+
+    @Test
+    fun `a failed load is reported instead of an empty editor`() = runTest(dispatcher) {
+        val editor = FakePostEditor(loadError = SiteException(SiteError.Network))
+        val viewModel = viewModel(editTarget = openingPost, editor = editor)
+        advanceUntilIdle()
+
+        assertEquals(SiteError.Network, viewModel.uiState.value.editLoadError)
+        assertFalse(viewModel.uiState.value.canPublish)
+    }
+
+    @Test
+    fun `saving sends what is on screen to the floor being edited`() = runTest(dispatcher) {
+        val editor = FakePostEditor(PostEditContent("原标题", PostPermission.PUBLIC, "原正文"))
+        val viewModel = viewModel(editTarget = openingPost, editor = editor)
+        advanceUntilIdle()
+        viewModel.titleState.edit { replace(0, length, "新标题") }
+        viewModel.bodyState.edit { replace(0, length, "新正文") }
+        viewModel.selectPermission(PostPermission.PRIVATE)
+        var published: Long? = null
+        viewModel.publish { published = it }
+        advanceUntilIdle()
+
+        assertEquals(openingPost, editor.savedTarget)
+        assertEquals(PostEditContent("新标题", PostPermission.PRIVATE, "新正文"), editor.savedContent)
+        // The thread, so the caller returns to it rather than to a post id it has to look up.
+        assertEquals(876332L, published)
+        // Nothing goes to the publish endpoint — that would create a second thread.
+        assertNull(repository.submission)
+    }
+
+    /** A reply has no title, so an empty one must not hold 保存 back the way it does for a 主楼. */
+    @Test
+    fun `a reply saves without a title`() = runTest(dispatcher) {
+        val editor = FakePostEditor(PostEditContent("", PostPermission.PUBLIC, "原回复"))
+        val viewModel = viewModel(editTarget = reply, editor = editor)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isThreadLevelEdit)
+        assertTrue(viewModel.uiState.value.canPublish)
+    }
+
+    /**
+     * An edit is a change to something already posted. Autosaving one would put it in the recovery
+     * dialog on the next 发新帖, offering to publish somebody's edit as a new thread.
+     */
+    @Test
+    fun `edit mode writes no draft`() = runTest(dispatcher) {
+        val editor = FakePostEditor(PostEditContent("原标题", PostPermission.PUBLIC, "原正文"))
+        val viewModel = viewModel(editTarget = openingPost, editor = editor)
+        advanceUntilIdle()
+        viewModel.bodyState.edit { replace(0, length, "改过的正文") }
+        advanceUntilIdle()
+
+        assertNull(repository.savedDraft)
+    }
+
+    /** A stored draft belongs to an unsent post and must not leak into an edit of a live one. */
+    @Test
+    fun `edit mode never offers the new-post draft`() = runTest(dispatcher) {
+        repository.draftState.value = PostDraft(title = "草稿", body = "草稿正文")
+        val editor = FakePostEditor(PostEditContent("原标题", PostPermission.PUBLIC, "原正文"))
+        val viewModel = viewModel(editTarget = openingPost, editor = editor)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.pendingDraft)
+        assertEquals("原正文", viewModel.uiState.value.body)
+    }
 
     // --- 插入投票 ------------------------------------------------------------
 
@@ -450,6 +566,27 @@ private class FakeComposerRepository : PostComposerRepository {
         this.submission = submission
         publishError?.let { throw it }
         return publishedId
+    }
+}
+
+private class FakePostEditor(
+    private val content: PostEditContent = PostEditContent("", PostPermission.PUBLIC, ""),
+    private val loadError: Throwable? = null,
+    /** Held open to inspect the in-flight state; null loads immediately. */
+    private val loadGate: CompletableDeferred<Unit>? = null,
+) : PostEditor {
+    var savedTarget: PostEditTarget? = null
+    var savedContent: PostEditContent? = null
+
+    override suspend fun load(target: PostEditTarget): PostEditContent {
+        loadGate?.await()
+        loadError?.let { throw it }
+        return content
+    }
+
+    override suspend fun save(target: PostEditTarget, content: PostEditContent) {
+        savedTarget = target
+        savedContent = content
     }
 }
 

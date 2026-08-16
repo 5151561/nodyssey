@@ -118,6 +118,21 @@ data class PostSubmission(
     val permission: PostPermission,
 )
 
+/**
+ * A rewrite of an existing 主楼.
+ *
+ * No board: the site's `edit-discussion` takes no `category`, and moving a thread between boards is
+ * a moderator action rather than something its author can do from the editor. Title and 阅读权限 are
+ * required on every save — the endpoint replaces the record, so leaving either out of the payload
+ * would blank it.
+ */
+data class PostEditSubmission(
+    val postId: Long,
+    val title: String,
+    val body: String,
+    val permission: PostPermission,
+)
+
 interface PostComposerRepository {
     val draft: Flow<PostDraft?>
 
@@ -126,6 +141,15 @@ interface PostComposerRepository {
     suspend fun deleteDraft()
 
     suspend fun publish(submission: PostSubmission): Long?
+
+    /**
+     * Rewrites the opening post. Answers nothing on success — the site returns no body back, so the
+     * caller reloads the thread rather than patching what it holds.
+     *
+     * Defaulted so the test doubles that only publish stay as small as they are.
+     */
+    suspend fun edit(submission: PostEditSubmission): Unit =
+        throw UnsupportedOperationException("This repository does not edit posts")
 }
 
 class DefaultPostComposerRepository(
@@ -202,6 +226,80 @@ class DefaultPostComposerRepository(
         }
     }
 
+    override suspend fun edit(submission: PostEditSubmission): Unit = withContext(dispatchers.io) {
+        val payload = json.encodeToString(
+            EditPayload(
+                title = submission.title.trim(),
+                content = submission.body.trim(),
+                postId = submission.postId,
+                rank = submission.permission.wireValue,
+                mode = NodeSeekSite.EDIT_DISCUSSION_MODE,
+            ),
+        )
+        val postUrl = NodeSeekSite.BASE_URL + NodeSeekSite.postPath(submission.postId)
+        val request = Request.Builder()
+            .url(
+                NodeSeekSite.absoluteUrl(NodeSeekSite.EDIT_DISCUSSION_API_PATH)
+                    ?: error("Invalid edit path"),
+            ).header("Accept", "application/json, text/plain, */*")
+            .header("Content-Type", "application/json")
+            .header("X-Requested-With", "XMLHttpRequest")
+            // Presence is what the server checks; see the comment on the same header in
+            // `DefaultCommentComposerRepository`.
+            .header("Csrf-Token", UUID.randomUUID().toString().replace("-", "").take(CSRF_TOKEN_LENGTH))
+            .header("Origin", NodeSeekSite.BASE_URL)
+            .header("Referer", postUrl)
+            .post(payload.toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+
+        val response = try {
+            okHttpClient.newCall(request).execute()
+        } catch (error: IOException) {
+            throw SiteException(SiteError.Network, error)
+        }
+        response.use {
+            val body = it.body.string()
+            // Challenge first, then status, then the body's own verdict — the same order and the
+            // same reasons as [publish].
+            val isChallenge =
+                it.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
+                    Selectors.CLOUDFLARE_MARKERS.any(body::contains) ||
+                    body.trimStart().startsWith("<")
+            if (isChallenge) throw SiteException(SiteError.Cloudflare)
+            if (it.code == 401 || it.code == 403) throw SiteException(SiteError.LoginRequired)
+            if (!it.isSuccessful) {
+                throw SiteException(error = SiteError.Http(it.code), detail = parseErrorDetail(body))
+            }
+            throwIfRefused(body)
+        }
+    }
+
+    /**
+     * A 200 is not yet a success: an edit the board refuses — a locked thread, a window that has
+     * closed — comes back 200 with `{"success":false,"message":…}`, and that sentence is the only
+     * thing that explains it.
+     */
+    private fun throwIfRefused(body: String) {
+        val root = runCatching { json.parseToJsonElement(body).jsonObject }
+            .getOrElse { throw SiteException(SiteError.Unparsable, it) }
+        val success = root["success"]?.jsonPrimitive?.booleanOrNull ?: false
+        if (!success) {
+            throw SiteException(
+                error = SiteError.Unknown,
+                detail = root["message"]?.jsonPrimitive?.contentOrNull,
+            )
+        }
+    }
+
+    @Serializable
+    private data class EditPayload(
+        val title: String,
+        val content: String,
+        val postId: Long,
+        val rank: Int,
+        val mode: String,
+    )
+
     @Serializable
     private data class PublishPayload(
         val title: String,
@@ -276,6 +374,7 @@ class DefaultPostComposerRepository(
         val DRAFT_KEY = stringPreferencesKey("draft")
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         val POST_ID = Regex("""/post-(\d+)""")
+        const val CSRF_TOKEN_LENGTH = 16
         const val MAX_ERROR_DETAIL_LENGTH = 200
     }
 }

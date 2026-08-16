@@ -70,6 +70,7 @@ import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
+import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.stardust.StardustReceiveComposeDialog
 import io.github.nodyssey.ui.vote.VoteComposeDialog
 import io.github.plaza.core.net.SiteError
@@ -95,6 +96,8 @@ fun PostComposerRoute(
     onVerify: () -> Unit,
     onPublished: (Long?) -> Unit,
     modifier: Modifier = Modifier,
+    /** Opens whatever this editor is about in the web view — the thread, or the new-post page. */
+    onOpenBrowser: () -> Unit = onVerify,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -135,6 +138,10 @@ fun PostComposerRoute(
         onRemoveAttachment = viewModel::removeAttachment,
         onRetryAttachment = viewModel::retryUpload,
         onPublish = { if (state.isSignedIn) viewModel.publish(onPublished) else onSignIn() },
+        onRetryLoad = viewModel::loadEditSource,
+        onOpenBrowser = onOpenBrowser,
+        onSignIn = onSignIn,
+        onVerify = onVerify,
         onContinueDraft = viewModel::continueDraft,
         onDiscardDraft = viewModel::discardDraft,
         onToolbarChange = viewModel::setToolbar,
@@ -224,6 +231,11 @@ fun PostComposerScreen(
     onToolbarChange: (List<EditorAction>) -> Unit,
     onToolbarReset: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Re-reads the floor being edited. Only reachable from the load-failure state. */
+    onRetryLoad: () -> Unit = {},
+    onOpenBrowser: () -> Unit = {},
+    onSignIn: () -> Unit = {},
+    onVerify: () -> Unit = {},
     /**
      * Creates a vote and, on success only, runs the callback so the dialog can close.
      *
@@ -249,13 +261,33 @@ fun PostComposerScreen(
                 viewMode = state.viewMode,
                 isPublishing = state.isPublishing,
                 canPublish = state.canPublish,
+                isEditing = state.isEditing,
                 onClose = onClose,
                 onViewModeChange = onViewModeChange,
                 onPublish = onPublish,
             )
         },
     ) { padding ->
-        if (state.viewMode == ComposerViewMode.PREVIEW) {
+        val loadError = state.editLoadError
+        if (state.isLoadingEdit) {
+            // The editor is not shown until the current text has arrived: an empty body on screen is
+            // one 保存 away from replacing the post with nothing.
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (loadError != null) {
+            SiteErrorState(
+                error = loadError,
+                onRetry = onRetryLoad,
+                onOpenBrowser = onOpenBrowser,
+                onSignIn = onSignIn,
+                onVerify = onVerify,
+                modifier = Modifier.padding(padding),
+            )
+        } else if (state.viewMode == ComposerViewMode.PREVIEW) {
             PreviewContent(state = state, modifier = Modifier.padding(padding))
         } else {
             EditorContent(
@@ -302,6 +334,7 @@ private fun ComposerTopBar(
     viewMode: ComposerViewMode,
     isPublishing: Boolean,
     canPublish: Boolean,
+    isEditing: Boolean,
     onClose: () -> Unit,
     onViewModeChange: (ComposerViewMode) -> Unit,
     onPublish: () -> Unit,
@@ -323,7 +356,14 @@ private fun ComposerTopBar(
                 )
             }
         },
-        actions = { PublishButton(isPublishing = isPublishing, enabled = canPublish, onClick = onPublish) },
+        actions = {
+            PublishButton(
+                isPublishing = isPublishing,
+                enabled = canPublish,
+                isEditing = isEditing,
+                onClick = onPublish,
+            )
+        },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
     )
 }
@@ -339,6 +379,7 @@ private fun ComposerTopBar(
 private fun PublishButton(
     isPublishing: Boolean,
     enabled: Boolean,
+    isEditing: Boolean,
     onClick: () -> Unit,
 ) {
     Button(
@@ -362,12 +403,15 @@ private fun PublishButton(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = stringResource(R.string.composer_publishing),
+                text = stringResource(if (isEditing) R.string.composer_saving else R.string.composer_publishing),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(start = Spacing.sm),
             )
         } else {
-            Text(stringResource(R.string.action_publish), style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = stringResource(if (isEditing) R.string.action_save else R.string.action_publish),
+                style = MaterialTheme.typography.labelLarge,
+            )
         }
     }
 }
@@ -400,7 +444,9 @@ private fun EditorContent(
     // padding it consumes, and applying `imePadding` again here would put the gap right back.
     Column(modifier = modifier.fillMaxSize()) {
         ComposerOptions(state = state, onBoardSelect = onBoardSelect, onPermissionSelect = onPermissionSelect)
-        TitleField(titleState = titleState, length = state.title.length)
+        // A reply has no title and no 阅读权限 of its own, so editing one shows neither — the same
+        // fields the site's own editor hides for `edit-comment`.
+        if (state.isThreadLevelEdit) TitleField(titleState = titleState, length = state.title.length)
         BodyArea(
             state = state,
             bodyState = bodyState,
@@ -577,6 +623,9 @@ private fun ComposerOptions(
     // The board is the one required field with no default, so it is called out only once there is
     // something to publish — an error outline on an untouched form is just noise.
     val boardMissing = state.boardSlug == null && state.hasContent
+    // Editing a reply leaves nothing in this row: no board to move, no 阅读权限 to set, no draft
+    // being saved. An empty strip of padding above the body is worse than no strip.
+    if (!state.isThreadLevelEdit) return
 
     Row(
         modifier = Modifier
@@ -585,22 +634,26 @@ private fun ComposerOptions(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box {
-            ComposerChip(
-                label = state.boardTitle ?: stringResource(R.string.composer_select_board),
-                filled = state.boardTitle != null,
-                error = boardMissing,
-                onClick = { boardMenuOpen = true },
-            )
-            DropdownMenu(expanded = boardMenuOpen, onDismissRequest = { boardMenuOpen = false }) {
-                state.boards.forEach { board ->
-                    DropdownMenuItem(
-                        text = { Text(board.title) },
-                        onClick = {
-                            onBoardSelect(board)
-                            boardMenuOpen = false
-                        },
-                    )
+        // Not offered on an edit: `edit-discussion` takes no board, and moving a thread between
+        // boards is a moderator action rather than something its author can do here.
+        if (!state.isEditing) {
+            Box {
+                ComposerChip(
+                    label = state.boardTitle ?: stringResource(R.string.composer_select_board),
+                    filled = state.boardTitle != null,
+                    error = boardMissing,
+                    onClick = { boardMenuOpen = true },
+                )
+                DropdownMenu(expanded = boardMenuOpen, onDismissRequest = { boardMenuOpen = false }) {
+                    state.boards.forEach { board ->
+                        DropdownMenuItem(
+                            text = { Text(board.title) },
+                            onClick = {
+                                onBoardSelect(board)
+                                boardMenuOpen = false
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -625,14 +678,18 @@ private fun ComposerOptions(
             }
         }
         Box(Modifier.weight(1f))
-        Text(
-            text = state.savedAtMillis?.let { stringResource(R.string.composer_draft_saved, formatTime(it)) }
-                ?: stringResource(R.string.composer_draft_saving),
-            style = MaterialTheme.typography.labelSmall,
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
+        // No draft line on an edit: nothing is being autosaved, and "草稿已保存" beside a post that is
+        // already published would claim the opposite of what is true.
+        if (!state.isEditing) {
+            Text(
+                text = state.savedAtMillis?.let { stringResource(R.string.composer_draft_saved, formatTime(it)) }
+                    ?: stringResource(R.string.composer_draft_saving),
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
     }
 }
 

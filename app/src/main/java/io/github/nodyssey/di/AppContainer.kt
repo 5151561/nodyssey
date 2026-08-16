@@ -49,9 +49,11 @@ import io.github.nodyssey.data.composer.CommentComposerRepository
 import io.github.nodyssey.data.composer.DefaultCommentComposerRepository
 import io.github.nodyssey.data.composer.DefaultImagePreparer
 import io.github.nodyssey.data.composer.DefaultPostComposerRepository
+import io.github.nodyssey.data.composer.DefaultPostEditor
 import io.github.nodyssey.data.composer.ImageHostUploader
 import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PostComposerRepository
+import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
 import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
@@ -106,6 +108,9 @@ interface AppContainer {
     val postComposerRepository: PostComposerRepository
     val accountSettingsRepository: AccountSettingsRepository
     val commentComposerRepository: CommentComposerRepository
+
+    /** 编辑 — reads a floor back as Markdown and writes it again. See [PostEditor]. */
+    val postEditor: PostEditor
     val imageUploader: ImageUploader
 
     /** The selected image host — a service of its own, with its own credential. See [ImageHostRepository]. */
@@ -297,6 +302,17 @@ class DefaultAppContainer(
 
     override val commentComposerRepository: CommentComposerRepository by lazy {
         DefaultCommentComposerRepository(appContext, okHttpClient, dispatchers, clock)
+    }
+
+    override val postEditor: PostEditor by lazy {
+        DefaultPostEditor(
+            remote = remotePosts,
+            posts = postComposerRepository,
+            comments = commentComposerRepository,
+            // `extend`, not `refresh`: the reader may have several pages loaded, and a refresh would
+            // drop every one but the edited page out from under the scroll they are in.
+            threads = postRepository::extendThread,
+        )
     }
 
     /**

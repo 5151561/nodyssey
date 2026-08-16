@@ -19,6 +19,9 @@ import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostDraft
+import io.github.nodyssey.data.composer.PostEditContent
+import io.github.nodyssey.data.composer.PostEditTarget
+import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.PostSubmission
 import io.github.nodyssey.data.composer.UploadFailure
@@ -73,8 +76,19 @@ class PostComposerViewModel(
      * this editor's caret: the site creates the vote first and only then is there a marker to insert.
      */
     private val voteRepository: VoteRepository? = null,
+    /**
+     * The floor being rewritten, or null for a new post.
+     *
+     * Edit mode is the same editor with three differences, all of which fall out of this being
+     * non-null: the board picker is gone (the endpoint takes no board), the draft machinery is off
+     * (a draft is an unsent post, and an edit is a change to one that is already up), and the body
+     * arrives from the site instead of from the user.
+     */
+    private val editTarget: PostEditTarget? = null,
+    /** Required whenever [editTarget] is; null everywhere else, including every new-post screen. */
+    private val editor: PostEditor? = null,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(PostComposerUiState())
+    private val _uiState = MutableStateFlow(PostComposerUiState(edit = editTarget))
     val uiState: StateFlow<PostComposerUiState> = _uiState.asStateFlow()
 
     /**
@@ -92,6 +106,7 @@ class PostComposerViewModel(
 
     private var saveJob: Job? = null
     private var publishJob: Job? = null
+    private var loadJob: Job? = null
     private var authorJob: Job? = null
     private var profileLoaded = false
 
@@ -132,18 +147,66 @@ class PostComposerViewModel(
             .onEach { body -> if (body != _uiState.value.body) mutate { it.copy(body = body) } }
             .launchIn(viewModelScope)
 
-        viewModelScope.launch {
-            val draft = repository.draft.first()
-            _uiState.update { current ->
-                if (current.draftDecisionMade) {
-                    current
-                } else {
-                    current.copy(
-                        pendingDraft = draft?.takeIf(PostDraft::hasContent),
-                        draftDecisionMade = draft?.hasContent() != true,
-                    )
+        if (editTarget == null) {
+            viewModelScope.launch {
+                val draft = repository.draft.first()
+                _uiState.update { current ->
+                    if (current.draftDecisionMade) {
+                        current
+                    } else {
+                        current.copy(
+                            pendingDraft = draft?.takeIf(PostDraft::hasContent),
+                            draftDecisionMade = draft?.hasContent() != true,
+                        )
+                    }
                 }
             }
+        } else {
+            loadEditSource()
+        }
+    }
+
+    /**
+     * Fills the editor with what is currently posted.
+     *
+     * Read live rather than from the thread cache: the cache holds rendered nodes, not the Markdown
+     * behind them, and even if it held both it can be days old — saving a stale body would silently
+     * undo an edit made from the web in the meantime. Until it lands the fields stay empty and 保存
+     * stays disabled, so there is no window in which an empty editor can overwrite a post.
+     */
+    fun loadEditSource() {
+        val target = editTarget ?: return
+        val editor = editor ?: return
+        if (loadJob?.isActive == true) return
+        loadJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingEdit = true, editLoadError = null, editLoadErrorDetail = null) }
+            runCatchingExceptCancellation { editor.load(target) }
+                .onSuccess { content ->
+                    titleState.editFromViewModel {
+                        replace(0, length, content.title)
+                        placeCursorAtEnd()
+                    }
+                    bodyState.editFromViewModel {
+                        replace(0, length, content.body)
+                        placeCursorAtEnd()
+                    }
+                    _uiState.update {
+                        it.copy(
+                            title = content.title,
+                            body = content.body,
+                            permission = content.permission,
+                            isLoadingEdit = false,
+                        )
+                    }
+                }.onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            isLoadingEdit = false,
+                            editLoadError = (throwable as? SiteException)?.error ?: SiteError.Unknown,
+                            editLoadErrorDetail = throwable.message,
+                        )
+                    }
+                }
         }
     }
 
@@ -202,25 +265,44 @@ class PostComposerViewModel(
 
     // --- Publishing ---------------------------------------------------------
 
+    /**
+     * Sends what is on screen: a new post, or — in edit mode — a rewrite of the floor it was opened
+     * on. [onPublished] is handed the thread either way, so the caller navigates to the same place.
+     */
     fun publish(onPublished: (Long?) -> Unit) {
         val state = _uiState.value
         if (!state.canPublish || publishJob?.isActive == true) return
         publishJob = viewModelScope.launch {
             _uiState.update { it.copy(isPublishing = true, publishError = null, publishErrorDetail = null) }
             runCatchingExceptCancellation {
-                repository.publish(
-                    PostSubmission(
-                        // Straight from the fields, not from the mirrored copy: the mirror runs a
-                        // frame behind, and what is published must be exactly what is on screen.
-                        title = titleState.text.toString(),
-                        body = bodyState.text.toString(),
-                        boardSlug = requireNotNull(state.boardSlug),
-                        permission = state.permission,
-                    ),
-                )
+                val target = editTarget
+                if (target != null) {
+                    requireNotNull(editor).save(
+                        target = target,
+                        content =
+                        PostEditContent(
+                            title = titleState.text.toString(),
+                            permission = state.permission,
+                            body = bodyState.text.toString(),
+                        ),
+                    )
+                    target.postId
+                } else {
+                    repository.publish(
+                        PostSubmission(
+                            // Straight from the fields, not from the mirrored copy: the mirror runs a
+                            // frame behind, and what is published must be exactly what is on screen.
+                            title = titleState.text.toString(),
+                            body = bodyState.text.toString(),
+                            boardSlug = requireNotNull(state.boardSlug),
+                            permission = state.permission,
+                        ),
+                    )
+                }
             }.onSuccess { postId ->
                 saveJob?.cancel()
-                repository.deleteDraft()
+                // Only a new post has a draft to clear; edit mode never wrote one.
+                if (editTarget == null) repository.deleteDraft()
                 _uiState.update { it.copy(isPublishing = false) }
                 onPublished(postId)
             }.onFailure { throwable ->
@@ -267,6 +349,9 @@ class PostComposerViewModel(
     }
 
     private fun scheduleSave() {
+        // An edit is a change to something already posted; there is nothing to recover and nothing
+        // to offer back on the next visit, and writing one here would resurrect it as a new post.
+        if (editTarget != null) return
         saveJob?.cancel()
         saveJob = viewModelScope.launch {
             delay(AUTOSAVE_DELAY_MILLIS)
@@ -381,7 +466,10 @@ class PostComposerViewModel(
         const val MAX_TITLE_LENGTH = 60
         private const val AUTOSAVE_DELAY_MILLIS = 750L
 
-        fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
+        fun factory(
+            container: AppContainer,
+            editTarget: PostEditTarget? = null,
+        ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 PostComposerViewModel(
                     repository = container.postComposerRepository,
@@ -392,6 +480,8 @@ class PostComposerViewModel(
                     profileRepository = container.profileRepository,
                     settings = container.settingsRepository,
                     voteRepository = container.voteRepository,
+                    editTarget = editTarget,
+                    editor = editTarget?.let { container.postEditor },
                 )
             }
         }
@@ -424,8 +514,18 @@ data class PostComposerUiState(
     val selfRank: Int? = null,
     /** How 插入投票 is going. Idle whenever the dialog is closed or has nothing to report. */
     val voteCreation: VoteCreationState = VoteCreationState.Idle,
+    /** The floor being rewritten, or null when this is a new post. */
+    val edit: PostEditTarget? = null,
+    val isLoadingEdit: Boolean = false,
+    val editLoadError: SiteError? = null,
+    val editLoadErrorDetail: String? = null,
 ) {
     val hasContent: Boolean get() = title.isNotBlank() || body.isNotBlank()
+
+    val isEditing: Boolean get() = edit != null
+
+    /** A reply has no title and no 阅读权限 — the site's own editor hides both when editing one. */
+    val isThreadLevelEdit: Boolean get() = edit?.isOpeningPost != false
 
     /**
      * What the 阅读权限 menu offers. A draft restored with a level the current [selfRank] does not
@@ -451,11 +551,18 @@ data class PostComposerUiState(
      * written only when it lands, so posting early silently drops the picture from the thread.
      */
     val canPublish: Boolean
-        get() = title.isNotBlank() &&
-            body.isNotBlank() &&
-            boardSlug != null &&
-            !isPublishing &&
-            attachments.none { it.status == UploadStatus.UPLOADING || it.status == UploadStatus.WAITING }
+        get() {
+            if (isPublishing) return false
+            // Saving before the current text has arrived would replace the post with an empty one.
+            if (isLoadingEdit) return false
+            if (body.isBlank()) return false
+            if (isThreadLevelEdit && title.isBlank()) return false
+            // A board is chosen once, when the thread is created; an edit cannot move it.
+            if (!isEditing && boardSlug == null) return false
+            return attachments.none {
+                it.status == UploadStatus.UPLOADING || it.status == UploadStatus.WAITING
+            }
+        }
 }
 
 private fun PostComposerUiState.toDraft() = PostDraft(
