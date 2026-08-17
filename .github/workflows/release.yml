@@ -8,6 +8,11 @@ name: Release
 # own; it is kept now that it does not, because `v*` also matches things that are not releases at all
 # — `v2-experiment`, a tag someone pushes to mark a branch point — and publishing a signed APK off
 # one of those is the failure it actually prevents.
+#
+# `vX.Y.Z-dev.N` is the one other shape the guard accepts: a test build, signed and published the
+# same way, but as a GitHub prerelease. `releases/latest` (what the in-app update checker reads,
+# see GitHubReleaseSource.kt) excludes prereleases by construction, so a dev tag never reaches
+# users who didn't go looking for it.
 on:
   push:
     tags: ['v*']
@@ -15,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to release, e.g. v1.0.2'
+        description: 'Existing tag to release, e.g. v1.0.2 or v1.0.2-dev.1'
         required: true
 
 concurrency:
@@ -45,14 +50,19 @@ jobs:
           tag="${{ github.event.inputs.tag || github.ref_name }}"
           # `v*` also matches `v2-experiment`, and workflow_dispatch takes whatever is typed into it —
           # including another app's tag, which would be built as Nodyssey and published under its name.
-          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+(\.[0-9]+)*$'; then
-            echo "::error::$tag is not a Nodyssey release tag; those are shaped vX.Y.Z." >&2
+          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+(\.[0-9]+)*(-dev\.[0-9]+)?$'; then
+            echo "::error::$tag is not a Nodyssey release tag; those are shaped vX.Y.Z or vX.Y.Z-dev.N." >&2
             exit 1
           fi
           version="${tag#v}"
+          is_dev=false
+          if printf '%s' "$tag" | grep -qE -- '-dev\.[0-9]+$'; then
+            is_dev=true
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Releasing $tag (version $version)"
+          echo "is_dev=$is_dev" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag (version $version, dev=$is_dev)"
 
       # A tag that disagrees with the APK it would contain is worth failing over: the store listing,
       # the in-app "about" screen and the download name all read the version from different places,
@@ -76,17 +86,24 @@ jobs:
       # Written before anything is built, so a missing changelog section fails in seconds rather than
       # after a full release build. An empty section is treated as missing on purpose: publishing a
       # release with no notes is the failure this is meant to prevent.
+      #
+      # Dev tags skip this: they don't get a CHANGELOG.md entry of their own, since they're cut for
+      # one-off testing rather than as a versioned step in the app's history.
       - name: Take the release notes from CHANGELOG.md
         run: |
           version="${{ steps.version.outputs.version }}"
-          awk -v v="$version" '
-            $0 ~ "^## " v "( |$)" { inside = 1; next }
-            inside && /^## / { exit }
-            inside { print }
-          ' CHANGELOG.md > release-notes.md
-          if [ ! -s release-notes.md ] || ! grep -q '[^[:space:]]' release-notes.md; then
-            echo "::error::CHANGELOG.md has no content under a '## $version' heading." >&2
-            exit 1
+          if [ "${{ steps.version.outputs.is_dev }}" = "true" ]; then
+            echo "Test build from tag \`${{ steps.version.outputs.tag }}\`. Not a general release; may be unstable." > release-notes.md
+          else
+            awk -v v="$version" '
+              $0 ~ "^## " v "( |$)" { inside = 1; next }
+              inside && /^## / { exit }
+              inside { print }
+            ' CHANGELOG.md > release-notes.md
+            if [ ! -s release-notes.md ] || ! grep -q '[^[:space:]]' release-notes.md; then
+              echo "::error::CHANGELOG.md has no content under a '## $version' heading." >&2
+              exit 1
+            fi
           fi
           previous=$(git tag -l 'v*' --sort=-v:refname | grep -Fxv "${{ steps.version.outputs.tag }}" | head -1)
           if [ -n "$previous" ]; then
@@ -173,14 +190,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${{ steps.version.outputs.tag }}"
+          # `releases/latest`, which the in-app update checker reads, excludes prereleases — this
+          # flag is what keeps a dev tag from reaching users who aren't specifically looking for it.
+          prerelease_flag=()
+          if [ "${{ steps.version.outputs.is_dev }}" = "true" ]; then
+            prerelease_flag=(--prerelease)
+          fi
           if gh release view "$tag" >/dev/null 2>&1; then
             # A re-run after a fix: replace the notes and the asset rather than failing on the
             # release that already exists.
-            gh release edit "$tag" --title "Nodyssey $tag" --notes-file release-notes.md
+            gh release edit "$tag" --title "Nodyssey $tag" --notes-file release-notes.md "${prerelease_flag[@]}"
             gh release upload "$tag" "${{ steps.apk.outputs.path }}" --clobber
           else
             gh release create "$tag" \
               --title "Nodyssey $tag" \
               --notes-file release-notes.md \
+              "${prerelease_flag[@]}" \
               "${{ steps.apk.outputs.path }}"
           fi
