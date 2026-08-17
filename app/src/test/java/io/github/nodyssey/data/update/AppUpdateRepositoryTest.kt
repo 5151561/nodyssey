@@ -6,6 +6,7 @@ import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.AppUpdateException
 import io.github.plaza.core.update.InstallFailure
+import io.github.plaza.core.update.ReleaseNote
 import io.github.plaza.core.update.ReleaseSource
 import io.github.plaza.core.update.UpdateCheck
 import io.github.plaza.core.update.UpdateCheckRecord
@@ -91,6 +92,91 @@ class AppUpdateRepositoryTest {
 
             assertEquals(UpdateCheck.UpToDate, repository.state.value.check)
             assertEquals(0, source.calls)
+        }
+
+    @Test
+    fun `the dev channel is what decides whether test builds are asked for`() =
+        runTest {
+            val source =
+                FakeReleaseSource(release("1.2.0"), preRelease = release("1.3.0-dev.2", preRelease = true))
+            val store = FakeUpdateCheckStore()
+            val repository = repository(source, store)
+
+            repository.check(force = true)
+            advanceUntilIdle()
+            assertEquals(false, source.askedForPreReleases)
+            assertEquals(UpdateCheck.Available(release("1.2.0")), repository.state.value.check)
+
+            store.devChannel = true
+            repository.check(force = true)
+            advanceUntilIdle()
+            assertEquals(true, source.askedForPreReleases)
+            assertEquals(
+                UpdateCheck.Available(release("1.3.0-dev.2", preRelease = true)),
+                repository.state.value.check,
+            )
+        }
+
+    /**
+     * The switch has to take effect now, not in six hours: the stored answer was the other channel's,
+     * and reusing it is how 接收 dev 版更新 would appear to do nothing until the next day.
+     */
+    @Test
+    fun `flipping the channel retires the stored answer`() =
+        runTest {
+            val store = FakeUpdateCheckStore()
+            val source =
+                FakeReleaseSource(release("1.2.0"), preRelease = release("1.3.0-dev.2", preRelease = true))
+            val repository = repository(source, store)
+
+            repository.check()
+            advanceUntilIdle()
+            assertEquals(1, source.calls)
+
+            // Same six-hour window, unforced — but the question changed.
+            store.devChannel = true
+            repository.check()
+            advanceUntilIdle()
+            assertEquals(2, source.calls)
+            assertEquals(
+                UpdateCheck.Available(release("1.3.0-dev.2", preRelease = true)),
+                repository.state.value.check,
+            )
+
+            // And a second unforced check on the same channel is still answered from the record.
+            repository.check()
+            advanceUntilIdle()
+            assertEquals(2, source.calls)
+        }
+
+    /** Turning it back off leaves the dev build installed and simply stops offering another. */
+    @Test
+    fun `a dev build already installed is not offered again once the channel is off`() =
+        runTest {
+            val source = FakeReleaseSource(release("1.2.0"))
+            val repository =
+                repository(source, currentVersionName = "1.3.0-dev.2")
+
+            repository.check(force = true)
+            advanceUntilIdle()
+
+            assertEquals(UpdateCheck.UpToDate, repository.state.value.check)
+        }
+
+    /** 更新日志 lists what the user could install, so the channel decides what it shows. */
+    @Test
+    fun `the release log follows the same channel as the check`() =
+        runTest {
+            val source = FakeReleaseSource(release("1.2.0"), notes = listOf(note("1.2.0")))
+            val store = FakeUpdateCheckStore()
+            val repository = repository(source, store)
+
+            assertEquals(listOf(note("1.2.0")), repository.releaseNotes())
+            assertEquals(false, source.askedForPreReleases)
+
+            store.devChannel = true
+            repository.releaseNotes()
+            assertEquals(true, source.askedForPreReleases)
         }
 
     @Test
@@ -275,7 +361,17 @@ class AppUpdateRepositoryTest {
         const val NOW = 1_770_000_000_000L
         const val RELEASE_SIZE = 2_048L
 
-        fun release(versionName: String) =
+        fun note(versionName: String) =
+            ReleaseNote(
+                versionName = versionName,
+                tag = "v$versionName",
+                notes = "notes",
+                publishedOn = "2026-08-17",
+                preRelease = false,
+                htmlUrl = "https://example.invalid/releases",
+            )
+
+        fun release(versionName: String, preRelease: Boolean = false) =
             AppRelease(
                 versionName = versionName,
                 tag = "v$versionName",
@@ -284,6 +380,7 @@ class AppUpdateRepositoryTest {
                 assetName = "nodyssey-v$versionName.apk",
                 sizeBytes = RELEASE_SIZE,
                 htmlUrl = "https://example.invalid/releases",
+                preRelease = preRelease,
             )
     }
 }
@@ -296,14 +393,25 @@ private class FakeReleaseSource(
     var release: AppRelease?,
     private val failWith: UpdateFailure? = null,
     private val failDownloadWith: UpdateFailure? = null,
+    /** What the dev channel would answer, when a test cares about the difference. */
+    private val preRelease: AppRelease? = null,
+    private val notes: List<ReleaseNote> = emptyList(),
 ) : ReleaseSource {
     var calls = 0
     var downloads = 0
+    var askedForPreReleases: Boolean? = null
+        private set
 
-    override suspend fun latestRelease(): AppRelease? {
+    override suspend fun latestRelease(includePreRelease: Boolean): AppRelease? {
         calls++
+        askedForPreReleases = includePreRelease
         failWith?.let { throw AppUpdateException(it) }
-        return release
+        return if (includePreRelease) preRelease ?: release else release
+    }
+
+    override suspend fun releaseNotes(includePreRelease: Boolean): List<ReleaseNote> {
+        askedForPreReleases = includePreRelease
+        return notes
     }
 
     override suspend fun download(
@@ -324,6 +432,7 @@ private class FakeReleaseSource(
 
 private class FakeUpdateCheckStore(
     private var record: UpdateCheckRecord = UpdateCheckRecord(),
+    var devChannel: Boolean = false,
 ) : UpdateCheckStore {
     var postponed: String? = null
         private set
@@ -333,6 +442,8 @@ private class FakeUpdateCheckStore(
     override suspend fun setUpdateCheckRecord(record: UpdateCheckRecord) {
         this.record = record
     }
+
+    override suspend fun devChannelEnabled(): Boolean = devChannel
 
     override suspend fun postponedUpdateVersion(): String? = postponed
 

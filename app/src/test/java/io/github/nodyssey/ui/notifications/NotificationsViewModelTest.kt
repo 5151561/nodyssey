@@ -145,6 +145,8 @@ class NotificationsViewModelTest {
 
 private object NoSearch : SearchRepository {
     override suspend fun searchUsers(query: String) = emptyList<UserSearchResult>()
+
+    override suspend fun resolveMemberUid(name: String): Long? = null
 }
 
 private object NoMessages : MessageRepository {

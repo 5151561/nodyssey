@@ -57,7 +57,7 @@ class SettingsRepository(
                 reportFormat = preferences[KEY_REPORT_FORMAT]
                     ?.let { runCatching { ReportFormat.valueOf(it) }.getOrNull() }
                     ?: ReportFormat.ADAPTED,
-                homePageBar = preferences[KEY_HOME_PAGE_BAR] ?: false,
+                homePageBar = preferences[KEY_HOME_PAGE_BAR] ?: true,
                 holidayTheme = preferences[KEY_HOLIDAY_THEME] ?: false,
                 searchHistory = decodeSearchHistory(preferences),
                 recentBoards = decodeValues(preferences[KEY_RECENT_BOARDS]),
@@ -83,6 +83,7 @@ class SettingsRepository(
                 notifyMessages = preferences[KEY_NOTIFY_MESSAGES] ?: true,
                 readHistoryLimit = readHistoryLimit(preferences),
                 updateCheckOnLaunch = preferences[KEY_UPDATE_CHECK_ON_LAUNCH] ?: true,
+                updateDevChannel = preferences[KEY_UPDATE_DEV_CHANNEL] ?: false,
             )
         }
 
@@ -119,11 +120,15 @@ class SettingsRepository(
 
     suspend fun setReportFormat(format: ReportFormat) = edit { it[KEY_REPORT_FORMAT] = format.name }
 
-    /** 首页翻页栏; see [UserSettings.homePageBar] for why it is off unless asked for. */
+    /** 首页翻页栏; see [UserSettings.homePageBar] for what it adds. */
     suspend fun setHomePageBar(enabled: Boolean) = edit { it[KEY_HOME_PAGE_BAR] = enabled }
 
     suspend fun setUpdateCheckOnLaunch(enabled: Boolean) =
         edit { it[KEY_UPDATE_CHECK_ON_LAUNCH] = enabled }
+
+    /** 接收 dev 版更新; see [UserSettings.updateDevChannel] for what the user is agreeing to. */
+    suspend fun setUpdateDevChannel(enabled: Boolean) =
+        edit { it[KEY_UPDATE_DEV_CHANNEL] = enabled }
 
     suspend fun setNotificationsEnabled(enabled: Boolean) =
         edit { it[KEY_NOTIFICATIONS_ENABLED] = enabled }
@@ -324,6 +329,7 @@ class SettingsRepository(
         val preferences = preferences()
         return UpdateCheckRecord(
             checkedAtMillis = preferences[KEY_UPDATE_CHECKED_AT] ?: 0L,
+            devChannel = preferences[KEY_UPDATE_RECORD_DEV_CHANNEL] ?: false,
             release =
             preferences[KEY_UPDATE_RELEASE]?.let { stored ->
                 runCatching { json.decodeFromString<AppRelease>(stored) }.getOrNull()
@@ -334,6 +340,9 @@ class SettingsRepository(
     override suspend fun setUpdateCheckRecord(record: UpdateCheckRecord) =
         edit { preferences ->
             preferences[KEY_UPDATE_CHECKED_AT] = record.checkedAtMillis
+            // The channel the answer came from, not the setting: the setting can change between two
+            // checks, and that is exactly the case this field lets the repository notice.
+            preferences[KEY_UPDATE_RECORD_DEV_CHANNEL] = record.devChannel
             val release = record.release
             if (release == null) {
                 preferences.remove(KEY_UPDATE_RELEASE)
@@ -348,6 +357,9 @@ class SettingsRepository(
      * A version name is what makes "不再提醒这个版本" survive: the next release has a different name
      * and asks again on its own, with no expiry to tune and nothing to reset when one ships.
      */
+    override suspend fun devChannelEnabled(): Boolean =
+        preferences()[KEY_UPDATE_DEV_CHANNEL] ?: false
+
     override suspend fun postponedUpdateVersion(): String? = preferences()[KEY_UPDATE_POSTPONED]
 
     override suspend fun setPostponedUpdateVersion(versionName: String) =
@@ -426,6 +438,8 @@ class SettingsRepository(
         private val KEY_UPDATE_RELEASE = stringPreferencesKey("update_latest_release")
         private val KEY_UPDATE_POSTPONED = stringPreferencesKey("update_postponed_version")
         private val KEY_UPDATE_CHECK_ON_LAUNCH = booleanPreferencesKey("update_check_on_launch")
+        private val KEY_UPDATE_DEV_CHANNEL = booleanPreferencesKey("update_dev_channel")
+        private val KEY_UPDATE_RECORD_DEV_CHANNEL = booleanPreferencesKey("update_checked_dev_channel")
 
         private const val RECENT_SEARCH_SEPARATOR = '\u001F'
         private const val MAX_RECENT_SEARCHES = 8
@@ -503,15 +517,14 @@ data class UserSettings(
     /**
      * Whether 首页 carries the same 翻页栏 the thread and 管理记录 have.
      *
-     * Off by default, and the default is the argument: the feed is read by scrolling, and a control
-     * that names the page is answering a question a scrolling reader never asks. It earns its place
-     * for the reader who does — one who reads 首页 by page number the way the site is read in a
-     * browser, or who wants to get back to page 40 without flinging there.
+     * On by default: 首页 is read by page number in the browser, and the reader who arrives from there
+     * expects to be able to say "page 40" rather than fling for it. Switching it off is for the reader
+     * who only scrolls, to whom a control naming the page is answering a question they never ask.
      *
-     * Switching it on does not change how the feed loads. Pages still append while scrolling; the bar
+     * It does not change how the feed loads either way. Pages still append while scrolling; the bar
      * only adds a way to arrive somewhere, which is the same pairing the comment thread uses.
      */
-    val homePageBar: Boolean = false,
+    val homePageBar: Boolean = true,
     /** Local mirror of the account's Remote 启用节日主题 switch. */
     val holidayTheme: Boolean = false,
     val searchHistory: List<SearchHistoryEntry> = emptyList(),
@@ -557,6 +570,17 @@ data class UserSettings(
      * on the 检查更新 button, which is a check the user asked for by being on that screen.
      */
     val updateCheckOnLaunch: Boolean = true,
+    /**
+     * 接收 dev 版更新 — whether the update check also offers the `vX.Y.Z-dev.N` test builds.
+     *
+     * Off, and opt-in on purpose: a dev tag is cut to try one thing out, it carries no CHANGELOG
+     * section, and nothing promises it works. `.github/workflows/release.yml` publishes those as
+     * GitHub prereleases, which is what keeps them away from everyone who has not turned this on.
+     *
+     * Turning it off does not undo an install: a device already running 1.3.0-dev.2 stays on it and
+     * simply hears nothing further until a stable release passes that number.
+     */
+    val updateDevChannel: Boolean = false,
 )
 
 /**

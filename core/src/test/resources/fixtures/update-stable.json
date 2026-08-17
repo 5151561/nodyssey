@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "channel": "stable",
+  "versionName": "1.2.9",
+  "tag": "v1.2.9",
+  "publishedOn": "2026-08-17",
+  "notes": "### 新增\n\n- 可以自己选择要不要收 dev 版了。\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.8...v1.2.9",
+  "apk": {
+    "name": "nodyssey-v1.2.9.apk",
+    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.9/nodyssey-v1.2.9.apk",
+    "sizeBytes": 8830112,
+    "sha256": "740c22968aa915f399feb93850c689787651bc2e52daa8f166fd7f22607b2a95"
+  },
+  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.9"
+}

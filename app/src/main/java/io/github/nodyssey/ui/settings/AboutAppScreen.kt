@@ -55,6 +55,7 @@ import io.github.plaza.core.update.UpdateDownload
 import io.github.plaza.core.update.UpdateFailure
 import io.github.plaza.core.update.releaseNotesText
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -175,6 +176,13 @@ fun AboutAppScreen(
                 onClick = { onOpenUri(AppLinks.ISSUES) },
             )
             AboutActionRow(
+                title = stringResource(R.string.about_app_group),
+                subtitle = stringResource(R.string.about_app_group_hint),
+                icon = PlazaIcons.Group,
+                external = true,
+                onClick = { onOpenUri(AppLinks.TELEGRAM_GROUP) },
+            )
+            AboutActionRow(
                 title = stringResource(R.string.about_changelog),
                 icon = PlazaIcons.History,
                 onClick = onOpenChangelog,
@@ -267,11 +275,13 @@ private fun checkSummary(check: UpdateCheck): String =
         is UpdateCheck.Failed -> failureText(check.failure)
     }
 
+/** Shared with [ChangelogScreen]: both screens fail against the same API, and say so the same way. */
 @Composable
-private fun failureText(failure: UpdateFailure): String =
+internal fun failureText(failure: UpdateFailure): String =
     when (failure) {
         UpdateFailure.Network -> stringResource(R.string.about_update_failed_network)
         is UpdateFailure.Server -> stringResource(R.string.about_update_failed_server, failure.statusCode)
+        UpdateFailure.Checksum -> stringResource(R.string.about_update_failed_checksum)
         UpdateFailure.Unreadable -> stringResource(R.string.about_update_failed_unreadable)
         UpdateFailure.Storage -> stringResource(R.string.about_update_failed_storage)
     }
@@ -315,19 +325,37 @@ private fun UpdateCard(
             modifier = Modifier.padding(Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
                 Text(
                     stringResource(R.string.about_update_new_version, release.versionName),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                 )
+                // Only ever set when 接收 dev 版更新 is on, and said out loud there: the card otherwise
+                // looks exactly like the one offering a release that was actually tested.
+                if (release.preRelease) {
+                    TonalTag(
+                        text = stringResource(R.string.about_update_prerelease),
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                }
                 if (release.sizeBytes > 0L) {
                     Text(
                         Formatter.formatShortFileSize(context, release.sizeBytes),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
+            }
+            if (release.preRelease) {
+                Text(
+                    stringResource(R.string.about_update_prerelease_hint),
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
             val notes = remember(release.notes) { releaseNotesText(release.notes) }
             if (notes.isNotBlank()) {
@@ -471,6 +499,15 @@ internal object AppLinks {
     const val PROJECT_HOME = "https://github.com/5151561/nodyssey"
     const val ISSUES = "https://github.com/5151561/nodyssey/issues"
     const val RELEASES = "https://github.com/5151561/nodyssey/releases"
+
+    /**
+     * The project's own Telegram group — Nodyssey's, not the forum's.
+     *
+     * NodeSeek's channel and group are on 关于 · 社区 under [CommunityLinks]; this one is where the app
+     * itself is discussed, so it belongs beside 项目主页 and 问题反馈 instead. The invite link is the
+     * published form of it: the group has no public username to link by name.
+     */
+    const val TELEGRAM_GROUP = "https://t.me/+0mY1RaPADJMwNTdl"
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "f1 关于 Nodyssey")

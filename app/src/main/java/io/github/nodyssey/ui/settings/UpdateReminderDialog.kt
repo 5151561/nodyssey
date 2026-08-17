@@ -62,6 +62,16 @@ fun UpdateReminderDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                // A test build says so before the 下载并安装 button, not after: it is the one thing
+                // about this release the reader cannot get from the notes, which a dev tag does not
+                // have — `release.yml` gives it a placeholder line instead of a CHANGELOG section.
+                if (release.preRelease) {
+                    Text(
+                        stringResource(R.string.about_update_prerelease_hint),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
                 if (release.sizeBytes > 0L) {
                     Text(
                         stringResource(
