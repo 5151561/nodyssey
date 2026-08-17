@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.ExternalLinkTarget
@@ -26,18 +27,28 @@ class SettingsViewModel(
     private val settings: SettingsRepository,
     private val posts: PostRepository,
     private val session: SessionRepository,
+    private val cache: AppCacheStore,
     private val updates: AppUpdateRepository,
     appVersion: AppVersion,
 ) : ViewModel() {
     private val clearingCache = MutableStateFlow(false)
 
+    /** Null until the first measurement lands; walking the cache directory is not instant. */
+    private val cacheSizeBytes = MutableStateFlow<Long?>(null)
+
     private val versionName = appVersion.name.ifBlank { "—" }
 
     val uiState: StateFlow<SettingsUiState> =
-        combine(settings.settings, clearingCache, updates.state) { values, clearing, update ->
+        combine(
+            settings.settings,
+            clearingCache,
+            cacheSizeBytes,
+            updates.state,
+        ) { values, clearing, cacheSize, update ->
             SettingsUiState(
                 settings = values,
                 isClearingCache = clearing,
+                cacheSizeBytes = cacheSize,
                 versionName = versionName,
                 // Read off the shared updater rather than checked here: the answer is already in
                 // memory by the time this screen opens, and 我的 shows the same dot from the same
@@ -49,6 +60,10 @@ class SettingsViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = SettingsUiState(versionName = versionName),
         )
+
+    init {
+        measureCache()
+    }
 
     fun setThemeMode(value: ThemeMode) {
         viewModelScope.launch { settings.setThemeMode(value) }
@@ -98,10 +113,18 @@ class SettingsViewModel(
             try {
                 val currentSession = session.state.value
                 posts.clearCache(currentSession.isSignedIn, currentSession.fingerprint)
+                // The database is the smaller half. The files beside it — images, WebView, a
+                // downloaded APK — are what the number on the row is made of.
+                cache.clear()
             } finally {
                 clearingCache.value = false
             }
+            measureCache()
         }
+    }
+
+    private fun measureCache() {
+        viewModelScope.launch { cacheSizeBytes.value = cache.sizeBytes() }
     }
 
     companion object {
@@ -112,6 +135,7 @@ class SettingsViewModel(
                         settings = container.settingsRepository,
                         posts = container.postRepository,
                         session = container.sessionRepository,
+                        cache = container.appCacheStore,
                         updates = container.appUpdateRepository,
                         appVersion = container.appVersion,
                     )
@@ -123,6 +147,8 @@ class SettingsViewModel(
 data class SettingsUiState(
     val settings: UserSettings = UserSettings(),
     val isClearingCache: Boolean = false,
+    /** What 清除缓存 would reclaim, or null while it is still being measured. */
+    val cacheSizeBytes: Long? = null,
     /** The installed build's own version, as `PackageManager` reports it. */
     val versionName: String = "—",
     /** The newer version on GitHub, or null when there is none to offer. */

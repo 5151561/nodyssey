@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.settings
 
+import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -224,8 +226,17 @@ fun SettingsScreen(
                         )
                     },
                 )
+                val context = LocalContext.current
                 SettingsRow(
                     title = stringResource(R.string.settings_clear_cache),
+                    // The figure is the one system settings shows under 缓存, in the units it uses.
+                    // Absent until the walk finishes, rather than a 0 that would read as an answer.
+                    subtitle = state.cacheSizeBytes?.let { bytes ->
+                        stringResource(
+                            R.string.settings_clear_cache_size,
+                            Formatter.formatShortFileSize(context, bytes),
+                        )
+                    },
                     bottom = true,
                     onClick = onClearCache,
                     leading = { Icon(Icons.Default.Delete, contentDescription = null) },
