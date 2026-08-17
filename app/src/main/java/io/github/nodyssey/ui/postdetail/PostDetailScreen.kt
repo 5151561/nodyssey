@@ -98,6 +98,7 @@ import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.countOf
 import io.github.nodyssey.model.hasSpent
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.nodyssey.ui.common.BottomPullToRefreshBox
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
@@ -171,6 +172,7 @@ fun PostDetailRoute(
         onPullRefresh = viewModel::pullRefresh,
         onRefreshPage = viewModel::refreshPage,
         onLoadMore = viewModel::loadNextPage,
+        onRefreshTail = viewModel::refreshTail,
         onLoadPage = viewModel::loadPage,
         onJumpToFloor = viewModel::jumpToFloor,
         onScrollHandled = viewModel::onScrollHandled,
@@ -228,6 +230,8 @@ fun PostDetailScreen(
     modifier: Modifier = Modifier,
     /** [onRetry] as a pull gesture; separate so the view model can route it to its own indicator. */
     onPullRefresh: () -> Unit = onRetry,
+    /** The same gesture at the other end of a finished thread — see [PostDetailViewModel.refreshTail]. */
+    onRefreshTail: () -> Unit = {},
     /** Re-fetches the given page in place — the 刷新 menu item, aimed at the page on screen. */
     onRefreshPage: (Int) -> Unit = { onRetry() },
     onLoadPage: (Int) -> Unit = { onLoadMore() },
@@ -431,59 +435,73 @@ fun PostDetailScreen(
                         isRefreshing = state.isRefreshing,
                         onRefresh = onPullRefresh,
                     ) {
-                        ThreadList(
-                            state = state,
-                            listState = listState,
-                            onOpenBrowser = onLinkClick,
-                            onImageClick = onImageClick,
-                            onJumpToFloor = { floor ->
-                                // A quote can point anywhere in the thread, including pages nobody
-                                // has opened. Scroll when it is here, fetch its page when it is not.
-                                val index = state.indexOfFloor(floor)
-                                if (index != null) {
-                                    scope.launch { listState.animateScrollToItem(index) }
-                                } else {
-                                    onJumpToFloor(floor)
-                                }
-                            },
-                            onReact = { content, action ->
-                                val commentId = content.commentId
-                                when {
-                                    // Same rule as the editor: the account has to exist before the
-                                    // action, not after a rejection that also spent the tap.
-                                    !state.isSignedIn -> onSignIn()
-
-                                    commentId == null -> Unit
-
-                                    // 点赞 costs nothing and the site does not confirm it either.
-                                    action == ReactionAction.Upvote -> onReact(commentId, action)
-
-                                    else -> {
-                                        confirmTarget = ReactionConfirm(content, commentId, action)
-                                        if (action == ReactionAction.ChickenLeg) onLoadFreeChickenLegs()
+                        // The same gesture at the foot of a thread the site has no more pages of:
+                        // where auto-append stops, dragging on re-reads the last page and brings in
+                        // the floors posted since. Disabled while a next page exists, because there
+                        // the drag already means "load it".
+                        BottomPullToRefreshBox(
+                            isRefreshing = state.isRefreshingTail,
+                            onRefresh = onRefreshTail,
+                            enabled = !state.hasNextPage && !state.isAppending,
+                            // Above the floating page bar rather than under it: that bar is expanded
+                            // at exactly the moment this gesture becomes available.
+                            indicatorBottomPadding = ThreadBottomBarRoom,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            ThreadList(
+                                state = state,
+                                listState = listState,
+                                onOpenBrowser = onLinkClick,
+                                onImageClick = onImageClick,
+                                onJumpToFloor = { floor ->
+                                    // A quote can point anywhere in the thread, including pages nobody
+                                    // has opened. Scroll when it is here, fetch its page when it is not.
+                                    val index = state.indexOfFloor(floor)
+                                    if (index != null) {
+                                        scope.launch { listState.animateScrollToItem(index) }
+                                    } else {
+                                        onJumpToFloor(floor)
                                     }
-                                }
-                            },
-                            onReplyToFloor = onReply,
-                            onQuoteFloor = onQuote,
-                            onEditFloor = { target ->
-                                // Same gate as everything else that writes: an expired session is
-                                // discovered before the editor opens, not after a save is refused.
-                                if (state.isSignedIn) onEdit(target) else onSignIn()
-                            },
-                            onAuthorClick = onAuthorClick,
-                            // Same gate as the editor and the marks: the account has to exist before
-                            // the action, not after a rejection that also spent the tap.
-                            onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
-                            voteContent = voteContent,
-                            stardustContent = stardustContent,
-                            modifier =
-                            Modifier.floatingToolbarVerticalNestedScroll(
-                                expanded = toolbarExpanded,
-                                onExpand = { pageToolbarExpanded = true },
-                                onCollapse = { pageToolbarExpanded = false },
-                            ),
-                        )
+                                },
+                                onReact = { content, action ->
+                                    val commentId = content.commentId
+                                    when {
+                                        // Same rule as the editor: the account has to exist before the
+                                        // action, not after a rejection that also spent the tap.
+                                        !state.isSignedIn -> onSignIn()
+
+                                        commentId == null -> Unit
+
+                                        // 点赞 costs nothing and the site does not confirm it either.
+                                        action == ReactionAction.Upvote -> onReact(commentId, action)
+
+                                        else -> {
+                                            confirmTarget = ReactionConfirm(content, commentId, action)
+                                            if (action == ReactionAction.ChickenLeg) onLoadFreeChickenLegs()
+                                        }
+                                    }
+                                },
+                                onReplyToFloor = onReply,
+                                onQuoteFloor = onQuote,
+                                onEditFloor = { target ->
+                                    // Same gate as everything else that writes: an expired session is
+                                    // discovered before the editor opens, not after a save is refused.
+                                    if (state.isSignedIn) onEdit(target) else onSignIn()
+                                },
+                                onAuthorClick = onAuthorClick,
+                                // Same gate as the editor and the marks: the account has to exist before
+                                // the action, not after a rejection that also spent the tap.
+                                onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
+                                voteContent = voteContent,
+                                stardustContent = stardustContent,
+                                modifier =
+                                Modifier.floatingToolbarVerticalNestedScroll(
+                                    expanded = toolbarExpanded,
+                                    onExpand = { pageToolbarExpanded = true },
+                                    onCollapse = { pageToolbarExpanded = false },
+                                ),
+                            )
+                        }
                     }
             }
 
@@ -716,6 +734,9 @@ private fun DetailTopBar(
     )
 }
 
+/** The room the floating page bar takes at the foot of the thread, reserved by everything under it. */
+private val ThreadBottomBarRoom = 80.dp
+
 /**
  * The thread as one scroll.
  *
@@ -741,7 +762,7 @@ private fun ThreadList(
 ) {
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(bottom = 80.dp),
+        contentPadding = PaddingValues(bottom = ThreadBottomBarRoom),
         modifier = modifier
             .fillMaxHeight()
             .readableWidth(),

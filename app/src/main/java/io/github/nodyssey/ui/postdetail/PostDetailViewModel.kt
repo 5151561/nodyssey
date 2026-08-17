@@ -81,6 +81,10 @@ class PostDetailViewModel(
                 isSignedIn = session.value.isSignedIn,
                 fingerprint = session.value.fingerprint,
             )
+            // Asked here, and before the collection below, because that collection marks the thread
+            // read and moves the very baseline this compares against. Read afterwards it would
+            // answer "no new replies" for the thread whose badge the reader had just tapped.
+            openThread(hasUnreadReplies = repository.hasUnreadReplies(postId))
             repository.thread(postId).collect { thread ->
                 if (thread == null) {
                     // Logout deletes the Room row while this Navigation 3 entry can remain alive in a
@@ -181,20 +185,27 @@ class PostDetailViewModel(
                 .debounce(POSITION_WRITE_DELAY_MILLIS)
                 .collect { position -> readingPositions.setReadingPosition(postId, position) }
         }
+    }
 
-        viewModelScope.launch {
-            // Opening on a notification's floor, or on the page a `/post-703863-4` link named, starts
-            // the thread there. Page 1 is only the default, not where every read begins.
-            val start = startPage()
-            if (initialFloor != null || start > 1) {
-                _uiState.update { it.copy(pendingScroll = PendingScroll(start, initialFloor)) }
-            }
-            // A thread read moments ago needs no request — but only if the page being asked for is
-            // one of the pages it cached; freshness says nothing about a page nobody has fetched.
-            val cached = repository.cachedPages(postId)
-            if (cached == null || start !in cached || !repository.isThreadFresh(postId)) {
-                load(page = start, replacesWindow = true)
-            }
+    /**
+     * Decides where this read starts and whether it begins with a request.
+     *
+     * @param hasUnreadReplies what the feed says has happened here since the last read — see
+     *   [PostRepository.hasUnreadReplies]. It overrides the cache window: the badge the reader
+     *   tapped names content the cached copy provably does not have.
+     */
+    private suspend fun openThread(hasUnreadReplies: Boolean) {
+        // Opening on a notification's floor, or on the page a `/post-703863-4` link named, starts
+        // the thread there. Page 1 is only the default, not where every read begins.
+        val start = startPage()
+        if (initialFloor != null || start > 1) {
+            _uiState.update { it.copy(pendingScroll = PendingScroll(start, initialFloor)) }
+        }
+        // A thread read moments ago needs no request — but only if the page being asked for is
+        // one of the pages it cached; freshness says nothing about a page nobody has fetched.
+        val cached = repository.cachedPages(postId)
+        if (cached == null || start !in cached || hasUnreadReplies || !repository.isThreadFresh(postId)) {
+            load(page = start, replacesWindow = true)
         }
     }
 
@@ -236,6 +247,24 @@ class PostDetailViewModel(
         val state = _uiState.value
         if (state.isLoading || state.isAppending || !state.hasNextPage) return
         load(page = state.lastLoadedPage + 1, replacesWindow = false)
+    }
+
+    /**
+     * Re-reads the last loaded page, for the pull past the end of a thread that has no next page.
+     *
+     * Where [loadNextPage] stops, this takes over: the floors posted since the page was fetched are
+     * on that same page until it fills, so the gesture that used to do nothing at the foot of a
+     * thread now brings them in. Stored as an extend rather than a refresh so the pages above it
+     * survive — the reader is at the bottom of a scroll they built by reading, and replacing the
+     * window would pull it out from under them. If the new replies started a page of their own, the
+     * refetched last page says so and the ordinary append picks it up from there.
+     */
+    fun refreshTail() {
+        val state = _uiState.value
+        if (state.isLoading || state.isAppending || state.isRefreshingTail) return
+        if (state.hasNextPage || state.body == null) return
+        _uiState.update { it.copy(isRefreshingTail = true) }
+        load(page = state.lastLoadedPage, replacesWindow = false, tail = true)
     }
 
     /**
@@ -418,10 +447,17 @@ class PostDetailViewModel(
         page: Int,
         replacesWindow: Boolean,
         scrollTo: PendingScroll? = null,
+        tail: Boolean = false,
     ) {
         loadJob?.cancel()
+        // A tail refresh announces itself through its own indicator, the way a pull-to-refresh does,
+        // so neither the top progress bar nor the append spinner should claim the same load.
         _uiState.update {
-            it.copy(isLoading = replacesWindow, isAppending = !replacesWindow, error = null)
+            it.copy(
+                isLoading = replacesWindow && !tail,
+                isAppending = !replacesWindow && !tail,
+                error = null,
+            )
         }
         loadJob =
             viewModelScope.launch {
@@ -439,6 +475,7 @@ class PostDetailViewModel(
                             isLoading = false,
                             isAppending = false,
                             isRefreshing = false,
+                            isRefreshingTail = false,
                             pendingScroll = scrollTo ?: it.pendingScroll,
                         )
                     }
@@ -448,6 +485,7 @@ class PostDetailViewModel(
                             isLoading = false,
                             isAppending = false,
                             isRefreshing = false,
+                            isRefreshingTail = false,
                             error = throwable.toSiteError(),
                         )
                     }
@@ -506,6 +544,8 @@ data class PostDetailUiState(
     val isAppending: Boolean = false,
     /** The load is a pull-to-refresh; its own indicator shows it, so no other progress bar should. */
     val isRefreshing: Boolean = false,
+    /** The same, for the pull past the foot of a thread that has no next page. See [PostDetailViewModel.refreshTail]. */
+    val isRefreshingTail: Boolean = false,
     val isSignedIn: Boolean = false,
     /** 临时显示被屏蔽内容 — draws the blocked floors instead of collapsing them. */
     val showBlockedContent: Boolean = false,

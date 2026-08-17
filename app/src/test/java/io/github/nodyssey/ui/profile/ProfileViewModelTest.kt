@@ -341,6 +341,8 @@ private object NoOpPostRepository : PostRepository {
 
     override suspend fun isThreadFresh(postId: Long): Boolean = false
 
+    override suspend fun hasUnreadReplies(postId: Long): Boolean = false
+
     override suspend fun cachedPages(postId: Long): IntRange? = null
 
     override suspend fun markThreadRead(postId: Long) = Unit

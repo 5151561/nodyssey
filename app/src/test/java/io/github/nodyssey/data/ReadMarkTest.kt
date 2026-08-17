@@ -187,4 +187,32 @@ class ReadMarkTest {
             assertFalse(feedPost.isRead)
             assertEquals(0, feedPost.newCommentCount)
         }
+
+    /** The same comparison the badge draws, asked as a question the cache window has to answer to. */
+    @Test
+    fun `a post the list has moved past reports unread replies`() =
+        runTest {
+            givenPost(postId = 7, commentCount = 10)
+            repository.markThreadRead(7)
+            givenPost(postId = 7, commentCount = 14)
+
+            assertTrue(repository.hasUnreadReplies(7))
+        }
+
+    @Test
+    fun `a post read at the count the list still shows reports none`() =
+        runTest {
+            givenPost(postId = 7, commentCount = 10)
+            repository.markThreadRead(7)
+
+            assertFalse(repository.hasUnreadReplies(7))
+        }
+
+    @Test
+    fun `a thread no feed carries reports none`() =
+        runTest {
+            repository.markThreadRead(999)
+
+            assertFalse(repository.hasUnreadReplies(999))
+        }
 }

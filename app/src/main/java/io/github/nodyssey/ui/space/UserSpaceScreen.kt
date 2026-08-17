@@ -86,7 +86,8 @@ fun UserSpaceRoute(
     viewModel: UserSpaceViewModel,
     onBack: () -> Unit,
     onPostClick: (Long, String?) -> Unit,
-    onMessage: (Long) -> Unit,
+    /** Opens the conversation with this account: its uid, and the name its thread should title. */
+    onMessage: (Long, String) -> Unit,
     onEditProfile: () -> Unit,
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
@@ -110,7 +111,7 @@ fun UserSpaceRoute(
         onTabSelected = viewModel::selectTab,
         onPostClick = onPostClick,
         onRetryProfile = viewModel::refreshProfile,
-        onMessage = { onMessage(state.uid) },
+        onMessage = { onMessage(state.uid, state.name) },
         onToggleFollow = viewModel::toggleFollow,
         onFollowFailureShown = viewModel::onFollowFailureShown,
         onEditProfile = onEditProfile,
