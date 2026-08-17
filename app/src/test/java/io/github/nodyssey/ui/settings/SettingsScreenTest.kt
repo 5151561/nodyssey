@@ -51,6 +51,7 @@ class SettingsScreenTest {
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }
@@ -75,6 +76,7 @@ class SettingsScreenTest {
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }
@@ -106,6 +108,7 @@ class SettingsScreenTest {
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }
@@ -134,6 +137,7 @@ class SettingsScreenTest {
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }
@@ -159,6 +163,7 @@ class SettingsScreenTest {
                     onReportFormatChange = { format = it },
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }
@@ -169,9 +174,9 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("显示原文").assertIsSelected()
     }
 
-    /** Off is the default: 首页 is read by scrolling unless the reader says otherwise. */
+    /** On is the default: 首页 is read by page number in the browser, and the bar says which one. */
     @Test
-    fun `the home page bar starts off and toggles from the whole row`() {
+    fun `the home page bar starts on and toggles from the whole row`() {
         composeRule.setContent {
             var enabled by remember { mutableStateOf(UserSettings().homePageBar) }
             PlazaTheme {
@@ -185,6 +190,7 @@ class SettingsScreenTest {
                     onReportFormatChange = {},
                     onHomePageBarChange = { enabled = it },
                     onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }
@@ -193,9 +199,9 @@ class SettingsScreenTest {
         composeRule
             .onNodeWithText("首页翻页栏")
             .performScrollTo()
-            .assertIsOff()
-            .performClick()
             .assertIsOn()
+            .performClick()
+            .assertIsOff()
     }
 
     @Test
@@ -213,6 +219,7 @@ class SettingsScreenTest {
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }
@@ -246,6 +253,7 @@ class SettingsScreenTest {
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }
@@ -276,6 +284,7 @@ class SettingsScreenTest {
                     onUpdateCheckOnLaunchChange = {
                         settings = settings.copy(updateCheckOnLaunch = it)
                     },
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }
@@ -303,6 +312,7 @@ class SettingsScreenTest {
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }
@@ -325,6 +335,7 @@ class SettingsScreenTest {
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
                     onClearCache = {},
                 )
             }

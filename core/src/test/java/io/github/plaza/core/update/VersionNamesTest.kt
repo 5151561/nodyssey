@@ -32,6 +32,15 @@ class VersionNamesTest {
         assertTrue(isNewerVersionName("1.2.0-rc2", "1.2.0-rc1"))
     }
 
+    /** `vX.Y.Z-dev.N` is the shape release.yml publishes test builds under, and N passes 9. */
+    @Test
+    fun `dev builds count up numerically, not alphabetically`() {
+        assertTrue(isNewerVersionName("1.3.0-dev.10", "1.3.0-dev.9"))
+        assertFalse(isNewerVersionName("1.3.0-dev.9", "1.3.0-dev.10"))
+        assertTrue(isNewerVersionName("1.3.0-dev.1", "1.2.9"))
+        assertTrue(isNewerVersionName("1.3.0", "1.3.0-dev.10"))
+    }
+
     @Test
     fun `build metadata does not make a version newer`() {
         assertEquals(0, compareVersionNames("1.2.0+42", "1.2.0"))

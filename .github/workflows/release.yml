@@ -36,6 +36,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # Where the app reads its update manifests from; `NodysseyRelease.UPDATES_BASE_URL` is the
+      # other end of this name.
+      UPDATES_BRANCH: updates
 
     steps:
       - uses: actions/checkout@v7
@@ -207,6 +211,53 @@ jobs:
               --notes-file release-notes.md \
               "${prerelease_flag[@]}" \
               "${{ steps.apk.outputs.path }}"
+          fi
+
+      # What the app actually reads to learn a new build exists.
+      #
+      # Not `api.github.com`: its anonymous quota is 60 calls an hour per *address*, so a phone shares
+      # it with everything else behind its NAT or proxy exit and meets a 403 it did not earn. These
+      # three files sit on the `updates` branch instead and are read straight off
+      # raw.githubusercontent.com — the same shape Sparkle's appcast and electron-builder's latest.yml
+      # have. `core/update/UpdateManifestSource.kt` is the reading end.
+      #
+      # The branch is orphaned on purpose: it carries no source, and nothing on it is ever merged.
+      - name: Publish the update manifests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          channel=stable
+          if [ "${{ steps.version.outputs.is_dev }}" = "true" ]; then
+            channel=dev
+          fi
+          checkout="$RUNNER_TEMP/updates"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if git clone --depth 1 --branch "$UPDATES_BRANCH" "$remote" "$checkout" 2>/dev/null; then
+            echo "Updating the existing $UPDATES_BRANCH branch."
+          else
+            echo "No $UPDATES_BRANCH branch yet; starting one."
+            git init -q -b "$UPDATES_BRANCH" "$checkout"
+            git -C "$checkout" remote add origin "$remote"
+          fi
+          python3 .github/scripts/build-update-manifests.py \
+            --tag "${{ steps.version.outputs.tag }}" \
+            --version "${{ steps.version.outputs.version }}" \
+            --channel "$channel" \
+            --date "$(date -u +%Y-%m-%d)" \
+            --repository "${{ github.repository }}" \
+            --apk "${{ steps.apk.outputs.path }}" \
+            --notes release-notes.md \
+            --changelog CHANGELOG.md \
+            --out "$checkout"
+          git -C "$checkout" config user.name "github-actions[bot]"
+          git -C "$checkout" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$checkout" add -A
+          if git -C "$checkout" diff --cached --quiet; then
+            echo "Manifests unchanged; nothing to push."
+          else
+            git -C "$checkout" commit -qm "Update manifests for ${{ steps.version.outputs.tag }}"
+            git -C "$checkout" push -q origin "$UPDATES_BRANCH"
+            echo "Pushed manifests for ${{ steps.version.outputs.tag }} on the $channel channel."
           fi
 
       # Dev tags are test builds for whoever went looking for them, not something to push at

@@ -92,7 +92,8 @@ import io.github.nodyssey.ui.settings.AboutAppRoute
 import io.github.nodyssey.ui.settings.AboutAppViewModel
 import io.github.nodyssey.ui.settings.AboutCommunityScreen
 import io.github.nodyssey.ui.settings.AppLinks
-import io.github.nodyssey.ui.settings.ChangelogScreen
+import io.github.nodyssey.ui.settings.ChangelogRoute
+import io.github.nodyssey.ui.settings.ChangelogViewModel
 import io.github.nodyssey.ui.settings.CommunityLinks
 import io.github.nodyssey.ui.settings.NotificationSettingsRoute
 import io.github.nodyssey.ui.settings.NotificationSettingsViewModel
@@ -535,10 +536,13 @@ fun MainNavigation(
             }
 
             entry<ChangelogKey> {
-                ChangelogScreen(
-                    versionName = container.appVersion.name.ifBlank { "—" },
+                val changelogViewModel: ChangelogViewModel =
+                    viewModel(factory = ChangelogViewModel.factory(container))
+                ChangelogRoute(
+                    viewModel = changelogViewModel,
                     onBack = { backStack.removeLastOrNull() },
                     onOpenReleases = { openExternalUrl(AppLinks.RELEASES) },
+                    onOpenUri = { openExternalUrl(it) },
                 )
             }
 

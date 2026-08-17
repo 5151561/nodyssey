@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "channel": "dev",
+  "versionName": "1.3.0-dev.2",
+  "tag": "v1.3.0-dev.2",
+  "publishedOn": "2026-08-18",
+  "notes": "Test build from tag `v1.3.0-dev.2`. Not a general release; may be unstable.",
+  "apk": {
+    "name": "nodyssey-v1.3.0-dev.2.apk",
+    "url": "https://github.com/5151561/nodyssey/releases/download/v1.3.0-dev.2/nodyssey-v1.3.0-dev.2.apk",
+    "sizeBytes": 8912345,
+    "sha256": "003c4c81b9982f9d8189a345b8255546592c867d0edd96fcf7e5eb16c8cf3df4"
+  },
+  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.3.0-dev.2"
+}

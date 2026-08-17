@@ -72,7 +72,7 @@ import io.github.plaza.core.net.WebViewCookieJar
 import io.github.plaza.core.net.resolveUserAgent
 import io.github.plaza.core.readAppVersion
 import io.github.plaza.core.runCatchingExceptCancellation
-import io.github.plaza.core.update.GitHubReleaseSource
+import io.github.plaza.core.update.UpdateManifestSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -405,12 +405,11 @@ class DefaultAppContainer(
     override val appUpdateRepository: AppUpdateRepository by lazy {
         DefaultAppUpdateRepository(
             source =
-            GitHubReleaseSource(
+            UpdateManifestSource(
                 okHttpClient = gitHubClient,
                 dispatchers = dispatchers,
                 userAgent = "Nodyssey/${appVersion.name} (+https://github.com/${NodysseyRelease.REPOSITORY})",
-                repository = NodysseyRelease.REPOSITORY,
-                assetNamePrefix = NodysseyRelease.ASSET_NAME_PREFIX,
+                manifestBaseUrl = NodysseyRelease.UPDATES_BASE_URL,
             ),
             store = settingsRepository,
             clock = clock,

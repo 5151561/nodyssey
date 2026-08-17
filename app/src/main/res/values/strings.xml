@@ -282,6 +282,8 @@
     <string name="settings_version">v%1$s</string>
     <string name="settings_update_on_launch">启动时检查更新</string>
     <string name="settings_update_on_launch_hint">有新版就在启动后提醒一次；关掉后只在关于页手动查</string>
+    <string name="settings_update_dev_channel">接收 dev 版更新</string>
+    <string name="settings_update_dev_channel_hint">dev 版是没正式发版的测试包，可能不稳定；关掉后只推正式版</string>
     <string name="settings_licenses">开源许可</string>
 
     <!-- About & community (board f1). -->
@@ -297,9 +299,12 @@
     <string name="about_update_available">发现 %1$s</string>
     <string name="about_update_failed_network">连不上 GitHub</string>
     <string name="about_update_failed_server">GitHub 返回 %1$d</string>
+    <string name="about_update_failed_checksum">下载的安装包校验不通过，请重试</string>
     <string name="about_update_failed_unreadable">读不懂 GitHub 的回答</string>
     <string name="about_update_failed_storage">写不进本机缓存</string>
     <string name="about_update_new_version">新版本 %1$s</string>
+    <string name="about_update_prerelease">dev 测试版</string>
+    <string name="about_update_prerelease_hint">这是没正式发版的测试包，可能不稳定。</string>
     <string name="about_update_download">下载并安装</string>
     <string name="about_update_retry">重试下载</string>
     <string name="about_update_downloading">正在下载 %1$d%%</string>
@@ -323,6 +328,8 @@
     <string name="about_project_home">项目主页</string>
     <string name="about_feedback">问题反馈</string>
     <string name="about_feedback_hint">提 GitHub Issue 或站内私信开发者</string>
+    <string name="about_app_group">Telegram 官方群组</string>
+    <string name="about_app_group_hint">聊 Nodyssey、报 bug、看 dev 版动静</string>
     <string name="about_changelog">更新日志</string>
     <string name="about_theme_signature">Material 3 Expressive · 主题色「石墨青」</string>
     <string name="about_community">社区</string>
@@ -357,7 +364,11 @@
     <string name="privacy_load_failed_hint">原生正文加载或解析失败，可以重试，或使用站内网页阅读。</string>
     <string name="privacy_open_web_fallback">使用网页版阅读</string>
     <string name="changelog_current_version">当前版本 %1$s</string>
-    <string name="changelog_summary">当前构建尚未附带结构化更新记录。完整提交与发行说明以项目 Releases 页面为准。</string>
+    <string name="changelog_installed">当前版本</string>
+    <string name="changelog_refresh">刷新</string>
+    <string name="changelog_no_notes">这个版本没有写更新说明。</string>
+    <string name="changelog_empty">暂时没有可显示的版本记录。</string>
+    <string name="changelog_failed_hint">更新日志读自项目发布的版本清单，可稍后重试。</string>
     <string name="changelog_all_releases">查看全部 Releases ↗</string>
 
     <string name="licenses_summary">Nodyssey 是 GPL-3.0 开源软件，并使用下列主要开源组件。点击条目可查看对应源码与许可信息。</string>

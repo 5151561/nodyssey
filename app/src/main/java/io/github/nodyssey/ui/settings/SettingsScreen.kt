@@ -70,6 +70,7 @@ fun SettingsRoute(
         onReportFormatChange = viewModel::setReportFormat,
         onHomePageBarChange = viewModel::setHomePageBar,
         onUpdateCheckOnLaunchChange = viewModel::setUpdateCheckOnLaunch,
+        onUpdateDevChannelChange = viewModel::setUpdateDevChannel,
         onClearCache = viewModel::clearCache,
         onOpenNotifications = onOpenNotifications,
         onOpenAbout = onOpenAbout,
@@ -90,6 +91,7 @@ fun SettingsScreen(
     onReportFormatChange: (ReportFormat) -> Unit,
     onHomePageBarChange: (Boolean) -> Unit,
     onUpdateCheckOnLaunchChange: (Boolean) -> Unit,
+    onUpdateDevChannelChange: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenNotifications: () -> Unit = {},
@@ -269,6 +271,18 @@ fun SettingsScreen(
                     },
                 )
                 SettingsRow(
+                    title = stringResource(R.string.settings_update_dev_channel),
+                    subtitle = stringResource(R.string.settings_update_dev_channel_hint),
+                    checked = state.settings.updateDevChannel,
+                    onCheckedChange = onUpdateDevChannelChange,
+                    trailing = {
+                        Switch(
+                            checked = state.settings.updateDevChannel,
+                            onCheckedChange = null,
+                        )
+                    },
+                )
+                SettingsRow(
                     title = stringResource(R.string.settings_licenses),
                     bottom = true,
                     onClick = onOpenLicenses,
@@ -360,6 +374,7 @@ private fun SettingsPreview() {
             onReportFormatChange = {},
             onHomePageBarChange = {},
             onUpdateCheckOnLaunchChange = {},
+            onUpdateDevChannelChange = {},
             onClearCache = {},
         )
     }
