@@ -59,6 +59,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -200,7 +201,9 @@ fun MessageThreadScreen(
     ) { padding ->
         Column(Modifier.paddingWithKeyboard(padding).fillMaxSize()) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Box(Modifier.weight(1f)) {
+            // fillMaxWidth, or the box is only as wide as whatever is inside it — which for the
+            // empty state is one line of text, and centring inside that put it against the left edge.
+            Box(Modifier.weight(1f).fillMaxWidth()) {
                 when {
                     state.isLoading && state.messages.isEmpty() -> LoadingState()
 
@@ -218,7 +221,10 @@ fun MessageThreadScreen(
                             stringResource(R.string.message_thread_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.align(Alignment.Center),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(horizontal = Spacing.xl),
                         )
 
                     else -> MessageBubbles(state, onLinkClick, onRetrySend)
