@@ -204,6 +204,8 @@ private class FakeProfileHtmlSource(
         callCount++
         return response
     }
+
+    override suspend fun resolveRedirect(path: String): String? = null
 }
 
 private class FakeProfileJsonSource(

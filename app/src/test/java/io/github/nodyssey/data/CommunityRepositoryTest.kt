@@ -34,4 +34,6 @@ private class RecordingCommunityHtmlSource(
         paths += path
         return html
     }
+
+    override suspend fun resolveRedirect(path: String): String? = null
 }

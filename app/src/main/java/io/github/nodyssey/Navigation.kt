@@ -45,7 +45,6 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.account.AccountSettingsRoute
@@ -293,12 +292,13 @@ fun MainNavigation(
             is NodeSeekSite.InternalRoute.Space -> openSpace(route.uid)
 
             is NodeSeekSite.InternalRoute.Member ->
-                // A mention carries only the user name; the uid comes from the member-search API.
-                // Any failure (offline, signed out, renamed user) falls back to the site itself.
+                // A mention carries only the user name; the uid comes from following the site's own
+                // /member?t= redirect. Any failure (offline, signed out, renamed user) falls back to
+                // the site itself.
                 scope.launch {
                     resolveMemberLink(
                         name = route.name,
-                        searchUsers = container.searchRepository::searchUsers,
+                        resolveMemberUid = container.searchRepository::resolveMemberUid,
                         onResolved = openSpace,
                         onFailure = { openWebUrl(url) },
                     )
@@ -1075,15 +1075,11 @@ fun MainNavigation(
 /** Resolves a member-name link without turning coroutine cancellation into browser navigation. */
 internal suspend fun resolveMemberLink(
     name: String,
-    searchUsers: suspend (String) -> List<UserSearchResult>,
+    resolveMemberUid: suspend (String) -> Long?,
     onResolved: (Long) -> Unit,
     onFailure: () -> Unit,
 ) {
-    val uid =
-        runCatchingExceptCancellation { searchUsers(name) }
-            .getOrNull()
-            ?.firstOrNull { it.name.equals(name, ignoreCase = true) }
-            ?.uid
+    val uid = runCatchingExceptCancellation { resolveMemberUid(name) }.getOrNull()
     if (uid != null) onResolved(uid) else onFailure()
 }
 

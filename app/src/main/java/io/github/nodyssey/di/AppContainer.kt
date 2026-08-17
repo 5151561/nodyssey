@@ -243,7 +243,7 @@ class DefaultAppContainer(
     }
 
     override val searchRepository: SearchRepository by lazy {
-        NetworkSearchRepository(jsonClient, dispatchers)
+        NetworkSearchRepository(jsonClient, htmlClient, dispatchers)
     }
 
     override val postComposerRepository: PostComposerRepository by lazy {
