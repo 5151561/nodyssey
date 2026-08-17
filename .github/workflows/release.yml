@@ -208,3 +208,34 @@ jobs:
               "${prerelease_flag[@]}" \
               "${{ steps.apk.outputs.path }}"
           fi
+
+      # Dev tags are test builds for whoever went looking for them, not something to push at
+      # channel subscribers. TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID are optional: unset, this step
+      # skips instead of failing the release over a notification nobody configured yet.
+      - name: Notify the Telegram channel
+        if: steps.version.outputs.is_dev != 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "::warning::TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set; skipping Telegram notification."
+            exit 0
+          fi
+          tag="${{ steps.version.outputs.tag }}"
+          # Telegram caps a text message at 4096 chars; leave room for the heading built below.
+          notes=$(head -c 3800 release-notes.md)
+          {
+            echo "Nodyssey $tag"
+            echo
+            echo "$notes"
+          } > telegram-message.txt
+          # Plain text (no parse_mode): release notes are free-form Chinese prose, and Markdown's
+          # escaping rules would misparse on ordinary punctuation rather than the other way round.
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            --data-urlencode text@telegram-message.txt
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
+            -F chat_id="${TELEGRAM_CHAT_ID}" \
+            -F document=@"${{ steps.apk.outputs.path }}" \
+            -F caption="Nodyssey $tag"
