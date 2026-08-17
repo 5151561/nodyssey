@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Create
@@ -263,6 +262,9 @@ fun ProfileScreen(
                     ),
                 )
             }
+            // No 在网页中打开 row here. It pointed at the site root rather than at 个人主页 like its
+            // label claimed, and the real thing already lives where the page it opens is: 个人主页's
+            // own top bar has 在浏览器中打开, with that user's space URL.
             item(key = "settings-menu") {
                 ProfileMenuGroup(
                     items =
@@ -277,11 +279,6 @@ fun ProfileScreen(
                             Icons.Default.Settings,
                             onSettings,
                             badge = hasAppUpdate,
-                        ),
-                        ProfileMenuItem(
-                            R.string.profile_open_web,
-                            Icons.AutoMirrored.Filled.ExitToApp,
-                            onOpenWebsite,
                         ),
                     ),
                 )
