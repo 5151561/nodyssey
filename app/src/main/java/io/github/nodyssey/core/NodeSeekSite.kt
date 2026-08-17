@@ -353,6 +353,13 @@ object NodeSeekSite {
 
     fun userSearchApiPath(query: String): String = "/api/account/find/${query.urlEncode()}"
 
+    /**
+     * The `/member?t=<name>` shape an `@mention` link takes. Unlike [userSearchPath]'s `q=` (a
+     * substring search, capped to a page of results), the site 302s `t=` straight to `/space/<uid>`
+     * when the name matches exactly one account — the lookup [parseMemberName] links exist to trigger.
+     */
+    fun memberMentionPath(name: String): String = "/member?t=${name.urlEncode()}"
+
     const val SIGN_IN_PATH = "/signIn.html"
 
     /** Resolves site-relative URLs (`/avatar/1.png`) against the base URL; leaves absolute ones alone. */
@@ -395,6 +402,21 @@ object NodeSeekSite {
             uri.scheme.equals("https", ignoreCase = true) &&
                 uri.host?.lowercase() in hosts &&
                 (uri.port == -1 || uri.port == 443)
+        } == true
+
+    /**
+     * Is this a nodeseek.com link at all, regardless of scheme?
+     *
+     * Route recognition (post/space/mention) never touches the WebView or its cookies — a matched
+     * route opens a native screen instead — so unlike [isTrustedWebViewUrl] it has no reason to
+     * reject `http://`. Post bodies are user-submitted HTML kept verbatim for years; an old mention
+     * or post link typed before the site enforced HTTPS survives as a literal `http://` anchor and
+     * must still resolve internally instead of falling through to the browser.
+     */
+    private fun isOwnSiteUrl(url: String): Boolean =
+        parseWebUri(url)?.let { uri ->
+            (uri.scheme.equals("https", ignoreCase = true) || uri.scheme.equals("http", ignoreCase = true)) &&
+                uri.host?.lowercase() in TRUSTED_WEBVIEW_HOSTS
         } == true
 
     /** Ordinary links leave the app and are accepted only when they are normal web URLs. */
@@ -441,7 +463,7 @@ object NodeSeekSite {
 
     /** Classifies a clicked link: an in-app destination when it is one of ours, null for the browser. */
     fun parseInternalRoute(url: String): InternalRoute? {
-        if (!isTrustedWebViewUrl(url)) return null
+        if (!isOwnSiteUrl(url)) return null
         val unwrapped = unwrapJumpUrl(url)
         if (unwrapped != url) return parseInternalRoute(unwrapped)
         parsePostRoute(url)?.let { return InternalRoute.Post(it.postId, it.page) }

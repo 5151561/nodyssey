@@ -1,6 +1,5 @@
 package io.github.nodyssey
 
-import io.github.nodyssey.data.UserSearchResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -11,14 +10,14 @@ import org.junit.Test
 
 class MemberLinkNavigationTest {
     @Test
-    fun `matching member opens the in-app profile`() =
+    fun `resolved member opens the in-app profile`() =
         runTest {
             var resolvedUid: Long? = null
             var fellBack = false
 
             resolveMemberLink(
                 name = "Alice",
-                searchUsers = { listOf(user(uid = 42, name = "alice")) },
+                resolveMemberUid = { 42L },
                 onResolved = { resolvedUid = it },
                 onFailure = { fellBack = true },
             )
@@ -28,14 +27,31 @@ class MemberLinkNavigationTest {
         }
 
     @Test
-    fun `search failure opens the original member link`() =
+    fun `unresolved member opens the original member link`() =
         runTest {
             var resolved = false
             var fellBack = false
 
             resolveMemberLink(
                 name = "Alice",
-                searchUsers = { throw IllegalStateException("offline") },
+                resolveMemberUid = { null },
+                onResolved = { resolved = true },
+                onFailure = { fellBack = true },
+            )
+
+            assertFalse(resolved)
+            assertTrue(fellBack)
+        }
+
+    @Test
+    fun `lookup failure opens the original member link`() =
+        runTest {
+            var resolved = false
+            var fellBack = false
+
+            resolveMemberLink(
+                name = "Alice",
+                resolveMemberUid = { throw IllegalStateException("offline") },
                 onResolved = { resolved = true },
                 onFailure = { fellBack = true },
             )
@@ -53,7 +69,7 @@ class MemberLinkNavigationTest {
             try {
                 resolveMemberLink(
                     name = "Alice",
-                    searchUsers = { throw CancellationException("screen left") },
+                    resolveMemberUid = { throw CancellationException("screen left") },
                     onResolved = { resolved = true },
                     onFailure = { fellBack = true },
                 )
@@ -65,16 +81,4 @@ class MemberLinkNavigationTest {
             assertFalse(resolved)
             assertFalse(fellBack)
         }
-
-    private fun user(uid: Long, name: String) =
-        UserSearchResult(
-            uid = uid,
-            name = name,
-            avatarUrl = null,
-            level = null,
-            bio = null,
-            joinedText = null,
-            topicCount = null,
-            commentCount = null,
-        )
 }

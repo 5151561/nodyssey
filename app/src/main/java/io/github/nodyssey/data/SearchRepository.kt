@@ -3,6 +3,7 @@ package io.github.nodyssey.data
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonSource
 import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.HtmlSource
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.withContext
@@ -31,10 +32,19 @@ data class UserSearchResult(
  */
 interface SearchRepository {
     suspend fun searchUsers(query: String): List<UserSearchResult>
+
+    /**
+     * Resolves an exact `@mention` username to its uid via the site's own `/member?t=` redirect —
+     * the same lookup the site performs when that link is clicked. [searchUsers] cannot stand in for
+     * this: it is a substring search capped to a page of results, so a short or common name (`xy`,
+     * `cloud`) can rank outside that page even though the site resolves it without any ambiguity.
+     */
+    suspend fun resolveMemberUid(name: String): Long?
 }
 
 class NetworkSearchRepository(
     private val jsonSource: JsonSource,
+    private val htmlSource: HtmlSource,
     private val dispatchers: AppDispatchers,
 ) : SearchRepository {
     private val json = Json { ignoreUnknownKeys = true }
@@ -53,6 +63,11 @@ class NetworkSearchRepository(
             if (!response.success) throw SiteException(SiteError.LoginRequired)
             response.memberList.map(UserSearchDto::toResult)
         }
+    }
+
+    override suspend fun resolveMemberUid(name: String): Long? {
+        val redirected = htmlSource.resolveRedirect(NodeSeekSite.memberMentionPath(name))
+        return redirected?.let(NodeSeekSite::parseUid)
     }
 }
 

@@ -270,8 +270,11 @@ data class PostListUiState(
     val parkedBoards: List<Board> = emptyList(),
     val categorySlug: String? = null,
     val sort: FeedSort = FeedSort.LAST_REPLY,
-    /** 设置 › 首页翻页栏. Off is the default; see [io.github.nodyssey.data.settings.UserSettings.homePageBar]. */
-    val pageBarEnabled: Boolean = false,
+    /**
+     * 设置 › 首页翻页栏, mirroring [io.github.nodyssey.data.settings.UserSettings.homePageBar]'s own
+     * default so the bar does not blink into place once DataStore answers.
+     */
+    val pageBarEnabled: Boolean = true,
     /**
      * Where the loaded window starts — 1 unless 翻页栏 has sent the feed somewhere.
      *

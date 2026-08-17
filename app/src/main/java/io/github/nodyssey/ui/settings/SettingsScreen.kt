@@ -57,6 +57,7 @@ fun SettingsRoute(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenProxy: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier,
@@ -72,8 +73,10 @@ fun SettingsRoute(
         onReportFormatChange = viewModel::setReportFormat,
         onHomePageBarChange = viewModel::setHomePageBar,
         onUpdateCheckOnLaunchChange = viewModel::setUpdateCheckOnLaunch,
+        onUpdateDevChannelChange = viewModel::setUpdateDevChannel,
         onClearCache = viewModel::clearCache,
         onOpenNotifications = onOpenNotifications,
+        onOpenProxy = onOpenProxy,
         onOpenAbout = onOpenAbout,
         onOpenLicenses = onOpenLicenses,
         modifier = modifier,
@@ -92,9 +95,11 @@ fun SettingsScreen(
     onReportFormatChange: (ReportFormat) -> Unit,
     onHomePageBarChange: (Boolean) -> Unit,
     onUpdateCheckOnLaunchChange: (Boolean) -> Unit,
+    onUpdateDevChannelChange: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenNotifications: () -> Unit = {},
+    onOpenProxy: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
 ) {
@@ -255,6 +260,17 @@ fun SettingsScreen(
                 )
             }
 
+            SettingsSectionTitle(stringResource(R.string.settings_network))
+            SettingsGroup {
+                SettingsRow(
+                    title = stringResource(R.string.settings_proxy_entry),
+                    subtitle = stringResource(R.string.settings_proxy_entry_hint),
+                    top = true,
+                    bottom = true,
+                    onClick = onOpenProxy,
+                )
+            }
+
             SettingsSectionTitle(stringResource(R.string.settings_about))
             SettingsGroup {
                 SettingsRow(
@@ -275,6 +291,18 @@ fun SettingsScreen(
                     trailing = {
                         Switch(
                             checked = state.settings.updateCheckOnLaunch,
+                            onCheckedChange = null,
+                        )
+                    },
+                )
+                SettingsRow(
+                    title = stringResource(R.string.settings_update_dev_channel),
+                    subtitle = stringResource(R.string.settings_update_dev_channel_hint),
+                    checked = state.settings.updateDevChannel,
+                    onCheckedChange = onUpdateDevChannelChange,
+                    trailing = {
+                        Switch(
+                            checked = state.settings.updateDevChannel,
                             onCheckedChange = null,
                         )
                     },
@@ -371,6 +399,7 @@ private fun SettingsPreview() {
             onReportFormatChange = {},
             onHomePageBarChange = {},
             onUpdateCheckOnLaunchChange = {},
+            onUpdateDevChannelChange = {},
             onClearCache = {},
         )
     }

@@ -28,7 +28,7 @@ class SettingsViewModel(
     private val posts: PostRepository,
     private val session: SessionRepository,
     private val cache: AppCacheStore,
-    updates: AppUpdateRepository,
+    private val updates: AppUpdateRepository,
     appVersion: AppVersion,
 ) : ViewModel() {
     private val clearingCache = MutableStateFlow(false)
@@ -91,6 +91,19 @@ class SettingsViewModel(
 
     fun setUpdateCheckOnLaunch(value: Boolean) {
         viewModelScope.launch { settings.setUpdateCheckOnLaunch(value) }
+    }
+
+    /**
+     * 接收 dev 版更新, and then a check on the spot.
+     *
+     * Forced rather than left to the next launch: the switch is flipped by someone who wants to know
+     * whether there *is* a test build, and the six-hour stored answer came from the other channel.
+     */
+    fun setUpdateDevChannel(value: Boolean) {
+        viewModelScope.launch {
+            settings.setUpdateDevChannel(value)
+            updates.check(force = true)
+        }
     }
 
     fun clearCache() {

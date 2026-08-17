@@ -7,6 +7,7 @@ import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.AppUpdateException
 import io.github.plaza.core.update.AppUpdateState
 import io.github.plaza.core.update.InstallFailure
+import io.github.plaza.core.update.ReleaseNote
 import io.github.plaza.core.update.ReleaseSource
 import io.github.plaza.core.update.UpdateCheck
 import io.github.plaza.core.update.UpdateCheckRecord
@@ -28,6 +29,14 @@ interface UpdateCheckStore {
     suspend fun updateCheckRecord(): UpdateCheckRecord
 
     suspend fun setUpdateCheckRecord(record: UpdateCheckRecord)
+
+    /**
+     * 接收 dev 版更新, as the user left it — read at check time rather than collected.
+     *
+     * A check is a moment, not a subscription: what matters is the answer when the question is asked,
+     * and flipping the switch forces a fresh check of its own.
+     */
+    suspend fun devChannelEnabled(): Boolean
 
     /** The version whose launch reminder was answered with 稍后, or null when none was. */
     suspend fun postponedUpdateVersion(): String?
@@ -83,6 +92,19 @@ interface AppUpdateRepository {
 
     fun cancelDownload()
 
+    /**
+     * 更新日志: every published release, newest first, on whichever channel the user is on.
+     *
+     * A plain suspend call rather than state on [state]: the log is one screen's content, read when it
+     * opens and gone when it closes, and nothing else in the app has a use for it. Throws
+     * [AppUpdateException] like every other call here — the screen decides the wording.
+     *
+     * Cached for [DefaultAppUpdateRepository.CHECK_INTERVAL_MILLIS] like the check is, and for the same
+     * reason: the anonymous API allows 60 calls an hour *per address*, so opening this screen four
+     * times must cost one call, not four. [force] is the 刷新 button on that screen.
+     */
+    suspend fun releaseNotes(force: Boolean = false): List<ReleaseNote>
+
     /** Reports a `PackageInstaller.STATUS_*` back from [ApkInstallResultReceiver]. */
     fun onInstallStatus(status: Int)
 }
@@ -105,6 +127,15 @@ class DefaultAppUpdateRepository(
     private var checkJob: Job? = null
     private var downloadJob: Job? = null
 
+    /**
+     * The last 更新日志 answer, in memory only.
+     *
+     * Not on disk like the check's record is: that one exists so the red dot is on screen in the first
+     * frame after a cold start, while this is only here to stop one session's repeated visits to the
+     * screen from spending the hourly quota. A relaunch may fetch again, and that is one call a day.
+     */
+    private var cachedNotes: CachedNotes? = null
+
     override fun check(force: Boolean) = runCheck(force = force, reminding = false)
 
     override fun checkOnLaunch() = runCheck(force = false, reminding = true)
@@ -126,18 +157,25 @@ class DefaultAppUpdateRepository(
         if (checkJob?.isActive == true) return
         checkJob =
             scope.launch {
+                val devChannel = store.devChannelEnabled()
                 val record = store.updateCheckRecord()
                 val age = clock.nowMillis() - record.checkedAtMillis
                 // A record that was never written, or one stamped in the future by a clock that has
-                // since been corrected, counts as stale rather than as a fresh "nothing new".
-                val fresh = record.checkedAtMillis > 0L && age in 0 until CHECK_INTERVAL_MILLIS
+                // since been corrected, counts as stale rather than as a fresh "nothing new". So is
+                // one from the other channel: it answered a different question.
+                val fresh =
+                    record.checkedAtMillis > 0L &&
+                        age in 0 until CHECK_INTERVAL_MILLIS &&
+                        record.devChannel == devChannel
                 if (!force && fresh) {
                     publish(record.release)
                 } else {
                     mutableState.update { it.copy(check = UpdateCheck.Checking) }
                     try {
-                        val release = source.latestRelease()
-                        store.setUpdateCheckRecord(UpdateCheckRecord(clock.nowMillis(), release))
+                        val release = source.latestRelease(includePreRelease = devChannel)
+                        store.setUpdateCheckRecord(
+                            UpdateCheckRecord(clock.nowMillis(), release, devChannel),
+                        )
                         publish(release)
                     } catch (e: AppUpdateException) {
                         mutableState.update { it.copy(check = UpdateCheck.Failed(e.failure)) }
@@ -198,6 +236,18 @@ class DefaultAppUpdateRepository(
             }
     }
 
+    override suspend fun releaseNotes(force: Boolean): List<ReleaseNote> {
+        val devChannel = store.devChannelEnabled()
+        val cached = cachedNotes
+        if (!force && cached != null && cached.devChannel == devChannel) {
+            val age = clock.nowMillis() - cached.fetchedAtMillis
+            if (age in 0 until CHECK_INTERVAL_MILLIS) return cached.notes
+        }
+        val notes = source.releaseNotes(includePreRelease = devChannel)
+        cachedNotes = CachedNotes(clock.nowMillis(), devChannel, notes)
+        return notes
+    }
+
     override fun cancelDownload() {
         downloadJob?.cancel()
         downloadJob = null
@@ -255,18 +305,38 @@ class DefaultAppUpdateRepository(
         return File(downloadDirectory, name)
     }
 
+    /**
+     * Whether the APK for [release] is already on disk, whole.
+     *
+     * The rename out of `.part` is what says "whole": it happens only after the last byte, so a file
+     * under this name was complete when it was written. The size, when the release states one, is the
+     * second opinion — but the feed does not carry it, so most of the time this is the rename alone.
+     */
     private fun File.isComplete(release: AppRelease): Boolean =
-        release.sizeBytes > 0L && isFile && length() == release.sizeBytes
+        isFile &&
+            length() > 0L &&
+            (release.sizeBytes <= 0L || length() == release.sizeBytes)
+
+    private data class CachedNotes(
+        val fetchedAtMillis: Long,
+        val devChannel: Boolean,
+        val notes: List<ReleaseNote>,
+    )
 
     companion object {
         /**
-         * How long a stored answer counts as current.
+         * How long a stored answer counts as current, for both the check and 更新日志.
          *
-         * Six hours: often enough that a release published in the morning is offered the same day,
-         * rare enough that the app is nowhere near GitHub's 60-calls-an-hour ceiling even if someone
-         * relaunches it all day.
+         * A day. It used to be six hours, on the reasoning that a release published in the morning
+         * should be offered the same day — which was written as if the 60-calls-an-hour ceiling were
+         * this app's own budget. It is not: GitHub counts anonymous calls **per address**, so every
+         * device behind one NAT or one proxy exit shares those sixty, and a phone that has asked
+         * nothing all day still meets a 403 because the address was spent by strangers. Under a shared
+         * budget the only responsible size is the one that answers the question as rarely as the
+         * question deserves — nobody needs a release offered within the hour, and 检查更新 is there
+         * for the moment someone does.
          */
-        const val CHECK_INTERVAL_MILLIS = 6 * 60 * 60 * 1000L
+        const val CHECK_INTERVAL_MILLIS = 24 * 60 * 60 * 1000L
 
         private const val PART_SUFFIX = ".part"
 

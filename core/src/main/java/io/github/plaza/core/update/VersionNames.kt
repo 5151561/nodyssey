@@ -10,7 +10,9 @@ package io.github.plaza.core.update
  *
  * Segments compare as numbers, a missing segment counts as zero (`1.2` equals `1.2.0`), build
  * metadata is ignored, and a pre-release sorts *below* the release of the same number, as semver
- * requires. A segment that is not a number contributes its leading digits, or zero: a tag shaped in
+ * requires. Inside a pre-release the dot-separated identifiers compare one by one, numerically where
+ * both are numbers — `1.3.0-dev.10` is the build *after* `1.3.0-dev.9`, which a plain string compare
+ * would have upside down. A segment that is not a number contributes its leading digits, or zero: a tag shaped in
  * some way this does not model must not read as "newer" on the strength of alphabetical luck.
  */
 fun compareVersionNames(left: String, right: String): Int {
@@ -55,5 +57,25 @@ private fun comparePreRelease(left: String, right: String): Int =
 
         right.isEmpty() -> -1
 
-        else -> left.compareTo(right)
+        else -> compareIdentifiers(left.split('.'), right.split('.'))
     }
+
+/** Semver's pre-release rule: numeric identifiers compare as numbers and sort below alphanumeric ones. */
+private fun compareIdentifiers(left: List<String>, right: List<String>): Int {
+    repeat(minOf(left.size, right.size)) { index ->
+        val leftIdentifier = left[index]
+        val rightIdentifier = right[index]
+        val leftNumber = leftIdentifier.toIntOrNull()
+        val rightNumber = rightIdentifier.toIntOrNull()
+        val comparison =
+            when {
+                leftNumber != null && rightNumber != null -> leftNumber.compareTo(rightNumber)
+                leftNumber != null -> -1
+                rightNumber != null -> 1
+                else -> leftIdentifier.compareTo(rightIdentifier)
+            }
+        if (comparison != 0) return comparison
+    }
+    // Everything shared matched, so the one that keeps going is the larger: `dev.1` before `dev.1.1`.
+    return left.size.compareTo(right.size)
+}

@@ -7,8 +7,13 @@ import androidx.datastore.preferences.preferencesDataStore
 import coil3.SingletonImageLoader
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.NodysseyRelease
+import io.github.nodyssey.core.net.AppProxyAuthenticator
+import io.github.nodyssey.core.net.AppProxySelector
+import io.github.nodyssey.core.net.AppSocksAuthenticator
 import io.github.nodyssey.core.net.DynamicSignInterceptor
+import io.github.nodyssey.core.net.LiveProxyConfig
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.nodyssey.core.net.ProxyClientKind
 import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
@@ -61,6 +66,10 @@ import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
 import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.nodyssey.data.proxy.DataStoreProxySettings
+import io.github.nodyssey.data.proxy.NetworkProxyConnectionTester
+import io.github.nodyssey.data.proxy.ProxyConnectionTester
+import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.update.ApkInstaller
@@ -69,17 +78,19 @@ import io.github.nodyssey.data.update.DefaultAppUpdateRepository
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
+import io.github.plaza.core.net.CrossOriginRefererInterceptor
 import io.github.plaza.core.net.SiteHtmlClient
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.core.net.WebViewCookieJar
 import io.github.plaza.core.net.resolveUserAgent
 import io.github.plaza.core.readAppVersion
 import io.github.plaza.core.runCatchingExceptCancellation
-import io.github.plaza.core.update.GitHubReleaseSource
+import io.github.plaza.core.update.UpdateManifestSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -152,6 +163,18 @@ interface AppContainer {
      */
     val userAgent: UserAgent
     val okHttpClient: OkHttpClient
+
+    /**
+     * The app's proxy — HTTP or SOCKS, with an optional credential.
+     *
+     * One setting routes all three clients below, which is the point: an app where the posts go
+     * through a proxy and the avatars, uploads or update check quietly do not is an app whose proxy
+     * setting means something different on every screen. `ProxyScope.FORUM_ONLY` is the one way out
+     * of that, and it is the user's to choose. Every other app on the device is unaffected either
+     * way — nothing here is a VPN.
+     */
+    val proxySettings: ProxySettings
+    val proxyConnectionTester: ProxyConnectionTester
 }
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
@@ -169,12 +192,49 @@ class DefaultAppContainer(
 
     override val userAgent: UserAgent by lazy { resolveUserAgent(appContext, NodeSeekSite.CONFIG) }
 
+    /**
+     * Lives as long as the process, and has two tenants: the update download, which has to survive
+     * the 关于 screen being left (a ViewModel scope would cancel it the moment the user backs out to
+     * read what changed), and [liveProxyConfig], which has to survive every screen.
+     */
+    private val appScope = CoroutineScope(SupervisorJob() + dispatchers.default)
+
+    override val proxySettings: ProxySettings by lazy { DataStoreProxySettings(appContext) }
+
+    /**
+     * One pool behind all three clients.
+     *
+     * Pooling is per-host and per-route, so nothing crosses between them — but owning it here means
+     * [liveProxyConfig] can empty it when the proxy setting changes without reaching into a client
+     * that may not have been built yet.
+     */
+    private val connectionPool = ConnectionPool()
+
+    /**
+     * See [LiveProxyConfig] — the synchronous read the clients' routing needs on their own threads.
+     *
+     * Evicting the pool on a change is what makes an edit take effect immediately: the selector below
+     * only decides where new connections go, and a request that lands on a connection opened before
+     * the change would otherwise still travel the old way.
+     */
+    private val liveProxyConfig: LiveProxyConfig by lazy {
+        LiveProxyConfig(appScope, proxySettings.config, onRoutingChanged = connectionPool::evictAll)
+    }
+
     override val okHttpClient: OkHttpClient by lazy {
+        // SOCKS auth has no per-client hook, only this process-wide one — see [AppSocksAuthenticator].
+        java.net.Authenticator.setDefault(AppSocksAuthenticator(liveProxyConfig))
         OkHttpClient
             .Builder()
             .cookieJar(cookieJar)
+            .connectionPool(connectionPool)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
+            // A ProxySelector, not `.proxy(Proxy)`: consulted on every call rather than baked in once,
+            // so toggling or editing 代理设置 takes effect on the next request instead of needing this
+            // client rebuilt.
+            .proxySelector(AppProxySelector(liveProxyConfig, ProxyClientKind.FORUM))
+            .proxyAuthenticator(AppProxyAuthenticator(liveProxyConfig))
             // Applied to page *and* image requests, which both have to look like the mobile site.
             .addInterceptor { chain ->
                 val request = chain.request()
@@ -190,12 +250,20 @@ class DefaultAppContainer(
             // After the one above, and not merged into it: the vote signature covers the very
             // `User-Agent` that interceptor just set, so it has to observe the finished request.
             .addInterceptor(DynamicSignInterceptor())
+            // A *network* interceptor, because it is about a hop the application layer never sees:
+            // the `Referer` stamped above must not follow a redirect off the host it was addressed
+            // to, or an image host that 302s to a CDN with hotlink protection refuses every image.
+            .addNetworkInterceptor(CrossOriginRefererInterceptor())
             .build()
     }
 
     private val htmlClient by lazy { SiteHtmlClient(okHttpClient, dispatchers, NodeSeekSite.CONFIG) }
 
     private val jsonClient by lazy { NodeSeekJsonClient(okHttpClient, dispatchers) }
+
+    override val proxyConnectionTester: ProxyConnectionTester by lazy {
+        NetworkProxyConnectionTester(jsonClient)
+    }
 
     /** The offline-first SSOT. Everything below reads from it; only the data sources write to it. */
     private val database by lazy { NodeSeekDatabase.create(appContext) }
@@ -249,7 +317,7 @@ class DefaultAppContainer(
     }
 
     override val searchRepository: SearchRepository by lazy {
-        NetworkSearchRepository(jsonClient, dispatchers)
+        NetworkSearchRepository(jsonClient, htmlClient, dispatchers)
     }
 
     override val postComposerRepository: PostComposerRepository by lazy {
@@ -322,18 +390,25 @@ class DefaultAppContainer(
     }
 
     /**
-     * A client of its own for the image host, sharing nothing with [okHttpClient].
+     * A client of its own for the image host, sharing with [okHttpClient] only what the user set once
+     * for the whole app.
      *
      * That client carries the WebView cookie jar and stamps `Referer: nodeseek.com` on anything
      * without one. Neither is appropriate for a third-party host we hand an API key to: the key is
      * the credential, the cookies are not its business, and the referrer would tell nodeimage.com
-     * about a browsing session it has no part in. The connection pool is shared because pooling is
-     * per-host anyway, so nothing crosses between them.
+     * about a browsing session it has no part in. What is shared is the connection pool, because
+     * pooling is per-host anyway, and the proxy, because that one is a setting rather than a
+     * property of this host.
      */
     private val imageHostClient: OkHttpClient by lazy {
         OkHttpClient
             .Builder()
-            .connectionPool(okHttpClient.connectionPool)
+            .connectionPool(connectionPool)
+            // The proxy is shared even though nothing else is: a user who routes the forum through a
+            // node is usually on a network that reaches the image host no better. `FORUM_ONLY` is how
+            // they say otherwise, and this selector is what reads it.
+            .proxySelector(AppProxySelector(liveProxyConfig, ProxyClientKind.THIRD_PARTY))
+            .proxyAuthenticator(AppProxyAuthenticator(liveProxyConfig))
             .connectTimeout(15, TimeUnit.SECONDS)
             // Uploads are the slow call here, and a photo on a weak connection takes longer than a
             // page read ever does.
@@ -392,31 +467,25 @@ class DefaultAppContainer(
     private val gitHubClient: OkHttpClient by lazy {
         OkHttpClient
             .Builder()
-            .connectionPool(okHttpClient.connectionPool)
+            .connectionPool(connectionPool)
+            // Same reasoning as `imageHostClient`: whatever reaches the forum is the user's best guess
+            // at what reaches a release download too, unless they picked `FORUM_ONLY`.
+            .proxySelector(AppProxySelector(liveProxyConfig, ProxyClientKind.THIRD_PARTY))
+            .proxyAuthenticator(AppProxyAuthenticator(liveProxyConfig))
             .connectTimeout(15, TimeUnit.SECONDS)
             // An APK download is minutes of streaming, not a page read.
             .readTimeout(120, TimeUnit.SECONDS)
             .build()
     }
 
-    /**
-     * Lives as long as the process, and has exactly one tenant.
-     *
-     * The update download has to survive the 关于 screen being left — a ViewModel scope would cancel
-     * it the moment the user backs out to read what changed — and the silent check at launch belongs
-     * to no screen at all.
-     */
-    private val appScope = CoroutineScope(SupervisorJob() + dispatchers.default)
-
     override val appUpdateRepository: AppUpdateRepository by lazy {
         DefaultAppUpdateRepository(
             source =
-            GitHubReleaseSource(
+            UpdateManifestSource(
                 okHttpClient = gitHubClient,
                 dispatchers = dispatchers,
                 userAgent = "Nodyssey/${appVersion.name} (+https://github.com/${NodysseyRelease.REPOSITORY})",
-                repository = NodysseyRelease.REPOSITORY,
-                assetNamePrefix = NodysseyRelease.ASSET_NAME_PREFIX,
+                manifestBaseUrl = NodysseyRelease.UPDATES_BASE_URL,
             ),
             store = settingsRepository,
             clock = clock,

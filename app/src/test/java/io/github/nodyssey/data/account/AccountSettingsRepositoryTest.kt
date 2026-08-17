@@ -427,6 +427,8 @@ private class FakeSettingsJsonSource(
         return settingHtml
     }
 
+    override suspend fun resolveRedirect(path: String): String? = null
+
     override suspend fun getJson(path: String, referer: String): String {
         requestedPath = path
         requestedReferer = referer
