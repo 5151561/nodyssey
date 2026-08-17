@@ -6,12 +6,13 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.NodysseyRelease
+import io.github.nodyssey.core.net.AppProxyAuthenticator
+import io.github.nodyssey.core.net.AppProxySelector
+import io.github.nodyssey.core.net.AppSocksAuthenticator
 import io.github.nodyssey.core.net.DynamicSignInterceptor
-import io.github.nodyssey.core.net.ForumProxyAuthenticator
-import io.github.nodyssey.core.net.ForumProxySelector
-import io.github.nodyssey.core.net.ForumSocksAuthenticator
 import io.github.nodyssey.core.net.LiveProxyConfig
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.nodyssey.core.net.ProxyClientKind
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
 import io.github.nodyssey.data.CategoryRepository
@@ -85,6 +86,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -156,9 +158,13 @@ interface AppContainer {
     val okHttpClient: OkHttpClient
 
     /**
-     * The forum proxy — HTTP or SOCKS, with an optional credential. Routes only [okHttpClient], so
-     * only forum requests (and the avatars/attachments Coil pulls through it) go through it; the
-     * image-host and update-check clients, and every other app on the device, are unaffected.
+     * The app's proxy — HTTP or SOCKS, with an optional credential.
+     *
+     * One setting routes all three clients below, which is the point: an app where the posts go
+     * through a proxy and the avatars, uploads or update check quietly do not is an app whose proxy
+     * setting means something different on every screen. `ProxyScope.FORUM_ONLY` is the one way out
+     * of that, and it is the user's to choose. Every other app on the device is unaffected either
+     * way — nothing here is a VPN.
      */
     val proxySettings: ProxySettings
     val proxyConnectionTester: ProxyConnectionTester
@@ -188,22 +194,40 @@ class DefaultAppContainer(
 
     override val proxySettings: ProxySettings by lazy { DataStoreProxySettings(appContext) }
 
-    /** See [LiveProxyConfig] — the synchronous read [okHttpClient]'s routing needs on its own threads. */
-    private val liveProxyConfig: LiveProxyConfig by lazy { LiveProxyConfig(appScope, proxySettings.config) }
+    /**
+     * One pool behind all three clients.
+     *
+     * Pooling is per-host and per-route, so nothing crosses between them — but owning it here means
+     * [liveProxyConfig] can empty it when the proxy setting changes without reaching into a client
+     * that may not have been built yet.
+     */
+    private val connectionPool = ConnectionPool()
+
+    /**
+     * See [LiveProxyConfig] — the synchronous read the clients' routing needs on their own threads.
+     *
+     * Evicting the pool on a change is what makes an edit take effect immediately: the selector below
+     * only decides where new connections go, and a request that lands on a connection opened before
+     * the change would otherwise still travel the old way.
+     */
+    private val liveProxyConfig: LiveProxyConfig by lazy {
+        LiveProxyConfig(appScope, proxySettings.config, onRoutingChanged = connectionPool::evictAll)
+    }
 
     override val okHttpClient: OkHttpClient by lazy {
-        // SOCKS auth has no per-client hook, only this process-wide one — see [ForumSocksAuthenticator].
-        java.net.Authenticator.setDefault(ForumSocksAuthenticator(liveProxyConfig))
+        // SOCKS auth has no per-client hook, only this process-wide one — see [AppSocksAuthenticator].
+        java.net.Authenticator.setDefault(AppSocksAuthenticator(liveProxyConfig))
         OkHttpClient
             .Builder()
             .cookieJar(cookieJar)
+            .connectionPool(connectionPool)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             // A ProxySelector, not `.proxy(Proxy)`: consulted on every call rather than baked in once,
             // so toggling or editing 代理设置 takes effect on the next request instead of needing this
             // client rebuilt.
-            .proxySelector(ForumProxySelector(liveProxyConfig))
-            .proxyAuthenticator(ForumProxyAuthenticator(liveProxyConfig))
+            .proxySelector(AppProxySelector(liveProxyConfig, ProxyClientKind.FORUM))
+            .proxyAuthenticator(AppProxyAuthenticator(liveProxyConfig))
             // Applied to page *and* image requests, which both have to look like the mobile site.
             .addInterceptor { chain ->
                 val request = chain.request()
@@ -355,18 +379,25 @@ class DefaultAppContainer(
     }
 
     /**
-     * A client of its own for the image host, sharing nothing with [okHttpClient].
+     * A client of its own for the image host, sharing with [okHttpClient] only what the user set once
+     * for the whole app.
      *
      * That client carries the WebView cookie jar and stamps `Referer: nodeseek.com` on anything
      * without one. Neither is appropriate for a third-party host we hand an API key to: the key is
      * the credential, the cookies are not its business, and the referrer would tell nodeimage.com
-     * about a browsing session it has no part in. The connection pool is shared because pooling is
-     * per-host anyway, so nothing crosses between them.
+     * about a browsing session it has no part in. What is shared is the connection pool, because
+     * pooling is per-host anyway, and the proxy, because that one is a setting rather than a
+     * property of this host.
      */
     private val imageHostClient: OkHttpClient by lazy {
         OkHttpClient
             .Builder()
-            .connectionPool(okHttpClient.connectionPool)
+            .connectionPool(connectionPool)
+            // The proxy is shared even though nothing else is: a user who routes the forum through a
+            // node is usually on a network that reaches the image host no better. `FORUM_ONLY` is how
+            // they say otherwise, and this selector is what reads it.
+            .proxySelector(AppProxySelector(liveProxyConfig, ProxyClientKind.THIRD_PARTY))
+            .proxyAuthenticator(AppProxyAuthenticator(liveProxyConfig))
             .connectTimeout(15, TimeUnit.SECONDS)
             // Uploads are the slow call here, and a photo on a weak connection takes longer than a
             // page read ever does.
@@ -425,7 +456,11 @@ class DefaultAppContainer(
     private val gitHubClient: OkHttpClient by lazy {
         OkHttpClient
             .Builder()
-            .connectionPool(okHttpClient.connectionPool)
+            .connectionPool(connectionPool)
+            // Same reasoning as `imageHostClient`: whatever reaches the forum is the user's best guess
+            // at what reaches a release download too, unless they picked `FORUM_ONLY`.
+            .proxySelector(AppProxySelector(liveProxyConfig, ProxyClientKind.THIRD_PARTY))
+            .proxyAuthenticator(AppProxyAuthenticator(liveProxyConfig))
             .connectTimeout(15, TimeUnit.SECONDS)
             // An APK download is minutes of streaming, not a page read.
             .readTimeout(120, TimeUnit.SECONDS)

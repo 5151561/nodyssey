@@ -289,10 +289,10 @@
     <!-- 代理设置 — a child of Settings' 网络 group. Routes only forum requests, see ProxyConfig doc. -->
     <string name="settings_network">网络</string>
     <string name="settings_proxy_entry">代理</string>
-    <string name="settings_proxy_entry_hint">只代理论坛请求，App 内其它请求和手机上其它 App 不受影响</string>
+    <string name="settings_proxy_entry_hint">HTTP / SOCKS5，代理 App 自己的请求；手机上其它 App 不受影响</string>
     <string name="proxy_title">代理</string>
     <string name="proxy_master_title">启用代理</string>
-    <string name="proxy_master_hint">只代理论坛的网络请求；应用内其它请求和手机上的其它 App 都照常直连</string>
+    <string name="proxy_master_hint">代理 App 内的网络请求；手机上的其它 App 照常直连</string>
     <string name="proxy_type_title">代理类型</string>
     <string name="proxy_type_http">HTTP</string>
     <string name="proxy_type_socks">SOCKS5</string>
@@ -300,7 +300,7 @@
     <string name="proxy_host_placeholder">IP 或域名</string>
     <string name="proxy_host_required">请填写代理地址</string>
     <string name="proxy_port_label">端口</string>
-    <string name="proxy_port_placeholder">1-65535</string>
+    <string name="proxy_port_placeholder">1–65535</string>
     <string name="proxy_port_invalid">端口需要在 1–65535 之间</string>
     <string name="proxy_username_label">用户名（可选）</string>
     <string name="proxy_password_label">密码（可选）</string>
@@ -309,6 +309,11 @@
     <string name="proxy_saved">已保存</string>
     <string name="proxy_test">测试连接</string>
     <string name="proxy_test_success">连接成功</string>
+    <string name="proxy_scope_title">只代理论坛</string>
+    <string name="proxy_scope_hint">开启后，图床上传和检查更新走直连；关掉则 App 内的请求都走代理</string>
+    <string name="proxy_advanced_title">VLESS、VMess 这类节点</string>
+    <string name="proxy_advanced_hint">App 自己只会说 HTTP 和 SOCKS5。手机上装了 Clash、mihomo 一类客户端的话，在那边开混合端口，这里填 127.0.0.1 和那个端口，节点协议交给它处理。</string>
+    <string name="proxy_webview_hint">登录用的是系统 WebView，它走自己的网络，不受这里的设置影响。</string>
 
     <!-- About & community (board f1). -->
     <string name="about_title">关于 Nodyssey</string>

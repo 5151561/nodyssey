@@ -18,6 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.proxy.ProxyConfigProblem
+import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.ProxyType
 import io.github.nodyssey.ui.account.accountMessageText
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -71,6 +73,7 @@ fun ProxySettingsRoute(
         onBack = onBack,
         onEnabledChange = viewModel::setEnabled,
         onTypeChange = viewModel::setType,
+        onForumOnlyChange = viewModel::setForumOnly,
         onHostChange = viewModel::updateHost,
         onPortChange = viewModel::updatePort,
         onUsernameChange = viewModel::updateUsername,
@@ -82,7 +85,7 @@ fun ProxySettingsRoute(
 }
 
 /**
- * 代理 — an HTTP or SOCKS5 proxy for the forum's own requests.
+ * 代理 — an HTTP or SOCKS5 proxy for the app's own requests.
  *
  * Everything below the master switch is dimmed and inert while it is off, the same
  * f4-style treatment [NotificationSettingsScreen] uses — there is nothing to configure until there is
@@ -96,6 +99,7 @@ fun ProxySettingsScreen(
     onBack: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
     onTypeChange: (ProxyType) -> Unit,
+    onForumOnlyChange: (Boolean) -> Unit,
     onHostChange: (String) -> Unit,
     onPortChange: (String) -> Unit,
     onUsernameChange: (String) -> Unit,
@@ -211,6 +215,25 @@ fun ProxySettingsScreen(
                     )
                 }
 
+                SettingsGroup {
+                    SettingsRow(
+                        title = stringResource(R.string.proxy_scope_title),
+                        subtitle = stringResource(R.string.proxy_scope_hint),
+                        top = true,
+                        bottom = true,
+                        enabled = state.enabled,
+                        checked = state.scope == ProxyScope.FORUM_ONLY,
+                        onCheckedChange = onForumOnlyChange,
+                        trailing = {
+                            Switch(
+                                checked = state.scope == ProxyScope.FORUM_ONLY,
+                                onCheckedChange = null,
+                                enabled = state.enabled,
+                            )
+                        },
+                    )
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Button(onClick = onSave, enabled = state.enabled) {
                         Text(stringResource(R.string.proxy_save))
@@ -224,8 +247,31 @@ fun ProxySettingsScreen(
                     }
                 }
             }
+
+            // Outside the dimmed block on purpose: this is what someone reads *before* deciding what
+            // to type, and it is the only place the app admits it speaks neither VLESS nor the
+            // WebView's network stack.
+            SettingsGroup {
+                SettingsBlock(
+                    title = stringResource(R.string.proxy_advanced_title),
+                    top = true,
+                    bottom = true,
+                ) {
+                    ProxyNote(stringResource(R.string.proxy_advanced_hint))
+                    ProxyNote(stringResource(R.string.proxy_webview_hint))
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun ProxyNote(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
@@ -272,6 +318,7 @@ private fun ProxySettingsPreview() {
             onBack = {},
             onEnabledChange = {},
             onTypeChange = {},
+            onForumOnlyChange = {},
             onHostChange = {},
             onPortChange = {},
             onUsernameChange = {},

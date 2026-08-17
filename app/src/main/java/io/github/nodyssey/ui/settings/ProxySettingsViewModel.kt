@@ -9,6 +9,7 @@ import io.github.nodyssey.R
 import io.github.nodyssey.data.proxy.ProxyConfig
 import io.github.nodyssey.data.proxy.ProxyConfigProblem
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
+import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.proxy.ProxyType
 import io.github.nodyssey.data.proxy.problem
@@ -49,6 +50,7 @@ class ProxySettingsViewModel(
                         portInput = if (config.port == 0) "" else config.port.toString(),
                         usernameInput = config.username,
                         passwordInput = config.password,
+                        scope = config.scope,
                     )
                 }
             }.launchIn(viewModelScope)
@@ -57,6 +59,11 @@ class ProxySettingsViewModel(
     fun setEnabled(value: Boolean) = _uiState.update { it.copy(enabled = value, problem = null) }
 
     fun setType(value: ProxyType) = _uiState.update { it.copy(type = value, problem = null) }
+
+    /** Part of the same draft as the fields, and committed by the same 保存 — see the class KDoc. */
+    fun setForumOnly(value: Boolean) = _uiState.update {
+        it.copy(scope = if (value) ProxyScope.FORUM_ONLY else ProxyScope.EVERYTHING)
+    }
 
     fun updateHost(value: String) = _uiState.update { it.copy(hostInput = value, problem = null) }
 
@@ -117,6 +124,7 @@ data class ProxySettingsUiState(
     val portInput: String = "",
     val usernameInput: String = "",
     val passwordInput: String = "",
+    val scope: ProxyScope = ProxyScope.EVERYTHING,
     /** Set when a save was refused, and cleared by the next keystroke. */
     val problem: ProxyConfigProblem? = null,
     val testing: Boolean = false,
@@ -130,4 +138,5 @@ internal fun ProxySettingsUiState.toConfig() = ProxyConfig(
     port = portInput.toIntOrNull() ?: 0,
     username = usernameInput.trim(),
     password = passwordInput,
+    scope = scope,
 )
