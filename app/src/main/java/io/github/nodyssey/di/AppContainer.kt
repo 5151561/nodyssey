@@ -66,6 +66,7 @@ import io.github.nodyssey.data.update.DefaultAppUpdateRepository
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
+import io.github.plaza.core.net.CrossOriginRefererInterceptor
 import io.github.plaza.core.net.SiteHtmlClient
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.core.net.WebViewCookieJar
@@ -184,6 +185,10 @@ class DefaultAppContainer(
             // After the one above, and not merged into it: the vote signature covers the very
             // `User-Agent` that interceptor just set, so it has to observe the finished request.
             .addInterceptor(DynamicSignInterceptor())
+            // A *network* interceptor, because it is about a hop the application layer never sees:
+            // the `Referer` stamped above must not follow a redirect off the host it was addressed
+            // to, or an image host that 302s to a CDN with hotlink protection refuses every image.
+            .addNetworkInterceptor(CrossOriginRefererInterceptor())
             .build()
     }
 
