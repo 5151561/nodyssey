@@ -91,13 +91,26 @@ jobs:
       # after a full release build. An empty section is treated as missing on purpose: publishing a
       # release with no notes is the failure this is meant to prevent.
       #
-      # Dev tags skip this: they don't get a CHANGELOG.md entry of their own, since they're cut for
-      # one-off testing rather than as a versioned step in the app's history.
+      # Dev tags have no section of their own — they aren't a versioned step in the app's history —
+      # so they take the `## Unreleased` section instead: that is exactly what a test build contains,
+      # and a tester who can't see what changed has nothing to look for. An empty Unreleased is fine
+      # here (the notice above still says what the build is), which is why only the release branch
+      # treats empty as a failure.
       - name: Take the release notes from CHANGELOG.md
         run: |
           version="${{ steps.version.outputs.version }}"
           if [ "${{ steps.version.outputs.is_dev }}" = "true" ]; then
-            echo "测试版，由 tag \`${{ steps.version.outputs.tag }}\` 构建。不是正式版本，可能不稳定。" > release-notes.md
+            {
+              echo "测试版，由 tag \`${{ steps.version.outputs.tag }}\` 构建。不是正式版本，可能不稳定。"
+              echo
+              awk '
+                $0 ~ "^## Unreleased" { inside = 1; next }
+                inside && /^## / { exit }
+                # The blank line under the heading would stack on the one echoed above.
+                inside && !started && /^[[:space:]]*$/ { next }
+                inside { started = 1; print }
+              ' CHANGELOG.md
+            } > release-notes.md
           else
             awk -v v="$version" '
               $0 ~ "^## " v "( |$)" { inside = 1; next }
@@ -287,16 +300,23 @@ jobs:
           curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             --data-urlencode text@telegram-message.txt
-          # The APK is a separate request, and a notification is not worth failing a release that is
-          # already published: if the file is gone or unreadable, say so and stop, rather than
-          # letting `curl: (26)` mark the whole run red after the release and manifests both landed.
+          # The APK goes in a second request, from a copy in the working directory rather than from
+          # `$RUNNER_TEMP` directly: `-F @path` reads the file inside curl, and whatever curl the
+          # runner image ships may not reach every path the shell can stat.
+          #
+          # A notification is not worth failing a release that is already published, so this half
+          # warns instead of exiting non-zero: the release and the manifests both landed before it.
           apk="${{ steps.apk.outputs.path }}"
-          if [ ! -r "$apk" ]; then
-            echo "::warning::No readable APK at $apk; the channel got the notice without the file."
-            ls -l "$RUNNER_TEMP" || true
-            exit 0
-          fi
-          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
+          ls -l "$apk" || true
+          command -v curl && curl --version | head -1
+          # Copied under its own name: Telegram shows the uploaded filename in the channel.
+          name=$(basename "$apk")
+          cp "$apk" "./$name"
+          if curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
             -F chat_id="${TELEGRAM_CHAT_ID}" \
-            -F document=@"$apk" \
-            -F caption="Nodyssey $tag"
+            -F document=@"$name" \
+            -F caption="Nodyssey $tag"; then
+            echo "Sent the APK to the channel."
+          else
+            echo "::warning::Could not send the APK to the channel; the text notice went out on its own."
+          fi
