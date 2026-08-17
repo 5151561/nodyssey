@@ -97,7 +97,7 @@ jobs:
         run: |
           version="${{ steps.version.outputs.version }}"
           if [ "${{ steps.version.outputs.is_dev }}" = "true" ]; then
-            echo "Test build from tag \`${{ steps.version.outputs.tag }}\`. Not a general release; may be unstable." > release-notes.md
+            echo "测试版，由 tag \`${{ steps.version.outputs.tag }}\` 构建。不是正式版本，可能不稳定。" > release-notes.md
           else
             awk -v v="$version" '
               $0 ~ "^## " v "( |$)" { inside = 1; next }
@@ -260,11 +260,12 @@ jobs:
             echo "Pushed manifests for ${{ steps.version.outputs.tag }} on the $channel channel."
           fi
 
-      # Dev tags are test builds for whoever went looking for them, not something to push at
-      # channel subscribers. TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID are optional: unset, this step
-      # skips instead of failing the release over a notification nobody configured yet.
+      # Dev tags are announced here too: a test build nobody hears about gets no testers, and the
+      # channel is where they are. What keeps it from reading as a general release is the notes body
+      # and the `-dev` in the tag heading, not silence. TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID are
+      # optional: unset, this step skips instead of failing the release over a notification nobody
+      # configured yet.
       - name: Notify the Telegram channel
-        if: steps.version.outputs.is_dev != 'true'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
