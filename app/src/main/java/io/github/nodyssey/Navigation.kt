@@ -100,6 +100,8 @@ import io.github.nodyssey.ui.settings.NotificationSettingsViewModel
 import io.github.nodyssey.ui.settings.OpenSourceLicensesScreen
 import io.github.nodyssey.ui.settings.PrivacyRoute
 import io.github.nodyssey.ui.settings.PrivacyViewModel
+import io.github.nodyssey.ui.settings.ProxySettingsRoute
+import io.github.nodyssey.ui.settings.ProxySettingsViewModel
 import io.github.nodyssey.ui.settings.SettingsRoute
 import io.github.nodyssey.ui.settings.SettingsViewModel
 import io.github.nodyssey.ui.settings.UpdateReminderDialog
@@ -448,6 +450,7 @@ fun MainNavigation(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
                     onOpenNotifications = { backStack.add(NotificationSettingsKey) },
+                    onOpenProxy = { backStack.add(ProxySettingsKey) },
                     onOpenAbout = { backStack.add(AboutAppKey) },
                     onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
                 )
@@ -461,6 +464,15 @@ fun MainNavigation(
                     onBack = { backStack.removeLastOrNull() },
                     // 绑定 Telegram lives on 联系方式 (d6 3/4), the site's own binding entry.
                     onOpenTelegram = { backStack.add(AccountContactKey) },
+                )
+            }
+
+            entry<ProxySettingsKey> {
+                val viewModel: ProxySettingsViewModel =
+                    viewModel(factory = ProxySettingsViewModel.factory(container))
+                ProxySettingsRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
                 )
             }
 

@@ -25,6 +25,15 @@ data object SettingsKey : NavKey
 @Serializable
 data object NotificationSettingsKey : NavKey
 
+/**
+ * 代理设置 — a child of [SettingsKey]'s 网络 group.
+ *
+ * Routes only the forum's own [io.github.nodyssey.di.AppContainer.okHttpClient], not the whole app;
+ * see that property's doc for what does and does not go through it.
+ */
+@Serializable
+data object ProxySettingsKey : NavKey
+
 @Serializable
 data object AboutAppKey : NavKey
 

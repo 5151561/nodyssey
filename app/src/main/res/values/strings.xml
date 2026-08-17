@@ -286,6 +286,30 @@
     <string name="settings_update_dev_channel_hint">dev 版是没正式发版的测试包，可能不稳定；关掉后只推正式版</string>
     <string name="settings_licenses">开源许可</string>
 
+    <!-- 代理设置 — a child of Settings' 网络 group. Routes only forum requests, see ProxyConfig doc. -->
+    <string name="settings_network">网络</string>
+    <string name="settings_proxy_entry">代理</string>
+    <string name="settings_proxy_entry_hint">只代理论坛请求，App 内其它请求和手机上其它 App 不受影响</string>
+    <string name="proxy_title">代理</string>
+    <string name="proxy_master_title">启用代理</string>
+    <string name="proxy_master_hint">只代理论坛的网络请求；应用内其它请求和手机上的其它 App 都照常直连</string>
+    <string name="proxy_type_title">代理类型</string>
+    <string name="proxy_type_http">HTTP</string>
+    <string name="proxy_type_socks">SOCKS5</string>
+    <string name="proxy_host_label">地址</string>
+    <string name="proxy_host_placeholder">IP 或域名</string>
+    <string name="proxy_host_required">请填写代理地址</string>
+    <string name="proxy_port_label">端口</string>
+    <string name="proxy_port_placeholder">1-65535</string>
+    <string name="proxy_port_invalid">端口需要在 1–65535 之间</string>
+    <string name="proxy_username_label">用户名（可选）</string>
+    <string name="proxy_password_label">密码（可选）</string>
+    <string name="proxy_credential_hint">留空表示这个代理不需要认证</string>
+    <string name="proxy_save">保存</string>
+    <string name="proxy_saved">已保存</string>
+    <string name="proxy_test">测试连接</string>
+    <string name="proxy_test_success">连接成功</string>
+
     <!-- About & community (board f1). -->
     <string name="about_title">关于 Nodyssey</string>
     <string name="about_community_title">关于 · 社区</string>

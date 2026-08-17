@@ -55,6 +55,7 @@ fun SettingsRoute(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenProxy: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier,
@@ -73,6 +74,7 @@ fun SettingsRoute(
         onUpdateDevChannelChange = viewModel::setUpdateDevChannel,
         onClearCache = viewModel::clearCache,
         onOpenNotifications = onOpenNotifications,
+        onOpenProxy = onOpenProxy,
         onOpenAbout = onOpenAbout,
         onOpenLicenses = onOpenLicenses,
         modifier = modifier,
@@ -95,6 +97,7 @@ fun SettingsScreen(
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenNotifications: () -> Unit = {},
+    onOpenProxy: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
 ) {
@@ -243,6 +246,17 @@ fun SettingsScreen(
                     bottom = true,
                     onClick = onOpenNotifications,
                     leading = { Icon(Icons.Default.Notifications, contentDescription = null) },
+                )
+            }
+
+            SettingsSectionTitle(stringResource(R.string.settings_network))
+            SettingsGroup {
+                SettingsRow(
+                    title = stringResource(R.string.settings_proxy_entry),
+                    subtitle = stringResource(R.string.settings_proxy_entry_hint),
+                    top = true,
+                    bottom = true,
+                    onClick = onOpenProxy,
                 )
             }
 

@@ -7,6 +7,10 @@ import androidx.datastore.preferences.preferencesDataStore
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.NodysseyRelease
 import io.github.nodyssey.core.net.DynamicSignInterceptor
+import io.github.nodyssey.core.net.ForumProxyAuthenticator
+import io.github.nodyssey.core.net.ForumProxySelector
+import io.github.nodyssey.core.net.ForumSocksAuthenticator
+import io.github.nodyssey.core.net.LiveProxyConfig
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
@@ -58,6 +62,10 @@ import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
 import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.nodyssey.data.proxy.DataStoreProxySettings
+import io.github.nodyssey.data.proxy.NetworkProxyConnectionTester
+import io.github.nodyssey.data.proxy.ProxyConnectionTester
+import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.update.ApkInstaller
@@ -146,6 +154,14 @@ interface AppContainer {
      */
     val userAgent: UserAgent
     val okHttpClient: OkHttpClient
+
+    /**
+     * The forum proxy — HTTP or SOCKS, with an optional credential. Routes only [okHttpClient], so
+     * only forum requests (and the avatars/attachments Coil pulls through it) go through it; the
+     * image-host and update-check clients, and every other app on the device, are unaffected.
+     */
+    val proxySettings: ProxySettings
+    val proxyConnectionTester: ProxyConnectionTester
 }
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
@@ -163,12 +179,31 @@ class DefaultAppContainer(
 
     override val userAgent: UserAgent by lazy { resolveUserAgent(appContext, NodeSeekSite.CONFIG) }
 
+    /**
+     * Lives as long as the process, and has two tenants: the update download, which has to survive
+     * the 关于 screen being left (a ViewModel scope would cancel it the moment the user backs out to
+     * read what changed), and [liveProxyConfig], which has to survive every screen.
+     */
+    private val appScope = CoroutineScope(SupervisorJob() + dispatchers.default)
+
+    override val proxySettings: ProxySettings by lazy { DataStoreProxySettings(appContext) }
+
+    /** See [LiveProxyConfig] — the synchronous read [okHttpClient]'s routing needs on its own threads. */
+    private val liveProxyConfig: LiveProxyConfig by lazy { LiveProxyConfig(appScope, proxySettings.config) }
+
     override val okHttpClient: OkHttpClient by lazy {
+        // SOCKS auth has no per-client hook, only this process-wide one — see [ForumSocksAuthenticator].
+        java.net.Authenticator.setDefault(ForumSocksAuthenticator(liveProxyConfig))
         OkHttpClient
             .Builder()
             .cookieJar(cookieJar)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
+            // A ProxySelector, not `.proxy(Proxy)`: consulted on every call rather than baked in once,
+            // so toggling or editing 代理设置 takes effect on the next request instead of needing this
+            // client rebuilt.
+            .proxySelector(ForumProxySelector(liveProxyConfig))
+            .proxyAuthenticator(ForumProxyAuthenticator(liveProxyConfig))
             // Applied to page *and* image requests, which both have to look like the mobile site.
             .addInterceptor { chain ->
                 val request = chain.request()
@@ -190,6 +225,10 @@ class DefaultAppContainer(
     private val htmlClient by lazy { SiteHtmlClient(okHttpClient, dispatchers, NodeSeekSite.CONFIG) }
 
     private val jsonClient by lazy { NodeSeekJsonClient(okHttpClient, dispatchers) }
+
+    override val proxyConnectionTester: ProxyConnectionTester by lazy {
+        NetworkProxyConnectionTester(jsonClient)
+    }
 
     /** The offline-first SSOT. Everything below reads from it; only the data sources write to it. */
     private val database by lazy { NodeSeekDatabase.create(appContext) }
@@ -392,15 +431,6 @@ class DefaultAppContainer(
             .readTimeout(120, TimeUnit.SECONDS)
             .build()
     }
-
-    /**
-     * Lives as long as the process, and has exactly one tenant.
-     *
-     * The update download has to survive the 关于 screen being left — a ViewModel scope would cancel
-     * it the moment the user backs out to read what changed — and the silent check at launch belongs
-     * to no screen at all.
-     */
-    private val appScope = CoroutineScope(SupervisorJob() + dispatchers.default)
 
     override val appUpdateRepository: AppUpdateRepository by lazy {
         DefaultAppUpdateRepository(
