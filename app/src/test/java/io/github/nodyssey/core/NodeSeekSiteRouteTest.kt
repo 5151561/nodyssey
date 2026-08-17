@@ -27,6 +27,27 @@ class NodeSeekSiteRouteTest {
         )
     }
 
+    /**
+     * Post bodies are user-submitted HTML kept verbatim for years — a mention or post link typed
+     * before the site enforced HTTPS survives as a literal `http://` anchor. Recognizing it as a
+     * route is a plain host/path match with no WebView involved, so it must not require HTTPS the
+     * way [NodeSeekSite.isTrustedWebViewUrl] does.
+     */
+    @Test fun `legacy http links still route internally`() {
+        assertEquals(
+            NodeSeekSite.InternalRoute.Member("lcy0828"),
+            NodeSeekSite.parseInternalRoute("http://www.nodeseek.com/member?t=lcy0828"),
+        )
+        assertEquals(
+            NodeSeekSite.InternalRoute.Post(832584L, 2),
+            NodeSeekSite.parseInternalRoute("http://www.nodeseek.com/post-832584-2"),
+        )
+        assertEquals(
+            NodeSeekSite.InternalRoute.Space(23042L),
+            NodeSeekSite.parseInternalRoute("http://www.nodeseek.com/space/23042"),
+        )
+    }
+
     @Test fun `jump to an external target unwraps for the browser`() {
         assertEquals(null, NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/jump?to=https%3A%2F%2Filatency.com%2Fcoverage"))
         assertEquals(

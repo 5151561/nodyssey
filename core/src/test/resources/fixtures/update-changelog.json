@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "versions": [
+    {
+      "versionName": "1.2.9",
+      "tag": "v1.2.9",
+      "publishedOn": "2026-08-17",
+      "preRelease": false,
+      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.9",
+      "notes": "### 新增\n\n- 可以自己选择要不要收 dev 版了。"
+    },
+    {
+      "versionName": "1.2.8",
+      "tag": "v1.2.8",
+      "publishedOn": "2026-08-16",
+      "preRelease": false,
+      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.8",
+      "notes": "### 新增\n\n- 能改自己发过的帖子和回复了。"
+    },
+    {
+      "versionName": "1.2.7",
+      "tag": "v1.2.7",
+      "publishedOn": "2026-08-14",
+      "preRelease": false,
+      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.7",
+      "notes": "### 修复\n\n- 表格里的链接可以点了。"
+    }
+  ]
+}

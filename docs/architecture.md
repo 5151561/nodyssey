@@ -166,11 +166,40 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
   安装器。数据层在 `data/update/`，纯粹的版本号比较在 `core/update/VersionNames.kt`。
 - **第三个 `OkHttpClient`。** 理由和图床那条一样：`AppContainer.okHttpClient` 挂着 WebView 的
   cookie jar 并补 `Referer: nodeseek.com`，这两样发给 GitHub 都没道理。User-Agent 这里写的是
-  `Nodyssey/<版本>`——GitHub API 要求调用方自报家门，而这里没有需要伪装成浏览器的挑战。
-- **只信 `releases/latest`，不做任何第三方中转。** GitHub 已经把草稿和预发布排除在这个端点之外；
-  连不上就明说连不上并给出手动入口，而不是换一条来路不明的下载链路。
-- **比较的是 tag 和 `PackageManager` 报的 versionName**，不是 versionCode——Release 上没有
-  versionCode。`release.yml` 里那道「tag 必须等于 versionName」的闸门是这件事成立的前提，
+  `Nodyssey/<版本>`——自报家门是礼貌，而这里没有需要伪装成浏览器的挑战。
+- **不碰 `api.github.com`，读自己发布的静态清单。** 「有没有新版」最顺手的写法是
+  `GET /repos/<repo>/releases/latest`，这条路走过，也正是它把这件事教明白的：匿名调用是
+  **每 IP** 60 次/小时，和同一个 NAT、同一个代理出口后面的所有客户端共享，所以一台一整天没问过
+  GitHub 的手机照样收到 403。这不是加个兜底能解决的问题，是给陌生人分发的客户端选错了协议。
+  桌面端成熟的做法——Sparkle 的 appcast、electron-builder 的 `latest.yml`——是发版时在安装包旁边
+  放一份很小的静态元数据，客户端只读它。本项目照这个形状来：`release.yml` 往 `updates` 分支写
+  `stable.json` / `dev.json` / `changelog.json`，这个分支由 **GitHub Pages** 发布，客户端读
+  `https://5151561.github.io/nodyssey/<文件>`，APK 仍然挂在 Release 上。
+  **不是 `raw.githubusercontent.com`**——它服务的是同一个分支，也是第一版选的地址，但 raw 自己也按
+  IP 限流：在测试用的那个代理出口上它对所有人回 429，和当初离开 API 的原因一模一样，只是换了个
+  主机名。Pages 那条在同一根网线上 0.7 秒回 200。**仓库设置里 Pages 必须一直指向 `updates` 分支**；
+  关掉的话这三个文件就是 404，客户端会照实报错而不是说「已是最新」。读的一端是 `core/update/UpdateManifestSource.kt`，写的一端是
+  `.github/scripts/build-update-manifests.py`——**两头是同一份协议，字段名改一边就等于改坏**，
+  `core` 的 fixture 就是那个脚本的输出，改坏了测试会先报。
+- **协议是自己的，所以能往里加东西。** 清单带 `sha256`，下载完先比对再交给安装器：APK 有签名、
+  系统安装器会验，所以这一步防的不是恶意包，而是把「下歪了」和「下坏了」区分开——否则两种都只会
+  得到一句「解析包时出现问题」。以后要加最低系统版本、灰度比例、强制更新，也是改自己的文件，
+  而不是去 GitHub 的字段里找一个意思差不多的。`schema` 对不上就整份不认：更新这件事不适合猜。
+- **dev 版是一个开关，默认关**（`UserSettings.updateDevChannel`，「设置 › 关于 › 接收 dev 版更新」）。
+  两个渠道各有一份清单，地址对称：`stable.json` 只由正式版写，`dev.json` 每次发版都写——想要
+  dev 的人要的是「最新的那个」，正式版发出来之后最新的就是它。开关翻面立刻强制重查一次：落盘的
+  那条记录回答的是另一个渠道的问题，沿用它等于让开关一整天看着没反应。清单里的 `channel` 一路
+  带到界面上，更新卡和启动提醒都要写明这是测试包——dev tag 没有自己的 CHANGELOG 段落，不说就和
+  一个正式版长得一模一样。
+- **更新日志读 `changelog.json`，不是打包进来的 CHANGELOG.md。** 装了几个月的旧包也要能看到这
+  期间发了什么，而随包带的那份只到它自己那次构建为止。那个文件由脚本从 `CHANGELOG.md` 的版本
+  章节生成，dev tag 会额外插一条自己（它在 CHANGELOG.md 里没有章节），关掉 dev 开关的人看不到它。
+- **请求少到一天两次。** 检查更新和更新日志各自缓存一天（`CHECK_INTERVAL_MILLIS`），
+  「检查更新」和日志页的「刷新」是强制的那条路。静态文件没有配额，但省下的请求同样是省下的电
+  和流量，而且更新检测本来就不需要分钟级。
+- **比较的是清单里的 versionName 和 `PackageManager` 报的 versionName**，不是 versionCode——
+  Release 上没有 versionCode。预发布后缀按 semver 比：`-dev.N` 排在同号正式版之前，N 按数字比而不是按字典序，
+  否则 `dev.10` 会被读成比 `dev.9` 旧。`release.yml` 里那道「tag 必须等于 versionName」的闸门是这件事成立的前提，
   它读的是 `gradle.properties` 的 `nodyssey.versionName`——版本号写在那里而不是模块的构建文件里，
   因为工作流要在不跑 Gradle 的情况下读到它。
 - **`PackageInstaller` 而不是 `FileProvider` + `ACTION_VIEW`。** 会话直接读我们自己的流，不需要
@@ -181,7 +210,7 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
   设置页和「我的」读到。为此 `DefaultAppContainer` 有一个进程级 `appScope`，目前只有它一个租户。
 - **上次检查的结果落盘**（`SettingsRepository` 的更新簿记，和 `notificationSeenCounts` 同类，
   不进 `UserSettings`）：红点要在冷启动第一帧就在，而不是一次网络往返之后才出现；
-  落盘的答案也让六小时内的重启不再问 GitHub。读出来时**仍然按当前 versionName 过滤一遍**——
+  落盘的答案也让一天之内的重启不再问 GitHub。读出来时**仍然按当前 versionName 过滤一遍**——
   记录会比写下它的那个版本活得久，装完之后那条记录还在说「1.2.0 出了」。
 - **启动提醒和红点是两件事，走两条路。** 红点读 `state`（有新版就一直在），提醒读
   `launchReminder`（问一次，按哪个按钮都算答完）。只有 `checkOnLaunch()` 会举起提醒，`check()` 不会——

@@ -2,8 +2,14 @@ package io.github.nodyssey.data.imagehost
 
 import android.content.Context
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.core.app.ApplicationProvider
+import io.github.nodyssey.data.security.PlainCipher
+import io.github.nodyssey.data.security.ReversingCipher
+import io.github.nodyssey.data.security.SecretCipher
+import io.github.nodyssey.data.security.UnencryptableCipher
+import io.github.nodyssey.data.security.UnreadableCipher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -26,7 +32,13 @@ private const val NODE_IMAGE_KEY = "0123456789abcdef0123456789abcdef0123456789ab
 @RunWith(RobolectricTestRunner::class)
 class ImageHostSettingsTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val settings = DataStoreImageHostSettings(context)
+
+    /**
+     * The real cipher is the platform keystore, which a JVM test does not have — it would fail every
+     * call and store nothing, and every assertion below would be about that rather than about this
+     * class. See `TestCiphers.kt` for what each stand-in pins down.
+     */
+    private val settings = DataStoreImageHostSettings(context, ReversingCipher)
 
     @Test
     fun `each host's credentials are kept apart`() = runTest {
@@ -133,5 +145,122 @@ class ImageHostSettingsTest {
         val migrated = LegacyNodeImageKeyMigration { error("corrupt") }.migrate(emptyPreferences())
 
         assertEquals(ImageHostProvider.NODE_IMAGE.id, migrated[stringPreferencesKey("selected")])
+    }
+
+    /** What a backup, or anyone reading the file, would find where the credential used to be. */
+    @Test
+    fun `a token is stored encrypted and the address beside it is not`() = runTest {
+        settings.save(
+            ImageHostConfig(ImageHostProvider.LSKY_PRO, siteUrl = "https://img.example.com", token = "1|lskytoken"),
+        )
+
+        // Reading the same file back with a cipher that does nothing shows what actually landed on disk.
+        val onDisk = DataStoreImageHostSettings(context, PlainCipher).config(ImageHostProvider.LSKY_PRO).first()
+        assertTrue("the token must be stored as ciphertext", SecretCipher.isEncrypted(onDisk.token))
+        assertFalse("and must not contain the token", onDisk.token.contains("lskytoken"))
+        assertEquals("https://img.example.com", onDisk.siteUrl)
+    }
+
+    /**
+     * A custom host's secret is in one of two fields and the app cannot tell which, so both are
+     * encrypted — the same two 断开 clears. The names and paths around them stay readable.
+     */
+    @Test
+    fun `a custom host's secret-bearing fields are encrypted and its field names are not`() = runTest {
+        settings.save(
+            ImageHostConfig(
+                provider = ImageHostProvider.CUSTOM,
+                siteUrl = "https://img.example.com/api/upload",
+                custom = CustomHostFields(
+                    fileField = "smfile",
+                    headerName = "X-Token",
+                    headerValue = "headersecret",
+                    formFields = "token=formsecret",
+                    urlPath = "data.url",
+                ),
+            ),
+        )
+
+        val onDisk = DataStoreImageHostSettings(context, PlainCipher).config(ImageHostProvider.CUSTOM).first()
+        assertTrue(SecretCipher.isEncrypted(onDisk.custom.headerValue))
+        assertTrue(SecretCipher.isEncrypted(onDisk.custom.formFields))
+        assertEquals("X-Token", onDisk.custom.headerName)
+        assertEquals("smfile", onDisk.custom.fileField)
+        assertEquals("data.url", onDisk.custom.urlPath)
+
+        // And it all comes back the way it was typed.
+        val readable = settings.config(ImageHostProvider.CUSTOM).first()
+        assertEquals("headersecret", readable.custom.headerValue)
+        assertEquals("token=formsecret", readable.custom.formFields)
+    }
+
+    /**
+     * An install from before this store encrypted anything. Its token is a working credential, and an
+     * update that stopped reading it would disconnect the host with nothing on screen to explain why.
+     */
+    @Test
+    fun `a plaintext token from an older version is still read as the token`() = runTest {
+        // PlainCipher writes unmarked, which is exactly the shape those installs have on disk.
+        DataStoreImageHostSettings(context, PlainCipher)
+            .save(ImageHostConfig(ImageHostProvider.SMMS, token = "plainsmmstoken"))
+
+        assertEquals("plainsmmstoken", settings.config(ImageHostProvider.SMMS).first().token)
+    }
+
+    /** A restored backup carries ciphertext to a phone whose keystore has no key for it. */
+    @Test
+    fun `a token that cannot be decrypted reads as no token, and the address survives`() = runTest {
+        settings.save(
+            ImageHostConfig(ImageHostProvider.EASY_IMAGE, siteUrl = "https://img.example.com", token = "gone"),
+        )
+
+        val recovered = DataStoreImageHostSettings(context, UnreadableCipher)
+            .config(ImageHostProvider.EASY_IMAGE)
+            .first()
+        assertEquals("", recovered.token)
+        assertEquals("https://img.example.com", recovered.siteUrl)
+    }
+
+    /** Encryption failing is not a reason to fall back to plaintext. */
+    @Test
+    fun `a device that cannot encrypt stores no token at all`() = runTest {
+        DataStoreImageHostSettings(context, UnencryptableCipher)
+            .save(ImageHostConfig(ImageHostProvider.IMGBB, token = "neverstored"))
+
+        assertEquals("", DataStoreImageHostSettings(context, PlainCipher).config(ImageHostProvider.IMGBB).first().token)
+    }
+
+    /**
+     * The upgrade path: the credentials an install already has are encrypted on the first launch after
+     * the update, not whenever the user next happens to open 图床设置 and press 保存.
+     */
+    @Test
+    fun `credentials already in the store are encrypted once, and configuration is left alone`() = runTest {
+        val existing = mutablePreferencesOf(
+            ImageHostKeys.token(ImageHostProvider.NODE_IMAGE) to "plaintoken",
+            ImageHostKeys.siteUrl(ImageHostProvider.LSKY_PRO) to "https://img.example.com",
+            ImageHostKeys.CUSTOM_HEADER_VALUE to "plainheader",
+            ImageHostKeys.CUSTOM_HEADER_NAME to "X-Token",
+        )
+        val migration = ImageHostSecretEncryptionMigration(ReversingCipher)
+
+        assertTrue("plaintext in the store is what this migration is for", migration.shouldMigrate(existing))
+        val migrated = migration.migrate(existing)
+
+        assertEquals(SecretCipher.MARKER + "nekotnialp", migrated[ImageHostKeys.token(ImageHostProvider.NODE_IMAGE)])
+        assertEquals(SecretCipher.MARKER + "redaehnialp", migrated[ImageHostKeys.CUSTOM_HEADER_VALUE])
+        assertEquals("https://img.example.com", migrated[ImageHostKeys.siteUrl(ImageHostProvider.LSKY_PRO)])
+        assertEquals("X-Token", migrated[ImageHostKeys.CUSTOM_HEADER_NAME])
+        assertFalse("it must not run twice", migration.shouldMigrate(migrated))
+    }
+
+    /** A keystore that refuses must leave a working credential working, not drop it. */
+    @Test
+    fun `a device that cannot encrypt keeps its credentials readable`() = runTest {
+        val existing = mutablePreferencesOf(ImageHostKeys.token(ImageHostProvider.SMMS) to "plaintoken")
+
+        val migrated = ImageHostSecretEncryptionMigration(UnencryptableCipher).migrate(existing)
+
+        assertEquals("plaintoken", migrated[ImageHostKeys.token(ImageHostProvider.SMMS)])
     }
 }

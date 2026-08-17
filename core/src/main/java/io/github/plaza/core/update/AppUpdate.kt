@@ -20,6 +20,41 @@ data class AppRelease(
     val sizeBytes: Long,
     /** The release page, for the "打不开就自己去下载" escape hatch. */
     val htmlUrl: String,
+    /**
+     * True for a GitHub prerelease — a `vX.Y.Z-dev.N` test build.
+     *
+     * Only ever set when the user turned the dev channel on, since that is the only check that looks
+     * past `releases/latest`. Carried so the screens can say so before anyone installs one: a build
+     * cut for testing has no CHANGELOG section of its own and no promise that it works.
+     */
+    val preRelease: Boolean = false,
+    /**
+     * The APK's SHA-256 as the manifest published it, lowercase hex; blank when it stated none.
+     *
+     * Checked against the bytes that arrive, which is the one thing a download can get wrong without
+     * failing: a truncated or mangled file otherwise reaches the installer and comes back as
+     * "解析包时出现问题", a sentence that names neither cause nor cure.
+     */
+    val sha256: String = "",
+)
+
+/**
+ * One published release as 更新日志 reads it — the notes, not the download.
+ *
+ * Separate from [AppRelease] because the two ask different things of a release: an update has to have
+ * an installable APK attached and a version newer than this build, while the log wants every release
+ * the project published, in order, whatever is or is not attached to it.
+ */
+data class ReleaseNote(
+    /** The version inside the APK — `1.2.0`, not the `v1.2.0` tag. */
+    val versionName: String,
+    val tag: String,
+    /** The release notes as published, which is the CHANGELOG section for that version. */
+    val notes: String,
+    /** `2026-08-17`, as GitHub dated it, or blank when it said nothing. */
+    val publishedOn: String,
+    val preRelease: Boolean,
+    val htmlUrl: String,
 )
 
 /**
@@ -32,7 +67,7 @@ sealed interface UpdateFailure {
     /** Transport failure — no connection, timeout, TLS. GitHub being unreachable lands here. */
     data object Network : UpdateFailure
 
-    /** GitHub answered, with a status we cannot use. 403 with a spent rate limit is the likely one. */
+    /** GitHub answered, with a status we cannot use. */
     data class Server(val statusCode: Int) : UpdateFailure
 
     /** A 200 whose body is not the release JSON this understands. */
@@ -40,6 +75,9 @@ sealed interface UpdateFailure {
 
     /** The download could not be written to or renamed inside the cache directory. */
     data object Storage : UpdateFailure
+
+    /** The bytes that arrived are not the ones the manifest published. Retrying is the answer. */
+    data object Checksum : UpdateFailure
 }
 
 class AppUpdateException(
@@ -130,4 +168,12 @@ data class AppUpdateState(
 data class UpdateCheckRecord(
     val checkedAtMillis: Long = 0L,
     val release: AppRelease? = null,
+    /**
+     * Which channel produced this answer.
+     *
+     * Stored with it because the two channels answer different questions: a "nothing newer" recorded
+     * while dev builds were excluded says nothing about whether one exists, so flipping the switch has
+     * to invalidate the record rather than wait out the six hours.
+     */
+    val devChannel: Boolean = false,
 )

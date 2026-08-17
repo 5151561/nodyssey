@@ -4,10 +4,17 @@ import io.github.plaza.core.AppDispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import java.io.IOException
 
 interface HtmlSource {
     suspend fun getHtml(path: String): String
+
+    /**
+     * Follows an HTTP redirect chain and returns the URL it ends on, or null if [path] answered
+     * directly instead of redirecting.
+     */
+    suspend fun resolveRedirect(path: String): String?
 }
 
 /**
@@ -25,6 +32,23 @@ class SiteHtmlClient(
 
     /** Returns the page body, or throws [SiteException] describing why it is unusable. */
     override suspend fun getHtml(path: String): String = withContext(dispatchers.io) {
+        execute(path).use {
+            val body = it.body.string()
+            val headers = it.headers.toMultimap().mapValues { entry -> entry.value.joinToString(",") }
+            challengeDetector.detect(body, it.code, headers)?.let { error ->
+                throw SiteException(error)
+            }
+            body
+        }
+    }
+
+    override suspend fun resolveRedirect(path: String): String? = withContext(dispatchers.io) {
+        val requestedUrl = absoluteUrl(path) ?: error("Invalid path: $path")
+        execute(path).use { it.request.url.toString() }
+            .takeIf { it != requestedUrl }
+    }
+
+    private fun execute(path: String): Response {
         val url = absoluteUrl(path) ?: error("Invalid path: $path")
         val request = Request.Builder()
             .url(url)
@@ -36,19 +60,10 @@ class SiteHtmlClient(
             .header("Upgrade-Insecure-Requests", "1")
             .build()
 
-        val response = try {
+        return try {
             okHttpClient.newCall(request).execute()
         } catch (e: IOException) {
             throw SiteException(SiteError.Network, e)
-        }
-
-        response.use {
-            val body = it.body.string()
-            val headers = it.headers.toMultimap().mapValues { entry -> entry.value.joinToString(",") }
-            challengeDetector.detect(body, it.code, headers)?.let { error ->
-                throw SiteException(error)
-            }
-            body
         }
     }
 

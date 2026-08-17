@@ -217,4 +217,6 @@ class SearchViewModelTest {
 
 private object NoUsersSearchRepository : SearchRepository {
     override suspend fun searchUsers(query: String): List<UserSearchResult> = emptyList()
+
+    override suspend fun resolveMemberUid(name: String): Long? = null
 }
