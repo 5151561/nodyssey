@@ -165,9 +165,11 @@ internal fun BoardStrip(
     }
 
     // Collapsing back to one row must not hide the board the user just picked behind the fold.
+    // Index 0 counts: 综合 is the first pill, and picking it from a strip scrolled halfway along
+    // leaves it off screen to the left unless the row is sent back to the head.
     val selectedIndex = boards.indexOfFirst { it.slug == selectedSlug }
     LaunchedEffect(expanded, selectedIndex) {
-        if (!expanded && selectedIndex > 0) rowState.animateScrollToItem(selectedIndex)
+        if (!expanded && selectedIndex >= 0) rowState.animateScrollToItem(selectedIndex)
     }
 
     // Back is what every other transient mode on this screen answers to, and the editor is one.
