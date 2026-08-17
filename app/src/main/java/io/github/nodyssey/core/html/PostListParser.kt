@@ -52,6 +52,7 @@ object PostListParser {
             lastActiveText = lastActive?.text()?.trim()?.ifBlank { null },
             lastActiveTitle = lastActive?.attr("title")?.ifBlank { null },
             isPinned = item.selectFirst(Selectors.LIST_PINNED) != null,
+            isAwarded = item.selectFirst(Selectors.LIST_AWARDED) != null,
             // The site ships the row and hides it in CSS (`.blocked-post{display:none}`), so the
             // class is the only thing that says "this account blocked the author".
             isBlocked = item.hasClass(Selectors.BLOCKED_POST_CLASS),

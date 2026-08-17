@@ -59,6 +59,8 @@
     <string name="post_new_reply_count">%1$d 条新回复</string>
     <string name="post_view_count">%1$d 浏览</string>
     <string name="post_badge_pinned">置顶</string>
+    <!-- 加精: the site labels its own marker 推荐阅读, so the a11y label says the same thing -->
+    <string name="post_badge_awarded">推荐阅读</string>
     <string name="post_badge_locked">已锁帖</string>
     <string name="post_badge_locked_level">%1$d 级可见</string>
     <string name="post_badge_original_poster">楼主</string>

@@ -1,6 +1,12 @@
 package io.github.nodyssey.ui.common
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.addPathNodes
+import androidx.compose.ui.unit.dp
 import io.github.plaza.designsys.component.materialIcon
 
 /**
@@ -21,5 +27,34 @@ object NodeSeekIcons {
                 "M14.1,13.2l2.8,2.8c0.8,-0.4 1.8,-0.3 2.4,0.4c0.9,0.9 0.9,2.3 0,3.2" +
                 "c-0.9,0.9 -2.3,0.9 -3.2,0c-0.7,-0.7 -0.8,-1.6 -0.4,-2.4l-2.8,-2.8z",
         )
+    }
+
+    /**
+     * 推荐阅读 — the diamond NodeSeek stamps on an 加精 thread, drawn from the site's own sprite.
+     *
+     * Copied out of the live `<symbol id="diamonds">` (read 2026-08-17) rather than approximated, so
+     * the badge in a list row is the glyph the reader already knows from the web. That symbol is a
+     * stroked outline on a 48×48 viewport, which is why this one icon does not go through
+     * [materialIcon] — that helper fills a 24×24 path, and filling this one would mean redrawing the
+     * gem's facets by hand. The sprite's second path is dropped: every one of its segments lies on an
+     * edge the first path already strokes, so it changes nothing on screen.
+     */
+    val Award: ImageVector by lazy {
+        ImageVector
+            .Builder(
+                name = "Award",
+                defaultWidth = 24.dp,
+                defaultHeight = 24.dp,
+                viewportWidth = 48f,
+                viewportHeight = 48f,
+            ).addPath(
+                pathData = addPathNodes("M12 8h24l8 10-20 24L4 18l8-10ZM4 18h40M24 42l-8-24m8 24 8-24"),
+                // Black is a placeholder for the same reason as in `materialIcon`: `Icon` tints the
+                // whole vector, stroke included, so nothing of this colour survives.
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 4f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ).build()
     }
 }

@@ -28,7 +28,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CacheSessionEntity::class,
         SelfProfileEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -60,6 +60,7 @@ abstract class NodeSeekDatabase : RoomDatabase() {
                     MIGRATION_6_7,
                     MIGRATION_7_8,
                     MIGRATION_8_9,
+                    MIGRATION_9_10,
                 )
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
@@ -186,5 +187,21 @@ internal val MIGRATION_8_9 =
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE `feed_positions` ADD COLUMN `page` INTEGER NOT NULL DEFAULT 1")
             db.execSQL("ALTER TABLE `feed_remote_keys` ADD COLUMN `totalPages` INTEGER NOT NULL DEFAULT 1")
+        }
+    }
+
+/**
+ * Gives stored rows somewhere to remember 推荐阅读.
+ *
+ * The two defaults differ because the two columns answer different questions. A list row is rewritten
+ * on the next refresh, so `0` is a value that corrects itself and keeps the column non-null. A cached
+ * thread may never be re-fetched from page 1, so its column stays nullable and starts null: "no page
+ * has said" rather than "not 加精", which is the same rule `collected` already follows.
+ */
+internal val MIGRATION_9_10 =
+    object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `posts` ADD COLUMN `isAwarded` INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE `post_details` ADD COLUMN `isAwarded` INTEGER DEFAULT NULL")
         }
     }

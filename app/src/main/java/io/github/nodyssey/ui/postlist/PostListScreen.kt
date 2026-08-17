@@ -94,6 +94,7 @@ import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
 import io.github.nodyssey.ui.common.NavigationBarScrollConnection
 import io.github.nodyssey.ui.common.NavigationDirectionThreshold
+import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PageJumpToolbarContent
 import io.github.nodyssey.ui.common.SiteErrorState
@@ -656,6 +657,11 @@ internal fun PostRow(
     post: FeedPost,
     onClick: () -> Unit,
     highlight: String? = null,
+    /**
+     * Off on 推荐阅读, where every row carries the badge and so it distinguishes nothing — the screen's
+     * own title already says what the whole list is.
+     */
+    showAwardBadge: Boolean = true,
 ) {
     val summary = post.summary
     ThreadRow(
@@ -729,6 +735,19 @@ internal fun PostRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+            if (showAwardBadge && summary.isAwarded) {
+                Icon(
+                    NodeSeekIcons.Award,
+                    contentDescription = stringResource(R.string.post_badge_awarded),
+                    // The warm role rather than primary: 加精 is a mark the site puts on a thread, not
+                    // an action this app offers, and the site draws it orange. Same 16dp as the lock,
+                    // and after it — the order the site's own title strip uses.
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier
+                        .padding(start = Spacing.xs)
+                        .size(16.dp),
+                )
             }
         },
         meta = { PostMetaItems(post) },

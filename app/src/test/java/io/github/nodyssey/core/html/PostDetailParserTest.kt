@@ -237,6 +237,53 @@ class PostDetailParserTest {
             )
     }
 
+    /**
+     * The 加精 marker on a post page is a gold corner over the post wrapper, and the fixture thread is
+     * not awarded — so the flag has to come out false rather than null, which is what a page carrying
+     * the opening post is entitled to say.
+     */
+    @Test
+    fun `reports an ordinary thread as not 推荐阅读`() {
+        assertEquals(false, detail.isAwarded)
+    }
+
+    @Test
+    fun `reads the 推荐阅读 corner off the post wrapper`() {
+        val html =
+            """
+            <html><body><div class="nsk-post-wrapper">
+              <div class="award-corner"><div title="推荐阅读" class="corner-triangle"></div></div>
+              <div class="nsk-post"><div class="content-item" data-comment-id="1">
+                <article class="post-content"><p>加精了的正文</p></article>
+              </div></div>
+            </div></body></html>
+            """.trimIndent()
+
+        assertEquals(true, PostDetailParser.parse(html, postId = 1L, page = 1).isAwarded)
+    }
+
+    /**
+     * Page 2 renders the same wrapper without the corner (verified live 2026-08-17), so its silence
+     * must read as "this page did not say" — reporting false would unmark the thread on screen as the
+     * reader scrolls into it.
+     */
+    @Test
+    fun `says nothing about 推荐阅读 on a page that carries no opening post`() {
+        val html =
+            """
+            <html><body><div class="nsk-post-wrapper">
+              <div class="nsk-post"></div>
+              <ul class="comments"><li class="content-item" data-comment-id="2">
+                <article class="post-content"><p>三楼</p></article>
+              </li></ul>
+            </div></body></html>
+            """.trimIndent()
+
+        val parsed = PostDetailParser.parse(html, postId = 1L, page = 2)
+        assertNull(parsed.body)
+        assertNull(parsed.isAwarded)
+    }
+
     @Test
     fun `parses a long post without dropping content`() {
         val long =

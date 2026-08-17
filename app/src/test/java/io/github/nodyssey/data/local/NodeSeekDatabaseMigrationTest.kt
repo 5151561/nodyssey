@@ -186,6 +186,48 @@ class NodeSeekDatabaseMigrationTest {
         migrated.close()
     }
 
+    /**
+     * The two 推荐阅读 columns start at different values on purpose: a list row is rewritten by the next
+     * refresh, so `0` corrects itself, while a cached thread may never be re-read from page 1 and only
+     * null can say "no page has told us".
+     */
+    @Test
+    fun `migration 9 to 10 adds the 推荐阅读 columns without dropping rows`() {
+        helper.createDatabase(DATABASE_NAME, 9).apply {
+            execSQL(
+                """
+                INSERT INTO posts(
+                    postId, title, authorName, authorUid, avatarUrl, categoryTitle, categorySlug,
+                    viewCount, commentCount, lastActiveText, lastActiveTitle, isPinned, isLocked,
+                    lockLevel, isBlocked, cachedAtMillis
+                )
+                VALUES(42, 'a cached post', 'someone', 7, NULL, '日常', 'daily', 100, 3, NULL, NULL, 0, 0, NULL, 0, 1000)
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO post_details(postId, title, body, totalPages, firstLoadedPage, loadedPages, cachedAtMillis)
+                VALUES(42, 'a cached thread', NULL, 9, 1, 3, 1000)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 10, true, MIGRATION_9_10)
+
+        migrated.query("SELECT title, isAwarded FROM posts WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("a cached post", it.getString(0))
+            assertEquals(0, it.getInt(1))
+        }
+        migrated.query("SELECT title, isAwarded FROM post_details WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("a cached thread", it.getString(0))
+            assertTrue(it.isNull(1))
+        }
+        migrated.close()
+    }
+
     private companion object {
         const val DATABASE_NAME = "profile-migration-test"
     }

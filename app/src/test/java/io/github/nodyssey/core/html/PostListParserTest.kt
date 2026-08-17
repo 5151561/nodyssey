@@ -98,6 +98,48 @@ class PostListParserTest {
         assertFalse(posts.last().isBlocked)
     }
 
+    /**
+     * 加精 arrives as a link into `/award` inside the title strip. The 快捷功能区 sidebar links there
+     * too, on every page including this one, which is why the selector is scoped to the row.
+     */
+    @Test
+    fun `marks the rows the site put a 推荐阅读 diamond on`() {
+        val html =
+            """
+            <html><body>
+              <div class="nsk-panel quick-access"><ul role="nav"><li>
+                <a href="/award"><svg class="iconpark-icon"><use href="#diamonds"></use></svg>
+                <span>推荐阅读</span></a>
+              </li></ul></div>
+              <ul class="post-list">
+                <li class="post-list-item">
+                  <div class="post-title">
+                    <a href="/post-11-1">加精了的帖子</a>
+                    <a href="/award" title="推荐阅读">
+                      <svg class="iconpark-icon award"><use href="#diamonds"></use></svg>
+                    </a>
+                  </div>
+                </li>
+                <li class="post-list-item">
+                  <div class="post-title"><a href="/post-12-1">ordinary</a></div>
+                </li>
+              </ul>
+            </body></html>
+            """.trimIndent()
+
+        val posts = PostListParser.parse(html, page = 1).posts
+
+        assertEquals(listOf(11L, 12L), posts.map { it.postId })
+        assertTrue(posts.first().isAwarded)
+        assertFalse(posts.last().isAwarded)
+    }
+
+    /** The sidebar's `/award` link must not mark the rows beside it. */
+    @Test
+    fun `leaves the front page un-awarded`() {
+        assertTrue(page.posts.none { it.isAwarded })
+    }
+
     @Test
     fun `leaves the front page unblocked`() {
         assertTrue(page.posts.none { it.isBlocked })
