@@ -141,12 +141,6 @@ fun CommunityToolsScreen(
                 )
             }
 
-            Text(
-                text = stringResource(R.string.tools_footnote),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-            )
             GroupedRow(
                 title = stringResource(R.string.about_community_title),
                 subtitle = stringResource(R.string.about_community_hint),

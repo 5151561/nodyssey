@@ -745,7 +745,6 @@
     <string name="tools_invite_subtitle">花费 1000 鸡腿购买一个邀请码</string>
     <string name="tools_ruling">管理记录</string>
     <string name="tools_ruling_subtitle">处罚与奖励公示表格</string>
-    <string name="tools_footnote">工具都从这里进，不占用底部四项主导航；副文案只写形态，不写实时数字。</string>
 
     <!-- Curated reading (9b) -->
     <string name="award_title">推荐阅读</string>
