@@ -277,6 +277,7 @@
     <string name="settings_wifi_images">仅 Wi-Fi 下加载图片</string>
     <string name="settings_wifi_images_hint">移动网络显示占位图</string>
     <string name="settings_clear_cache">清除缓存</string>
+    <string name="settings_clear_cache_size">已占用 %1$s</string>
     <string name="settings_about">关于</string>
     <string name="settings_about_app">关于 Nodyssey</string>
     <string name="settings_version">v%1$s</string>

@@ -4,15 +4,18 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import coil3.SingletonImageLoader
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.NodysseyRelease
 import io.github.nodyssey.core.net.DynamicSignInterceptor
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.CommunityRepository
 import io.github.nodyssey.data.CreditRepository
+import io.github.nodyssey.data.DefaultAppCacheStore
 import io.github.nodyssey.data.FollowRepository
 import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.NetworkAssetsRepository
@@ -139,6 +142,9 @@ interface AppContainer {
     val apkInstaller: ApkInstaller
 
     val rulingRepository: RulingRepository
+
+    /** 清除缓存 — the image, WebView and update caches on disk. See [AppCacheStore]. */
+    val appCacheStore: AppCacheStore
 
     /**
      * The UA the WebView and OkHttp both use. Shared rather than duplicated: `cf_clearance` is issued
@@ -424,4 +430,12 @@ class DefaultAppContainer(
     }
 
     override val apkInstaller: ApkInstaller by lazy { ApkInstaller(appContext, dispatchers) }
+
+    override val appCacheStore: AppCacheStore by lazy {
+        DefaultAppCacheStore(
+            cacheDirectory = appContext.cacheDir,
+            dispatchers = dispatchers,
+            imageLoader = { SingletonImageLoader.get(appContext) },
+        )
+    }
 }
