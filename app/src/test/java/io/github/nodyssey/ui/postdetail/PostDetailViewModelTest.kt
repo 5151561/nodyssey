@@ -9,6 +9,7 @@ import io.github.nodyssey.data.ReadingPosition
 import io.github.nodyssey.data.ReadingPositionStore
 import io.github.nodyssey.data.inMemoryDatabase
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.model.ReactionAction
 import io.github.plaza.core.net.SiteError
@@ -71,6 +72,21 @@ class PostDetailViewModelTest {
         initialPage,
         readingPositions = readingPositions,
     )
+
+    /**
+     * Puts one post in the `posts` table with [commentCount] replies — what a feed refresh leaves
+     * behind, and the baseline both the badge and [PostRepository.hasUnreadReplies] compare against.
+     */
+    private suspend fun givenListedPost(
+        postId: Long,
+        commentCount: Int,
+    ) {
+        val summary =
+            FakePostRemoteDataSource
+                .summary(slug = null, page = 1, commentCount = commentCount)
+                .copy(postId = postId)
+        database.feedDao().upsertPosts(listOf(summary.toEntity(clock.nowMillis())))
+    }
 
     /** A [ReadingPositionStore] a test can seed and then read back, in place of DataStore. */
     private class FakeReadingPositions(
@@ -180,6 +196,90 @@ class PostDetailViewModelTest {
             assertEquals(before, remote.detailRequests.size)
         }
 
+    /**
+     * The pull past the foot of a finished thread — see [PostDetailViewModel.refreshTail]. It re-reads
+     * the last page in place, so the pages the reader scrolled through to get there are still there.
+     */
+    @Test
+    fun `pulling past the end re-reads the last page and keeps the ones above it`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 2)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+            vm.loadNextPage()
+            advanceUntilIdle()
+            assertFalse(vm.uiState.value.hasNextPage)
+
+            // Two replies landed on the last page while it was being read.
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 4, totalPages = 2)
+            }
+            vm.refreshTail()
+            advanceUntilIdle()
+
+            assertEquals(42L to 2, remote.detailRequests.last())
+            assertEquals(1, vm.uiState.value.firstLoadedPage)
+            assertEquals(2, vm.uiState.value.lastLoadedPage)
+            // Page 1 as it was, page 2 as it is now — not a window replaced by its own last page.
+            assertEquals(6, vm.uiState.value.comments.size)
+        }
+
+    /** While a next page exists the same drag means "load it", and the two must not both fire. */
+    @Test
+    fun `pulling past the end does nothing while the thread still has a next page`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 3)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+            val before = remote.detailRequests.size
+
+            vm.refreshTail()
+            advanceUntilIdle()
+
+            assertEquals(before, remote.detailRequests.size)
+        }
+
+    /** Its own indicator owns the feedback, so neither the top bar nor the append spinner claims it. */
+    @Test
+    fun `a tail refresh raises only its own indicator`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 1)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            vm.refreshTail()
+            assertTrue(vm.uiState.value.isRefreshingTail)
+            assertFalse(vm.uiState.value.isLoading)
+            assertFalse(vm.uiState.value.isAppending)
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.isRefreshingTail)
+            assertNull(vm.uiState.value.error)
+        }
+
+    @Test
+    fun `a failed tail refresh lowers its indicator and reports the error`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 1)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+            remote.detailError = SiteException(SiteError.Network)
+
+            vm.refreshTail()
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.isRefreshingTail)
+            assertEquals(SiteError.Network, vm.uiState.value.error)
+        }
+
     /** The pull gesture's indicator is its own feedback; it must rise with the load and fall with it. */
     @Test
     fun `a pull refresh raises its indicator and lowers it when the load lands`() =
@@ -248,6 +348,49 @@ class PostDetailViewModelTest {
             assertEquals(requestsAfterSeeding, remote.detailRequests.size)
             assertEquals(2, vm.uiState.value.comments.size)
             assertNotNull(vm.uiState.value.body)
+        }
+
+    /**
+     * The badge on the row the reader tapped said replies had arrived; the cache window said the
+     * thread was fresh. The badge is the one with evidence — see [PostRepository.hasUnreadReplies].
+     */
+    @Test
+    fun `a fresh cached thread is refetched when the list says replies arrived`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 1, totalPages = 1)
+            }
+            repository.refreshThread(postId = 42, page = 1)
+            givenListedPost(postId = 42, commentCount = 1)
+            repository.markThreadRead(42)
+            // The list refreshes; the row now carries replies this read never saw.
+            givenListedPost(postId = 42, commentCount = 4)
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 4, totalPages = 1)
+            }
+
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(4, vm.uiState.value.comments.size)
+        }
+
+    /** The window is still what suppresses the request when the list has nothing new to report. */
+    @Test
+    fun `a fresh cached thread the list agrees with is still shown without a request`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 1)
+            }
+            repository.refreshThread(postId = 42, page = 1)
+            givenListedPost(postId = 42, commentCount = 2)
+            repository.markThreadRead(42)
+            val requestsAfterSeeding = remote.detailRequests.size
+
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(requestsAfterSeeding, remote.detailRequests.size)
         }
 
     @Test

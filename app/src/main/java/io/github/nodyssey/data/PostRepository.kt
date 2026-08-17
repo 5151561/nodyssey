@@ -210,6 +210,20 @@ interface PostRepository {
     /** True when the cached thread is recent enough that opening it need not hit the network. */
     suspend fun isThreadFresh(postId: Long): Boolean
 
+    /**
+     * True when the list is showing more replies than the last read of this thread accounted for —
+     * the state the feed draws as "3 条新回复".
+     *
+     * Freshness cannot answer this on its own. A thread refreshed a minute ago is inside the cache
+     * window, and a reply that arrived since is exactly what the badge on the row the reader just
+     * tapped was pointing at; opening it on the cached copy showed the content they had already
+     * read and left a manual refresh as the only way through.
+     *
+     * False for a thread no feed carries — a notification or an external link — where there is no
+     * count to compare against and the freshness window is the whole of the answer.
+     */
+    suspend fun hasUnreadReplies(postId: Long): Boolean
+
     /** The comment pages the cache currently holds, or null when the thread was never fetched. */
     suspend fun cachedPages(postId: Long): IntRange?
 
@@ -495,6 +509,12 @@ class OfflineFirstPostRepository(
     override suspend fun isThreadFresh(postId: Long): Boolean {
         val detail = database.postDetailDao().findDetail(postId) ?: return false
         return clock.nowMillis() - detail.cachedAtMillis < THREAD_CACHE_TTL_MILLIS
+    }
+
+    override suspend fun hasUnreadReplies(postId: Long): Boolean {
+        val listed = database.feedDao().commentCount(postId) ?: return false
+        val seen = database.readMarkDao().find(postId)?.lastSeenCommentCount ?: return false
+        return listed > seen
     }
 
     override suspend fun cachedPages(postId: Long): IntRange? =

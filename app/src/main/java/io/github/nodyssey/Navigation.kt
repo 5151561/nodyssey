@@ -562,17 +562,10 @@ fun MainNavigation(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
                     onPostClick = { postId, floor -> backStack.add(PostDetailKey(postId, floor)) },
-                    // 私信 is the site's own conversation page: authenticated, and with a Markdown
-                    // composer we have not reimplemented, so it opens in the session's web view.
-                    onMessage = { uid ->
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.messagePath(uid),
-                                siteTitle,
-                                WebViewGoal.MANAGE,
-                            ),
-                        )
-                    },
+                    // The same conversation screen 私信 opens from the notification tab (board 7f).
+                    // It reads and writes this thread through the site's own message endpoints, so
+                    // there is nothing here the web view was needed for.
+                    onMessage = { uid, name -> backStack.add(MessageThreadKey(uid, name)) },
                     // 空间页右上角的笔是「编辑资料」，直接进资料编辑页，不是账号设置的目录页。
                     onEditProfile = { backStack.add(AccountProfileFieldsKey) },
                     onOpenBrowser = openWebUrl,

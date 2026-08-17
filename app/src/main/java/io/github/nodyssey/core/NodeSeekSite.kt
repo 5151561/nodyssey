@@ -137,9 +137,6 @@ object NodeSeekSite {
     const val SPACE_TAB_COMMENTS = "comments"
     const val SPACE_TAB_COLLECTIONS = "collections"
 
-    /** The conversation with one user, which is the only action a public space page offers. */
-    fun messagePath(uid: Long): String = "/notification#/message?mode=talk&to=$uid"
-
     /** Follows and followers are one page with a query parameter, and only for the signed-in user. */
     fun fansPath(followers: Boolean): String = if (followers) "/fans?type=fans" else "/fans?type=follow"
 

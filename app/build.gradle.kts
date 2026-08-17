@@ -167,6 +167,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.coil.network.cache.control)
     // The site's generated default avatars are SVG served from a `.png` path.
     implementation(libs.coil.svg)
 }

@@ -6,8 +6,10 @@ import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.annotation.ExperimentalCoilApi
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
+import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
@@ -80,7 +82,17 @@ open class NodysseyApp :
     /**
      * Images share the app's OkHttp client so avatars and attachments carry the same cookies and
      * browser headers as page requests — Cloudflare rejects them otherwise.
+     *
+     * The cache strategy is not the default one. Coil's `DefaultCacheStrategy.read` hands back the
+     * cached response whenever there is one and never asks the server about it, which is invisible
+     * for an attachment — its URL changes when its bytes do — and wrong for an avatar, which the
+     * site serves from `/avatar/<uid>.png` for the life of the account. Changing your picture
+     * changed nothing in the app, at any distance from the upload. [CacheControlCacheStrategy]
+     * honours the `Cache-Control` and `ETag` the site actually sends on those responses, so a
+     * cached avatar expires here on the same schedule it expires in a browser, and revalidating an
+     * unchanged one costs a 304 rather than the image.
      */
+    @OptIn(ExperimentalCoilApi::class)
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader
             .Builder(context)
@@ -93,7 +105,12 @@ open class NodysseyApp :
                         imagesOnWifiOnly = container.settingsRepository.settings.map { it.imagesOnWifiOnly },
                     ),
                 )
-                add(OkHttpNetworkFetcherFactory(callFactory = { container.okHttpClient }))
+                add(
+                    OkHttpNetworkFetcherFactory(
+                        callFactory = { container.okHttpClient },
+                        cacheStrategy = { CacheControlCacheStrategy() },
+                    ),
+                )
                 // An account that never uploaded a picture is served a generated cartoon *SVG* from
                 // `/avatar/<uid>.png` — the extension lies, the Content-Type does not. Without this
                 // decoder those all failed and every such user wore an initial instead.
