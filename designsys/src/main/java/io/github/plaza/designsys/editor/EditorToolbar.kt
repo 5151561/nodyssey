@@ -3,12 +3,14 @@ package io.github.plaza.designsys.editor
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -17,6 +19,8 @@ import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,7 +31,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.plaza.designsys.R
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Spacing
@@ -229,9 +232,18 @@ val EditorAction.labelRes: Int
 /**
  * The 内容 / 预览 / 对照 switch from 7a.
  *
- * A hand-built pill rather than `SingleChoiceSegmentedButtonRow`: the segmented button's own 40dp
- * height and check-mark affordance push the toolbar past the point where the keyboard fits, and the
- * three options here are views of one thing rather than a choice being made.
+ * A Material 3 connected button group: three `ToggleButton`s spaced by
+ * `ButtonGroupDefaults.ConnectedSpaceBetween`, with the leading/middle/trailing connected shapes.
+ * This was hand-built out of two nested `Surface`s until the switch turned out to have no motion at
+ * all — selection was a plain `if` on the container colour, so it snapped. The connected group is
+ * the component this pattern was always imitating, and it animates the shape on press and on
+ * selection for free.
+ *
+ * `SingleChoiceSegmentedButtonRow` is still the wrong one: its check-mark affordance says a choice
+ * is being made, and these three are views of one thing.
+ *
+ * [contentPadding] runs narrower than `ToggleButtonDefaults.ContentPadding`'s 16dp because the
+ * switch shares the top bar with 关闭 and 发布, and 发布 grows to 发布中… mid-flight.
  */
 @Composable
 fun <T> ViewModeSwitch(
@@ -240,43 +252,33 @@ fun <T> ViewModeSwitch(
     label: @Composable (T) -> String,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp),
 ) {
-    Surface(
+    val colors = ToggleButtonDefaults.toggleButtonColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        checkedContainerColor = MaterialTheme.colorScheme.primary,
+        checkedContentColor = MaterialTheme.colorScheme.onPrimary,
+    )
+    Row(
         modifier = modifier,
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
     ) {
-        Row(
-            modifier = Modifier.padding(2.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            options.forEach { option ->
-                val isSelected = option == selected
-                // The selectable overload, so TalkBack announces which of the three views is
-                // active — colour is the only visual cue and reads as nothing.
-                Surface(
-                    selected = isSelected,
-                    onClick = { onSelect(option) },
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerLow
-                    },
-                    contentColor = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                ) {
-                    Text(
-                        text = label(option),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = Spacing.sm),
-                    )
-                }
+        options.forEachIndexed { index, option ->
+            ToggleButton(
+                checked = option == selected,
+                // Tapping the live view re-selects it rather than toggling off: there is no
+                // unselected state for a switch that answers "which view am I looking at".
+                onCheckedChange = { onSelect(option) },
+                shapes = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                },
+                colors = colors,
+                contentPadding = contentPadding,
+            ) {
+                Text(text = label(option), maxLines = 1)
             }
         }
     }

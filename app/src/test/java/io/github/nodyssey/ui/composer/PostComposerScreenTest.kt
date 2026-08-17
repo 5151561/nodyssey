@@ -101,6 +101,11 @@ class PostComposerScreenTest {
         setScreen(draftState().copy(isPublishing = true))
 
         composeRule.onNodeWithText("发布中").assertIsDisplayed()
+        // 发布中… is the top bar's widest state, and the view switch shares the bar with it. Both
+        // have to survive 360dp together or the switch is the one the Row measures to nothing.
+        composeRule.onNodeWithText("内容").assertIsDisplayed()
+        composeRule.onNodeWithText("对照").assertIsDisplayed()
+        composeRule.onNodeWithText("预览").assertIsDisplayed()
     }
 
     @Test
