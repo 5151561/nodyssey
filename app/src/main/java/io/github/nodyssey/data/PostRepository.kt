@@ -487,6 +487,7 @@ class OfflineFirstPostRepository(
             replacesWindow = replacesWindow,
             collected = detail.collected,
             collectionCount = detail.collectionCount,
+            isAwarded = detail.isAwarded,
         )
         database.postDetailDao().trimTo(MAX_CACHED_THREADS)
     }

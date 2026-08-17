@@ -104,6 +104,7 @@ class PostDetailViewModel(
                             hasNextPage = false,
                             collected = null,
                             collectionCount = null,
+                            isAwarded = false,
                         )
                     }
                     return@collect
@@ -121,6 +122,10 @@ class PostDetailViewModel(
                         hasNextPage = thread.hasNextPage,
                         collected = thread.collected,
                         collectionCount = thread.collectionCount,
+                        // Unknown collapses to false here, unlike [collected]: an unlit star and an
+                        // absent star are two different things to a reader, but an absent badge is
+                        // the only thing "we have not been told" can honestly look like.
+                        isAwarded = thread.isAwarded == true,
                     )
                 }
 
@@ -528,6 +533,8 @@ data class PostDetailUiState(
      */
     val collected: Boolean? = null,
     val collectionCount: Int? = null,
+    /** 推荐阅读 — see [io.github.nodyssey.model.PostDetail.isAwarded] for what a page can say about it. */
+    val isAwarded: Boolean = false,
     /** A collection toggle is in flight, so the star refuses a second tap until it lands. */
     val collectPending: Boolean = false,
     /** A refused collection toggle, held until the screen has shown it once. */

@@ -117,6 +117,7 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SkeletonBar
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -746,7 +747,7 @@ private fun ThreadList(
             .readableWidth(),
     ) {
         item(key = "title") {
-            ThreadHeader(title = state.title, body = state.body)
+            ThreadHeader(title = state.title, body = state.body, isAwarded = state.isAwarded)
         }
 
         state.body?.let { body ->
@@ -911,6 +912,7 @@ private fun TextStyle.hangLeadingPunctuation(text: String): TextStyle =
 private fun ThreadHeader(
     title: String,
     body: PostContent?,
+    isAwarded: Boolean,
 ) {
     Column(
         modifier = Modifier.padding(
@@ -932,6 +934,16 @@ private fun ThreadHeader(
             itemVerticalAlignment = Alignment.CenterVertically,
         ) {
             BoardTag(title = body?.categoryTitle, slug = null)
+            // A labelled tag rather than the list's diamond: here there is room to name the thing, and
+            // the site marks a post page differently too — a gold corner over the opening post, which
+            // has no place in a layout whose left edge every floor shares.
+            if (isAwarded) {
+                TonalTag(
+                    text = stringResource(R.string.post_badge_awarded),
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+            }
             body?.createdAtText?.let { MetaText(it) }
         }
     }

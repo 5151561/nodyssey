@@ -15,6 +15,16 @@ object Selectors {
     const val LIST_LOCKED = "div.post-title use[href=#lock]"
 
     /**
+     * 推荐阅读 — the 加精 marker, a link into `/award` carrying an orange diamond:
+     * `<a href="/award" title="推荐阅读"><svg class="iconpark-icon award"><use href="#diamonds">`.
+     *
+     * Scoped to `div.post-title` because the 快捷功能区 sidebar links to `/award` on every page, and
+     * the diamond it uses is the same sprite symbol — the row's own title strip is what separates the
+     * badge from the navigation.
+     */
+    const val LIST_AWARDED = "div.post-title a[href=/award]"
+
+    /**
      * The red-boxed 只读 label on an announcement row. Same meaning as the lock icon
      * (additions.md §1.4), so the parser folds it into `isLocked` — the app draws one lock state.
      */
@@ -53,6 +63,16 @@ object Selectors {
     const val DETAIL_PAGER = "div.nsk-pager"
     const val DETAIL_PAGER_POSITIONS = "a.pager-pos, span.pager-pos"
     const val DETAIL_PAGER_NEXT = "a.pager-next[href]"
+
+    /**
+     * 推荐阅读 on a post page: a gold corner triangle laid over the post wrapper, rather than the
+     * list's diamond — `<div class="award-corner"><div title="推荐阅读" class="corner-triangle">`.
+     *
+     * Page 1 only. Verified live on 2026-08-17: `/post-373751-1` (an awarded thread) carries the
+     * corner, `/post-373751-2` renders the same wrapper without it, so on a later page the absence
+     * of this element says nothing about the thread.
+     */
+    const val DETAIL_AWARD_CORNER = "div.nsk-post-wrapper div.award-corner"
 
     // --- One post body or comment ------------------------------------------
     const val CONTENT_AVATAR = "div.avatar-wrapper img"

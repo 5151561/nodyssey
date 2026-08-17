@@ -49,6 +49,13 @@ object PostDetailParser {
             hasNextPage = pager?.selectFirst(Selectors.DETAIL_PAGER_NEXT) != null,
             collected = config.collected,
             collectionCount = config.collectionCount,
+            // Only a page that carried the opening post can answer this: the corner is drawn over
+            // the wrapper the body lives in, and a later page renders that wrapper without it.
+            isAwarded = if (body != null) {
+                document.selectFirst(Selectors.DETAIL_AWARD_CORNER) != null
+            } else {
+                null
+            },
         )
     }
 

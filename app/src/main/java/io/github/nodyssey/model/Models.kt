@@ -20,6 +20,8 @@ data class PostSummary(
     val lastActiveTitle: String?,
     val isPinned: Boolean = false,
     val isLocked: Boolean = false,
+    /** 推荐阅读 — the thread has been 加精, per the diamond the row carries next to its title. */
+    val isAwarded: Boolean = false,
     /** The reader level a locked post demands, when the list shows one next to the lock icon. */
     val lockLevel: Int? = null,
     /**
@@ -69,6 +71,14 @@ data class PostDetail(
      */
     val collected: Boolean? = null,
     val collectionCount: Int? = null,
+    /**
+     * 推荐阅读, or null when this page could not say.
+     *
+     * The site draws the 加精 corner over the opening post, which it renders on page 1 only, so a
+     * page carrying no body carries no answer either — the same distinction [body] itself makes, and
+     * the reason this is not simply false.
+     */
+    val isAwarded: Boolean? = null,
 )
 
 /**
@@ -93,6 +103,8 @@ data class ThreadSnapshot(
     /** See [PostDetail.collected]; null survives into the cache for the same reason. */
     val collected: Boolean? = null,
     val collectionCount: Int? = null,
+    /** See [PostDetail.isAwarded]; null survives into the cache for the same reason. */
+    val isAwarded: Boolean? = null,
 ) {
     val hasNextPage: Boolean get() = lastLoadedPage < totalPages
 }

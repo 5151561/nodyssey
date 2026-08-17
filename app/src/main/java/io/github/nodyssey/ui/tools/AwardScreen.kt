@@ -131,6 +131,7 @@ fun AwardScreen(
                             PostRow(
                                 post = FeedPost(summary = summary, isRead = false, newCommentCount = 0),
                                 onClick = { onPostClick(summary.postId) },
+                                showAwardBadge = false,
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }

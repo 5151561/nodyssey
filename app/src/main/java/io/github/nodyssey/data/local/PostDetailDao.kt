@@ -37,6 +37,7 @@ fun CachedThread.toSnapshot(): ThreadSnapshot {
         cachedAtMillis = detail.cachedAtMillis,
         collected = detail.collected,
         collectionCount = detail.collectionCount,
+        isAwarded = detail.isAwarded,
     )
 }
 
@@ -78,6 +79,7 @@ interface PostDetailDao {
         replacesWindow: Boolean,
         collected: Boolean? = null,
         collectionCount: Int? = null,
+        isAwarded: Boolean? = null,
     ) {
         val existing = findDetail(postId)
         val replaces =
@@ -98,6 +100,9 @@ interface PostDetailDao {
                 // fallback costs nothing and is the difference between a stale star and a missing one.
                 collected = collected ?: existing?.collected,
                 collectionCount = collectionCount ?: existing?.collectionCount,
+                // Same rule again, and here it is the load-bearing one: only page 1 carries the 加精
+                // corner, so a scroll into page 2 would otherwise unmark the thread on screen.
+                isAwarded = isAwarded ?: existing?.isAwarded,
                 cachedAtMillis = nowMillis,
             ),
         )

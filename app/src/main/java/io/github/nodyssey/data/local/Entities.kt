@@ -77,6 +77,8 @@ data class PostEntity(
     val isPinned: Boolean,
     val isLocked: Boolean,
     val lockLevel: Int?,
+    /** 推荐阅读. Defaulted so a row written before v10 reads as "not 加精" until the next refresh. */
+    val isAwarded: Boolean = false,
     /**
      * Stored rather than filtered away on arrival, because whether it is shown is a *view* decision:
      * 临时显示被屏蔽内容 reveals what is already here instead of re-fetching the feed.
@@ -101,6 +103,7 @@ fun PostEntity.toSummary() =
         isPinned = isPinned,
         isLocked = isLocked,
         lockLevel = lockLevel,
+        isAwarded = isAwarded,
         isBlocked = isBlocked,
     )
 
@@ -120,6 +123,7 @@ fun PostSummary.toEntity(cachedAtMillis: Long) =
         isPinned = isPinned,
         isLocked = isLocked,
         lockLevel = lockLevel,
+        isAwarded = isAwarded,
         isBlocked = isBlocked,
         cachedAtMillis = cachedAtMillis,
     )
@@ -218,6 +222,13 @@ data class PostDetailEntity(
      */
     val collected: Boolean? = null,
     val collectionCount: Int? = null,
+    /**
+     * 推荐阅读 as of the last page that could tell — see [io.github.nodyssey.model.PostDetail.isAwarded].
+     *
+     * Null for the same reason [collected] is: a thread first opened at page 7 has never been told,
+     * and drawing "not 加精" would be a claim rather than a gap.
+     */
+    val isAwarded: Boolean? = null,
     val cachedAtMillis: Long,
 )
 

@@ -76,6 +76,7 @@ class PostListScreenTest {
         commentCount: Int? = 12,
         isPinned: Boolean = false,
         isLocked: Boolean = false,
+        isAwarded: Boolean = false,
         categoryTitle: String? = "日常",
         page: Int? = null,
     ) = FeedPost(
@@ -94,6 +95,7 @@ class PostListScreenTest {
             lastActiveTitle = null,
             isPinned = isPinned,
             isLocked = isLocked,
+            isAwarded = isAwarded,
         ),
         isRead = isRead,
         newCommentCount = newCommentCount,
@@ -551,6 +553,21 @@ class PostListScreenTest {
         // Twice by design: the pin badge replacing the avatar, and the word in the meta line.
         composeRule.onAllNodesWithText("置顶").assertCountEquals(1)
         composeRule.onNodeWithContentDescription("置顶").assertIsDisplayed()
+    }
+
+    /** The badge is an icon, so the announcement is the only thing carrying it to a screen reader. */
+    @Test
+    fun `an 加精 row is announced as 推荐阅读`() {
+        setScreen(listOf(feedPost(1, "加精了的帖子", isAwarded = true)))
+
+        composeRule.onNodeWithContentDescription("推荐阅读").assertIsDisplayed()
+    }
+
+    @Test
+    fun `an ordinary row carries no 推荐阅读 badge`() {
+        setScreen(listOf(feedPost(1, "普通帖子")))
+
+        composeRule.onNodeWithContentDescription("推荐阅读").assertDoesNotExist()
     }
 
     @Test
