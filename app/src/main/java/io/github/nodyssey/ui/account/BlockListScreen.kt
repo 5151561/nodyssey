@@ -48,8 +48,8 @@ import io.github.nodyssey.R
 import io.github.nodyssey.data.account.BlockedUser
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.PlazaTheme
-import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 
@@ -293,7 +293,7 @@ private fun BlockedRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        UserAvatar(url = user.avatarUrl, name = user.name, size = Sizes.avatarList)
+        UserAvatar(url = user.avatarUrl, name = user.name, size = listAvatarSize())
         Column(Modifier.weight(1f)) {
             Text(
                 text = user.name,

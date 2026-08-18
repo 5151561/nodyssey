@@ -73,6 +73,7 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.richtext.collapseMarkdown
 import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -703,8 +704,20 @@ private fun SpacePostRow(
         ) {
             post.categoryTitle?.let { BoardTag(title = it, slug = post.categorySlug) }
             post.authorName?.let { RowMeta(it) }
-            post.commentCount?.let { RowMeta(stringResource(R.string.post_reply_count, it)) }
-            post.viewCount?.let { RowMeta(stringResource(R.string.post_view_count, it)) }
+            post.commentCount?.let {
+                MetaStat(
+                    icon = PlazaIcons.ModeComment,
+                    value = it.toString(),
+                    contentDescription = stringResource(R.string.post_reply_count, it),
+                )
+            }
+            post.viewCount?.let {
+                MetaStat(
+                    icon = PlazaIcons.Visibility,
+                    value = it.toString(),
+                    contentDescription = stringResource(R.string.post_view_count, it),
+                )
+            }
             post.createdAtText?.let { RowMeta(it) }
         }
     }

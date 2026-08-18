@@ -31,7 +31,6 @@ object Sizes {
     val minTouchTarget = 48.dp
 
     val avatarComment = 28.dp
-    val avatarList = 34.dp
     val avatarOriginalPost = 40.dp
     val avatarProfile = 64.dp
 

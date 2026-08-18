@@ -62,6 +62,7 @@ import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
@@ -69,8 +70,8 @@ import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.PlazaTheme
-import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import kotlinx.coroutines.launch
@@ -365,7 +366,7 @@ private fun HistoryRow(
                     // served at /avatar/<uid>.png. A row with no uid falls back to the initial.
                     url = entry.authorUid?.let(NodeSeekSite::avatarUrl),
                     name = entry.authorName?.takeIf { it.isNotBlank() } ?: title,
-                    size = Sizes.avatarList,
+                    size = listAvatarSize(),
                     modifier = Modifier.offset(y = AvatarCapOffset),
                 )
             },
@@ -382,7 +383,11 @@ private fun HistoryRow(
             BoardTag(title = entry.categoryTitle, slug = null)
             entry.authorName?.takeIf { it.isNotBlank() }?.let { MetaText(it, singleLine = true) }
             entry.commentCount?.let {
-                MetaText(stringResource(R.string.post_reply_count, it), singleLine = true)
+                MetaStat(
+                    icon = PlazaIcons.ModeComment,
+                    value = it.toString(),
+                    contentDescription = stringResource(R.string.post_reply_count, it),
+                )
             }
             MetaText(stamp, singleLine = true)
         }

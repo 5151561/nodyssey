@@ -42,6 +42,7 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
@@ -211,7 +212,7 @@ private fun FollowRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        UserAvatar(url = user.avatarUrl, name = user.name, size = 44.dp)
+        UserAvatar(url = user.avatarUrl, name = user.name, size = listAvatarSize())
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = user.name,

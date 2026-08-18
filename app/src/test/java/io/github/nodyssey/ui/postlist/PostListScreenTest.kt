@@ -214,7 +214,8 @@ class PostListScreenTest {
     fun `an unread row shows the reply count`() {
         setScreen(listOf(feedPost(1, "unread", isRead = false, commentCount = 12)))
 
-        composeRule.onNodeWithText("12 回复").assertIsDisplayed()
+        // The count is drawn as an icon and a bare number, so the words live in the a11y label.
+        composeRule.onNodeWithContentDescription("12 回复").assertIsDisplayed()
     }
 
     /** The whole point of the read-mark table: the delta replaces the raw total once read. */
@@ -225,7 +226,7 @@ class PostListScreenTest {
         )
 
         composeRule.onNodeWithText("4 条新回复").assertIsDisplayed()
-        composeRule.onNodeWithText("16 回复").assertDoesNotExist()
+        composeRule.onAllNodesWithContentDescription("16 回复").assertCountEquals(0)
     }
 
     @Test

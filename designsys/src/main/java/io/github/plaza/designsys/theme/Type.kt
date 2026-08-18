@@ -56,16 +56,46 @@ val PlazaTypography =
         labelSmall = TextStyle(fontSize = 12.sp, lineHeight = 16.sp),
     )
 
-/** Applies the in-app reading-size preference on top of Android's system font scale. */
+/**
+ * Applies the in-app reading-size preference on top of Android's system font scale.
+ *
+ * Every role the app writes *content* in, not only the body roles. The setting used to move post
+ * bodies alone, which made the one screen the reader spends most of their time on — the feed — the
+ * one screen it did nothing to.
+ *
+ * That reaches further than the feed, because `titleMedium` and `titleSmall` are also the headings
+ * of the about, changelog and settings pages: the preference is now an app-wide reading size rather
+ * than a body-text size, which is the whole reason it is no longer called 正文字号.
+ *
+ * What stays fixed is chrome sized by its container rather than by its text: the app bar's wordmark
+ * (`titleLarge`), button and chip labels (`labelLarge`), and the display and headline roles. Those
+ * sit in fixed heights, and a reading preference is not a request to redraw the furniture.
+ */
 fun plazaTypography(fontScale: Float): Typography {
-    val scale = fontScale.coerceIn(0.85f, 1.5f)
+    val scale = fontScale.coerceIn(MIN_TYPE_SCALE, MAX_TYPE_SCALE)
     fun TextStyle.scaled() = copy(fontSize = fontSize * scale, lineHeight = lineHeight * scale)
     return PlazaTypography.copy(
+        // List row and section titles.
+        titleMedium = PlazaTypography.titleMedium.scaled(),
+        titleSmall = PlazaTypography.titleSmall.scaled(),
         bodyLarge = PlazaTypography.bodyLarge.scaled(),
         bodyMedium = PlazaTypography.bodyMedium.scaled(),
         bodySmall = PlazaTypography.bodySmall.scaled(),
+        // The meta lines under those titles: authors, counts, timestamps.
+        labelMedium = PlazaTypography.labelMedium.scaled(),
+        labelSmall = PlazaTypography.labelSmall.scaled(),
     )
 }
+
+/**
+ * The bounds the reading-size preference is clamped to, exported so the two things that scale
+ * *outside* the type scale — the board tag and the icons standing in for words on a meta line —
+ * clamp identically. See `LocalPlazaFontScale`.
+ */
+const val MIN_TYPE_SCALE = 0.85f
+
+/** @see MIN_TYPE_SCALE */
+const val MAX_TYPE_SCALE = 1.5f
 
 /**
  * Long-form reading style: 16sp on a 27sp line (1.69) with a hair of tracking.

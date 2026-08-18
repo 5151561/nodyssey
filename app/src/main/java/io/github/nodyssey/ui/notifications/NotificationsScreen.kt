@@ -60,8 +60,8 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.PlazaTheme
-import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
@@ -279,7 +279,7 @@ private fun NotificationRow(
         UserAvatar(
             url = item.avatarUrl,
             name = item.actorName,
-            size = Sizes.avatarList,
+            size = listAvatarSize(),
             modifier = Modifier.offset(y = AvatarCapOffset),
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {

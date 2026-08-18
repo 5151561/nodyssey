@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -78,6 +79,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.PagingData
@@ -107,12 +109,15 @@ import io.github.nodyssey.ui.common.sharedThreadTitle
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.listAvatarSize
+import io.github.plaza.designsys.component.textScaledSize
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
@@ -740,6 +745,7 @@ internal fun PostRow(
     sharedWithThread: Boolean = false,
 ) {
     val summary = post.summary
+    val avatarSize = listAvatarSize()
     ThreadRow(
         onClick = onClick,
         containerColor =
@@ -754,7 +760,7 @@ internal fun PostRow(
                     modifier =
                     Modifier
                         .offset(y = AvatarCapOffset)
-                        .size(Sizes.avatarList)
+                        .size(avatarSize)
                         .clip(AvatarShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center,
@@ -770,7 +776,7 @@ internal fun PostRow(
                 UserAvatar(
                     url = summary.avatarUrl,
                     name = summary.authorName,
-                    size = Sizes.avatarList,
+                    size = avatarSize,
                     // The offset goes first so that what travels is where the avatar is actually
                     // placed, cap line and all, rather than where it would sit without it.
                     modifier = Modifier
@@ -808,10 +814,11 @@ internal fun PostRow(
                         ?.let { stringResource(R.string.post_badge_locked_level, it) }
                         ?: stringResource(R.string.post_badge_locked),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    // 16dp per the b1 §8 只读→锁定 mapping spec.
+                    // 16dp per the b1 §8 只读→锁定 mapping spec, in sp so it tracks the title
+                    // it stands beside rather than shrinking against a raised reading size.
                     modifier = Modifier
                         .padding(start = Spacing.xs)
-                        .size(16.dp),
+                        .size(textScaledSize(TITLE_BADGE_SIZE)),
                 )
                 summary.lockLevel?.let { level ->
                     Text(
@@ -831,13 +838,16 @@ internal fun PostRow(
                     tint = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier
                         .padding(start = Spacing.xs)
-                        .size(16.dp),
+                        .size(textScaledSize(TITLE_BADGE_SIZE)),
                 )
             }
         },
         meta = { PostMetaItems(post, sharedWithThread) },
     )
 }
+
+/** The lock and the 加精 mark beside a title, at the size the b1 §8 badge spec gives them. */
+private val TITLE_BADGE_SIZE = 16.sp
 
 /**
  * Applies [modifier] only when [condition] holds.
@@ -883,9 +893,14 @@ internal fun highlighted(
  * The meta line, in the order a scanning eye wants it: what board, who, how busy, how fresh.
  *
  * The row itself belongs to [ThreadRow] — this only says what goes in it.
+ *
+ * Two rules keep it on one line, which is the whole point of a meta line: the counts are icons
+ * rather than words (see [MetaStat]), and the author — the one item with no upper bound on its
+ * length — is the item that gives way. Everything else is a handful of characters wide, so a long
+ * name ellipsizing is the only thing that has to happen for the timestamp to keep its place.
  */
 @Composable
-private fun PostMetaItems(
+private fun FlowRowScope.PostMetaItems(
     post: FeedPost,
     sharedWithThread: Boolean = false,
 ) {
@@ -899,15 +914,31 @@ private fun PostMetaItems(
         summary.authorName,
         singleLine = true,
         modifier =
-        Modifier.thenIf(sharedWithThread) { Modifier.sharedThreadAuthor(summary.postId) },
+        Modifier
+            // fill = false so a short name stays short and the counts sit next to it, rather than
+            // being pushed to the right edge with a lake of space in between.
+            .weight(1f, fill = false)
+            .thenIf(sharedWithThread) { Modifier.sharedThreadAuthor(summary.postId) },
     )
     if (summary.isPinned) MetaText(stringResource(R.string.post_badge_pinned), singleLine = true)
     if (post.newCommentCount > 0) {
         NewReplyBadge(post.newCommentCount)
     } else {
-        summary.commentCount?.let { MetaText(stringResource(R.string.post_reply_count, it), singleLine = true) }
+        summary.commentCount?.let {
+            MetaStat(
+                icon = PlazaIcons.ModeComment,
+                value = it.toString(),
+                contentDescription = stringResource(R.string.post_reply_count, it),
+            )
+        }
     }
-    summary.viewCount?.let { MetaText(stringResource(R.string.post_view_count, it), singleLine = true) }
+    summary.viewCount?.let {
+        MetaStat(
+            icon = PlazaIcons.Visibility,
+            value = it.toString(),
+            contentDescription = stringResource(R.string.post_view_count, it),
+        )
+    }
     summary.lastActiveText?.let { MetaText(it, singleLine = true) }
 }
 
@@ -965,7 +996,7 @@ internal fun FeedRowPlaceholder(
     ) {
         Box(
             Modifier
-                .size(Sizes.avatarList)
+                .size(listAvatarSize())
                 .clip(AvatarShape)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         )
