@@ -41,6 +41,18 @@ class VersionNamesTest {
         assertTrue(isNewerVersionName("1.3.0", "1.3.0-dev.10"))
     }
 
+    /** Which channel a build came off, read back out of its own version name. */
+    @Test
+    fun `a dev suffix is what marks a build as a test build`() {
+        assertTrue(isPreReleaseVersionName("1.2.9-dev.4"))
+        assertTrue(isPreReleaseVersionName("v1.2.9-dev.4"))
+        assertTrue(isPreReleaseVersionName("1.3.0-rc1"))
+        assertFalse(isPreReleaseVersionName("1.2.9"))
+        // Build metadata is not a pre-release, and neither is a version we could not read.
+        assertFalse(isPreReleaseVersionName("1.2.9+42"))
+        assertFalse(isPreReleaseVersionName(""))
+    }
+
     @Test
     fun `build metadata does not make a version newer`() {
         assertEquals(0, compareVersionNames("1.2.0+42", "1.2.0"))

@@ -34,9 +34,17 @@ import java.io.IOException
  * Everything that reads a setting collects [settings]; nothing keeps its own copy. That rule is the
  * whole point — settings duplicated into a ViewModel field or an `object` cache is how a settings
  * screen and the rest of the app drift apart.
+ *
+ * @param devChannelDefault what 接收 dev 版更新 reads as before anyone touches the switch. Wired to
+ * "this build is itself a test build" rather than to a constant: a phone running `1.2.9-dev.3` that
+ * checks the stable channel is asking whether a *release* has passed `1.2.9-dev.3`, and the honest
+ * answer to that stays 已是最新 until `1.3.0` ships — so a tester who never found the switch would
+ * sit on a build that has had four successors and be told there is nothing. The switch still wins
+ * once it is touched, in both directions, which is what keeps turning it off from being undone here.
  */
 class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
+    private val devChannelDefault: Boolean = false,
 ) : UpdateCheckStore {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -86,7 +94,7 @@ class SettingsRepository(
                 notifyMessages = preferences[KEY_NOTIFY_MESSAGES] ?: true,
                 readHistoryLimit = readHistoryLimit(preferences),
                 updateCheckOnLaunch = preferences[KEY_UPDATE_CHECK_ON_LAUNCH] ?: true,
-                updateDevChannel = preferences[KEY_UPDATE_DEV_CHANNEL] ?: false,
+                updateDevChannel = preferences[KEY_UPDATE_DEV_CHANNEL] ?: devChannelDefault,
             )
         }
 
@@ -373,7 +381,7 @@ class SettingsRepository(
      * and asks again on its own, with no expiry to tune and nothing to reset when one ships.
      */
     override suspend fun devChannelEnabled(): Boolean =
-        preferences()[KEY_UPDATE_DEV_CHANNEL] ?: false
+        preferences()[KEY_UPDATE_DEV_CHANNEL] ?: devChannelDefault
 
     override suspend fun postponedUpdateVersion(): String? = preferences()[KEY_UPDATE_POSTPONED]
 

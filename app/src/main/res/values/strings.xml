@@ -304,7 +304,7 @@
     <string name="settings_update_on_launch">启动时检查更新</string>
     <string name="settings_update_on_launch_hint">有新版就在启动后提醒一次；关掉后只在关于页手动查</string>
     <string name="settings_update_dev_channel">接收 dev 版更新</string>
-    <string name="settings_update_dev_channel_hint">dev 版是没正式发版的测试包，可能不稳定；关掉后只推正式版</string>
+    <string name="settings_update_dev_channel_hint">dev 版是没正式发版的测试包，可能不稳定；关掉后只推正式版。装的就是 dev 版时默认开着</string>
     <string name="settings_licenses">开源许可</string>
 
     <!-- 代理设置 — a child of Settings' 网络 group. Routes only forum requests, see ProxyConfig doc. -->

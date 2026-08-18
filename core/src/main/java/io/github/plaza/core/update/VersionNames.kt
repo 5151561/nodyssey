@@ -37,6 +37,18 @@ fun isNewerVersionName(candidate: String, current: String): Boolean =
         current.isNotBlank() &&
         compareVersionNames(candidate, current) > 0
 
+/**
+ * True when [versionName] names a test build — `1.2.9-dev.4`, not `1.2.9`.
+ *
+ * The suffix is the same one that makes `release.yml` publish the tag as a prerelease, so it is also
+ * what says which channel the build came off. Worth asking about because the two channels are not
+ * symmetric: `stable.json` has nothing to offer someone on `1.2.9-dev.3` until a release passes that
+ * number, so a test build checking the stable channel reports 已是最新 for as long as it takes the
+ * next release to ship — which is not a wrong answer to the question asked, only the wrong question.
+ */
+fun isPreReleaseVersionName(versionName: String): Boolean =
+    splitVersionName(versionName).second.isNotEmpty()
+
 /** `v1.2.0` is the tag, `1.2.0` is the version inside the APK. This is the one difference. */
 fun versionNameOfTag(tag: String): String = tag.trim().removePrefix("v").removePrefix("V")
 
