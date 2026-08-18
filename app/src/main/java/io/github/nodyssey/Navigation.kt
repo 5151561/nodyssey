@@ -2,8 +2,11 @@ package io.github.nodyssey
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -18,6 +21,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -68,6 +72,7 @@ import io.github.nodyssey.ui.assets.CreditRoute
 import io.github.nodyssey.ui.assets.CreditViewModel
 import io.github.nodyssey.ui.assets.StardustRoute
 import io.github.nodyssey.ui.assets.StardustViewModel
+import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.composer.PostComposerRoute
 import io.github.nodyssey.ui.composer.PostComposerViewModel
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
@@ -134,6 +139,8 @@ fun MainNavigation(
     container: AppContainer,
     modifier: Modifier = Modifier,
     initialTab: TopLevelDestination = TopLevelDestination.HOME,
+    launchRequest: LaunchRequest? = null,
+    onLaunchRequestHandled: () -> Unit = {},
 ) {
     val signInUrl = NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH
 
@@ -260,84 +267,90 @@ fun MainNavigation(
     val scope = rememberCoroutineScope()
 
     /*
-     * Opening a web page, routed by host: nodeseek.com stays in the app's own web view, everything
-     * else goes to the browser.
+     * Where something outside the app has asked us to go.
      *
-     * This is a cookie decision, not a cosmetic one. A Custom Tab is the browser doing the browsing —
-     * its process, and crucially its cookie jar — where this account is not signed in. A site page
-     * opened out there shows the user a logged-out stranger's view of their own forum, and a
-     * Cloudflare pass earned out there lands in a jar the app cannot read, so the app's own requests
-     * keep failing afterwards.
+     * Onto 首页 rather than whichever tab happened to be open: a link arriving from elsewhere has no
+     * relationship to the tab the user last left behind, and landing a thread on top of 账号设置 would
+     * make Back walk out through a settings page. 首页's stack starts as `[PostListKey]`, so a cold
+     * start lands exactly the two layers the deep link should have — the list, then the thread.
      *
-     * By host rather than page by page because "does this one need the session" is a judgement we get
-     * wrong: an 内版 thread is an ordinary `/post-` URL right up until it 404s, and the site's own
-     * pages move between public and gated without telling us.
+     * Nothing is cleared first. When the app was already running the user has a place in 首页 worth
+     * keeping, and Back still reaches the list eventually; throwing it away to make the stack exactly
+     * two entries deep would cost more than the tidiness is worth.
      *
-     * [WebViewGoal.MANAGE] because there is no cookie to wait for here — the user is done when they
-     * say so. The web view carries its own way back out to a real browser; see `WebViewScreen`.
+     * `onLaunchRequestHandled` is what stops a rotation from replaying the link: the Activity holds
+     * the request until the composition says it is spent.
      */
-    val openWebUrl: (String) -> Unit = { url ->
-        if (NodeSeekSite.isTrustedWebViewUrl(url)) {
-            backStack.add(WebKey(url, siteTitle, WebViewGoal.MANAGE))
-        } else {
-            openExternalUrl(url)
+    LaunchedEffect(launchRequest) {
+        val openSpaceOnHome: (Long) -> Unit = { uid ->
+            homeStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid))
         }
-    }
+        when (val request = launchRequest) {
+            null -> return@LaunchedEffect
 
-    // Content links: our own post/space/mention URLs get a native screen, and everything else —
-    // including the rest of nodeseek.com — goes through the routing above.
-    val openSpace: (Long) -> Unit = { uid ->
-        backStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid))
-    }
-    val openContentUrl: (String) -> Unit = { url ->
-        when (val route = NodeSeekSite.parseInternalRoute(url)) {
-            is NodeSeekSite.InternalRoute.Post ->
-                backStack.add(PostDetailKey(route.postId, page = route.page))
+            is LaunchRequest.OpenTab -> currentTab = request.tab
 
-            is NodeSeekSite.InternalRoute.Space -> openSpace(route.uid)
-
-            is NodeSeekSite.InternalRoute.Member ->
-                // A mention carries only the user name; the uid comes from following the site's own
-                // /member?t= redirect. Any failure (offline, signed out, renamed user) falls back to
-                // the site itself.
-                scope.launch {
-                    resolveMemberLink(
-                        name = route.name,
-                        resolveMemberUid = container.searchRepository::resolveMemberUid,
-                        onResolved = openSpace,
-                        onFailure = { openWebUrl(url) },
-                    )
+            is LaunchRequest.OpenLink -> {
+                currentTab = TopLevelDestination.HOME
+                // The web view is the fallback rather than the browser: the link came to us because
+                // the user chose this app for it, and bouncing it back out would read as a refusal.
+                val openInWebView: () -> Unit = {
+                    homeStack.add(WebKey(request.url, siteTitle, WebViewGoal.MANAGE))
                 }
+                when (val route = NodeSeekSite.parseInternalRoute(request.url)) {
+                    is NodeSeekSite.InternalRoute.Post ->
+                        homeStack.add(PostDetailKey(route.postId, page = route.page))
 
-            null -> openWebUrl(NodeSeekSite.unwrapJumpUrl(url))
+                    is NodeSeekSite.InternalRoute.Space -> openSpaceOnHome(route.uid)
+
+                    is NodeSeekSite.InternalRoute.Member ->
+                        resolveMemberLink(
+                            name = route.name,
+                            resolveMemberUid = container.searchRepository::resolveMemberUid,
+                            onResolved = openSpaceOnHome,
+                            onFailure = openInWebView,
+                        )
+
+                    // Only reachable if the manifest filter and `parseInternalRoute` drift apart.
+                    null -> openInWebView()
+                }
+            }
         }
+        onLaunchRequestHandled()
     }
 
-    /*
-     * Back out of a secondary tab returns to home rather than leaving the app.
-     *
-     * `NavDisplay` only handles back while the current stack has something to pop, so without this
-     * the first back press on a tab root would exit — and now that the tabs keep their stacks,
-     * exiting from "我的" would silently drop three other stacks the user could still see.
-     */
-    BackHandler(enabled = atTabRoot && currentTab != TopLevelDestination.HOME) {
-        currentTab = TopLevelDestination.HOME
-    }
-
-    fun destinationProvider(backStack: NavBackStack<NavKey>) =
+    fun destinationEntries(
+        backStack: NavBackStack<NavKey>,
+        openWebUrl: (String) -> Unit,
+        openSpace: (Long) -> Unit,
+        openContentUrl: (String) -> Unit,
+    ) =
         entryProvider<NavKey> {
-            entry<PostListKey>(
-                metadata =
-                ListDetailSceneStrategy.listPane(
-                    detailPlaceholder = { EmptyDetailPane(R.string.home_pane_empty) },
-                ),
-            ) {
+            entry<PostListKey> {
                 val viewModel: PostListViewModel =
                     viewModel(factory = PostListViewModel.factory(container))
                 PostListRoute(
                     viewModel = viewModel,
                     listState = homeListState,
-                    onPostClick = { backStack.add(PostDetailKey(it)) },
+                    // The whole of what the row is already showing, not just the id: the thread
+                    // draws these four before the network answers, and they are what the row's own
+                    // title, avatar, name and board tag fly into.
+                    onPostClick = { post ->
+                        backStack.add(
+                            PostDetailKey(
+                                post.summary.postId,
+                                preview =
+                                ThreadPreview(
+                                    title = post.summary.title,
+                                    authorName = post.summary.authorName,
+                                    avatarUrl = post.summary.avatarUrl,
+                                    categoryTitle = post.summary.categoryTitle,
+                                    categorySlug = post.summary.categorySlug,
+                                    isAwarded = post.summary.isAwarded,
+                                ),
+                            ),
+                        )
+                    },
                     onCreatePost = { backStack.add(PostComposerKey()) },
                     onSignIn = {
                         backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
@@ -352,12 +365,7 @@ fun MainNavigation(
                 )
             }
 
-            entry<SearchKey>(
-                metadata =
-                ListDetailSceneStrategy.listPane(
-                    detailPlaceholder = { EmptyDetailPane(R.string.search_pane_empty) },
-                ),
-            ) {
+            entry<SearchKey> {
                 val viewModel: SearchViewModel =
                     viewModel(factory = SearchViewModel.factory(container))
                 SearchRoute(
@@ -378,12 +386,7 @@ fun MainNavigation(
                 )
             }
 
-            entry<NotificationsKey>(
-                metadata =
-                ListDetailSceneStrategy.listPane(
-                    detailPlaceholder = { EmptyDetailPane(R.string.notifications_pane_empty) },
-                ),
-            ) {
+            entry<NotificationsKey> {
                 NotificationsRoute(
                     viewModel = notificationsViewModel,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
@@ -403,9 +406,7 @@ fun MainNavigation(
                 )
             }
 
-            entry<MessageThreadKey>(
-                metadata = ListDetailSceneStrategy.detailPane(),
-            ) { key ->
+            entry<MessageThreadKey> { key ->
                 val viewModel: MessageThreadViewModel =
                     viewModel(
                         key = "message-${key.uid}",
@@ -580,12 +581,7 @@ fun MainNavigation(
                 )
             }
 
-            entry<UserSpaceKey>(
-                metadata =
-                ListDetailSceneStrategy.listPane(
-                    detailPlaceholder = { EmptyDetailPane(R.string.space_pane_empty) },
-                ),
-            ) { key ->
+            entry<UserSpaceKey> { key ->
                 val viewModel: UserSpaceViewModel =
                     viewModel(
                         // The landing tab is part of the identity: 我的主页 and 我的收藏 are the same
@@ -857,7 +853,22 @@ fun MainNavigation(
                 )
             }
 
-            entry<ImageViewerKey> { key ->
+            entry<ImageViewerKey>(
+                /*
+                 * Fades rather than the default slide.
+                 *
+                 * Every other destination is a page that follows the one before it, and sliding says
+                 * so. This one is the picture already on screen, filled out — it is the same object
+                 * seen closer, not a place the user travelled to, and sliding it in from the edge
+                 * reads as having left the thread rather than having zoomed into it.
+                 */
+                metadata =
+                NavDisplay.transitionSpec { fadeIn() togetherWith fadeOut() } +
+                    NavDisplay.popTransitionSpec { fadeIn() togetherWith fadeOut() } +
+                    NavDisplay.predictivePopTransitionSpec { _ ->
+                        fadeIn() togetherWith fadeOut()
+                    },
+            ) { key ->
                 val context = LocalContext.current
                 val viewModel: ImageViewerViewModel =
                     viewModel(factory = ImageViewerViewModel.factory(container, context))
@@ -876,7 +887,20 @@ fun MainNavigation(
             }
 
             entry<PostDetailKey>(
-                metadata = ListDetailSceneStrategy.detailPane(),
+                /*
+                 * Fades rather than the default slide — but only for a thread opened from a row that
+                 * handed over its title.
+                 *
+                 * A slide and a shared element contradict each other: the title would detach from
+                 * the page it belongs to and fly across a screen that is itself travelling sideways.
+                 * Fading the two pages leaves the title as the only thing moving, which is the whole
+                 * point of moving it. Where no row supplied a title there is nothing to fly — a
+                 * notification, a deep link, the composer — and those keep the slide, which is still
+                 * the honest description of what happened: a page arrived from somewhere else.
+                 */
+                metadata = { key ->
+                    if (key.preview == null) emptyMap() else ThreadOpenTransition
+                },
             ) { key ->
                 // Keyed so navigating to a different post builds a fresh ViewModel.
                 val viewModel: PostDetailViewModel =
@@ -888,6 +912,7 @@ fun MainNavigation(
                             key.postId,
                             initialFloor = key.floor,
                             initialPage = key.page,
+                            preview = key.preview,
                         ),
                     )
                 // Its own ViewModel, keyed the same way: an unsent reply belongs to one thread
@@ -994,6 +1019,106 @@ fun MainNavigation(
             }
         }
 
+    /*
+     * The entries for one tab's stack, with every "open this somewhere" closure bound to that same
+     * stack.
+     *
+     * Built per stack rather than once for the app because an entry's content lambda is created in a
+     * plain (non-composable) function, so whatever it captures is frozen at the moment the entry is
+     * built — and `rememberDecoratedNavEntries` only rebuilds entries when *its own* back stack
+     * changes. A closure over "whichever tab is current" therefore keeps pointing at whichever tab
+     * happened to be current when the entry was made: on a cold start that is the launch tab for all
+     * four stacks, and after a rotation or process death it is the restored tab for all four. 访问网站
+     * in 我的 pushed its web view onto 首页's stack that way, and nothing appeared to happen.
+     *
+     * The parameter shadows nothing now — these three used to be declared beside `backStack` above,
+     * where they read the `when (currentTab)` result.
+     */
+    fun destinationProvider(backStack: NavBackStack<NavKey>): (NavKey) -> NavEntry<NavKey> {
+        /*
+         * Opening a web page, routed by host: nodeseek.com stays in the app's own web view,
+         * everything else goes to the browser.
+         *
+         * This is a cookie decision, not a cosmetic one. A Custom Tab is the browser doing the
+         * browsing — its process, and crucially its cookie jar — where this account is not signed
+         * in. A site page opened out there shows the user a logged-out stranger's view of their own
+         * forum, and a Cloudflare pass earned out there lands in a jar the app cannot read, so the
+         * app's own requests keep failing afterwards.
+         *
+         * By host rather than page by page because "does this one need the session" is a judgement
+         * we get wrong: an 内版 thread is an ordinary `/post-` URL right up until it 404s, and the
+         * site's own pages move between public and gated without telling us.
+         *
+         * [WebViewGoal.MANAGE] because there is no cookie to wait for here — the user is done when
+         * they say so. The web view carries its own way back out to a real browser; see
+         * `WebViewScreen`.
+         */
+        val openWebUrl: (String) -> Unit = { url ->
+            if (NodeSeekSite.isTrustedWebViewUrl(url)) {
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.MANAGE))
+            } else {
+                openExternalUrl(url)
+            }
+        }
+
+        // Content links: our own post/space/mention URLs get a native screen, and everything else —
+        // including the rest of nodeseek.com — goes through the routing above.
+        val openSpace: (Long) -> Unit = { uid ->
+            backStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid))
+        }
+        val openContentUrl: (String) -> Unit = { url ->
+            when (val route = NodeSeekSite.parseInternalRoute(url)) {
+                is NodeSeekSite.InternalRoute.Post ->
+                    backStack.add(PostDetailKey(route.postId, page = route.page))
+
+                is NodeSeekSite.InternalRoute.Space -> openSpace(route.uid)
+
+                is NodeSeekSite.InternalRoute.Member ->
+                    // A mention carries only the user name; the uid comes from following the site's
+                    // own /member?t= redirect. Any failure (offline, signed out, renamed user) falls
+                    // back to the site itself.
+                    scope.launch {
+                        resolveMemberLink(
+                            name = route.name,
+                            resolveMemberUid = container.searchRepository::resolveMemberUid,
+                            onResolved = openSpace,
+                            onFailure = { openWebUrl(url) },
+                        )
+                    }
+
+                null -> openWebUrl(NodeSeekSite.unwrapJumpUrl(url))
+            }
+        }
+
+        return destinationEntries(backStack, openWebUrl, openSpace, openContentUrl)
+    }
+
+    /*
+     * One provider per stack, built once.
+     *
+     * `rememberDecoratedNavEntries` only calls its provider when its own back stack changes, so a
+     * provider rebuilt on every recomposition — which is what passing `destinationProvider(stack)`
+     * straight through did — was four maps of thirty-five entries built and thrown away each time
+     * the unread count ticked. Everything the entries close over is either constant for the life of
+     * the composition or a state object read at draw time, so freezing the provider changes nothing
+     * they can observe.
+     *
+     * Four `remember` calls rather than a loop, for the same reason the stacks above are written out.
+     */
+    val homeProvider =
+        remember { stackScopedEntryProvider(TopLevelDestination.HOME, destinationProvider(homeStack)) }
+    val searchProvider =
+        remember { stackScopedEntryProvider(TopLevelDestination.SEARCH, destinationProvider(searchStack)) }
+    val notificationsProvider =
+        remember {
+            stackScopedEntryProvider(
+                TopLevelDestination.NOTIFICATIONS,
+                destinationProvider(notificationsStack),
+            )
+        }
+    val profileProvider =
+        remember { stackScopedEntryProvider(TopLevelDestination.PROFILE, destinationProvider(profileStack)) }
+
     val viewModelDecorator = rememberViewModelStoreNavEntryDecorator<NavKey>()
     val homeEntries =
         rememberDecoratedNavEntries(
@@ -1003,11 +1128,7 @@ fun MainNavigation(
                 rememberSaveableStateHolderNavEntryDecorator(),
                 viewModelDecorator,
             ),
-            entryProvider =
-            stackScopedEntryProvider(
-                TopLevelDestination.HOME,
-                destinationProvider(homeStack),
-            ),
+            entryProvider = homeProvider,
         )
     val searchEntries =
         rememberDecoratedNavEntries(
@@ -1017,11 +1138,7 @@ fun MainNavigation(
                 rememberSaveableStateHolderNavEntryDecorator(),
                 viewModelDecorator,
             ),
-            entryProvider =
-            stackScopedEntryProvider(
-                TopLevelDestination.SEARCH,
-                destinationProvider(searchStack),
-            ),
+            entryProvider = searchProvider,
         )
     val notificationEntries =
         rememberDecoratedNavEntries(
@@ -1031,11 +1148,7 @@ fun MainNavigation(
                 rememberSaveableStateHolderNavEntryDecorator(),
                 viewModelDecorator,
             ),
-            entryProvider =
-            stackScopedEntryProvider(
-                TopLevelDestination.NOTIFICATIONS,
-                destinationProvider(notificationsStack),
-            ),
+            entryProvider = notificationsProvider,
         )
     val profileEntries =
         rememberDecoratedNavEntries(
@@ -1045,19 +1158,32 @@ fun MainNavigation(
                 rememberSaveableStateHolderNavEntryDecorator(),
                 viewModelDecorator,
             ),
-            entryProvider =
-            stackScopedEntryProvider(
-                TopLevelDestination.PROFILE,
-                destinationProvider(profileStack),
-            ),
+            entryProvider = profileProvider,
         )
-    val entries =
+    val tabEntries =
         when (currentTab) {
             TopLevelDestination.HOME -> homeEntries
             TopLevelDestination.SEARCH -> searchEntries
             TopLevelDestination.NOTIFICATIONS -> notificationEntries
             TopLevelDestination.PROFILE -> profileEntries
         }
+
+    /*
+     * "Exit through home": 首页's entries sit under every other tab's, so the user always leaves the
+     * app through 首页.
+     *
+     * This used to be a `BackHandler` that flipped `currentTab`, which was correct but silent — the
+     * gesture had nothing to preview, so backing out of 搜索 was a hard cut. Handing `NavDisplay` a
+     * stack that really does have 首页 underneath makes it an ordinary pop, which means it animates
+     * and the predictive-back gesture shows where it is going.
+     *
+     * Safe only because each tab's panes carry their own scene key — see [paneMetadataOf].
+     * `ListDetailSceneStrategy` collects the run of panes at the top of the list, and without the
+     * key it would have swept 首页's list into 搜索's scene and drawn 首页's empty-detail text beside
+     * the search results.
+     */
+    val entries =
+        if (currentTab == TopLevelDestination.HOME) tabEntries else homeEntries + tabEntries
 
     /*
      * 启动提醒 lives here rather than on any screen: the launch check answers while whatever tab was
@@ -1099,11 +1225,36 @@ fun MainNavigation(
         NavigationSuiteScaffoldDefaults.navigationSuiteType(windowAdaptiveInfo),
         state = navigationSuiteState,
     ) {
-        NavDisplay(
-            entries = entries,
-            onBack = { backStack.removeLastOrNull() },
-            sceneStrategies = listOf(listDetailSceneStrategy),
-        )
+        SharedTransitionLayout(Modifier.fillMaxSize()) {
+            /*
+             * Withheld on a two-pane window, where a row and the thread it opens are on screen at
+             * once and a single shared-element key would have two live claims on it. Provided as a
+             * composition local rather than threaded through every screen: the two ends of the
+             * flight are a feed row and a thread header, twelve composables apart, and the only
+             * thing they need to agree on is that the flight is happening at all.
+             */
+            CompositionLocalProvider(
+                LocalThreadTransition provides
+                    this@SharedTransitionLayout.takeUnless { isListDetailExpanded },
+            ) {
+                NavDisplay(
+                    entries = entries,
+                    // The current tab first, and only when it is spent does back mean "leave this
+                    // tab". `NavDisplay` handles back whenever there is more than one entry, and
+                    // with 首页 underneath there always is — so popping blindly would empty a
+                    // secondary tab's stack.
+                    onBack = {
+                        if (backStack.size > 1) {
+                            backStack.removeLastOrNull()
+                        } else {
+                            currentTab = TopLevelDestination.HOME
+                        }
+                    },
+                    sceneStrategies = listOf(listDetailSceneStrategy),
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                )
+            }
+        }
     }
 }
 
@@ -1132,13 +1283,14 @@ private fun EmptyDetailPane(@StringRes text: Int) {
 /**
  * Which half of a list-detail layout a destination is drawn in, or null if it takes the whole window.
  *
- * This restates the `metadata =` on the entries above, and nothing but review keeps the two in step —
- * the metadata is built inside a composable local function, so no test can read it back. They answer
- * different questions from the same fact: the metadata is what [ListDetailSceneStrategy] reads to
- * build a scene, and this is what the app reads to decide whether a detail still needs its own back
- * arrow and whether the navigation area would be covering a list or sitting beside one. Adding a
- * `listPane`/`detailPane` to an entry without adding its key here leaves a thread with a back arrow
- * pointing at a list already on screen; the reverse hides an arrow that was the only way out.
+ * The single source of truth for that question. Two things read it, and they used to be two separate
+ * statements of the same fact: [paneMetadataOf] turns it into what [ListDetailSceneStrategy] reads to
+ * build a scene, and the app reads it directly to decide whether a detail still needs its own back
+ * arrow and whether the navigation area would be covering a list or sitting beside one. Those could
+ * disagree — a `listPane` on an entry whose key was missing here left a thread with a back arrow
+ * pointing at a list already on screen — so now the entries carry no pane metadata of their own and
+ * [stackScopedEntryProvider] derives it from here. Adding a destination is one edit, and a test can
+ * read the answer back.
  */
 internal enum class PaneRole {
     LIST,
@@ -1175,6 +1327,50 @@ internal fun List<NavKey>.showsListPane(): Boolean =
         .takeWhile { paneRoleOf(it) != null }
         .any { paneRoleOf(it) == PaneRole.LIST }
 
+/**
+ * The pane metadata for a destination, derived from [paneRoleOf].
+ *
+ * The placeholder is resolved here rather than inside the lambda so that a list pane added without a
+ * matching line in [emptyDetailTextOf] fails when the key is pushed, not when a wide window happens
+ * to draw the empty half of it.
+ */
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+private fun paneMetadataOf(key: NavKey, destination: TopLevelDestination): Map<String, Any> =
+    when (paneRoleOf(key)) {
+        PaneRole.LIST -> {
+            val text = emptyDetailTextOf(key)
+            ListDetailSceneStrategy.listPane(
+                destination,
+                detailPlaceholder = { EmptyDetailPane(text) },
+            )
+        }
+
+        PaneRole.DETAIL -> ListDetailSceneStrategy.detailPane(destination)
+
+        null -> emptyMap()
+    }
+
+/** What the detail half says on a wide window before anything has been opened in it. */
+@StringRes
+internal fun emptyDetailTextOf(key: NavKey): Int =
+    when (key) {
+        PostListKey -> R.string.home_pane_empty
+        SearchKey -> R.string.search_pane_empty
+        NotificationsKey -> R.string.notifications_pane_empty
+        is UserSpaceKey -> R.string.space_pane_empty
+        else -> error("$key is a list pane with nothing to say when its detail is empty")
+    }
+
+/**
+ * What a thread opened from a list row animates as. See the `entry<PostDetailKey>` metadata for why
+ * this is not the default slide, and [io.github.nodyssey.ui.common.sharedThreadTitle] for the thing
+ * the fade is clearing the way for.
+ */
+private val ThreadOpenTransition =
+    NavDisplay.transitionSpec { fadeIn() togetherWith fadeOut() } +
+        NavDisplay.popTransitionSpec { fadeIn() togetherWith fadeOut() } +
+        NavDisplay.predictivePopTransitionSpec { _ -> fadeIn() togetherWith fadeOut() }
+
 private fun stackScopedEntryProvider(
     destination: TopLevelDestination,
     provider: (NavKey) -> NavEntry<NavKey>,
@@ -1183,7 +1379,7 @@ private fun stackScopedEntryProvider(
     NavEntry(
         key = key,
         contentKey = "${destination.name}:${entry.contentKey}",
-        metadata = entry.metadata,
+        metadata = entry.metadata + paneMetadataOf(key, destination),
     ) {
         entry.Content()
     }

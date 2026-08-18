@@ -12,6 +12,9 @@ import org.junit.Test
  *
  * The cases that matter are the ones where the answer is not the tab: a thread reached from a screen
  * that is not a list is still full-screen, and a list reached from a thread still counts.
+ *
+ * These also stand in for the scene metadata, which no test can read back: the entries carry none of
+ * their own and `paneMetadataOf` derives all of it from [paneRoleOf].
  */
 class PaneRoleTest {
     @Test
@@ -68,6 +71,13 @@ class PaneRoleTest {
     fun `我的 is a menu, not a list`() {
         assertEquals(null, paneRoleOf(ProfileKey))
         assertFalse(listOf<NavKey>(ProfileKey).showsListPane())
+    }
+
+    @Test
+    fun `every list pane says something different when its detail is empty`() {
+        val listKeys = listOf<NavKey>(PostListKey, SearchKey, NotificationsKey, UserSpaceKey(uid = 7))
+        // Distinct implies present: a key with no line of its own throws rather than returning 0.
+        assertEquals(listKeys.size, listKeys.map { emptyDetailTextOf(it) }.toSet().size)
     }
 
     @Test

@@ -37,13 +37,52 @@
             of the screen and reports the keyboard as an inset anyway, which is what made every
             `imePadding` in the app subtract a second keyboard.
         -->
+        <!--
+            singleTask so that a notification tap and a site link both land in the one instance that
+            is already running, through onNewIntent, instead of stacking a second copy of the app.
+            The notification's PendingIntent carries only FLAG_ACTIVITY_NEW_TASK, which under the
+            default launch mode merely brought the existing task forward without delivering the
+            intent — so tapping it while the app was open never did switch to 通知.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+                Site links the app can open on a screen of its own — and only those. A board page or
+                the sign-in page would come in here too if the filter were the whole host, and all
+                the app could do with one is hand it to a web view, which is what the browser was
+                already doing better.
+
+                No android:autoVerify — hence the suppressed AppLinkWarning. Verification needs an
+                assetlinks.json under nodeseek.com, and that domain is not ours to publish to; the
+                attribute would only make the system try, fail, and log about it every install. So
+                this stays an ordinary deep link and the system asks the user which app to use the
+                first time.
+
+                The three <data> path forms combine with both hosts — the elements are matched as a
+                cross product, not as a list of whole URLs. Kept in step with
+                NodeSeekSite.parseInternalRoute, which is what actually turns the URL into a screen:
+                POST_PATH `/post-<id>[-<page>]`, SPACE_PATH `/space/<uid>`, and `/member?t=<name>`.
+            -->
+            <intent-filter tools:ignore="AppLinkWarning">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="www.nodeseek.com" />
+                <data android:host="nodeseek.com" />
+                <data android:pathPrefix="/post-" />
+                <data android:pathPrefix="/space/" />
+                <data android:path="/member" />
             </intent-filter>
         </activity>
 

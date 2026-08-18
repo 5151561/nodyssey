@@ -93,12 +93,17 @@ import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
 import io.github.nodyssey.ui.common.JumpDestination
+import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.common.NavigationBarScrollConnection
 import io.github.nodyssey.ui.common.NavigationDirectionThreshold
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.sharedThreadAuthor
+import io.github.nodyssey.ui.common.sharedThreadAvatar
+import io.github.nodyssey.ui.common.sharedThreadBoard
+import io.github.nodyssey.ui.common.sharedThreadTitle
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.AvatarShape
@@ -128,7 +133,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 fun PostListRoute(
     viewModel: PostListViewModel,
     listState: LazyListState,
-    onPostClick: (Long) -> Unit,
+    onPostClick: (FeedPost) -> Unit,
     onCreatePost: () -> Unit,
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
@@ -170,7 +175,7 @@ fun PostListRoute(
 fun PostListScreen(
     state: PostListUiState,
     posts: LazyPagingItems<FeedPost>,
-    onPostClick: (Long) -> Unit,
+    onPostClick: (FeedPost) -> Unit,
     onBoardClick: (String?) -> Unit,
     onSortChange: (FeedSort) -> Unit,
     onSignInClick: () -> Unit,
@@ -468,7 +473,8 @@ fun PostListScreen(
                                         else -> {
                                             PostRow(
                                                 post = post,
-                                                onClick = { onPostClick(post.summary.postId) },
+                                                onClick = { onPostClick(post) },
+                                                sharedWithThread = true,
                                             )
                                             HorizontalDivider(
                                                 color = MaterialTheme.colorScheme.outlineVariant,
@@ -722,6 +728,16 @@ internal fun PostRow(
      * own title already says what the whole list is.
      */
     showAwardBadge: Boolean = true,
+    /**
+     * Whether this row's title, avatar, author and board tag are the same objects as the thread's,
+     * and should travel there rather than cut — see [LocalThreadTransition].
+     *
+     * On for 首页 alone, which is the only list that hands the thread everything it would need to
+     * draw them. A row that flew its contents into a thread arriving by the ordinary slide would
+     * look worse than one that did not fly at all, and two lists claiming one post at the same
+     * moment is a state the shared-element machinery has no answer for.
+     */
+    sharedWithThread: Boolean = false,
 ) {
     val summary = post.summary
     ThreadRow(
@@ -755,7 +771,11 @@ internal fun PostRow(
                     url = summary.avatarUrl,
                     name = summary.authorName,
                     size = Sizes.avatarList,
-                    modifier = Modifier.offset(y = AvatarCapOffset),
+                    // The offset goes first so that what travels is where the avatar is actually
+                    // placed, cap line and all, rather than where it would sit without it.
+                    modifier = Modifier
+                        .offset(y = AvatarCapOffset)
+                        .thenIf(sharedWithThread) { Modifier.sharedThreadAvatar(summary.postId) },
                 )
             }
         },
@@ -773,7 +793,12 @@ internal fun PostRow(
                 },
                 fontWeight = if (post.isRead) FontWeight.Medium else FontWeight.SemiBold,
                 // Not filling, so the lock beside it keeps its place instead of being pushed off.
-                modifier = Modifier.weight(1f, fill = false),
+                // The shared bounds go inside the weight, so what travels is the title as the row
+                // actually lays it out rather than as it would be unconstrained.
+                modifier =
+                Modifier
+                    .weight(1f, fill = false)
+                    .thenIf(sharedWithThread) { Modifier.sharedThreadTitle(summary.postId) },
             )
             if (summary.isLocked) {
                 Icon(
@@ -810,9 +835,22 @@ internal fun PostRow(
                 )
             }
         },
-        meta = { PostMetaItems(post) },
+        meta = { PostMetaItems(post, sharedWithThread) },
     )
 }
+
+/**
+ * Applies [modifier] only when [condition] holds.
+ *
+ * A helper because the four shared-element modifiers below are all conditional on the same flag, and
+ * spelling out `if (flag) Modifier.x() else Modifier` four times buried the row's layout under the
+ * animation's bookkeeping. Composable-aware, which is why it is a lambda and not a value.
+ */
+@Composable
+private inline fun Modifier.thenIf(
+    condition: Boolean,
+    modifier: @Composable () -> Modifier,
+): Modifier = if (condition) then(modifier()) else this
 
 /**
  * The searched-for words picked out of the title.
@@ -847,10 +885,22 @@ internal fun highlighted(
  * The row itself belongs to [ThreadRow] — this only says what goes in it.
  */
 @Composable
-private fun PostMetaItems(post: FeedPost) {
+private fun PostMetaItems(
+    post: FeedPost,
+    sharedWithThread: Boolean = false,
+) {
     val summary = post.summary
-    BoardTag(title = summary.categoryTitle, slug = summary.categorySlug)
-    MetaText(summary.authorName, singleLine = true)
+    BoardTag(
+        title = summary.categoryTitle,
+        slug = summary.categorySlug,
+        modifier = Modifier.thenIf(sharedWithThread) { Modifier.sharedThreadBoard(summary.postId) },
+    )
+    MetaText(
+        summary.authorName,
+        singleLine = true,
+        modifier =
+        Modifier.thenIf(sharedWithThread) { Modifier.sharedThreadAuthor(summary.postId) },
+    )
     if (summary.isPinned) MetaText(stringResource(R.string.post_badge_pinned), singleLine = true)
     if (post.newCommentCount > 0) {
         NewReplyBadge(post.newCommentCount)

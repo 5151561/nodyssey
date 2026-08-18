@@ -110,7 +110,7 @@ class PostListScreenTest {
         refresh: LoadState = LoadState.NotLoading(false),
         append: LoadState = LoadState.NotLoading(true),
         state: PostListUiState = PostListUiState(boards = boards),
-        onPostClick: (Long) -> Unit = {},
+        onPostClick: (FeedPost) -> Unit = {},
         onBoardClick: (String?) -> Unit = {},
         onSortChange: (FeedSort) -> Unit = {},
         onRecoverInBrowser: () -> Unit = {},
@@ -144,7 +144,7 @@ class PostListScreenTest {
         append: LoadState,
         state: PostListUiState,
         listState: LazyListState = rememberLazyListState(),
-        onPostClick: (Long) -> Unit,
+        onPostClick: (FeedPost) -> Unit,
         onBoardClick: (String?) -> Unit,
         onSortChange: (FeedSort) -> Unit,
         onRecoverInBrowser: () -> Unit,
@@ -188,13 +188,16 @@ class PostListScreenTest {
     }
 
     @Test
-    fun `tapping a row reports the post id`() {
-        var clicked: Long? = null
+    fun `tapping a row reports the whole row, not just the post id`() {
+        var clicked: FeedPost? = null
         setScreen(listOf(feedPost(77, "tap me")), onPostClick = { clicked = it })
 
         composeRule.onNodeWithText("tap me").performClick()
 
-        assertEquals(77L, clicked)
+        // The row travels because the thread draws four of its facts before the network answers,
+        // and because they are what the row's own four fly into. See PostDetailKey.preview.
+        assertEquals(77L, clicked?.summary?.postId)
+        assertEquals("tap me", clicked?.summary?.title)
     }
 
     @Test
