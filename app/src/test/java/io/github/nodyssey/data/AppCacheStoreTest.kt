@@ -1,8 +1,5 @@
 package io.github.nodyssey.data
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
-import coil3.ImageLoader
 import coil3.disk.DiskCache
 import io.github.plaza.core.AppDispatchers
 import kotlinx.coroutines.Dispatchers
@@ -14,8 +11,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import java.io.File
 
 /**
@@ -26,7 +21,6 @@ import java.io.File
  * system settings. So the assertions are about the directory: what the number counts, and what is
  * actually gone afterwards.
  */
-@RunWith(RobolectricTestRunner::class)
 class AppCacheStoreTest {
     @get:Rule
     val temporaryFolder = TemporaryFolder()
@@ -34,24 +28,30 @@ class AppCacheStoreTest {
     private val dispatchers = AppDispatchers(io = Dispatchers.Unconfined, default = Dispatchers.Unconfined)
 
     private lateinit var cacheDirectory: File
-    private lateinit var imageLoader: ImageLoader
+    private lateinit var diskCache: DiskCache
 
     private fun store(): AppCacheStore {
         cacheDirectory = temporaryFolder.newFolder("cache")
-        imageLoader =
-            ImageLoader
-                .Builder(ApplicationProvider.getApplicationContext<Context>())
-                .diskCache {
-                    DiskCache
-                        .Builder()
-                        .directory(File(cacheDirectory, "coil3_disk_cache").toOkioPath())
-                        .build()
-                }.build()
-        return DefaultAppCacheStore(cacheDirectory, dispatchers) { imageLoader }
+        diskCache =
+            DiskCache
+                .Builder()
+                .directory(File(cacheDirectory, "coil3_disk_cache").toOkioPath())
+                .build()
+        return DefaultAppCacheStore(cacheDirectory, dispatchers) {
+            object : ImageCaches {
+                // Nothing here writes to a memory cache, and nothing asserts on one.
+                override fun clearMemory() = Unit
+
+                override fun clearDisk(): File {
+                    diskCache.clear()
+                    return File(diskCache.directory.toString())
+                }
+            }
+        }
     }
 
     private fun writeCachedImage(bytes: Int) {
-        val cache = requireNotNull(imageLoader.diskCache)
+        val cache = diskCache
         val editor = requireNotNull(cache.openEditor("https://www.nodeseek.com/avatar/1.png"))
         cache.fileSystem.write(editor.data) { write(ByteArray(bytes)) }
         editor.commit()
@@ -102,10 +102,9 @@ class AppCacheStoreTest {
 
             // Coil's journal is open in this process; the directory has to survive so the next
             // image can be cached without the loader having to notice anything happened.
-            val cache = requireNotNull(imageLoader.diskCache)
-            assertEquals(0L, cache.size)
+            assertEquals(0L, diskCache.size)
             writeCachedImage(512)
-            assertTrue(cache.size > 0L)
+            assertTrue(diskCache.size > 0L)
         }
 
     @Test

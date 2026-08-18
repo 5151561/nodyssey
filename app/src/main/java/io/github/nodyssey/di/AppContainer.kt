@@ -17,6 +17,7 @@ import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
 import io.github.nodyssey.data.CategoryRepository
+import io.github.nodyssey.data.CoilImageCaches
 import io.github.nodyssey.data.CommunityRepository
 import io.github.nodyssey.data.CreditRepository
 import io.github.nodyssey.data.DefaultAppCacheStore
@@ -512,7 +513,7 @@ class DefaultAppContainer(
         DefaultAppCacheStore(
             cacheDirectory = appContext.cacheDir,
             dispatchers = dispatchers,
-            imageLoader = { SingletonImageLoader.get(appContext) },
+            imageCaches = { CoilImageCaches(SingletonImageLoader.get(appContext)) },
         )
     }
 }
