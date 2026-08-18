@@ -115,7 +115,6 @@
     <string name="composer_emoji_group_onion">洋葱头</string>
     <string name="composer_emoji_group_chick">小黄鸡</string>
     <string name="composer_emoji_group_fluent">Fluent</string>
-    <string name="composer_emoji_group_app">App</string>
     <!-- 最近使用 and 删除 belong to the panel itself and live in `:designsys`. Declaring them here too
          would not add a second string: resource merging lets this module silently override a
          library's string of the same name, so the copy in `:designsys` would go dead while still

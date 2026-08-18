@@ -19,12 +19,18 @@ import io.github.plaza.designsys.editor.EmojiGroup
 import io.github.plaza.designsys.editor.EmojiPanel
 
 /**
- * The five groups NodeSeek's own editor offers, and how their previews are fetched.
+ * The four groups NodeSeek's own editor offers, and how their previews are fetched.
  *
  * The first three are NodeSeek's image stickers. Their previews come from the site's own
  * `/static/image/sticker/` — the same URLs post bodies already render — while the editor inserts the
  * site's native shortcode (`:ac01:` etc.). Keeping those two concerns separate means a published
  * post still uses NodeSeek's renderer instead of a guessed Markdown image URL.
+ *
+ * There is a fifth tab on the site's editor, labelled APP, and it is not a sticker group: it is
+ * where 投票 and 星辰收款 are inserted from. This app read it as one and filled it with eighteen
+ * invented Unicode emoji that the site has never offered, which is the kind of mistake that only
+ * shows up when somebody who uses the site looks at it. Those two features belong on the editor's
+ * toolbar when they are built, not in the emoji panel.
  *
  * The previews used to ship in `assets/stickers`, which cost 1.7 MB of APK for images the app was
  * downloading anyway the moment a post used one. Fetching them means one Coil-cached copy serves
@@ -43,14 +49,6 @@ val NodeSeekEmojiGroups = listOf(
             "😀", "😄", "😅", "🤣", "🙂", "😉",
             "😍", "😘", "🤔", "😐", "😴", "😭",
             "😡", "👍", "👎", "🎉", "❤️", "🔥",
-        ).map(EmojiEntry::Unicode),
-    ),
-    EmojiGroup(
-        R.string.composer_emoji_group_app,
-        listOf(
-            "🍗", "✨", "🐧", "💻", "🌐", "🚀",
-            "📦", "🔧", "🐛", "📈", "💰", "🛒",
-            "🎯", "⚡", "🧪", "📌", "🔒", "🧵",
         ).map(EmojiEntry::Unicode),
     ),
 )

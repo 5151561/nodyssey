@@ -127,7 +127,7 @@ nodeimage、兰空 Lsky Pro、简单图床 EasyImage、sm.ms、imgbb，以及手
 
 | 能力 | 当前情况 |
 |---|---|
-| 站内贴图 | 编辑器已有五组面板，其中三组图片贴图因素材 URL 未确认而为空；两组 Unicode emoji 可用。此项是素材缺失，不计入上述 10 项接口能力 |
+| 站内贴图 | 编辑器面板四组：AC娘 / 洋葱头 / 小黄鸡三组图片贴图从站点 `/static/image/sticker/` 现拉，Fluent 一组是 Unicode emoji。站点编辑器还有第五个页签「APP」，那不是表情，是插入投票和星辰收款的入口，尚未实现 |
 
 收藏已经闭环：读列表走用户空间的 `list-collection`，写走 `POST /api/statistics/collection`
 （`{postId, action:"add"|"remove"}`，可撤销），详情页楼主楼的表态行上有星标控件。初始状态不额外请求，
