@@ -374,13 +374,39 @@ Android target 走 **`com.android.kotlin.multiplatform.library`**，不是在 KM
 `com.android.library`：AGP 9 不再支持后者那种组合。DSL 入口在 AGP 9.2.1 里是 `kotlin { android { } }`，
 文档里常见的 `androidLibrary { }` 已经打上 deprecated，编译时会告警。
 
-三处不写就不通的地方：
+四处不写就不通的地方，**其中两处的症状都是「静默地什么都不跑」而不是报错**：
 
 | | 症状 |
 |---|---|
 | `build-logic` 要加 `kotlin-gradle-plugin` 依赖 | 约定插件里 `id("org.jetbrains.kotlin.multiplatform")` 找不到 |
 | `gradle.properties` 加 `kotlin.native.ignoreDisabledTargets=true` | Apple target 在 Linux 上不可构建，不写这条则 **configure 阶段就失败**，CI 连 Android 的门禁都跑不到 |
 | CI 的测试步骤补 `testAndroidHostTest` | `testDebugUnitTest` 在 KMP 模块里根本不存在（没有 build type），`commonTest` 会一个都不跑而 CI 全绿 |
+| 约定插件里还要应用 **`com.android.lint`** | 不写则 `commonMain` 完全不进 lint，见下 |
+
+#### KMP 模块的 lint 是有条件注册的
+
+`com.android.kotlin.multiplatform.library` 单独用的时候，模块只会得到
+`lintAnalyzeAndroidHostTest`，**主组件一个 lint 任务都没有** —— 没有 `lint`、没有
+`lintAnalyzeAndroidMain`、没有 `generateAndroidMainLintModel`。于是 `:app:lintDebug` 的
+`checkDependencies` 里 `:core`、`:designsys` 都在，`:shared` 只有个 host test，搬进去的 4,600 行生产
+代码一行都没被检查过，而约定插件里的 `warningsAsErrors = true` 守着一间空屋子。
+
+根因在 AGP 的 `KmpTaskManager` 里，反编译可见：
+
+```text
+1116: ldc_w  "com.android.lint"
+1119: PluginContainer.hasPlugin
+1124: ifeq   1181                  ← 没有这个插件就整段跳过
+...
+1172: LintTaskManager.createLintTasks(KMP_ANDROID, ...)
+```
+
+所以 `plaza.kmp.library` 里 `com.android.lint` 和 `com.android.kotlin.multiplatform.library` 要一起
+应用。补上之后 `lintAnalyzeAndroidMain` 出现并进入 `:app:lintDebug` 的任务图，lint model 里也能看到
+`javaDirectories="src/androidMain/kotlin:src/commonMain/kotlin"`。
+
+**验过覆盖是真的**：在 `commonMain` 和 `androidMain` 各放一句 `// STOPSHIP`（这条检查默认只在 release
+变体开，所以探针里临时 `enable += "StopShip"`），lint 两处都报了出来。
 
 **CI 只跑 JVM/Android**（2026-08-18 拍板）。`commonMain` 在 CI 里只按 Android 编一次，只有 Native
 编不过的写法 CI 抓不到，本机 `./gradlew :shared:macosArm64Test` 才是那道闸。

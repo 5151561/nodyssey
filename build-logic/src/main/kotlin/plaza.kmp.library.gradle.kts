@@ -18,6 +18,12 @@
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     id("com.android.kotlin.multiplatform.library")
+    // Not redundant beside the plugin above, and not optional. AGP's `KmpTaskManager` guards the whole
+    // block that registers the main component's lint tasks behind `plugins.hasPlugin("com.android.lint")`
+    // — without it a KMP module gets `lintAnalyzeAndroidHostTest` and nothing for `commonMain`, so
+    // `warningsAsErrors` below would be guarding an empty room and `:app:lintDebug` would report a
+    // clean repository while never having read a line of this module.
+    id("com.android.lint")
     id("plaza.dependency-locking")
 }
 

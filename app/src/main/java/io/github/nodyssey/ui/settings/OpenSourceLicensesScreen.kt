@@ -117,12 +117,18 @@ private data class LibraryLicense(
     val sourceUrl: String,
 )
 
+// Two HTML parsers ship, which looks like an oversight and is not: every post, list, search result and
+// terms page is read by Ksoup, because those parsers live in `:shared` and have to compile without a
+// JVM under them. jsoup is still in the APK for the one call that strips markup to plain text in
+// `UserSpaceRepository`. Both are listed because both are shipped — this screen answers "what is in
+// the APK", not "what does the most work".
 private val SHIPPED_LIBRARIES =
     listOf(
         LibraryLicense("AndroidX · Jetpack Compose", "Apache License 2.0", "https://android.googlesource.com/platform/frameworks/support"),
         LibraryLicense("Kotlin · Coroutines · Serialization", "Apache License 2.0", "https://github.com/JetBrains/kotlin"),
         LibraryLicense("OkHttp", "Apache License 2.0", "https://github.com/square/okhttp"),
         LibraryLicense("Coil", "Apache License 2.0", "https://github.com/coil-kt/coil"),
+        LibraryLicense("Ksoup", "MIT License", "https://github.com/fleeksoft/ksoup"),
         LibraryLicense("jsoup", "MIT License", "https://github.com/jhy/jsoup"),
     )
 
