@@ -1,28 +1,28 @@
 package io.github.plaza.core.net
 
-import android.webkit.CookieManager
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
 
 /**
- * Shares one cookie store between OkHttp and the WebView.
+ * Shares one cookie store between OkHttp and the sign-in browser, and reads a session out of it.
  *
  * Login and Cloudflare challenges can only be completed in a real WebView, and everything else in
- * the app is a plain OkHttp request. Rather than copying cookies back and forth, both sides read
- * and write Android's [CookieManager], which also persists them across launches for free.
+ * the app is a plain OkHttp request. Rather than copying cookies back and forth, both sides go
+ * through one [SessionCookieStore] — [WebViewCookieStore] in the app, which is Android's own
+ * `CookieManager` and is what makes the name of this class still true.
+ *
+ * Nothing below knows which store that is. What it does know is the site: which cookie names mean
+ * signed in, which ones Cloudflare churns on its own schedule, and what a change in them should
+ * cost. That is the half worth keeping off any one platform.
  */
 class WebViewCookieJar(
     private val config: SiteConfig,
-    private val cookieManager: CookieManager = CookieManager.getInstance(),
+    private val store: SessionCookieStore,
 ) : CookieJar {
 
-    init {
-        cookieManager.setAcceptCookie(true)
-    }
-
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        val header = cookieManager.getCookie(url.toString()) ?: return emptyList()
+        val header = store.cookieHeader(url.toString()) ?: return emptyList()
         return header.split(';')
             .mapNotNull { Cookie.parse(url, it.trim()) }
     }
@@ -30,19 +30,13 @@ class WebViewCookieJar(
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         if (cookies.isEmpty()) return
         val target = url.toString()
-        cookies.forEach { cookieManager.setCookie(target, it.toString()) }
-        cookieManager.flush()
+        cookies.forEach { store.setCookie(target, it.toString()) }
+        store.flush()
     }
 
-    /**
-     * Writes the in-memory cookie store to disk.
-     *
-     * The WebView batches its writes, and the one cookie worth never losing — the session the site
-     * issues at login — arrives from an XHR rather than a page load, so there is no navigation to
-     * hang the flush on.
-     */
+    /** See [SessionCookieStore.flush] for why this is worth calling by hand. */
     fun flush() {
-        cookieManager.flush()
+        store.flush()
     }
 
     /**
@@ -78,8 +72,8 @@ class WebViewCookieJar(
     fun cookieNames(): List<String> = cookiePairs().map { (name, _) -> name }
 
     fun clearSession() {
-        cookieManager.removeAllCookies(null)
-        cookieManager.flush()
+        store.removeAll()
+        store.flush()
     }
 
     /**
@@ -97,8 +91,8 @@ class WebViewCookieJar(
             (name.startsWith("__cf") || name.startsWith("_cf") || name.startsWith("cf_"))
 
     private fun cookiePairs(): List<Pair<String, String>> =
-        cookieManager
-            .getCookie(config.baseUrl)
+        store
+            .cookieHeader(config.baseUrl)
             .orEmpty()
             .split(';')
             .mapNotNull { raw ->

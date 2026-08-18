@@ -83,6 +83,7 @@ import io.github.plaza.core.net.CrossOriginRefererInterceptor
 import io.github.plaza.core.net.SiteHtmlClient
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.core.net.WebViewCookieJar
+import io.github.plaza.core.net.WebViewCookieStore
 import io.github.plaza.core.net.deviceAcceptLanguage
 import io.github.plaza.core.net.resolveUserAgent
 import io.github.plaza.core.readAppVersion
@@ -187,7 +188,7 @@ class DefaultAppContainer(
 ) : AppContainer {
     private val appContext = context.applicationContext
 
-    override val cookieJar: WebViewCookieJar by lazy { WebViewCookieJar(NodeSeekSite.CONFIG) }
+    override val cookieJar: WebViewCookieJar by lazy { WebViewCookieJar(NodeSeekSite.CONFIG, WebViewCookieStore()) }
 
     override val userAgent: UserAgent by lazy { resolveUserAgent(appContext, NodeSeekSite.CONFIG) }
 

@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.notifications
 
-import android.webkit.CookieManager
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.data.MessageConversation
@@ -9,6 +8,7 @@ import io.github.nodyssey.data.MessageThread
 import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.UserSearchResult
+import io.github.nodyssey.data.session.FakeSessionCookieStore
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.net.WebViewCookieJar
@@ -37,18 +37,16 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class NotificationsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private val cookieManager = CookieManager.getInstance()
+    private val cookies = FakeSessionCookieStore()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        cookieManager.removeAllCookies(null)
-        cookieManager.setCookie(NodeSeekSite.BASE_URL, "session=test")
+        cookies.setCookie(NodeSeekSite.BASE_URL, "session=test")
     }
 
     @After
     fun tearDown() {
-        cookieManager.removeAllCookies(null)
         Dispatchers.resetMain()
     }
 
@@ -137,7 +135,7 @@ class NotificationsViewModelTest {
             repository = notifications,
             messages = NoMessages,
             search = NoSearch,
-            session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookieManager)),
+            session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
             clock = clock,
         )
     }

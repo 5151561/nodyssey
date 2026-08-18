@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.messages
 
-import android.webkit.CookieManager
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonApi
@@ -9,6 +8,7 @@ import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.MessageThread
 import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.composer.ImageUploader
+import io.github.nodyssey.data.session.FakeSessionCookieStore
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.net.SiteError
@@ -33,18 +33,16 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class MessageThreadViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private val cookieManager = CookieManager.getInstance()
+    private val cookies = FakeSessionCookieStore()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        cookieManager.removeAllCookies(null)
-        cookieManager.setCookie(NodeSeekSite.BASE_URL, "session=test")
+        cookies.setCookie(NodeSeekSite.BASE_URL, "session=test")
     }
 
     @After
     fun tearDown() {
-        cookieManager.removeAllCookies(null)
         Dispatchers.resetMain()
     }
 
@@ -207,7 +205,7 @@ class MessageThreadViewModelTest {
     ) = MessageThreadViewModel(
         repository = repository,
         notifications = notifications,
-        session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookieManager)),
+        session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
         clock = AppClock { NOW },
         uploader = ImageUploader { _, _ -> "https://cdn.nodeimage.com/i/x.webp" },
         uid = 4471,
