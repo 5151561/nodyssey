@@ -1,6 +1,8 @@
 package io.github.nodyssey.ui.settings
 
 import android.text.format.Formatter
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,8 +65,20 @@ fun SettingsRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    // Read here rather than in the ViewModel: it is a fact about the system's settings, not about
+    // this app's, and it changes while the user is away on a screen we do not own.
+    val appLinkHandlingEnabled = rememberAppLinkHandlingEnabled(context)
+    val appLinkSettings =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            // Nothing to read from the result — the value comes back through ON_RESUME above.
+        }
     SettingsScreen(
         state = state,
+        appLinkHandlingEnabled = appLinkHandlingEnabled,
+        onOpenAppLinkSettings = {
+            runCatching { appLinkSettings.launch(appLinkSettingsIntent(context)) }
+        },
         onBack = onBack,
         onThemeModeChange = viewModel::setThemeMode,
         onFontScaleChange = viewModel::setFontScale,
@@ -87,6 +101,9 @@ fun SettingsRoute(
 @Composable
 fun SettingsScreen(
     state: SettingsUiState,
+    /** Null where the system has no such switch — see [appLinkHandlingEnabled]. */
+    appLinkHandlingEnabled: Boolean?,
+    onOpenAppLinkSettings: () -> Unit,
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onFontScaleChange: (Float) -> Unit,
@@ -190,6 +207,21 @@ fun SettingsScreen(
                     ConnectedExternalLinkButtons(
                         selected = state.settings.externalLinkTarget,
                         onSelected = onExternalLinkTargetChange,
+                    )
+                }
+                appLinkHandlingEnabled?.let { enabled ->
+                    SettingsRow(
+                        leading = { Icon(PlazaIcons.Link, contentDescription = null) },
+                        title = stringResource(R.string.settings_app_links),
+                        subtitle =
+                        stringResource(
+                            if (enabled) {
+                                R.string.settings_app_links_hint_on
+                            } else {
+                                R.string.settings_app_links_hint_off
+                            },
+                        ),
+                        onClick = onOpenAppLinkSettings,
                     )
                 }
                 SettingsBlock(
@@ -401,6 +433,8 @@ private fun SettingsPreview() {
             onUpdateCheckOnLaunchChange = {},
             onUpdateDevChannelChange = {},
             onClearCache = {},
+            appLinkHandlingEnabled = false,
+            onOpenAppLinkSettings = {},
         )
     }
 }
