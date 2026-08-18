@@ -4,8 +4,6 @@ import io.github.nodyssey.core.html.Selectors
 import io.github.nodyssey.model.FeedSort
 import io.github.plaza.core.net.PageMarkers
 import io.github.plaza.core.net.SiteConfig
-import io.github.plaza.core.net.resolveUserAgent
-import io.github.plaza.designsys.component.UserAvatar
 import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -191,7 +189,7 @@ object NodeSeekSite {
     const val SETTING_PREFERENCE = "preference"
     const val SETTING_HOMEPAGE = "homepage"
 
-    /** Accounts without an upload 404 here; [UserAvatar] draws the initial instead. */
+    /** Accounts without an upload 404 here; `UserAvatar` draws the initial instead. */
     fun avatarUrl(uid: Long): String? = absoluteUrl("/avatar/$uid.png")
 
     /**
