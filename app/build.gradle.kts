@@ -63,6 +63,12 @@ android {
 
     // Robolectric's MigrationTestHelper reads schemas through the debug AssetManager.
     sourceSets["debug"].assets.directories.add("$projectDir/schemas")
+
+    // The captured pages moved to `:shared` with the parsers that read them, and a handful of tests
+    // left here — the challenge detector, two repositories, the reply composer — still read the same
+    // captures. Pointed at rather than copied: two copies of a 100KB capture drift, and the one that
+    // drifts is whichever the failing test is not reading.
+    sourceSets["test"].resources.srcDir(project(":shared").projectDir.resolve("src/commonTest/resources"))
 }
 
 // Schemas are checked in: a diff here is the review signal that a migration is needed.
@@ -80,6 +86,12 @@ dependencies {
     // `:core` needs to know about nodeseek.com reaches it as `NodeSeekSite.CONFIG`, never as an
     // import.
     implementation(project(":core"))
+
+    // The domain model and the parsers, which no longer know they are running on Android. Named
+    // explicitly even though `:core` already exposes it transitively: this module imports
+    // `io.github.nodyssey.model` and `io.github.nodyssey.core.html` directly, and a dependency you
+    // import from is one you declare.
+    implementation(project(":shared"))
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
@@ -139,7 +151,9 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
 
-    // NodeSeek has no public API for lists/details, so pages are scraped.
+    // NodeSeek has no public API for lists/details, so pages are scraped. The parsers themselves have
+    // moved to `:shared` and are written against Ksoup; jsoup stays here because this module is still
+    // what turns a response body into the `Document` it hands them.
     implementation(libs.jsoup)
     implementation(libs.kotlinx.serialization.json)
 

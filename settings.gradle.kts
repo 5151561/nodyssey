@@ -49,3 +49,13 @@ include(":designsys")
 // WebView and OkHttp share, and the in-app update check. Everything a particular site knows about
 // itself arrives as `SiteConfig` rather than as a constant in here.
 include(":core")
+
+// The platform-neutral business core: the domain model and the parsers that encode what this
+// particular forum's HTML means. Kotlin Multiplatform rather than an Android library because nothing
+// in here is allowed to know it is running on Android — see `docs/kmp-migration-plan.md`.
+//
+// It sits *below* `:core`, which depends on it: `:core` is still the Android shell (OkHttp, the
+// WebView cookie bridge), and the neutral types it used to hold have moved down here. Later steps of
+// the migration move the rest of that shell into this module's `androidMain`, at which point `:core`
+// stops existing.
+include(":shared")

@@ -27,14 +27,18 @@ NodeSeek has no public API. A few JSON endpoints exist (`/api/statistics/*`, `/a
 search and terms pages also depend on server-rendered HTML. Everything sits behind Cloudflare, so requests have to look like a real mobile browser and
 carry cookies obtained from a WebView.
 
-Three Gradle modules:
+Four Gradle modules:
 
 ```text
-:app        NodeSeek itself — parsers, repositories, Compose screens
+:app        NodeSeek itself — repositories, Room persistence, Compose screens
+:shared     the domain model and the parsers, as Kotlin Multiplatform: Android, iOS and macOS
 :core       HTTP against a scraped forum, the WebView/OkHttp cookie bridge, the update check;
             what a site knows about itself arrives as `SiteConfig`, not as a constant in here
 :designsys  theme, components and the rich-text renderer, with no knowledge of any forum
 ```
+
+`:shared` is the one module that does not know it is running on Android. Only the Android half of it
+is built in CI; the Apple targets build on a Mac. See [docs/kmp-migration-plan.md](docs/kmp-migration-plan.md).
 
 `:core` and `:designsys` were extracted when a second client shared this repository. That app now
 lives in [5151561/plaza](https://github.com/5151561/plaza) carrying a *copy* of both modules, so
@@ -42,44 +46,53 @@ edits here do not reach it; the boundary stays because it is what makes the site
 this app visible as a thing with edges.
 
 ```text
+shared/src/commonMain/kotlin/          the half that does not know what it is running on
+├── io/github/nodyssey/
+│   ├── core/
+│   │   ├── NodeSeekSite.kt          URL vocabulary and route parsing
+│   │   ├── VoteMarkup.kt            poll markup, read and written
+│   │   ├── StardustReceiveMarkup.kt the `nsapp://stardust-receive` payment marker
+│   │   ├── html/
+│   │   │   ├── Selectors.kt         shared site selectors
+│   │   │   ├── SiteBootstrap.kt     the base64 `__config__` every page carries
+│   │   │   ├── PostConfigParser.kt  that blob → reaction tallies, by comment id
+│   │   │   ├── PostListParser.kt    topic list → PostListPage
+│   │   │   ├── PostDetailParser.kt  post page → PostDetail
+│   │   │   ├── PostSourceParser.kt  edit page → the Markdown the author actually typed
+│   │   │   ├── SearchParser.kt      search results → the same list model
+│   │   │   ├── RichContentParser.kt post HTML → block/inline tree
+│   │   │   └── TermsParser.kt       terms article → native reading blocks
+│   │   └── report/                  NodeQuality report parsing
+│   └── model/                       the domain types
+└── io/github/plaza/core/
+    ├── net/                         `SiteConfig`, `SiteError`, `WebUrl`
+    ├── richtext/                    the block/inline tree and the Markdown that produces one
+    ├── ansi/                        ANSI colour decoding for pasted terminal output
+    └── TerminalColumns.kt           column widths for monospaced report tables
+
 app/src/main/java/io/github/nodyssey/
 ├── core/
-│   ├── NodeSeekSite.kt          URL vocabulary and route parsing
 │   ├── NodeImageSite.kt         nodeimage.com's own vocabulary (off-site, user API key)
-│   ├── VoteMarkup.kt            poll markup, read and written
-│   ├── StardustReceiveMarkup.kt the `nsapp://stardust-receive` payment marker
-│   ├── html/
-│   │   ├── Selectors.kt         shared site selectors
-│   │   ├── SiteBootstrap.kt     the base64 `__config__` every page carries
-│   │   ├── PostConfigParser.kt  that blob → reaction tallies, by comment id
-│   │   ├── PostListParser.kt    topic list → PostListPage
-│   │   ├── PostDetailParser.kt  post page → PostDetail
-│   │   ├── PostSourceParser.kt  edit page → the Markdown the author actually typed
-│   │   ├── SearchParser.kt      search results → the same list model
-│   │   ├── RichContentParser.kt post HTML → block/inline tree
-│   │   └── TermsParser.kt       terms article → native reading blocks
-│   ├── net/                     NodeSeek's JSON client and request signing
-│   └── report/                  NodeQuality report parsing
-├── model/                       Android-free domain types
+│   ├── LuckyDraw.kt             the 抽奖 vocabulary, still on `java.time`
+│   └── net/                     NodeSeek's JSON client and request signing
 ├── data/                        repositories, Room, DataStore and composers
 │   ├── local/                   Room: feed cache, read marks, browse history, reading positions
 │   └── update/                  GitHub release lookup, APK download and install
+├── platform/                    the Android shells behind `data`'s interfaces
 ├── di/                          `AppContainer`: constructor injection, no global singletons
 ├── notifications/               WorkManager polling and Android notifications
 └── ui/                          Compose routes, screens and native renderers
 
 core/src/main/java/io/github/plaza/core/
 ├── net/                         OkHttp, cookies shared with the WebView, rate gate, challenge detection
-├── richtext/                    the block/inline tree and Markdown types the renderer consumes
 ├── update/                      version-name comparison, release-note trimming
-├── ansi/                        ANSI colour decoding for pasted terminal output
 └── image/                       the Wi-Fi-only image network policy
 ```
 
 Two rules keep scraping maintainable when NodeSeek changes its templates:
 
-1. Shared markup knowledge belongs in `core/html`; avoid spreading selectors through UI or data code.
-2. Parsers are covered by JVM tests using committed fixtures or focused inline HTML samples. Tests never hit the live site.
+1. Shared markup knowledge belongs in `:shared`'s `core/html`; avoid spreading selectors through UI or data code.
+2. Parsers are covered by tests using committed fixtures or focused inline HTML samples, and those tests run on both the JVM and Kotlin/Native. Tests never hit the live site.
 
 Detailed architecture rules are in [docs/architecture.md](docs/architecture.md).
 
@@ -106,7 +119,7 @@ Full verification matches CI:
 NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口，其余页面需要解析服务端 HTML；站点整体在
 Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cookie。请求频率保持克制，测试不访问线上站点。
 
-具体调用地址以 `:app` 的 `core/NodeSeekSite.kt`、`core/html/` 和 `:core` 的 `net/` 为准。
+具体调用地址以 `:shared` 的 `core/NodeSeekSite.kt`、`core/html/` 和 `:core` 的 `net/` 为准。
 本仓库不发布账号 Cookie、抓取凭据或已登录页面样本。
 
 ## Roadmap
