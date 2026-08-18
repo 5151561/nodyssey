@@ -93,7 +93,7 @@ class AccountSettingsScreenTest {
         composeRule.onNodeWithText("修改密码与两步验证").assertExists()
         composeRule.onNodeWithText("邮箱、手机与 Telegram").assertExists()
         composeRule.onNodeWithText("3 人").performScrollTo().assertExists()
-        composeRule.onNodeWithText("节日主题、夜间模式与首页版块").performScrollTo().assertExists()
+        composeRule.onNodeWithText("节日主题与首页版块").performScrollTo().assertExists()
     }
 
     @Test

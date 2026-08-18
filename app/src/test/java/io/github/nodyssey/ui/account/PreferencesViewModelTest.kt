@@ -2,7 +2,6 @@ package io.github.nodyssey.ui.account
 
 import io.github.nodyssey.data.account.RemoteAccountPreferences
 import io.github.nodyssey.data.settings.SettingsRepository
-import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.testSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -118,28 +117,6 @@ class PreferencesViewModelTest {
 
             settings.awaitHiddenBoards(setOf("life"))
             withTimeout(STORE_TIMEOUT_MILLIS) { settings.settings.first { it.holidayTheme } }
-        }
-
-    @Test
-    fun `the night rows map onto the theme mode`() =
-        runTest(dispatcher) {
-            val settings = testSettingsRepository(backgroundScope)
-            val vm = viewModel(FakeAccountSettingsRepository(), settings)
-            collectState(vm)
-            advanceUntilIdle()
-
-            vm.setNightBasisTimed(true)
-            advanceUntilIdle()
-            withTimeout(STORE_TIMEOUT_MILLIS) { settings.settings.first { it.themeMode == ThemeMode.TIMED } }
-
-            vm.setAutoNight(false)
-            advanceUntilIdle()
-            withTimeout(STORE_TIMEOUT_MILLIS) { settings.settings.first { it.themeMode == ThemeMode.LIGHT } }
-
-            vm.setAutoNight(true)
-            advanceUntilIdle()
-            // Back on lands on the default basis, 跟随系统 — not on the last one used.
-            withTimeout(STORE_TIMEOUT_MILLIS) { settings.settings.first { it.themeMode == ThemeMode.SYSTEM } }
         }
 
     private companion object {

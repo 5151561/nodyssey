@@ -3,16 +3,13 @@ package io.github.nodyssey.ui.account
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import io.github.plaza.designsys.theme.PlazaTheme
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import kotlin.math.abs
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -21,30 +18,23 @@ class PreferencesScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    /** 夜间模式 belongs to 设置 · 主题, so this screen must not grow a second copy of it. */
     @Test
-    fun `night basis choices fill the row with equal segments`() {
+    fun `the screen carries no night mode rows`() {
         composeRule.setContent {
             PlazaTheme {
                 PreferencesScreen(
-                    state = PreferencesUiState(autoNight = true),
+                    state = PreferencesUiState(holidayTheme = true),
                     snackbarHostState = SnackbarHostState(),
                     onBack = {},
                     onHolidayThemeChange = {},
-                    onAutoNightChange = {},
-                    onNightBasisTimedChange = {},
                     onBoardHiddenChange = { _, _ -> },
                 )
             }
         }
 
-        val bounds =
-            listOf("跟随系统", "定时（日落）").map { label ->
-                composeRule.onNodeWithText(label).fetchSemanticsNode().boundsInRoot
-            }
-        val rootWidth = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.width
-        val groupWidth = bounds.last().right - bounds.first().left
-
-        assertTrue(groupWidth > rootWidth * 0.7f)
-        assertTrue(abs(bounds.first().width - bounds.last().width) <= 2f)
+        composeRule.onNodeWithText("启用节日主题").assertExists()
+        composeRule.onNodeWithText("自动夜间模式").assertDoesNotExist()
+        composeRule.onNodeWithText("夜间模式依据").assertDoesNotExist()
     }
 }

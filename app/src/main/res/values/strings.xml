@@ -572,16 +572,10 @@
 
     <!-- 偏好与首页版块 (d6 5/5)。Local=本机 DataStore，Remote=账号（服务端），归属徽标随行展示 -->
     <string name="account_preferences_title">偏好与首页版块</string>
-    <string name="account_preferences_summary">节日主题、夜间模式与首页版块</string>
+    <string name="account_preferences_summary">节日主题与首页版块</string>
     <string name="account_holiday_theme">启用节日主题</string>
     <string name="account_holiday_theme_hint">节日期间使用节日配色，跟随账号同步</string>
-    <string name="account_auto_night">自动夜间模式</string>
-    <string name="account_auto_night_hint">按下方依据自动切换深浅色</string>
-    <string name="account_night_basis">夜间模式依据</string>
-    <string name="account_night_basis_system">跟随系统</string>
-    <string name="account_night_basis_timed">定时（日落）</string>
-    <string name="account_night_basis_note">站点仅支持「系统时间」定时；「跟随系统」为 App 增强并默认。定时窗口约 19:00–07:00。</string>
-    <string name="account_preferences_new_tab_note">站点另有「新标签页打开主题帖」（Local）— 浏览器概念，App 不适用，刻意省略。</string>
+    <string name="account_preferences_omitted_note">站点另有「新标签页打开主题帖」（浏览器概念，App 不适用）与「自动夜间模式／依据」（改用 设置 · 主题），均刻意省略。</string>
     <string name="account_home_boards_hint">关闭后首页信息流不再显示该版块；其余版块不可关闭（站点仅开放这三项）。</string>
     <string name="account_board_trade">交易</string>
     <string name="account_board_life">生活</string>

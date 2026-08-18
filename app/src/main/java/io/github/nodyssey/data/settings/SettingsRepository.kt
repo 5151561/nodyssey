@@ -627,11 +627,11 @@ data class UserSettings(
 )
 
 /**
- * [TIMED] is d6 5/5's 夜间模式依据 = 定时（日落）: dark by the clock, regardless of the system theme.
- * The site's own automatic night mode is time-based too ("系统时间"); 跟随系统 ([SYSTEM]) is the app's
- * addition and the default.
+ * How 设置 · 主题 decides light or dark. [SYSTEM] is the default, and the only automatic one: the
+ * site's own 定时（日落）night mode used to live here as a fourth entry, and a value stored back then
+ * reads as [SYSTEM] again, which is what that setting was asking for anyway.
  */
-enum class ThemeMode { SYSTEM, LIGHT, DARK, TIMED }
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 /**
  * Where a link that leaves the app goes.
@@ -661,19 +661,6 @@ enum class ExternalLinkTarget { CUSTOM_TAB, BROWSER }
  * rather than tapping through to the original on every report.
  */
 enum class ReportFormat { ADAPTED, SOURCE }
-
-/**
- * Whether the 定时 night window covers this hour.
- *
- * A fixed 19:00–07:00 window: the site publishes no schedule to copy and "日落" without a location
- * permission is a fiction, so the app uses the plainest defensible approximation and says so in the
- * settings row rather than pretending to track the sun.
- */
-fun isTimedNightHour(hourOfDay: Int): Boolean =
-    hourOfDay >= TIMED_NIGHT_START_HOUR || hourOfDay < TIMED_NIGHT_END_HOUR
-
-const val TIMED_NIGHT_START_HOUR = 19
-const val TIMED_NIGHT_END_HOUR = 7
 
 /**
  * The stored field stays a list even though the domain now holds one board.
