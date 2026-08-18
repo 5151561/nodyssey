@@ -39,7 +39,6 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -95,8 +94,8 @@ import io.github.nodyssey.ui.common.EmptyFeedState
 import io.github.nodyssey.ui.common.NavigationBarScrollConnection
 import io.github.nodyssey.ui.common.NavigationDirectionThreshold
 import io.github.nodyssey.ui.common.NodeSeekIcons
+import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
-import io.github.nodyssey.ui.common.PageJumpToolbarContent
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarCapOffset
@@ -113,8 +112,11 @@ import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Stateful entry point. It only wires the ViewModel to the stateless [PostListScreen] below, which is
@@ -143,6 +145,7 @@ fun PostListRoute(
         onArrangementChange = viewModel::saveBoardArrangement,
         onSortChange = viewModel::selectSort,
         onGoToPage = viewModel::goToPage,
+        onFindPageRow = viewModel::rowIndexOfPage,
         onSignInClick = onSignIn,
         // The challenge is cleared on the URL that failed, so the WebView loads the same list page the
         // request did — a different page can be served without a challenge and prove nothing.
@@ -176,6 +179,11 @@ fun PostListScreen(
      * when the target is genuinely absent — a page already in the window is scrolled to instead.
      */
     onGoToPage: (Int) -> Unit = {},
+    /**
+     * Where a page starts among the rows already stored, or null when none of it is. Answered by the
+     * database rather than by [posts], which holds one window and calls everything outside it absent.
+     */
+    onFindPageRow: suspend (Int) -> Int? = { null },
     listState: LazyListState = rememberLazyListState(),
     /** Commits an edit made on the board strip itself: the pill order, and which boards are parked. */
     onArrangementChange: (order: List<String>, parked: Set<String>) -> Unit = { _, _ -> },
@@ -310,12 +318,48 @@ fun PostListScreen(
             }
     }
 
-    /** Scrolls when the page is already in the window, and reloads from it when it is not. */
+    /**
+     * 上一页 / 下一页 on a list that is one continuous scroll: the step is a scroll wherever it can be,
+     * and only a page the feed has no way to reach by reading on is fetched as a new window.
+     *
+     * Three cases, in the order they are tried:
+     *
+     * The feed already holds the page — scroll to it. The row is very often a placeholder, and that
+     * is the point: with placeholders on, a row the reader scrolled past keeps its index whether or
+     * not Paging is still holding it in memory, and arriving there is what makes Paging fetch that
+     * window back. Asking [LazyPagingItems] instead — which is what this did — asks whether the page
+     * is in *memory*, and one step away it never is, so every step reloaded the feed from the network.
+     *
+     * The page right after the ones it holds — that is not somewhere to travel to, it is the rest of
+     * this scroll. Reaching the foot is what asks the feed for it, exactly as scrolling there by hand
+     * would, and when its rows land we carry on into them. Fetching it as a new window instead would
+     * throw away every page above it to arrive at the one place the reader could have simply scrolled.
+     *
+     * Anything else — a jump, and a jump is what it gets.
+     */
     fun goToPage(target: Int) {
-        val index = posts.itemSnapshotList.indexOfFirst { it?.page == target }
-        if (index >= 0) {
-            scope.launch { listState.animateScrollToItem(index) }
-        } else {
+        scope.launch {
+            onFindPageRow(target)?.takeIf { it < posts.itemCount }?.let { index ->
+                listState.animateScrollToItem(index)
+                return@launch
+            }
+            // Contiguity is enough to tell "read on" from "jump": the stored pages run without gaps,
+            // so a target whose predecessor is stored can only be the one past the end. Going the
+            // other way never lands here — a stored predecessor would mean a stored target.
+            val readsOn = posts.itemCount > 0 && target > FIRST_PAGE && onFindPageRow(target - 1) != null
+            if (readsOn) {
+                listState.animateScrollToItem(posts.itemCount - 1)
+                val arrived =
+                    withTimeoutOrNull(APPEND_WAIT_MILLIS) {
+                        // itemCount is the row count Room reports, so it changes exactly when the
+                        // appended page lands — one query per arrival rather than a poll.
+                        snapshotFlow { posts.itemCount }.mapNotNull { onFindPageRow(target) }.first()
+                    }
+                if (arrived != null) {
+                    listState.animateScrollToItem(arrived)
+                    return@launch
+                }
+            }
             onGoToPage(target)
         }
     }
@@ -481,12 +525,14 @@ fun PostListScreen(
 }
 
 /**
- * 首页翻页栏: `‹ 第 3 / 217 页 ›`, with 发帖 riding in the toolbar's own FAB slot.
+ * 首页翻页栏: the page keys stacked over 发帖, in the corner the thumb is already in.
  *
- * The row itself is [PageJumpToolbarContent], shared with the comment thread and 管理记录 so the
- * wording and the shortcuts cannot drift between the three screens that have it.
+ * The rail itself is [PageJumpRail], shared with the comment thread and 管理记录 so the wording and
+ * the shortcuts cannot drift between the three screens that have it. 发帖 leaves the `Scaffold`'s
+ * FAB slot while this is on and joins the stack instead — two floating things side by side in one
+ * corner is what that slot exists to prevent, and the thread has shipped the stacked pair for as
+ * long as it has had a rail.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FeedPageBar(
     expanded: Boolean,
@@ -498,36 +544,29 @@ private fun FeedPageBar(
     onCreatePost: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    HorizontalFloatingToolbar(
-        expanded = expanded,
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                text = { Text(stringResource(R.string.action_create_post)) },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                onClick = onCreatePost,
-                modifier = Modifier.fillMaxSize(),
-                shape = RoundedCornerShape(18.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            )
-        },
-        // The thread's measurements, for the same reason it needed them: Material's 64dp container
-        // stands taller than the FAB inside it, so a collapsed FAB would hang 12dp below the bar
-        // without the extra bottom margin.
-        modifier = modifier
-            .padding(
-                start = Spacing.lg,
-                end = Spacing.lg,
-                top = Spacing.sm,
-                bottom = Spacing.sm + 12.dp,
-            ).height(56.dp),
+    Column(
+        modifier = modifier.padding(Spacing.lg),
+        horizontalAlignment = Alignment.End,
+        // The thread's measurement, for the thread's reason: the rail's bottom key carries 4dp of
+        // touch-target slack under its paint, so 4dp here draws as the design's 8dp.
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        PageJumpToolbarContent(
+        PageJumpRail(
+            expanded = expanded,
             page = page,
             totalPages = totalPages,
             onPrevious = onPrevious,
             onNext = onNext,
             onPageClick = onPageClick,
+        )
+        ExtendedFloatingActionButton(
+            text = { Text(stringResource(R.string.action_create_post)) },
+            icon = { Icon(Icons.Default.Add, contentDescription = null) },
+            onClick = onCreatePost,
+            expanded = expanded,
+            shape = RoundedCornerShape(18.dp),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }
@@ -547,6 +586,19 @@ private fun feedIdentity(state: PostListUiState): String =
 
 /** How much of the feed a "back to the top" actually animates past; anything beyond it is a jump. */
 private const val SCROLL_TO_TOP_ANIMATED_ITEMS = 12
+
+/** The first of the site's pages, and the one 上一页 can never step below. */
+private const val FIRST_PAGE = 1
+
+/**
+ * How long 下一页 waits at the foot for the page it asked the feed to append.
+ *
+ * Generous on purpose: it is a request over a network the reader may be on a train with, and the
+ * cost of giving up early is a window reload that throws away everything above. Giving up at all is
+ * only for the load that failed outright — the append shows its own spinner and its own retry
+ * meanwhile, so nothing about the wait is invisible.
+ */
+private const val APPEND_WAIT_MILLIS = 15_000L
 
 /**
  * The home app bar carries the wordmark and exactly one action.

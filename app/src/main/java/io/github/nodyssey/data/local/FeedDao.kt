@@ -109,6 +109,52 @@ interface FeedDao {
     suspend fun firstLoadedPage(feedKey: String): Int?
 
     /**
+     * Where the site's page [page] starts, as a `sortIndex`, or null when this feed holds none of it.
+     *
+     * Together with [countRowsBefore] this is how 首页翻页栏 tells "scroll there" from "fetch it": the
+     * rows the reader has already scrolled past are in this table whether or not Paging is currently
+     * holding them in memory, and asking the list is asking the wrong question. Room hands the UI one
+     * window of rows around the anchor and re-makes it on every write, so a page one step away is a
+     * row of placeholders almost all the time — which read as "not loaded" and reloaded the feed from
+     * the network for a page that was already sitting in the database.
+     *
+     * [includeBlocked] has to match the one [pagingSource] was built with. It is the same filter, so
+     * an answer taken under the other one counts rows the list does not have and lands off by however
+     * many blocked posts are above it.
+     */
+    @Query(
+        """
+        SELECT MIN(f.sortIndex)
+        FROM feed_positions f
+        INNER JOIN posts p ON p.postId = f.postId
+        WHERE f.feedKey = :feedKey AND f.page = :page AND (:includeBlocked OR p.isBlocked = 0)
+        """,
+    )
+    suspend fun firstSortIndexOnPage(
+        feedKey: String,
+        page: Int,
+        includeBlocked: Boolean = false,
+    ): Int?
+
+    /**
+     * How many of this feed's rows sort before [sortIndex] — which, given [pagingSource] orders by
+     * that column, is the index the row sits at in the list.
+     */
+    @Query(
+        """
+        SELECT COUNT(*)
+        FROM feed_positions f
+        INNER JOIN posts p ON p.postId = f.postId
+        WHERE f.feedKey = :feedKey AND f.sortIndex < :sortIndex AND (:includeBlocked OR p.isBlocked = 0)
+        """,
+    )
+    suspend fun countRowsBefore(
+        feedKey: String,
+        sortIndex: Int,
+        includeBlocked: Boolean = false,
+    ): Int
+
+    /**
      * The reply count the list is currently showing for this post.
      *
      * This is the right baseline for "read up to here": it is the same number the badge will later be

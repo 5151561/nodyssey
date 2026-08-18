@@ -202,6 +202,18 @@ class PostListViewModel(
     }
 
     /**
+     * Where [page] starts among the rows 首页 is already holding, or null when it holds none of it.
+     *
+     * This is the question [goToPage] is the answer to only half the time. The reader who has scrolled
+     * through five pages has all five in the database, and stepping back to the fourth should be a
+     * scroll — but the pager keeps one window of rows in memory and re-makes it on every write, so
+     * asking the list would say "not loaded" about a page the reader was looking at a moment ago and
+     * fetch it again.
+     */
+    suspend fun rowIndexOfPage(page: Int): Int? =
+        repository.feedRowIndexOfPage(_uiState.value.categorySlug, _uiState.value.sort, page)
+
+    /**
      * Commits an edit made on the strip itself: the new left-to-right order, and which boards are
      * parked at the tail.
      *

@@ -454,7 +454,7 @@ class PostDetailScreenTest {
     fun `the toolbar reads the page the reader jumped to`() {
         setScreen(jumpedState())
 
-        composeRule.onNodeWithText("第 13 / 40 页").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("第 13 / 40 页").assertIsDisplayed()
     }
 
     /** Paging on from a jumped-to slice asks for the page after it, not for page 2. */
@@ -603,7 +603,7 @@ class PostDetailScreenTest {
         var requested: Int? = null
         setScreen(jumpedState(body = null), onLoadPage = { requested = it })
 
-        composeRule.onNodeWithText("第 13 / 40 页").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("第 13 / 40 页").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("上一页").performClick()
 
         assertEquals(12, requested)

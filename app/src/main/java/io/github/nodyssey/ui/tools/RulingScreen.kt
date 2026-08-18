@@ -20,7 +20,6 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingToolbarDefaults.floatingToolbarVerticalNestedScroll
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -57,8 +56,8 @@ import io.github.nodyssey.data.RulingKind
 import io.github.nodyssey.data.RulingRecord
 import io.github.nodyssey.data.RulingTarget
 import io.github.nodyssey.ui.common.NodeSeekIcons
+import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
-import io.github.nodyssey.ui.common.PageJumpToolbarContent
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
@@ -282,23 +281,19 @@ fun RulingScreen(
             }
 
             if (state.records.isNotEmpty() && state.totalPages > 1) {
-                HorizontalFloatingToolbar(
+                PageJumpRail(
                     expanded = toolbarExpanded,
+                    page = visiblePage,
+                    totalPages = state.totalPages,
+                    onPrevious = { goToPage((visiblePage - 1).coerceAtLeast(1)) },
+                    onNext = { goToPage((visiblePage + 1).coerceAtMost(state.totalPages)) },
+                    onPageClick = { showPageSheet = true },
+                    // No FAB under it here, unlike the thread and the feed: the log is read-only,
+                    // so the rail is the whole of what floats and it sits where their FAB does.
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-                        // Same trim as the thread's bar: Material's 64dp container reads as bulky
-                        // for a row of three small controls. No FAB here, so nothing overhangs.
-                        .height(56.dp),
-                ) {
-                    PageJumpToolbarContent(
-                        page = visiblePage,
-                        totalPages = state.totalPages,
-                        onPrevious = { goToPage((visiblePage - 1).coerceAtLeast(1)) },
-                        onNext = { goToPage((visiblePage + 1).coerceAtMost(state.totalPages)) },
-                        onPageClick = { showPageSheet = true },
-                    )
-                }
+                        .padding(Spacing.lg),
+                )
             }
         }
     }

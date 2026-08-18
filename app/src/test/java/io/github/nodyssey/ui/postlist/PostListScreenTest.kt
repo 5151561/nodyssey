@@ -19,6 +19,7 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -113,6 +114,8 @@ class PostListScreenTest {
         onSortChange: (FeedSort) -> Unit = {},
         onRecoverInBrowser: () -> Unit = {},
         onGoToPage: (Int) -> Unit = {},
+        onFindPageRow: suspend (Int) -> Int? = { null },
+        listState: LazyListState? = null,
     ) {
         composeRule.setContent {
             PlazaTheme {
@@ -126,6 +129,8 @@ class PostListScreenTest {
                     onSortChange = onSortChange,
                     onRecoverInBrowser = onRecoverInBrowser,
                     onGoToPage = onGoToPage,
+                    onFindPageRow = onFindPageRow,
+                    listState = listState ?: rememberLazyListState(),
                 )
             }
         }
@@ -144,6 +149,7 @@ class PostListScreenTest {
         onRecoverInBrowser: () -> Unit,
         scrollToTopRequests: Int = 0,
         onGoToPage: (Int) -> Unit = {},
+        onFindPageRow: suspend (Int) -> Int? = { null },
     ) {
         val pagingData =
             PagingData.from(
@@ -165,6 +171,7 @@ class PostListScreenTest {
             onSignInClick = {},
             onRecoverInBrowser = onRecoverInBrowser,
             onGoToPage = onGoToPage,
+            onFindPageRow = onFindPageRow,
             scrollToTopRequests = scrollToTopRequests,
         )
     }
@@ -680,14 +687,14 @@ class PostListScreenTest {
             state = pagedState(pageBarEnabled = false),
         )
 
-        composeRule.onAllNodesWithText("第 1 / 217 页").assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("第 1 / 217 页").assertCountEquals(0)
     }
 
     @Test
     fun `the page bar names the page and the total`() {
         setScreen(listOf(feedPost(1, "post", page = 1)), state = pagedState())
 
-        composeRule.onNodeWithText("第 1 / 217 页").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("第 1 / 217 页").assertIsDisplayed()
     }
 
     /** One page is not a pager: a bar that can only ever say "第 1 / 1 页" is furniture. */
@@ -698,7 +705,7 @@ class PostListScreenTest {
             state = pagedState(totalPages = 1),
         )
 
-        composeRule.onAllNodesWithText("第 1 / 1 页").assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("第 1 / 1 页").assertCountEquals(0)
     }
 
     /** A jump names its destination before the rows arrive; otherwise the tap reads as ignored. */
@@ -709,17 +716,18 @@ class PostListScreenTest {
             state = pagedState(startPage = 40),
         )
 
-        composeRule.onNodeWithText("第 40 / 217 页").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("第 40 / 217 页").assertIsDisplayed()
     }
 
-    /** Travel, not fetching: a page already in the window is somewhere to scroll to. */
+    /** Travel, not fetching: a page the feed already holds is somewhere to scroll to. */
     @Test
-    fun `next page scrolls instead of reloading when the page is already loaded`() {
+    fun `next page scrolls instead of reloading when the page is already stored`() {
         var requested: Int? = null
         setScreen(
             posts = listOf(feedPost(1, "page one row", page = 1), feedPost(2, "page two row", page = 2)),
             state = pagedState(),
             onGoToPage = { requested = it },
+            onFindPageRow = { page -> 1.takeIf { page == 2 } },
         )
 
         composeRule.onNodeWithContentDescription("下一页").performClick()
@@ -727,8 +735,55 @@ class PostListScreenTest {
         assertEquals(null, requested)
     }
 
+    /**
+     * The regression this pairs with: the row is stored, and the pager is not holding it.
+     *
+     * That is the ordinary state of the page one step away — the feed runs with placeholders on and
+     * Room re-windows it on every write, so nothing outside the current window is in [posts] even
+     * though the reader scrolled through it a moment ago. The old check asked [posts] for a row whose
+     * page matched, found placeholders, and refetched the page on every single step.
+     */
     @Test
-    fun `next page asks for a reload when the page is not loaded`() {
+    fun `next page scrolls to a stored row the pager is not holding`() {
+        var requested: Int? = null
+        setScreen(
+            posts = List(60) { feedPost(it + 1L, "page one row ${it + 1}", page = 1) },
+            state = pagedState(),
+            onGoToPage = { requested = it },
+            onFindPageRow = { page -> 50.takeIf { page == 2 } },
+        )
+
+        composeRule.onNodeWithContentDescription("下一页").performClick()
+
+        assertEquals(null, requested)
+    }
+
+    /**
+     * 下一页 onto the page the feed has not fetched yet is the rest of the scroll, not a jump: it
+     * goes to the foot, which is what asks for the append, rather than replacing the window and
+     * throwing away every page the reader scrolled through to get here.
+     */
+    @Test
+    fun `next page reads on to the foot instead of reloading at the frontier`() {
+        var requested: Int? = null
+        val listState = LazyListState()
+        setScreen(
+            posts = List(60) { feedPost(it + 1L, "page one row ${it + 1}", page = 1) },
+            state = pagedState(),
+            onGoToPage = { requested = it },
+            // Page 1 is stored and page 2 is not, which is the frontier.
+            onFindPageRow = { page -> 0.takeIf { page == 1 } },
+            listState = listState,
+        )
+
+        composeRule.onNodeWithContentDescription("下一页").performClick()
+        composeRule.waitUntil { listState.firstVisibleItemIndex > 0 }
+
+        assertEquals(null, requested)
+    }
+
+    @Test
+    fun `next page asks for a reload when the feed does not hold the page`() {
         var requested: Int? = null
         setScreen(
             posts = listOf(feedPost(1, "only page one", page = 1)),
@@ -750,7 +805,7 @@ class PostListScreenTest {
             onGoToPage = { requested = it },
         )
 
-        composeRule.onNodeWithText("第 1 / 217 页").performClick()
+        composeRule.onNodeWithContentDescription("第 1 / 217 页").performClick()
         composeRule.onNodeWithText("最后一页").performClick()
 
         assertEquals(217, requested)

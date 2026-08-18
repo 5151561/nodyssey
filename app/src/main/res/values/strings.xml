@@ -142,6 +142,8 @@
     <string name="page_jump_previous">上一页</string>
     <string name="page_jump_next">下一页</string>
     <string name="page_jump_page_of">第 %1$d / %2$d 页</string>
+    <!-- Second line of the rail's page key, under the page it is on -->
+    <string name="page_jump_of_total">/%1$d</string>
     <string name="page_jump_title">跳转到</string>
     <string name="page_jump_input">页码（1–%1$d）</string>
     <string name="page_jump_first">第一页</string>

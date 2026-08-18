@@ -317,6 +317,12 @@ private object NoOpPostRepository : PostRepository {
 
     override fun feedTotalPages(categorySlug: String?, sort: FeedSort): Flow<Int> = emptyFlow()
 
+    override suspend fun feedRowIndexOfPage(
+        categorySlug: String?,
+        sort: FeedSort,
+        page: Int,
+    ): Int? = null
+
     override fun searchFeed(
         query: String,
         categorySlug: String?,

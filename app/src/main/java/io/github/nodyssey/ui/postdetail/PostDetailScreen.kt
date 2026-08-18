@@ -43,7 +43,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingToolbarDefaults.floatingToolbarVerticalNestedScroll
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -100,8 +99,8 @@ import io.github.nodyssey.model.hasSpent
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.BottomPullToRefreshBox
 import io.github.nodyssey.ui.common.NodeSeekIcons
+import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
-import io.github.nodyssey.ui.common.PageJumpToolbarContent
 import io.github.nodyssey.ui.common.RoleBadgeRow
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
@@ -619,42 +618,37 @@ private fun DetailBottomActions(
     onReply: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    HorizontalFloatingToolbar(
-        expanded = toolbarExpanded,
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                text = { Text(stringResource(R.string.post_reply_action)) },
-                icon = {
-                    Icon(
-                        PlazaIcons.Reply,
-                        contentDescription = null,
-                    )
-                },
-                onClick = onReply,
-                modifier = Modifier.fillMaxSize(),
-                shape = RoundedCornerShape(18.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            )
-        },
-        // Material's floating toolbar is a fixed 64dp and offers no size parameter, which leaves it
-        // standing 8dp taller than the 回复 FAB inside it. Collapsed, that FAB becomes an 80dp round
-        // button centred on these bounds, so 12dp of it now falls below them — hence the extra
-        // bottom margin, which puts it back exactly where it sat before.
-        modifier = modifier
-            .padding(
-                start = Spacing.lg,
-                end = Spacing.lg,
-                top = Spacing.sm,
-                bottom = Spacing.sm + 12.dp,
-            ).height(56.dp),
+    Column(
+        modifier = modifier.padding(Spacing.lg),
+        horizontalAlignment = Alignment.End,
+        // 4dp, not 8: the rail's bottom key already carries 4dp of touch-target slack under its
+        // paint, and the two together are the 8dp the design puts between the rail and the FAB.
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        PageJumpToolbarContent(
+        PageJumpRail(
+            expanded = toolbarExpanded,
             page = page,
             totalPages = totalPages,
             onPrevious = onPrevious,
             onNext = onNext,
             onPageClick = onPageClick,
+        )
+        // The screen's own FAB rather than the toolbar's: 回复 is the one action here that must stay
+        // where the thumb last left it, and Material's toolbar rounds its FAB up to 80dp the moment
+        // the bar collapses. Shrinking to an icon is the whole of the change it makes now.
+        ExtendedFloatingActionButton(
+            text = { Text(stringResource(R.string.post_reply_action)) },
+            icon = {
+                Icon(
+                    PlazaIcons.Reply,
+                    contentDescription = null,
+                )
+            },
+            onClick = onReply,
+            expanded = toolbarExpanded,
+            shape = RoundedCornerShape(18.dp),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }

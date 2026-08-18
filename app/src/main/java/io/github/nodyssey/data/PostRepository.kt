@@ -127,6 +127,21 @@ interface PostRepository {
     ): Flow<Int>
 
     /**
+     * Where the site's page [page] begins in the feed's own row order, or null when no row of it is
+     * stored.
+     *
+     * 首页翻页栏 asks this to tell travelling from fetching apart. It cannot ask the list: the pager
+     * runs with placeholders on and Room re-windows it on every write, so the rows of the page one
+     * step away are almost always placeholders even though the reader scrolled through them a moment
+     * ago. The database still has them, and this is the index they are at.
+     */
+    suspend fun feedRowIndexOfPage(
+        categorySlug: String?,
+        sort: FeedSort,
+        page: Int,
+    ): Int?
+
+    /**
      * The site's own `/search?q=…`, read exactly like a board feed.
      *
      * Deliberately the same return type, the same pager and the same mediator as [feed]: search is
@@ -346,6 +361,20 @@ class OfflineFirstPostRepository(
             .remoteKeyStream(feedKeyFor(categorySlug, sort))
             .map { key -> key?.totalPages?.coerceAtLeast(1) ?: 1 }
             .distinctUntilChanged()
+
+    override suspend fun feedRowIndexOfPage(
+        categorySlug: String?,
+        sort: FeedSort,
+        page: Int,
+    ): Int? {
+        val feedKey = feedKeyFor(categorySlug, sort)
+        // The same reveal the pager was built under; counting under the other one is off by however
+        // many blocked posts sit above the page.
+        val includeBlocked = showBlockedContent.first()
+        val dao = database.feedDao()
+        val sortIndex = dao.firstSortIndexOnPage(feedKey, page, includeBlocked) ?: return null
+        return dao.countRowsBefore(feedKey, sortIndex, includeBlocked)
+    }
 
     override fun searchFeed(
         query: String,
