@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -31,6 +32,10 @@ import kotlinx.coroutines.launch
  * rest of Settings, which write on every keystroke. A proxy is a host, a port and a type that only
  * mean something together; persisting a half-typed port the instant a digit lands would make
  * [io.github.nodyssey.di.AppContainer.okHttpClient] route through it before the user meant it to.
+ *
+ * The master switch is the exception — see [setEnabled]. The draft is seeded once from storage and
+ * not re-read afterwards, so the write that switch makes cannot overwrite whatever is half-typed in
+ * the fields at the time.
  */
 class ProxySettingsViewModel(
     private val settings: ProxySettings,
@@ -41,6 +46,7 @@ class ProxySettingsViewModel(
 
     init {
         settings.config
+            .take(1)
             .onEach { config ->
                 _uiState.update {
                     it.copy(
@@ -56,7 +62,17 @@ class ProxySettingsViewModel(
             }.launchIn(viewModelScope)
     }
 
-    fun setEnabled(value: Boolean) = _uiState.update { it.copy(enabled = value, problem = null) }
+    /**
+     * The one control on this screen that is not part of the draft: it writes as it is tapped.
+     *
+     * 保存 is only offered while the proxy is on, so a switch that waited for it could be turned on but
+     * never off — the tap would dim the button that was supposed to commit it. See
+     * [ProxySettings.setEnabled], which writes the flag without touching the fields.
+     */
+    fun setEnabled(value: Boolean) {
+        _uiState.update { it.copy(enabled = value, problem = null) }
+        viewModelScope.launch { settings.setEnabled(value) }
+    }
 
     fun setType(value: ProxyType) = _uiState.update { it.copy(type = value, problem = null) }
 

@@ -45,6 +45,17 @@ class ProxySettingsTest {
         assertEquals(saved.copy(scope = ProxyScope.FORUM_ONLY), settings.config.first())
     }
 
+    /** 主开关 writes as it is tapped, so it has to leave the address and the ciphertext beside it alone. */
+    @Test
+    fun `setEnabled flips the flag and nothing else`() = runTest {
+        val settings = DataStoreProxySettings(context, ReversingCipher)
+        settings.save(saved)
+
+        settings.setEnabled(false)
+
+        assertEquals(saved.copy(enabled = false), settings.config.first())
+    }
+
     /** The point of the cipher: what a backup or a file browser would find is not the password. */
     @Test
     fun `the password is stored encrypted and everything else is stored as typed`() = runTest {

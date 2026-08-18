@@ -88,6 +88,17 @@ interface ProxySettings {
     val config: Flow<ProxyConfig>
 
     suspend fun save(config: ProxyConfig)
+
+    /**
+     * Flips the master switch on its own, leaving the address, the credentials and the scope as they
+     * are on disk.
+     *
+     * The rest of 代理设置 is a draft the user commits with 保存, but the switch cannot be: turning the
+     * proxy off has to land the moment it is tapped, and 保存 is itself only offered while the proxy is
+     * on. Writing the enabled flag alone is what keeps a half-typed address in the fields from
+     * riding along with the tap.
+     */
+    suspend fun setEnabled(enabled: Boolean)
 }
 
 /**
@@ -120,6 +131,10 @@ class DataStoreProxySettings(
                     ?: ProxyScope.EVERYTHING,
             )
         }
+
+    override suspend fun setEnabled(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[ProxyKeys.ENABLED] = enabled }
+    }
 
     override suspend fun save(config: ProxyConfig) {
         dataStore.edit { preferences ->
