@@ -17,7 +17,7 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 | 画板 | 实现状态 | 主要代码 | 仍需注意 |
 |---|---|---|---|
 | f1 关于与社区 | 已按稿重做并拆页 | `ui/settings/AboutAppScreen.kt`、`AboutCommunityScreen.kt`、`ChangelogScreen.kt`、`Navigation.kt` | 软件关于仅从设置进入，社区关于仅从社区工具进入；更新在 App 内完成（查、下、装），失败时明说原因，不伪造检查结果 |
-| f2 隐私协议 | 已按稿重做 | `ui/settings/PrivacyScreen.kt`、`PrivacyViewModel.kt`、`core/html/TermsParser.kt`、`data/TermsRepository.kt` | 正常路径为原生长文；站点请求或解析失败时才显示 WebView 降级 |
+| f2 隐私协议 | 已按稿重做 | `ui/settings/PrivacyScreen.kt`、`PrivacyViewModel.kt`、`:shared` 的 `core/html/TermsParser.kt`、`data/TermsRepository.kt` | 正常路径为原生长文；站点请求或解析失败时才显示 WebView 降级 |
 | f3 Telegram 绑定 | 已接入账号联系方式流程 | `ui/account/ContactScreen.kt`、`ContactViewModel.kt`、`data/account/AccountSettingsRepository.kt` | 绑定本身在网页完成（站点用 telegram.org 登录挂件），确认弹窗打开 `/setting#contact`，返回后轮询状态；绑定状态读取与解绑是原生请求 |
 | f4 App 通知设置 | 已接入 | `ui/settings/NotificationSettingsScreen.kt`、`NotificationSettingsViewModel.kt`、`notifications/` | WorkManager 是周期轮询，不承诺即时推送；系统省电策略可能延后执行 |
 
