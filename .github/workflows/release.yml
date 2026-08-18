@@ -300,22 +300,18 @@ jobs:
           curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             --data-urlencode text@telegram-message.txt
-          # The APK goes in a second request, from a copy in the working directory rather than from
-          # `$RUNNER_TEMP` directly: `-F @path` reads the file inside curl, and whatever curl the
-          # runner image ships may not reach every path the shell can stat.
+          # `--form-string` for everything that is not the file, `-F` only for the file itself:
+          # `-F name=@value` reads `value` as a filename, and TELEGRAM_CHAT_ID holds the channel in
+          # `@name` form, so `-F chat_id=...` sent curl looking for a local file called `@name` and
+          # died with `curl: (26)` before it ever opened a connection. `-d` above is unaffected —
+          # it only treats `@` as a file when the whole value starts with one.
           #
           # A notification is not worth failing a release that is already published, so this half
           # warns instead of exiting non-zero: the release and the manifests both landed before it.
-          apk="${{ steps.apk.outputs.path }}"
-          ls -l "$apk" || true
-          command -v curl && curl --version | head -1
-          # Copied under its own name: Telegram shows the uploaded filename in the channel.
-          name=$(basename "$apk")
-          cp "$apk" "./$name"
           if curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
-            -F chat_id="${TELEGRAM_CHAT_ID}" \
-            -F document=@"$name" \
-            -F caption="Nodyssey $tag"; then
+            --form-string chat_id="${TELEGRAM_CHAT_ID}" \
+            -F document=@"${{ steps.apk.outputs.path }}" \
+            --form-string caption="Nodyssey $tag"; then
             echo "Sent the APK to the channel."
           else
             echo "::warning::Could not send the APK to the channel; the text notice went out on its own."
