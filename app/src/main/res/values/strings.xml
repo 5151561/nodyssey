@@ -276,6 +276,10 @@
     <string name="settings_theme_dark">深色</string>
     <string name="settings_body_size">正文字号</string>
     <string name="settings_body_size_value">%1$dsp</string>
+    <string name="settings_sticker_uniform">表情统一缩限</string>
+    <string name="settings_sticker_uniform_hint">开启后所有表情一样大，可调；关闭则各按表情原本的大小显示</string>
+    <string name="settings_sticker_size">表情大小</string>
+    <string name="settings_sticker_size_value">%1$dsp</string>
     <string name="settings_text_preview">预览：中文长文的阅读体验。</string>
     <string name="settings_content">内容</string>
     <string name="settings_external_link">站外链接</string>

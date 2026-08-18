@@ -73,6 +73,14 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setFontScale(value) }
     }
 
+    fun setStickerUniformSize(value: Boolean) {
+        viewModelScope.launch { settings.setStickerUniformSize(value) }
+    }
+
+    fun setStickerSize(value: Int) {
+        viewModelScope.launch { settings.setStickerSize(value) }
+    }
+
     fun setImagesOnWifiOnly(value: Boolean) {
         viewModelScope.launch { settings.setImagesOnWifiOnly(value) }
     }
