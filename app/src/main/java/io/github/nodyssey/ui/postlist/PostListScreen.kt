@@ -87,10 +87,12 @@ import androidx.paging.compose.itemKey
 import io.github.nodyssey.R
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
+import io.github.nodyssey.data.OfflineFirstPostRepository
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
+import io.github.nodyssey.ui.common.JumpDestination
 import io.github.nodyssey.ui.common.NavigationBarScrollConnection
 import io.github.nodyssey.ui.common.NavigationDirectionThreshold
 import io.github.nodyssey.ui.common.NodeSeekIcons
@@ -505,16 +507,22 @@ fun PostListScreen(
         PageJumpSheet(
             page = visiblePage,
             totalPages = state.totalPages,
-            progress =
-            stringResource(
-                R.string.feed_page_progress,
-                visiblePage,
-                state.totalPages,
-                posts.itemCount,
-            ),
-            // No 上次阅读 here, unlike the thread: the feed keeps no place, and the furthest page it
-            // reached is not one either — a jump replaces the window, so the page it would offer has
-            // already been thrown away by the time the offer could be taken.
+            // The site's own page size rather than a count of what is loaded: on a feed the reader
+            // scrolls through, "已载入 N 个帖子" is a number that only ever goes up and says nothing
+            // about where any page is.
+            note = stringResource(R.string.feed_page_size_note, OfflineFirstPostRepository.NETWORK_PAGE_SIZE),
+            // No 上次浏览 here, unlike the thread: the feed keeps no place across visits, and this
+            // session's furthest page is not one — nothing records it, and inventing one from the
+            // scroll would offer the page the reader is already on.
+            newest =
+            JumpDestination(
+                label = stringResource(R.string.page_jump_newest),
+                icon = PlazaIcons.VerticalAlignTop,
+                onGo = {
+                    showPageSheet = false
+                    goToPage(1)
+                },
+            ).takeIf { visiblePage > 1 },
             onDismiss = { showPageSheet = false },
             onGo = { target ->
                 showPageSheet = false

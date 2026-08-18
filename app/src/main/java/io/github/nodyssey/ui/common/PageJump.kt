@@ -1,19 +1,32 @@
 package io.github.nodyssey.ui.common
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -23,6 +36,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -32,15 +46,25 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -49,6 +73,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.R
+import io.github.nodyssey.core.NodeSeekSite.COMMENTS_PER_PAGE
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -217,41 +243,56 @@ private fun PageKey(
 }
 
 /**
- * The jump sheet: a page number, and the destinations worth one tap.
+ * Where the reader can travel to, as one chip.
  *
- * [progress] is the caller's own sentence because only the caller knows what it has loaded — the
- * thread counts 楼, the moderation log counts 条 — and a shared component inventing a noun for both
+ * The three lists that share this sheet mean different things by their own destinations — the thread's
+ * newest is the foot of its last page, the feed's is page 1 — so each caller says what it means rather
+ * than passing a flag the sheet would have to interpret.
+ */
+@Immutable
+data class JumpDestination(
+    val label: String,
+    val icon: ImageVector,
+    val onGo: () -> Unit,
+)
+
+/**
+ * The jump sheet: every page as a key, and the destinations a number cannot name.
+ *
+ * A scroller rather than a field with a 前往 button under it. Travelling one or two pages is most of
+ * what this is opened for, and typing "3" and confirming it is three taps for something that was
+ * already on screen — so a page key *is* the jump, with no confirmation. Typing stays for the reader
+ * going somewhere far, behind the [numberEntry] chip.
+ *
+ * [note] is the caller's own sentence because only the caller knows what it has loaded — the thread
+ * counts 楼, the feed states the site's page size — and a shared component inventing a noun for both
  * would be wrong in one of them.
  *
- * [resumePage] is where "上次阅读" goes, and a null one takes the button away with it. It is also
- * printed on the button, unlike the other two: 第一页 and 最后一页 say where they go in their own
- * names, and this one is a number only the app knows — a reader deciding whether to take the offer
- * is deciding about that number.
+ * [resume] and [newest] are chips only while they lead somewhere else: 最新 on page 1 of the feed, or
+ * a resume offer pointing at the page under the reader's thumb, are taps that do nothing and read as
+ * a broken control rather than as a satisfied one. The caller decides what they mean; whether they
+ * are worth showing is decided here.
  *
- * Every destination here is only worth a button while it is somewhere else: 第一页 on page 1, or a
- * resume offer pointing at the page under the reader's thumb, are taps that do nothing and read as a
- * broken control rather than as a satisfied one. The caller decides what "上次阅读" means — the
- * thread remembers it across visits, the moderation log only knows how far this session scrolled —
- * but not whether it is worth showing.
+ * [totalPages] of 1 or less takes the scroller away rather than drawing a single key: a list whose
+ * page count never arrived should say so through [note] instead of showing a page count it made up.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PageJumpSheet(
     page: Int,
     totalPages: Int,
-    progress: String,
+    note: String,
     onDismiss: () -> Unit,
     onGo: (Int) -> Unit,
-    resumePage: Int? = null,
-    onResume: () -> Unit = { resumePage?.let(onGo) },
+    resume: JumpDestination? = null,
+    newest: JumpDestination? = null,
+    /** 页码 or 楼层 — the chip that swaps the scroller for a number to type, and what that number is. */
+    numberEntry: NumberEntry = NumberEntry.Page,
+    onGoToFloor: ((Int) -> Unit)? = null,
 ) {
-    var input by rememberSaveable { mutableStateOf(page.toString()) }
     val lastPage = totalPages.coerceAtLeast(1)
-    // What the button both says and does. Clamping here rather than in each caller is what keeps
-    // those two from disagreeing: the label used to promise page 9999 and the tap delivered the last
-    // page. A blank field means "where I already am", which is also what the label falls back to —
-    // it used to fall back in the label alone, leaving a button that read fine and did nothing.
-    val target = input.toIntOrNull()?.coerceIn(1, lastPage) ?: page.coerceIn(1, lastPage)
+    val current = page.coerceIn(1, lastPage)
+    var typing by rememberSaveable { mutableStateOf(false) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState =
@@ -261,14 +302,11 @@ fun PageJumpSheet(
         ),
     ) {
         Column(
-            modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xl),
+            modifier = Modifier.padding(bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            // Title and progress share a baseline, as the design draws them: the sentence is about
-            // the heading rather than about the field under it. It keeps its own line when the two
-            // no longer fit — a large font scale takes "第 2 / 12 页 · 已载入 28 / 165 楼" past any
-            // room a three-character title leaves.
             Row(
+                modifier = Modifier.padding(horizontal = SheetPadding),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.Bottom,
             ) {
@@ -278,7 +316,7 @@ fun PageJumpSheet(
                     modifier = Modifier.alignByBaseline(),
                 )
                 Text(
-                    progress,
+                    note,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.End,
@@ -287,46 +325,249 @@ fun PageJumpSheet(
                         .alignByBaseline(),
                 )
             }
-            OutlinedTextField(
-                value = input,
-                onValueChange = { input = it.filter { character -> character.isDigit() } },
-                label = { Text(stringResource(R.string.page_jump_input, lastPage)) },
-                singleLine = true,
-                keyboardOptions =
-                KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Go),
-                // The keyboard covers the button it would otherwise take two taps to reach.
-                keyboardActions = KeyboardActions(onGo = { onGo(target) }),
-                modifier = Modifier.fillMaxWidth(),
+
+            if (lastPage > 1 && !typing) {
+                PageScroller(current = current, lastPage = lastPage, onGo = onGo)
+                PageProgress(current = current, lastPage = lastPage)
+            }
+
+            Row(
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = SheetPadding),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 2.dp),
+            ) {
+                resume?.let { JumpChip(it.icon, it.label, it.onGo, highlighted = true) }
+                newest?.let { JumpChip(it.icon, it.label, it.onGo) }
+                JumpChip(
+                    icon = PlazaIcons.Dialpad,
+                    label = stringResource(numberEntry.label),
+                    onClick = { typing = !typing },
+                    highlighted = typing,
+                )
+            }
+
+            if (typing) {
+                PageNumberField(
+                    page = current,
+                    lastPage = lastPage,
+                    numberEntry = numberEntry,
+                    onGo = onGo,
+                    onGoToFloor = onGoToFloor,
+                )
+            }
+        }
+    }
+}
+
+/** What the sheet's number field takes, which is not the same unit on every list. */
+enum class NumberEntry(
+    @get:StringRes val label: Int,
+) {
+    Page(R.string.page_jump_by_page),
+    Floor(R.string.page_jump_by_floor),
+}
+
+/**
+ * Every page, as keys, with the one the reader is on twice the weight of the rest.
+ *
+ * Lazy because a board can run to several hundred pages, and started at the current key rather than
+ * at page 1 — the reader opened this from a control that says "第 40 页", and a row that begins a
+ * thousand pixels away from that number reads as the wrong list.
+ */
+@Composable
+private fun PageScroller(
+    current: Int,
+    lastPage: Int,
+    onGo: (Int) -> Unit,
+) {
+    val state = rememberLazyListState()
+    LaunchedEffect(current, lastPage) {
+        // Off by one so the page before the current one stays in view: the two commonest jumps from
+        // here are one step either way, and a key flush against the left edge looks like the end.
+        state.scrollToItem((current - 2).coerceAtLeast(0))
+    }
+    LazyRow(
+        state = state,
+        contentPadding = PaddingValues(horizontal = SheetPadding),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        items(count = lastPage, key = { it }) { index ->
+            val number = index + 1
+            PageScrollerKey(number = number, selected = number == current, onClick = { onGo(number) })
+        }
+    }
+}
+
+@Composable
+private fun PageScrollerKey(
+    number: Int,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = if (selected) SelectedPageKeyShape else ScrollerPageKeyShape,
+        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
+        contentColor =
+        if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        shadowElevation = if (selected) SelectedPageKeyElevation else 0.dp,
+        modifier = Modifier
+            .size(
+                width = if (selected) SelectedPageKeyWidth else ScrollerPageKeyWidth,
+                height = ScrollerPageKeyHeight,
+            ).semantics { this.selected = selected },
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = number.toString(),
+                style =
+                if (selected) {
+                    MaterialTheme.typography.titleMedium
+                } else {
+                    MaterialTheme.typography.titleSmall
+                }.copy(fontFeatureSettings = TABULAR_FIGURES),
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                maxLines = 1,
             )
-            val showFirst = page > 1
-            val resume = resumePage?.takeIf { it != page }
-            val showLast = page < lastPage
-            if (showFirst || resume != null || showLast) {
-                // FlowRow, not Row: 第一页 and 最后一页 say where they go in their own names, but
-                // "上次阅读" is the one destination whose page the reader cannot guess, so it carries
-                // the number — and three chips, one of them that wide, do not fit a narrow phone in
-                // one line, let alone at the 1.5× font scale 设置 offers.
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                    itemVerticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (showFirst) {
-                        TextButton(onClick = { onGo(1) }) { Text(stringResource(R.string.page_jump_first)) }
-                    }
-                    if (resume != null) {
-                        TextButton(onClick = onResume) {
-                            Text(stringResource(R.string.page_jump_latest_read, resume))
-                        }
-                    }
-                    if (showLast) {
-                        TextButton(onClick = { onGo(lastPage) }) { Text(stringResource(R.string.page_jump_last)) }
-                    }
-                }
-            }
-            Button(onClick = { onGo(target) }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.page_jump_go, target.toString()))
-            }
+        }
+    }
+}
+
+/** How far through the list the current page is, and how many there are — the scroller cannot show both. */
+@Composable
+private fun PageProgress(
+    current: Int,
+    lastPage: Int,
+) {
+    Row(
+        modifier = Modifier.padding(horizontal = SheetPadding),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(ProgressTrackHeight)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(current.toFloat() / lastPage)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+            )
+        }
+        Text(
+            stringResource(R.string.page_jump_total_pages, lastPage),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * The far jump, typed.
+ *
+ * Committed by the keyboard's own 前往 key rather than by a button beside it: the keyboard is over
+ * the sheet the whole time this is open, and a button under the field is a button under the keyboard.
+ */
+@Composable
+private fun PageNumberField(
+    page: Int,
+    lastPage: Int,
+    numberEntry: NumberEntry,
+    onGo: (Int) -> Unit,
+    onGoToFloor: ((Int) -> Unit)?,
+) {
+    var input by rememberSaveable { mutableStateOf(if (numberEntry == NumberEntry.Floor) "" else page.toString()) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    val number = input.toIntOrNull()
+    val go = {
+        when {
+            number == null -> Unit
+            numberEntry == NumberEntry.Floor -> onGoToFloor?.invoke(number.coerceAtLeast(0)) ?: Unit
+            else -> onGo(number.coerceIn(1, lastPage))
+        }
+    }
+    OutlinedTextField(
+        value = input,
+        onValueChange = { typed -> input = typed.filter { it.isDigit() } },
+        label = {
+            Text(
+                when (numberEntry) {
+                    NumberEntry.Floor -> stringResource(R.string.page_jump_floor_input, lastPage * COMMENTS_PER_PAGE)
+                    NumberEntry.Page -> stringResource(R.string.page_jump_input, lastPage)
+                },
+            )
+        },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Go),
+        keyboardActions = KeyboardActions(onGo = { go() }),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = SheetPadding)
+            .focusRequester(focus),
+    )
+}
+
+private val SheetPadding = 20.dp
+private val ScrollerPageKeyWidth = 48.dp
+private val SelectedPageKeyWidth = 60.dp
+private val ScrollerPageKeyHeight = 60.dp
+private val ScrollerPageKeyShape = RoundedCornerShape(16.dp)
+private val SelectedPageKeyShape = RoundedCornerShape(20.dp)
+private val SelectedPageKeyElevation = 3.dp
+private val ProgressTrackHeight = 3.dp
+private val JumpChipHeight = 40.dp
+private val JumpChipShape = RoundedCornerShape(14.dp)
+private val JumpChipIconSize = 18.dp
+
+/**
+ * One destination on the jump sheet.
+ *
+ * Hand-drawn rather than an `AssistChip` because the design's chip is neither of Material's: 40dp
+ * tall against the chip scale's 32, and a 14dp corner against its 8 — the same corner the rail's keys
+ * take, which is what makes the sheet read as the control's own rather than as a dialog it opened.
+ */
+@Composable
+private fun JumpChip(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    highlighted: Boolean = false,
+) {
+    Surface(
+        onClick = onClick,
+        shape = JumpChipShape,
+        color = if (highlighted) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+        contentColor =
+        if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+        border = if (highlighted) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.height(JumpChipHeight),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(JumpChipIconSize),
+                tint = if (highlighted) LocalContentColor.current else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Medium,
+                maxLines = 1,
+            )
         }
     }
 }

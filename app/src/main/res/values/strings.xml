@@ -54,7 +54,6 @@
     <string name="board_family_flagged">警示类</string>
 
     <!-- Post list -->
-    <string name="feed_page_progress">第 %1$d / %2$d 页 · 已载入 %3$d 个帖子</string>
     <string name="post_reply_count">%1$d 回复</string>
     <string name="post_new_reply_count">%1$d 条新回复</string>
     <string name="post_view_count">%1$d 浏览</string>
@@ -144,15 +143,22 @@
     <string name="page_jump_page_of">第 %1$d / %2$d 页</string>
     <!-- Second line of the rail's page key, under the page it is on -->
     <string name="page_jump_of_total">/%1$d</string>
-    <string name="page_jump_title">跳转到</string>
+    <string name="page_jump_title">跳转到页</string>
     <string name="page_jump_input">页码（1–%1$d）</string>
-    <string name="page_jump_first">第一页</string>
+    <string name="page_jump_total_pages">共 %1$d 页</string>
+    <!-- The chip that swaps the page scroller for a number to type -->
+    <string name="page_jump_by_page">页码</string>
+    <string name="page_jump_by_floor">楼层</string>
+    <string name="page_jump_floor_input">楼层（#0–#%1$d）</string>
     <!-- Carries its own page number: it is the one destination here whose page the reader cannot guess -->
     <string name="page_jump_latest_read">上次阅读 · 第 %1$d 页</string>
-    <string name="page_jump_last">最后一页</string>
-    <string name="page_jump_go">前往第 %1$s 页</string>
+    <!-- Thread only: its newest is the foot of the last page, which is not where a page number lands -->
+    <string name="page_jump_latest">到最新</string>
+    <!-- The feed newest is page 1: its page numbers drift as posts arrive, so there is no last page to go to -->
+    <string name="page_jump_newest">最新</string>
+    <string name="feed_page_size_note">%1$d 条 / 页</string>
     <!-- The "what is loaded" line each list words in its own noun -->
-    <string name="post_page_progress">第 %1$d / %2$d 页 · 已载入 %3$d 楼</string>
+    <string name="post_page_progress">已载入 %1$d 楼</string>
     <string name="post_reply_editor_title">回复</string>
     <string name="post_reply_editor_title_floor">回复 #%1$d · %2$s</string>
     <string name="post_reply_editor_hint">写下你的回复…</string>
@@ -861,7 +867,7 @@
     <string name="ruling_action_unpin">取消置顶评论</string>
     <string name="ruling_action_suspend">禁言 %1$d 天</string>
     <string name="ruling_action_unsuspend">解除禁言</string>
-    <string name="ruling_page_progress">第 %1$d / %2$d 页 · 已载入 %3$d 条</string>
+    <string name="ruling_page_progress">已载入 %1$d 条</string>
     <string name="ruling_page_cap">站点只公开前 %1$d 页，更早的记录要到网页上查</string>
 
     <!-- Profile menu entries added by the 8/9 batch -->

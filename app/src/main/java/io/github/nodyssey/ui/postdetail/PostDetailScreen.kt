@@ -98,7 +98,9 @@ import io.github.nodyssey.model.countOf
 import io.github.nodyssey.model.hasSpent
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.BottomPullToRefreshBox
+import io.github.nodyssey.ui.common.JumpDestination
 import io.github.nodyssey.ui.common.NodeSeekIcons
+import io.github.nodyssey.ui.common.NumberEntry
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.RoleBadgeRow
@@ -347,6 +349,9 @@ fun PostDetailScreen(
         if (positionWorthRecording) onReadingPositionChange(visiblePage, visibleFloor)
     }
 
+    /** Set while 到最新 is waiting for the last page it just asked for. */
+    var pendingBottom by remember { mutableStateOf(false) }
+
     /** Scrolls when the page is already in the list, and asks for it when it is not. */
     fun goToPage(target: Int) {
         val index = state.firstIndexOfPage(target)
@@ -355,6 +360,30 @@ fun PostDetailScreen(
         } else {
             onLoadPage(target)
         }
+    }
+
+    /**
+     * 到最新 — the newest floor, which is the foot of the last page rather than its head.
+     *
+     * Separate from 最后一页 because standing on that page and standing at the end of it are two
+     * different places, and on a thread being replied to it is the second one people mean. The flag
+     * outlives the fetch: the floors are not here yet when the last page has to be asked for, so the
+     * scroll waits for the emission that carries them.
+     */
+    fun goToLatest() {
+        val last = state.totalPages.coerceAtLeast(1)
+        if (last in state.firstLoadedPage..state.lastLoadedPage) {
+            scope.launch { listState.animateScrollToItem(state.lastItemIndex) }
+        } else {
+            pendingBottom = true
+            onLoadPage(last)
+        }
+    }
+    LaunchedEffect(pendingBottom, state.lastLoadedPage, state.comments.size) {
+        if (!pendingBottom) return@LaunchedEffect
+        if (state.lastLoadedPage < state.totalPages || state.comments.isEmpty()) return@LaunchedEffect
+        listState.scrollToItem(state.lastItemIndex)
+        pendingBottom = false
     }
 
     /**
@@ -589,19 +618,45 @@ fun PostDetailScreen(
         PageJumpSheet(
             page = visiblePage,
             totalPages = state.totalPages,
-            progress = stringResource(R.string.post_page_progress, visiblePage, state.totalPages, loadedFloors),
+            note = stringResource(R.string.post_page_progress, loadedFloors),
             onDismiss = { showPageSheet = false },
             onGo = { target ->
                 showPageSheet = false
                 goToPage(target.coerceIn(1, state.totalPages.coerceAtLeast(1)))
             },
             // Clamped so a place left in a thread that has since lost pages still resolves to a
-            // button that goes somewhere — the ViewModel lands it on the last page for the same reason.
-            resumePage =
-            (resume?.page ?: state.lastLoadedPage).coerceIn(1, state.totalPages.coerceAtLeast(1)),
-            onResume = {
+            // chip that goes somewhere — the ViewModel lands it on the last page for the same reason.
+            resume =
+            (resume?.page ?: state.lastLoadedPage)
+                .coerceIn(1, state.totalPages.coerceAtLeast(1))
+                .takeIf { it != visiblePage }
+                ?.let { target ->
+                    JumpDestination(
+                        label = stringResource(R.string.page_jump_latest_read, target),
+                        icon = PlazaIcons.Bookmark,
+                        onGo = {
+                            showPageSheet = false
+                            if (resume != null) onResumeReading() else goToPage(state.lastLoadedPage)
+                        },
+                    )
+                },
+            // The thread's newest is the foot of its last page, which is not where 最后一页 lands.
+            newest =
+            JumpDestination(
+                label = stringResource(R.string.page_jump_latest),
+                icon = PlazaIcons.VerticalAlignBottom,
+                onGo = {
+                    showPageSheet = false
+                    goToLatest()
+                },
+            ),
+            numberEntry = NumberEntry.Floor,
+            // The floor's page is arithmetic the site fixes — see NodeSeekSite.COMMENTS_PER_PAGE —
+            // and [onJumpToFloor] already fetches that page and lands on the floor, which is the same
+            // trip a notification about it makes.
+            onGoToFloor = { floor ->
                 showPageSheet = false
-                if (resume != null) onResumeReading() else goToPage(state.lastLoadedPage)
+                onJumpToFloor("#$floor")
             },
         )
     }
@@ -1668,6 +1723,10 @@ private val PostDetailUiState.headerItemCount: Int
 /** The mark in flight on [content], if any — only one floor at a time can have one. */
 private fun PostDetailUiState.pendingReactionFor(content: PostContent): ReactionAction? =
     pendingReaction?.takeIf { it.commentId == content.commentId }?.action
+
+/** The last row of the list — the newest floor when the last page is loaded. */
+private val PostDetailUiState.lastItemIndex: Int
+    get() = (headerItemCount + comments.size - 1).coerceAtLeast(0)
 
 /** Mirrors [ThreadList]'s item order so a quote reference can scroll to the floor it points at. */
 private fun PostDetailUiState.indexOfFloor(floor: String): Int? {

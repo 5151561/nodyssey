@@ -55,6 +55,7 @@ import io.github.nodyssey.data.RulingAction
 import io.github.nodyssey.data.RulingKind
 import io.github.nodyssey.data.RulingRecord
 import io.github.nodyssey.data.RulingTarget
+import io.github.nodyssey.ui.common.JumpDestination
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
@@ -301,17 +302,31 @@ fun RulingScreen(
     if (showPageSheet) {
         PageJumpSheet(
             page = visiblePage,
+            totalPages = state.totalPages,
+            note = stringResource(R.string.ruling_page_progress, state.records.size),
             // The log keeps no place across visits, so "上次阅读" is this session's own furthest
             // point — offered while the reader has scrolled back from it, and gone once they have not.
-            resumePage = state.lastLoadedPage,
-            totalPages = state.totalPages,
-            progress =
-            stringResource(
-                R.string.ruling_page_progress,
-                visiblePage,
-                state.totalPages,
-                state.records.size,
-            ),
+            resume =
+            state.lastLoadedPage.takeIf { it != visiblePage }?.let { target ->
+                JumpDestination(
+                    label = stringResource(R.string.page_jump_latest_read, target),
+                    icon = PlazaIcons.Bookmark,
+                    onGo = {
+                        showPageSheet = false
+                        goToPage(target)
+                    },
+                )
+            },
+            // Newest first, like the feed: the log's own newest entry is on page 1.
+            newest =
+            JumpDestination(
+                label = stringResource(R.string.page_jump_newest),
+                icon = PlazaIcons.VerticalAlignTop,
+                onGo = {
+                    showPageSheet = false
+                    goToPage(1)
+                },
+            ).takeIf { visiblePage > 1 },
             onDismiss = { showPageSheet = false },
             onGo = { target ->
                 showPageSheet = false

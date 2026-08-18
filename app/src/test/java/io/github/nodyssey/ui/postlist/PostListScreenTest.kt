@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
@@ -796,18 +797,41 @@ class PostListScreenTest {
         assertEquals(2, requested)
     }
 
+    /** The scroller is the jump: a page key is the whole gesture, with nothing to confirm after it. */
     @Test
-    fun `the jump sheet offers the last page and reports it`() {
+    fun `a page key on the jump sheet reports the page it names`() {
         var requested: Int? = null
         setScreen(
-            posts = listOf(feedPost(1, "post", page = 1)),
-            state = pagedState(),
+            posts = listOf(feedPost(1, "post", page = 40)),
+            state = pagedState(startPage = 40),
             onGoToPage = { requested = it },
         )
 
-        composeRule.onNodeWithContentDescription("第 1 / 217 页").performClick()
-        composeRule.onNodeWithText("最后一页").performClick()
+        composeRule.onNodeWithContentDescription("第 40 / 217 页").performClick()
+        composeRule.onNode(hasText("41") and hasClickAction()).performClick()
 
-        assertEquals(217, requested)
+        assertEquals(41, requested)
+    }
+
+    /**
+     * 最新 on the feed is page 1, not the last page.
+     *
+     * The site's page numbers drift under a feed sorted by activity — a post that was on page 3 is on
+     * page 4 an hour later — so its newest content is always at the head, and "最后一页" would be the
+     * oldest thing the board has.
+     */
+    @Test
+    fun `the jump sheet sends 最新 back to the first page`() {
+        var requested: Int? = null
+        setScreen(
+            posts = listOf(feedPost(1, "post", page = 40)),
+            state = pagedState(startPage = 40),
+            onGoToPage = { requested = it },
+        )
+
+        composeRule.onNodeWithContentDescription("第 40 / 217 页").performClick()
+        composeRule.onNodeWithText("最新").performClick()
+
+        assertEquals(1, requested)
     }
 }

@@ -119,6 +119,55 @@ object PlazaIcons {
         )
     }
 
+    /** 第一页, on the jump sheet: a left chevron against the wall it cannot pass. */
+    val FirstPage: ImageVector by lazy {
+        materialIcon(
+            name = "FirstPage",
+            pathData = "M18.41,16.59L13.82,12l4.59,-4.59L17,6l-6,6 6,6zM6,6h2v12H6z",
+        )
+    }
+
+    /** 最后一页, the mirror of [FirstPage]. */
+    val LastPage: ImageVector by lazy {
+        materialIcon(
+            name = "LastPage",
+            pathData = "M5.59,7.41L10.18,12l-4.59,4.59L7,18l6,-6 -6,-6zM16,6h2v12h-2z",
+        )
+    }
+
+    /** 上次阅读 — the place a previous visit left behind. */
+    val Bookmark: ImageVector by lazy {
+        materialIcon(
+            name = "Bookmark",
+            pathData = "M17,3H7c-1.1,0 -2,0.9 -2,2v16l7,-3 7,3V5c0,-1.1 -0.9,-2 -2,-2z",
+        )
+    }
+
+    /** 到最新 — the newest floor, which is the foot of the last page. */
+    val VerticalAlignBottom: ImageVector by lazy {
+        materialIcon(
+            name = "VerticalAlignBottom",
+            pathData = "M16,13h-3V3h-2v10H8l4,4 4,-4zM4,19v2h16v-2H4z",
+        )
+    }
+
+    /** 楼层 / 页码 — the chip that turns the jump sheet's scroller into a number to type. */
+    val Dialpad: ImageVector by lazy {
+        materialIcon(
+            name = "Dialpad",
+            pathData =
+            "M3,3a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM10,3a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM17,3a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM3,9a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM10,9a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM17,9a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM3,15a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM10,15a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM17,15a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM10,21a2,2 0 1,0 4,0a2,2 0 1,0 -4,0z",
+        )
+    }
+
+    /** 最新, on a list whose newest is at its head — the feed, where page 1 is today. */
+    val VerticalAlignTop: ImageVector by lazy {
+        materialIcon(
+            name = "VerticalAlignTop",
+            pathData = "M8,11h3v10h2V11h3l-4,-4 -4,4zM4,3v2h16V3H4z",
+        )
+    }
+
     /** Sort order — the only action in the home app bar. */
     val SwapVert: ImageVector by lazy {
         materialIcon(
