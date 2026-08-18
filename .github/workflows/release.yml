@@ -288,26 +288,33 @@ jobs:
             exit 0
           fi
           tag="${{ steps.version.outputs.tag }}"
-          # Telegram caps a text message at 4096 chars; leave room for the heading built below.
-          notes=$(head -c 3800 release-notes.md)
+          # Telegram caps a text message at 4096 characters, and rejects the whole request with
+          # 400 "strings must be encoded in UTF-8" if the body is not valid UTF-8. `head -c 3800`
+          # counted *bytes*: on Chinese notes it both cut the text a third short and sliced a
+          # character in half, which is what earned that 400 on v1.2.9-dev.4. Cut by characters.
           {
             echo "Nodyssey $tag"
             echo
-            echo "$notes"
+            python3 -c 'import sys; sys.stdout.write(open("release-notes.md", encoding="utf-8").read()[:3800])'
           } > telegram-message.txt
           # Plain text (no parse_mode): release notes are free-form Chinese prose, and Markdown's
           # escaping rules would misparse on ordinary punctuation rather than the other way round.
-          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+          #
+          # Warns rather than exits non-zero for the same reason the APK half below does: the
+          # release and the manifests have already landed by here, and a notification that did not
+          # go out is not worth painting the run red.
+          if curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            --data-urlencode text@telegram-message.txt
+            --data-urlencode text@telegram-message.txt; then
+            echo "Announced $tag in the channel."
+          else
+            echo "::warning::Could not announce $tag in the channel."
+          fi
           # `--form-string` for everything that is not the file, `-F` only for the file itself:
           # `-F name=@value` reads `value` as a filename, and TELEGRAM_CHAT_ID holds the channel in
           # `@name` form, so `-F chat_id=...` sent curl looking for a local file called `@name` and
           # died with `curl: (26)` before it ever opened a connection. `-d` above is unaffected —
           # it only treats `@` as a file when the whole value starts with one.
-          #
-          # A notification is not worth failing a release that is already published, so this half
-          # warns instead of exiting non-zero: the release and the manifests both landed before it.
           if curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
             --form-string chat_id="${TELEGRAM_CHAT_ID}" \
             -F document=@"${{ steps.apk.outputs.path }}" \
