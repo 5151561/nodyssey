@@ -126,6 +126,7 @@
     <!-- Post detail -->
     <string name="post_comments_header">评论 · %1$d</string>
     <string name="post_body_empty">这个帖子没有正文</string>
+    <string name="post_open_original">查看正文</string>
     <string name="post_comments_empty">还没有人回复</string>
     <string name="post_comments_empty_hint">来做第一个吧——不过 v1 还是只读的</string>
     <string name="post_link_copied">链接已复制</string>

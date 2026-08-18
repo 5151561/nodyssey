@@ -343,7 +343,7 @@ fun PostDetailScreen(
     // has to be a thread to be positioned in — an empty screen mid-fetch reports page 1 — and the
     // reader has to have got somewhere: every thread parks at its top on open, so opening one and
     // backing straight out would otherwise reset it to page 1.
-    val positionWorthRecording = state.body != null && (visiblePage > 1 || !atListTop)
+    val positionWorthRecording = state.hasContent && (visiblePage > 1 || !atListTop)
     LaunchedEffect(visiblePage, visibleFloor, positionWorthRecording) {
         if (positionWorthRecording) onReadingPositionChange(visiblePage, visibleFloor)
     }
@@ -357,6 +357,20 @@ fun PostDetailScreen(
             onLoadPage(target)
         }
     }
+
+    /**
+     * 点标题看正文 — the way back to the opening post from a read that started past it.
+     *
+     * Offered only when the body is genuinely absent, which is a thread opened straight onto a later
+     * page and never cached before: NodeSeek serves the opening post on page 1 alone. Page 1 is then
+     * fetched like any other page, and [firstIndexOfPage] lands the scroll on the top of the list
+     * rather than on that page's first floor, because the post is what was asked for.
+     *
+     * Same answer the site gives — its title is a link to `/post-703863-1` — rather than a control of
+     * our own, so a reader who knows the web knows this one.
+     */
+    val openOriginalPost: (() -> Unit)? = if (state.body == null) ({ goToPage(1) }) else null
+
     // Keyed on the pages themselves rather than on how many comments there are: a jump swaps one page
     // of ten floors for another page of ten floors, so a count would not change and the effect would
     // never re-run against the content it was waiting for.
@@ -400,6 +414,7 @@ fun PostDetailScreen(
             DetailTopBar(
                 title = state.title,
                 showTitle = showCollapsedTitle,
+                onTitleClick = openOriginalPost,
                 postUrl = postUrl,
                 onBack = onBack,
                 onOpenInBrowser = { onOpenBrowser(postUrl) },
@@ -411,9 +426,9 @@ fun PostDetailScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             val error = state.error
             when {
-                state.body == null && state.isLoading -> ThreadSkeleton()
+                !state.hasContent && state.isLoading -> ThreadSkeleton()
 
-                state.body == null && error != null ->
+                !state.hasContent && error != null ->
                     SiteErrorState(
                         error = error,
                         onRetry = onRetry,
@@ -451,6 +466,7 @@ fun PostDetailScreen(
                             ThreadList(
                                 state = state,
                                 listState = listState,
+                                onOpenOriginalPost = openOriginalPost,
                                 onOpenBrowser = onLinkClick,
                                 onImageClick = onImageClick,
                                 onJumpToFloor = { floor ->
@@ -509,13 +525,13 @@ fun PostDetailScreen(
             // content that is on its way out. This says "a different page is coming" where the reader
             // is already looking — and it is the only feedback between the tap and the new page.
             // A pull-to-refresh is the one load excused: its own indicator is already saying it.
-            if (state.isLoading && !state.isRefreshing && state.body != null) {
+            if (state.isLoading && !state.isRefreshing && state.hasContent) {
                 LinearProgressIndicator(
                     modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter),
                 )
             }
 
-            if (state.body != null && !replyOpen) {
+            if (state.hasContent && !replyOpen) {
                 DetailBottomActions(
                     toolbarExpanded = toolbarExpanded,
                     page = visiblePage,
@@ -648,6 +664,8 @@ private fun DetailBottomActions(
 private fun DetailTopBar(
     title: String,
     showTitle: Boolean,
+    /** Jumps to the opening post, for the reads that start on a page without one. Null when there is nothing to jump to. */
+    onTitleClick: (() -> Unit)?,
     postUrl: String,
     onBack: () -> Unit,
     onOpenInBrowser: () -> Unit,
@@ -657,16 +675,28 @@ private fun DetailTopBar(
     var menuOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val copy = rememberClipboardCopy()
+    val openOriginalPostLabel = stringResource(R.string.post_open_original)
     val linkCopied = stringResource(R.string.post_link_copied)
     val shareLabel = stringResource(R.string.action_share)
 
     TopAppBar(
         title = {
+            // Clickable only while the bar is actually showing the title: the collapsed bar is where
+            // a reader deep in someone else's page 7 meets the title at all, and an invisible tap
+            // target over an empty bar is worse than no affordance.
+            val jump = onTitleClick?.takeIf { showTitle }
             Text(
                 text = if (showTitle) title else "",
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = if (jump != null) {
+                    Modifier.clickable(onClick = jump).semantics {
+                        contentDescription = openOriginalPostLabel
+                    }
+                } else {
+                    Modifier
+                },
             )
         },
         navigationIcon = {
@@ -747,6 +777,8 @@ private val ThreadBottomBarRoom = 80.dp
 private fun ThreadList(
     state: PostDetailUiState,
     listState: LazyListState,
+    /** See [PostDetailScreen]'s own — null when the opening post is already in the list. */
+    onOpenOriginalPost: (() -> Unit)?,
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
@@ -768,7 +800,12 @@ private fun ThreadList(
             .readableWidth(),
     ) {
         item(key = "title") {
-            ThreadHeader(title = state.title, body = state.body, isAwarded = state.isAwarded)
+            ThreadHeader(
+                title = state.title,
+                body = state.body,
+                isAwarded = state.isAwarded,
+                onOpenOriginalPost = onOpenOriginalPost,
+            )
         }
 
         state.body?.let { body ->
@@ -934,14 +971,20 @@ private fun ThreadHeader(
     title: String,
     body: PostContent?,
     isAwarded: Boolean,
+    /** Fetches page 1 and scrolls to the opening post; null when it is already the item below. */
+    onOpenOriginalPost: (() -> Unit)? = null,
 ) {
     Column(
-        modifier = Modifier.padding(
-            start = Spacing.lg,
-            end = Spacing.lg,
-            top = 6.dp,
-            bottom = 14.dp,
-        ),
+        modifier = Modifier
+            // Clickable outside the padding, so the ripple covers the block the title reads as.
+            .then(
+                if (onOpenOriginalPost != null) Modifier.clickable(onClick = onOpenOriginalPost) else Modifier,
+            ).padding(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                top = 6.dp,
+                bottom = 14.dp,
+            ),
     ) {
         Text(
             text = title,
@@ -966,6 +1009,27 @@ private fun ThreadHeader(
                 )
             }
             body?.createdAtText?.let { MetaText(it) }
+        }
+        if (onOpenOriginalPost != null) {
+            // The title alone carries no affordance on a phone — no hover, no underline, nothing to
+            // say it goes anywhere — and this is a screen the reader landed on knowing nothing about
+            // where the post went. So the tap is spelled out, and the title stays tappable too.
+            TextButton(
+                onClick = onOpenOriginalPost,
+                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 0.dp),
+                modifier = Modifier.offset(x = -Spacing.sm),
+            ) {
+                Icon(
+                    PlazaIcons.Article,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.post_open_original),
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(start = Spacing.xs),
+                )
+            }
         }
     }
 }

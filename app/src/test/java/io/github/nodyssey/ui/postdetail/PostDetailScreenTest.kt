@@ -593,14 +593,51 @@ class PostDetailScreenTest {
         composeRule.onNodeWithText("floor 7").assertIsDisplayed()
     }
 
+    /**
+     * A notification about floor #127 opens page 13, and the site serves the opening post on page 1
+     * alone — so a thread nobody had read before arrives with floors and no body. The page bar was
+     * gated on that body, which left this read with no control that could go back for page 1.
+     */
+    @Test
+    fun `a thread opened past page one keeps its page bar without the opening post`() {
+        var requested: Int? = null
+        setScreen(jumpedState(body = null), onLoadPage = { requested = it })
+
+        composeRule.onNodeWithText("第 13 / 40 页").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("上一页").performClick()
+
+        assertEquals(12, requested)
+    }
+
+    /** 点标题看正文, the way the site does it: its title is a link back to the first page. */
+    @Test
+    fun `tapping the title of a bodyless thread fetches page one`() {
+        var requested: Int? = null
+        setScreen(jumpedState(body = null), onLoadPage = { requested = it })
+
+        composeRule.onNodeWithText("查看正文").performClick()
+
+        assertEquals(1, requested)
+    }
+
+    /** And nothing to offer when the opening post is the item directly under the title. */
+    @Test
+    fun `no jump to the opening post when it is already on screen`() {
+        setScreen(jumpedState())
+
+        composeRule.onNodeWithText("查看正文").assertDoesNotExist()
+    }
+
     /** One page of a long thread, loaded on its own — what a jump or a notification produces. */
     private fun jumpedState(
         floors: List<Int> = (121..130).toList(),
         page: Int = 13,
         pendingScroll: PendingScroll? = null,
+        /** Null is a thread nobody had cached: the site puts the opening post on page 1 only. */
+        body: PostContent? = content("the opening post"),
     ) = PostDetailUiState(
         title = "a long thread",
-        body = content("the opening post"),
+        body = body,
         comments = floors.map { content("floor $it", floor = "#$it") },
         commentPages = List(floors.size) { page },
         firstLoadedPage = page,

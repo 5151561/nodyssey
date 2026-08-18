@@ -262,7 +262,7 @@ class PostDetailViewModel(
     fun refreshTail() {
         val state = _uiState.value
         if (state.isLoading || state.isAppending || state.isRefreshingTail) return
-        if (state.hasNextPage || state.body == null) return
+        if (state.hasNextPage || !state.hasContent) return
         _uiState.update { it.copy(isRefreshingTail = true) }
         load(page = state.lastLoadedPage, replacesWindow = false, tail = true)
     }
@@ -579,7 +579,17 @@ data class PostDetailUiState(
     val collectPending: Boolean = false,
     /** A refused collection toggle, held until the screen has shown it once. */
     val collectFailure: ReactionFailure? = null,
-)
+) {
+    /**
+     * Whether there is a thread on screen to read and act on.
+     *
+     * Deliberately not [body] alone. NodeSeek renders the opening post on page 1 only, so a thread
+     * opened straight onto a later page — every notification about a floor past the tenth — has
+     * floors and no body until page 1 is fetched. Gating the screen's furniture on the body left
+     * that read with no page bar, which is the one control that could have gone back for it.
+     */
+    val hasContent: Boolean get() = body != null || comments.isNotEmpty()
+}
 
 data class PendingReaction(
     val commentId: Long,
