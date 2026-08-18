@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -22,15 +21,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
-import io.github.nodyssey.data.settings.isTimedNightHour
 import io.github.nodyssey.ui.common.rememberExternalUriHandler
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.richtext.LocalReportFormat
 import io.github.plaza.designsys.richtext.LocalStickerSizing
 import io.github.plaza.designsys.richtext.StickerSizing
 import io.github.plaza.designsys.theme.PlazaTheme
-import kotlinx.coroutines.delay
-import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
     /*
@@ -70,7 +66,6 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
-                ThemeMode.TIMED -> isTimedNightNow()
             }
 
             PlazaTheme(
@@ -152,25 +147,4 @@ sealed interface LaunchRequest {
 
     /** A `nodeseek.com` link from another app. Parsed by `NodeSeekSite.parseInternalRoute`. */
     data class OpenLink(val url: String) : LaunchRequest
-}
-
-/**
- * True while the 定时 night window is on, re-evaluated once a minute.
- *
- * A minute is coarse enough to cost nothing and fine enough that the theme flips within a minute of
- * the boundary — nobody is watching the screen at 19:00:00 to catch the difference. The wall clock is
- * read directly rather than injected: this composable exists for one Activity, and the pure decision
- * it wraps ([isTimedNightHour]) is what the tests cover.
- */
-@Composable
-private fun isTimedNightNow(): Boolean {
-    val isNight by produceState(
-        initialValue = isTimedNightHour(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)),
-    ) {
-        while (true) {
-            delay(60_000)
-            value = isTimedNightHour(Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
-        }
-    }
-    return isNight
 }

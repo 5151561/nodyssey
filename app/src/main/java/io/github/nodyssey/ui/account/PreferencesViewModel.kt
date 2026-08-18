@@ -9,7 +9,6 @@ import io.github.nodyssey.R
 import io.github.nodyssey.data.account.AccountSettingsRepository
 import io.github.nodyssey.data.settings.OPTIONAL_HOME_BOARD_SLUGS
 import io.github.nodyssey.data.settings.SettingsRepository
-import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.di.AppContainer
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,14 +23,13 @@ import kotlinx.coroutines.launch
 /**
  * State holder for 偏好与首页版块 (d6 5/5).
  *
- * Every row belongs to exactly one of two stores, and the split is the site's own:
+ * Every row here is **Remote** (this account, server): 启用节日主题 and the three 首页版块 switches.
+ * The account is the authority; DataStore only *mirrors* them so the feed and theme work offline. A
+ * toggle writes the mirror first — the app must obey the user immediately — and then tells the
+ * server, and says so when the server refuses.
  *
- * - **Local** (this device, DataStore): 自动夜间模式 and its 依据. These write through
- *   [SettingsRepository] and never touch the network.
- * - **Remote** (this account, server): 启用节日主题 and the three 首页版块 switches. The account is
- *   the authority; DataStore only *mirrors* them so the feed and theme work offline. A toggle writes
- *   the mirror first — the app must obey the user immediately — and then tells the server, and says
- *   so when the server refuses.
+ * The site's own 自动夜间模式 and 夜间模式依据 are not here: they are a browser asking for a dark
+ * theme, and 设置 · 主题 already decides that for this device.
  */
 class PreferencesViewModel(
     private val settings: SettingsRepository,
@@ -43,8 +41,6 @@ class PreferencesViewModel(
         combine(settings.settings, remote) { values, remoteState ->
             PreferencesUiState(
                 holidayTheme = values.holidayTheme,
-                autoNight = values.themeMode == ThemeMode.SYSTEM || values.themeMode == ThemeMode.TIMED,
-                nightBasisTimed = values.themeMode == ThemeMode.TIMED,
                 hiddenBoards = values.hiddenHomeBoards,
                 message = remoteState.message,
             )
@@ -76,20 +72,6 @@ class PreferencesViewModel(
         viewModelScope.launch {
             settings.setHolidayTheme(enabled)
             pushRemote { account.setHolidayTheme(enabled) }
-        }
-    }
-
-    fun setAutoNight(enabled: Boolean) {
-        viewModelScope.launch {
-            // On restores the default basis (跟随系统 — the app enhancement d6 marks as default);
-            // off lands on plain light, the state the switch visually returns the screen to.
-            settings.setThemeMode(if (enabled) ThemeMode.SYSTEM else ThemeMode.LIGHT)
-        }
-    }
-
-    fun setNightBasisTimed(timed: Boolean) {
-        viewModelScope.launch {
-            settings.setThemeMode(if (timed) ThemeMode.TIMED else ThemeMode.SYSTEM)
         }
     }
 
@@ -138,8 +120,6 @@ private data class RemotePreferencesState(
 
 data class PreferencesUiState(
     val holidayTheme: Boolean = false,
-    val autoNight: Boolean = true,
-    val nightBasisTimed: Boolean = false,
     val hiddenBoards: Set<String> = emptySet(),
     val message: AccountMessage? = null,
 )
