@@ -1,0 +1,367 @@
+# KMP-ready 架构改造计划
+
+制定日期：2026-08-18 · 修订：目标由「迁移到 macOS」改为「先做 KMP-ready」 ·
+基线提交：`56c5b2a` · 评估依据：[`kmp-migration-decision.md`](kmp-migration-decision.md)
+
+## 0. 目标的重新定义
+
+**不是**「花几个月把 Nodyssey 跨平台化」。**是**「把业务核心整理成 platform-neutral Kotlin，
+真正需要 Apple 平台时再打开 Native target」。
+
+这两件事的区别决定了本计划的形状：
+
+| | KMP-ready（第一阶段，现在做） | KMP migration（第二阶段，以后） |
+|---|---|---|
+| 产出 | 不认识 Android、不认识 JVM 库的 core/data | `:shared` KMP 模块 + Apple target |
+| 前置条件 | **无** | 决定真的要开 iOS/macOS App |
+| 若最终不做 KMP | **全部是净收益**，Android 架构本身变好 | — |
+| 需要 KMP 基建 | 不需要 | 需要 |
+
+**第一阶段的每一项改造，单独看都是 Android 架构改善。**这是它不需要赌注的原因，
+也是本计划把 feasibility gate 降级的原因（见第 6 节）。
+
+---
+
+## 1. 最终架构
+
+前端永远原生，KMP 只承担业务核心。
+
+```text
+                        shared / commonMain
+        ┌────────────────────┼────────────────────┐
+        ▼                    ▼                    ▼
+    Android                iOS                 macOS
+   Kotlin/JVM         Kotlin/Native        Kotlin/Native
+       ART               iosArm64             macosArm64
+        │                    │                    │
+ Android Compose         SwiftUI              SwiftUI
+                        / UIKit               / AppKit
+```
+
+source set 层级用 KMP 的 hierarchical source sets，`appleMain` 让两个 Apple 平台共用实现：
+
+```text
+                    commonMain
+                        │
+             ┌──────────┴──────────┐
+        androidMain             appleMain
+                                   │
+                          ┌────────┴────────┐
+                       iosMain           macosMain
+```
+
+```text
+shared/
+├── commonMain      model / parser / domain / repository / database
+│                   settings / session semantics / network contracts
+├── androidMain     OkHttp / WebView cookie / Keystore / Android DB bootstrap
+├── appleMain       Apple networking / Keychain / 共用的 Apple 集成
+├── iosMain         iOS 特有
+└── macosMain       macOS 特有
+```
+
+**目标平台假设：Apple Silicon only。**`paging-common` 3.5.0 无 `macosX64` 构件（实测），
+且 Feed 依赖 Paging。如果将来要支持 Intel Mac，需重新评估 Paging 的替代方案。
+
+---
+
+## 2. 边界：共享到哪一层为止
+
+**Repository 以下共享，ViewModel 以上各写各的。**
+
+### 共享
+
+```text
+Post / User / Comment / Category / Vote / SearchResult …   domain model
+HTML parser                                                 站点「协议」
+PostRepository / SearchRepository / SessionRepository …     业务规则
+Room entity / DAO / database                                缓存
+network contracts / session semantics
+```
+
+### 不共享（永远 Android-only）
+
+```text
+:designsys
+app/ui
+Navigation 3
+Compose
+```
+
+### 不共享（各端自己写很薄的一层）
+
+`PostListViewModel`、`PostDetailViewModel`、`UiState`、`NavigationState`。
+
+Apple 侧：
+
+```swift
+@Observable
+final class PostListModel {
+    private let repository: PostRepository
+    var posts: [Post] = []
+    var loading = false
+    func reload() async { ... }
+}
+```
+
+Android 侧维持现有 `ViewModel` + `StateFlow` 不变。
+
+### 为什么不共享 ViewModel
+
+门槛 C 已实测：Kotlin 2.4.10 的 Swift Export 能把 `StateFlow` 导出成类型化的
+`KotlinTypedStateFlow<T>`，`suspend` 导出成原生 `async throws`，**技术上可行**。
+
+但它是 **Alpha**，官方明说不适合生产。把一个 Alpha 特性设成长期架构边界，
+换来的只是省掉每端几十行很薄的 presentation —— 不划算。
+
+把边界卡在 Repository，则 Swift 侧只需要消费 `suspend` 函数和 domain model，
+即使 Swift Export 有变动，影响面也小得多。
+
+### 这样不缩小共享层
+
+共享层约 16,850 行（生产代码 27%）本来就不含 ViewModel —— 它们在 `app/ui` 的 35,431 行里。
+划清边界不减少共享量，只是让边界不再模糊。
+
+---
+
+## 3. Parser 为什么是最值得共享的一块
+
+不是因为代码量（1,257 行，占 2%），而是因为 **NodeSeek 客户端真正的「协议」就是它**：
+
+```text
+HTML structure / CSS selector / markup quirks / API quirks / Cloudflare behavior
+```
+
+站点改一个 `div.topic-item`，不共享就要 Android 改一次、Apple 再改一次；共享则三平台只改一次。
+这个价值与行数无关。
+
+同理，Room 进 common 的投入在三平台（Android / iPhone / iPad / Mac）摊薄后，
+比只为一个 iOS 重构一次容易回本。
+
+---
+
+## 4. 第一阶段：KMP-ready
+
+**全程不需要任何 KMP 基建，不新建模块，不动 frontend。**每一项都可独立合并。
+
+### 4.1 让 core 不再认识 Android
+
+把这些从 `core` / `data` 往外推：
+
+```text
+android.content.Context / Intent
+android.webkit.*
+android.net.* / android.os.*
+```
+
+现状：`data` 层 60 个文件中只有 **9 个** `import android.*` ——
+`ProxySettings`、`ApkInstaller`、`SecretCipher`、`AppUpdateRepository`、`ImagePreparer`、
+`CommentComposerRepository`、`PostComposerRepository`、`NodeSeekDatabase`、`ImageHostSettings`。
+
+其余 51 个的障碍不是 Android，是 JVM 库（见 4.2）。**这一项的工作量比想象中小。**
+
+`NodeSeekSite.kt` 需要拆：它用了 `resolveUserAgent`（要 `Context`）、`java.net.URI` /
+`URLEncoder`，还有一个只服务于 KDoc 链接的 `import ...designsys.component.UserAvatar`
+（删 import、把 `[UserAvatar]` 改成普通文字即可，不涉及架构）。
+
+### 4.2 让 core 不再认识 JVM library 实现
+
+**不是不能用 OkHttp，而是 `commonMain` 不应该知道 OkHttp。**
+
+不得出现在 domain / repository 公开 API：
+
+```text
+okhttp3.Request / Response / Interceptor
+org.jsoup.Element / Document
+java.io.* / java.net.*
+```
+
+已知的具体泄漏点（spike 实测）：
+
+| 文件 | 泄漏 | 处置 |
+|---|---|---|
+| `TerminalColumns.kt` | `java.lang.Character.charCount`、internal `codePointAt` | 自写 UTF-16 代理对处理 |
+| `StardustReceiveMarkup.kt` | `java.net.URLDecoder` / `StandardCharsets` | 自写 percent-decode，**必须保留 `+`→空格 的表单语义**，否则历史帖子收款码解码错位 |
+| `SiteBootstrap.kt` | `java.util.Base64` | 换 `kotlin.io.encoding.Base64`（同为 RFC 4648） |
+| 全部 parser | `org.jsoup.*` | 第二阶段换 Ksoup；第一阶段先确保 jsoup 类型不出现在 parser 的**返回值**上 |
+
+参考实现见 `nodyssey-kmp-spike/gate-b-parser/src/commonMain/`，已通过两端测试。
+
+### 4.3 测试变纯
+
+**这一项无论 KMP 做不做都值，且它是后续一切的前提。**
+
+全项目 1,260 个 `@Test` 中 568 个（45%）跑在 Robolectric 上，其中 **173 个在 `data` 层**。
+把这 19 个测试类改成用 fake 而非 Robolectric `Context` / Room in-memory 构建。
+
+涉及 `FeedRemoteMediatorTest`、`SessionRepositoryTest`、`ProfileRepositoryTest`、
+`CategoryRepositoryTest`、`PostDetailCacheTest`、`PostCollectionTest`、`ReadHistoryTest`、
+`SearchFeedTest`、`BlockedFeedTest`、`ReadMarkTest` 等。
+
+**例外**：`NodeSeekDatabaseMigrationTest` 测的就是 Android schema 升级，永远留在 Android 侧。
+
+即时收益：测试执行时间显著缩短，与 KMP 无关。
+
+### 4.4 把平台能力抽成很少几个 interface
+
+```kotlin
+interface SiteTransport
+interface SessionCookieStore
+interface SecretCipher        // 已存在
+interface AppVersionProvider
+interface DatabaseFactory
+interface SettingsStoreFactory
+```
+
+**然后不要过度抽象。**不为「共享率」包装 WorkManager / PackageInstaller / 通知调度 ——
+那些本来就该是平台 shell。
+
+继续用 constructor injection，不为 KMP 引入 DI framework。
+
+### 4.5 拆掉 data → designsys 反向依赖
+
+[`SettingsRepository.kt:18`](../app/src/main/java/io/github/nodyssey/data/settings/SettingsRepository.kt)
+`import io.github.plaza.designsys.editor.EditorAction` —— data 层不该依赖 UI 模块。
+
+把需要持久化的部分下沉成 `EditorActionId`，`:designsys` 负责映射回 UI action。
+这是 `data` 层唯一一处反向依赖，**单独一个 PR**。
+
+### 4.6 不碰 frontend
+
+```text
+app/ui
+:designsys
+Navigation 3
+Compose
+```
+
+**一个字都不要为了 KMP 改。**
+
+### 第一阶段验收
+
+```bash
+./gradlew :app:testDebugUnitTest :app:assembleDebug
+```
+
+- `data` / `core` 的公开 API 不出现 `android.*`、`okhttp3.*`、`org.jsoup.*`、`java.*`
+- `data` 包下不再出现 `RobolectricTestRunner`（迁移测试除外）
+- 测试总数不减，Android 行为不变
+
+---
+
+## 5. 第二阶段：真正 KMP
+
+**触发条件：决定真的要开 iOS/macOS App。**在此之前不必开始。
+
+大致顺序（细节到时按当时的工具链状态重定）：
+
+| 步骤 | 内容 | 说明 |
+|---|---|---|
+| 1 | Apple 平台 spike | WKWebView / `WKHTTPCookieStore` / `URLSession` / Keychain。**门槛 A 已在 macOS 上验证通过**，iOS 需复验 |
+| 2 | 构建基础设施 | `plaza.kmp.library` convention plugin、`:shared` 模块、`appleMain` 层级 |
+| 3 | model + 纯逻辑 | 第一阶段做完后基本是搬文件 |
+| 4 | parser + Ksoup | 门槛 B 已验证是纯机械替换 |
+| 5 | 网络契约 + Apple transport | |
+| 6 | Room + DataStore | 7 个手写 migration 要重写 |
+| 7 | Repository 由简到繁 | Terms/Search → Profile/Community → Post/Vote → Feed/Paging |
+| 8 | Apple 前端 | SwiftUI，见下 |
+
+### 构建基础设施的已知障碍
+
+`plaza.dependency-locking` 锁的是 6 个 **Android 专有配置名**
+（`debugCompileClasspath` 等），而 KMP 模块的配置名完全不同
+（`macosArm64CompileKlibraries`、`commonMainApiElements` …），且 `lockMode` 是 **STRICT**
+（「没有 lock state 也算失败」）。直接套用会卡住。
+
+处置二选一，需在该步骤开始时就定：给 KMP 模块补一套配置名（推荐，但必须**实测**哪些真的产生
+lock state，照抄猜测的清单在 STRICT 下会失败），或让 `:shared` 不应用这个插件。
+
+另：convention plugin 里只用 `//` 注释 —— Kotlin 会嵌套块注释，散文里一个 `/*`
+会静默吞掉文件剩余部分，唯一症状是「插件找不到」。
+
+### Apple 侧还能再共享一层
+
+iOS 与 macOS 的 Swift 代码不必各写一套：
+
+```text
+AppleFrontendCore/     (Swift Package)
+├── model adapters / view models / formatting
+└── 共用 SwiftUI 组件
+
+iOSApp/     iOS navigation / lifecycle / iOS 特有 UI
+macOSApp/   菜单命令 / 窗口管理 / macOS 特有 UI
+```
+
+最终形成两层共享：
+
+```text
+                     KMP Core
+        Android / iOS / macOS 共享
+                       │
+           ┌───────────┴───────────┐
+      Android UI              Apple Swift layer
+       Compose                     │
+                             ┌─────┴─────┐
+                           iOS         macOS
+```
+
+---
+
+## 6. 已验证的资产
+
+三道门槛已于 2026-08-18 实测通过，工程在 `nodyssey-kmp-spike/`。
+
+**在新目标下它们不再是前置条件**，但结论继续有效，第二阶段可直接复用：
+
+| | 结论 | 第二阶段的用途 |
+|---|---|---|
+| A 会话链路 | macOS WKWebView cookie → `URLSession` 拿到帖子 HTML（HTTP 200，44KB） | Apple transport 有已验证路径；iOS 需复验 |
+| B parser | 41 测试两端全绿，jsoup→Ksoup 纯机械替换 | 直接照搬 |
+| C Swift 互操作 | Swift Export 导出类型化 `StateFlow`/`Flow`/`suspend` | 证明边界即使上移也可行；当前不依赖 |
+
+生态核对（实测 Google Maven，`macosArm64` 全部就位）：
+Room 2.8.4、Paging 3.5.0、DataStore 1.2.1（项目用的是 Preferences，正是 KMP 唯一支持的那种）。
+
+### 门槛 A 顺带发现的一件事，值得现在就复核
+
+站点实际下发 6 个 cookie：`colorscheme`、`fog`、`session`、`pjwt`、`smac`、`cf_clearance`。
+而 `SiteConfig.sessionCookieNames = listOf("session", "token")` —— JWT 风格的实际名是 `pjwt`，
+没有 `token`。`session` 在场所以登录判定不受影响，但 `token` 可能已是死代码。
+
+---
+
+## 7. 贯穿全程的约束
+
+### 铁律
+
+- 不改表名、不改列名、不清 schema history、不用 destructive migration 解决编译问题
+- 不改 `@SerialName` discriminator 或任何持久化过的序列化名 —— 旧缓存要能读
+- 迁移 PR 不顺手做命名清理
+- 每个 PR 只降低一个平台耦合；同一个 PR 不要既搬代码又改行为
+
+### 依赖有变动时
+
+```bash
+./gradlew resolveAndLockAll --write-locks
+```
+
+lockfile 是 STRICT 模式，不更新就直接失败。
+
+### 第二阶段的测试迁移坑
+
+JUnit `assertTrue(msg, cond)` 与 kotlin.test `assertTrue(cond, msg)` **参数顺序相反**，
+影响每一个被搬进 `commonTest` 的断言。编译期能抓到，不会静默出错，但要计入工期。
+
+fixture 加载要做成 **Gradle 任务**从 resources 生成 Kotlin 常量（且必须分块，JVM 字面量
+上限 65535 字节），不要沿用 spike 里的一次性脚本。
+
+### 成功标准
+
+第一阶段：
+
+> `core` / `data` 的公开 API 不出现平台类型；Android 行为与测试数量不变。
+
+第二阶段：
+
+> 同一份 fixture，Android 与 Apple target 解析结果一致；
+> Android 现有用户升级后数据完好；每个阶段合并后 Android 行为不变。
