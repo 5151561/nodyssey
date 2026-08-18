@@ -3,6 +3,7 @@ package io.github.nodyssey
 import android.content.ClipData
 import android.content.ClipboardManager
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -242,14 +243,15 @@ fun MainNavigation(
 
     // The bar belongs to the top-level destinations only. A thread, the image viewer and the web
     // view are full-screen by design — showing a tab bar under them would invite leaving mid-read.
+    //
+    // Two panes changes what "under them" means: a detail is drawn *beside* its list, not over it,
+    // so the tab root is still on screen and the bar still belongs to it. The question is therefore
+    // whether the top of the stack is part of a pane scene at all, not which tab it belongs to —
+    // 首页, 搜索, 通知 and a user's space all pair with a detail now.
     val atTabRoot = TopLevelDestination.forKey(backStack.lastOrNull()) != null
     val showNavigationSuite =
         (atTabRoot && (!tabBarHiddenByScroll || isListDetailExpanded)) ||
-            (
-                currentTab == TopLevelDestination.HOME &&
-                    isListDetailExpanded &&
-                    backStack.lastOrNull() is PostDetailKey
-                )
+            (isListDetailExpanded && paneRoleOf(backStack.lastOrNull()) != null)
     val navigationSuiteState = rememberNavigationSuiteScaffoldState()
     LaunchedEffect(showNavigationSuite) {
         if (showNavigationSuite) navigationSuiteState.show() else navigationSuiteState.hide()
@@ -327,7 +329,7 @@ fun MainNavigation(
             entry<PostListKey>(
                 metadata =
                 ListDetailSceneStrategy.listPane(
-                    detailPlaceholder = { EmptyDetailPane() },
+                    detailPlaceholder = { EmptyDetailPane(R.string.home_pane_empty) },
                 ),
             ) {
                 val viewModel: PostListViewModel =
@@ -350,7 +352,12 @@ fun MainNavigation(
                 )
             }
 
-            entry<SearchKey> {
+            entry<SearchKey>(
+                metadata =
+                ListDetailSceneStrategy.listPane(
+                    detailPlaceholder = { EmptyDetailPane(R.string.search_pane_empty) },
+                ),
+            ) {
                 val viewModel: SearchViewModel =
                     viewModel(factory = SearchViewModel.factory(container))
                 SearchRoute(
@@ -371,7 +378,12 @@ fun MainNavigation(
                 )
             }
 
-            entry<NotificationsKey> {
+            entry<NotificationsKey>(
+                metadata =
+                ListDetailSceneStrategy.listPane(
+                    detailPlaceholder = { EmptyDetailPane(R.string.notifications_pane_empty) },
+                ),
+            ) {
                 NotificationsRoute(
                     viewModel = notificationsViewModel,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
@@ -391,7 +403,9 @@ fun MainNavigation(
                 )
             }
 
-            entry<MessageThreadKey> { key ->
+            entry<MessageThreadKey>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) { key ->
                 val viewModel: MessageThreadViewModel =
                     viewModel(
                         key = "message-${key.uid}",
@@ -400,6 +414,7 @@ fun MainNavigation(
                     )
                 MessageThreadRoute(
                     viewModel = viewModel,
+                    showBackButton = !(currentListDetailExpanded && backStack.showsListPane()),
                     onBack = { backStack.removeLastOrNull() },
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                     onVerify = {
@@ -565,7 +580,12 @@ fun MainNavigation(
                 )
             }
 
-            entry<UserSpaceKey> { key ->
+            entry<UserSpaceKey>(
+                metadata =
+                ListDetailSceneStrategy.listPane(
+                    detailPlaceholder = { EmptyDetailPane(R.string.space_pane_empty) },
+                ),
+            ) { key ->
                 val viewModel: UserSpaceViewModel =
                     viewModel(
                         // The landing tab is part of the identity: 我的主页 and 我的收藏 are the same
@@ -880,8 +900,7 @@ fun MainNavigation(
                 PostDetailRoute(
                     viewModel = viewModel,
                     replyViewModel = replyViewModel,
-                    showBackButton =
-                    !(currentListDetailExpanded && backStack.firstOrNull() == PostListKey),
+                    showBackButton = !(currentListDetailExpanded && backStack.showsListPane()),
                     onBack = { backStack.removeLastOrNull() },
                     onOpenBrowser = openWebUrl,
                     onLinkClick = openContentUrl,
@@ -1100,15 +1119,61 @@ internal suspend fun resolveMemberLink(
 }
 
 @Composable
-private fun EmptyDetailPane() {
+private fun EmptyDetailPane(@StringRes text: Int) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
-            text = stringResource(R.string.home_pane_empty),
+            text = stringResource(text),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
+
+/**
+ * Which half of a list-detail layout a destination is drawn in, or null if it takes the whole window.
+ *
+ * This restates the `metadata =` on the entries above, and nothing but review keeps the two in step —
+ * the metadata is built inside a composable local function, so no test can read it back. They answer
+ * different questions from the same fact: the metadata is what [ListDetailSceneStrategy] reads to
+ * build a scene, and this is what the app reads to decide whether a detail still needs its own back
+ * arrow and whether the navigation area would be covering a list or sitting beside one. Adding a
+ * `listPane`/`detailPane` to an entry without adding its key here leaves a thread with a back arrow
+ * pointing at a list already on screen; the reverse hides an arrow that was the only way out.
+ */
+internal enum class PaneRole {
+    LIST,
+    DETAIL,
+}
+
+internal fun paneRoleOf(key: NavKey?): PaneRole? =
+    when (key) {
+        // Every tab root that is a list of things worth opening one of. 我的 is not one: it is a menu
+        // whose rows are settings pages, and a settings page is not a detail.
+        PostListKey, SearchKey, NotificationsKey -> PaneRole.LIST
+
+        // A user's space is a list wherever it is reached from — including on top of a thread, where
+        // tapping an author then leaves their posts beside the one being read.
+        is UserSpaceKey -> PaneRole.LIST
+
+        is PostDetailKey, is MessageThreadKey -> PaneRole.DETAIL
+
+        else -> null
+    }
+
+/**
+ * Whether a list is sharing the window with whatever is on top of this stack.
+ *
+ * Mirrors [ListDetailSceneStrategy.calculateScene]: a scene is built from the run of pane-carrying
+ * entries at the top of the stack, and that run ends at the first entry carrying no pane role. So a
+ * thread opened from 浏览历史 is full-screen and keeps its back arrow — 浏览历史 is not a pane — while
+ * the same thread opened from the feed, from search or from a user's space does not.
+ *
+ * Only meaningful once the window is wide enough for two panes; every caller checks that first.
+ */
+internal fun List<NavKey>.showsListPane(): Boolean =
+    asReversed()
+        .takeWhile { paneRoleOf(it) != null }
+        .any { paneRoleOf(it) == PaneRole.LIST }
 
 private fun stackScopedEntryProvider(
     destination: TopLevelDestination,

@@ -636,8 +636,11 @@
     <string name="status_not_wired_body">NodeSeek 这一页是网页端渲染的，没有可读的接口，App 不会拿猜出来的数据糊弄你。先到网页里看，接口对上就会补进来。</string>
 
 
-    <!-- Two-pane home on tablets and unfolded foldables -->
+    <!-- Two-pane list-detail on tablets and unfolded foldables: what the empty detail pane says -->
     <string name="home_pane_empty">选一个帖子，正文会显示在这里</string>
+    <string name="search_pane_empty">选一条结果，正文会显示在这里</string>
+    <string name="notifications_pane_empty">选一条消息，内容会显示在这里</string>
+    <string name="space_pane_empty">选一个帖子，正文会显示在这里</string>
 
     <!-- Pagination for the lists the site indexes by page number -->
     <string name="pager_total_approx">共 %1$d+ 页</string>

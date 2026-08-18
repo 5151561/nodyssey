@@ -100,6 +100,7 @@ fun MessageThreadRoute(
     onVerify: () -> Unit,
     onOpenBrowser: (String) -> Unit,
     modifier: Modifier = Modifier,
+    showBackButton: Boolean = true,
     /** Bubble-content links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
     onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
@@ -108,6 +109,7 @@ fun MessageThreadRoute(
         state = state,
         draftState = viewModel.draftState,
         onBack = onBack,
+        showBackButton = showBackButton,
         onSignIn = onSignIn,
         onVerify = onVerify,
         onOpenBrowser = onOpenBrowser,
@@ -145,6 +147,13 @@ fun MessageThreadScreen(
     onToolbarChange: (List<EditorAction>) -> Unit,
     onToolbarReset: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Whether the conversation draws its own way back.
+     *
+     * False when it is the detail half of a two-pane layout: the list it came from is still on
+     * screen beside it, so there is nothing for an arrow to return to.
+     */
+    showBackButton: Boolean = true,
     /** Bubble-content links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
     onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
@@ -164,11 +173,13 @@ fun MessageThreadScreen(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
-                        )
+                    if (showBackButton) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.action_back),
+                            )
+                        }
                     }
                 },
                 title = {
