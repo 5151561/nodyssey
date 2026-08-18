@@ -1,8 +1,5 @@
 package io.github.plaza.core.image
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import coil3.Extras
 import coil3.getExtra
 import coil3.intercept.Interceptor
@@ -35,15 +32,11 @@ fun ImageRequest.Builder.allowMeteredImage(allow: Boolean): ImageRequest.Builder
  * consulted per request; where that flow comes from — which DataStore key, under which name — is the
  * app's business, and the interceptor is deliberately not told.
  */
-class ImageNetworkPolicyInterceptor internal constructor(
+class ImageNetworkPolicyInterceptor(
     private val imagesOnWifiOnly: Flow<Boolean>,
+    /** See `hasValidatedUnmeteredNetwork` — what counts as unmetered is the platform's to answer. */
     private val hasUnmeteredNetwork: () -> Boolean,
 ) : Interceptor {
-    constructor(context: Context, imagesOnWifiOnly: Flow<Boolean>) : this(
-        imagesOnWifiOnly = imagesOnWifiOnly,
-        hasUnmeteredNetwork = context::hasValidatedUnmeteredNetwork,
-    )
-
     override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
         val deferred =
             shouldDeferImage(
@@ -96,12 +89,3 @@ internal fun shouldDeferImage(
  */
 internal fun ImageRequest.withoutNetwork(): ImageRequest =
     newBuilder().networkCachePolicy(CachePolicy.DISABLED).build()
-
-private fun Context.hasValidatedUnmeteredNetwork(): Boolean {
-    val connectivityManager = getSystemService(ConnectivityManager::class.java)
-    val activeNetwork = connectivityManager.activeNetwork ?: return false
-    val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
-    return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) &&
-        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-}

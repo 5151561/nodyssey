@@ -1,31 +1,6 @@
 package io.github.plaza.core.net
 
-import android.os.LocaleList
 import java.util.Locale
-
-/**
- * The `Accept-Language` a browser on this device would send.
- *
- * OkHttp sends no `Accept-Language` at all, and a request without one is a request no browser
- * makes. Cloudflare's bot scoring reads that: on an image host fronted by it, the app's request was
- * answered with a managed challenge and a 403 while every browser on the same connection was served
- * the picture. Measured against `img.legend.moe` on 2026-08-18 — with the same User-Agent, adding
- * this header alone turned three 403s into three 200s, and removing it turned them back:
- *
- * ```
- * UA + Accept-Encoding + Accept-Language  →  200 200 200
- * UA + Accept-Encoding                    →  403 403 403
- * UA +                   Accept-Language  →  403 403 403
- * ```
- *
- * (`Accept-Encoding` is OkHttp's own, added to every request that does not set one, so the app
- * already had that half.)
- *
- * Sent on page requests too, not just images: the WebView sends one on every navigation, and two
- * halves of the app that disagree about what the device reads is exactly the mismatch a bot score
- * is looking for. See [resolveUserAgent] for the same argument about `User-Agent`.
- */
-fun deviceAcceptLanguage(): String = acceptLanguage(LocaleList.getDefault().toLocales())
 
 /**
  * Builds the header value from [locales], most-preferred first.
@@ -75,5 +50,3 @@ private const val MAX_LANGUAGES = 6
 
 /** What a device with no usable locale gets. Sending nothing is the thing this file exists to avoid. */
 private const val FALLBACK = "en-US,en;q=0.9"
-
-private fun LocaleList.toLocales(): List<Locale> = (0 until size()).mapNotNull { get(it) }

@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.net.URLEncoder
 
 class NodeSeekSiteTest {
     @Test
@@ -15,6 +16,36 @@ class NodeSeekSiteTest {
         )
         assertEquals("/member?q=%E8%8A%B1%E7%94%B0", NodeSeekSite.userSearchPath("花田"))
         assertEquals("/api/account/find/%E8%8A%B1%E7%94%B0", NodeSeekSite.userSearchApiPath("花田"))
+    }
+
+    /**
+     * The encoder these paths are built with, against the `java.net.URLEncoder` it replaced.
+     *
+     * Character for character rather than case by case, because the interesting characters are the
+     * ones nobody thinks to write a case for: `URLEncoder` leaves `*` alone and escapes `~`, which
+     * is the opposite of what `encodeURIComponent` does, and a search URL is what the site is asked
+     * for and what the app caches under.
+     */
+    @Test
+    fun `search paths encode exactly the way URLEncoder did`() {
+        val queries = listOf(
+            "花田",
+            "Android TV",
+            "a+b",
+            "~!*'()",
+            "-._",
+            "100%",
+            "a&b=c",
+            "\"quoted\"",
+            "🍜",
+            "",
+        )
+
+        queries.forEach { query ->
+            val expected = URLEncoder.encode(query, "UTF-8").replace("+", "%20")
+
+            assertEquals(query, "/member?q=$expected", NodeSeekSite.userSearchPath(query))
+        }
     }
 
     @Test

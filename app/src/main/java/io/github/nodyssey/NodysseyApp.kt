@@ -18,6 +18,7 @@ import io.github.nodyssey.di.DefaultAppContainer
 import io.github.nodyssey.notifications.NotificationChannels
 import io.github.nodyssey.notifications.NotificationPollScheduler
 import io.github.plaza.core.image.ImageNetworkPolicyInterceptor
+import io.github.plaza.core.image.hasValidatedUnmeteredNetwork
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -99,10 +100,11 @@ open class NodysseyApp :
             .components {
                 add(
                     ImageNetworkPolicyInterceptor(
-                        context = context,
-                        // The interceptor is `:core`'s and knows nothing about this app's
-                        // settings; which key means 仅 Wi-Fi 加载图片 is decided here.
+                        // The interceptor is `:core`'s and knows neither this app's settings nor this
+                        // platform: which key means 仅 Wi-Fi 加载图片, and what counts as Wi-Fi, are
+                        // both decided here.
                         imagesOnWifiOnly = container.settingsRepository.settings.map { it.imagesOnWifiOnly },
+                        hasUnmeteredNetwork = context::hasValidatedUnmeteredNetwork,
                     ),
                 )
                 add(

@@ -1,10 +1,9 @@
 package io.github.nodyssey.data.imagehost
 
-import android.content.Context
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.test.core.app.ApplicationProvider
+import io.github.nodyssey.data.PreferenceStoreScope
 import io.github.nodyssey.data.security.PlainCipher
 import io.github.nodyssey.data.security.ReversingCipher
 import io.github.nodyssey.data.security.SecretCipher
@@ -16,29 +15,27 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 private const val NODE_IMAGE_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 /**
  * The stored half of 图床设置.
  *
- * Every test writes what it needs before reading it: DataStore is a process singleton keyed by file
- * name, and Robolectric hands every test in this class the same application context, so anything
- * left by an earlier test is still there for the next one.
+ * Each test gets its own store file, so a test that reads before writing reads an empty store rather
+ * than whatever the test before it left behind.
  */
-@RunWith(RobolectricTestRunner::class)
 class ImageHostSettingsTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
+    @get:Rule
+    val store = PreferenceStoreScope("imagehost")
 
     /**
      * The real cipher is the platform keystore, which a JVM test does not have — it would fail every
      * call and store nothing, and every assertion below would be about that rather than about this
      * class. See `TestCiphers.kt` for what each stand-in pins down.
      */
-    private val settings = DataStoreImageHostSettings(context, ReversingCipher)
+    private val settings = DataStoreImageHostSettings(store.dataStore, ReversingCipher)
 
     @Test
     fun `each host's credentials are kept apart`() = runTest {
@@ -155,7 +152,7 @@ class ImageHostSettingsTest {
         )
 
         // Reading the same file back with a cipher that does nothing shows what actually landed on disk.
-        val onDisk = DataStoreImageHostSettings(context, PlainCipher).config(ImageHostProvider.LSKY_PRO).first()
+        val onDisk = DataStoreImageHostSettings(store.dataStore, PlainCipher).config(ImageHostProvider.LSKY_PRO).first()
         assertTrue("the token must be stored as ciphertext", SecretCipher.isEncrypted(onDisk.token))
         assertFalse("and must not contain the token", onDisk.token.contains("lskytoken"))
         assertEquals("https://img.example.com", onDisk.siteUrl)
@@ -181,7 +178,7 @@ class ImageHostSettingsTest {
             ),
         )
 
-        val onDisk = DataStoreImageHostSettings(context, PlainCipher).config(ImageHostProvider.CUSTOM).first()
+        val onDisk = DataStoreImageHostSettings(store.dataStore, PlainCipher).config(ImageHostProvider.CUSTOM).first()
         assertTrue(SecretCipher.isEncrypted(onDisk.custom.headerValue))
         assertTrue(SecretCipher.isEncrypted(onDisk.custom.formFields))
         assertEquals("X-Token", onDisk.custom.headerName)
@@ -201,7 +198,7 @@ class ImageHostSettingsTest {
     @Test
     fun `a plaintext token from an older version is still read as the token`() = runTest {
         // PlainCipher writes unmarked, which is exactly the shape those installs have on disk.
-        DataStoreImageHostSettings(context, PlainCipher)
+        DataStoreImageHostSettings(store.dataStore, PlainCipher)
             .save(ImageHostConfig(ImageHostProvider.SMMS, token = "plainsmmstoken"))
 
         assertEquals("plainsmmstoken", settings.config(ImageHostProvider.SMMS).first().token)
@@ -214,7 +211,7 @@ class ImageHostSettingsTest {
             ImageHostConfig(ImageHostProvider.EASY_IMAGE, siteUrl = "https://img.example.com", token = "gone"),
         )
 
-        val recovered = DataStoreImageHostSettings(context, UnreadableCipher)
+        val recovered = DataStoreImageHostSettings(store.dataStore, UnreadableCipher)
             .config(ImageHostProvider.EASY_IMAGE)
             .first()
         assertEquals("", recovered.token)
@@ -224,10 +221,10 @@ class ImageHostSettingsTest {
     /** Encryption failing is not a reason to fall back to plaintext. */
     @Test
     fun `a device that cannot encrypt stores no token at all`() = runTest {
-        DataStoreImageHostSettings(context, UnencryptableCipher)
+        DataStoreImageHostSettings(store.dataStore, UnencryptableCipher)
             .save(ImageHostConfig(ImageHostProvider.IMGBB, token = "neverstored"))
 
-        assertEquals("", DataStoreImageHostSettings(context, PlainCipher).config(ImageHostProvider.IMGBB).first().token)
+        assertEquals("", DataStoreImageHostSettings(store.dataStore, PlainCipher).config(ImageHostProvider.IMGBB).first().token)
     }
 
     /**

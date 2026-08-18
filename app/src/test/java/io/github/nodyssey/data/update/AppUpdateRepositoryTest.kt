@@ -1,11 +1,11 @@
 package io.github.nodyssey.data.update
 
-import android.content.pm.PackageInstaller
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.AppUpdateException
 import io.github.plaza.core.update.InstallFailure
+import io.github.plaza.core.update.InstallOutcome
 import io.github.plaza.core.update.ReleaseNote
 import io.github.plaza.core.update.ReleaseSource
 import io.github.plaza.core.update.UpdateCheck
@@ -331,10 +331,10 @@ class AppUpdateRepositoryTest {
         runTest {
             val repository = repository(FakeReleaseSource(release("1.2.0")))
 
-            repository.onInstallStatus(PackageInstaller.STATUS_FAILURE_CONFLICT)
+            repository.onInstallOutcome(InstallOutcome.Failed(InstallFailure.CONFLICT))
             assertEquals(InstallFailure.CONFLICT, repository.state.value.installFailure)
 
-            repository.onInstallStatus(PackageInstaller.STATUS_FAILURE_ABORTED)
+            repository.onInstallOutcome(InstallOutcome.Abandoned)
             assertNull(repository.state.value.installFailure)
         }
 

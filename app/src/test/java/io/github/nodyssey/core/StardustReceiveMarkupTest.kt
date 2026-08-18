@@ -135,6 +135,21 @@ class StardustReceiveMarkupTest {
     }
 
     /**
+     * A marker typed rather than generated can carry the character itself instead of its escape.
+     *
+     * `URLSearchParams` copies an unescaped character straight through, so an emoji — two `Char`s
+     * that only mean anything together — has to survive as one. Decoding it as bytes one `Char` at a
+     * time is the mistake this pins: that turns 🍜 into two replacement characters, and the reader
+     * sees a 备注 the writer never typed.
+     */
+    @Test
+    fun `keeps an unescaped character that takes two chars to write`() {
+        val code = StardustReceiveMarkup.parse("member_id=9&ref_id=1&diff=5&description=%E8%AF%B7 🍜")
+
+        assertEquals("请 🍜", code?.description)
+    }
+
+    /**
      * A stray `%` costs the site the whole card. Keeping the raw text instead loses nothing that was
      * ever readable and leaves a hand-written marker usable.
      */

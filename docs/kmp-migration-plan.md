@@ -144,6 +144,10 @@ HTML structure / CSS selector / markup quirks / API quirks / Cloudflare behavior
 
 **全程不需要任何 KMP 基建，不新建模块，不动 frontend。**每一项都可独立合并。
 
+> **执行记录（2026-08-18）**：4.1 / 4.2 / 4.4 / 4.5 已完成，4.3 完成 7/19（12 个 Room 测试类
+> 在第一阶段做不到，见 4.3）。下面每一节里带 ✅ / ⚠️ 的段落是事后按实测补写的，未标注的部分
+> 是当初的计划原文。
+
 ### 4.1 让 core 不再认识 Android
 
 把这些从 `core` / `data` 往外推：
@@ -163,6 +167,26 @@ android.net.* / android.os.*
 `NodeSeekSite.kt` 需要拆：它用了 `resolveUserAgent`（要 `Context`）、`java.net.URI` /
 `URLEncoder`，还有一个只服务于 KDoc 链接的 `import ...designsys.component.UserAvatar`
 （删 import、把 `[UserAvatar]` 改成普通文字即可，不涉及架构）。
+
+**✅ 实际做法**：这 9 个分成两类，处理方式不同。
+
+| 类别 | 文件 | 做法 |
+|---|---|---|
+| 只为了拿 `DataStore` 才收 `Context` | `ProxySettings`、`ImageHostSettings`、`PostComposerRepository`、`CommentComposerRepository` | 改收 `DataStore<Preferences>`；`preferencesDataStore` 委托集中到 `di/PreferenceStores.kt` |
+| 本身就是平台外壳 | `KeystoreSecretCipher`、`DefaultImagePreparer`、`ApkInstaller` + `ApkInstallResultReceiver`、`NodeSeekDatabase.create` | 整个搬进新的 `app/.../platform/` 包，接口留在 `data` |
+
+`AppUpdateRepository` 是第三种：它没有平台外壳可搬，只是 `onInstallStatus(status: Int)` 收的是
+`PackageInstaller.STATUS_*`。改成 `onInstallOutcome(InstallOutcome)`，整数到语义的翻译放在广播
+到达的地方。
+
+`resolveUserAgent` 和 `UserAvatar` 两个 import 实测都没人用，只出现在 KDoc 散文里，直接删。
+
+**✅ `:core` 也做了同一件事**：`AppVersion` / `UserAgent` / `AcceptLanguage` /
+`ImageNetworkPolicyInterceptor` 四处形状一样——中性的值和逻辑，加边缘一个读设备的函数。把读取
+函数各自拆成独立文件（`AndroidAppVersion.kt`、`WebViewUserAgent.kt`、`DeviceAcceptLanguage.kt`、
+`AndroidNetworkMetering.kt`）。**拆开不是为了整洁**：KMP 里一个文件不能一半 `commonMain` 一半
+`androidMain`，拆过之后第二阶段就是移动文件而不是改写。`:core` 里 `import android.*` 的现在只剩
+5 个以平台命名的文件。
 
 ### 4.2 让 core 不再认识 JVM library 实现
 
@@ -187,6 +211,26 @@ java.io.* / java.net.*
 
 参考实现见 `nodyssey-kmp-spike/gate-b-parser/src/commonMain/`，已通过两端测试。
 
+**✅ 实际做法**：三处按 spike 走，但 spike 的 `percentDecode` 有一个 bug 没照抄——它对未转义
+字符逐 `Char` 转字节，会把一个 emoji 拆成两个替换字符。改成「未转义字符原样抄写」，并补了测试。
+
+`java.util.Base64` → `kotlin.io.encoding.Base64` 时 padding 设成 `PRESENT_OPTIONAL`：spike 的
+注释说两者「都要求正确 padding」，实测不对——Java 的 decoder 接受无 padding 的输入，Kotlin 默认
+不接受。
+
+**✅ 多出来的一项：`NodeSeekSite` 的 `java.net.URI`**。判断一个链接是不是本站、能不能进登录
+WebView、该开原生页还是浏览器，是关于站点的规则，之前却是从 `java.net.URI` 上读出来的。新增
+`:core` 的 `WebUrl` 承担这件事。
+
+`WebUrlTest` 是**对 `java.net.URI` 的差分测试**而不是手写断言：要保住的不是规范，是那一个解析器
+给出的答案，而 `https://www.nodeseek.com@evil.example/`、非 web scheme、下划线主机名、非数字端口
+这些绕过主机校验的写法，恰恰是手写期望最容易写错的地方。实测确认了几条反直觉行为：`URI` 对
+`https://例え.jp/` 是**解析成功、host 为 null**（不是抛异常），对 `foo_bar.example` 同样；对
+`:abc` 端口也是 host 为 null。
+
+一处有意的行为差异：查询参数里的 `+` 不再解成空格（`URLDecoder` 是表单解码器）。
+`encodeURIComponent` 把字面加号写成 `%2B`，站点自己生成的链接碰不到这个差异。
+
 ### 4.3 测试变纯
 
 **这一项无论 KMP 做不做都值，且它是后续一切的前提。**
@@ -201,6 +245,29 @@ java.io.* / java.net.*
 **例外**：`NodeSeekDatabaseMigrationTest` 测的就是 Android schema 升级，永远留在 Android 侧。
 
 即时收益：测试执行时间显著缩短，与 KMP 无关。
+
+#### ⚠️ 实测：这一项在第一阶段只能做到 7/19
+
+**已脱离 Robolectric（7 个）**：`ProxySettingsTest`、`ImageHostSettingsTest`、
+`PostComposerRepositoryTest`、`CommentComposerRepositoryTest`（随 4.1 的 DataStore 改造一起）、
+`SessionRepositoryTest`（随 `SessionCookieStore` 一起）、`AppCacheStoreTest`（把
+`DefaultAppCacheStore` 收的整个 `ImageLoader` 收窄成它真正用到的 `ImageCaches`）。另有三个
+`ui` 层测试（`MessageThreadViewModelTest`、`ProfileViewModelTest`、`NotificationsViewModelTest`）
+顺带换掉了 `CookieManager`。
+
+**做不到的 12 个**：全部靠 `inMemoryDatabase()`。`javap` 查过 `room-runtime-android` 2.8.4 的
+`androidx.room.Room`，四个 builder 重载**每一个都要 `android.content.Context`**，没有 common
+那套无 Context 的重载。所以「真 Room 跑在纯 JVM 单测」这条路在不新建 KMP 模块的前提下不存在，
+而不新建模块正是第一阶段的约束。
+
+**并且原来那条「即时收益」不成立**：实测整个 `:app` 单测 24.5s，其中 Robolectric 类占 23.1s，
+但这 12 个 Room 类只占 **2.6s**——剩下 20s 在 41 个 Compose 测试类里，而 4.6 明说不许碰
+frontend。Robolectric 的 sandbox 是按 SDK 缓存、跨类共享的，所以边际成本远比想象中小。
+
+**决定（2026-08-18）**：这 12 个继续用 Robolectric，等第二阶段 Room 进 KMP 模块（那边有
+`BundledSQLiteDriver` 和无 Context 的 builder）时一起解决。换 fake DAO 的选项被否掉了——
+`TestDoubles.kt` 里写明「Robolectric 而不是 fake DAO 是刻意的：要测的就是 SQL」，三表 join、
+upsert 不重排、级联删除这些覆盖丢了不划算。
 
 ### 4.4 把平台能力抽成很少几个 interface
 
@@ -218,6 +285,20 @@ interface SettingsStoreFactory
 
 继续用 constructor injection，不为 KMP 引入 DI framework。
 
+**✅ 落地情况**——六个里只有一个真的需要新写接口，其余要么已存在，要么一个函数就够：
+
+| 计划里的名字 | 实际 |
+|---|---|
+| `SiteTransport` | 已存在，叫 `HtmlSource`；`SiteHtmlClient` 是它的 OkHttp 实现 |
+| `SessionCookieStore` | **新写**。`WebViewCookieJar` 原来和 `android.webkit.CookieManager` 绑死，而它真正值钱的是站点知识（哪些 cookie 名算登录、哪些是 Cloudflare 噪声）。接口留 `:core`，`CookieManager` 实现是 `WebViewCookieStore` |
+| `SecretCipher` | 已存在；这次只是把 `KeystoreSecretCipher` 挪进 `platform/` |
+| `AppVersionProvider` | 不需要接口——`AppVersion` 本来就是中性 data class，拆出 `readAppVersion` 即可 |
+| `DatabaseFactory` | 不需要接口——一个 `createNodeSeekDatabase(context)` 函数 |
+| `SettingsStoreFactory` | 不需要接口——`di/PreferenceStores.kt` 里一组 `Context` 扩展 |
+
+按「不要过度抽象」这条，后三个都没做成接口。另外顺手收窄了一个不在计划里的依赖：
+`DefaultAppCacheStore` 原来收整个 `ImageLoader`，实际只用两个缓存，改成 `ImageCaches`。
+
 ### 4.5 拆掉 data → designsys 反向依赖
 
 [`SettingsRepository.kt:18`](../app/src/main/java/io/github/nodyssey/data/settings/SettingsRepository.kt)
@@ -225,6 +306,10 @@ interface SettingsStoreFactory
 
 把需要持久化的部分下沉成 `EditorActionId`，`:designsys` 负责映射回 UI action。
 这是 `data` 层唯一一处反向依赖，**单独一个 PR**。
+
+**✅ 实测比这简单得多**：存进 DataStore 的本来就是 `List<String>`，`setComposerToolbar` 收的也是
+`List<String>`——那个 import 只出现在 KDoc 散文里，没有一行代码用它。不需要 `EditorActionId`，
+删掉 import 就断了。`NodeSeekSite` 的 `UserAvatar` 是同一种情况。
 
 ### 4.6 不碰 frontend
 
@@ -240,12 +325,22 @@ Compose
 ### 第一阶段验收
 
 ```bash
-./gradlew :app:testDebugUnitTest :app:assembleDebug
+./gradlew testDebugUnitTest :app:assembleDebug spotlessCheck :app:lintDebug
 ```
 
 - `data` / `core` 的公开 API 不出现 `android.*`、`okhttp3.*`、`org.jsoup.*`、`java.*`
-- `data` 包下不再出现 `RobolectricTestRunner`（迁移测试除外）
+- ~~`data` 包下不再出现 `RobolectricTestRunner`（迁移测试除外）~~ →
+  **改为**：`data` 包下 `RobolectricTestRunner` 只剩靠 `inMemoryDatabase()` 的 12 个类，
+  加上迁移测试。理由见 4.3；这一条移交第二阶段
 - 测试总数不减，Android 行为不变
+
+**✅ 2026-08-18 全绿**。`import android.*` 在 `app/.../data`、`app/.../core`、`app/.../model`
+下为 0；`:core` 只剩 5 个以平台命名的文件（`AndroidAppVersion`、`DeviceAcceptLanguage`、
+`WebViewUserAgent`、`WebViewCookieStore`、`AndroidNetworkMetering`）。jsoup 类型只出现在 parser
+的**参数**上，没有一个出现在返回值上——第一阶段这条要求达成，换 Ksoup 留给第二阶段。
+
+测试总数 1,269 → 1,280（`WebUrlTest` 5 个差分测试、`urlEncode` 的差分测试、
+`ApkInstallOutcomeTest` 3 个、`percentDecode` 的代理对测试、`ProxySettings` 的空 store 默认值）。
 
 ---
 

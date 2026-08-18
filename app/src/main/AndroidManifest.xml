@@ -10,7 +10,7 @@
         应用内更新. This app is published as an APK on GitHub Releases, not through a store, so the
         update it offers is an APK it downloaded and handed to the platform installer. Declaring the
         permission does not grant it: the user still turns "allow from this source" on per app, and
-        the system still shows its own install confirmation. See data/update/ApkInstaller.kt.
+        the system still shows its own install confirmation. See platform/ApkInstaller.kt.
     -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
@@ -98,7 +98,7 @@
             the outcome on the way back. Not exported — the only sender is our own PendingIntent.
         -->
         <receiver
-            android:name=".data.update.ApkInstallResultReceiver"
+            android:name=".platform.ApkInstallResultReceiver"
             android:exported="false" />
 
         <!-- WorkManager initializes on demand via NodysseyApp (Configuration.Provider). -->

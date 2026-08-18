@@ -126,11 +126,28 @@ sealed interface UpdateDownload {
 }
 
 /**
- * Why the system installer refused the APK.
+ * How an install session ended, once the user has answered the system's confirmation.
  *
- * A user who backed out of the confirmation dialog is not in here: `STATUS_FAILURE_ABORTED` means
- * "no thanks", and showing an error for it would turn their own decision into a fault.
+ * The platform reports this as an integer from its own installer; naming the three outcomes here is
+ * what keeps the repository — which only decides what the screen says — from having to know which
+ * integer meant which. The translation belongs to whatever received the platform's answer.
  */
+sealed interface InstallOutcome {
+    /** The new build is in, and this process is about to be replaced by it. */
+    data object Installed : InstallOutcome
+
+    /**
+     * The user backed out of the confirmation dialog.
+     *
+     * Separate from [Failed] because it is an answer rather than a fault, and showing an error for it
+     * would turn their own decision into one.
+     */
+    data object Abandoned : InstallOutcome
+
+    data class Failed(val failure: InstallFailure) : InstallOutcome
+}
+
+/** Why the system installer refused the APK. */
 enum class InstallFailure {
     /** Blocked by the device — Play Protect, a device policy, or unknown sources still off. */
     BLOCKED,

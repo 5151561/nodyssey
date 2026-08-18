@@ -4,12 +4,7 @@ import io.github.nodyssey.core.html.Selectors
 import io.github.nodyssey.model.FeedSort
 import io.github.plaza.core.net.PageMarkers
 import io.github.plaza.core.net.SiteConfig
-import io.github.plaza.core.net.resolveUserAgent
-import io.github.plaza.designsys.component.UserAvatar
-import java.net.URI
-import java.net.URLDecoder
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
+import io.github.plaza.core.net.WebUrl
 
 /**
  * Everything we know about the shape of nodeseek.com lives here.
@@ -191,7 +186,7 @@ object NodeSeekSite {
     const val SETTING_PREFERENCE = "preference"
     const val SETTING_HOMEPAGE = "homepage"
 
-    /** Accounts without an upload 404 here; [UserAvatar] draws the initial instead. */
+    /** Accounts without an upload 404 here; `UserAvatar` draws the initial instead. */
     fun avatarUrl(uid: Long): String? = absoluteUrl("/avatar/$uid.png")
 
     /**
@@ -398,10 +393,10 @@ object NodeSeekSite {
     fun isTelegramOAuthUrl(url: String): Boolean = isHttpsHost(url, TELEGRAM_OAUTH_HOSTS)
 
     private fun isHttpsHost(url: String, hosts: Set<String>): Boolean =
-        parseWebUri(url)?.let { uri ->
-            uri.scheme.equals("https", ignoreCase = true) &&
-                uri.host?.lowercase() in hosts &&
-                (uri.port == -1 || uri.port == 443)
+        parseWebUrl(url)?.let { url ->
+            url.scheme == "https" &&
+                url.host?.lowercase() in hosts &&
+                (url.port == -1 || url.port == 443)
         } == true
 
     /**
@@ -414,25 +409,24 @@ object NodeSeekSite {
      * must still resolve internally instead of falling through to the browser.
      */
     private fun isOwnSiteUrl(url: String): Boolean =
-        parseWebUri(url)?.let { uri ->
-            (uri.scheme.equals("https", ignoreCase = true) || uri.scheme.equals("http", ignoreCase = true)) &&
-                uri.host?.lowercase() in TRUSTED_WEBVIEW_HOSTS
+        parseWebUrl(url)?.let { parsed ->
+            (parsed.scheme == "https" || parsed.scheme == "http") &&
+                parsed.host?.lowercase() in TRUSTED_WEBVIEW_HOSTS
         } == true
 
     /** Ordinary links leave the app and are accepted only when they are normal web URLs. */
     fun isExternalWebUrl(url: String): Boolean =
-        parseWebUri(url)?.let { uri ->
-            uri.host != null &&
-                (
-                    uri.scheme.equals("https", ignoreCase = true) ||
-                        uri.scheme.equals("http", ignoreCase = true)
-                    )
+        parseWebUrl(url)?.let { parsed ->
+            parsed.host != null && (parsed.scheme == "https" || parsed.scheme == "http")
         } == true
 
-    private fun parseWebUri(url: String): URI? =
-        runCatching { URI(url.trim()) }
-            .getOrNull()
-            ?.takeIf { it.isAbsolute && it.userInfo == null }
+    /**
+     * The link as something with a host, or null when it is not a URL worth deciding about.
+     *
+     * A `userInfo` is refused rather than ignored: `https://www.nodeseek.com@evil.example/` names
+     * `evil.example`, and every rule below is a rule about the host.
+     */
+    private fun parseWebUrl(url: String): WebUrl? = WebUrl.parse(url)?.takeIf { it.userInfo == null }
 
     private val POST_PATH = Regex("""/post-(\d+)(?:-(\d+))?""")
     private val SPACE_PATH = Regex("""/space/(\d+)""")
@@ -506,9 +500,9 @@ object NodeSeekSite {
      * `#/message` with no `to` is the conversation list, which is a group of the same screen.
      */
     private fun parseNotificationRoute(url: String): InternalRoute? {
-        val uri = parseWebUri(url) ?: return null
-        if (uri.path?.trimEnd('/').orEmpty() != NOTIFICATION_PATH) return null
-        val fragment = uri.fragment.orEmpty()
+        val parsed = parseWebUrl(url) ?: return null
+        if (parsed.path?.trimEnd('/').orEmpty() != NOTIFICATION_PATH) return null
+        val fragment = parsed.fragment.orEmpty()
         val name = fragment.substringBefore('?').trim('/')
         return when {
             name.equals("atMe", ignoreCase = true) ->
@@ -522,7 +516,7 @@ object NodeSeekSite {
         }
     }
 
-    /** The query half of a hash route — `#/message?mode=talk&to=5230` — which is not [URI.rawQuery]. */
+    /** The query half of a hash route — `#/message?mode=talk&to=5230` — which is not [WebUrl.rawQuery]. */
     private fun String.fragmentParameter(name: String): String? =
         substringAfter('?', missingDelimiterValue = "")
             .split('&')
@@ -536,27 +530,46 @@ object NodeSeekSite {
      * destination instead of the interstitial.
      */
     fun unwrapJumpUrl(url: String): String {
-        val uri = parseWebUri(url) ?: return url
-        if (uri.host?.lowercase() !in TRUSTED_WEBVIEW_HOSTS || uri.path != "/jump") return url
-        val target = uri.queryParameter("to") ?: return url
+        val parsed = parseWebUrl(url) ?: return url
+        if (parsed.host?.lowercase() !in TRUSTED_WEBVIEW_HOSTS || parsed.path != "/jump") return url
+        val target = parsed.queryParameter("to") ?: return url
         return target.ifBlank { url }
     }
 
     private fun parseMemberName(url: String): String? =
-        parseWebUri(url)
+        parseWebUrl(url)
             ?.takeIf { it.path == "/member" }
             ?.queryParameter("t")
             ?.ifBlank { null }
 
-    private fun URI.queryParameter(name: String): String? =
-        rawQuery
-            ?.split('&')
-            ?.firstOrNull { it.substringBefore('=') == name }
-            ?.substringAfter('=', missingDelimiterValue = "")
-            ?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) }
+    /**
+     * A value going *into* one of the paths above, encoded the way `URLEncoder` encoded it.
+     *
+     * The unreserved set is `URLEncoder`'s and not `encodeURIComponent`'s — they differ over
+     * `~!'()`, and these strings become search URLs the app has been building for releases. Written
+     * out rather than delegated because `java.net.URLEncoder` is JVM API; the `+` it writes for a
+     * space was already being corrected to `%20` at every call site, so that is simply done here.
+     *
+     * `StardustReceiveMarkup` has a near-twin of this with a different set, deliberately: that one
+     * has to match the site's own editor character for character, and this one has to match the URLs
+     * already in use.
+     */
+    private fun String.urlEncode(): String = buildString {
+        for (byte in encodeToByteArray()) {
+            val octet = byte.toInt() and 0xFF
+            val char = octet.toChar()
+            if (octet < 0x80 && (char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char in URL_ENCODER_SAFE)) {
+                append(char)
+            } else {
+                append('%')
+                append(HEX[octet shr 4])
+                append(HEX[octet and 0xF])
+            }
+        }
+    }
 
-    private fun String.urlEncode(): String =
-        URLEncoder.encode(this, StandardCharsets.UTF_8.toString()).replace("+", "%20")
+    private const val URL_ENCODER_SAFE = ".-*_"
+    private const val HEX = "0123456789ABCDEF"
 }
 
 /**

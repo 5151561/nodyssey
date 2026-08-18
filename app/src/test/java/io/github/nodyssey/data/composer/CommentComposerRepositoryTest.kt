@@ -1,8 +1,7 @@
 package io.github.nodyssey.data.composer
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.data.testPreferenceStore
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.SiteError
@@ -25,17 +24,12 @@ import okio.Buffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 /**
  * Every response body here was copied from a live exchange with the sandbox thread (2026-07-28),
  * not invented — the point of the suite is that the app keeps matching a contract we do not own.
  */
-@RunWith(RobolectricTestRunner::class)
 class CommentComposerRepositoryTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
-
     @Test
     fun `publish sends the site's own new-comment payload`() = runTest {
         val recorder = RecordingCommentInterceptor(
@@ -156,7 +150,7 @@ class CommentComposerRepositoryTest {
     private fun TestScope.repository(interceptor: Interceptor) =
         StandardTestDispatcher(testScheduler).let { dispatcher ->
             DefaultCommentComposerRepository(
-                context = context,
+                dataStore = testPreferenceStore(backgroundScope, "comment-composer"),
                 okHttpClient = OkHttpClient.Builder().addInterceptor(interceptor).build(),
                 dispatchers = AppDispatchers(dispatcher, dispatcher),
                 clock = AppClock { 0L },

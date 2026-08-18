@@ -1,8 +1,7 @@
 package io.github.nodyssey.data.composer
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.data.testPreferenceStore
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.SiteError
@@ -27,13 +26,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
-@RunWith(RobolectricTestRunner::class)
 class PostComposerRepositoryTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
-
     @Test
     fun `publish uses current NodeSeek discussion contract`() =
         runTest {
@@ -41,7 +35,7 @@ class PostComposerRepositoryTest {
             val recorder = RecordingPublishInterceptor()
             val repository =
                 DefaultPostComposerRepository(
-                    context = context,
+                    dataStore = testPreferenceStore(backgroundScope, "post-composer"),
                     okHttpClient = OkHttpClient.Builder().addInterceptor(recorder).build(),
                     dispatchers = AppDispatchers(dispatcher, dispatcher),
                     clock = AppClock { 0L },
@@ -80,7 +74,7 @@ class PostComposerRepositoryTest {
             val recorder = SuccessWithoutIdInterceptor()
             val repository =
                 DefaultPostComposerRepository(
-                    context = context,
+                    dataStore = testPreferenceStore(backgroundScope, "post-composer"),
                     okHttpClient = OkHttpClient.Builder().addInterceptor(recorder).build(),
                     dispatchers = AppDispatchers(dispatcher, dispatcher),
                     clock = AppClock { 0L },
@@ -143,7 +137,7 @@ class PostComposerRepositoryTest {
             val requests = RequestCaptor()
             val repository =
                 DefaultPostComposerRepository(
-                    context = context,
+                    dataStore = testPreferenceStore(backgroundScope, "post-composer"),
                     okHttpClient =
                     OkHttpClient.Builder().addInterceptor(requests).addInterceptor(recorder).build(),
                     dispatchers = AppDispatchers(dispatcher, dispatcher),
@@ -180,7 +174,7 @@ class PostComposerRepositoryTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository =
                 DefaultPostComposerRepository(
-                    context = context,
+                    dataStore = testPreferenceStore(backgroundScope, "post-composer"),
                     okHttpClient =
                     OkHttpClient.Builder()
                         .addInterceptor(
@@ -231,7 +225,7 @@ class PostComposerRepositoryTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val repository =
             DefaultPostComposerRepository(
-                context = context,
+                dataStore = testPreferenceStore(backgroundScope, "post-composer"),
                 okHttpClient = OkHttpClient.Builder().addInterceptor(interceptor).build(),
                 dispatchers = AppDispatchers(dispatcher, dispatcher),
                 clock = AppClock { 0L },

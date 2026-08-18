@@ -1,17 +1,18 @@
 package io.github.nodyssey.ui.settings
 
 import android.content.Intent
-import android.content.pm.PackageInstaller
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.data.update.ApkInstaller
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.platform.ApkInstaller
 import io.github.plaza.core.AppVersion
 import io.github.plaza.core.update.AppUpdateState
+import io.github.plaza.core.update.InstallFailure
+import io.github.plaza.core.update.InstallOutcome
 import io.github.plaza.core.update.UpdateDownload
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -80,9 +81,9 @@ class AboutAppViewModel(
         needsInstallPermission.value = false
         viewModelScope.launch {
             val committed = installer.install(File(ready.apkPath))
-            // Nothing will arrive at the receiver if the session never got written, so the plain
-            // failure status stands in for it and the screen still says something.
-            if (!committed) updates.onInstallStatus(PackageInstaller.STATUS_FAILURE)
+            // Nothing will arrive at the receiver if the session never got written, so an unnamed
+            // failure stands in for it and the screen still says something.
+            if (!committed) updates.onInstallOutcome(InstallOutcome.Failed(InstallFailure.UNKNOWN))
         }
     }
 

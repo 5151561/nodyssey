@@ -1,8 +1,6 @@
 package io.github.nodyssey.data.local
 
-import android.content.Context
 import androidx.room.Database
-import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
@@ -46,25 +44,6 @@ abstract class NodeSeekDatabase : RoomDatabase() {
     abstract fun cacheSessionDao(): CacheSessionDao
 
     abstract fun profileDao(): ProfileDao
-
-    companion object {
-        fun create(context: Context): NodeSeekDatabase =
-            Room
-                .databaseBuilder(context, NodeSeekDatabase::class.java, "nodeseek.db")
-                // Known upgrades preserve local state explicitly. The fallback remains for unknown
-                // legacy versions whose downloaded content can be rebuilt; schemas stay checked in.
-                .addMigrations(
-                    MIGRATION_3_4,
-                    MIGRATION_4_5,
-                    MIGRATION_5_6,
-                    MIGRATION_6_7,
-                    MIGRATION_7_8,
-                    MIGRATION_8_9,
-                    MIGRATION_9_10,
-                )
-                .fallbackToDestructiveMigration(dropAllTables = true)
-                .build()
-    }
 }
 
 /** Adds the signed-in profile cache without disturbing existing posts or read marks. */
@@ -205,3 +184,20 @@ internal val MIGRATION_9_10 =
             db.execSQL("ALTER TABLE `post_details` ADD COLUMN `isAwarded` INTEGER DEFAULT NULL")
         }
     }
+
+/**
+ * Every migration this schema has, in order — the list `createNodeSeekDatabase` opens the file with.
+ *
+ * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
+ * is a fact about the schema, and leaving one out is how a device with real content in it takes the
+ * destructive fallback instead.
+ */
+internal val NODESEEK_MIGRATIONS = arrayOf(
+    MIGRATION_3_4,
+    MIGRATION_4_5,
+    MIGRATION_5_6,
+    MIGRATION_6_7,
+    MIGRATION_7_8,
+    MIGRATION_8_9,
+    MIGRATION_9_10,
+)

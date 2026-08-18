@@ -4,8 +4,7 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import java.nio.charset.StandardCharsets
-import java.util.Base64
+import kotlin.io.encoding.Base64
 
 /**
  * The base64 `__config__` record NodeSeek server-renders into every page.
@@ -60,5 +59,15 @@ internal object SiteBootstrap {
 
     private fun encodedText(document: Document): String = document.getElementById(ELEMENT_ID)?.data()?.trim().orEmpty()
 
-    private fun decodeBase64(encoded: String): String = String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8)
+    /**
+     * `kotlin.io.encoding.Base64` rather than `java.util.Base64`: same RFC 4648 alphabet, no JVM.
+     *
+     * [Base64.PaddingOption.PRESENT_OPTIONAL] is not a relaxation, it is what the Java decoder did —
+     * that one accepts a payload with the trailing `=` and one without. `btoa`, which is what writes
+     * this element, always pads, so the difference has never shown up in a capture; matching it
+     * anyway keeps a hand-trimmed blob from becoming an [SiteError.Unparsable] it never was.
+     */
+    private val base64 = Base64.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
+
+    private fun decodeBase64(encoded: String): String = base64.decode(encoded).decodeToString()
 }

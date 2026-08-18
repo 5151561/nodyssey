@@ -3,7 +3,6 @@ package io.github.nodyssey.di
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
 import coil3.SingletonImageLoader
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.NodysseyRelease
@@ -18,6 +17,7 @@ import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
 import io.github.nodyssey.data.CategoryRepository
+import io.github.nodyssey.data.CoilImageCaches
 import io.github.nodyssey.data.CommunityRepository
 import io.github.nodyssey.data.CreditRepository
 import io.github.nodyssey.data.DefaultAppCacheStore
@@ -55,7 +55,6 @@ import io.github.nodyssey.data.account.AccountSettingsRepository
 import io.github.nodyssey.data.account.NetworkAccountSettingsRepository
 import io.github.nodyssey.data.composer.CommentComposerRepository
 import io.github.nodyssey.data.composer.DefaultCommentComposerRepository
-import io.github.nodyssey.data.composer.DefaultImagePreparer
 import io.github.nodyssey.data.composer.DefaultPostComposerRepository
 import io.github.nodyssey.data.composer.DefaultPostEditor
 import io.github.nodyssey.data.composer.ImageHostUploader
@@ -65,16 +64,18 @@ import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
 import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
-import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.proxy.DataStoreProxySettings
 import io.github.nodyssey.data.proxy.NetworkProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.SettingsRepository
-import io.github.nodyssey.data.update.ApkInstaller
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.data.update.DefaultAppUpdateRepository
+import io.github.nodyssey.platform.ApkInstaller
+import io.github.nodyssey.platform.DefaultImagePreparer
+import io.github.nodyssey.platform.KeystoreSecretCipher
+import io.github.nodyssey.platform.createNodeSeekDatabase
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
@@ -83,6 +84,7 @@ import io.github.plaza.core.net.CrossOriginRefererInterceptor
 import io.github.plaza.core.net.SiteHtmlClient
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.core.net.WebViewCookieJar
+import io.github.plaza.core.net.WebViewCookieStore
 import io.github.plaza.core.net.deviceAcceptLanguage
 import io.github.plaza.core.net.resolveUserAgent
 import io.github.plaza.core.readAppVersion
@@ -180,10 +182,6 @@ interface AppContainer {
     val proxyConnectionTester: ProxyConnectionTester
 }
 
-private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "settings",
-)
-
 class DefaultAppContainer(
     context: Context,
     override val dispatchers: AppDispatchers = AppDispatchers(),
@@ -191,7 +189,7 @@ class DefaultAppContainer(
 ) : AppContainer {
     private val appContext = context.applicationContext
 
-    override val cookieJar: WebViewCookieJar by lazy { WebViewCookieJar(NodeSeekSite.CONFIG) }
+    override val cookieJar: WebViewCookieJar by lazy { WebViewCookieJar(NodeSeekSite.CONFIG, WebViewCookieStore()) }
 
     override val userAgent: UserAgent by lazy { resolveUserAgent(appContext, NodeSeekSite.CONFIG) }
 
@@ -211,7 +209,9 @@ class DefaultAppContainer(
      */
     private val appScope = CoroutineScope(SupervisorJob() + dispatchers.default)
 
-    override val proxySettings: ProxySettings by lazy { DataStoreProxySettings(appContext) }
+    override val proxySettings: ProxySettings by lazy {
+        DataStoreProxySettings(appContext.proxyDataStore, KeystoreSecretCipher())
+    }
 
     /**
      * One pool behind all three clients.
@@ -274,7 +274,7 @@ class DefaultAppContainer(
     }
 
     /** The offline-first SSOT. Everything below reads from it; only the data sources write to it. */
-    private val database by lazy { NodeSeekDatabase.create(appContext) }
+    private val database by lazy { createNodeSeekDatabase(appContext) }
 
     private val remotePosts by lazy { NetworkPostDataSource(htmlClient, dispatchers, clock) }
 
@@ -336,7 +336,7 @@ class DefaultAppContainer(
     }
 
     override val postComposerRepository: PostComposerRepository by lazy {
-        DefaultPostComposerRepository(appContext, okHttpClient, dispatchers, clock)
+        DefaultPostComposerRepository(appContext.postComposerDataStore, okHttpClient, dispatchers, clock)
     }
 
     override val accountSettingsRepository: AccountSettingsRepository by lazy {
@@ -390,7 +390,7 @@ class DefaultAppContainer(
     }
 
     override val commentComposerRepository: CommentComposerRepository by lazy {
-        DefaultCommentComposerRepository(appContext, okHttpClient, dispatchers, clock)
+        DefaultCommentComposerRepository(appContext.commentComposerDataStore, okHttpClient, dispatchers, clock)
     }
 
     override val postEditor: PostEditor by lazy {
@@ -443,7 +443,7 @@ class DefaultAppContainer(
 
     override val imageHostRepository: ImageHostRepository by lazy {
         DefaultImageHostRepository(
-            settings = DataStoreImageHostSettings(appContext),
+            settings = DataStoreImageHostSettings(appContext.imageHostDataStore, KeystoreSecretCipher()),
             http = imageHostClient,
             dispatchers = dispatchers,
         )
@@ -513,7 +513,7 @@ class DefaultAppContainer(
         DefaultAppCacheStore(
             cacheDirectory = appContext.cacheDir,
             dispatchers = dispatchers,
-            imageLoader = { SingletonImageLoader.get(appContext) },
+            imageCaches = { CoilImageCaches(SingletonImageLoader.get(appContext)) },
         )
     }
 }

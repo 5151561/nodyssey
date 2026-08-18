@@ -1,7 +1,6 @@
 package io.github.nodyssey.data.proxy
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
+import io.github.nodyssey.data.PreferenceStoreScope
 import io.github.nodyssey.data.security.PlainCipher
 import io.github.nodyssey.data.security.ReversingCipher
 import io.github.nodyssey.data.security.SecretCipher
@@ -11,22 +10,23 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 /**
  * The stored half of 代理设置, and in particular what the password looks like on disk.
  *
  * The real cipher is the platform keystore, which no JVM test has — so these drive the same code with
  * ciphers whose behaviour is stated rather than provisioned: one that transforms, one that cannot
- * encrypt, one that cannot decrypt. Every test writes what it needs before reading it: DataStore is a
- * process singleton keyed by file name, and Robolectric hands every test in this class the same
- * application context.
+ * encrypt, one that cannot decrypt. Where a test builds a second settings object, it is on the same
+ * store: reading a file back with a different cipher is how "what actually landed on disk" becomes
+ * something a test can assert on.
  */
-@RunWith(RobolectricTestRunner::class)
 class ProxySettingsTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
+    @get:Rule
+    val store = PreferenceStoreScope("proxy")
+
+    private val settings = { cipher: SecretCipher -> DataStoreProxySettings(store.dataStore, cipher) }
 
     private val saved = ProxyConfig(
         enabled = true,
@@ -37,12 +37,17 @@ class ProxySettingsTest {
         password = "hunter2",
     )
 
+    /** Nothing written is not the same as something written empty; this is what a fresh install reads. */
+    @Test
+    fun `a store nothing has written reads as the defaults`() = runTest {
+        assertEquals(ProxyConfig(), settings(ReversingCipher).config.first())
+    }
+
     @Test
     fun `the whole configuration survives a round trip`() = runTest {
-        val settings = DataStoreProxySettings(context, ReversingCipher)
-        settings.save(saved.copy(scope = ProxyScope.FORUM_ONLY))
+        settings(ReversingCipher).save(saved.copy(scope = ProxyScope.FORUM_ONLY))
 
-        assertEquals(saved.copy(scope = ProxyScope.FORUM_ONLY), settings.config.first())
+        assertEquals(saved.copy(scope = ProxyScope.FORUM_ONLY), settings(ReversingCipher).config.first())
     }
 
     /** 主开关 writes as it is tapped, so it has to leave the address and the ciphertext beside it alone. */
@@ -59,10 +64,10 @@ class ProxySettingsTest {
     /** The point of the cipher: what a backup or a file browser would find is not the password. */
     @Test
     fun `the password is stored encrypted and everything else is stored as typed`() = runTest {
-        DataStoreProxySettings(context, ReversingCipher).save(saved)
+        settings(ReversingCipher).save(saved)
 
         // Reading the same file back with a cipher that does nothing shows what actually landed on disk.
-        val onDisk = DataStoreProxySettings(context, PlainCipher).config.first()
+        val onDisk = settings(PlainCipher).config.first()
         assertTrue("the stored value must say it is ciphertext", SecretCipher.isEncrypted(onDisk.password))
         assertEquals(SecretCipher.MARKER + "2retnuh", onDisk.password)
         assertEquals("127.0.0.1", onDisk.host)
@@ -75,9 +80,9 @@ class ProxySettingsTest {
      */
     @Test
     fun `an unreadable password reads as no password, and the rest still loads`() = runTest {
-        DataStoreProxySettings(context, ReversingCipher).save(saved)
+        settings(ReversingCipher).save(saved)
 
-        val recovered = DataStoreProxySettings(context, UnreadableCipher).config.first()
+        val recovered = settings(UnreadableCipher).config.first()
         assertEquals("", recovered.password)
         assertEquals(saved.copy(password = ""), recovered)
     }
@@ -85,8 +90,8 @@ class ProxySettingsTest {
     /** Encryption failing is not a reason to fall back to plaintext. */
     @Test
     fun `a device that cannot encrypt stores no password at all`() = runTest {
-        DataStoreProxySettings(context, UnencryptableCipher).save(saved)
+        settings(UnencryptableCipher).save(saved)
 
-        assertEquals("", DataStoreProxySettings(context, PlainCipher).config.first().password)
+        assertEquals("", settings(PlainCipher).config.first().password)
     }
 }

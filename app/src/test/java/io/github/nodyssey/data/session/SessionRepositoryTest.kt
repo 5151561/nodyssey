@@ -1,16 +1,12 @@
 package io.github.nodyssey.data.session
 
-import android.webkit.CookieManager
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.plaza.core.net.WebViewCookieJar
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 /**
  * The layer the login bug lived in.
@@ -19,23 +15,16 @@ import org.robolectric.RobolectricTestRunner
  * them back and noticed. These tests are about *noticing* — the generation counter the feed reloads
  * on, and the two name checks that used to be a `contains("session=")`.
  */
-@RunWith(RobolectricTestRunner::class)
 class SessionRepositoryTest {
-    private val cookieManager = CookieManager.getInstance()
+    private val cookies = FakeSessionCookieStore()
     private lateinit var repository: SessionRepository
 
     @Before
     fun setUp() {
-        cookieManager.removeAllCookies(null)
-        repository = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookieManager))
+        repository = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies))
     }
 
-    @After
-    fun tearDown() {
-        cookieManager.removeAllCookies(null)
-    }
-
-    private fun setCookie(raw: String) = cookieManager.setCookie(NodeSeekSite.BASE_URL, raw)
+    private fun setCookie(raw: String) = cookies.setCookie(NodeSeekSite.BASE_URL, raw)
 
     @Test
     fun `starts signed out when the store is empty`() {
