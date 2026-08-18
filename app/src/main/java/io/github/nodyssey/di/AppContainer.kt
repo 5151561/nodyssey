@@ -88,6 +88,7 @@ import io.github.plaza.core.net.resolveUserAgent
 import io.github.plaza.core.readAppVersion
 import io.github.plaza.core.runCatchingExceptCancellation
 import io.github.plaza.core.update.UpdateManifestSource
+import io.github.plaza.core.update.isPreReleaseVersionName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -298,7 +299,14 @@ class DefaultAppContainer(
     }
 
     override val settingsRepository: SettingsRepository by lazy {
-        SettingsRepository(appContext.settingsDataStore)
+        SettingsRepository(
+            dataStore = appContext.settingsDataStore,
+            // Whoever is running a `-dev.N` build was handed it on purpose, so that is what the
+            // update check follows until they say otherwise: the stable manifest cannot name anything
+            // newer than a test build cut ahead of it, and 已是最新 is what they would be told for as
+            // long as that stays true. Flipping the switch off still sticks.
+            devChannelDefault = isPreReleaseVersionName(appVersion.name),
+        )
     }
 
     override val notificationRepository: NotificationRepository by lazy {
