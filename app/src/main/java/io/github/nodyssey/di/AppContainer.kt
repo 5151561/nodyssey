@@ -78,10 +78,12 @@ import io.github.nodyssey.data.update.DefaultAppUpdateRepository
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
+import io.github.plaza.core.net.BrowserHeadersInterceptor
 import io.github.plaza.core.net.CrossOriginRefererInterceptor
 import io.github.plaza.core.net.SiteHtmlClient
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.core.net.WebViewCookieJar
+import io.github.plaza.core.net.deviceAcceptLanguage
 import io.github.plaza.core.net.resolveUserAgent
 import io.github.plaza.core.readAppVersion
 import io.github.plaza.core.runCatchingExceptCancellation
@@ -193,6 +195,15 @@ class DefaultAppContainer(
     override val userAgent: UserAgent by lazy { resolveUserAgent(appContext, NodeSeekSite.CONFIG) }
 
     /**
+     * The other header a browser always sends and OkHttp never does — see [deviceAcceptLanguage].
+     *
+     * Without it a Cloudflare-fronted image host answered the app with a challenge and a 403 while
+     * serving every browser on the same connection, and post-879848's attachment failed for
+     * everyone using the app.
+     */
+    private val acceptLanguage: String by lazy { deviceAcceptLanguage() }
+
+    /**
      * Lives as long as the process, and has two tenants: the update download, which has to survive
      * the 关于 screen being left (a ViewModel scope would cancel it the moment the user backs out to
      * read what changed), and [liveProxyConfig], which has to survive every screen.
@@ -236,17 +247,13 @@ class DefaultAppContainer(
             .proxySelector(AppProxySelector(liveProxyConfig, ProxyClientKind.FORUM))
             .proxyAuthenticator(AppProxyAuthenticator(liveProxyConfig))
             // Applied to page *and* image requests, which both have to look like the mobile site.
-            .addInterceptor { chain ->
-                val request = chain.request()
-                val builder = request.newBuilder()
-                if (request.header("User-Agent") == null) {
-                    builder.header("User-Agent", userAgent.value)
-                }
-                if (request.header("Referer") == null) {
-                    builder.header("Referer", "${NodeSeekSite.BASE_URL}/")
-                }
-                chain.proceed(builder.build())
-            }
+            .addInterceptor(
+                BrowserHeadersInterceptor(
+                    userAgent = userAgent.value,
+                    acceptLanguage = acceptLanguage,
+                    referer = "${NodeSeekSite.BASE_URL}/",
+                ),
+            )
             // After the one above, and not merged into it: the vote signature covers the very
             // `User-Agent` that interceptor just set, so it has to observe the finished request.
             .addInterceptor(DynamicSignInterceptor())
@@ -420,16 +427,10 @@ class DefaultAppContainer(
             // challenge and OkHttp's default `okhttp/4.x` is the single most reliable way to be
             // served the interstitial instead of JSON, and a self-hosted host may well be behind one
             // too; the device's real browser UA is what a challenge expects to see.
-            .addInterceptor { chain ->
-                val request = chain.request()
-                chain.proceed(
-                    if (request.header("User-Agent") != null) {
-                        request
-                    } else {
-                        request.newBuilder().header("User-Agent", userAgent.value).build()
-                    },
-                )
-            }.build()
+            // No `referer`: see the comment above, and [BrowserHeadersInterceptor].
+            .addInterceptor(
+                BrowserHeadersInterceptor(userAgent = userAgent.value, acceptLanguage = acceptLanguage),
+            ).build()
     }
 
     override val imageHostRepository: ImageHostRepository by lazy {
