@@ -281,6 +281,23 @@ class PostDetailViewModel(
     fun loadPage(page: Int) = bringIntoView(page, floor = null)
 
     /**
+     * Fetches a page next to the loaded ones and leaves the reader exactly where they are.
+     *
+     * The difference from [loadPage] is the landing, not the fetch: a page adjoining the window is the
+     * rest of this read rather than a place to be put down at, so the screen scrolls into the new
+     * floors itself instead of being snapped onto them the moment they arrive. Refuses anything that
+     * does not adjoin — a real jump has to go through [loadPage], which is allowed to replace the
+     * window.
+     */
+    fun extendToPage(page: Int) {
+        val state = _uiState.value
+        if (state.isLoading || state.isAppending) return
+        if (page !in 1..state.totalPages) return
+        if (page != state.lastLoadedPage + 1 && page != state.firstLoadedPage - 1) return
+        load(page = page, replacesWindow = false)
+    }
+
+    /**
      * Scrolls to [floor], loading the page it lives on when it is not on screen.
      *
      * The site names a floor without saying where it is — a notification carries `floor_id`, a quote

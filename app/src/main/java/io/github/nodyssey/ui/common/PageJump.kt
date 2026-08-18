@@ -8,7 +8,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -276,7 +274,7 @@ data class JumpDestination(
  * [totalPages] of 1 or less takes the scroller away rather than drawing a single key: a list whose
  * page count never arrived should say so through [note] instead of showing a page count it made up.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PageJumpSheet(
     page: Int,
@@ -300,9 +298,22 @@ fun PageJumpSheet(
             initialValue = SheetValue.Hidden,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
+        // Material's own handle reserves 22dp above and below the bar, which put 45dp of nothing
+        // between the top of the sheet and its title. 8 / 4 / 8 — half the design's own bottom gap,
+        // which still read as a band of nothing under a bar that is only there to be dragged.
+        dragHandle = {
+            Box(modifier = Modifier.padding(top = Spacing.sm, bottom = Spacing.sm)) {
+                Box(
+                    modifier = Modifier
+                        .size(width = DragHandleWidth, height = DragHandleHeight)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.outlineVariant),
+                )
+            }
+        },
     ) {
         Column(
-            modifier = Modifier.padding(bottom = Spacing.xl),
+            modifier = Modifier.padding(bottom = Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Row(
@@ -331,11 +342,17 @@ fun PageJumpSheet(
                 PageProgress(current = current, lastPage = lastPage)
             }
 
-            Row(
+            // Right-aligned, and wrapping rather than scrolling: the control this sheet belongs to
+            // lives in the bottom-right corner, so its destinations belong on the same side as the
+            // thumb that opened them. Anchoring the row's end also pins them — 上次阅读 is the one
+            // chip that comes and goes, and from the left it moved every other chip with it.
+            FlowRow(
                 modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
+                    .fillMaxWidth()
                     .padding(horizontal = SheetPadding),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 2.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 resume?.let { JumpChip(it.icon, it.label, it.onGo, highlighted = true) }
                 newest?.let { JumpChip(it.icon, it.label, it.onGo) }
@@ -529,6 +546,19 @@ private val JumpChipShape = RoundedCornerShape(14.dp)
 private val JumpChipIconSize = 18.dp
 
 /**
+ * 13sp and 10dp of side padding, both a step under the label scale and the design's own chip.
+ *
+ * The three chips have to share one line on a 360dp screen — the commonest phone there is — and at
+ * Material's `labelLarge` they came to 388dp and wrapped 楼层 onto a second row. They still wrap when
+ * the reader has scaled their text up, which is the case worth wrapping for.
+ */
+private val JumpChipFontSize = 13.sp
+private val JumpChipPadding = 10.dp
+
+private val DragHandleWidth = 32.dp
+private val DragHandleHeight = 4.dp
+
+/**
  * One destination on the jump sheet.
  *
  * Hand-drawn rather than an `AssistChip` because the design's chip is neither of Material's: 40dp
@@ -552,8 +582,8 @@ private fun JumpChip(
         modifier = Modifier.height(JumpChipHeight),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = Spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 3.dp),
+            modifier = Modifier.padding(horizontal = JumpChipPadding),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -564,7 +594,7 @@ private fun JumpChip(
             )
             Text(
                 label,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = JumpChipFontSize),
                 fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Medium,
                 maxLines = 1,
             )

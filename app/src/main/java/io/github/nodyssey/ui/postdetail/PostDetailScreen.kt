@@ -66,8 +66,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -129,7 +131,10 @@ import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.asSignature
 import io.github.plaza.designsys.theme.readableWidth
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun PostDetailRoute(
@@ -175,6 +180,7 @@ fun PostDetailRoute(
         onLoadMore = viewModel::loadNextPage,
         onRefreshTail = viewModel::refreshTail,
         onLoadPage = viewModel::loadPage,
+        onExtendToPage = viewModel::extendToPage,
         onJumpToFloor = viewModel::jumpToFloor,
         onScrollHandled = viewModel::onScrollHandled,
         onReadingPositionChange = viewModel::recordReadingPosition,
@@ -236,6 +242,11 @@ fun PostDetailScreen(
     /** Re-fetches the given page in place — the 刷新 menu item, aimed at the page on screen. */
     onRefreshPage: (Int) -> Unit = { onRetry() },
     onLoadPage: (Int) -> Unit = { onLoadMore() },
+    /**
+     * Fetches a page adjoining the loaded ones without moving the reader — the step controls scroll
+     * into it themselves. See [PostDetailViewModel.extendToPage].
+     */
+    onExtendToPage: (Int) -> Unit = onLoadPage,
     /** Scrolls to a floor, fetching its page first when that floor is not loaded. */
     onJumpToFloor: (String) -> Unit = {},
     onScrollHandled: () -> Unit = {},
@@ -349,15 +360,49 @@ fun PostDetailScreen(
         if (positionWorthRecording) onReadingPositionChange(visiblePage, visibleFloor)
     }
 
+    // The state as it is *now*, for the waits below: `state` is this composition's value and a
+    // coroutine holding it would never see the floors it is waiting for.
+    val latestState by rememberUpdatedState(state)
+
     /** Set while 到最新 is waiting for the last page it just asked for. */
     var pendingBottom by remember { mutableStateOf(false) }
 
-    /** Scrolls when the page is already in the list, and asks for it when it is not. */
+    /**
+     * 上一页 / 下一页 on a thread that is also one continuous scroll, in the same three cases the feed
+     * has: scroll where it can, read on where the page adjoins, and jump only where it does not.
+     *
+     * The page next to the loaded ones was the teleport. It is fetched without replacing anything —
+     * that part was always right — but the landing went through [PostDetailUiState.pendingScroll],
+     * which snaps, because that path exists for *arriving*: a notification about floor #127 should
+     * put the reader on it, not scroll them there from wherever they were. Stepping a page is the
+     * opposite gesture, so it asks for the floors without a pending scroll and walks into them.
+     */
     fun goToPage(target: Int) {
-        val index = state.firstIndexOfPage(target)
-        if (index != null && target in state.firstLoadedPage..state.lastLoadedPage) {
-            scope.launch { listState.animateScrollToItem(index) }
-        } else {
+        scope.launch {
+            val index = state.firstIndexOfPage(target)
+            if (index != null && target in state.firstLoadedPage..state.lastLoadedPage) {
+                listState.animateScrollToItem(index)
+                return@launch
+            }
+            val adjoins = target == state.lastLoadedPage + 1 || target == state.firstLoadedPage - 1
+            if (adjoins && target in 1..state.totalPages) {
+                // Asked for first, then walked to: the fetch and the scroll to the end the new floors
+                // will join are the same half-second, and ordering them the other way spends the
+                // animation before the request has left.
+                onExtendToPage(target)
+                listState.animateScrollToItem(if (target > state.lastLoadedPage) state.lastItemIndex else 0)
+                val arrived =
+                    withTimeoutOrNull(PAGE_WAIT_MILLIS) {
+                        snapshotFlow {
+                            latestState.firstIndexOfPage(target)
+                                ?.takeIf { target in latestState.firstLoadedPage..latestState.lastLoadedPage }
+                        }.filterNotNull().first()
+                    }
+                if (arrived != null) {
+                    listState.animateScrollToItem(arrived)
+                    return@launch
+                }
+            }
             onLoadPage(target)
         }
     }
@@ -632,7 +677,9 @@ fun PostDetailScreen(
                 .takeIf { it != visiblePage }
                 ?.let { target ->
                     JumpDestination(
-                        label = stringResource(R.string.page_jump_latest_read, target),
+                        label =
+                        resume?.floor?.let { stringResource(R.string.page_jump_latest_read_floor, it) }
+                            ?: stringResource(R.string.page_jump_latest_read, target),
                         icon = PlazaIcons.Bookmark,
                         onGo = {
                             showPageSheet = false
@@ -1715,6 +1762,14 @@ private fun FloorLabel(floor: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
+
+/**
+ * How long a page step waits at the end of the list for the page it asked for.
+ *
+ * Long, for the reason the feed's own wait is long: giving up means a jump that replaces the window,
+ * and the append spinner is saying what is happening the whole time.
+ */
+private const val PAGE_WAIT_MILLIS = 15_000L
 
 /** Items in [ThreadList] before the first comment: title, comments header, and the body when present. */
 private val PostDetailUiState.headerItemCount: Int
