@@ -162,11 +162,19 @@ fun RichContent(
      * forum, and this module does not know one — see the app's `PostRichContent`, which does.
      */
     stardustContent: @Composable (RichNode.StardustReceive) -> Unit = { StardustReceiveCard(it) },
+    /**
+     * Whether a long press inside the body starts a text selection.
+     *
+     * On everywhere a body is read. Off where the long press is already spoken for: a direct-message
+     * bubble puts 复制 and 引用 on it, and a selection handle rising under the finger on the Markdown
+     * bubbles while the plain ones did nothing was exactly the asymmetry that menu exists to end.
+     */
+    selectable: Boolean = true,
 ) {
     // Reading upgrades happen here, at the display seam, so the same styles stay safe to reuse in
     // editors — see `TextStyle.asProse` for why an editor must never inherit them.
     val prose = remember(textStyle) { textStyle.asProse() }
-    SelectionContainer(modifier = modifier) {
+    val blocks: @Composable (Modifier) -> Unit = { blockModifier ->
         RichBlockColumn(
             nodes = nodes,
             onLinkClick = onLinkClick,
@@ -176,7 +184,15 @@ fun RichContent(
             voteContent = voteContent,
             codeBlockContent = codeBlockContent,
             stardustContent = stardustContent,
+            modifier = blockModifier,
         )
+    }
+    // The container is what a selection needs, so it goes away entirely rather than being told to
+    // select nothing — `DisableSelection` inside one would still leave the gesture detector there.
+    if (selectable) {
+        SelectionContainer(modifier = modifier) { blocks(Modifier) }
+    } else {
+        blocks(modifier)
     }
 }
 

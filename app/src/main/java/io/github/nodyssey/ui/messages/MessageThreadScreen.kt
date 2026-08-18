@@ -3,18 +3,27 @@ package io.github.nodyssey.ui.messages
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +36,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -40,6 +50,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TopAppBar
@@ -54,7 +65,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -63,8 +76,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
@@ -83,6 +103,7 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.MarkdownEditorBar
 import io.github.plaza.designsys.editor.MarkdownEditorState
@@ -118,6 +139,7 @@ fun MessageThreadRoute(
         onToggleMarkdown = viewModel::toggleMarkdown,
         onSend = viewModel::send,
         onRetrySend = viewModel::retry,
+        onQuote = viewModel::quote,
         onPickImages = viewModel::addImages,
         onRemoveAttachment = viewModel::removeAttachment,
         onRetryAttachment = viewModel::retryUpload,
@@ -141,6 +163,8 @@ fun MessageThreadScreen(
     onToggleMarkdown: () -> Unit,
     onSend: () -> Unit,
     onRetrySend: (String) -> Unit,
+    /** 引用: drops the bubble into the draft as a blockquote. See `MessageThreadViewModel.quote`. */
+    onQuote: (MessageBubble) -> Unit,
     onPickImages: (List<PickedImage>) -> Unit,
     onRemoveAttachment: (ImageAttachment) -> Unit,
     onRetryAttachment: (ImageAttachment) -> Unit,
@@ -238,7 +262,7 @@ fun MessageThreadScreen(
                                 .padding(horizontal = Spacing.xl),
                         )
 
-                    else -> MessageBubbles(state, onLinkClick, onRetrySend)
+                    else -> MessageBubbles(state, onLinkClick, onRetrySend, onQuote)
                 }
             }
             MessageComposer(
@@ -270,6 +294,7 @@ private fun MessageBubbles(
     state: MessageThreadUiState,
     onOpenBrowser: (String) -> Unit,
     onRetrySend: (String) -> Unit,
+    onQuote: (MessageBubble) -> Unit,
 ) {
     val listState = rememberLazyListState()
     /*
@@ -309,6 +334,7 @@ private fun MessageBubbles(
                         message = row.message,
                         onOpenBrowser = onOpenBrowser,
                         onRetrySend = { onRetrySend(row.message.id) },
+                        onQuote = { onQuote(row.message) },
                     )
             }
         }
@@ -368,7 +394,9 @@ private fun MessageBubbleRow(
     message: MessageBubble,
     onOpenBrowser: (String) -> Unit,
     onRetrySend: () -> Unit,
+    onQuote: () -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start,
@@ -391,6 +419,15 @@ private fun MessageBubbleRow(
                     } else {
                         MaterialTheme.colorScheme.surfaceContainerLow
                     },
+                ).combinedClickable(
+                    // Nothing on a plain tap: the bubble is not a destination, and the whole point of
+                    // the gesture is that it is the *long* press. It goes through `combinedClickable`
+                    // rather than a raw `pointerInput` for what that brings with it — the ripple that
+                    // says the press registered, and a long-click action TalkBack can announce and
+                    // perform, which a hand-rolled detector gives a screen reader no way to reach.
+                    onClick = {},
+                    onLongClick = { menuOpen = true },
+                    onLongClickLabel = stringResource(R.string.message_bubble_actions),
                 ).padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
             val textStyle =
@@ -410,12 +447,155 @@ private fun MessageBubbleRow(
                     onLinkClick = onOpenBrowser,
                     onImageClick = onOpenBrowser,
                     textStyle = textStyle,
+                    // The long press belongs to the menu above. Left selectable, the renderer's own
+                    // `SelectionContainer` would take it first and only on the Markdown bubbles —
+                    // which is how a conversation came to offer 复制 on one side and nothing on the
+                    // other, the sender's MD switch deciding it without anyone having chosen that.
+                    selectable = false,
                 )
             } else {
                 Text(message.content, style = textStyle)
             }
+            BubbleMenu(
+                expanded = menuOpen,
+                onDismiss = { menuOpen = false },
+                content = message.content,
+                onQuote = onQuote,
+            )
         }
         MessageStatusLine(message = message, onRetrySend = onRetrySend)
+    }
+}
+
+/**
+ * 复制 and 引用, on the long press: a small bar that floats over the conversation at the bubble.
+ *
+ * Not a `DropdownMenu`, which is what this was and what it looked like — a menu is a list, so two
+ * actions came out as 112dp of white with one full-height row each, hanging off the bubble's top
+ * corner like the overflow menu of a screen that is not there. Two actions want a bar, and the bar
+ * Material floats over content is the one this replaced: the `inverseSurface` pill a text selection
+ * puts up. `HorizontalFloatingToolbar` is not it — that is a screen-level toolbar, 64dp tall and
+ * built to react to scrolling — so the pill is a `Popup` around a `Surface`, and [BubbleMenuPosition]
+ * is the placement a menu would otherwise have given for free.
+ *
+ * Copies the message's source rather than what is on screen: a bubble that renders `[看这个](/post-1-1)`
+ * as one blue word is a bubble whose link survives only in the Markdown, and 引用 quotes that same
+ * string — pasting one and quoting the other would be two different messages.
+ */
+@Composable
+private fun BubbleMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    content: String,
+    onQuote: () -> Unit,
+) {
+    // The popup outlives `expanded` by exactly one exit animation; without the transition state it
+    // would be torn out of the composition on the tap that closes it and never play one.
+    val visibility = remember { MutableTransitionState(false) }
+    visibility.targetState = expanded
+    if (!visibility.currentState && !visibility.targetState) return
+
+    val copy = rememberClipboardCopy()
+    val copied = stringResource(R.string.message_copied)
+    val motionScheme = MaterialTheme.motionScheme
+    val density = LocalDensity.current
+    val position =
+        remember(density) {
+            with(density) { BubbleMenuPosition(gapPx = BUBBLE_MENU_GAP.roundToPx(), marginPx = Spacing.md.roundToPx()) }
+        }
+    Popup(
+        popupPositionProvider = position,
+        onDismissRequest = onDismiss,
+        // Focusable so the back key and a tap anywhere else close it, the way a menu does.
+        properties = PopupProperties(focusable = true),
+    ) {
+        AnimatedVisibility(
+            visibleState = visibility,
+            enter = fadeIn(motionScheme.defaultEffectsSpec()) +
+                scaleIn(motionScheme.fastSpatialSpec(), initialScale = 0.85f),
+            exit = fadeOut(motionScheme.fastEffectsSpec()) +
+                scaleOut(motionScheme.fastSpatialSpec(), targetScale = 0.85f),
+        ) {
+            Surface(
+                shape = RoundedCornerShape(percent = 50),
+                color = MaterialTheme.colorScheme.inverseSurface,
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                shadowElevation = 3.dp,
+            ) {
+                Row(
+                    modifier = Modifier.padding(BUBBLE_MENU_INSET),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BubbleAction(
+                        icon = PlazaIcons.ContentCopy,
+                        label = stringResource(R.string.action_copy),
+                        onClick = {
+                            copy("message", content, copied)
+                            onDismiss()
+                        },
+                    )
+                    BubbleAction(
+                        icon = PlazaIcons.FormatQuote,
+                        label = stringResource(R.string.message_quote_action),
+                        onClick = {
+                            onDismiss()
+                            onQuote()
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** One key on the bar. A `TextButton` so the ripple, the 40dp target and the icon gap are Material's. */
+@Composable
+private fun BubbleAction(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.inverseOnSurface),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        Text(label, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+/**
+ * Above the bubble, centred on it, and inside the window.
+ *
+ * Above rather than below because the finger is on the bubble and the composer is under it; the bar
+ * flips below only for a message so near the top of the screen that there is no room. Centring is on
+ * the bubble rather than on the press: a one-character bubble is narrower than the bar, and the
+ * clamp then decides — which lands the same way every time, where following the finger would leave
+ * the bar somewhere slightly different on each press.
+ */
+internal class BubbleMenuPosition(
+    private val gapPx: Int,
+    private val marginPx: Int,
+) : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset {
+        val x =
+            (anchorBounds.center.x - popupContentSize.width / 2)
+                .coerceIn(marginPx, (windowSize.width - popupContentSize.width - marginPx).coerceAtLeast(marginPx))
+        val above = anchorBounds.top - popupContentSize.height - gapPx
+        val below = anchorBounds.bottom + gapPx
+        val y =
+            if (above >= marginPx) {
+                above
+            } else {
+                below.coerceAtMost((windowSize.height - popupContentSize.height - marginPx).coerceAtLeast(marginPx))
+            }
+        return IntOffset(x, y)
     }
 }
 
@@ -715,6 +895,12 @@ private fun Modifier.wrapContentWidthTo(isMine: Boolean): Modifier =
     this.wrapContentWidth(align = if (isMine) Alignment.End else Alignment.Start)
 
 private const val BUBBLE_MAX_WIDTH = 0.78f
+
+/** The bar clears the bubble by a hair, so the two read as one gesture rather than two surfaces. */
+private val BUBBLE_MENU_GAP = 6.dp
+
+/** The 4dp of slack around the keys is what turns a row of buttons into a bar with them inside it. */
+private val BUBBLE_MENU_INSET = 4.dp
 private const val MAX_INPUT_LINES = 5
 private const val MAX_IMAGES_PER_PICK = 9
 
@@ -791,6 +977,7 @@ private fun MessageThreadPreview() {
             onToggleMarkdown = {},
             onSend = {},
             onRetrySend = {},
+            onQuote = {},
             onPickImages = {},
             onRemoveAttachment = {},
             onRetryAttachment = {},
