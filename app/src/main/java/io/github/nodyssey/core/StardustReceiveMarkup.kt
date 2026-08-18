@@ -1,8 +1,6 @@
 package io.github.nodyssey.core
 
 import io.github.plaza.core.richtext.RichNode
-import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
 import kotlin.random.Random
 
 /**
@@ -117,12 +115,51 @@ object StardustReceiveMarkup {
      */
     private fun decode(value: String): String =
         try {
-            // The `String` charset overload, not the `Charset` one: that is API 33 and this app runs
-            // from 26.
-            URLDecoder.decode(value, StandardCharsets.UTF_8.name())
+            percentDecode(value)
         } catch (exception: IllegalArgumentException) {
             value
         }
+
+    /**
+     * `URLDecoder.decode(value, "UTF-8")`, spelled out.
+     *
+     * Written here rather than delegated because `java.net.URLDecoder` is JVM API while the markup
+     * this file reads is a fact about the site. The behaviour copied is exact, including the part
+     * that looks like a bug: **`+` still decodes to a space.** That is form encoding rather than URL
+     * encoding, and the site's editor has been writing it into 收款码 markers for as long as they
+     * have existed — reading only `%XX` would shift every space in every card already posted.
+     *
+     * A run of escapes is decoded as one byte sequence, so a character split across `%E4%B8%AD`
+     * comes back whole. Characters that were never escaped are copied as they are, which is what
+     * keeps an emoji in a 备注 from being taken apart into two unpaired surrogates.
+     */
+    private fun percentDecode(value: String): String = buildString(value.length) {
+        val escaped = ByteArray(value.length / 3 + 1)
+        var index = 0
+        while (index < value.length) {
+            when (value[index]) {
+                '+' -> {
+                    append(' ')
+                    index++
+                }
+
+                '%' -> {
+                    var count = 0
+                    while (index < value.length && value[index] == '%') {
+                        require(index + 3 <= value.length) { "incomplete trailing escape at $index" }
+                        escaped[count++] = (
+                            value.substring(index + 1, index + 3).toIntOrNull(radix = 16)
+                                ?: throw IllegalArgumentException("malformed escape at $index")
+                            ).toByte()
+                        index += 3
+                    }
+                    append(escaped.decodeToString(endIndex = count))
+                }
+
+                else -> append(value[index++])
+            }
+        }
+    }
 
     /**
      * JavaScript's `encodeURIComponent`, which is what the site's editor applies to every value.
@@ -133,7 +170,7 @@ object StardustReceiveMarkup {
      */
     private fun encodeUriComponent(value: String): String =
         buildString {
-            for (byte in value.toByteArray(StandardCharsets.UTF_8)) {
+            for (byte in value.encodeToByteArray()) {
                 val octet = byte.toInt() and 0xFF
                 val char = octet.toChar()
                 if (octet < 0x80 && (char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char in UNRESERVED)) {
@@ -147,6 +184,7 @@ object StardustReceiveMarkup {
         }
 
     private const val UNRESERVED = "-_.!~*'()"
+
     private const val HEX = "0123456789ABCDEF"
 
     /** `1e8` in the site's expression. */

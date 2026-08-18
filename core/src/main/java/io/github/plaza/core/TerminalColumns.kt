@@ -36,9 +36,9 @@ object TerminalColumns {
         var column = 0
         var index = 0
         while (index < charIndex && index < line.length) {
-            val codePoint = line.codePointAt(index)
+            val codePoint = codePointAt(line, index)
             column += cellsFor(codePoint)
-            index += Character.charCount(codePoint)
+            index += charCount(codePoint)
         }
         return column
     }
@@ -46,11 +46,31 @@ object TerminalColumns {
     private inline fun forEachCodePoint(text: String, action: (Int) -> Unit) {
         var index = 0
         while (index < text.length) {
-            val codePoint = text.codePointAt(index)
+            val codePoint = codePointAt(text, index)
             action(codePoint)
-            index += Character.charCount(codePoint)
+            index += charCount(codePoint)
         }
     }
+
+    /**
+     * The code point starting at [index], as `String.codePointAt` would report it.
+     *
+     * Spelled out rather than delegated because both of the ways the JVM offers this — `Character`
+     * and the `codePointAt` the Kotlin stdlib only publishes for JVM — are platform API, and the
+     * rule for decoding a surrogate pair is four lines. An unpaired surrogate reads as itself, which
+     * is what the JVM does too and what keeps a truncated string from throwing here.
+     */
+    private fun codePointAt(text: String, index: Int): Int {
+        val high = text[index]
+        if (high.isHighSurrogate() && index + 1 < text.length) {
+            val low = text[index + 1]
+            if (low.isLowSurrogate()) return 0x10000 + ((high.code - 0xD800) shl 10) + (low.code - 0xDC00)
+        }
+        return high.code
+    }
+
+    /** `Character.charCount`: how many `Char`s the code point occupied. */
+    private fun charCount(codePoint: Int): Int = if (codePoint >= 0x10000) 2 else 1
 
     private fun cellsFor(codePoint: Int): Int = if (isWide(codePoint)) 2 else 1
 
