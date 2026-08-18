@@ -54,7 +54,6 @@ import io.github.nodyssey.data.account.AccountSettingsRepository
 import io.github.nodyssey.data.account.NetworkAccountSettingsRepository
 import io.github.nodyssey.data.composer.CommentComposerRepository
 import io.github.nodyssey.data.composer.DefaultCommentComposerRepository
-import io.github.nodyssey.data.composer.DefaultImagePreparer
 import io.github.nodyssey.data.composer.DefaultPostComposerRepository
 import io.github.nodyssey.data.composer.DefaultPostEditor
 import io.github.nodyssey.data.composer.ImageHostUploader
@@ -64,17 +63,18 @@ import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
 import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
-import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.proxy.DataStoreProxySettings
 import io.github.nodyssey.data.proxy.NetworkProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
-import io.github.nodyssey.data.security.KeystoreSecretCipher
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.SettingsRepository
-import io.github.nodyssey.data.update.ApkInstaller
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.data.update.DefaultAppUpdateRepository
+import io.github.nodyssey.platform.ApkInstaller
+import io.github.nodyssey.platform.DefaultImagePreparer
+import io.github.nodyssey.platform.KeystoreSecretCipher
+import io.github.nodyssey.platform.createNodeSeekDatabase
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
@@ -272,7 +272,7 @@ class DefaultAppContainer(
     }
 
     /** The offline-first SSOT. Everything below reads from it; only the data sources write to it. */
-    private val database by lazy { NodeSeekDatabase.create(appContext) }
+    private val database by lazy { createNodeSeekDatabase(appContext) }
 
     private val remotePosts by lazy { NetworkPostDataSource(htmlClient, dispatchers, clock) }
 

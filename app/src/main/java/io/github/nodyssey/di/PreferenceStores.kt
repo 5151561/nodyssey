@@ -7,7 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import io.github.nodyssey.data.imagehost.ImageHostSecretEncryptionMigration
 import io.github.nodyssey.data.imagehost.LEGACY_NODE_IMAGE_KEY
 import io.github.nodyssey.data.imagehost.LegacyNodeImageKeyMigration
-import io.github.nodyssey.data.security.KeystoreSecretCipher
+import io.github.nodyssey.platform.KeystoreSecretCipher
 import kotlinx.coroutines.flow.first
 
 /**

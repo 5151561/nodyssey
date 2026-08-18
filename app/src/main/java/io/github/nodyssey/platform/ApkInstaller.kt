@@ -1,4 +1,4 @@
-package io.github.nodyssey.data.update
+package io.github.nodyssey.platform
 
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -12,6 +12,8 @@ import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import io.github.nodyssey.NodysseyApp
 import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.update.InstallFailure
+import io.github.plaza.core.update.InstallOutcome
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
@@ -127,10 +129,29 @@ class ApkInstallResultReceiver : BroadcastReceiver() {
         (context.applicationContext as? NodysseyApp)
             ?.container
             ?.appUpdateRepository
-            ?.onInstallStatus(status)
+            ?.onInstallOutcome(outcomeOf(status))
     }
 
     companion object {
         const val ACTION_INSTALL_STATUS = "io.github.nodyssey.INSTALL_STATUS"
+
+        /**
+         * `PackageInstaller.STATUS_*` in the vocabulary the update repository speaks.
+         *
+         * Here rather than there because this is the only place the platform's integers arrive, and
+         * because an unrecognised one has to mean [InstallFailure.UNKNOWN] rather than a crash: the
+         * list has grown before and the system is free to send a status this build has never seen.
+         */
+        internal fun outcomeOf(status: Int): InstallOutcome =
+            when (status) {
+                PackageInstaller.STATUS_SUCCESS -> InstallOutcome.Installed
+                PackageInstaller.STATUS_FAILURE_ABORTED -> InstallOutcome.Abandoned
+                PackageInstaller.STATUS_FAILURE_BLOCKED -> InstallOutcome.Failed(InstallFailure.BLOCKED)
+                PackageInstaller.STATUS_FAILURE_CONFLICT -> InstallOutcome.Failed(InstallFailure.CONFLICT)
+                PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> InstallOutcome.Failed(InstallFailure.INCOMPATIBLE)
+                PackageInstaller.STATUS_FAILURE_STORAGE -> InstallOutcome.Failed(InstallFailure.STORAGE)
+                PackageInstaller.STATUS_FAILURE_INVALID -> InstallOutcome.Failed(InstallFailure.INVALID)
+                else -> InstallOutcome.Failed(InstallFailure.UNKNOWN)
+            }
     }
 }

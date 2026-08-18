@@ -1,12 +1,11 @@
 package io.github.nodyssey.data.update
 
-import android.content.pm.PackageInstaller
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.AppUpdateException
 import io.github.plaza.core.update.AppUpdateState
-import io.github.plaza.core.update.InstallFailure
+import io.github.plaza.core.update.InstallOutcome
 import io.github.plaza.core.update.ReleaseNote
 import io.github.plaza.core.update.ReleaseSource
 import io.github.plaza.core.update.UpdateCheck
@@ -105,8 +104,13 @@ interface AppUpdateRepository {
      */
     suspend fun releaseNotes(force: Boolean = false): List<ReleaseNote>
 
-    /** Reports a `PackageInstaller.STATUS_*` back from [ApkInstallResultReceiver]. */
-    fun onInstallStatus(status: Int)
+    /**
+     * Reports how the install session ended.
+     *
+     * An [InstallOutcome] rather than the platform's own status integer: which number meant "the
+     * user said no" is a fact about `PackageInstaller`, and it is read where the broadcast arrives.
+     */
+    fun onInstallOutcome(outcome: InstallOutcome)
 }
 
 class DefaultAppUpdateRepository(
@@ -254,9 +258,9 @@ class DefaultAppUpdateRepository(
         mutableState.update { it.copy(download = UpdateDownload.Idle) }
     }
 
-    override fun onInstallStatus(status: Int) {
-        when (status) {
-            PackageInstaller.STATUS_SUCCESS -> {
+    override fun onInstallOutcome(outcome: InstallOutcome) {
+        when (outcome) {
+            InstallOutcome.Installed -> {
                 // The new build is in; this process is about to be replaced. Drop the APK rather than
                 // leaving a copy of the previous download sitting in the cache forever.
                 scope.launch { withContext(dispatchers.io) { downloadDirectory.deleteRecursively() } }
@@ -266,10 +270,9 @@ class DefaultAppUpdateRepository(
             }
 
             // Backing out of the system dialog is an answer, not a fault.
-            PackageInstaller.STATUS_FAILURE_ABORTED ->
-                mutableState.update { it.copy(installFailure = null) }
+            InstallOutcome.Abandoned -> mutableState.update { it.copy(installFailure = null) }
 
-            else -> mutableState.update { it.copy(installFailure = installFailureOf(status)) }
+            is InstallOutcome.Failed -> mutableState.update { it.copy(installFailure = outcome.failure) }
         }
     }
 
@@ -339,15 +342,5 @@ class DefaultAppUpdateRepository(
         const val CHECK_INTERVAL_MILLIS = 24 * 60 * 60 * 1000L
 
         private const val PART_SUFFIX = ".part"
-
-        private fun installFailureOf(status: Int): InstallFailure =
-            when (status) {
-                PackageInstaller.STATUS_FAILURE_BLOCKED -> InstallFailure.BLOCKED
-                PackageInstaller.STATUS_FAILURE_CONFLICT -> InstallFailure.CONFLICT
-                PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> InstallFailure.INCOMPATIBLE
-                PackageInstaller.STATUS_FAILURE_STORAGE -> InstallFailure.STORAGE
-                PackageInstaller.STATUS_FAILURE_INVALID -> InstallFailure.INVALID
-                else -> InstallFailure.UNKNOWN
-            }
     }
 }
