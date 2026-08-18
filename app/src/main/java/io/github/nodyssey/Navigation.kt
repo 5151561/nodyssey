@@ -491,6 +491,7 @@ fun MainNavigation(
                     onBack = { backStack.removeLastOrNull() },
                     onOpenNotifications = { backStack.add(NotificationSettingsKey) },
                     onOpenProxy = { backStack.add(ProxySettingsKey) },
+                    onOpenImageHost = { backStack.add(ImageHostKey) },
                     onOpenAbout = { backStack.add(AboutAppKey) },
                     onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
                 )
@@ -737,11 +738,10 @@ fun MainNavigation(
                     // 常用偏好 and 首页版块 share one page (d6 5/5): three of their rows are the
                     // same account-side switches, and splitting them would leave two stub screens.
                     onOpenPreferences = { backStack.add(AccountPreferencesKey) },
-                    onOpenImageHost = { backStack.add(AccountImageHostKey) },
                 )
             }
 
-            entry<AccountImageHostKey> {
+            entry<ImageHostKey> {
                 val viewModel: ImageHostViewModel =
                     viewModel(factory = ImageHostViewModel.factory(container))
                 ImageHostRoute(

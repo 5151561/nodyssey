@@ -34,6 +34,17 @@ data object NotificationSettingsKey : NavKey
 @Serializable
 data object ProxySettingsKey : NavKey
 
+/**
+ * 图床 — which image host is connected, and with what.
+ *
+ * A child of [SettingsKey] rather than of 账号设置: the host is not a NodeSeek account setting at all.
+ * The forum stores Markdown and never sees the key, which lives on this device only, and it is
+ * whichever host the person picked — so it belongs with the app's own settings, and stays reachable
+ * while signed out.
+ */
+@Serializable
+data object ImageHostKey : NavKey
+
 @Serializable
 data object AboutAppKey : NavKey
 
@@ -76,15 +87,6 @@ data object AccountBlockListKey : NavKey
 /** 偏好与首页版块 (d6 5/5). */
 @Serializable
 data object AccountPreferencesKey : NavKey
-
-/**
- * 图床 — which image host is connected, and with what.
- *
- * Under 账号设置 rather than the app's own [SettingsKey] because it is a credential for an account,
- * not a display preference; it sits beside 联系方式 for the same reason those do.
- */
-@Serializable
-data object AccountImageHostKey : NavKey
 
 /**
  * The editor.

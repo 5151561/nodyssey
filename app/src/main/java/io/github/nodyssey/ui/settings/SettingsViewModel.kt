@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.PostRepository
+import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.ReportFormat
@@ -29,6 +30,7 @@ class SettingsViewModel(
     private val session: SessionRepository,
     private val cache: AppCacheStore,
     private val updates: AppUpdateRepository,
+    imageHost: ImageHostRepository,
     appVersion: AppVersion,
 ) : ViewModel() {
     private val clearingCache = MutableStateFlow(false)
@@ -44,12 +46,14 @@ class SettingsViewModel(
             clearingCache,
             cacheSizeBytes,
             updates.state,
-        ) { values, clearing, cacheSize, update ->
+            imageHost.current,
+        ) { values, clearing, cacheSize, update, imageHostConfig ->
             SettingsUiState(
                 settings = values,
                 isClearingCache = clearing,
                 cacheSizeBytes = cacheSize,
                 versionName = versionName,
+                imageHostConnected = imageHostConfig.isConfigured,
                 // Read off the shared updater rather than checked here: the answer is already in
                 // memory by the time this screen opens, and 我的 shows the same dot from the same
                 // state.
@@ -145,6 +149,7 @@ class SettingsViewModel(
                         session = container.sessionRepository,
                         cache = container.appCacheStore,
                         updates = container.appUpdateRepository,
+                        imageHost = container.imageHostRepository,
                         appVersion = container.appVersion,
                     )
                 }
@@ -161,4 +166,6 @@ data class SettingsUiState(
     val versionName: String = "—",
     /** The newer version on GitHub, or null when there is none to offer. */
     val updateVersionName: String? = null,
+    /** Whether the selected image host is usable — the 图床 row's subtitle, and nothing more of it. */
+    val imageHostConnected: Boolean = false,
 )

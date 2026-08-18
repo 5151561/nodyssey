@@ -99,7 +99,7 @@ Repository 上没有 `page` 参数。写操作是 `POST /api/fans/{add,del}`，b
 评论发布与图床上传也不在表里了：两者都接了真实端点，契约取自 2026-07-28 在沙盒贴
 （`post-841108`）和 nodeimage.com 上抓到的真实请求，不是猜的。评论走 `/api/content/new-comment`，
 楼层号只在响应的 `redirectHash` 里；图床是**站外**服务，用用户自己的凭证
-认证（论坛网页版靠的是浏览器扩展，站点本身没有图床），入口在 账号设置 › 图床，一次生效一家：
+认证（论坛网页版靠的是浏览器扩展，站点本身没有图床），入口在 设置 › 内容 › 图床，一次生效一家：
 nodeimage、兰空 Lsky Pro、简单图床 EasyImage、sm.ms、imgbb，以及手填上传地址与取值路径的自定义图床。
 
 账号设置不再出现在这张表里：`NetworkAccountSettingsRepository` 的 15 个方法全部接的是站点自己的请求，
