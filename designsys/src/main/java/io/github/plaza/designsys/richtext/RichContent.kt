@@ -111,6 +111,7 @@ import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.asProse
+import coil3.size.Size as CoilSize
 
 /**
  * Renders parsed post markup with real Compose text and images — no WebView.
@@ -1283,15 +1284,22 @@ private fun InlineText(
             built to ranges.toList()
         }
 
+    val stickerSizing = LocalStickerSizing.current
+    val density = LocalDensity.current
     val stickerContent =
         inlines.filterIsInstance<InlineNode.Sticker>().associate { sticker ->
+            // Reads the size cache, so the first decode of a sticker this process has not seen
+            // relays out the paragraph around its real size. In 统一缩限 mode the cache is not
+            // consulted and there is nothing to relay out.
+            val box = stickerSizing.boxSize(StickerSizeCache.naturalSize(sticker.url), density)
             STICKER_PREFIX + sticker.url to
                 InlineTextContent(
                     Placeholder(
-                        width = STICKER_SIZE,
-                        height = STICKER_SIZE,
-                        // Centred on the text, not the baseline: a 20sp box hung off the baseline
-                        // would push the whole line taller and break the 27sp rhythm.
+                        width = with(density) { box.width.toSp() },
+                        height = with(density) { box.height.toSp() },
+                        // Centred on the text, not the baseline: a box hung off the baseline would
+                        // push the whole line taller and break the 27sp rhythm. That is what keeps
+                        // the smallest 统一缩限 setting — a 20sp square — inside the line at all.
                         placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter,
                     ),
                 ) {
@@ -1302,12 +1310,35 @@ private fun InlineText(
                     var failure by remember(sticker.url) { mutableStateOf<StickerFailure?>(null) }
                     val failed = failure
                     if (failed == null) {
+                        val context = LocalContext.current
+                        val request =
+                            remember(sticker.url) {
+                                ImageRequest
+                                    .Builder(context)
+                                    .data(sticker.url)
+                                    // Decoded whole, not to the box. Before its first decode a
+                                    // sticker sits in the 20sp fallback box, and a request sized to
+                                    // that box would come back 20sp wide — natural-size mode would
+                                    // record *that* as the sticker's natural size and never grow.
+                                    // Stickers are 90px at most, so keeping them whole costs
+                                    // nothing, and it means one cached bitmap per sticker rather
+                                    // than one per slider position.
+                                    .size(CoilSize.ORIGINAL)
+                                    .build()
+                            }
                         AsyncImage(
-                            model = sticker.url,
+                            model = request,
                             // Sticker markup often has no alt text, and an image with no
                             // content description is silent to a screen reader.
                             contentDescription =
                             sticker.alt ?: stringResource(R.string.richtext_sticker_description),
+                            onSuccess = { state ->
+                                StickerSizeCache.record(
+                                    url = sticker.url,
+                                    width = state.result.image.width,
+                                    height = state.result.image.height,
+                                )
+                            },
                             onError = { error ->
                                 failure = if (error.result.throwable is ImagesDeferredException) {
                                     StickerFailure.Deferred
@@ -1315,7 +1346,10 @@ private fun InlineText(
                                     StickerFailure.Failed
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            // Fits the box rather than filling its width: 统一缩限 hands every
+                            // sticker the same square, and a tall one used to be drawn to that
+                            // square's width and overdraw the lines above and below it.
+                            modifier = Modifier.fillMaxSize(),
                         )
                     } else {
                         ImageFallback(
@@ -1369,7 +1403,6 @@ private fun InlineText(
 /** Why a sticker is not on screen, kept apart for the reason [ImageFallback] states. */
 private enum class StickerFailure { Deferred, Failed }
 
-private val STICKER_SIZE = 20.sp
 private val QUOTE_HEIGHT = 22.sp
 private val QUOTE_LABEL_SIZE = 12.sp
 

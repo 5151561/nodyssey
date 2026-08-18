@@ -14,9 +14,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
@@ -24,6 +26,8 @@ import io.github.nodyssey.data.settings.isTimedNightHour
 import io.github.nodyssey.ui.common.rememberExternalUriHandler
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.richtext.LocalReportFormat
+import io.github.plaza.designsys.richtext.LocalStickerSizing
+import io.github.plaza.designsys.richtext.StickerSizing
 import io.github.plaza.designsys.theme.PlazaTheme
 import kotlinx.coroutines.delay
 import java.util.Calendar
@@ -77,13 +81,21 @@ class MainActivity : ComponentActivity() {
                 // Every link that leaves the app goes through LocalUriHandler — the explicit
                 // `openUri` calls in Navigation and the ones Compose resolves for a link inside post
                 // text alike. Overriding it here, inside the theme so the tab can match the colours
-                // on screen, is what makes 外部链接打开方式 apply everywhere at once. 测评报告 rides
-                // along for the same reason: a report can appear in any post body, and only this one
-                // place has to know which way the setting is pointing.
+                // on screen, is what makes 外部链接打开方式 apply everywhere at once. 测评报告 and
+                // 表情大小 ride along for the same reason: both are decided per post body, a post
+                // body turns up on six screens, and only this one place has to read the setting.
+                val stickerSizing =
+                    remember(settings.stickerUniformSize, settings.stickerSize) {
+                        StickerSizing(
+                            uniform = settings.stickerUniformSize,
+                            uniformSize = settings.stickerSize.sp,
+                        )
+                    }
                 CompositionLocalProvider(
                     LocalUriHandler provides
                         rememberExternalUriHandler(settings.externalLinkTarget),
                     LocalReportFormat provides settings.reportFormat,
+                    LocalStickerSizing provides stickerSizing,
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),

@@ -46,6 +46,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = { mode = it },
                     onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
@@ -73,6 +75,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = {},
                     onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
@@ -97,6 +101,69 @@ class SettingsScreenTest {
         assertTrue(bounds.zipWithNext().all { (left, right) -> abs(left.width - right.width) <= 2f })
     }
 
+    /**
+     * 表情统一缩限 is what the slider sizes, so switching it off takes the slider with it — a size
+     * control still sitting there under a switch that says "each sticker at its own size" would be
+     * claiming to do something it no longer does.
+     */
+    @Test
+    fun `the sticker size slider follows the uniform switch`() {
+        composeRule.setContent {
+            var uniform by remember { mutableStateOf(UserSettings().stickerUniformSize) }
+            PlazaTheme {
+                SettingsScreen(
+                    state = SettingsUiState(UserSettings(stickerUniformSize = uniform)),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onStickerUniformSizeChange = { uniform = it },
+                    onStickerSizeChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = {},
+                    onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
+                    onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(STICKER_SIZE_SLIDER_TAG).assertExists()
+        composeRule.onNodeWithText("表情统一缩限").performScrollTo().assertIsOn().performClick()
+        composeRule.onNodeWithTag(STICKER_SIZE_SLIDER_TAG).assertDoesNotExist()
+    }
+
+    /** Default is the 20sp box every build before the setting had, stated on the row itself. */
+    @Test
+    fun `the sticker size row states the stored size`() {
+        composeRule.setContent {
+            PlazaTheme {
+                SettingsScreen(
+                    state = SettingsUiState(UserSettings()),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = {},
+                    onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
+                    onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("20sp").performScrollTo().assertIsDisplayed()
+    }
+
     @Test
     fun `wifi image setting toggles from the whole row`() {
         composeRule.setContent {
@@ -107,6 +174,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = {},
                     onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = { wifiOnly = it },
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
@@ -138,6 +207,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = {},
                     onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = { target = it },
                     onReportFormatChange = {},
@@ -151,7 +222,9 @@ class SettingsScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("应用内浏览").assertIsSelected()
+        // 内容 sits below the fold on a 800dp screen now that 外观 carries the sticker controls,
+        // and a tap aimed off the viewport never lands.
+        composeRule.onNodeWithText("应用内浏览").performScrollTo().assertIsSelected()
         composeRule.onNodeWithText("系统浏览器").performClick()
         composeRule.onNodeWithText("系统浏览器").assertIsSelected()
     }
@@ -166,6 +239,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = {},
                     onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = { format = it },
@@ -179,7 +254,7 @@ class SettingsScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("适配格式").assertIsSelected()
+        composeRule.onNodeWithText("适配格式").performScrollTo().assertIsSelected()
         composeRule.onNodeWithText("显示原文").performClick()
         composeRule.onNodeWithText("显示原文").assertIsSelected()
     }
@@ -195,6 +270,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = {},
                     onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
@@ -226,6 +303,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = {},
                     onFontScaleChange = { appliedScale = it },
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
@@ -262,6 +341,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = {},
                     onFontScaleChange = { appliedScale = it },
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
@@ -293,6 +374,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = {},
                     onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
@@ -325,6 +408,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = {},
                     onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
@@ -350,6 +435,8 @@ class SettingsScreenTest {
                     onBack = {},
                     onThemeModeChange = {},
                     onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
                     onExternalLinkTargetChange = {},
                     onReportFormatChange = {},

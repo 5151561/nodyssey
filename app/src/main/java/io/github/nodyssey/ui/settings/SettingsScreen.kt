@@ -30,6 +30,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -41,14 +42,21 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.ui.common.UpdateDot
+import io.github.nodyssey.ui.richtext.PostRichContent
+import io.github.plaza.core.richtext.InlineNode
+import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.richtext.LocalStickerSizing
+import io.github.plaza.designsys.richtext.StickerSizing
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -82,6 +90,8 @@ fun SettingsRoute(
         onBack = onBack,
         onThemeModeChange = viewModel::setThemeMode,
         onFontScaleChange = viewModel::setFontScale,
+        onStickerUniformSizeChange = viewModel::setStickerUniformSize,
+        onStickerSizeChange = viewModel::setStickerSize,
         onImagesOnWifiOnlyChange = viewModel::setImagesOnWifiOnly,
         onExternalLinkTargetChange = viewModel::setExternalLinkTarget,
         onReportFormatChange = viewModel::setReportFormat,
@@ -107,6 +117,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onFontScaleChange: (Float) -> Unit,
+    onStickerUniformSizeChange: (Boolean) -> Unit,
+    onStickerSizeChange: (Int) -> Unit,
     onImagesOnWifiOnlyChange: (Boolean) -> Unit,
     onExternalLinkTargetChange: (ExternalLinkTarget) -> Unit,
     onReportFormatChange: (ReportFormat) -> Unit,
@@ -122,6 +134,11 @@ fun SettingsScreen(
 ) {
     var bodyFontSize by remember(state.settings.fontScale) {
         mutableFloatStateOf(fontScaleToBodySize(state.settings.fontScale))
+    }
+    // Dragging is local and only the released value is stored, the same deal the font slider has:
+    // a write per frame would push a settings emission through every open post body.
+    var stickerSize by remember(state.settings.stickerSize) {
+        mutableFloatStateOf(state.settings.stickerSize.toFloat())
     }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
@@ -169,7 +186,6 @@ fun SettingsScreen(
                         R.string.settings_body_size_value,
                         bodyFontSize.roundToInt(),
                     ),
-                    bottom = true,
                 ) {
                     Slider(
                         value = bodyFontSize,
@@ -192,6 +208,44 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(Spacing.md),
                         )
+                    }
+                }
+                SettingsRow(
+                    title = stringResource(R.string.settings_sticker_uniform),
+                    subtitle = stringResource(R.string.settings_sticker_uniform_hint),
+                    checked = state.settings.stickerUniformSize,
+                    onCheckedChange = onStickerUniformSizeChange,
+                    // The slider below only exists while the switch is on, so which of the two
+                    // carries the group's rounded bottom edge moves with it.
+                    bottom = !state.settings.stickerUniformSize,
+                    trailing = {
+                        Switch(
+                            checked = state.settings.stickerUniformSize,
+                            onCheckedChange = null,
+                        )
+                    },
+                )
+                if (state.settings.stickerUniformSize) {
+                    SettingsBlock(
+                        title = stringResource(R.string.settings_sticker_size),
+                        subtitle = stringResource(
+                            R.string.settings_sticker_size_value,
+                            stickerSize.roundToInt(),
+                        ),
+                        bottom = true,
+                    ) {
+                        Slider(
+                            value = stickerSize,
+                            onValueChange = { stickerSize = it },
+                            onValueChangeFinished = { onStickerSizeChange(stickerSize.roundToInt()) },
+                            valueRange = STICKER_SIZE_RANGE,
+                            // 20..90sp in 5sp stops: fourteen intervals, so thirteen interior
+                            // stops. Finer than that is a difference nobody can see on a
+                            // picture this small.
+                            steps = STICKER_SIZE_STEPS,
+                            modifier = Modifier.testTag(STICKER_SIZE_SLIDER_TAG),
+                        )
+                        StickerSizePreview(sizeSp = stickerSize.roundToInt())
                     }
                 }
             }
@@ -402,6 +456,59 @@ private fun ConnectedThemeButtons(
     )
 }
 
+/**
+ * What 表情大小 buys, drawn by the renderer it changes.
+ *
+ * The same [PostRichContent] the thread uses, handed a line with two of the site's stickers in it,
+ * under the size being dragged rather than the size stored — so the sample answers "how big next to
+ * my body text" while the thumb is still moving. The stickers are fetched like any other: already in
+ * Coil's cache for anyone who has opened a thread, a pair of fallback squares at the right size for
+ * anyone who has not, which still shows the sizing this control is about.
+ */
+@Composable
+private fun StickerSizePreview(sizeSp: Int) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        CompositionLocalProvider(
+            LocalStickerSizing provides StickerSizing(uniform = true, uniformSize = sizeSp.sp),
+        ) {
+            PostRichContent(
+                nodes = STICKER_PREVIEW_NODES,
+                onLinkClick = {},
+                onImageClick = {},
+                // Nothing here is worth copying, and a selection handle inside a settings row is a
+                // way to lose the drag that was aimed at the slider.
+                selectable = false,
+                modifier = Modifier.padding(Spacing.md),
+            )
+        }
+    }
+}
+
+private val STICKER_PREVIEW_NODES =
+    listOf(
+        RichNode.Paragraph(
+            listOf(
+                InlineNode.Text("表情就这么大"),
+                InlineNode.Sticker(
+                    url = NodeSeekSite.stickerUrl(group = "ac", code = "01", extension = "png"),
+                    alt = "ac01",
+                ),
+                InlineNode.Sticker(
+                    url = NodeSeekSite.stickerUrl(group = "yct", code = "001", extension = "gif"),
+                    alt = "yct001",
+                ),
+            ),
+        ),
+    )
+
+private val STICKER_SIZE_RANGE =
+    SettingsRepository.MIN_STICKER_SIZE_SP.toFloat()..SettingsRepository.MAX_STICKER_SIZE_SP.toFloat()
+private const val STICKER_SIZE_STEPS = 13
+internal const val STICKER_SIZE_SLIDER_TAG = "sticker-size-slider"
+
 private val BODY_FONT_SIZE_RANGE = 14f..24f
 private const val BODY_FONT_SIZE_STEPS = 9
 private const val BASE_BODY_FONT_SIZE = 16f
@@ -426,6 +533,8 @@ private fun SettingsPreview() {
             onBack = {},
             onThemeModeChange = {},
             onFontScaleChange = {},
+            onStickerUniformSizeChange = {},
+            onStickerSizeChange = {},
             onImagesOnWifiOnlyChange = {},
             onExternalLinkTargetChange = {},
             onReportFormatChange = {},

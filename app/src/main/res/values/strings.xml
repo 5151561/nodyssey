@@ -115,7 +115,6 @@
     <string name="composer_emoji_group_onion">洋葱头</string>
     <string name="composer_emoji_group_chick">小黄鸡</string>
     <string name="composer_emoji_group_fluent">Fluent</string>
-    <string name="composer_emoji_group_app">App</string>
     <!-- 最近使用 and 删除 belong to the panel itself and live in `:designsys`. Declaring them here too
          would not add a second string: resource merging lets this module silently override a
          library's string of the same name, so the copy in `:designsys` would go dead while still
@@ -276,6 +275,10 @@
     <string name="settings_theme_dark">深色</string>
     <string name="settings_body_size">正文字号</string>
     <string name="settings_body_size_value">%1$dsp</string>
+    <string name="settings_sticker_uniform">表情统一缩限</string>
+    <string name="settings_sticker_uniform_hint">开启后所有表情一样大，可调；关闭则各按表情原本的大小显示</string>
+    <string name="settings_sticker_size">表情大小</string>
+    <string name="settings_sticker_size_value">%1$dsp</string>
     <string name="settings_text_preview">预览：中文长文的阅读体验。</string>
     <string name="settings_content">内容</string>
     <string name="settings_external_link">站外链接</string>

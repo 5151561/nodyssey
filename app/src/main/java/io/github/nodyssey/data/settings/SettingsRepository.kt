@@ -50,6 +50,9 @@ class SettingsRepository(
                     ?: ThemeMode.SYSTEM,
                 dynamicColor = preferences[KEY_DYNAMIC_COLOR] ?: false,
                 fontScale = preferences[KEY_FONT_SCALE] ?: 1f,
+                stickerUniformSize = preferences[KEY_STICKER_UNIFORM_SIZE] ?: true,
+                stickerSize = (preferences[KEY_STICKER_SIZE] ?: DEFAULT_STICKER_SIZE_SP)
+                    .coerceIn(MIN_STICKER_SIZE_SP, MAX_STICKER_SIZE_SP),
                 imagesOnWifiOnly = preferences[KEY_IMAGES_WIFI_ONLY] ?: false,
                 externalLinkTarget = preferences[KEY_EXTERNAL_LINK_TARGET]
                     ?.let { runCatching { ExternalLinkTarget.valueOf(it) }.getOrNull() }
@@ -112,6 +115,18 @@ class SettingsRepository(
 
     suspend fun setFontScale(scale: Float) =
         edit { it[KEY_FONT_SCALE] = scale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE) }
+
+    /**
+     * 表情统一缩限. On — the default, and what every build before this one did — every inline sticker
+     * is drawn in the same [stickerSize] square. Off, each is drawn at its own natural size, the way
+     * the web does it.
+     */
+    suspend fun setStickerUniformSize(uniform: Boolean) =
+        edit { it[KEY_STICKER_UNIFORM_SIZE] = uniform }
+
+    /** The side of that square, in sp. Only read while 表情统一缩限 is on. */
+    suspend fun setStickerSize(sizeSp: Int) =
+        edit { it[KEY_STICKER_SIZE] = sizeSp.coerceIn(MIN_STICKER_SIZE_SP, MAX_STICKER_SIZE_SP) }
 
     suspend fun setImagesOnWifiOnly(enabled: Boolean) = edit { it[KEY_IMAGES_WIFI_ONLY] = enabled }
 
@@ -381,6 +396,16 @@ class SettingsRepository(
         const val MIN_FONT_SCALE = 0.85f
         const val MAX_FONT_SCALE = 1.5f
 
+        /*
+         * 表情大小, in sp. The bottom of the range is the 20sp box a sticker has always had — the one
+         * the body copy's 27sp line was designed around — and the top is the 90px the site's own
+         * `img.sticker { max-width: 90px }` caps a sticker at, so the slider's far end and 表情统一缩限
+         * switched off agree about how big the biggest sticker gets.
+         */
+        const val MIN_STICKER_SIZE_SP = 20
+        const val MAX_STICKER_SIZE_SP = 90
+        const val DEFAULT_STICKER_SIZE_SP = MIN_STICKER_SIZE_SP
+
         /** WorkManager's own floor is 15 minutes, which is why the choices start there — board f4. */
         val POLL_MINUTE_CHOICES = listOf(15, 30, 60)
         const val DEFAULT_POLL_MINUTES = 30
@@ -409,6 +434,8 @@ class SettingsRepository(
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
+        private val KEY_STICKER_UNIFORM_SIZE = booleanPreferencesKey("sticker_uniform_size")
+        private val KEY_STICKER_SIZE = intPreferencesKey("sticker_size_sp")
         private val KEY_IMAGES_WIFI_ONLY = booleanPreferencesKey("images_on_wifi_only")
         private val KEY_EXTERNAL_LINK_TARGET = stringPreferencesKey("external_link_target")
         private val KEY_REPORT_FORMAT = stringPreferencesKey("report_format")
@@ -510,6 +537,14 @@ data class UserSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = false,
     val fontScale: Float = 1f,
+    /**
+     * 表情统一缩限. True — the default — draws every inline sticker in the same [stickerSize] square,
+     * which at its smallest is the 20sp box that keeps a sticker inside a line of body text. False
+     * draws each sticker at its own natural size, capped the way the site caps it.
+     */
+    val stickerUniformSize: Boolean = true,
+    /** The side of that square in sp, between [SettingsRepository.MIN_STICKER_SIZE_SP] and its max. */
+    val stickerSize: Int = SettingsRepository.DEFAULT_STICKER_SIZE_SP,
     val imagesOnWifiOnly: Boolean = false,
     val externalLinkTarget: ExternalLinkTarget = ExternalLinkTarget.CUSTOM_TAB,
     /** How a NodeQuality-style benchmark report is drawn in a post; see [ReportFormat]. */
