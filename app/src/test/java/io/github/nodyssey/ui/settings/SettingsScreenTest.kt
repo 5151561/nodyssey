@@ -453,4 +453,36 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("发现新版本 10.0.0").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("v9.9.9").assertDoesNotExist()
     }
+
+    @Test
+    fun `image host row says whether posting a picture would work, and opens the page`() {
+        var opened = false
+        composeRule.setContent {
+            PlazaTheme {
+                SettingsScreen(
+                    state = SettingsUiState(imageHostConnected = false),
+                    onBack = {},
+                    onThemeModeChange = {},
+                    onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = {},
+                    onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
+                    onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
+                    onOpenImageHost = { opened = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("未连接").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("图床").performScrollTo().performClick()
+
+        assertTrue(opened)
+    }
 }

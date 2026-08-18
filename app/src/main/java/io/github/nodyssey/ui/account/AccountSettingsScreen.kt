@@ -48,7 +48,6 @@ fun AccountSettingsRoute(
     onOpenContact: () -> Unit,
     onOpenBlockList: () -> Unit,
     onOpenPreferences: () -> Unit,
-    onOpenImageHost: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -67,7 +66,6 @@ fun AccountSettingsRoute(
         onOpenContact = onOpenContact,
         onOpenBlockList = onOpenBlockList,
         onOpenPreferences = onOpenPreferences,
-        onOpenImageHost = onOpenImageHost,
         onSignOut = viewModel::signOut,
         modifier = modifier,
     )
@@ -89,7 +87,6 @@ fun AccountSettingsScreen(
     onOpenContact: () -> Unit,
     onOpenBlockList: () -> Unit,
     onOpenPreferences: () -> Unit,
-    onOpenImageHost: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -153,23 +150,9 @@ fun AccountSettingsScreen(
                 SettingsRow(
                     title = stringResource(R.string.account_preferences_title),
                     subtitle = stringResource(R.string.account_preferences_summary),
+                    bottom = true,
                     onClick = onOpenPreferences,
                     leading = { RowIcon(Icons.Default.Settings) },
-                    trailing = { Chevron() },
-                )
-                SettingsRow(
-                    title = stringResource(R.string.imagehost_title),
-                    subtitle =
-                    stringResource(
-                        if (state.imageHostConnected) {
-                            R.string.imagehost_connected
-                        } else {
-                            R.string.imagehost_not_connected
-                        },
-                    ),
-                    bottom = true,
-                    onClick = onOpenImageHost,
-                    leading = { RowIcon(PlazaIcons.Image) },
                     trailing = { Chevron() },
                 )
             }
@@ -221,17 +204,13 @@ private fun AccountSettingsPreview() {
     PlazaTheme {
         AccountSettingsScreen(
             state =
-            AccountSettingsUiState(
-                blockedCount = 3,
-                imageHostConnected = true,
-            ),
+            AccountSettingsUiState(blockedCount = 3),
             onBack = {},
             onOpenProfileFields = {},
             onOpenSecurity = {},
             onOpenContact = {},
             onOpenBlockList = {},
             onOpenPreferences = {},
-            onOpenImageHost = {},
             onSignOut = {},
         )
     }

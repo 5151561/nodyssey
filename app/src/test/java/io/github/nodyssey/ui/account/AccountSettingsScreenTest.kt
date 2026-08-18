@@ -24,10 +24,7 @@ class AccountSettingsScreenTest {
     val composeRule = createComposeRule()
 
     private val populated =
-        AccountSettingsUiState(
-            blockedCount = 3,
-            imageHostConnected = true,
-        )
+        AccountSettingsUiState(blockedCount = 3)
 
     private fun setContent(
         state: AccountSettingsUiState = populated,
@@ -36,7 +33,6 @@ class AccountSettingsScreenTest {
         onOpenContact: () -> Unit = {},
         onOpenBlockList: () -> Unit = {},
         onOpenPreferences: () -> Unit = {},
-        onOpenImageHost: () -> Unit = {},
         onSignOut: () -> Unit = {},
     ) {
         composeRule.setContent {
@@ -49,7 +45,6 @@ class AccountSettingsScreenTest {
                     onOpenContact = onOpenContact,
                     onOpenBlockList = onOpenBlockList,
                     onOpenPreferences = onOpenPreferences,
-                    onOpenImageHost = onOpenImageHost,
                     onSignOut = onSignOut,
                 )
             }
@@ -60,7 +55,7 @@ class AccountSettingsScreenTest {
     fun `shows exactly one entry for each destination`() {
         setContent()
 
-        listOf("个人信息", "安全", "联系方式", "屏蔽用户", "偏好与首页版块", "图床")
+        listOf("个人信息", "安全", "联系方式", "屏蔽用户", "偏好与首页版块")
             .forEach { destination ->
                 composeRule.onAllNodesWithText(destination).assertCountEquals(1)
             }
@@ -80,6 +75,9 @@ class AccountSettingsScreenTest {
             "邮箱",
             "Telegram 提醒",
             "首页显示的版块",
+            // 图床 moved to the app's own 设置 — it is a device-local credential, not an account
+            // setting, and nothing here should offer a second way in.
+            "图床",
         ).forEach { section ->
             composeRule.onNodeWithText(section).assertDoesNotExist()
         }
@@ -105,7 +103,6 @@ class AccountSettingsScreenTest {
             onOpenContact = { opened += "contact" },
             onOpenBlockList = { opened += "block" },
             onOpenPreferences = { opened += "preferences" },
-            onOpenImageHost = { opened += "imagehost" },
         )
 
         composeRule.onNodeWithText("个人信息").performScrollTo().performClick()
@@ -113,10 +110,9 @@ class AccountSettingsScreenTest {
         composeRule.onNodeWithText("联系方式").performScrollTo().performClick()
         composeRule.onNodeWithText("屏蔽用户").performScrollTo().performClick()
         composeRule.onNodeWithText("偏好与首页版块").performScrollTo().performClick()
-        composeRule.onNodeWithText("图床").performScrollTo().performClick()
 
         assertEquals(
-            listOf("profile", "security", "contact", "block", "preferences", "imagehost"),
+            listOf("profile", "security", "contact", "block", "preferences"),
             opened,
         )
     }

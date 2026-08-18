@@ -68,6 +68,7 @@ fun SettingsRoute(
     onBack: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenProxy: () -> Unit,
+    onOpenImageHost: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier,
@@ -101,6 +102,7 @@ fun SettingsRoute(
         onClearCache = viewModel::clearCache,
         onOpenNotifications = onOpenNotifications,
         onOpenProxy = onOpenProxy,
+        onOpenImageHost = onOpenImageHost,
         onOpenAbout = onOpenAbout,
         onOpenLicenses = onOpenLicenses,
         modifier = modifier,
@@ -129,6 +131,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onOpenNotifications: () -> Unit = {},
     onOpenProxy: () -> Unit = {},
+    onOpenImageHost: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
 ) {
@@ -311,6 +314,20 @@ fun SettingsScreen(
                             onCheckedChange = null,
                         )
                     },
+                )
+                SettingsRow(
+                    title = stringResource(R.string.imagehost_title),
+                    // 已连接 / 未连接 rather than the host's name: what the row is asked on the way
+                    // to writing a post is whether inserting a picture will work at all.
+                    subtitle = stringResource(
+                        if (state.imageHostConnected) {
+                            R.string.imagehost_connected
+                        } else {
+                            R.string.imagehost_not_connected
+                        },
+                    ),
+                    onClick = onOpenImageHost,
+                    leading = { Icon(PlazaIcons.Image, contentDescription = null) },
                 )
                 val context = LocalContext.current
                 SettingsRow(

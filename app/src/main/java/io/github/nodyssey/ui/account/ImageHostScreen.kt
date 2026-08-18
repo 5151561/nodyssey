@@ -21,7 +21,11 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,7 +62,6 @@ import io.github.nodyssey.data.imagehost.CustomHostFields
 import io.github.nodyssey.data.imagehost.HostedImage
 import io.github.nodyssey.data.imagehost.ImageHostError
 import io.github.nodyssey.data.imagehost.ImageHostProvider
-import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -181,7 +184,6 @@ fun ImageHostScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            AccountSectionLabel(stringResource(R.string.imagehost_section_provider))
             ProviderPicker(selected = state.provider, onSelect = onSelectProvider)
 
             AccountSectionLabel(
@@ -256,43 +258,64 @@ fun ImageHostScreen(
 }
 
 /**
- * The six, as a single-choice list.
+ * The six, behind a dropdown.
  *
- * A list rather than a dropdown: choosing a host is a decision made once and then rarely revisited,
- * and the one thing that helps make it is seeing what the alternatives are. The line underneath is
- * the selected host's own instructions, which is where the answer to "so what do I paste here" lives.
+ * Six radio rows spelled out at the top of the screen cost a screenful for a decision that is made
+ * once and then rarely revisited, and pushed the fields that actually need typing below the fold.
+ * Collapsed it reads as one more field like the ones under it; opened it still puts all six side by
+ * side, which is the one thing that helps make the choice. The line underneath is the selected
+ * host's own instructions, which is where the answer to "so what do I paste here" lives.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProviderPicker(
     selected: ImageHostProvider,
     onSelect: (ImageHostProvider) -> Unit,
 ) {
-    Surface(
-        shape = AccountFieldShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
-            ImageHostProvider.entries.forEach { provider ->
-                ChoiceRow(
-                    label = stringResource(provider.nameRes()),
-                    selected = provider == selected,
-                    onSelect = { onSelect(provider) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            Text(
-                text = stringResource(selected.hintRes()),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(
-                    start = Spacing.xs,
-                    end = Spacing.xs,
-                    top = Spacing.xs,
-                    bottom = Spacing.sm,
-                ),
+    var expanded by remember { mutableStateOf(false) }
+    Column {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            OutlinedTextField(
+                value = stringResource(selected.nameRes()),
+                onValueChange = {},
+                readOnly = true,
+                singleLine = true,
+                label = { Text(stringResource(R.string.imagehost_section_provider)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                shape = AccountFieldShape,
+                modifier = Modifier
+                    // The field is not typable, so the menu opens on a tap anywhere in it rather
+                    // than only on the chevron, and no keyboard comes up with it.
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth(),
             )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                ImageHostProvider.entries.forEach { provider ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(provider.nameRes())) },
+                        onClick = {
+                            onSelect(provider)
+                            expanded = false
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    )
+                }
+            }
         }
+        // Drawn here rather than passed as the field's `supportingText`, which is what this was: the
+        // menu opens below its anchor, the anchor is the whole text field, and a text field's
+        // supporting line is *inside* it — so the menu detached from the box and hung off the bottom
+        // of the sentence. Same two lines to look at, laid out to match `HostField`'s helper.
+        Text(
+            text = stringResource(selected.hintRes()),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.xs),
+        )
     }
 }
 
