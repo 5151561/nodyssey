@@ -43,7 +43,16 @@
     <string name="richtext_image_label">图片</string>
     <string name="richtext_image_view_full">点击查看全图</string>
     <string name="richtext_image_load_failed">图片加载失败</string>
+    <!-- The second line under 图片加载失败: why it failed, in terms of what the reader can do next.
+         See ImageLoadFailure — a challenge is worth its own wording because retrying cannot fix it
+         and opening the image in a browser can. -->
+    <string name="richtext_image_failed_challenge">图床要求人机验证，App 过不去（HTTP %1$d）</string>
+    <string name="richtext_image_failed_http">图床拒绝了这张图（HTTP %1$d）</string>
+    <string name="richtext_image_failed_unreachable">连不上图床，检查一下网络</string>
+    <string name="richtext_image_failed_timeout">连接图床超时</string>
+    <string name="richtext_image_failed_connection">连接中断</string>
     <string name="richtext_action_retry">重试</string>
+    <string name="richtext_action_open_in_browser">用浏览器打开</string>
     <string name="richtext_code_copied">代码已复制</string>
     <string name="richtext_action_copy">复制</string>
     <string name="richtext_quote_reply">@%1$s %2$s</string>

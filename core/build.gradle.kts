@@ -23,6 +23,10 @@ dependencies {
     // is a Compose question and belongs to the module that draws it.
     api(libs.coil.core)
 
+    // `implementation`: reading why a fetch failed means naming Coil's `HttpException`, but that type
+    // stops here — [ImageLoadFailure] is what leaves, and a consumer matches on that.
+    implementation(libs.coil.network.core)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 

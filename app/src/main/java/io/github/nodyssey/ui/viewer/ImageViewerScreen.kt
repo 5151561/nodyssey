@@ -62,9 +62,12 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import io.github.nodyssey.R
+import io.github.plaza.core.image.ImageLoadFailure
 import io.github.plaza.core.image.ImagesDeferredException
 import io.github.plaza.core.image.allowMeteredImage
+import io.github.plaza.core.image.diagnoseImageFailure
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.imageLoadFailureText
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import kotlin.math.abs
@@ -358,11 +361,13 @@ private fun ZoomableImage(
                     // [ImagesDeferredException]. Naming the switch is what helps, and the action
                     // then has to be one that works: fetching it anyway, not retrying a request the
                     // app will decline again.
-                    val deferred = (state as AsyncImagePainter.State.Error)
-                        .result.throwable is ImagesDeferredException
+                    val throwable = (state as AsyncImagePainter.State.Error).result.throwable
+                    val deferred = throwable is ImagesDeferredException
                     ImageFailure(
                         url = url,
                         deferred = deferred,
+                        // A skipped image has a reason already, and it is the sentence above.
+                        failure = if (deferred) null else diagnoseImageFailure(throwable),
                         onRetry = { if (deferred) allowMetered = true else retryToken++ },
                     )
                 }
@@ -391,8 +396,10 @@ private fun ZoomableImage(
 private fun ImageFailure(
     url: String,
     deferred: Boolean,
+    failure: ImageLoadFailure?,
     onRetry: () -> Unit,
 ) {
+    val reason = imageLoadFailureText(failure)
     Surface(
         color = VIEWER_ACTION_CONTAINER,
         contentColor = VIEWER_CONTENT,
@@ -417,6 +424,16 @@ private fun ImageFailure(
                     ),
                     style = MaterialTheme.typography.labelLarge,
                 )
+                // Why it failed, above which file failed: 重试 is on this card and the reason is what
+                // says whether it is worth pressing — a Cloudflare challenge will refuse it again, and
+                // 用浏览器打开 in the bar above is the way through.
+                if (reason != null) {
+                    Text(
+                        reason,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = VIEWER_SECONDARY_CONTENT,
+                    )
+                }
                 Text(
                     url.toFileName(),
                     style = MaterialTheme.typography.labelSmall,

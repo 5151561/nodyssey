@@ -82,8 +82,10 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import io.github.plaza.core.image.ImageLoadFailure
 import io.github.plaza.core.image.ImagesDeferredException
 import io.github.plaza.core.image.allowMeteredImage
+import io.github.plaza.core.image.diagnoseImageFailure
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.InlineStyle
 import io.github.plaza.core.richtext.RichNode
@@ -98,6 +100,7 @@ import io.github.plaza.designsys.component.WrapCell
 import io.github.plaza.designsys.component.WrapCellImage
 import io.github.plaza.designsys.component.WrapTable
 import io.github.plaza.designsys.component.asSpecTable
+import io.github.plaza.designsys.component.imageLoadFailureText
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberTerminalText
 import io.github.plaza.designsys.component.specTableFits
@@ -220,7 +223,7 @@ private fun RichBlockColumn(
             if (index > 0) Spacer(Modifier.height(blockSpacing(units[index - 1].last(), unit.first())))
             val images = unit.filterIsInstance<RichNode.BlockImage>()
             if (images.size > 1) {
-                ImageFlow(images = images, onImageClick = onImageClick)
+                ImageFlow(images = images, onImageClick = onImageClick, onLinkClick = onLinkClick)
             } else {
                 RichBlock(
                     node = unit.single(),
@@ -243,6 +246,7 @@ private fun RichBlockColumn(
 private fun ImageFlow(
     images: List<RichNode.BlockImage>,
     onImageClick: (String) -> Unit,
+    onLinkClick: (String) -> Unit,
 ) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -250,7 +254,7 @@ private fun ImageFlow(
         modifier = Modifier.fillMaxWidth(),
     ) {
         images.forEach { image ->
-            BlockImage(node = image, onImageClick = onImageClick)
+            BlockImage(node = image, onImageClick = onImageClick, onLinkClick = onLinkClick)
         }
     }
 }
@@ -317,7 +321,7 @@ private fun RichBlock(
                 onQuoteRefClick = onQuoteRefClick,
             )
 
-        is RichNode.BlockImage -> BlockImage(node = node, onImageClick = onImageClick)
+        is RichNode.BlockImage -> BlockImage(node = node, onImageClick = onImageClick, onLinkClick = onLinkClick)
 
         is RichNode.CodeBlock -> codeBlockContent(node)
 
@@ -611,12 +615,18 @@ private fun FoldBlock(
 private fun BlockImage(
     node: RichNode.BlockImage,
     onImageClick: (String) -> Unit,
+    onLinkClick: (String) -> Unit,
 ) {
     var naturalSize by remember(node.url) { mutableStateOf<IntSize?>(null) }
     var allowMetered by remember(node.url) { mutableStateOf(false) }
     var retryToken by remember(node.url) { mutableIntStateOf(0) }
     var phase by remember(node.url, allowMetered, retryToken) {
         mutableStateOf(InlineImagePhase.Loading)
+    }
+    // Keyed like `phase`, so a retry clears the last reason rather than showing it under the next
+    // attempt's spinner.
+    var failure by remember(node.url, allowMetered, retryToken) {
+        mutableStateOf<ImageLoadFailure?>(null)
     }
 
     val context = LocalContext.current
@@ -628,7 +638,11 @@ private fun BlockImage(
         }
 
         InlineImagePhase.Error -> {
-            InlineImageError(onRetry = { retryToken++ })
+            InlineImageError(
+                failure = failure,
+                onRetry = { retryToken++ },
+                onOpenInBrowser = { onLinkClick(node.url) },
+            )
             return
         }
 
@@ -696,10 +710,12 @@ private fun BlockImage(
                         }
                     },
                     onError = { error ->
-                        phase = if (error.result.throwable is ImagesDeferredException) {
-                            InlineImagePhase.Deferred
+                        val throwable = error.result.throwable
+                        if (throwable is ImagesDeferredException) {
+                            phase = InlineImagePhase.Deferred
                         } else {
-                            InlineImagePhase.Error
+                            failure = diagnoseImageFailure(throwable)
+                            phase = InlineImagePhase.Error
                         }
                     },
                     modifier =
@@ -761,31 +777,81 @@ private fun BlockImage(
     }
 }
 
+/**
+ * What is left where an image failed: what happened, and the two things worth trying.
+ *
+ * The reason line is the point. This used to say 图片加载失败 and offer 重试, which describes every
+ * failure identically and recommends the one action that cannot help the most common of them — an
+ * image host that answers the app with a Cloudflare challenge refuses the retry exactly as it
+ * refused the first request, while a browser is handed the picture. post-879848 is that case, and
+ * from inside the app it was indistinguishable from a dead link.
+ *
+ * 用浏览器打开 goes through the same link handler as any other link in the post, so the image opens
+ * wherever the reader's links open.
+ */
 @Composable
-private fun InlineImageError(onRetry: () -> Unit) {
+private fun InlineImageError(
+    failure: ImageLoadFailure?,
+    onRetry: () -> Unit,
+    onOpenInBrowser: () -> Unit,
+) {
+    val reason = imageLoadFailureText(failure)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(INLINE_IMAGE_LOADING_HEIGHT)
+            // A minimum rather than a fixed height: the reason line wraps on a narrow screen, and a
+            // fixed box would clip the buttons under it.
+            .heightIn(min = INLINE_IMAGE_LOADING_HEIGHT)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable(onClick = onRetry),
+            .padding(vertical = Spacing.sm),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            modifier = Modifier.padding(horizontal = Spacing.md),
         ) {
+            Icon(
+                imageVector = PlazaIcons.BrokenImage,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
+            )
             Text(
                 text = stringResource(R.string.richtext_image_load_failed),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
-            Text(
-                text = stringResource(R.string.richtext_action_retry),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            if (reason != null) {
+                Text(
+                    text = reason,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                Text(
+                    text = stringResource(R.string.richtext_action_retry),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable(onClick = onRetry)
+                        .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+                )
+                Text(
+                    text = stringResource(R.string.richtext_action_open_in_browser),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable(onClick = onOpenInBrowser)
+                        .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+                )
+            }
         }
     }
 }
