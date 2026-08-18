@@ -125,6 +125,8 @@ class SettingsScreenTest {
                     onUpdateCheckOnLaunchChange = {},
                     onUpdateDevChannelChange = {},
                     onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
                 )
             }
         }
@@ -153,6 +155,8 @@ class SettingsScreenTest {
                     onUpdateCheckOnLaunchChange = {},
                     onUpdateDevChannelChange = {},
                     onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
                 )
             }
         }
