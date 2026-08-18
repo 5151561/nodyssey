@@ -1,16 +1,19 @@
 package io.github.nodyssey.ui.postdetail
 
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import io.github.nodyssey.ThreadPreview
 import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostReactions
@@ -20,12 +23,14 @@ import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.math.absoluteValue
 
 /** Screen-level tests for the thread view, including the offline-first error behaviour. */
 @RunWith(RobolectricTestRunner::class)
@@ -106,6 +111,159 @@ class PostDetailScreenTest {
         composeRule.onNodeWithText("the opening post").assertIsDisplayed()
         composeRule.onNodeWithText("first reply").assertIsDisplayed()
         composeRule.onNodeWithText("second reply").assertIsDisplayed()
+    }
+
+    /**
+     * The loading state states what the list already knew, instead of standing in for it.
+     *
+     * Grey bars were the only honest thing this screen could draw back when nothing had told it any
+     * of this. Something has now — see `PostDetailKey.preview` — and this frame is also where the
+     * row's own title, avatar, name and board tag are flying to, so a placeholder here would be a
+     * flight to nowhere.
+     */
+    @Test
+    fun `the loading state states what the list already knew`() {
+        setScreen(
+            PostDetailUiState(
+                title = "a thread title",
+                preview =
+                ThreadPreview(
+                    title = "a thread title",
+                    authorName = "op",
+                    categoryTitle = "技术",
+                ),
+                isLoading = true,
+            ),
+        )
+
+        composeRule.onNodeWithText("a thread title").assertIsDisplayed()
+        composeRule.onNodeWithText("op").assertIsDisplayed()
+        composeRule.onNodeWithText("技术").assertIsDisplayed()
+    }
+
+    /** What a feed row hands over, and what the thread then draws before the network answers. */
+    private fun rowPreview() =
+        ThreadPreview(
+            title = "a thread title",
+            authorName = "op",
+            categoryTitle = "技术",
+            categorySlug = "tech",
+        )
+
+    /** Renders a thread opened from a feed row, still loading. */
+    private fun setThreadArriving(): MutableState<PostDetailUiState> {
+        val preview = rowPreview()
+        val state =
+            mutableStateOf(
+                PostDetailUiState(title = preview.title, preview = preview, isLoading = true),
+            )
+        composeRule.setContent {
+            PlazaTheme {
+                PostDetailScreen(
+                    state = state.value,
+                    postUrl = "https://www.nodeseek.com/post-1-1",
+                    onBack = {},
+                    onOpenBrowser = {},
+                    onImageClick = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                )
+            }
+        }
+        return state
+    }
+
+    /** The fetch answering: the same thread, now with its opening post. */
+    private fun MutableState<PostDetailUiState>.land() {
+        value =
+            value.copy(
+                isLoading = false,
+                body = content("the opening post", author = "op").copy(categoryTitle = "技术"),
+            )
+        composeRule.waitForIdle()
+    }
+
+    /**
+     * Unmerged throughout: once the thread arrives the author row becomes clickable and merges its
+     * avatar and name into one node, so the merged tree would answer about the block in one state
+     * and the bare text in the other, and compare two different things.
+     */
+    private fun nodeWithText(text: String) =
+        composeRule.onNodeWithText(text, useUnmergedTree = true)
+
+    /** The title, the board tag, the author's name, and the letter the avatar falls back to. */
+    private val travellers = listOf("a thread title", "技术", "op", "O")
+
+    /**
+     * The thread arriving must not replace the nodes the shared elements are landing on.
+     *
+     * This is the whole cause of a bug worth naming, because the symptom pointed elsewhere: with the
+     * loading state and the thread in two different subtrees, the four travelling things were
+     * disposed and re-composed the moment the fetch answered. Nothing about that is visible as a
+     * "rebuild" — what the reader saw was the avatar arriving, settling, and then flying a second
+     * time, sometimes up from below, because the shared-element machinery reads a new node under an
+     * old key as a fresh transition and animates it from wherever it was first measured.
+     *
+     * Semantics ids are the cheapest way to state "same node". They change when a node is composed
+     * again; they survive a modifier being added, which is what happens here when the author row
+     * becomes clickable.
+     */
+    @Test
+    fun `the thread arriving does not replace the nodes that flew in`() {
+        val state = setThreadArriving()
+        val before = travellers.associateWith { nodeWithText(it).fetchSemanticsNode().id }
+
+        state.land()
+
+        travellers.forEach {
+            assertEquals(
+                "$it was composed again when the thread arrived, so it flies a second time",
+                before[it],
+                nodeWithText(it).fetchSemanticsNode().id,
+            )
+        }
+    }
+
+    /**
+     * Where the loading state puts the four travelling things is where the thread puts them.
+     *
+     * The whole point of the flight is that it ends. If the loading state parked the avatar 24dp
+     * low — which it did, by laying the author row out in a padded column of its own instead of in
+     * the opening post's — then the reader watched it settle and then step, and the animation became
+     * a claim the layout went back on. Measured rather than reasoned about, because the two layouts
+     * live in one composable only by construction and nothing but a ruler notices when they drift.
+     */
+    @Test
+    fun `the loading state puts what is flying exactly where the thread will put it`() {
+        val state = setThreadArriving()
+        val before = travellers.associateWith { nodeWithText(it).getUnclippedBoundsInRoot() }
+
+        state.land()
+
+        travellers.forEach { text ->
+            val after = nodeWithText(text).getUnclippedBoundsInRoot()
+            assertEquals("$text moved sideways when the thread arrived", before[text]!!.left, after.left)
+            val moved = (before[text]!!.top - after.top).value.absoluteValue
+            /*
+             * A dp of slack, spent only on the author's name and only because of the harness.
+             *
+             * The name is centred against the line below it, so its position depends on how tall
+             * that line measures — and Robolectric's stub font ignores the style's `lineHeight`,
+             * which is what the placeholder is built from and what a real device honours. The other
+             * three are positioned by paddings and an avatar's size, which Robolectric gets right,
+             * so they are held to the dp.
+             */
+            val slack = if (text == "op") 1f else 0f
+            assertTrue("$text moved $moved dp down the screen when the thread arrived", moved <= slack)
+        }
+    }
+
+    /** Nothing told it anything, so the grey bars are still what it has to draw. */
+    @Test
+    fun `the loading state falls back to placeholders when no list opened the thread`() {
+        setScreen(PostDetailUiState(isLoading = true))
+
+        composeRule.onAllNodesWithText("op").assertCountEquals(0)
     }
 
     /**

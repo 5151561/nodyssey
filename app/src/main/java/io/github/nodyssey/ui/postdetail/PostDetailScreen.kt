@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -91,6 +92,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
+import io.github.nodyssey.ThreadPreview
 import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.model.PostContent
@@ -107,6 +109,10 @@ import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.RoleBadgeRow
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.sharedThreadAuthor
+import io.github.nodyssey.ui.common.sharedThreadAvatar
+import io.github.nodyssey.ui.common.sharedThreadBoard
+import io.github.nodyssey.ui.common.sharedThreadTitle
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.FloorReference
 import io.github.nodyssey.ui.composer.ReplyComposerHost
@@ -439,10 +445,18 @@ fun PostDetailScreen(
      * fetched like any other page, and [firstIndexOfPage] lands the scroll on the top of the list
      * rather than on that page's first floor, because the post is what was asked for.
      *
+     * "Genuinely absent" means floors arrived and the post was not among them — not merely that
+     * nothing has arrived yet. A thread still loading has no body either, and this used to offer the
+     * button to it; nobody saw that until the loading state started drawing the real header, at
+     * which point the button appeared for the length of the fetch and then vanished, dropping
+     * everything under it — including an avatar still settling out of its flight — by its own
+     * height.
+     *
      * Same answer the site gives — its title is a link to `/post-703863-1` — rather than a control of
      * our own, so a reader who knows the web knows this one.
      */
-    val openOriginalPost: (() -> Unit)? = if (state.body == null) ({ goToPage(1) }) else null
+    val openOriginalPost: (() -> Unit)? =
+        if (state.body == null && state.comments.isNotEmpty()) ({ goToPage(1) }) else null
 
     // Keyed on the pages themselves rather than on how many comments there are: a jump swaps one page
     // of ten floors for another page of ten floors, so a count would not change and the effect would
@@ -499,7 +513,18 @@ fun PostDetailScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             val error = state.error
             when {
-                !state.hasContent && state.isLoading -> ThreadSkeleton()
+                /*
+                 * Only where nothing told us anything about this thread — a notification, a deep
+                 * link, a cold start into a restored destination.
+                 *
+                 * A thread opened from a list does *not* come through here, even while it is still
+                 * loading. It goes straight to [ThreadList], which draws what the list already knew
+                 * and grey bars for the rest. Sending it here instead would put the loading state
+                 * and the thread in two different subtrees, and swapping one for the other disposes
+                 * the four shared elements mid-landing and flies them again.
+                 */
+                !state.hasContent && state.isLoading && state.preview == null ->
+                    UnopenedThreadSkeleton()
 
                 !state.hasContent && error != null ->
                     SiteErrorState(
@@ -530,7 +555,7 @@ fun PostDetailScreen(
                         BottomPullToRefreshBox(
                             isRefreshing = state.isRefreshingTail,
                             onRefresh = onRefreshTail,
-                            enabled = !state.hasNextPage && !state.isAppending,
+                            enabled = state.hasContent && !state.hasNextPage && !state.isAppending,
                             // Above the floating page bar rather than under it: that bar is expanded
                             // at exactly the moment this gesture becomes available.
                             indicatorBottomPadding = ThreadBottomBarRoom,
@@ -898,51 +923,69 @@ private fun ThreadList(
         item(key = "title") {
             ThreadHeader(
                 title = state.title,
+                postId = state.postId,
                 body = state.body,
                 isAwarded = state.isAwarded,
+                preview = state.preview,
                 onOpenOriginalPost = onOpenOriginalPost,
             )
         }
 
-        state.body?.let { body ->
-            item(key = "body") {
-                BlockAware(content = body, revealed = state.showBlockedContent) {
-                    OriginalPost(
-                        body = body,
-                        onOpenBrowser = onOpenBrowser,
-                        onImageClick = onImageClick,
-                        onJumpToFloor = onJumpToFloor,
-                        pendingReaction = state.pendingReactionFor(body),
-                        onReact = { action -> onReact(body, action) },
-                        onAuthorClick = onAuthorClick,
-                        // The opening post is always on page 1, wherever the reader currently is.
-                        onEdit = body.commentId
-                            ?.takeIf { body.isMine }
-                            ?.let { id ->
-                                {
-                                    onEditFloor(
-                                        PostEditTarget(
-                                            postId = state.postId,
-                                            commentId = id,
-                                            page = 1,
-                                            isOpeningPost = true,
-                                        ),
-                                    )
-                                }
-                            },
-                        collected = state.collected,
-                        collectionCount = state.collectionCount,
-                        collectPending = state.collectPending,
-                        onCollect = onCollect,
-                        voteContent = voteContent,
-                        stardustContent = stardustContent,
-                    )
-                }
-            }
+        /*
+         * Present whether or not the thread has arrived — which is the whole reason this is one item
+         * and not an `item` guarded by `state.body != null`.
+         *
+         * The avatar and the author's name inside it are shared elements, still settling out of
+         * their flight from a feed row while the thread is on its way. A guard here would dispose
+         * them the instant the body landed and compose fresh ones in a new subtree; the
+         * shared-element machinery reads that as a *second* transition and flies them again, from
+         * wherever the new node happened to be measured first. Same call site, changing arguments,
+         * and nothing moves. See [ThreadOpeningPost].
+         */
+        item(key = "body") {
+            val body = state.body
+            ThreadOpeningPost(
+                body = body,
+                preview = state.preview,
+                postId = state.postId,
+                showBlockedContent = state.showBlockedContent,
+                onOpenBrowser = onOpenBrowser,
+                onImageClick = onImageClick,
+                onJumpToFloor = onJumpToFloor,
+                pendingReaction = body?.let { state.pendingReactionFor(it) },
+                onReact = { action -> body?.let { onReact(it, action) } },
+                onAuthorClick = onAuthorClick,
+                // The opening post is always on page 1, wherever the reader currently is.
+                onEdit = body?.commentId
+                    ?.takeIf { body.isMine }
+                    ?.let { id ->
+                        {
+                            onEditFloor(
+                                PostEditTarget(
+                                    postId = state.postId,
+                                    commentId = id,
+                                    page = 1,
+                                    isOpeningPost = true,
+                                ),
+                            )
+                        }
+                    },
+                collected = state.collected,
+                collectionCount = state.collectionCount,
+                collectPending = state.collectPending,
+                onCollect = onCollect,
+                voteContent = voteContent,
+                stardustContent = stardustContent,
+            )
         }
 
-        item(key = "comments-header") {
-            CommentsHeader(count = state.comments.size)
+        if (state.hasContent) {
+            item(key = "comments-header") {
+                CommentsHeader(count = state.comments.size)
+            }
+        } else {
+            // "共 0 条回复" would be a claim, and nobody has counted yet.
+            item(key = "comments-skeleton") { CommentSkeletons() }
         }
 
         itemsIndexed(
@@ -1065,8 +1108,14 @@ private fun TextStyle.hangLeadingPunctuation(text: String): TextStyle =
 @Composable
 private fun ThreadHeader(
     title: String,
+    postId: Long,
     body: PostContent?,
     isAwarded: Boolean,
+    /**
+     * What the list that opened this thread already said about it, drawn wherever [body] cannot yet.
+     * See [io.github.nodyssey.PostDetailKey.preview].
+     */
+    preview: ThreadPreview?,
     /** Fetches page 1 and scrolls to the opening post; null when it is already the item below. */
     onOpenOriginalPost: (() -> Unit)? = null,
 ) {
@@ -1086,6 +1135,10 @@ private fun ThreadHeader(
             text = title,
             style = PostTitle.hangLeadingPunctuation(title),
             color = MaterialTheme.colorScheme.onSurface,
+            // Where the row's title lands. This header is also what the skeleton draws while the
+            // thread loads, so the landing place exists from the first frame of the flight rather
+            // than appearing once the network answers.
+            modifier = Modifier.sharedThreadTitle(postId),
         )
         FlowRow(
             modifier = Modifier.padding(top = 10.dp),
@@ -1093,7 +1146,15 @@ private fun ThreadHeader(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             itemVerticalAlignment = Alignment.CenterVertically,
         ) {
-            BoardTag(title = body?.categoryTitle, slug = null)
+            // The slug comes from the preview even once the body has arrived: the thread page's
+            // own markup carries the board's name but not its slug, and the tag colours read the
+            // slug first. Without it a tag would change colour under the reader the moment the
+            // network answered — and it is the same tag, still in flight from the row.
+            BoardTag(
+                title = body?.categoryTitle ?: preview?.categoryTitle,
+                slug = preview?.categorySlug,
+                modifier = Modifier.sharedThreadBoard(postId),
+            )
             // A labelled tag rather than the list's diamond: here there is room to name the thing, and
             // the site marks a post page differently too — a gold corner over the opening post, which
             // has no place in a layout whose left edge every floor shares.
@@ -1131,15 +1192,76 @@ private fun ThreadHeader(
 }
 
 /**
- * The opening post, laid out flat like every other floor.
+ * Who wrote a thread, at the size the opening post states it.
+ *
+ * Extracted because the loading state draws it too, from what the list already knew, and the two
+ * have to agree to the pixel: the avatar and the name are mid-flight from a feed row when the
+ * loading state is on screen, and they land again — without moving — when the thread replaces it.
+ * Two hand-matched copies of this geometry would drift, and the drift would show as a twitch at the
+ * exact moment the reader is watching.
+ */
+@Composable
+private fun ThreadAuthorRow(
+    postId: Long,
+    avatarUrl: String?,
+    authorName: String,
+    modifier: Modifier = Modifier,
+    badges: @Composable RowScope.() -> Unit = {},
+    subtitle: @Composable () -> Unit = {},
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        modifier = modifier,
+    ) {
+        UserAvatar(
+            url = avatarUrl,
+            name = authorName,
+            size = Sizes.avatarOriginalPost,
+            modifier = Modifier.sharedThreadAvatar(postId),
+        )
+        Column(Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = authorName,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .sharedThreadAuthor(postId),
+                )
+                badges()
+            }
+            subtitle()
+        }
+    }
+}
+
+/**
+ * The opening post, laid out flat like every other floor — and, before it arrives, the part of it
+ * the list that opened this thread already knew.
  *
  * It used to sit in a rounded container, which cost two levels of horizontal inset and boxed in the
  * long bodies this forum is full of. The larger avatar, the bodyLarge text and the comments header
  * below already mark it as the opening post, so the container was only spending width.
+ *
+ * A null [body] is the thread still loading, and this draws it rather than handing the screen over
+ * to a separate skeleton, because the avatar and the author's name here are shared elements landing
+ * out of a flight from a feed row. Two composables would mean two sets of nodes, and swapping one
+ * for the other the moment the body arrived would look to the shared-element machinery like a fresh
+ * transition — it would fly them a second time, from wherever the replacement was first measured.
+ * One call site whose arguments change is the whole fix: nothing is disposed, so nothing moves.
  */
 @Composable
-private fun OriginalPost(
-    body: PostContent,
+private fun ThreadOpeningPost(
+    body: PostContent?,
+    preview: ThreadPreview?,
+    postId: Long,
+    showBlockedContent: Boolean,
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
@@ -1156,6 +1278,16 @@ private fun OriginalPost(
     voteContent: @Composable (Long) -> Unit,
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
 ) {
+    // [BlockAware]'s job, done here rather than around this composable: a wrapper that swapped the
+    // whole opening post out would take the shared elements with it, which is the thing this
+    // arrangement exists to prevent. A blocked author is the one case where they *should* go — the
+    // point of blocking is that the name and the face are not shown.
+    var revealedHere by rememberSaveable(body?.commentId) { mutableStateOf(false) }
+    if (body != null && body.isBlocked && !showBlockedContent && !revealedHere) {
+        BlockedFloorRow(floor = body.floor, onShow = { revealedHere = true })
+        return
+    }
+
     Column(
         modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = 12.dp),
     ) {
@@ -1164,36 +1296,29 @@ private fun OriginalPost(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             // The identity block opens the author's space; the floor label stays outside it.
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ThreadAuthorRow(
+                postId = postId,
+                avatarUrl = body?.avatarUrl ?: preview?.avatarUrl,
+                authorName = body?.authorName ?: preview?.authorName.orEmpty(),
                 modifier = Modifier
                     .weight(1f)
-                    .authorClickable(body.authorUid, onAuthorClick),
+                    .authorClickable(body?.authorUid, onAuthorClick),
+                badges = { if (body != null) FloorBadges(body) },
+                // A bar the height of the line, until there is a time to put in it. The list knows
+                // when the thread was last active, which is not when it was posted.
+                subtitle = { if (body != null) FloorTimeLine(body) else MetaLinePlaceholder() },
+            )
+            body?.floor?.let { FloorLabel(it) }
+        }
+
+        if (body == null) {
+            Column(
+                modifier = Modifier.padding(top = Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                UserAvatar(
-                    url = body.avatarUrl,
-                    name = body.authorName,
-                    size = Sizes.avatarOriginalPost,
-                )
-                Column(Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(
-                            text = body.authorName,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        FloorBadges(body)
-                    }
-                    FloorTimeLine(body)
-                }
+                listOf(0.98f, 0.94f, 0.99f, 0.62f).forEach { SkeletonBar(it, 14.dp) }
             }
-            body.floor?.let { FloorLabel(it) }
+            return
         }
 
         if (body.nodes.isEmpty()) {
@@ -1805,11 +1930,40 @@ private fun PostDetailUiState.firstIndexOfPage(page: Int): Int? {
     return headerItemCount + position
 }
 
-/** The detail-screen skeleton: a title block, a body, and the first few replies. */
+/**
+ * A bar standing in for the posting time, in a box exactly as tall as the line it replaces.
+ *
+ * The height matters and the bar's own does not: the author's name is centred against this column,
+ * so a placeholder even a dp off centres the name a dp high and drops it into place the moment the
+ * thread arrives — one visible step, in an element the reader has just watched fly across the
+ * screen.
+ *
+ * The height comes from the style the real line is drawn in, so it follows the reading-size
+ * preference along with the text it stands in for. A single-line [MetaText] is exactly its style's
+ * `lineHeight` tall.
+ */
 @Composable
-private fun ThreadSkeleton(modifier: Modifier = Modifier) {
+private fun MetaLinePlaceholder() {
+    val lineHeight = with(LocalDensity.current) {
+        MaterialTheme.typography.labelSmall.lineHeight.toDp()
+    }
+    Box(Modifier.height(lineHeight), contentAlignment = Alignment.CenterStart) {
+        SkeletonBar(0.22f, 10.dp)
+    }
+}
+
+/**
+ * The skeleton for a thread nothing told us anything about — a notification, a deep link, a cold
+ * start straight into a restored destination.
+ *
+ * Grey all the way down, because grey is the only honest thing this screen can draw when it is
+ * holding no facts. Nothing is in flight either, so unlike its sibling above this one owes the
+ * final layout nothing.
+ */
+@Composable
+private fun UnopenedThreadSkeleton() {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -1833,6 +1987,17 @@ private fun ThreadSkeleton(modifier: Modifier = Modifier) {
             }
         }
         listOf(0.98f, 0.94f, 0.99f, 0.62f).forEach { SkeletonBar(it, 14.dp) }
+        CommentSkeletons()
+    }
+}
+
+/** The band and the first few reply stubs under the opening post. Grey either way. */
+@Composable
+private fun CommentSkeletons() {
+    Column(
+        modifier = Modifier.padding(horizontal = Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -1989,7 +2154,7 @@ private fun List<RichNode>.imageUrls(): List<String> =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post detail · skeleton")
 @Composable
 private fun PostDetailSkeletonPreview() {
-    PlazaTheme { ThreadSkeleton() }
+    PlazaTheme { UnopenedThreadSkeleton() }
 }
 
 @Suppress("UnusedPrivateMember")

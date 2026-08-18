@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nodyssey.ThreadPreview
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.NoReadingPositions
@@ -54,6 +55,13 @@ class PostDetailViewModel(
     /** The page a `/post-703863-4` link named, when the thread was opened from one. */
     private val initialPage: Int? = null,
     /**
+     * What the list that opened this thread already knew — see [io.github.nodyssey.PostDetailKey.preview].
+     *
+     * Held rather than merely seeded, because Room answers "nothing cached" for a thread nobody has
+     * opened before and the state that answer clears would otherwise take this with it.
+     */
+    private val preview: ThreadPreview? = null,
+    /**
      * 临时显示被屏蔽内容.
      *
      * A floor the site marked blocked is downloaded and cached like any other, so revealing is a
@@ -64,7 +72,15 @@ class PostDetailViewModel(
     /** Where this thread was left off last time, and where this read's own place is written. */
     private val readingPositions: ReadingPositionStore = NoReadingPositions,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(PostDetailUiState(postId = postId))
+    private val _uiState =
+        MutableStateFlow(
+            PostDetailUiState(
+                postId = postId,
+                title = preview?.title.orEmpty(),
+                isAwarded = preview?.isAwarded == true,
+                preview = preview,
+            ),
+        )
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
 
     private var loadJob: Job? = null
@@ -98,7 +114,7 @@ class PostDetailViewModel(
                     // before the floors it named could possibly have arrived.
                     _uiState.update {
                         it.copy(
-                            title = "",
+                            title = preview?.title.orEmpty(),
                             body = null,
                             comments = emptyList(),
                             commentPages = emptyList(),
@@ -108,7 +124,7 @@ class PostDetailViewModel(
                             hasNextPage = false,
                             collected = null,
                             collectionCount = null,
-                            isAwarded = false,
+                            isAwarded = preview?.isAwarded == true,
                         )
                     }
                     return@collect
@@ -518,6 +534,7 @@ class PostDetailViewModel(
             postId: Long,
             initialFloor: String? = null,
             initialPage: Int? = null,
+            preview: ThreadPreview? = null,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -527,6 +544,7 @@ class PostDetailViewModel(
                         container.sessionRepository.state,
                         initialFloor,
                         initialPage,
+                        preview,
                         container.settingsRepository.showBlockedContent,
                         container.readingPositionStore,
                     )
@@ -547,6 +565,11 @@ data class PostDetailUiState(
     /** The thread on screen. Zero only in the default state, which is never rendered with content. */
     val postId: Long = 0,
     val title: String = "",
+    /**
+     * What the list that opened this thread said about it, or null when nothing opened it from a
+     * list. Drawn wherever [body] cannot yet — see [io.github.nodyssey.PostDetailKey.preview].
+     */
+    val preview: ThreadPreview? = null,
     val body: PostContent? = null,
     val comments: List<PostContent> = emptyList(),
     /** The site page each comment came from, index-aligned with [comments]. */

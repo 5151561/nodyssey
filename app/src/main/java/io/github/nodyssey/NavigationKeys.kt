@@ -117,13 +117,55 @@ data class MessageThreadKey(
  * [floor] is what a notification or a quote knows — the site labels floors and leaves their page
  * implicit — and [page] is what a `/post-703863-4` link knows. Either one makes the detail screen
  * start there instead of at page 1; [floor] wins, being the more precise of the two.
+ *
+ * [preview] travels for the same reason [MessageThreadKey.userName] does: the list that opened this
+ * already knew it, and a round trip to say it again leaves the screen blank meanwhile. Null exactly
+ * where there was no row to carry it — a deep link, a notification, the composer returning a post
+ * that did not exist a moment ago.
  */
 @Serializable
 data class PostDetailKey(
     val postId: Long,
     val floor: String? = null,
     val page: Int? = null,
+    val preview: ThreadPreview? = null,
 ) : NavKey
+
+/**
+ * What a list row already knows about the thread it opens.
+ *
+ * Every field here is drawn twice — once in the row, once at the top of the thread — which is what
+ * makes it worth carrying rather than re-fetching. Two things follow from having it:
+ *
+ * - The thread states these before the network answers, instead of four grey bars standing in for
+ *   facts the app was already holding.
+ * - They are what the row's own title, avatar, name and board tag fly into. A shared element needs
+ *   something at the far end on the *first* frame of the flight, and on that frame the thread has
+ *   nothing of its own; see [io.github.nodyssey.ui.common.LocalThreadTransition].
+ *
+ * Deliberately not the whole [io.github.nodyssey.model.PostSummary]: this goes in a navigation key,
+ * which is serialized into saved state and survives process death, so it holds what the thread will
+ * actually draw and nothing else. The reply count, the view count and 最后活跃 are facts about the
+ * row, not about the thread, and the thread never shows them.
+ */
+@Serializable
+data class ThreadPreview(
+    val title: String,
+    val authorName: String,
+    val avatarUrl: String? = null,
+    val categoryTitle: String? = null,
+    val categorySlug: String? = null,
+    /**
+     * Carried although the thread draws it differently from the row — a labelled 推荐阅读 tag rather
+     * than the row's diamond, so the two never travel into one another.
+     *
+     * It is here for a duller reason: the tag sits in the same wrapping row as the board tag, and a
+     * loading state that did not know about it would size that row for two items and then find
+     * three. Everything below — the avatar and the author's name, still settling out of their
+     * flight — would step down as it re-wrapped.
+     */
+    val isAwarded: Boolean = false,
+)
 
 /**
  * A user's space.
