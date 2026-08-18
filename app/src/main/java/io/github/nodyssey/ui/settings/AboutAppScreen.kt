@@ -175,6 +175,15 @@ fun AboutAppScreen(
                 external = true,
                 onClick = { onOpenUri(AppLinks.ISSUES) },
             )
+            // Sms rather than the Campaign a broadcast channel would ordinarily take: 问题反馈 two rows
+            // up already has that icon, and two identical megaphones on one screen tell nobody apart.
+            AboutActionRow(
+                title = stringResource(R.string.about_app_channel),
+                subtitle = stringResource(R.string.about_app_channel_hint),
+                icon = PlazaIcons.Sms,
+                external = true,
+                onClick = { onOpenUri(AppLinks.TELEGRAM_CHANNEL) },
+            )
             AboutActionRow(
                 title = stringResource(R.string.about_app_group),
                 subtitle = stringResource(R.string.about_app_group_hint),
@@ -501,11 +510,23 @@ internal object AppLinks {
     const val RELEASES = "https://github.com/5151561/nodyssey/releases"
 
     /**
+     * The project's own Telegram channel — where `release.yml` posts every build.
+     *
+     * One-way, so it is the row for people who only want to hear that a version exists; [TELEGRAM_GROUP]
+     * is the one where anything is discussed back.
+     */
+    const val TELEGRAM_CHANNEL = "https://t.me/nodyssey_official"
+
+    /**
      * The project's own Telegram group — Nodyssey's, not the forum's.
      *
      * NodeSeek's channel and group are on 关于 · 社区 under [CommunityLinks]; this one is where the app
      * itself is discussed, so it belongs beside 项目主页 and 问题反馈 instead. The invite link is the
      * published form of it: the group has no public username to link by name.
+     *
+     * Deliberately *not* the invite link the README publishes, and the two must not be merged: Telegram
+     * counts joins per invite link, and keeping this one to itself is what makes "came in from the app"
+     * a number that can be read at all.
      */
     const val TELEGRAM_GROUP = "https://t.me/+0mY1RaPADJMwNTdl"
 }

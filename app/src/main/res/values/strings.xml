@@ -379,6 +379,8 @@
     <string name="about_project_home">项目主页</string>
     <string name="about_feedback">问题反馈</string>
     <string name="about_feedback_hint">提 GitHub Issue 或站内私信开发者</string>
+    <string name="about_app_channel">Telegram 官方频道</string>
+    <string name="about_app_channel_hint">新版本发布和更新说明</string>
     <string name="about_app_group">Telegram 官方群组</string>
     <string name="about_app_group_hint">聊 Nodyssey、报 bug、看 dev 版动静</string>
     <string name="about_changelog">更新日志</string>
