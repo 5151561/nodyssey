@@ -635,6 +635,19 @@ object PlazaIcons {
         )
     }
 
+    /**
+     * 回复数 on a list row: the speech bubble, filled, so it still reads as a shape at 13sp.
+     *
+     * [Reply]'s arrow is the *action*; this is the *count*. Drawing the count with the action's
+     * glyph would offer a tap the row does not have.
+     */
+    val ModeComment: ImageVector by lazy {
+        materialIcon(
+            name = "ModeComment",
+            pathData = "M20,2H4C2.9,2 2,2.9 2,4v18l4,-4h14c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2z",
+        )
+    }
+
     /** Material's `apps` grid — the editors' menu of things a forum can embed in a post. */
     val Apps: ImageVector by lazy {
         materialIcon(

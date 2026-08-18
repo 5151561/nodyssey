@@ -4,15 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.plaza.designsys.theme.LocalPlazaFontScale
 
 /**
  * A small tonal label — a board name, a category, a tag.
@@ -35,17 +38,42 @@ fun TonalTag(
 
     Text(
         text = text,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        fontWeight = FontWeight.Medium,
+        style = LocalTextStyle.current.merge(tonalTagTextStyle()),
         color = contentColor,
         modifier =
         modifier
             .clip(RoundedCornerShape(6.dp))
             .background(containerColor)
-            .padding(horizontal = 7.dp, vertical = 1.dp),
+            .padding(horizontal = 7.dp, vertical = TonalTagVerticalPadding),
     )
 }
+
+/**
+ * The tag's type, as a style rather than three arguments.
+ *
+ * Named because a tag is the tallest thing on a list row's meta line, so anything that has to line
+ * up with the bottom of that line — [listAvatarSize] — has to be able to measure one. Three inline
+ * arguments cannot be measured, and a copy of them drifts the first time one is edited.
+ *
+ * 11sp sits between `labelSmall` and nothing, so it is declared here rather than read from the type
+ * scale — which is also why it has to apply the reading-size preference by hand. A tag that stayed
+ * put while the meta line beside it grew would be the one thing on the row that did not move.
+ */
+@Composable
+fun tonalTagTextStyle(): TextStyle {
+    val scale = LocalPlazaFontScale.current
+    return TextStyle(
+        fontSize = TONAL_TAG_FONT_SIZE * scale,
+        lineHeight = TONAL_TAG_LINE_HEIGHT * scale,
+        fontWeight = FontWeight.Medium,
+    )
+}
+
+private val TONAL_TAG_FONT_SIZE = 11.sp
+private val TONAL_TAG_LINE_HEIGHT = 16.sp
+
+/** The half of the pill that is not text, per edge. Same reason as [TonalTagTextStyle]. */
+val TonalTagVerticalPadding = 1.dp
 
 /**
  * How loudly a [BadgeChip] speaks.

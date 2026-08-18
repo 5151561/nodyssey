@@ -53,6 +53,7 @@ import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -144,7 +145,7 @@ private fun ConversationRow(
         if (conversation.isSystem) {
             Box(
                 Modifier
-                    .size(AVATAR)
+                    .size(listAvatarSize())
                     .clip(AvatarShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center,
@@ -159,7 +160,7 @@ private fun ConversationRow(
             UserAvatar(
                 url = conversation.avatarUrl,
                 name = conversation.userName,
-                size = AVATAR,
+                size = listAvatarSize(),
             )
         }
 
@@ -346,7 +347,7 @@ private fun NewConversationSheet(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                UserAvatar(url = user.avatarUrl, name = user.name, size = 34.dp)
+                                UserAvatar(url = user.avatarUrl, name = user.name, size = listAvatarSize())
                                 Text(user.name, style = MaterialTheme.typography.bodyLarge)
                             }
                         }
@@ -356,7 +357,6 @@ private fun NewConversationSheet(
     }
 }
 
-private val AVATAR = 44.dp
 private val FAB_CLEARANCE = 88.dp
 private const val MAX_UNREAD = 99
 

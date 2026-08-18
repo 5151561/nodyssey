@@ -100,6 +100,7 @@ import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -799,7 +800,7 @@ private fun UserResults(
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                UserAvatar(url = user.avatarUrl, name = user.name, size = 40.dp)
+                UserAvatar(url = user.avatarUrl, name = user.name, size = listAvatarSize())
                 Column(Modifier.weight(1f).padding(horizontal = Spacing.md)) {
                     Text(user.name, fontWeight = FontWeight.SemiBold)
                     Text(

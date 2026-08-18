@@ -22,6 +22,18 @@ import androidx.compose.ui.platform.LocalContext
  */
 val LocalPlazaDarkTheme = staticCompositionLocalOf { false }
 
+/**
+ * The in-app reading-size preference, for the few things that are sized in `sp` but are not text.
+ *
+ * [plazaTypography] carries the scale for everything written in a Material role. What it cannot
+ * reach is type declared outside the scale — the board tag, which sits between `labelSmall` and
+ * nothing — and the icons that stand in for words on a meta line, which have to grow with the
+ * number beside them or the row stops reading as one line. Those read the scale from here.
+ *
+ * Already clamped: a caller multiplies rather than re-deciding the bounds.
+ */
+val LocalPlazaFontScale = staticCompositionLocalOf { 1f }
+
 @Composable
 fun PlazaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -46,6 +58,7 @@ fun PlazaTheme(
     CompositionLocalProvider(
         LocalPlazaExtraColors provides if (darkTheme) DarkExtraColors else LightExtraColors,
         LocalPlazaDarkTheme provides darkTheme,
+        LocalPlazaFontScale provides fontScale.coerceIn(MIN_TYPE_SCALE, MAX_TYPE_SCALE),
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
