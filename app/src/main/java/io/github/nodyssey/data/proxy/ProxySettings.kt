@@ -1,6 +1,5 @@
 package io.github.nodyssey.data.proxy
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -8,8 +7,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import io.github.nodyssey.data.security.KeystoreSecretCipher
 import io.github.nodyssey.data.security.SecretCipher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -70,8 +67,6 @@ fun ProxyConfig.problem(): ProxyConfigProblem? {
     return null
 }
 
-private val Context.proxyDataStore: DataStore<Preferences> by preferencesDataStore(name = "proxy")
-
 private object ProxyKeys {
     val ENABLED = booleanPreferencesKey("enabled")
     val TYPE = stringPreferencesKey("type")
@@ -100,11 +95,9 @@ interface ProxySettings {
  * thing that happens when the user has not typed one.
  */
 class DataStoreProxySettings(
-    context: Context,
-    private val cipher: SecretCipher = KeystoreSecretCipher(),
+    private val dataStore: DataStore<Preferences>,
+    private val cipher: SecretCipher,
 ) : ProxySettings {
-    private val dataStore = context.applicationContext.proxyDataStore
-
     override val config: Flow<ProxyConfig> = dataStore.data
         .catch { throwable -> if (throwable is IOException) emit(emptyPreferences()) else throw throwable }
         .map { preferences ->

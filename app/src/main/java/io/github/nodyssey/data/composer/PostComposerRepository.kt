@@ -1,11 +1,9 @@
 package io.github.nodyssey.data.composer
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.PostListParser
 import io.github.nodyssey.core.html.Selectors
@@ -38,10 +36,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.util.UUID
-
-private val Context.postComposerDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "post-composer",
-)
 
 /** User-authored draft and publish contract for the native post editor. */
 @Serializable
@@ -153,12 +147,11 @@ interface PostComposerRepository {
 }
 
 class DefaultPostComposerRepository(
-    context: Context,
+    private val dataStore: DataStore<Preferences>,
     private val okHttpClient: OkHttpClient,
     private val dispatchers: AppDispatchers,
     private val clock: AppClock,
 ) : PostComposerRepository {
-    private val dataStore = context.applicationContext.postComposerDataStore
     private val json = Json { ignoreUnknownKeys = true }
 
     override val draft: Flow<PostDraft?> = dataStore.data.map { preferences ->

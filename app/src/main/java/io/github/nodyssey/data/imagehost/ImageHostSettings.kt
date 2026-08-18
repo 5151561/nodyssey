@@ -1,6 +1,5 @@
 package io.github.nodyssey.data.imagehost
 
-import android.content.Context
 import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
@@ -8,52 +7,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import io.github.nodyssey.data.security.KeystoreSecretCipher
 import io.github.nodyssey.data.security.SecretCipher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
-
-/**
- * Which host is selected, and the credentials for each.
- *
- * All six live in one store, keyed by [ImageHostProvider.id], so switching hosts does not mean
- * re-pasting a token: the one that was there before is still there when the user switches back.
- * That is the whole reason the configs are kept per provider rather than as a single current record.
- *
- * Nothing here leaves the device — except that a DataStore file is part of the cloud backup, which
- * `data_extraction_rules.xml` only holds the Room database and the WebView cookies out of. So the
- * credentials go in encrypted: see [ImageHostSecretKeys] for which values those are and
- * [io.github.nodyssey.data.security.SecretCipher] for what encrypted means here. These are the user's
- * own credentials on services this app does not run, and the only place they are ever sent is the
- * host they belong to.
- */
-private val Context.imageHostDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "imagehost",
-    produceMigrations = { context ->
-        listOf(
-            LegacyNodeImageKeyMigration {
-                context.legacyNodeImageDataStore.data.first()[LEGACY_NODE_IMAGE_KEY]
-            },
-            // After the one above, not before: the key it copies in arrives in plaintext, and this is
-            // what turns it into ciphertext on the same first read.
-            ImageHostSecretEncryptionMigration(KeystoreSecretCipher()),
-        )
-    },
-)
-
-/**
- * Where the NodeImage key lived when nodeimage.com was the only host the app could talk to.
- *
- * Kept declared for exactly one reason: [LegacyNodeImageKeyMigration] reads it once. Deleting the
- * declaration would make every existing install look like a fresh one with no host connected.
- */
-private val Context.legacyNodeImageDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "nodeimage",
-)
 
 /**
  * Carries a pre-existing NodeImage key into the multi-host store, once.
@@ -85,7 +43,13 @@ internal class LegacyNodeImageKeyMigration(
     override suspend fun cleanUp() = Unit
 }
 
-private val LEGACY_NODE_IMAGE_KEY = stringPreferencesKey("api-key")
+/**
+ * Where the NodeImage key lived when nodeimage.com was the only host the app could talk to.
+ *
+ * Named here rather than at the store that still holds it, because [LegacyNodeImageKeyMigration] is
+ * the only reader left and this is the file that says why the read happens at all.
+ */
+internal val LEGACY_NODE_IMAGE_KEY = stringPreferencesKey("api-key")
 
 internal object ImageHostKeys {
     val SELECTED = stringPreferencesKey("selected")
@@ -160,13 +124,25 @@ interface ImageHostSettings {
     suspend fun disconnect(provider: ImageHostProvider)
 }
 
+/**
+ * Which host is selected, and the credentials for each.
+ *
+ * All six live in one store, keyed by [ImageHostProvider.id], so switching hosts does not mean
+ * re-pasting a token: the one that was there before is still there when the user switches back.
+ * That is the whole reason the configs are kept per provider rather than as a single current record.
+ *
+ * Nothing here leaves the device — except that a DataStore file is part of the cloud backup, which
+ * `data_extraction_rules.xml` only holds the Room database and the WebView cookies out of. So the
+ * credentials go in encrypted: see [ImageHostSecretKeys] for which values those are and
+ * [io.github.nodyssey.data.security.SecretCipher] for what encrypted means here. These are the user's
+ * own credentials on services this app does not run, and the only place they are ever sent is the
+ * host they belong to.
+ */
 class DataStoreImageHostSettings(
-    context: Context,
+    private val dataStore: DataStore<Preferences>,
     /** The same cipher [ImageHostSecretEncryptionMigration] runs with, unless a test says otherwise. */
-    private val cipher: SecretCipher = KeystoreSecretCipher(),
+    private val cipher: SecretCipher,
 ) : ImageHostSettings {
-    private val dataStore = context.applicationContext.imageHostDataStore
-
     private val preferences: Flow<Preferences> = dataStore.data
         .catch { throwable -> if (throwable is IOException) emit(emptyPreferences()) else throw throwable }
 

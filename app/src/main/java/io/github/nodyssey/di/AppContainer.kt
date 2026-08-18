@@ -3,7 +3,6 @@ package io.github.nodyssey.di
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
 import coil3.SingletonImageLoader
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.NodysseyRelease
@@ -70,6 +69,7 @@ import io.github.nodyssey.data.proxy.DataStoreProxySettings
 import io.github.nodyssey.data.proxy.NetworkProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
+import io.github.nodyssey.data.security.KeystoreSecretCipher
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.update.ApkInstaller
@@ -180,10 +180,6 @@ interface AppContainer {
     val proxyConnectionTester: ProxyConnectionTester
 }
 
-private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "settings",
-)
-
 class DefaultAppContainer(
     context: Context,
     override val dispatchers: AppDispatchers = AppDispatchers(),
@@ -211,7 +207,9 @@ class DefaultAppContainer(
      */
     private val appScope = CoroutineScope(SupervisorJob() + dispatchers.default)
 
-    override val proxySettings: ProxySettings by lazy { DataStoreProxySettings(appContext) }
+    override val proxySettings: ProxySettings by lazy {
+        DataStoreProxySettings(appContext.proxyDataStore, KeystoreSecretCipher())
+    }
 
     /**
      * One pool behind all three clients.
@@ -336,7 +334,7 @@ class DefaultAppContainer(
     }
 
     override val postComposerRepository: PostComposerRepository by lazy {
-        DefaultPostComposerRepository(appContext, okHttpClient, dispatchers, clock)
+        DefaultPostComposerRepository(appContext.postComposerDataStore, okHttpClient, dispatchers, clock)
     }
 
     override val accountSettingsRepository: AccountSettingsRepository by lazy {
@@ -390,7 +388,7 @@ class DefaultAppContainer(
     }
 
     override val commentComposerRepository: CommentComposerRepository by lazy {
-        DefaultCommentComposerRepository(appContext, okHttpClient, dispatchers, clock)
+        DefaultCommentComposerRepository(appContext.commentComposerDataStore, okHttpClient, dispatchers, clock)
     }
 
     override val postEditor: PostEditor by lazy {
@@ -443,7 +441,7 @@ class DefaultAppContainer(
 
     override val imageHostRepository: ImageHostRepository by lazy {
         DefaultImageHostRepository(
-            settings = DataStoreImageHostSettings(appContext),
+            settings = DataStoreImageHostSettings(appContext.imageHostDataStore, KeystoreSecretCipher()),
             http = imageHostClient,
             dispatchers = dispatchers,
         )

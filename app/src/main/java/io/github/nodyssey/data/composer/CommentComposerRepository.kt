@@ -1,11 +1,9 @@
 package io.github.nodyssey.data.composer
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.Selectors
 import io.github.plaza.core.AppClock
@@ -27,10 +25,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.util.UUID
-
-private val Context.commentComposerDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "comment-composer",
-)
 
 /**
  * An unsent reply.
@@ -92,12 +86,11 @@ interface CommentComposerRepository {
  * this layer could infer (it also carries the duplicate-reply and rate-limit refusals).
  */
 class DefaultCommentComposerRepository(
-    context: Context,
+    private val dataStore: DataStore<Preferences>,
     private val okHttpClient: OkHttpClient,
     private val dispatchers: AppDispatchers,
     private val clock: AppClock,
 ) : CommentComposerRepository {
-    private val dataStore = context.applicationContext.commentComposerDataStore
     private val json = Json { ignoreUnknownKeys = true }
 
     override fun draft(postId: Long): Flow<CommentDraft?> = dataStore.data.map { preferences ->
