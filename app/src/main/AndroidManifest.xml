@@ -66,10 +66,16 @@
                 this stays an ordinary deep link and the system asks the user which app to use the
                 first time.
 
-                The three <data> path forms combine with both hosts — the elements are matched as a
+                The <data> path forms combine with both hosts — the elements are matched as a
                 cross product, not as a list of whole URLs. Kept in step with
                 NodeSeekSite.parseInternalRoute, which is what actually turns the URL into a screen:
-                POST_PATH `/post-<id>[-<page>]`, SPACE_PATH `/space/<uid>`, and `/member?t=<name>`.
+                POST_PATH `/post-<id>[-<page>]`, SPACE_PATH `/space/<uid>`, `/member?t=<name>` and
+                `/notification`.
+
+                `/notification` is admitted as a bare path because everything that distinguishes one
+                notification screen from another lives after the `#` — `#/atMe`, `#/message?mode=talk
+                &to=<uid>` — and a fragment is the one part of a URL these filters cannot match on.
+                It arrives on the intent intact, so the telling apart happens in parseInternalRoute.
             -->
             <intent-filter tools:ignore="AppLinkWarning">
                 <action android:name="android.intent.action.VIEW" />
@@ -83,6 +89,7 @@
                 <data android:pathPrefix="/post-" />
                 <data android:pathPrefix="/space/" />
                 <data android:path="/member" />
+                <data android:path="/notification" />
             </intent-filter>
         </activity>
 

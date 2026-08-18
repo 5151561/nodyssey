@@ -239,6 +239,7 @@
     <string name="messages_new_conversation_empty">没有找到这个用户</string>
     <string name="messages_new_conversation_intro">站点没有「新建会话」入口，这里用用户搜索选收件人。</string>
     <string name="message_thread_title">与 %1$s 的对话</string>
+    <string name="message_thread_title_unknown">私信</string>
     <string name="message_thread_subtitle">UID %1$d</string>
     <string name="message_thread_subtitle_level">UID %1$d · Lv %2$d</string>
     <string name="message_thread_empty">还没有消息，说点什么吧</string>
@@ -283,7 +284,7 @@
     <string name="settings_content">内容</string>
     <string name="settings_external_link">站外链接</string>
     <string name="settings_app_links">站内链接</string>
-    <string name="settings_app_links_hint_on">已开启：在别的 App 里点 NodeSeek 的帖子、用户链接会直接进来</string>
+    <string name="settings_app_links_hint_on">已开启：在别的 App 里点 NodeSeek 的帖子、用户、通知链接会直接进来</string>
     <string name="settings_app_links_hint_off">未开启：站内链接仍由浏览器打开。点这里去系统设置里打开「打开支持的链接」</string>
     <string name="settings_external_link_hint">帖子里指向别的网站的链接怎么打开</string>
     <string name="settings_external_link_custom_tab">应用内浏览</string>

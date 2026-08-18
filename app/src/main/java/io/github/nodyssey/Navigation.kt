@@ -50,6 +50,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.account.AccountSettingsRoute
@@ -291,13 +292,26 @@ fun MainNavigation(
             is LaunchRequest.OpenTab -> currentTab = request.tab
 
             is LaunchRequest.OpenLink -> {
-                currentTab = TopLevelDestination.HOME
+                val route = NodeSeekSite.parseInternalRoute(request.url)
+                /*
+                 * A notification link is the one kind that has a tab of its own to land on, and 首页
+                 * would be the wrong one twice over: the screen it asks for is 通知's, and Back from
+                 * a conversation would walk out through the feed.
+                 */
+                currentTab =
+                    when (route) {
+                        is NodeSeekSite.InternalRoute.Notifications,
+                        is NodeSeekSite.InternalRoute.MessageThread,
+                        -> TopLevelDestination.NOTIFICATIONS
+
+                        else -> TopLevelDestination.HOME
+                    }
                 // The web view is the fallback rather than the browser: the link came to us because
                 // the user chose this app for it, and bouncing it back out would read as a refusal.
                 val openInWebView: () -> Unit = {
                     homeStack.add(WebKey(request.url, siteTitle, WebViewGoal.MANAGE))
                 }
-                when (val route = NodeSeekSite.parseInternalRoute(request.url)) {
+                when (route) {
                     is NodeSeekSite.InternalRoute.Post ->
                         homeStack.add(PostDetailKey(route.postId, page = route.page))
 
@@ -310,6 +324,16 @@ fun MainNavigation(
                             onResolved = openSpaceOnHome,
                             onFailure = openInWebView,
                         )
+
+                    is NodeSeekSite.InternalRoute.Notifications ->
+                        route.group?.let { notificationsViewModel.selectCategory(it.toCategory()) }
+
+                    is NodeSeekSite.InternalRoute.MessageThread -> {
+                        // The list behind the conversation, so Back lands on 私信 rather than on
+                        // whichever group the tab was last left showing.
+                        notificationsViewModel.selectCategory(NotificationCategory.MESSAGES)
+                        notificationsStack.openMessageThread(route.uid)
+                    }
 
                     // Only reachable if the manifest filter and `parseInternalRoute` drift apart.
                     null -> openInWebView()
@@ -1086,6 +1110,18 @@ fun MainNavigation(
                         )
                     }
 
+                // A link to a notification list is a link to a tab, and a tab is not something a
+                // stack can hold — 通知 is where it already lives.
+                is NodeSeekSite.InternalRoute.Notifications -> {
+                    currentTab = TopLevelDestination.NOTIFICATIONS
+                    route.group?.let { notificationsViewModel.selectCategory(it.toCategory()) }
+                }
+
+                // The conversation goes on the stack that is open, unlike the tab switch above: a
+                // 私信 link inside a thread should leave the thread underneath it.
+                is NodeSeekSite.InternalRoute.MessageThread ->
+                    backStack.openMessageThread(route.uid)
+
                 null -> openWebUrl(NodeSeekSite.unwrapJumpUrl(url))
             }
         }
@@ -1388,6 +1424,26 @@ private fun stackScopedEntryProvider(
 /** Buying an invite code is a site-side spend; the app only confirms it. */
 private fun inviteWebKey(title: String): WebKey =
     WebKey(NodeSeekSite.BASE_URL + NodeSeekSite.INVITE_PATH, title, WebViewGoal.MANAGE)
+
+/**
+ * Opens a 私信 conversation, unless it is already the screen on top.
+ *
+ * The guard is for the notification tap and the deep link, which can both arrive again while the
+ * conversation they name is open — a second copy would only give Back something to undo.
+ *
+ * The name is left blank because a URL does not carry one: `MessageThreadViewModel` fills it in from
+ * the thread it loads, and the app bar falls back to 私信 until then.
+ */
+private fun NavBackStack<NavKey>.openMessageThread(uid: Long) {
+    if ((lastOrNull() as? MessageThreadKey)?.uid == uid) return
+    add(MessageThreadKey(uid, userName = ""))
+}
+
+private fun NodeSeekSite.NotificationGroup.toCategory(): NotificationCategory =
+    when (this) {
+        NodeSeekSite.NotificationGroup.MENTIONS -> NotificationCategory.MENTIONS
+        NodeSeekSite.NotificationGroup.MESSAGES -> NotificationCategory.MESSAGES
+    }
 
 private fun imageViewerKeyFor(urls: List<String>, url: String): ImageViewerKey =
     ImageViewerKey(urls = urls, index = urls.indexOf(url).coerceAtLeast(0))

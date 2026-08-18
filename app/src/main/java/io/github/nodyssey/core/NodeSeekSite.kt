@@ -459,7 +459,29 @@ object NodeSeekSite {
 
         /** An `@mention` links `/member?t=<name>`, so only the name is known until it is resolved. */
         data class Member(val name: String) : InternalRoute
+
+        /**
+         * The 通知 tab. [group] is the list the link named, null when it named none the app knows.
+         *
+         * Null is not a failure: `/notification` on its own is the page as the site left it, and an
+         * unrecognised fragment (`#/replyToMe` is the one the site has that this does not read) is
+         * still a notification link, so the tab is a better answer than a web view of a screen the
+         * app already has.
+         */
+        data class Notifications(val group: NotificationGroup?) : InternalRoute
+
+        /** One 私信 conversation: `#/message?mode=talk&to=<uid>`. */
+        data class MessageThread(val uid: Long) : InternalRoute
     }
+
+    /**
+     * Which of the 通知 lists a `/notification` link asks for.
+     *
+     * Deliberately not `data.NotificationCategory`: that enum carries the endpoints the repository
+     * calls, which is a fact about fetching notifications rather than about reading a URL, and it
+     * has a third value (回复我) no fragment here resolves to. The caller maps between them.
+     */
+    enum class NotificationGroup { MENTIONS, MESSAGES }
 
     /** Classifies a clicked link: an in-app destination when it is one of ours, null for the browser. */
     fun parseInternalRoute(url: String): InternalRoute? {
@@ -469,8 +491,44 @@ object NodeSeekSite {
         parsePostRoute(url)?.let { return InternalRoute.Post(it.postId, it.page) }
         parseUid(url)?.let { return InternalRoute.Space(it) }
         parseMemberName(url)?.let { return InternalRoute.Member(it) }
-        return null
+        return parseNotificationRoute(url)
     }
+
+    /**
+     * `/notification` and the hash routes the page keeps its own screens under.
+     *
+     * The site puts everything after `#`, which is the one part of a URL an `<intent-filter>` cannot
+     * match on and the one part Android still delivers intact — so the manifest admits the path and
+     * the reading of `#/atMe` versus `#/message?mode=talk&to=<uid>` happens here.
+     *
+     * Read off the fragment rather than pattern-matched whole because `mode=talk` is the site's way
+     * of saying "a conversation, not the list" and `to` is the only part that names anything; a
+     * `#/message` with no `to` is the conversation list, which is a group of the same screen.
+     */
+    private fun parseNotificationRoute(url: String): InternalRoute? {
+        val uri = parseWebUri(url) ?: return null
+        if (uri.path?.trimEnd('/').orEmpty() != NOTIFICATION_PATH) return null
+        val fragment = uri.fragment.orEmpty()
+        val name = fragment.substringBefore('?').trim('/')
+        return when {
+            name.equals("atMe", ignoreCase = true) ->
+                InternalRoute.Notifications(NotificationGroup.MENTIONS)
+
+            name.equals("message", ignoreCase = true) ->
+                fragment.fragmentParameter("to")?.toLongOrNull()?.let(InternalRoute::MessageThread)
+                    ?: InternalRoute.Notifications(NotificationGroup.MESSAGES)
+
+            else -> InternalRoute.Notifications(null)
+        }
+    }
+
+    /** The query half of a hash route — `#/message?mode=talk&to=5230` — which is not [URI.rawQuery]. */
+    private fun String.fragmentParameter(name: String): String? =
+        substringAfter('?', missingDelimiterValue = "")
+            .split('&')
+            .firstOrNull { it.substringBefore('=') == name }
+            ?.substringAfter('=', missingDelimiterValue = "")
+            ?.ifBlank { null }
 
     /**
      * The site wraps outbound links as `/jump?to=<encoded target>`. Returns the target for a jump

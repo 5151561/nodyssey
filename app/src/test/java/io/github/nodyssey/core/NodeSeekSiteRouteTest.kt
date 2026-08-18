@@ -63,6 +63,47 @@ class NodeSeekSiteRouteTest {
         )
     }
 
+    /**
+     * The two shapes the site's notification page actually links to. Everything that tells them
+     * apart is in the fragment, which no `<intent-filter>` can match on — so if this parsing goes,
+     * both URLs land on the same screen and the app looks like it ignored half the link.
+     */
+    @Test fun `notification hash routes`() {
+        assertEquals(
+            NodeSeekSite.InternalRoute.Notifications(NodeSeekSite.NotificationGroup.MENTIONS),
+            NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/notification#/atMe"),
+        )
+        assertEquals(
+            NodeSeekSite.InternalRoute.MessageThread(5230L),
+            NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/notification#/message?mode=talk&to=5230"),
+        )
+    }
+
+    @Test fun `notification without a conversation is the message list`() {
+        assertEquals(
+            NodeSeekSite.InternalRoute.Notifications(NodeSeekSite.NotificationGroup.MESSAGES),
+            NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/notification#/message"),
+        )
+    }
+
+    /** A bare page, and a group the app does not read, are both still the 通知 tab. */
+    @Test fun `notification falls back to the tab itself`() {
+        assertEquals(
+            NodeSeekSite.InternalRoute.Notifications(null),
+            NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/notification"),
+        )
+        assertEquals(
+            NodeSeekSite.InternalRoute.Notifications(null),
+            NodeSeekSite.parseInternalRoute("https://nodeseek.com/notification/#/replyToMe"),
+        )
+    }
+
+    /** `/notifications` is not `/notification`, and neither is a post that mentions the word. */
+    @Test fun `notification path is matched exactly`() {
+        assertEquals(null, NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/notifications"))
+        assertEquals(null, NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/notification-help"))
+    }
+
     @Test fun `a non-jump url passes through unwrap unchanged`() {
         assertEquals("https://example.com/a", NodeSeekSite.unwrapJumpUrl("https://example.com/a"))
     }

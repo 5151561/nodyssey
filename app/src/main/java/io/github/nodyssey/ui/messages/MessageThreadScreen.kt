@@ -214,7 +214,13 @@ fun MessageThreadScreen(
                         UserAvatar(url = state.avatarUrl, name = state.userName, size = 32.dp)
                         Column {
                             Text(
-                                stringResource(R.string.message_thread_title, state.userName),
+                                // Blank until the thread loads when it was opened by a link, which
+                                // names a uid and nothing else; every other way in knows the name.
+                                if (state.userName.isBlank()) {
+                                    stringResource(R.string.message_thread_title_unknown)
+                                } else {
+                                    stringResource(R.string.message_thread_title, state.userName)
+                                },
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
