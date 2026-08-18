@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -43,6 +44,14 @@ fun groupShape(first: Boolean, last: Boolean): Shape =
 
 private val GROUP_OUTER_RADIUS = 18.dp
 private val GROUP_SEAM_RADIUS = 5.dp
+
+/**
+ * How much of the row a value may claim before it starts ellipsizing.
+ *
+ * Generous for what these rows actually hold — 「30 天」, 「未开启」, 「300 条」 — and the point of it is
+ * only that some number exists, so a row handed an unexpectedly long one keeps its title readable.
+ */
+private val VALUE_MAX_WIDTH = 120.dp
 
 /** 2dp: wide enough to read as a seam, narrow enough that the group stays one object. */
 val GroupSeam = 2.dp
@@ -127,13 +136,18 @@ fun GroupedRow(
                 }
             }
             value?.let {
+                // Capped rather than weighted. A second `weight(1f)` here splits the leftover width
+                // down the middle no matter how short the value is, so 「30 天」 came to rest in the
+                // middle of the row while the subtitle beside it — with half a row to work in —
+                // wrapped onto a second line. Unweighted, the value takes what it needs and the
+                // title column gets the rest; the cap is what stops a long one from taking the lot.
                 Text(
                     text = it,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = Modifier.widthIn(max = VALUE_MAX_WIDTH),
                 )
             }
             trailing?.invoke()

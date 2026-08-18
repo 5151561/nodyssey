@@ -78,8 +78,13 @@ fun ProfileRoute(
     onAccountSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
     onOpenSpace: (Long) -> Unit,
-    /** 我的收藏 — the space page's own 收藏 tab, opened straight onto it. */
-    onCollections: (Long) -> Unit,
+    /**
+     * 我的收藏 — its own screen (board i1).
+     *
+     * No uid, unlike [onOpenSpace]: the site publishes nobody else's collections, so the destination
+     * is the signed-in account's by construction and there is nothing to identify.
+     */
+    onCollections: () -> Unit,
     onHistory: () -> Unit,
     onAssets: () -> Unit,
     onAttendance: () -> Unit,
@@ -99,7 +104,7 @@ fun ProfileRoute(
         onAccountSettings = onAccountSettings,
         onOpenWebsite = onOpenWebsite,
         onOpenSpace = { state.uid?.let(onOpenSpace) },
-        onCollections = { state.uid?.let(onCollections) },
+        onCollections = onCollections,
         onHistory = onHistory,
         onAssets = onAssets,
         onAttendance = onAttendance,

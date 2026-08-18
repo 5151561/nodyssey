@@ -53,7 +53,7 @@ class ProxySettingsTest {
     /** 主开关 writes as it is tapped, so it has to leave the address and the ciphertext beside it alone. */
     @Test
     fun `setEnabled flips the flag and nothing else`() = runTest {
-        val settings = DataStoreProxySettings(context, ReversingCipher)
+        val settings = DataStoreProxySettings(store.dataStore, ReversingCipher)
         settings.save(saved)
 
         settings.setEnabled(false)
