@@ -81,6 +81,7 @@ class MessageComposerTest {
                     onToggleMarkdown = { isMarkdown = !isMarkdown },
                     onSend = {},
                     onRetrySend = {},
+                    onQuote = {},
                     onPickImages = {},
                     onRemoveAttachment = {},
                     onRetryAttachment = {},

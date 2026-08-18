@@ -2,6 +2,7 @@ package io.github.nodyssey.ui.messages
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.placeCursorAtEnd
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -190,6 +191,29 @@ class MessageThreadViewModel(
         _uiState.update { it.copy(isMarkdown = !it.isMarkdown) }
     }
 
+    /**
+     * Drops a bubble into the draft as a blockquote.
+     *
+     * The site has no quote button in a conversation — `message/send` carries one `content` string
+     * and nothing that points at an earlier message — so this is the app's own, written the way the
+     * reply editor's 引用 writes one. Without the floor header: that header names an author and links
+     * a floor, and in a thread with exactly two people in it, it would only be restating one of them.
+     *
+     * Turning MD on is part of the action, not a side effect: with the switch off the server takes
+     * the text verbatim, and the quotation would arrive as a line beginning with a literal `>`.
+     *
+     * Text rather than state, for the reason `ReplyComposerViewModel.quote` is: once the block is in
+     * the draft it is ordinary Markdown that can be typed between, reordered or deleted, and quoting
+     * a second message adds a second block instead of replacing the first.
+     */
+    fun quote(message: MessageBubble) {
+        draftState.editFromViewModel {
+            appendBlock(message.content.toQuoteBlock())
+            placeCursorAtEnd()
+        }
+        _uiState.update { it.copy(isMarkdown = true) }
+    }
+
     fun send() {
         val content = draftState.text.toString().trim()
         if (content.isEmpty()) return
@@ -312,6 +336,15 @@ data class MessageBubble(
     /** The server's own words for a rejection, when it gave any. */
     val failureReason: String? = null,
 )
+
+/**
+ * One message as a Markdown blockquote, with a blank line after it.
+ *
+ * Every line takes its own `>` — a blank line in the middle would otherwise end the quotation and
+ * leave the rest of the message as the user's own words. The trailing blank line is what keeps the
+ * reply that follows out of the quotation, and what lets the next 引用 land as its own block.
+ */
+private fun String.toQuoteBlock(): String = "> " + trim().replace("\n", "\n> ") + "\n\n"
 
 data class MessageThreadUiState(
     val uid: Long,

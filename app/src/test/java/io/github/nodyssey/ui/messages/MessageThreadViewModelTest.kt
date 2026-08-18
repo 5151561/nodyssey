@@ -144,6 +144,63 @@ class MessageThreadViewModelTest {
             assertEquals(0, notifications.counts.value.messages)
         }
 
+    /**
+     * 引用. The message goes into the draft as a blockquote and the reply is typed after it — which
+     * is only Markdown if the switch is on, so quoting turns it on.
+     */
+    @Test
+    fun `引用 drops the message into the draft as a blockquote`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(FakeMessageRepository())
+            advanceUntilIdle()
+            viewModel.toggleMarkdown()
+
+            viewModel.quote(viewModel.uiState.value.messages.single())
+
+            assertEquals("> 改名的事我问过管理\n\n", viewModel.draftState.text.toString())
+            assertTrue(viewModel.uiState.value.isMarkdown)
+        }
+
+    /** Every line takes a `>`, or a blank line inside the message would end the quotation early. */
+    @Test
+    fun `a multi-line message is quoted line by line`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(FakeMessageRepository())
+            advanceUntilIdle()
+
+            viewModel.quote(bubble("第一行\n\n第三行"))
+
+            assertEquals("> 第一行\n> \n> 第三行\n\n", viewModel.draftState.text.toString())
+        }
+
+    /** Cumulative, like the reply editor's: quoting a second message must not eat the first. */
+    @Test
+    fun `每引用一条就多一段，互不覆盖`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(FakeMessageRepository())
+            advanceUntilIdle()
+
+            viewModel.quote(bubble("在的"))
+            viewModel.draftState.setTextAndPlaceCursorAtEnd(viewModel.draftState.text.toString() + "看到了")
+            viewModel.quote(bubble("那明天见"))
+
+            assertEquals(
+                "> 在的\n\n看到了\n\n> 那明天见\n\n",
+                viewModel.draftState.text.toString(),
+            )
+        }
+
+    private fun bubble(content: String) =
+        MessageBubble(
+            id = "b",
+            isMine = false,
+            content = content,
+            isMarkdown = true,
+            sentAtMillis = NOW,
+            sentAtText = null,
+            status = SendStatus.SENT,
+        )
+
     private fun viewModel(
         repository: MessageRepository,
         notifications: NotificationRepository = NotificationRepository(FakeCountsApi()),

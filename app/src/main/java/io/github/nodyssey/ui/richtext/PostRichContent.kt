@@ -53,6 +53,8 @@ fun PostRichContent(
      * this wrapper thinks", which is exactly what those layers know.
      */
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)? = null,
+    /** Passed straight through; see [RichContent]. The message thread is the one caller that says no. */
+    selectable: Boolean = true,
 ) {
     RichContent(
         nodes = nodes,
@@ -64,6 +66,7 @@ fun PostRichContent(
         voteContent = voteContent,
         codeBlockContent = { CodeOrReport(it) },
         stardustContent = stardustContent ?: { StardustReceiveCard(it, avatarUrl = NodeSeekSite.avatarUrl(it.memberId)) },
+        selectable = selectable,
     )
 }
 

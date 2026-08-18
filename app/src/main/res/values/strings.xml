@@ -251,6 +251,9 @@
     <string name="message_status_sending">发送中</string>
     <string name="message_status_failed">发送失败</string>
     <string name="message_status_sent">已送达 %1$s</string>
+    <string name="message_bubble_actions">消息操作</string>
+    <string name="message_quote_action">引用</string>
+    <string name="message_copied">消息已复制</string>
 
     <!-- Profile -->
     <string name="profile_session_active">NodeSeek 登录会话有效</string>
