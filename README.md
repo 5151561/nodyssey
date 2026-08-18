@@ -1,5 +1,8 @@
 # Nodyssey
 
+[![Telegram Channel](https://img.shields.io/badge/Telegram-Channel-26A5E4?logo=telegram&logoColor=white)](https://t.me/nodyssey_official)
+[![Telegram Group](https://img.shields.io/badge/Telegram-Group-26A5E4?logo=telegram&logoColor=white)](https://t.me/+97ANIwVaCYk1MjQ1)
+
 Nodyssey is an unofficial, open-source Android client for
 [NodeSeek](https://www.nodeseek.com/), built with Kotlin and Jetpack Compose.
 
@@ -11,8 +14,8 @@ scrolling stays in one list, and the UI follows the system theme.
 [Issues](https://github.com/5151561/nodyssey/issues) ·
 [Releases](https://github.com/5151561/nodyssey/releases)
 
+Telegram：[频道](https://t.me/nodyssey_official) · [群组](https://t.me/+97ANIwVaCYk1MjQ1)
 
-[Telegram](https://t.me/+97ANIwVaCYk1MjQ1)
 各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，文档导航见 [docs/README.md](docs/README.md)。
 
 > 中文说明见下方。
