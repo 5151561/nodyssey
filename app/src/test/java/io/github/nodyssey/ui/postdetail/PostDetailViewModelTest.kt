@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.postdetail
 
+import io.github.nodyssey.ThreadPreview
 import io.github.nodyssey.data.FakePostRemoteDataSource
 import io.github.nodyssey.data.MutableClock
 import io.github.nodyssey.data.NoReadingPositions
@@ -63,6 +64,7 @@ class PostDetailViewModelTest {
         postId: Long = 42,
         initialFloor: String? = null,
         initialPage: Int? = null,
+        preview: ThreadPreview? = null,
         readingPositions: ReadingPositionStore = NoReadingPositions,
     ) = PostDetailViewModel(
         postId,
@@ -70,6 +72,7 @@ class PostDetailViewModelTest {
         session,
         initialFloor,
         initialPage,
+        preview,
         readingPositions = readingPositions,
     )
 
@@ -138,6 +141,36 @@ class PostDetailViewModelTest {
 
             assertEquals(requestsBefore, remote.detailRequests.size)
             assertNull(vm.uiState.value.error)
+        }
+
+    /**
+     * The title the feed row already showed is the screen's until the thread itself says otherwise.
+     *
+     * Room answers "nothing cached" for a thread nobody has opened, and that answer used to clear
+     * the whole mirrored state — including a title that had just been handed over deliberately. It
+     * is also the frame the row's title flies into, so losing it loses the animation.
+     */
+    @Test
+    fun `states the title the list knew before the thread arrives`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 1, totalPages = 1)
+            }
+            val gate = CompletableDeferred<Unit>()
+            remote.gate = gate
+
+            val vm = viewModel(preview = ThreadPreview(title = "what the row said", authorName = "op"))
+            // Let the fetch start and park on the gate, so the assertions below are made against
+            // the frame the reader actually sees while the thread is on its way.
+            advanceUntilIdle()
+
+            assertEquals("what the row said", vm.uiState.value.title)
+            assertFalse("nothing has loaded yet", vm.uiState.value.hasContent)
+
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals("thread 42", vm.uiState.value.title)
         }
 
     @Test

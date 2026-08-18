@@ -3,6 +3,7 @@ package io.github.nodyssey
 import android.content.ClipData
 import android.content.ClipboardManager
 import androidx.annotation.StringRes
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -20,6 +21,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -70,6 +72,7 @@ import io.github.nodyssey.ui.assets.CreditRoute
 import io.github.nodyssey.ui.assets.CreditViewModel
 import io.github.nodyssey.ui.assets.StardustRoute
 import io.github.nodyssey.ui.assets.StardustViewModel
+import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.composer.PostComposerRoute
 import io.github.nodyssey.ui.composer.PostComposerViewModel
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
@@ -329,7 +332,25 @@ fun MainNavigation(
                 PostListRoute(
                     viewModel = viewModel,
                     listState = homeListState,
-                    onPostClick = { backStack.add(PostDetailKey(it)) },
+                    // The whole of what the row is already showing, not just the id: the thread
+                    // draws these four before the network answers, and they are what the row's own
+                    // title, avatar, name and board tag fly into.
+                    onPostClick = { post ->
+                        backStack.add(
+                            PostDetailKey(
+                                post.summary.postId,
+                                preview =
+                                ThreadPreview(
+                                    title = post.summary.title,
+                                    authorName = post.summary.authorName,
+                                    avatarUrl = post.summary.avatarUrl,
+                                    categoryTitle = post.summary.categoryTitle,
+                                    categorySlug = post.summary.categorySlug,
+                                    isAwarded = post.summary.isAwarded,
+                                ),
+                            ),
+                        )
+                    },
                     onCreatePost = { backStack.add(PostComposerKey()) },
                     onSignIn = {
                         backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
@@ -865,7 +886,22 @@ fun MainNavigation(
                 )
             }
 
-            entry<PostDetailKey> { key ->
+            entry<PostDetailKey>(
+                /*
+                 * Fades rather than the default slide — but only for a thread opened from a row that
+                 * handed over its title.
+                 *
+                 * A slide and a shared element contradict each other: the title would detach from
+                 * the page it belongs to and fly across a screen that is itself travelling sideways.
+                 * Fading the two pages leaves the title as the only thing moving, which is the whole
+                 * point of moving it. Where no row supplied a title there is nothing to fly — a
+                 * notification, a deep link, the composer — and those keep the slide, which is still
+                 * the honest description of what happened: a page arrived from somewhere else.
+                 */
+                metadata = { key ->
+                    if (key.preview == null) emptyMap() else ThreadOpenTransition
+                },
+            ) { key ->
                 // Keyed so navigating to a different post builds a fresh ViewModel.
                 val viewModel: PostDetailViewModel =
                     viewModel(
@@ -876,6 +912,7 @@ fun MainNavigation(
                             key.postId,
                             initialFloor = key.floor,
                             initialPage = key.page,
+                            preview = key.preview,
                         ),
                     )
                 // Its own ViewModel, keyed the same way: an unsent reply belongs to one thread
@@ -1188,20 +1225,36 @@ fun MainNavigation(
         NavigationSuiteScaffoldDefaults.navigationSuiteType(windowAdaptiveInfo),
         state = navigationSuiteState,
     ) {
-        NavDisplay(
-            entries = entries,
-            // The current tab first, and only when it is spent does back mean "leave this tab".
-            // `NavDisplay` handles back whenever there is more than one entry, and with 首页
-            // underneath there always is — so popping blindly would empty a secondary tab's stack.
-            onBack = {
-                if (backStack.size > 1) {
-                    backStack.removeLastOrNull()
-                } else {
-                    currentTab = TopLevelDestination.HOME
-                }
-            },
-            sceneStrategies = listOf(listDetailSceneStrategy),
-        )
+        SharedTransitionLayout(Modifier.fillMaxSize()) {
+            /*
+             * Withheld on a two-pane window, where a row and the thread it opens are on screen at
+             * once and a single shared-element key would have two live claims on it. Provided as a
+             * composition local rather than threaded through every screen: the two ends of the
+             * flight are a feed row and a thread header, twelve composables apart, and the only
+             * thing they need to agree on is that the flight is happening at all.
+             */
+            CompositionLocalProvider(
+                LocalThreadTransition provides
+                    this@SharedTransitionLayout.takeUnless { isListDetailExpanded },
+            ) {
+                NavDisplay(
+                    entries = entries,
+                    // The current tab first, and only when it is spent does back mean "leave this
+                    // tab". `NavDisplay` handles back whenever there is more than one entry, and
+                    // with 首页 underneath there always is — so popping blindly would empty a
+                    // secondary tab's stack.
+                    onBack = {
+                        if (backStack.size > 1) {
+                            backStack.removeLastOrNull()
+                        } else {
+                            currentTab = TopLevelDestination.HOME
+                        }
+                    },
+                    sceneStrategies = listOf(listDetailSceneStrategy),
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                )
+            }
+        }
     }
 }
 
@@ -1307,6 +1360,16 @@ internal fun emptyDetailTextOf(key: NavKey): Int =
         is UserSpaceKey -> R.string.space_pane_empty
         else -> error("$key is a list pane with nothing to say when its detail is empty")
     }
+
+/**
+ * What a thread opened from a list row animates as. See the `entry<PostDetailKey>` metadata for why
+ * this is not the default slide, and [io.github.nodyssey.ui.common.sharedThreadTitle] for the thing
+ * the fade is clearing the way for.
+ */
+private val ThreadOpenTransition =
+    NavDisplay.transitionSpec { fadeIn() togetherWith fadeOut() } +
+        NavDisplay.popTransitionSpec { fadeIn() togetherWith fadeOut() } +
+        NavDisplay.predictivePopTransitionSpec { _ -> fadeIn() togetherWith fadeOut() }
 
 private fun stackScopedEntryProvider(
     destination: TopLevelDestination,
