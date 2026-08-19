@@ -397,6 +397,12 @@
     <string name="proxy_saved">已保存</string>
     <string name="proxy_test">测试连接</string>
     <string name="proxy_test_success">连接成功</string>
+    <string name="proxy_test_failure_dns">DNS 解析失败（%1$s）</string>
+    <string name="proxy_test_failure_timeout">连接超时（%1$s）</string>
+    <string name="proxy_test_failure_connection">无法连接代理或目标服务器（%1$s）</string>
+    <string name="proxy_test_failure_socks_auth">SOCKS5 认证失败，请检查用户名和密码（%1$s）</string>
+    <string name="proxy_test_failure_tls">TLS 握手失败（%1$s）</string>
+    <string name="proxy_test_failure_other">连接失败（%1$s）</string>
     <string name="proxy_scope_title">只代理论坛</string>
     <string name="proxy_scope_hint">开启后，图床上传和检查更新走直连；关掉则 App 内的请求都走代理</string>
     <string name="proxy_advanced_title">VLESS、VMess 这类节点</string>

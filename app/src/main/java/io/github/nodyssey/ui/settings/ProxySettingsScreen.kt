@@ -33,6 +33,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -41,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.proxy.ProxyConfigProblem
+import io.github.nodyssey.data.proxy.ProxyConnectionFailure
 import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.ProxyType
 import io.github.nodyssey.ui.account.accountMessageText
@@ -244,6 +248,14 @@ fun ProxySettingsScreen(
                         }
                     }
                 }
+                state.testFailure?.let { failure ->
+                    Text(
+                        text = proxyTestFailureText(failure),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    )
+                }
             }
 
             // Outside the dimmed block on purpose: this is what someone reads *before* deciding what
@@ -261,6 +273,20 @@ fun ProxySettingsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun proxyTestFailureText(failure: ProxyConnectionFailure): String {
+    val messageRes =
+        when (failure.kind) {
+            ProxyConnectionFailure.Kind.DNS -> R.string.proxy_test_failure_dns
+            ProxyConnectionFailure.Kind.TIMEOUT -> R.string.proxy_test_failure_timeout
+            ProxyConnectionFailure.Kind.CONNECTION -> R.string.proxy_test_failure_connection
+            ProxyConnectionFailure.Kind.SOCKS_AUTHENTICATION -> R.string.proxy_test_failure_socks_auth
+            ProxyConnectionFailure.Kind.TLS -> R.string.proxy_test_failure_tls
+            ProxyConnectionFailure.Kind.OTHER -> R.string.proxy_test_failure_other
+        }
+    return stringResource(messageRes, failure.exceptionName)
 }
 
 @Composable

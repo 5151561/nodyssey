@@ -8,9 +8,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.net.Authenticator
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.URI
@@ -99,6 +103,42 @@ class ProxyRoutingTest {
         configs.value = CONFIGURED.copy(host = "10.0.0.2", scope = ProxyScope.FORUM_ONLY)
         runCurrent()
         assertEquals(afterFirstValue + 2, evictions)
+    }
+
+    /** Android's SOCKS5 stack uses this SERVER-typed overload rather than a PROXY-typed callback. */
+    @Test
+    fun `the six-argument SOCKS5 callback receives the configured credential`() = runTest {
+        val live = LiveProxyConfig(
+            backgroundScope,
+            MutableStateFlow(CONFIGURED.copy(username = "someone", password = "secret")),
+        )
+        runCurrent()
+        try {
+            Authenticator.setDefault(AppSocksAuthenticator(live))
+
+            val credential = Authenticator.requestPasswordAuthentication(
+                "127.0.0.1",
+                InetAddress.getLoopbackAddress(),
+                7890,
+                "SOCKS5",
+                "SOCKS authentication",
+                null,
+            )
+            assertEquals("someone", credential?.userName)
+            assertArrayEquals("secret".toCharArray(), credential?.password)
+
+            val unrelated = Authenticator.requestPasswordAuthentication(
+                "127.0.0.1",
+                InetAddress.getLoopbackAddress(),
+                7890,
+                "HTTP",
+                "Server authentication",
+                "Basic",
+            )
+            assertNull(unrelated)
+        } finally {
+            Authenticator.setDefault(null)
+        }
     }
 }
 

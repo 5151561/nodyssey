@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import io.github.nodyssey.data.proxy.ProxyConnectionFailure
 import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
@@ -92,6 +93,25 @@ class ProxySettingsScreenTest {
 
         composeRule.onNodeWithText("VLESS、VMess 这类节点").performScrollTo().assertExists()
         composeRule.onNodeWithText("登录用的是系统 WebView，它走自己的网络，不受这里的设置影响。")
+            .performScrollTo()
+            .assertExists()
+    }
+
+    @Test
+    fun `a connection-test failure names the failed network layer and exception`() {
+        composeRule.setContent {
+            Screen(
+                ProxySettingsUiState(
+                    enabled = true,
+                    testFailure = ProxyConnectionFailure(
+                        ProxyConnectionFailure.Kind.SOCKS_AUTHENTICATION,
+                        "SocketException",
+                    ),
+                ),
+            )
+        }
+
+        composeRule.onNodeWithText("SOCKS5 认证失败，请检查用户名和密码（SocketException）")
             .performScrollTo()
             .assertExists()
     }

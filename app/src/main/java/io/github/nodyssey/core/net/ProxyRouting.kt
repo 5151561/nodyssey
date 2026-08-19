@@ -127,16 +127,16 @@ class AppProxyAuthenticator(private val live: LiveProxyConfig) : Authenticator {
  * The JDK's own socket implementation runs the SOCKS handshake below OkHttp, and the only hook it
  * offers for a credential is the process-wide [java.net.Authenticator.setDefault] — there is no
  * per-`Proxy` or per-client equivalent. That is safe to install here because every proxied client in
- * the app routes through this one config: a `RequestorType.PROXY` challenge has nowhere else to come
- * from, so gating on [ProxyConfig.type] being SOCKS is enough — no separate host/port check, which
- * would be comparing against whatever hostname-or-address form the JDK happens to report for this
- * handshake, a form this class has no control over.
+ * the app routes through this one config. Android's `SocksSocketImpl` uses the six-argument
+ * `requestPasswordAuthentication` overload, which reports `RequestorType.SERVER`, so requestor type
+ * cannot identify this callback. The `SOCKS5` protocol can: it keeps this process-wide authenticator
+ * from offering the proxy credential to ordinary HTTP server authentication.
  */
 class AppSocksAuthenticator(private val live: LiveProxyConfig) : java.net.Authenticator() {
     override fun getPasswordAuthentication(): PasswordAuthentication? {
-        if (requestorType != RequestorType.PROXY) return null
         val config = live.value
         if (config.type != ProxyType.SOCKS || config.username.isBlank()) return null
+        if (!requestingProtocol.equals("SOCKS5", ignoreCase = true)) return null
         return PasswordAuthentication(config.username, config.password.toCharArray())
     }
 }

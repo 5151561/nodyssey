@@ -8,11 +8,13 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.R
 import io.github.nodyssey.data.proxy.ProxyConfig
 import io.github.nodyssey.data.proxy.ProxyConfigProblem
+import io.github.nodyssey.data.proxy.ProxyConnectionFailure
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.proxy.ProxyType
 import io.github.nodyssey.data.proxy.problem
+import io.github.nodyssey.data.proxy.toProxyConnectionFailure
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.account.AccountMessage
 import io.github.nodyssey.ui.account.toAccountMessage
@@ -70,25 +72,36 @@ class ProxySettingsViewModel(
      * [ProxySettings.setEnabled], which writes the flag without touching the fields.
      */
     fun setEnabled(value: Boolean) {
-        _uiState.update { it.copy(enabled = value, problem = null) }
+        _uiState.update { it.copy(enabled = value, problem = null, testFailure = null) }
         viewModelScope.launch { settings.setEnabled(value) }
     }
 
-    fun setType(value: ProxyType) = _uiState.update { it.copy(type = value, problem = null) }
+    fun setType(value: ProxyType) =
+        _uiState.update { it.copy(type = value, problem = null, testFailure = null) }
 
     /** Part of the same draft as the fields, and committed by the same 保存 — see the class KDoc. */
     fun setForumOnly(value: Boolean) = _uiState.update {
-        it.copy(scope = if (value) ProxyScope.FORUM_ONLY else ProxyScope.EVERYTHING)
+        it.copy(
+            scope = if (value) ProxyScope.FORUM_ONLY else ProxyScope.EVERYTHING,
+            testFailure = null,
+        )
     }
 
-    fun updateHost(value: String) = _uiState.update { it.copy(hostInput = value, problem = null) }
+    fun updateHost(value: String) =
+        _uiState.update { it.copy(hostInput = value, problem = null, testFailure = null) }
 
     fun updatePort(value: String) =
-        _uiState.update { it.copy(portInput = value.filter(Char::isDigit).take(PORT_DIGITS), problem = null) }
+        _uiState.update {
+            it.copy(
+                portInput = value.filter(Char::isDigit).take(PORT_DIGITS),
+                problem = null,
+                testFailure = null,
+            )
+        }
 
-    fun updateUsername(value: String) = _uiState.update { it.copy(usernameInput = value) }
+    fun updateUsername(value: String) = _uiState.update { it.copy(usernameInput = value, testFailure = null) }
 
-    fun updatePassword(value: String) = _uiState.update { it.copy(passwordInput = value) }
+    fun updatePassword(value: String) = _uiState.update { it.copy(passwordInput = value, testFailure = null) }
 
     fun save() {
         val config = validated() ?: return
@@ -102,14 +115,24 @@ class ProxySettingsViewModel(
         val config = validated() ?: return
         viewModelScope.launch {
             settings.save(config)
-            _uiState.update { it.copy(testing = true) }
+            _uiState.update { it.copy(testing = true, testFailure = null) }
             tester.test()
                 .onSuccess {
                     _uiState.update {
-                        it.copy(testing = false, message = AccountMessage.Info(R.string.proxy_test_success))
+                        it.copy(
+                            testing = false,
+                            testFailure = null,
+                            message = AccountMessage.Info(R.string.proxy_test_success),
+                        )
                     }
                 }.onFailure { throwable ->
-                    _uiState.update { it.copy(testing = false, message = throwable.toAccountMessage()) }
+                    _uiState.update {
+                        it.copy(
+                            testing = false,
+                            testFailure = throwable.toProxyConnectionFailure(),
+                            message = throwable.toAccountMessage(),
+                        )
+                    }
                 }
         }
     }
@@ -144,6 +167,7 @@ data class ProxySettingsUiState(
     /** Set when a save was refused, and cleared by the next keystroke. */
     val problem: ProxyConfigProblem? = null,
     val testing: Boolean = false,
+    val testFailure: ProxyConnectionFailure? = null,
     val message: AccountMessage? = null,
 )
 

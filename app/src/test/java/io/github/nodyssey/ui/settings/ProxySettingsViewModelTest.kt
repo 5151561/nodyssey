@@ -2,6 +2,7 @@ package io.github.nodyssey.ui.settings
 
 import io.github.nodyssey.data.proxy.ProxyConfig
 import io.github.nodyssey.data.proxy.ProxyConfigProblem
+import io.github.nodyssey.data.proxy.ProxyConnectionFailure
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.ProxySettings
@@ -19,6 +20,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import java.net.UnknownHostException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProxySettingsViewModelTest {
@@ -133,6 +135,27 @@ class ProxySettingsViewModelTest {
         assertEquals(1, tester.calls)
         assertEquals(false, viewModel.uiState.value.testing)
     }
+
+    @Test
+    fun `测试连接 keeps a diagnostic failure until the config changes`() = runTest(dispatcher) {
+        tester.result = Result.failure(UnknownHostException("private.proxy.example"))
+        val viewModel = ProxySettingsViewModel(settings, tester)
+        advanceUntilIdle()
+
+        viewModel.setEnabled(true)
+        viewModel.updateHost("127.0.0.1")
+        viewModel.updatePort("7890")
+        viewModel.test()
+        advanceUntilIdle()
+
+        assertEquals(
+            ProxyConnectionFailure(ProxyConnectionFailure.Kind.DNS, "UnknownHostException"),
+            viewModel.uiState.value.testFailure,
+        )
+
+        viewModel.updateHost("10.0.0.2")
+        assertNull(viewModel.uiState.value.testFailure)
+    }
 }
 
 private class FakeProxySettings : ProxySettings {
@@ -152,9 +175,10 @@ private class FakeProxySettings : ProxySettings {
 private class FakeProxyConnectionTester : ProxyConnectionTester {
     var calls = 0
         private set
+    var result: Result<Unit> = Result.success(Unit)
 
     override suspend fun test(): Result<Unit> {
         calls++
-        return Result.success(Unit)
+        return result
     }
 }
