@@ -39,6 +39,7 @@ import io.github.nodyssey.data.NetworkUserSpaceRepository
 import io.github.nodyssey.data.NetworkVoteRepository
 import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.OfflineFirstPostRepository
+import io.github.nodyssey.data.OfflineLibrary
 import io.github.nodyssey.data.PostCollectionWriter
 import io.github.nodyssey.data.PostReactionWriter
 import io.github.nodyssey.data.PostRepository
@@ -49,6 +50,7 @@ import io.github.nodyssey.data.RulingRepository
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.data.TermsRepository
+import io.github.nodyssey.data.UnavailableOfflineLibrary
 import io.github.nodyssey.data.UserSpaceRepository
 import io.github.nodyssey.data.VoteRepository
 import io.github.nodyssey.data.account.AccountSettingsRepository
@@ -136,6 +138,15 @@ interface AppContainer {
     val imageHostRepository: ImageHostRepository
     val sessionRepository: SessionRepository
     val userSpaceRepository: UserSpaceRepository
+
+    /**
+     * 离线阅读 — what 收藏 draws its download states from.
+     *
+     * The engine behind it does not exist yet, so what is bound here reports
+     * [OfflineLibrary.isAvailable] false and the screen draws no offline chrome at all. See
+     * [OfflineLibrary] for why this is a contract rather than the `post_details` cache.
+     */
+    val offlineLibrary: OfflineLibrary
     val assetsRepository: AssetsRepository
     val creditRepository: CreditRepository
     val stardustRepository: StardustRepository
@@ -351,6 +362,8 @@ class DefaultAppContainer(
     override val userSpaceRepository: UserSpaceRepository by lazy {
         NetworkUserSpaceRepository(jsonClient, dispatchers)
     }
+
+    override val offlineLibrary: OfflineLibrary = UnavailableOfflineLibrary
 
     override val assetsRepository: AssetsRepository by lazy {
         NetworkAssetsRepository(profileRepository, creditRepository, jsonClient, dispatchers, clock)
