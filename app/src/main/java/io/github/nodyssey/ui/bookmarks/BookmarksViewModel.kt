@@ -36,6 +36,8 @@ data class BookmarkEntry(
     val categoryTitle: String?,
     val categorySlug: String?,
     val authorName: String?,
+    /** Resolved from what this device remembers; the collection payload carries no author at all. */
+    val avatarUrl: String? = null,
     val commentCount: Int?,
     val createdAtText: String?,
     val offline: OfflineState = OfflineState.NotDownloaded,
@@ -447,6 +449,7 @@ private fun SpacePost.toEntry(
     categoryTitle = categoryTitle ?: known?.categoryTitle,
     categorySlug = categorySlug ?: known?.categorySlug,
     authorName = authorName ?: known?.authorName,
+    avatarUrl = known?.resolvedAvatarUrl,
     commentCount = commentCount ?: known?.commentCount,
     createdAtText = createdAtText ?: known?.createdAtText,
     offline = offline,

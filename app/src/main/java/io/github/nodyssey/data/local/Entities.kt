@@ -394,6 +394,17 @@ data class CollectedPostMetaEntity(
     val categoryTitle: String? = null,
     val categorySlug: String? = null,
     val authorName: String? = null,
+    /**
+     * The picture the page actually rendered for the author.
+     *
+     * Stored alongside [authorUid] rather than derived from it, even though `/avatar/<uid>.png` is
+     * the canonical address and seven other screens build it that way: this is also the URL an
+     * offline download stored a *file* under, and asking for the same string is what makes the
+     * avatar appear on a downloaded row with the network off.
+     */
+    val avatarUrl: String? = null,
+    /** The durable half of the same fact — every source that names an author carries it. */
+    val authorUid: Long? = null,
     /** The site's own reply count when it was last stated, not the number of replies stored. */
     val commentCount: Int? = null,
     val createdAtText: String? = null,

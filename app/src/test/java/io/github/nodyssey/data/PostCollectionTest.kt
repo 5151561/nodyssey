@@ -12,6 +12,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -227,6 +228,61 @@ class PostCollectionTest {
             assertEquals("原作者", known.authorName)
             assertEquals(12, known.commentCount)
             assertEquals("3 天前", known.createdAtText)
+        }
+
+    /**
+     * The route the reader actually takes: tap a bare row, and it is complete when they come back.
+     *
+     * Opening the thread fetches the page that names its board, its author, its avatar and when it
+     * was posted — all of which `list-collection` withheld — so the list has no reason to still be
+     * drawing a headline afterwards.
+     */
+    @Test
+    fun `reading a collected thread writes down what the page said`() =
+        runTest {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource
+                    .detail(postId, page, collected = true)
+                    .copy(
+                        body =
+                        FakePostRemoteDataSource
+                            .content("the opening post")
+                            .copy(
+                                authorName = "原作者",
+                                authorUid = 77,
+                                avatarUrl = "https://ns/avatar/77.png",
+                                categoryTitle = "日常",
+                                createdAtText = "3 天前",
+                            ),
+                    )
+            }
+
+            repository(api("""{"success":true}""")).refreshThread(postId = 42, page = 1)
+
+            val known = requireNotNull(store().observe().first()[42L])
+            assertEquals("原作者", known.authorName)
+            assertEquals("https://ns/avatar/77.png", known.avatarUrl)
+            assertEquals(77L, known.authorUid)
+            assertEquals("日常", known.categoryTitle)
+            assertEquals("3 天前", known.createdAtText)
+        }
+
+    /**
+     * This runs for every thread anybody opens; the table is about the ones in the collection.
+     *
+     * A page carrying no `__config__` is a signed-out read, and a signed-out reader has no
+     * collection for the row to be about — so "we were not told" is not treated as a yes.
+     */
+    @Test
+    fun `reading a thread nobody collected writes nothing down`() =
+        runTest {
+            remote.detailResult = { postId, page -> FakePostRemoteDataSource.detail(postId, page, collected = false) }
+            repository(api("""{"success":true}""")).refreshThread(postId = 42, page = 1)
+            assertTrue(store().observe().first().isEmpty())
+
+            remote.detailResult = { postId, page -> FakePostRemoteDataSource.detail(postId, page, collected = null) }
+            repository(api("""{"success":true}""")).refreshThread(postId = 43, page = 1)
+            assertTrue(store().observe().first().isEmpty())
         }
 
     /** Un-collecting is not new information about the thread, and must not blank what is known. */

@@ -1,5 +1,6 @@
 package io.github.nodyssey.data
 
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.local.CollectedPostMetaDao
 import io.github.nodyssey.data.local.CollectedPostMetaEntity
 import io.github.plaza.core.AppClock
@@ -18,10 +19,24 @@ data class CollectedPostMeta(
     val categoryTitle: String? = null,
     val categorySlug: String? = null,
     val authorName: String? = null,
+    /** See [CollectedPostMetaEntity.avatarUrl] — the page's own URL, not one built from the uid. */
+    val avatarUrl: String? = null,
+    val authorUid: Long? = null,
     /** The site's own reply count as last stated, never a count of what happens to be stored. */
     val commentCount: Int? = null,
     val createdAtText: String? = null,
-)
+) {
+    /**
+     * Where to ask for the author's picture, or null when nothing here names the author.
+     *
+     * The page's own URL first, because that is the one an offline download stored a file under and
+     * therefore the one that resolves with the network off. `/avatar/<uid>.png` is the fallback and
+     * is not a guess — it is the address this site serves every account's picture from, uploaded or
+     * generated, which is what the rest of the app already builds avatars out of.
+     */
+    val resolvedAvatarUrl: String?
+        get() = avatarUrl ?: authorUid?.let(NodeSeekSite::avatarUrl)
+}
 
 /**
  * The 收藏 list's local memory of what the site has said about the threads on it.
@@ -76,6 +91,8 @@ private fun CollectedPostMetaEntity.toMeta() =
         categoryTitle = categoryTitle,
         categorySlug = categorySlug,
         authorName = authorName,
+        avatarUrl = avatarUrl,
+        authorUid = authorUid,
         commentCount = commentCount,
         createdAtText = createdAtText,
     )
@@ -87,6 +104,8 @@ private fun CollectedPostMeta.toEntity(nowMillis: Long) =
         categoryTitle = categoryTitle,
         categorySlug = categorySlug,
         authorName = authorName,
+        avatarUrl = avatarUrl,
+        authorUid = authorUid,
         commentCount = commentCount,
         createdAtText = createdAtText,
         updatedAtMillis = nowMillis,
@@ -99,5 +118,7 @@ internal val CollectedPostMeta.isEmpty: Boolean
             categoryTitle == null &&
             categorySlug == null &&
             authorName == null &&
+            avatarUrl == null &&
+            authorUid == null &&
             commentCount == null &&
             createdAtText == null

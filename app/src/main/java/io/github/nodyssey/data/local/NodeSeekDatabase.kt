@@ -30,7 +30,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         OfflineImageEntity::class,
         CollectedPostMetaEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -287,6 +287,26 @@ internal val MIGRATION_11_12 =
     }
 
 /**
+ * Gives a remembered thread its author's picture.
+ *
+ * Two columns, both null on every existing row, and null is the honest value: v12 stored the
+ * author's *name* and never asked anything for a face, so no row can be back-filled from what is
+ * already in the file. They fill in the next time the thread is opened, collected or downloaded.
+ *
+ * A version of its own rather than a wider v12, even though v12 has never shipped: the identity
+ * hash is checked at open time and a changed one at an unchanged version is not something
+ * `fallbackToDestructiveMigration` catches — it throws, and every device carrying a test build of
+ * v12 would crash on launch rather than upgrade.
+ */
+internal val MIGRATION_12_13 =
+    object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `collected_post_meta` ADD COLUMN `avatarUrl` TEXT")
+            db.execSQL("ALTER TABLE `collected_post_meta` ADD COLUMN `authorUid` INTEGER")
+        }
+    }
+
+/**
  * Every migration this schema has, in order — the list `createNodeSeekDatabase` opens the file with.
  *
  * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
@@ -303,4 +323,5 @@ internal val NODESEEK_MIGRATIONS = arrayOf(
     MIGRATION_9_10,
     MIGRATION_10_11,
     MIGRATION_11_12,
+    MIGRATION_12_13,
 )

@@ -348,6 +348,8 @@ class RoomOfflineLibrary(
                 title = title.takeIf { it.isNotBlank() },
                 categoryTitle = body?.categoryTitle,
                 authorName = body?.authorName,
+                avatarUrl = body?.avatarUrl,
+                authorUid = body?.authorUid,
                 // What the site had when this copy was made — the same number [remoteCommentCount]
                 // is set to, and a statement of the site's rather than a count of stored rows.
                 commentCount = stored,

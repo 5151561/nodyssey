@@ -41,6 +41,8 @@ interface CollectedPostMetaDao {
                     categoryTitle = fresh.categoryTitle ?: old?.categoryTitle,
                     categorySlug = fresh.categorySlug ?: old?.categorySlug,
                     authorName = fresh.authorName ?: old?.authorName,
+                    avatarUrl = fresh.avatarUrl ?: old?.avatarUrl,
+                    authorUid = fresh.authorUid ?: old?.authorUid,
                     commentCount = fresh.commentCount ?: old?.commentCount,
                     createdAtText = fresh.createdAtText ?: old?.createdAtText,
                     updatedAtMillis = nowMillis,

@@ -292,6 +292,33 @@ class NodeSeekDatabaseMigrationTest {
         migrated.close()
     }
 
+    /**
+     * Null on every existing row, and null is what a v12 row honestly knows: it stored the author's
+     * name and never asked anything for a face, so there is nothing in the file to back-fill from.
+     */
+    @Test
+    fun `migration 12 to 13 gives remembered threads an avatar without dropping them`() {
+        helper.createDatabase(DATABASE_NAME, 12).apply {
+            execSQL(
+                """
+                INSERT INTO collected_post_meta(postId, title, authorName, updatedAtMillis)
+                VALUES(42, '一篇收藏', '原作者', 1000)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 13, true, MIGRATION_12_13)
+
+        migrated.query("SELECT authorName, avatarUrl, authorUid FROM collected_post_meta WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("原作者", it.getString(0))
+            assertTrue(it.isNull(1))
+            assertTrue(it.isNull(2))
+        }
+        migrated.close()
+    }
+
     private companion object {
         const val DATABASE_NAME = "profile-migration-test"
     }

@@ -110,10 +110,11 @@ internal fun BookmarkRow(
                     }
                 }
                 UserAvatar(
-                    // The collection payload carries no uid, so there is no avatar URL to ask for
-                    // and every row falls back to the author's initial. Filling that in means
-                    // another request per row, which is not worth an avatar.
-                    url = null,
+                    // The collection payload carries neither a uid nor a picture, so this comes from
+                    // what the device remembers of the thread — see [CollectedPostMetaStore]. Still
+                    // null for a thread nothing here has ever opened or downloaded, and the row then
+                    // falls back to the author's initial as it always did.
+                    url = entry.avatarUrl,
                     name = entry.authorName?.takeIf { it.isNotBlank() } ?: entry.title,
                     size = avatarSize,
                     modifier = Modifier.offset(y = AvatarCapOffset),

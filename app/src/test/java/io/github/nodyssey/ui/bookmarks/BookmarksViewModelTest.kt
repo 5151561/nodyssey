@@ -101,6 +101,41 @@ class BookmarksViewModelTest {
             assertEquals("3 天前", row.createdAtText)
         }
 
+    /**
+     * The collection payload carries no author at all, so the avatar can only come from memory.
+     *
+     * The stored URL wins over the one built from the uid, because that is the address an offline
+     * download stored a file under and therefore the one that resolves with the network off.
+     */
+    @Test
+    fun `the avatar comes from what was remembered, page URL first`() =
+        runTest(dispatcher) {
+            known.remember(
+                listOf(
+                    CollectedPostMeta(postId = 1, authorUid = 77, avatarUrl = "https://ns/uploaded.png"),
+                    CollectedPostMeta(postId = 2, authorUid = 88),
+                ),
+            )
+            space.pages = listOf(page(1, 1..2, hasNext = false, row = ::bare))
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            val rows = viewModel.uiState.value.entries
+            assertEquals("https://ns/uploaded.png", rows[0].avatarUrl)
+            assertTrue(rows[1].avatarUrl.orEmpty().endsWith("/avatar/88.png"))
+        }
+
+    /** Nothing known about the author means no picture asked for, and the row keeps its initial. */
+    @Test
+    fun `a thread nothing has ever seen still has no avatar`() =
+        runTest(dispatcher) {
+            space.pages = listOf(page(1, 1..1, hasNext = false, row = ::bare))
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.entries.single().avatarUrl)
+        }
+
     /** A remembered answer is a fallback, never an override: the site is the one being asked. */
     @Test
     fun `the site's own answer wins over what was remembered`() =
@@ -420,6 +455,8 @@ class BookmarksViewModelTest {
                                 categoryTitle = fresh.categoryTitle ?: old?.categoryTitle,
                                 categorySlug = fresh.categorySlug ?: old?.categorySlug,
                                 authorName = fresh.authorName ?: old?.authorName,
+                                avatarUrl = fresh.avatarUrl ?: old?.avatarUrl,
+                                authorUid = fresh.authorUid ?: old?.authorUid,
                                 commentCount = fresh.commentCount ?: old?.commentCount,
                                 createdAtText = fresh.createdAtText ?: old?.createdAtText,
                             )

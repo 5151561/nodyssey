@@ -19,6 +19,7 @@ import io.github.nodyssey.data.local.toSnapshot
 import io.github.nodyssey.data.local.toSummary
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.model.FeedSort
+import io.github.nodyssey.model.PostDetail
 import io.github.nodyssey.model.PostListPage
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.model.ReactionAction
@@ -556,6 +557,37 @@ class OfflineFirstPostRepository(
             isAwarded = detail.isAwarded,
         )
         database.postDetailDao().trimTo(MAX_CACHED_THREADS)
+        rememberFromPage(detail)
+    }
+
+    /**
+     * Writes down what a page just said about a thread this account has collected.
+     *
+     * The most travelled of the three routes into `collected_post_meta`, and the one that makes the
+     * 收藏 list fill itself in as it is used: tapping a bare row opens the very page that names its
+     * board, its author, its avatar and when it was posted, so by the time the reader comes back the
+     * row they tapped is complete.
+     *
+     * Gated on the page's own `collected`, not on the request: this runs for every thread anyone
+     * opens, and the table is about the ones in this account's collection. Null — a page carrying no
+     * `__config__`, which is a signed-out read — is not treated as a yes, and a signed-out reader has
+     * no collection for it to be about.
+     */
+    private suspend fun rememberFromPage(detail: PostDetail) {
+        val store = collectedMeta ?: return
+        if (detail.collected != true) return
+        val body = detail.body
+        val meta =
+            CollectedPostMeta(
+                postId = detail.postId,
+                title = detail.title.takeIf { it.isNotBlank() },
+                categoryTitle = body?.categoryTitle,
+                authorName = body?.authorName,
+                avatarUrl = body?.avatarUrl,
+                authorUid = body?.authorUid,
+                createdAtText = body?.createdAtText,
+            )
+        if (!meta.isEmpty) store.remember(meta)
     }
 
     /**
@@ -722,6 +754,8 @@ class OfflineFirstPostRepository(
                 categoryTitle = listed?.categoryTitle ?: body?.categoryTitle ?: mark?.categoryTitle,
                 categorySlug = listed?.categorySlug,
                 authorName = body?.authorName ?: listed?.authorName ?: mark?.authorName,
+                avatarUrl = body?.avatarUrl ?: listed?.avatarUrl,
+                authorUid = body?.authorUid ?: listed?.authorUid ?: mark?.authorUid,
                 commentCount = listed?.commentCount ?: mark?.commentCount,
                 createdAtText = body?.createdAtText,
             )
