@@ -113,6 +113,23 @@ class InlineStickerSizeTest {
     }
 
     /**
+     * The same sticker, on a phone-like screen rather than the 1x one the rest of the class uses.
+     *
+     * 关闭统一缩限 promises 按表情原本的大小显示, and a sticker's own size is a fact about the
+     * sticker, not about the screen it lands on. The first build divided the file's pixels by the
+     * density, so this came out 16x12dp on a 4x phone — inside the 20sp box the mode exists to
+     * escape, which is what 「不缩限的全都缩在一行里」 was.
+     */
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxxhdpi")
+    fun `natural sizing is the sticker's own size on a dense screen too`() {
+        setContent(StickerSizing(uniform = false))
+
+        composeRule.onNodeWithContentDescription(ALT).assertWidthIsEqualTo(64.dp)
+        composeRule.onNodeWithContentDescription(ALT).assertHeightIsEqualTo(48.dp)
+    }
+
+    /**
      * The line a big sticker lands on has to make room for it — 问题 #90.
      *
      * The paragraph wraps, so the sticker ends up on a line of its own with text above it: exactly
