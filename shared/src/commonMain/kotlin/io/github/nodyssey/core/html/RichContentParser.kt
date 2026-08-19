@@ -31,7 +31,13 @@ object RichContentParser {
     private const val TAB_TITLE_CLASS = "nsk-magic-tab-title"
     private const val TAB_BODY_CLASS = "nsk-magic-tab-body"
 
-    fun parse(article: Element?): List<RichNode> {
+    /**
+     * `internal` because the parameter is a Ksoup type, and Ksoup is an `implementation` dependency
+     * of this module: it never reaches a consumer's compile classpath, so a public signature naming
+     * one would be a method nobody outside `:shared` could resolve the arguments for. What leaves
+     * this module is the domain model, which is the same rule the build file states for return types.
+     */
+    internal fun parse(article: Element?): List<RichNode> {
         if (article == null) return emptyList()
         return parseBlocks(article.childNodes())
     }

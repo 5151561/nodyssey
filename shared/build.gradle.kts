@@ -135,10 +135,16 @@ kotlin {
             // these types lived there.
             api(libs.kotlinx.serialization.json)
 
-            // `implementation`, and it has to stay that way: no Ksoup type may appear on a parser's
-            // return value. What leaves this module is the domain model. Ksoup types are still
-            // *accepted* — `parse(element: Element)` — which is the state the first phase left the
-            // parsers in, and what the Android side still hands them.
+            // `implementation`, and it has to stay that way: no Ksoup type may appear anywhere on
+            // this module's public surface. What leaves here is the domain model.
+            //
+            // That rule covers parameters as well as return values, which is not where the first
+            // phase left things — a handful of parsers still *accepted* an `Element` or a `Document`
+            // from a public method, back when the Android side was the one parsing the HTML. Phase 2
+            // moved those callers in here, so the entry points that name a Ksoup type are now
+            // `internal` (`RichContentParser.parse`, `AnsiParser.sourceOf`, `SiteBootstrap.decodeOrNull`).
+            // A public signature naming a type the consumer cannot resolve is one nobody can call:
+            // either it is internal, or this line has to become `api`.
             implementation(libs.ksoup)
         }
 

@@ -46,8 +46,12 @@ object SiteBootstrap {
      * bootstrap element has failed. A post page has not: it renders for signed-out readers too, and it
      * carries content worth showing whether or not the blob came with it. Those callers want null,
      * not an exception that would throw the article away along with the counts.
+     *
+     * `internal` where [decode] is public, and the difference is the parameter: this one takes an
+     * already-parsed `Document`, a Ksoup type that an `implementation` dependency keeps off every
+     * consumer's compile classpath. [decode] takes a string of HTML and is what the app calls.
      */
-    fun decodeOrNull(document: Document): String? {
+    internal fun decodeOrNull(document: Document): String? {
         val encoded = encodedText(document)
         if (encoded.isEmpty()) return null
         return try {
