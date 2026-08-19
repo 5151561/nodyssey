@@ -95,14 +95,14 @@ fun ThemeSettingsRoute(
 }
 
 /**
- * 主题 — j1 卡1, minus 明暗.
+ * 主题 — j1 卡1 with j2's 预设, minus 明暗.
  *
  * The board opens with 跟随系统 / 浅色 / 深色 and this screen does not: that one control is reached far
  * more often than everything below it put together — it is what someone flips when the room changes,
  * not something they set once — and it stayed on 设置 where it has always been. Burying a daily
  * control two taps deep to keep a board intact is the wrong half of the design to honour.
  *
- * 预设 is the one section that comes and goes with the source: two rows of 56dp swatches is most of
+ * 预设 is the one section that comes and goes with the source: two rows of 56dp faces is most of
  * this page, and under 动态取色 or 自定义 none of them is the colour in force. Everything else stays
  * put — 我的主题 in particular, because 新建 is how a colour gets made in the first place and it would
  * be unreachable from the source it belongs to. The tiles carry each source's remembered value, so
@@ -115,7 +115,7 @@ fun ThemeSettingsScreen(
     onBack: () -> Unit,
     onOpenDynamicColor: () -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
-    onPresetSelected: (Int) -> Unit,
+    onPresetSelected: (String) -> Unit,
     onCustomSeedSelected: (Int) -> Unit,
     onPaletteStyleChange: (PaletteStyle) -> Unit,
     onSaveTheme: (String, Int) -> Unit,
@@ -161,26 +161,12 @@ fun ThemeSettingsScreen(
                 onOpenDynamicColor = onOpenDynamicColor,
                 onOpenSeedSheet = { sheetOpen = true },
             )
-            Row(
-                modifier = Modifier.padding(horizontal = Spacing.xs),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(15.dp).padding(top = 1.dp),
-                )
-                Text(
-                    stringResource(
-                        R.string.settings_color_source_memory_hint,
-                        Color(settings.seedColor).toHexString(),
-                    ),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            InfoLine(
+                stringResource(
+                    R.string.settings_color_source_memory_hint,
+                    Color(settings.seedColor).toHexString(),
+                ),
+            )
 
             // Two rows of swatches that cannot be the answer, sitting between the tiles and the rest
             // of the screen, is most of this page's height spent on a section the reader has already
@@ -190,7 +176,8 @@ fun ThemeSettingsScreen(
             AnimatedVisibility(visible = settings.colorSource == ColorSource.PRESET) {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     SettingsSectionTitle(stringResource(R.string.settings_presets))
-                    PresetGrid(selected = settings.presetSeed, onSelect = onPresetSelected)
+                    PresetGrid(selected = settings.presetId, onSelect = onPresetSelected)
+                    InfoLine(stringResource(R.string.settings_presets_hint))
                 }
             }
 
@@ -211,7 +198,14 @@ fun ThemeSettingsScreen(
             )
 
             SettingsSectionTitle(stringResource(R.string.settings_palette_style))
-            PaletteStyleChips(settings.paletteStyle, onPaletteStyleChange)
+            // 色彩风格 steers the generator, and a 角色预设 never reaches it. Greyed rather than
+            // hidden: the chips are still the answer for the other five ways of getting a colour,
+            // and a section that vanished would read as one the app had lost.
+            PaletteStyleChips(
+                selected = settings.paletteStyle,
+                onSelect = onPaletteStyleChange,
+                enabled = activeCharacterPalette(settings) == null,
+            )
 
             SettingsSectionTitle(stringResource(R.string.settings_theme_preview))
             ThemePreviewCard()
@@ -263,10 +257,7 @@ private fun ColorSourceTiles(
     onOpenDynamicColor: () -> Unit,
     onOpenSeedSheet: () -> Unit,
 ) {
-    val presetName =
-        ThemePresets.firstOrNull { it.seed.toArgb() == settings.presetSeed }
-            ?.let { stringResource(it.label) }
-            ?: Color(settings.presetSeed).toHexString()
+    val presetName = stringResource(presetById(settings.presetId).label)
 
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         ColorSourceTile(
@@ -370,9 +361,9 @@ private fun ColorSourceTile(
  */
 @Composable
 private fun PresetGrid(
-    /** Non-null: the grid is only on screen while 预设 is the source, so one of the six always is. */
-    selected: Int,
-    onSelect: (Int) -> Unit,
+    /** The grid is only on screen while 预设 is the source, so one of the six is always the answer. */
+    selected: String,
+    onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -386,7 +377,7 @@ private fun PresetGrid(
                     row.forEach { preset ->
                         PresetCell(
                             preset = preset,
-                            selected = preset.seed.toArgb() == selected,
+                            selected = preset.id == selected,
                             onSelect = onSelect,
                             modifier = Modifier.weight(1f),
                         )
@@ -399,41 +390,67 @@ private fun PresetGrid(
     }
 }
 
+/**
+ * One face, its name, and the three colours it is made of.
+ *
+ * The line under the name is the character's own summary — 青×灰×粉 — rather than a hex, because a
+ * hex names one colour and none of these presets is one colour. 石墨青 keeps the slot and says 默认.
+ */
 @Composable
 private fun PresetCell(
     preset: ThemePreset,
     selected: Boolean,
-    onSelect: (Int) -> Unit,
+    onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val label = stringResource(preset.label)
     Column(
         modifier =
         modifier
             .selectable(
                 selected = selected,
                 role = Role.RadioButton,
-                onClick = { onSelect(preset.seed.toArgb()) },
-            ).padding(vertical = Spacing.sm),
+                onClick = { onSelect(preset.id) },
+            ).padding(vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        ThemeSwatch(
-            color = preset.seed,
-            second = preset.companion,
+        PresetDot(
+            avatar = preset.avatar,
             selected = selected,
-            label = label,
-            size = PresetSwatchSize,
-            ringGround = MaterialTheme.colorScheme.surfaceContainer,
+            plate = MaterialTheme.colorScheme.surfaceContainer,
         )
         Text(
-            label,
+            stringResource(preset.label),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            textAlign = TextAlign.Center,
         )
         Text(
-            preset.seed.toHexString(),
+            stringResource(preset.subtitle),
             style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** The 说明 line j1 and j2 both put under a section: one small icon, one paragraph, no card. */
+@Composable
+private fun InfoLine(text: String) {
+    Row(
+        modifier = Modifier.padding(horizontal = Spacing.xs),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            Icons.Default.Info,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(15.dp).padding(top = 1.dp),
+        )
+        Text(
+            text,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -531,6 +548,7 @@ private fun SavedThemeChips(
 private fun PaletteStyleChips(
     selected: PaletteStyle,
     onSelect: (PaletteStyle) -> Unit,
+    enabled: Boolean,
 ) {
     val labels =
         listOf(
@@ -550,6 +568,7 @@ private fun PaletteStyleChips(
                 selected = style == selected,
                 onClick = { onSelect(style) },
                 label = { Text(stringResource(label)) },
+                enabled = enabled,
             )
         }
     }

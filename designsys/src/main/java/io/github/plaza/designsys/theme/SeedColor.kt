@@ -32,9 +32,9 @@ enum class PlazaPaletteStyle { SOFT, VIBRANT, EXPRESSIVE, NEUTRAL, MONOCHROME }
 /**
  * The seed a fresh install starts on: 石墨青, the colour the app has always been.
  *
- * It is a seed rather than a hand-tuned palette because every one of the six presets is, and a first
- * preset that answered to neither 色彩风格 nor the preview card would have been the one entry in the
- * grid the rest of the screen could not describe.
+ * It is a seed rather than a hand-tuned palette because it is the app's own colour rather than a
+ * character's — 色彩风格 still steers it, and the preview card still describes it, which is what the
+ * five 角色预设 beside it in the grid give up in exchange for a third colour.
  */
 val PlazaDefaultSeed = Color(0xFF35606E)
 

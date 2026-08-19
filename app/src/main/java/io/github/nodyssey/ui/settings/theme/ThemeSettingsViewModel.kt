@@ -12,6 +12,7 @@ import io.github.nodyssey.data.settings.PaletteStyle
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.di.AppContainer
+import io.github.plaza.designsys.theme.PlazaCharacterPalette
 import io.github.plaza.designsys.theme.PlazaPaletteStyle
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -47,12 +48,12 @@ class ThemeSettingsViewModel(
      *
      * The grid only shows while 预设 is already the source, so the second line is an invariant rather
      * than a transition anyone can currently trigger. It stays because the pairing is the rule — a
-     * seed and the source that reads it are set together — and a grid shown from somewhere else
+     * preset and the source that reads it are set together — and a grid shown from somewhere else
      * later must not be able to write a preset nothing is reading.
      */
-    fun selectPreset(argb: Int) {
+    fun selectPreset(id: String) {
         viewModelScope.launch {
-            settings.setPresetSeed(argb)
+            settings.setPresetId(id)
             settings.setColorSource(ColorSource.PRESET)
         }
     }
@@ -132,7 +133,9 @@ internal fun rememberActiveSeed(settings: UserSettings): Int {
             null
         }
     return when (settings.colorSource) {
-        ColorSource.PRESET -> settings.presetSeed
+        // 石墨青 is the only preset with a seed at all; the other five bypass this entirely — see
+        // [activeCharacterPalette].
+        ColorSource.PRESET -> SettingsRepository.DEFAULT_SEED_COLOR
 
         ColorSource.CUSTOM -> settings.seedColor
 
@@ -144,6 +147,16 @@ internal fun rememberActiveSeed(settings: UserSettings): Int {
             }
     } ?: SettingsRepository.DEFAULT_SEED_COLOR
 }
+
+/**
+ * The hand-written scheme in force, or null when the app is on a seed.
+ *
+ * Non-null only under 预设, and only for the five character presets: 动态取色 and 自定义 are seeds by
+ * definition, and so is 石墨青. Null is the answer the whole rest of the theme path is written
+ * around, so it is the answer for every source but one.
+ */
+internal fun activeCharacterPalette(settings: UserSettings): PlazaCharacterPalette? =
+    if (settings.colorSource == ColorSource.PRESET) presetById(settings.presetId).palette else null
 
 /** `:designsys` cannot see this module's enum, so the two meet here. */
 internal fun PaletteStyle.toPlaza(): PlazaPaletteStyle =

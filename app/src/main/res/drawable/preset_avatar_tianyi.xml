@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the j2 board's inline SVG; see ThemePresets.kt. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="56dp"
+    android:height="56dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:fillColor="#E4F3FC"
+        android:pathData="M0,32a32,32 0 1,0 64,0a32,32 0 1,0 -64,0Z" />
+    <path
+        android:fillColor="#BCC8D2"
+        android:pathData="M15 26 Q11 48 16 58 L48 58 Q53 48 49 26 Z" />
+    <path
+        android:fillColor="#BCC8D2"
+        android:pathData="M15,27a17,17 0 1,0 34,0a17,17 0 1,0 -34,0Z" />
+    <path
+        android:fillColor="#FFE7D4"
+        android:pathData="M19,35a13,13 0 1,0 26,0a13,13 0 1,0 -26,0Z" />
+    <path
+        android:fillColor="#BCC8D2"
+        android:pathData="M19 32 Q18 16 32 16 Q46 16 45 32 Q40 26 36 28 Q34 23 31 27 Q28 23 26 28 Q22 26 19 32 Z" />
+    <path
+        android:fillColor="#66CCFF"
+        android:pathData="M40,20a4,4 0 1,0 8,0a4,4 0 1,0 -8,0Z" />
+    <path
+        android:fillColor="#66CCFF"
+        android:pathData="M46.5,24a2.5,2.5 0 1,0 5,0a2.5,2.5 0 1,0 -5,0Z" />
+    <path
+        android:fillColor="#3E8E6E"
+        android:pathData="M25,37a2,2 0 1,0 4,0a2,2 0 1,0 -4,0Z" />
+    <path
+        android:fillColor="#3E8E6E"
+        android:pathData="M35,37a2,2 0 1,0 4,0a2,2 0 1,0 -4,0Z" />
+</vector>

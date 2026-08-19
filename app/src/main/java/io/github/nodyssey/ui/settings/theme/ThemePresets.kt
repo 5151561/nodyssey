@@ -1,46 +1,96 @@
 package io.github.nodyssey.ui.settings.theme
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import io.github.nodyssey.R
+import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.plaza.designsys.theme.PlazaCharacterPalette
 import java.util.Locale
 
 /**
- * The six 预设, as j1 lays them out: three columns, 石墨青 first.
+ * The six 预设, as j2 lays them out: three columns, 石墨青 first, five characters after it.
  *
- * Six rather than the nine an earlier build offered. Nine filled three rows and turned a choice into
- * a chart; six fits two, and the reader who wants a seventh colour has 自定义 one section below —
- * which is the section the extra three were standing in for.
+ * 石墨青 leads and stays the factory default because it is the app's own colour — picking it is the
+ * closest thing to "put it back". It is also the only one of the six that is still a seed: the other
+ * five are whole hand-written schemes (see [PlazaCharacterPalette]), which is the point of them. A
+ * character is a combination of colours, and the generator only ever gets handed one.
  *
- * 石墨青 leads because it is the app's own colour, and picking it is the closest thing to "put it
- * back". It is a seed like the other five: the hand-tuned palette it used to name is gone, so
- * 色彩风格 and the preview card describe every entry in the grid rather than five of six.
+ * The five that j1 offered — 暖石墨, 靛蓝, 苔绿, 玫紫, 落日橙 — are gone rather than pushed to a
+ * second plate. They were seeds with names, and the section one below this one is where a reader
+ * makes exactly that: 自定义 takes any colour at all and 我的主题 keeps it.
  */
 internal data class ThemePreset(
+    /** What the store holds. Stable across releases — the label is not. */
+    val id: String,
     @param:StringRes val label: Int,
-    val seed: Color,
-    /** The dot's other half. See [ThemeSwatch] — and the note below on why it is a literal. */
-    val companion: Color,
+    /** The line under the name: the character's three-colour summary, or 默认 for 石墨青. */
+    @param:StringRes val subtitle: Int,
+    /** The hand-written scheme, or null for 石墨青 — the one preset still expanded from a seed. */
+    val palette: PlazaCharacterPalette?,
+    /** The flat portrait, or null for 石墨青, which is a two-tone dot rather than a face. */
+    @param:DrawableRes val avatar: Int?,
 )
 
-/*
- * The companions are literals rather than each seed's generated `tertiary`.
- *
- * They are sample colours, not theme tokens: a dot has to look the same in light and dark or the
- * grid stops being a stable thing to point at, and the generated tertiary moves with both the mode
- * and 色彩风格. j1 marks them the same way — "字面色值例外 … 亮暗两态相同" — alongside the avatar
- * ground rule.
- */
 internal val ThemePresets =
     listOf(
-        ThemePreset(R.string.settings_preset_teal, Color(0xFF35606E), Color(0xFF7E5700)),
-        ThemePreset(R.string.settings_preset_warm_graphite, Color(0xFF7A6A54), Color(0xFF4C6B4A)),
-        ThemePreset(R.string.settings_preset_indigo, Color(0xFF4C5FA8), Color(0xFF7A4E93)),
-        ThemePreset(R.string.settings_preset_moss, Color(0xFF3F6B4E), Color(0xFF6B6428)),
-        ThemePreset(R.string.settings_preset_rose, Color(0xFF8B4F72), Color(0xFF8A5340)),
-        ThemePreset(R.string.settings_preset_sunset, Color(0xFFA05A32), Color(0xFF6B6428)),
+        ThemePreset(
+            id = SettingsRepository.DEFAULT_PRESET_ID,
+            label = R.string.settings_preset_graphite,
+            subtitle = R.string.settings_preset_graphite_desc,
+            palette = null,
+            avatar = null,
+        ),
+        ThemePreset(
+            id = "miku",
+            label = R.string.settings_preset_miku,
+            subtitle = R.string.settings_preset_miku_desc,
+            palette = PlazaCharacterPalette.MIKU,
+            avatar = R.drawable.preset_avatar_miku,
+        ),
+        ThemePreset(
+            id = "twins",
+            label = R.string.settings_preset_twins,
+            subtitle = R.string.settings_preset_twins_desc,
+            palette = PlazaCharacterPalette.TWINS,
+            avatar = R.drawable.preset_avatar_twins,
+        ),
+        ThemePreset(
+            id = "tianyi",
+            label = R.string.settings_preset_tianyi,
+            subtitle = R.string.settings_preset_tianyi_desc,
+            palette = PlazaCharacterPalette.TIANYI,
+            avatar = R.drawable.preset_avatar_tianyi,
+        ),
+        ThemePreset(
+            id = "reimu",
+            label = R.string.settings_preset_reimu,
+            subtitle = R.string.settings_preset_reimu_desc,
+            palette = PlazaCharacterPalette.REIMU,
+            avatar = R.drawable.preset_avatar_reimu,
+        ),
+        ThemePreset(
+            id = "marisa",
+            label = R.string.settings_preset_marisa,
+            subtitle = R.string.settings_preset_marisa_desc,
+            palette = PlazaCharacterPalette.MARISA,
+            avatar = R.drawable.preset_avatar_marisa,
+        ),
     )
+
+/** The preset a stored id names, or 石墨青 when the store holds one this build no longer ships. */
+internal fun presetById(id: String): ThemePreset =
+    ThemePresets.firstOrNull { it.id == id } ?: ThemePresets.first()
+
+/**
+ * 石墨青's other half — the dot's warm side, split on the 135° diagonal.
+ *
+ * A literal rather than the seed's generated `tertiary`: it is a sample colour, not a theme token,
+ * and a dot that moved with 色彩风格 and the mode would stop being a stable thing to point at. j2
+ * marks it the same way — "字面色值例外".
+ */
+internal val GraphiteCompanion = Color(0xFF7E5700)
 
 /** `#RRGGBB`, upper case — the form the hex field reads back and the form the labels print. */
 internal fun Color.toHexString(): String =
