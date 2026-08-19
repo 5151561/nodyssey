@@ -73,6 +73,8 @@ import io.github.nodyssey.ui.assets.CreditRoute
 import io.github.nodyssey.ui.assets.CreditViewModel
 import io.github.nodyssey.ui.assets.StardustRoute
 import io.github.nodyssey.ui.assets.StardustViewModel
+import io.github.nodyssey.ui.bookmarks.BookmarksRoute
+import io.github.nodyssey.ui.bookmarks.BookmarksViewModel
 import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.composer.PostComposerRoute
 import io.github.nodyssey.ui.composer.PostComposerViewModel
@@ -452,6 +454,10 @@ fun MainNavigation(
                         )
                     },
                     onOpenBrowser = openWebUrl,
+                    // Pushed rather than swapped in: on a wide window the space lands in the list
+                    // pane and the conversation stays beside it, which is why `paneRoleOf` calls a
+                    // space a list wherever it is reached from.
+                    onOpenSpace = { openSpace(key.uid) },
                     onLinkClick = openContentUrl,
                 )
             }
@@ -470,11 +476,11 @@ fun MainNavigation(
                     onAccountSettings = { backStack.add(AccountSettingsKey) },
                     onOpenWebsite = { openWebUrl(NodeSeekSite.BASE_URL) },
                     onOpenSpace = { uid -> backStack.add(UserSpaceKey(uid, isSelf = true)) },
-                    // 我的收藏 is the space page's own 收藏 tab, opened directly. A separate screen
-                    // would be the same list rendered twice from the same endpoint.
-                    onCollections = { uid ->
-                        backStack.add(UserSpaceKey(uid, isSelf = true, openCollections = true))
-                    },
+                    // 我的收藏 has its own screen (board i1) rather than the space page's tab: it is
+                    // the only list here that is always about you, and the things the board asks for
+                    // — filters over the whole collection, multi-select, offline downloads — are
+                    // about the collection rather than about a profile. The space page keeps its tab.
+                    onCollections = { backStack.add(BookmarksKey) },
                     onHistory = { backStack.add(ReadHistoryKey) },
                     onAssets = { backStack.add(AssetsKey()) },
                     onAttendance = { backStack.add(AssetsKey(openAttendanceChooser = true)) },
@@ -628,6 +634,17 @@ fun MainNavigation(
                     onOpenBrowser = openWebUrl,
                     onLinkClick = openContentUrl,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                )
+            }
+
+            entry<BookmarksKey> {
+                val viewModel: BookmarksViewModel =
+                    viewModel(factory = BookmarksViewModel.factory(container))
+                BookmarksRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onPostClick = { postId -> backStack.add(PostDetailKey(postId)) },
+                    onOpenBrowser = openWebUrl,
                 )
             }
 

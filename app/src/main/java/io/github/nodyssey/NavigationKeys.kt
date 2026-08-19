@@ -196,6 +196,16 @@ data class UserSpaceKey(
 data object FollowKey : NavKey
 
 /**
+ * 我的收藏, as its own screen (board i1).
+ *
+ * No uid: the site publishes nobody else's collections, so this destination is only ever the signed-in
+ * account's. That is also why it is separate from [UserSpaceKey] rather than a tab on it — the space
+ * page is a page about *a user*, and this one cannot be about anyone but you.
+ */
+@Serializable
+data object BookmarksKey : NavKey
+
+/**
  * 浏览历史. Device-local, so unlike almost every other destination here it has no web equivalent to
  * fall back to — NodeSeek does not keep a reading history.
  */

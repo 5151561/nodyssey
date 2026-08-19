@@ -657,6 +657,80 @@ object PlazaIcons {
                 "M16,4v4h4V4H16zM10,8h4V4h-4V8zM16,14h4v-4h-4V14zM16,20h4v-4h-4V20z",
         )
     }
+
+    /** 收藏页状态条：这台设备上已经有离线内容了（板 i1）。 */
+    val CloudDone: ImageVector by lazy {
+        materialIcon(
+            name = "CloudDone",
+            pathData =
+            "M19.35,10.04C18.67,6.59 15.64,4 12,4 9.11,4 6.6,5.64 5.35,8.04 2.34,8.36 0,10.91 0,14" +
+                "c0,3.31 2.69,6 6,6h13c2.76,0 5,-2.24 5,-5 0,-2.64 -2.05,-4.78 -4.65,-4.96z" +
+                "M10,17l-3.5,-3.5 1.41,-1.41L10,14.17 15.18,9l1.41,1.41L10,17z",
+        )
+    }
+
+    /** 「全部下载」胶囊。与 [Download] 分开：那个是把一张图存进相册，这个是把一批帖子存下来。 */
+    val CloudDownload: ImageVector by lazy {
+        materialIcon(
+            name = "CloudDownload",
+            pathData =
+            "M19.35,10.04C18.67,6.59 15.64,4 12,4 9.11,4 6.6,5.64 5.35,8.04 2.34,8.36 0,10.91 0,14" +
+                "c0,3.31 2.69,6 6,6h13c2.76,0 5,-2.24 5,-5 0,-2.64 -2.05,-4.78 -4.65,-4.96z" +
+                "M17,13l-5,5 -5,-5h3V9h4v4h3z",
+        )
+    }
+
+    /** 离线版落后于站点，等着补新回复（板 i1）。 */
+    val Sync: ImageVector by lazy {
+        materialIcon(
+            name = "Sync",
+            pathData =
+            "M12,4V1L8,5l4,4V6c3.31,0 6,2.69 6,6 0,1.01 -0.25,1.97 -0.7,2.8l1.46,1.46" +
+                "C19.54,15.03 20,13.57 20,12c0,-4.42 -3.58,-8 -8,-8z" +
+                "M12,18c-3.31,0 -6,-2.69 -6,-6 0,-1.01 0.25,-1.97 0.7,-2.8L5.24,7.74" +
+                "C4.46,8.97 4,10.43 4,12c0,4.42 3.58,8 8,8v3l4,-4 -4,-4v3z",
+        )
+    }
+
+    /** 把选中的帖子移出收藏（板 i1 多选工具栏）。 */
+    val BookmarkRemove: ImageVector by lazy {
+        materialIcon(
+            name = "BookmarkRemove",
+            pathData =
+            "M17,3H7c-1.1,0 -2,0.9 -2,2v16l7,-3 7,3V5c0,-1.1 -0.9,-2 -2,-2zM15,9H9V7h6v2z",
+        )
+    }
+
+    /** 仅 Wi-Fi 下载。 */
+    val Wifi: ImageVector by lazy {
+        materialIcon(
+            name = "Wifi",
+            pathData =
+            "M1,9l2,2c4.97,-4.97 13.03,-4.97 18,0l2,-2C16.93,2.93 7.08,2.93 1,9z" +
+                "M9,17l3,3 3,-3c-1.65,-1.66 -4.34,-1.66 -6,0z" +
+                "M5,13l2,2c2.76,-2.76 7.24,-2.76 10,0l2,-2C15.14,9.14 8.87,9.14 5,13z",
+        )
+    }
+
+    /** 落后的回复数前面那个下箭头——方向是「还要往下拉」，不是排序。 */
+    val ArrowDownward: ImageVector by lazy {
+        materialIcon(
+            name = "ArrowDownward",
+            pathData = "M20,12l-1.41,-1.41L13,16.17V4h-2v12.17l-5.58,-5.59L4,12l8,8 8,-8z",
+        )
+    }
+
+    /**
+     * 进度环中心的方块：按一下停掉这一篇的下载。
+     *
+     * 方块而不是 ✕，因为它压在一个还在转的进度环里——✕ 在那个尺寸下会和环上的缺口混在一起。
+     */
+    val Stop: ImageVector by lazy {
+        materialIcon(
+            name = "Stop",
+            pathData = "M6,6h12v12H6z",
+        )
+    }
 }
 
 /**

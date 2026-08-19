@@ -2,8 +2,10 @@ package io.github.plaza.designsys.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.FlowRowScope
@@ -41,6 +43,15 @@ import io.github.plaza.designsys.theme.Spacing
  * when this app's history screen was built out of `ListItem`. Everything that varies between the
  * two — a pin instead of an avatar, a lock beside the title, which counts go on the meta line — is a
  * slot here, so a caller can differ without re-deciding the geometry.
+ *
+ * [supporting] is a third line under the meta, for the one thing a row has to say about *itself*
+ * rather than about the thread — 收藏 uses it for 「离线版落后 3 条回复」 and for a failed download's
+ * reason. It is its own line rather than another item in [meta] because the meta is a `FlowRow`: a
+ * sentence dropped in there queues up beside the board tag and wraps mid-phrase.
+ *
+ * [trailing] is the row's own state at the end of the line — a download state, a count, a switch.
+ * The row's end padding tightens when one is present, because a trailing block brings its own
+ * optical margin and 16dp on top of it pushed the state off the edge of a 360dp screen.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -50,19 +61,42 @@ fun ThreadRow(
     title: @Composable RowScope.() -> Unit,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.surface,
+    /** Long-press, for a list that can be multi-selected. Null keeps the row a plain `clickable`. */
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null,
+    supporting: (@Composable ColumnScope.() -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
     meta: @Composable FlowRowScope.() -> Unit,
 ) {
     Row(
         modifier =
         modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .background(containerColor)
-            .padding(start = 14.dp, end = Spacing.lg, top = 10.dp, bottom = 10.dp),
+            .let { base ->
+                if (onLongClick == null) {
+                    base.clickable(onClick = onClick)
+                } else {
+                    // Not a raw `pointerInput`: this is what gives the press a ripple and gives
+                    // TalkBack a long-click action it can announce and perform.
+                    base.combinedClickable(
+                        onClick = onClick,
+                        onLongClick = onLongClick,
+                        onLongClickLabel = onLongClickLabel,
+                    )
+                }
+            }.background(containerColor)
+            .padding(
+                start = 14.dp,
+                end = if (trailing == null) Spacing.lg else 10.dp,
+                top = 10.dp,
+                bottom = 10.dp,
+            ),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         leading()
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        // Weighted so a trailing block keeps its width: without it the title column claims
+        // everything left over and the state at the end of the row is measured at zero.
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically, content = title)
             // Flows rather than clips so that a large system font wraps the meta onto a second line
             // instead of pushing the timestamp — the single most useful item there — off the edge.
@@ -72,7 +106,9 @@ fun ThreadRow(
                 itemVerticalAlignment = Alignment.CenterVertically,
                 content = meta,
             )
+            supporting?.invoke(this)
         }
+        trailing?.invoke()
     }
 }
 

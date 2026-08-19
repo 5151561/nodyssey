@@ -3,7 +3,6 @@ package io.github.nodyssey.ui.common
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Face
@@ -347,9 +346,9 @@ fun SignedInState(
 /**
  * The site renders this page in the browser and exposes no endpoint we can read.
  *
- * Distinct from [ComingSoonState] on purpose: the screen exists and is designed, what is missing is
- * the data. Saying "还在做" would blame the wrong half and hide the one action that works today —
- * opening the same page in the web view, where the site's own JavaScript renders it.
+ * The screen exists and is designed; what is missing is the data. Saying "还在做" would blame the
+ * wrong half and hide the one action that works today — opening the same page in the web view,
+ * where the site's own JavaScript renders it.
  */
 @Composable
 fun NotWiredState(
@@ -366,23 +365,6 @@ fun NotWiredState(
         description = description ?: stringResource(R.string.status_not_wired_body),
         primaryAction =
         StatusAction(stringResource(R.string.action_open_in_browser), onOpenBrowser),
-        modifier = modifier,
-    )
-}
-
-/** Honest placeholder for the tabs whose screens are not designed yet. */
-@Composable
-fun ComingSoonState(
-    label: String,
-    modifier: Modifier = Modifier,
-) {
-    StatusView(
-        icon = Icons.Default.Build,
-        shape = StatusShapes.Empty,
-        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        title = stringResource(R.string.status_coming_soon_title, label),
-        description = stringResource(R.string.status_coming_soon_body),
         modifier = modifier,
     )
 }
