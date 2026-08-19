@@ -300,11 +300,30 @@ class OneHandAppBarState internal constructor(initialHeightPx: Float, initialCon
      * left of the screen below it. Every such control has to say so here.
      */
     suspend fun fold() {
+        settleTo(0f)
+    }
+
+    /**
+     * Brings the bar back, for the same kind of jump [fold] takes it away for.
+     *
+     * They are a pair because a programmatic scroll dispatches nothing, and both ends of the list
+     * have a bar height that a hand would have produced on its own. Dragged to the top, the last of
+     * the gesture is precisely what the list could not use, this connection takes that leftover, and
+     * the bar is standing when the finger comes off. `animateScrollToItem(0)` arrives at the same
+     * place having moved nothing through the scroll chain — so a "back to the top" that does not say
+     * so here lands on a top with the title still folded away, which is not a state the reader could
+     * have scrolled themselves into.
+     */
+    suspend fun unfold() {
+        settleTo(maxHeightPx)
+    }
+
+    private suspend fun settleTo(target: Float) {
         val from = heightPx
-        if (from <= 0f) return
+        if (from == target) return
         animate(
             initialValue = from,
-            targetValue = 0f,
+            targetValue = target,
             animationSpec =
             spring(
                 dampingRatio = Spring.DampingRatioNoBouncy,
@@ -380,16 +399,6 @@ internal fun expandedTitleAlpha(fraction: Float): Float {
 
 /** @see expandedTitleAlpha */
 internal fun collapsedTitleAlpha(fraction: Float): Float = 1f - expandedTitleAlpha(fraction)
-
-/**
- * A shorter sink, for a screen whose pull it has to share.
- *
- * Where pull-to-refresh is chained behind the bar, the bar's own travel is what the reader drags
- * through before the refresh even begins to arm. A third of the screen is too much to put in front
- * of a gesture people use constantly; this is short enough to read as one stage of a longer pull,
- * which is what it is.
- */
-val OneHandSharedPullBlank = 120.dp
 
 /** The most of the screen the whole bar — blank plus toolbar — is ever allowed to take. */
 private const val MAX_BAR_FRACTION = 0.40f

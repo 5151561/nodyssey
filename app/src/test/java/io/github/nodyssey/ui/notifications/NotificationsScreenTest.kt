@@ -1,10 +1,17 @@
 package io.github.nodyssey.ui.notifications
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
@@ -118,6 +125,45 @@ class NotificationsScreenTest {
         composeRule.onNodeWithText("您的评论被用户iwil投喂鸡腿").assertIsDisplayed()
     }
 
+    /**
+     * Tapping 通知 while already on 通知 is the same "back to the top" the 首页 tab answers, and the
+     * screen hears about it as a counter rather than a call — see the note on it in `Navigation`.
+     */
+    @Test
+    fun `re-tapping the tab brings the list back to the top`() {
+        var requests by mutableIntStateOf(0)
+        val items = List(40) { mention(id = "$it", threadTitle = "第${it}帖") }
+        composeRule.setContent {
+            PlazaTheme {
+                NotificationsScreen(
+                    state = state(items = items),
+                    onSignIn = {},
+                    onVerify = {},
+                    onCategoryChange = {},
+                    onRetry = {},
+                    onMarkAllRead = {},
+                    onNotificationClick = {},
+                    onConversationClick = {},
+                    onNewConversation = {},
+                    onNewConversationQueryChange = {},
+                    onNewConversationSearch = {},
+                    onNewConversationDismiss = {},
+                    onRecipientClick = {},
+                    scrollToTopRequests = requests,
+                )
+            }
+        }
+        // The last of the two lazy lists on screen: the group chips are the other one.
+        composeRule.onAllNodes(hasScrollToIndexAction()).onLast().performScrollToIndex(35)
+        composeRule.onNodeWithText(sentence("第0帖")).assertIsNotDisplayed()
+
+        composeRule.runOnIdle { requests++ }
+
+        composeRule.onNodeWithText(sentence("第0帖")).assertIsDisplayed()
+    }
+
+    private fun sentence(threadTitle: String) = "nssk 在帖子 $threadTitle 中@了我"
+
     private fun setContent(state: NotificationsUiState) {
         composeRule.setContent {
             PlazaTheme {
@@ -153,9 +199,9 @@ class NotificationsScreenTest {
         nowMillis = NOW,
     )
 
-    private fun mention() =
+    private fun mention(id: String = "1", threadTitle: String = "求教如何改用户名") =
         ForumNotification(
-            id = "1",
+            id = id,
             viewedId = 1L,
             category = NotificationCategory.MENTIONS,
             postId = 1,
@@ -164,7 +210,7 @@ class NotificationsScreenTest {
             actorName = "nssk",
             avatarUrl = null,
             excerpt = null,
-            threadTitle = "求教如何改用户名",
+            threadTitle = threadTitle,
             createdAtMillis = NOW - 26 * 60_000L,
             createdAtText = null,
             isUnread = true,

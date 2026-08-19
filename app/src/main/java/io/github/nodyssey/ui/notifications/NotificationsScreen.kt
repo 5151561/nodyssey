@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -31,7 +32,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,7 +64,6 @@ import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.LoadingState
-import io.github.plaza.designsys.component.OneHandSharedPullBlank
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
@@ -68,6 +72,7 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
+import kotlinx.coroutines.launch
 
 @Composable
 fun NotificationsRoute(
@@ -77,6 +82,7 @@ fun NotificationsRoute(
     onNotificationClick: (ForumNotification) -> Unit,
     onOpenThread: (Long, String) -> Unit,
     modifier: Modifier = Modifier,
+    scrollToTopRequests: Int = 0,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     // Coming back into view is the refresh trigger this screen was missing: the view model outlives
@@ -110,6 +116,7 @@ fun NotificationsRoute(
             onOpenThread(user.uid, user.name)
         },
         modifier = modifier,
+        scrollToTopRequests = scrollToTopRequests,
     )
 }
 
@@ -136,8 +143,32 @@ fun NotificationsScreen(
     onNewConversationDismiss: () -> Unit,
     onRecipientClick: (UserSearchResult) -> Unit,
     modifier: Modifier = Modifier,
+    scrollToTopRequests: Int = 0,
 ) {
     val appBarState = rememberOneHandAppBarState()
+    // One list state per group rather than one shared: 通知 and 私信 are different lists of different
+    // things, and returning to a group ought to return to where it was left.
+    val notificationListState = rememberLazyListState()
+    val conversationListState = rememberLazyListState()
+    /*
+     * Which 通知 tap has already been answered. Remembered across leaving the composition, because
+     * opening a notification takes this screen out of it and a plain `LaunchedEffect` on the count
+     * would fire again on the way back — throwing away the position the list had just restored. A
+     * tap from before the thread was opened is not a request to scroll after returning from it.
+     */
+    var answeredScrollRequest by rememberSaveable { mutableIntStateOf(scrollToTopRequests) }
+    LaunchedEffect(scrollToTopRequests) {
+        if (scrollToTopRequests == answeredScrollRequest) return@LaunchedEffect
+        answeredScrollRequest = scrollToTopRequests
+        // Alongside the scroll rather than before it: the title coming down and the list running up
+        // are one movement, and awaiting the bar first would play them as two.
+        launch { appBarState.unfold() }
+        if (state.selectedCategory == NotificationCategory.MESSAGES) {
+            conversationListState.animateScrollToItem(0)
+        } else {
+            notificationListState.animateScrollToItem(0)
+        }
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -148,10 +179,6 @@ fun NotificationsScreen(
                 modifier = Modifier.readableWidth(),
                 title = stringResource(R.string.tab_notifications),
                 state = appBarState,
-                // Shorter than elsewhere because the bar is only the first stage of this screen's
-                // pull: everything the reader drags through here, they drag through before the
-                // refresh below even begins to arm.
-                expandedBlank = OneHandSharedPullBlank,
                 actions = {
                     TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
                         Icon(Icons.Default.Check, contentDescription = null)
@@ -213,7 +240,12 @@ fun NotificationsScreen(
                 //
                 // The reader gets one gesture with two stages in it: pull to bring the screen down,
                 // keep pulling to refresh. Releasing mid-sink leaves the bar where it is, so the
-                // next pull starts from there and reaches the refresh sooner.
+                // next pull starts from there and reaches the refresh sooner — and from the top of
+                // the page, where the bar is already full, the very first pull is the refresh.
+                //
+                // The spinner comes down from here rather than from the top of the window, which is
+                // the right place for it and nobody had to arrange it: the refresh wraps the
+                // content, so it starts wherever the bar has left the content standing.
                 Box(Modifier.fillMaxSize().nestedScroll(appBarState.nestedScrollConnection)) {
                     when {
                         !state.isSignedIn -> SignedOutState(onSignIn = onSignIn)
@@ -231,6 +263,7 @@ fun NotificationsScreen(
                         state.selectedCategory == NotificationCategory.MESSAGES ->
                             ConversationList(
                                 state = state,
+                                listState = conversationListState,
                                 onConversationClick = onConversationClick,
                                 onNewConversation = onNewConversation,
                                 onQueryChange = onNewConversationQueryChange,
@@ -246,7 +279,7 @@ fun NotificationsScreen(
                             )
 
                         else ->
-                            LazyColumn {
+                            LazyColumn(state = notificationListState) {
                                 items(state.items, key = ForumNotification::id) { item ->
                                     NotificationRow(
                                         item = item,

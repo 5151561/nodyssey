@@ -224,7 +224,8 @@ fun MainNavigation(
 
     /*
      * Tapping 首页 while already on 首页 is the platform's "back to the top" gesture, and until now it
-     * was the one place in the bar where a tap did nothing at all.
+     * was the one place in the bar where a tap did nothing at all. 通知 answers the same tap the same
+     * way; the two counters are separate because a tap on one tab is not a request to the other.
      *
      * A counter rather than a boolean flag: two taps in a row are two separate requests, and a flag
      * would need clearing afterwards — which is a second write the screen would have to own. Saved
@@ -233,6 +234,7 @@ fun MainNavigation(
      * look like a fresh tap and scroll a restored list back to the top.
      */
     var homeScrollToTopRequests by rememberSaveable { mutableIntStateOf(0) }
+    var notificationsScrollToTopRequests by rememberSaveable { mutableIntStateOf(0) }
 
     val backStack: NavBackStack<NavKey> =
         when (currentTab) {
@@ -429,6 +431,7 @@ fun MainNavigation(
                     onOpenThread = { uid, name ->
                         backStack.add(MessageThreadKey(uid, name))
                     },
+                    scrollToTopRequests = notificationsScrollToTopRequests,
                 )
             }
 
@@ -1262,11 +1265,15 @@ fun MainNavigation(
             NodysseyNavigationItems(
                 current = currentTab,
                 onSelect = { destination ->
-                    // Re-selecting 首页 scrolls the feed back to the start. Only 首页 — the other
-                    // three are not lists you get lost in, and a tab that silently jumps somewhere
-                    // is worse than one that does nothing.
-                    if (destination == currentTab && destination == TopLevelDestination.HOME) {
-                        homeScrollToTopRequests++
+                    // Re-selecting a tab scrolls its list back to the start — but only the two tabs
+                    // that *are* a list long enough to get lost in. 搜索 and 我的 stay inert, because
+                    // a tab that silently jumps somewhere is worse than one that does nothing.
+                    if (destination == currentTab) {
+                        when (destination) {
+                            TopLevelDestination.HOME -> homeScrollToTopRequests++
+                            TopLevelDestination.NOTIFICATIONS -> notificationsScrollToTopRequests++
+                            else -> Unit
+                        }
                     }
                     currentTab = destination
                 },
