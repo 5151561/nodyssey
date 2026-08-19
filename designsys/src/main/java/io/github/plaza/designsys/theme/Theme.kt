@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 /**
@@ -38,18 +39,31 @@ val LocalPlazaFontScale = staticCompositionLocalOf { 1f }
 fun PlazaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // The brand palette is the default and the point: the app should be recognisable from a
-    // screenshot posted back to the forum. Wallpaper colors stay available, but opt-in.
-    dynamicColor: Boolean = false,
+    // screenshot posted back to the forum. The wallpaper and a hand-picked seed stay available,
+    // but opt-in.
+    colorSource: PlazaColorSource = PlazaColorSource.BRAND,
+    seedColor: Color = PlazaDefaultSeed,
     fontScale: Float = 1f,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val useDynamic = dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    // Below API 31 there is no wallpaper palette to read, so that source falls through to the brand
+    // one. The stored setting is left alone: it is the reader's answer, not this phone's capability.
+    val useWallpaper =
+        colorSource == PlazaColorSource.WALLPAPER && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val colorScheme =
         when {
-            useDynamic && darkTheme -> dynamicDarkColorScheme(context)
-            useDynamic -> dynamicLightColorScheme(context)
+            useWallpaper && darkTheme -> dynamicDarkColorScheme(context)
+
+            useWallpaper -> dynamicLightColorScheme(context)
+
+            // Remembered because generating one is real work — an HCT solve per role — and it would
+            // otherwise rerun on every recomposition of the whole app.
+            colorSource == PlazaColorSource.SEED ->
+                remember(seedColor, darkTheme) { plazaSeedColorScheme(seedColor, darkTheme) }
+
             darkTheme -> PlazaDarkColorScheme
+
             else -> PlazaLightColorScheme
         }
 
