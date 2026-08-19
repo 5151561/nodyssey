@@ -1,10 +1,14 @@
 package io.github.plaza.designsys.richtext
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.ColorImage
@@ -17,6 +21,7 @@ import coil3.test.FakeImageLoaderEngine
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.theme.PlazaTheme
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -51,7 +56,10 @@ class InlineStickerSizeTest {
         StickerSizeCache.clear()
     }
 
-    private fun setContent(sizing: StickerSizing) {
+    private fun setContent(
+        sizing: StickerSizing,
+        nodes: List<RichNode> = NODES,
+    ) {
         val engine =
             FakeImageLoaderEngine
                 .Builder()
@@ -63,7 +71,12 @@ class InlineStickerSizeTest {
             }
             PlazaTheme {
                 CompositionLocalProvider(LocalStickerSizing provides sizing) {
-                    RichContent(nodes = NODES, onLinkClick = {}, onImageClick = {})
+                    RichContent(
+                        nodes = nodes,
+                        onLinkClick = {},
+                        onImageClick = {},
+                        modifier = Modifier.testTag(BODY),
+                    )
                 }
             }
         }
@@ -98,16 +111,74 @@ class InlineStickerSizeTest {
         composeRule.onNodeWithContentDescription(ALT).assertWidthIsEqualTo(64.dp)
         composeRule.onNodeWithContentDescription(ALT).assertHeightIsEqualTo(48.dp)
     }
+
+    /**
+     * The same sticker, on a phone-like screen rather than the 1x one the rest of the class uses.
+     *
+     * 关闭统一缩限 promises 按表情原本的大小显示, and a sticker's own size is a fact about the
+     * sticker, not about the screen it lands on. The first build divided the file's pixels by the
+     * density, so this came out 16x12dp on a 4x phone — inside the 20sp box the mode exists to
+     * escape, which is what 「不缩限的全都缩在一行里」 was.
+     */
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxxhdpi")
+    fun `natural sizing is the sticker's own size on a dense screen too`() {
+        setContent(StickerSizing(uniform = false))
+
+        composeRule.onNodeWithContentDescription(ALT).assertWidthIsEqualTo(64.dp)
+        composeRule.onNodeWithContentDescription(ALT).assertHeightIsEqualTo(48.dp)
+    }
+
+    /**
+     * The line a big sticker lands on has to make room for it — 问题 #90.
+     *
+     * The paragraph wraps, so the sticker ends up on a line of its own with text above it: exactly
+     * the shape in the report, where an enlarged 表情 was drawn straight through the line before it.
+     * Containment is the assertion because it is the complaint — a sticker that hangs out of its own
+     * paragraph is a sticker drawn over whatever the paragraph is stacked against. Before the fix it
+     * hung 18dp past the bottom of an 81dp body.
+     */
+    @Test
+    fun `an enlarged sticker on a wrapped line stays inside its paragraph`() {
+        setContent(StickerSizing(uniform = true, uniformSize = 60.sp), WRAPPING_NODES)
+
+        val body = composeRule.onNodeWithTag(BODY).getUnclippedBoundsInRoot()
+        val sticker = composeRule.onNodeWithContentDescription(ALT).getUnclippedBoundsInRoot()
+        assertTrue(
+            "sticker $sticker escaped body $body",
+            sticker.top >= body.top && sticker.bottom <= body.bottom,
+        )
+    }
+
+    /** The other half of it: a sticker that fits the line leaves `PostBody`'s 27sp rhythm alone. */
+    @Test
+    fun `a sticker that fits keeps the body's line height`() {
+        setContent(StickerSizing())
+
+        composeRule.onNodeWithTag(BODY).assertHeightIsEqualTo(27.dp)
+    }
 }
 
 private const val STICKER_URL = "https://example.invalid/static/image/sticker/ac/01.png"
 private const val ALT = "笑"
+private const val BODY = "body"
 
 private val NODES =
     listOf(
         RichNode.Paragraph(
             listOf(
                 InlineNode.Text("笑死"),
+                InlineNode.Sticker(url = STICKER_URL, alt = ALT),
+            ),
+        ),
+    )
+
+/** Long enough to wrap at `w360dp`, so the sticker lands on a line with text above it. */
+private val WRAPPING_NODES =
+    listOf(
+        RichNode.Paragraph(
+            listOf(
+                InlineNode.Text("之前天天论坛都有帖子骂 在上面跑的服务都只能随缘用 现在刚想着放生了 好像也没有人讨论了"),
                 InlineNode.Sticker(url = STICKER_URL, alt = ALT),
             ),
         ),

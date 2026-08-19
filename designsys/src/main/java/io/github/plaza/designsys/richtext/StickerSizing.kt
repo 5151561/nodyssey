@@ -108,23 +108,31 @@ fun StickerSizing.boxSize(
             val side = if (uniform) uniformSize.toDp() else DEFAULT_STICKER_SIZE.toDp()
             DpSize(side, side)
         } else {
-            naturalDpSize(naturalPx, density)
+            naturalDpSize(naturalPx)
         }
     }
 
-/** Natural size in dp, scaled down to [NATURAL_STICKER_MAX_WIDTH] the way the site's CSS does. */
-private fun naturalDpSize(
-    naturalPx: IntSize,
-    density: Density,
-): DpSize =
-    with(density) {
-        val width: Dp = naturalPx.width.toDp()
-        val height: Dp = naturalPx.height.toDp()
-        if (width <= NATURAL_STICKER_MAX_WIDTH) {
-            DpSize(width, height)
-        } else {
-            // max-width shrinks the width and the height follows it; the site does not letterbox.
-            val scale = NATURAL_STICKER_MAX_WIDTH / width
-            DpSize(NATURAL_STICKER_MAX_WIDTH, height * scale)
-        }
+/**
+ * Natural size in dp, scaled down to [NATURAL_STICKER_MAX_WIDTH] the way the site's CSS does.
+ *
+ * The decoded pixels become dp one for one, with no density division anywhere. That looks like a
+ * missing conversion and is the whole point: the numbers coming in are the *file's* pixels, which
+ * for a `<img>` with no width attribute are exactly the CSS pixels the site lays the sticker out
+ * in — and the Android unit that means what a CSS pixel means is the dp, not the physical pixel.
+ *
+ * Dividing by density is what shipped first, and it made the mode useless on a real phone: a 90px
+ * sticker came out 22.5dp on a 4x screen, under the 27sp line it sits in, so 关掉统一缩限 — the
+ * setting whose entire job is 按表情原本的大小显示 — drew every sticker smaller than the 20sp box
+ * it was supposed to escape.
+ */
+private fun naturalDpSize(naturalPx: IntSize): DpSize {
+    val width: Dp = naturalPx.width.dp
+    val height: Dp = naturalPx.height.dp
+    return if (width <= NATURAL_STICKER_MAX_WIDTH) {
+        DpSize(width, height)
+    } else {
+        // max-width shrinks the width and the height follows it; the site does not letterbox.
+        val scale = NATURAL_STICKER_MAX_WIDTH / width
+        DpSize(NATURAL_STICKER_MAX_WIDTH, height * scale)
     }
+}

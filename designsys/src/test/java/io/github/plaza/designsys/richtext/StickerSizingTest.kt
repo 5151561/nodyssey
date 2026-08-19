@@ -39,16 +39,22 @@ class StickerSizingTest {
         assertEquals(sizing.boxSize(IntSize(80, 80), density), sizing.boxSize(null, density))
     }
 
+    /**
+     * A CSS pixel is a dp, which is the rule the site's own layout follows — so the file's pixels
+     * become dp untouched, and the screen's density does not enter into it. Pinned at two densities
+     * because dividing by density is the bug this mode shipped with: it made a sticker four times
+     * smaller on a 4x phone than on a 1x one, when the site draws it the same size on both.
+     */
     @Test
     fun `natural sizing reads the sticker's own pixels as dp`() {
         val sizing = StickerSizing(uniform = false)
+        val pixels = IntSize(width = 64, height = 48)
 
-        // 120x96 source pixels at density 2 is 60x48dp — a CSS pixel is a dp, which is the rule the
-        // site's own layout follows.
-        val box = sizing.boxSize(IntSize(width = 120, height = 96), density)
+        val box = sizing.boxSize(pixels, density)
 
-        assertEquals(60.dp, box.width)
+        assertEquals(64.dp, box.width)
         assertEquals(48.dp, box.height)
+        assertEquals(box, sizing.boxSize(pixels, Density(density = 4f, fontScale = 1f)))
     }
 
     /** `img.sticker { max-width: 90px }`: the width is clamped and the height follows it down. */
