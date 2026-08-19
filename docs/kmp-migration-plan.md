@@ -79,7 +79,7 @@ Room entity / DAO / database                                缓存
 network contracts / session semantics
 ```
 
-### 不共享（永远 Android-only）
+### ~~不共享（永远 Android-only）~~ → 迁移目标（2026-08-19 改定）
 
 ```text
 :designsys
@@ -87,6 +87,9 @@ app/ui
 Navigation 3
 Compose
 ```
+
+**这四项已改定为走 Compose Multiplatform**，不再是永久 Android-only。依据与实测核对见
+[`cmp-ui-decision.md`](cmp-ui-decision.md)。本节其余部分（Repository 以下的共享边界）不受影响。
 
 ### 不共享（各端自己写很薄的一层）
 
@@ -107,6 +110,10 @@ final class PostListModel {
 Android 侧维持现有 `ViewModel` + `StateFlow` 不变。
 
 ### 为什么不共享 ViewModel
+
+> **2026-08-19**：本节论证针对 SwiftUI 路线。前端改定为 CMP 后不存在 Swift Export，下述顾虑不再
+> 适用，边界**可以**上移到 ViewModel——是否上移留到真正开 Apple 端时决定。见
+> [`cmp-ui-decision.md`](cmp-ui-decision.md) 第 3.2 节。
 
 门槛 C 已实测：Kotlin 2.4.10 的 Swift Export 能把 `StateFlow` 导出成类型化的
 `KotlinTypedStateFlow<T>`，`suspend` 导出成原生 `async throws`，**技术上可行**。
@@ -362,7 +369,7 @@ Compose
 | 5 | 网络契约 + Apple transport | |
 | 6 | Room + DataStore | 7 个手写 migration 要重写 |
 | 7 | Repository 由简到繁 | Terms/Search → Profile/Community → Post/Vote → Feed/Paging |
-| 8 | Apple 前端 | SwiftUI，见下 |
+| 8 | Apple 前端 | ~~SwiftUI~~ → **CMP，与 Android 同一套**（2026-08-19 改定，见 [`cmp-ui-decision.md`](cmp-ui-decision.md)）|
 
 ### ✅ 步骤 2 实测：构建基础设施
 

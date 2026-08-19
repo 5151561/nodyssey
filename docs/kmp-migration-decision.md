@@ -31,11 +31,15 @@ parser，而在测试资产（第 3.1 节）和一批零散的 JVM-only API（�
 | 第一个新端是 macOS，iOS 暂不做 | **iOS 与 macOS 都做**，共用 `appleMain` source set |
 | 门槛是开工前的前置条件 | **降级为已验证的资产**。当前目标是「KMP-ready 架构」，不需要先过门槛 |
 | 共享层可能上探到 presentation（35 个 ViewModel） | **边界卡在 Repository**。ViewModel 以上各端自己写，理由见计划第 2 节 |
-| 前端路线待定（SwiftUI vs CMP） | **已定：永远原生**。`:designsys` 与 `app/ui` 永远 Android-only |
+| 前端路线待定（SwiftUI vs CMP） | ~~**已定：永远原生**。`:designsys` 与 `app/ui` 永远 Android-only~~ → **2026-08-19 改定：CMP**，见 [`cmp-ui-decision.md`](cmp-ui-decision.md) |
 
 因此第 4 节三道门槛请读作「已完成的可行性验证记录」，第 5 节执行顺序已被
 [`kmp-migration-plan.md`](kmp-migration-plan.md) 取代。第 1、2、3 节（代码分布、生态核对、
 必须计价的成本）不受影响。
+
+前端改定只动前端归属：第 1 节的代码分布仍然成立，但其中 42,050 行「重写层」在 CMP 下是**搬迁**
+而非重写，成本口径见 [`cmp-ui-decision.md`](cmp-ui-decision.md) 第 3.3 节。第 2、3 节与三道门槛
+不受影响。
 
 **「不共享 ViewModel」不缩小共享层**：第 1 节算出的 16,850 行本就不含 ViewModel，
 它们在 `app/ui` 的 35,431 行里。
