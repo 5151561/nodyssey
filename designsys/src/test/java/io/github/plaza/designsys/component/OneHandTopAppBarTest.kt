@@ -257,16 +257,16 @@ class OneHandAppBarScrollTest {
     }
 
     /**
-     * What a screen with pull-to-refresh buys by handing the pull over.
+     * The bar stops taking anything once it is full, which is what lets a refresh chain behind it.
      *
-     * Both want the same leftover downward drag out of the same `onPostScroll`, and the bar getting
-     * there first would put its whole travel — a third of the screen — in front of every refresh.
-     * Folding has to keep working: the bar still has to get out of the way on the way down.
+     * On a screen with pull-to-refresh the two connections are nested rather than arbitrated: this
+     * one sits deeper, so it gets the leftover downward drag first. The chain only works because a
+     * full bar returns zero here — if it kept claiming the drag, the refresh below would never see
+     * a pixel of it and could not be reached at all.
      */
     @Test
-    fun `a bar that handed the pull over does not reopen`() {
-        val state = OneHandAppBarState(Float.NaN, 0f, reopenOnPull = false).apply { maxHeightPx = max }
-        state.nestedScrollConnection.onPreScroll(Offset(0f, -max), NestedScrollSource.UserInput)
+    fun `a full bar takes nothing and passes the pull on`() {
+        val state = state()
 
         val taken =
             state.nestedScrollConnection.onPostScroll(
@@ -276,17 +276,23 @@ class OneHandAppBarScrollTest {
             )
 
         assertEquals(0f, taken.y, 0f)
-        assertEquals(0f, state.heightPx, 0f)
+        assertEquals(max, state.heightPx, 0f)
     }
 
     @Test
-    fun `a bar that handed the pull over still folds`() {
-        val state = OneHandAppBarState(Float.NaN, 0f, reopenOnPull = false).apply { maxHeightPx = max }
+    fun `a part-open bar takes only what it still has room for`() {
+        val state = state()
+        state.nestedScrollConnection.onPreScroll(Offset(0f, -50f), NestedScrollSource.UserInput)
 
-        val taken = state.nestedScrollConnection.onPreScroll(Offset(0f, -50f), NestedScrollSource.UserInput)
+        val taken =
+            state.nestedScrollConnection.onPostScroll(
+                consumed = Offset.Zero,
+                available = Offset(0f, 80f),
+                source = NestedScrollSource.UserInput,
+            )
 
-        assertEquals(-50f, taken.y, 0f)
-        assertEquals(max - 50f, state.heightPx, 0f)
+        assertEquals(50f, taken.y, 0f)
+        assertEquals(max, state.heightPx, 0f)
     }
 
     @Test

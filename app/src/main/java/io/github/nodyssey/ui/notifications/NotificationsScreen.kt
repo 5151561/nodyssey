@@ -59,6 +59,7 @@ import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.OneHandSharedPullBlank
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
@@ -136,14 +137,9 @@ fun NotificationsScreen(
     onRecipientClick: (UserSearchResult) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // `reopenOnPull = false`: this screen's downward drag belongs to pull-to-refresh, whole. The bar
-    // is here as the opening layout — big title on arrival, folded by the first scroll — and does not
-    // compete for the gesture. Chaining the two (bar fills, then refresh arms) was the alternative
-    // and would have put a third of a screen of dragging in front of every refresh on the one screen
-    // people refresh most.
-    val appBarState = rememberOneHandAppBarState(reopenOnPull = false)
+    val appBarState = rememberOneHandAppBarState()
     Scaffold(
-        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
+        modifier = modifier,
         topBar = {
             // `readableWidth` stays on the bar itself: the content column below is constrained the
             // same way, and a full-bleed bar over a centred list is the one thing this screen has
@@ -152,6 +148,10 @@ fun NotificationsScreen(
                 modifier = Modifier.readableWidth(),
                 title = stringResource(R.string.tab_notifications),
                 state = appBarState,
+                // Shorter than elsewhere because the bar is only the first stage of this screen's
+                // pull: everything the reader drags through here, they drag through before the
+                // refresh below even begins to arm.
+                expandedBlank = OneHandSharedPullBlank,
                 actions = {
                     TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
                         Icon(Icons.Default.Check, contentDescription = null)
@@ -205,47 +205,58 @@ fun NotificationsScreen(
                 onRefresh = onRetry,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                when {
-                    !state.isSignedIn -> SignedOutState(onSignIn = onSignIn)
+                // Inside the refresh box rather than on the `Scaffold`, which is the whole of the
+                // arbitration: post-scroll runs innermost first, so the deeper of the two gets the
+                // leftover downward drag. In here the bar sinks first and — once full, consuming
+                // nothing — hands the rest of the pull on to the refresh. Out on the `Scaffold` the
+                // refresh would take it all and the big title could never be pulled back.
+                //
+                // The reader gets one gesture with two stages in it: pull to bring the screen down,
+                // keep pulling to refresh. Releasing mid-sink leaves the bar where it is, so the
+                // next pull starts from there and reaches the refresh sooner.
+                Box(Modifier.fillMaxSize().nestedScroll(appBarState.nestedScrollConnection)) {
+                    when {
+                        !state.isSignedIn -> SignedOutState(onSignIn = onSignIn)
 
-                    state.isLoading && state.isEmpty -> LoadingState()
+                        state.isLoading && state.isEmpty -> LoadingState()
 
-                    state.error != null && state.isEmpty ->
-                        SiteErrorState(
-                            error = state.error,
-                            onRetry = onRetry,
-                            onOpenBrowser = onVerify,
-                            onSignIn = onSignIn,
-                        )
+                        state.error != null && state.isEmpty ->
+                            SiteErrorState(
+                                error = state.error,
+                                onRetry = onRetry,
+                                onOpenBrowser = onVerify,
+                                onSignIn = onSignIn,
+                            )
 
-                    state.selectedCategory == NotificationCategory.MESSAGES ->
-                        ConversationList(
-                            state = state,
-                            onConversationClick = onConversationClick,
-                            onNewConversation = onNewConversation,
-                            onQueryChange = onNewConversationQueryChange,
-                            onSearch = onNewConversationSearch,
-                            onDismiss = onNewConversationDismiss,
-                            onRecipientClick = onRecipientClick,
-                        )
+                        state.selectedCategory == NotificationCategory.MESSAGES ->
+                            ConversationList(
+                                state = state,
+                                onConversationClick = onConversationClick,
+                                onNewConversation = onNewConversation,
+                                onQueryChange = onNewConversationQueryChange,
+                                onSearch = onNewConversationSearch,
+                                onDismiss = onNewConversationDismiss,
+                                onRecipientClick = onRecipientClick,
+                            )
 
-                    state.items.isEmpty() ->
-                        EmptyNotifications(
-                            modifier = Modifier.align(Alignment.Center),
-                            onRefresh = onRetry,
-                        )
+                        state.items.isEmpty() ->
+                            EmptyNotifications(
+                                modifier = Modifier.align(Alignment.Center),
+                                onRefresh = onRetry,
+                            )
 
-                    else ->
-                        LazyColumn {
-                            items(state.items, key = ForumNotification::id) { item ->
-                                NotificationRow(
-                                    item = item,
-                                    nowMillis = state.nowMillis,
-                                    onClick = { onNotificationClick(item) },
-                                )
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        else ->
+                            LazyColumn {
+                                items(state.items, key = ForumNotification::id) { item ->
+                                    NotificationRow(
+                                        item = item,
+                                        nowMillis = state.nowMillis,
+                                        onClick = { onNotificationClick(item) },
+                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                }
                             }
-                        }
+                    }
                 }
             }
         }

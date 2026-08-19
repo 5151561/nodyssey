@@ -81,11 +81,11 @@ fun OneHandTopAppBar(
     state: OneHandAppBarState,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    expandedBlank: Dp = oneHandExpandedBlank(),
     navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val density = LocalDensity.current
-    val expandedBlank = oneHandExpandedBlank()
     state.maxHeightPx = with(density) { expandedBlank.toPx() }
 
     val containerColor by animateColorAsState(
@@ -212,11 +212,7 @@ fun OneHandTopAppBar(
  * scroll through the shared nested-scroll chain.
  */
 @Stable
-class OneHandAppBarState internal constructor(
-    initialHeightPx: Float,
-    initialContentOffset: Float,
-    private val reopenOnPull: Boolean = true,
-) {
+class OneHandAppBarState internal constructor(initialHeightPx: Float, initialContentOffset: Float) {
     /**
      * `NaN` until the first measurement, which is how "start expanded" is expressed: the bar opens
      * to whatever [maxHeightPx] turns out to be on this window, and that is not known until the
@@ -284,9 +280,11 @@ class OneHandAppBarState internal constructor(
                 // `onPreScroll` is what stops a scroll from reopening the bar while there is still
                 // page left to scroll back.
                 //
-                // It is also the one slot pull-to-refresh wants, so a screen that has one hands this
-                // over: see `reopenOnPull`.
-                if (!reopenOnPull || available.y <= 0f) return Offset.Zero
+                // It is also the one slot pull-to-refresh wants. The two chain by nesting rather
+                // than by arbitration: whichever connection sits deeper gets the leftover first, so
+                // a screen with a refresh puts this one inside it. The reader sinks the bar, and
+                // then — with the bar full and consuming nothing — goes on into the refresh.
+                if (available.y <= 0f) return Offset.Zero
                 val before = heightPx
                 heightPx = before + available.y
                 return Offset(0f, heightPx - before)
@@ -316,10 +314,10 @@ class OneHandAppBarState internal constructor(
     }
 
     internal companion object {
-        fun saver(reopenOnPull: Boolean): Saver<OneHandAppBarState, *> =
+        val Saver: Saver<OneHandAppBarState, *> =
             listSaver(
                 save = { listOf(it.heightPx, it.contentOffset) },
-                restore = { OneHandAppBarState(it[0], it[1], reopenOnPull) },
+                restore = { OneHandAppBarState(it[0], it[1]) },
             )
     }
 }
@@ -332,21 +330,11 @@ class OneHandAppBarState internal constructor(
  * blank is something to scroll past before the screen starts being useful, and the bar is better off
  * waiting to be asked. It is the same bar either way: a pull still opens it, which is the point of
  * making this a starting position rather than a mode.
- *
- * Pass `reopenOnPull = false` where something else already owns the pull — pull-to-refresh, which
- * takes the same leftover downward drag out of the same `onPostScroll`. The two can be chained by
- * nesting, so that the bar fills first and the refresh arms after, but the bar's travel is a third
- * of the screen: on a list anyone refreshes often, that is a third of a screen of dragging in front
- * of every refresh. Handing the pull over instead leaves the bar as the screen's opening layout —
- * open on arrival, folded by the first scroll, and not in the way of the gesture that matters.
  */
 @Composable
-fun rememberOneHandAppBarState(
-    initiallyExpanded: Boolean = true,
-    reopenOnPull: Boolean = true,
-): OneHandAppBarState =
-    rememberSaveable(saver = OneHandAppBarState.saver(reopenOnPull)) {
-        OneHandAppBarState(if (initiallyExpanded) Float.NaN else 0f, 0f, reopenOnPull)
+fun rememberOneHandAppBarState(initiallyExpanded: Boolean = true): OneHandAppBarState =
+    rememberSaveable(saver = OneHandAppBarState.Saver) {
+        OneHandAppBarState(if (initiallyExpanded) Float.NaN else 0f, 0f)
     }
 
 /**
@@ -392,6 +380,16 @@ internal fun expandedTitleAlpha(fraction: Float): Float {
 
 /** @see expandedTitleAlpha */
 internal fun collapsedTitleAlpha(fraction: Float): Float = 1f - expandedTitleAlpha(fraction)
+
+/**
+ * A shorter sink, for a screen whose pull it has to share.
+ *
+ * Where pull-to-refresh is chained behind the bar, the bar's own travel is what the reader drags
+ * through before the refresh even begins to arm. A third of the screen is too much to put in front
+ * of a gesture people use constantly; this is short enough to read as one stage of a longer pull,
+ * which is what it is.
+ */
+val OneHandSharedPullBlank = 120.dp
 
 /** The most of the screen the whole bar — blank plus toolbar — is ever allowed to take. */
 private const val MAX_BAR_FRACTION = 0.40f
