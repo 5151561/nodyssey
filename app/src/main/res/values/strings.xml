@@ -243,6 +243,7 @@
     <string name="message_thread_subtitle">UID %1$d</string>
     <string name="message_thread_subtitle_level">UID %1$d · Lv %2$d</string>
     <string name="message_thread_empty">还没有消息，说点什么吧</string>
+    <string name="message_thread_open_space">查看主页</string>
     <string name="message_input_hint_markdown">发消息（Markdown 已开）</string>
     <string name="message_input_hint_plain">发消息</string>
     <string name="message_markdown_toggle">Markdown 开关</string>
