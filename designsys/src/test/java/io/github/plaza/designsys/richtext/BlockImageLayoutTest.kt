@@ -47,7 +47,11 @@ class BlockImageLayoutTest {
     // `setSingletonImageLoaderFactory` only takes effect on an unset singleton — without the reset,
     // whichever test ran first would supply every later test's images.
     @Before
-    fun resetImageLoader() = SingletonImageLoader.reset()
+    fun resetImageLoader() {
+        SingletonImageLoader.reset()
+        // The measured-size cache is process-wide too — same hazard, same place to clear it.
+        resetNaturalImageSizes()
+    }
 
     private val badge1 = "https://example.invalid/runs.svg"
     private val badge2 = "https://example.invalid/license.svg"
