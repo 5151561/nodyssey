@@ -75,10 +75,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.isUnspecified
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -1286,12 +1290,16 @@ private fun InlineText(
 
     val stickerSizing = LocalStickerSizing.current
     val density = LocalDensity.current
+    // Reads the size cache, so the first decode of a sticker this process has not seen relays out
+    // the paragraph around its real size. In 统一缩限 mode the cache is not consulted and there is
+    // nothing to relay out.
+    val stickerBoxes =
+        inlines.filterIsInstance<InlineNode.Sticker>().associate { sticker ->
+            sticker.url to stickerSizing.boxSize(StickerSizeCache.naturalSize(sticker.url), density)
+        }
     val stickerContent =
         inlines.filterIsInstance<InlineNode.Sticker>().associate { sticker ->
-            // Reads the size cache, so the first decode of a sticker this process has not seen
-            // relays out the paragraph around its real size. In 统一缩限 mode the cache is not
-            // consulted and there is nothing to relay out.
-            val box = stickerSizing.boxSize(StickerSizeCache.naturalSize(sticker.url), density)
+            val box = stickerBoxes.getValue(sticker.url)
             STICKER_PREFIX + sticker.url to
                 InlineTextContent(
                     Placeholder(
@@ -1363,7 +1371,7 @@ private fun InlineText(
     var textLayoutResult by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     Text(
         text = text,
-        style = style,
+        style = style.fitStickers(stickerBoxes.values, density),
         inlineContent = stickerContent,
         onTextLayout = { textLayoutResult = it },
         modifier =
@@ -1398,6 +1406,39 @@ private fun InlineText(
             }
         },
     )
+}
+
+/**
+ * Gives up the paragraph's fixed line height when a 表情 in it is taller than that line.
+ *
+ * `PostBody` and its neighbours set an explicit `lineHeight` — 27sp on a 16sp body, the leading a
+ * solid block of hanzi needs — and Compose enforces it with a span that rewrites every line's
+ * ascent and descent to exactly that. It is enforced against inline content too, so a sticker
+ * enlarged past the line by 表情大小 kept its own box and got no room for it: the box stayed
+ * centred on a 27sp line and drew straight through the line above, which is 问题 #90.
+ *
+ * A browser has no such conflict — `line-height` is a *minimum* there, and a line holding a tall
+ * inline image simply grows. Compose has the same idea in `LineHeightStyle.Mode.Minimum`, but it
+ * cannot be used for this: the span works out its metrics from the first line it is asked about and
+ * reuses them for the rest of the paragraph, so a paragraph that opens with text and ends with a
+ * sticker still forces the sticker's line back to 27sp. Verified against ui-text 1.12.0-beta01 —
+ * `LineHeightStyleSpan.chooseHeight` calls `calculateTargetMetrics` only while `firstAscent` is
+ * unset.
+ *
+ * So the line height comes off entirely, and only for the paragraphs that need it. Their lines fall
+ * back to the font's own metrics — a little tighter than 27sp — and the line holding the sticker
+ * grows to hold it, which is the browser's layout and the only one where nothing is covered up. Any
+ * paragraph whose stickers fit the line, which is every paragraph at the default 20sp setting, is
+ * left exactly as it was.
+ */
+private fun TextStyle.fitStickers(
+    boxes: Collection<DpSize>,
+    density: Density,
+): TextStyle {
+    if (lineHeight.isUnspecified) return this
+    val line = with(density) { lineHeight.toDp() }
+    val tallest = boxes.maxOfOrNull { it.height } ?: 0.dp
+    return if (tallest <= line) this else copy(lineHeight = TextUnit.Unspecified)
 }
 
 /** Why a sticker is not on screen, kept apart for the reason [ImageFallback] states. */
