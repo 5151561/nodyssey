@@ -68,7 +68,7 @@ android {
     // left here — the challenge detector, two repositories, the reply composer — still read the same
     // captures. Pointed at rather than copied: two copies of a 100KB capture drift, and the one that
     // drifts is whichever the failing test is not reading.
-    sourceSets["test"].resources.srcDir(project(":shared").projectDir.resolve("src/commonTest/resources"))
+    sourceSets["test"].resources.directories.add(project(":shared").projectDir.resolve("src/commonTest/resources").path)
 }
 
 // Schemas are checked in: a diff here is the review signal that a migration is needed.

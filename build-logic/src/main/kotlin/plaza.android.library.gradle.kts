@@ -45,7 +45,6 @@ android {
         // A lint regression must fail the build, not scroll past in a log.
         warningsAsErrors = true
         abortOnError = true
-        sarifReport = true
 
         // Only checks that fire on the calendar rather than on a commit are disabled. Anything a
         // change to this repository can cause stays enabled, including `warningsAsErrors`.

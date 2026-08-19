@@ -78,7 +78,6 @@ android {
         // A lint regression must fail the build, not scroll past in a log.
         warningsAsErrors = true
         abortOnError = true
-        sarifReport = true
 
         // One `lintDebug` on the application covers every module it depends on, which keeps CI to a
         // single lint invocation and a single report directory.

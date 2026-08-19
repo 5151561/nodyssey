@@ -50,7 +50,6 @@ kotlin {
 
             warningsAsErrors = true
             abortOnError = true
-            sarifReport = true
 
             // The same calendar-driven checks the Android library plugin disables; anything a change
             // to this repository can cause stays enabled.
