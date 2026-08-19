@@ -77,6 +77,7 @@ class MessageComposerTest {
                     onSignIn = {},
                     onVerify = {},
                     onOpenBrowser = {},
+                    onOpenSpace = {},
                     onRetryLoad = {},
                     onToggleMarkdown = { isMarkdown = !isMarkdown },
                     onSend = {},

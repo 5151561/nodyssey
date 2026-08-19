@@ -120,6 +120,7 @@ fun MessageThreadRoute(
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
     onOpenBrowser: (String) -> Unit,
+    onOpenSpace: () -> Unit,
     modifier: Modifier = Modifier,
     showBackButton: Boolean = true,
     /** Bubble-content links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
@@ -134,6 +135,7 @@ fun MessageThreadRoute(
         onSignIn = onSignIn,
         onVerify = onVerify,
         onOpenBrowser = onOpenBrowser,
+        onOpenSpace = onOpenSpace,
         onLinkClick = onLinkClick,
         onRetryLoad = viewModel::refresh,
         onToggleMarkdown = viewModel::toggleMarkdown,
@@ -159,6 +161,8 @@ fun MessageThreadScreen(
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
     onOpenBrowser: (String) -> Unit,
+    /** The other side's space. The title block is the handle onto it; see the top bar. */
+    onOpenSpace: () -> Unit,
     onRetryLoad: () -> Unit,
     onToggleMarkdown: () -> Unit,
     onSend: () -> Unit,
@@ -210,6 +214,17 @@ fun MessageThreadScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        // The whole title opens the space, not the avatar alone: a 32dp circle is
+                        // the smallest thing on the bar, and the name and the UID beside it are the
+                        // same person — tapping either should not do two different things. The
+                        // padding sits inside the clickable so it is target, not dead space.
+                        modifier =
+                        Modifier
+                            .clip(RoundedCornerShape(Spacing.md))
+                            .clickable(
+                                onClickLabel = stringResource(R.string.message_thread_open_space),
+                            ) { onOpenSpace() }
+                            .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
                     ) {
                         UserAvatar(url = state.avatarUrl, name = state.userName, size = 32.dp)
                         Column {
@@ -979,6 +994,7 @@ private fun MessageThreadPreview() {
             onSignIn = {},
             onVerify = {},
             onOpenBrowser = {},
+            onOpenSpace = {},
             onRetryLoad = {},
             onToggleMarkdown = {},
             onSend = {},
