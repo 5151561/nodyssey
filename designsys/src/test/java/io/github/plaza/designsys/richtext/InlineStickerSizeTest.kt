@@ -46,13 +46,14 @@ class InlineStickerSizeTest {
     val composeRule = createComposeRule()
 
     /*
-     * Both of these outlive a single test. The image loader singleton is the usual one; the size
-     * cache is deliberately process-wide, which is exactly what would let the first test in the
+     * All three of these outlive a single test. The image loader singleton is the usual one; both
+     * caches are deliberately process-wide, which is exactly what would let the first test in the
      * class hand its measurements to the rest of them.
      */
     @Before
     fun reset() {
         SingletonImageLoader.reset()
+        resetNaturalImageSizes()
         StickerSizeCache.clear()
     }
 

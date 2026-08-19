@@ -29,6 +29,7 @@ import io.github.plaza.core.image.AllowMeteredImage
 import io.github.plaza.core.image.ImagesDeferredException
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.richtext.resetNaturalImageSizes
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
@@ -65,7 +66,11 @@ class RichContentTest {
      * image tests passed alone and failed in the full run until this was forced.
      */
     @After
-    fun resetImageLoader() = SingletonImageLoader.reset()
+    fun resetImageLoader() {
+        SingletonImageLoader.reset()
+        // The measured-size cache is process-wide too — same hazard, same place to clear it.
+        resetNaturalImageSizes()
+    }
 
     private fun setContent(
         nodes: List<RichNode>,

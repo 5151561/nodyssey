@@ -1,5 +1,7 @@
 package io.github.plaza.designsys.richtext
 
+import android.util.LruCache
+import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -631,6 +633,14 @@ private fun FoldBlock(
  * When 仅 Wi-Fi 加载图片 skips the image it is replaced by [SkippedImagePlaceholder] rather than by
  * nothing, and a tap on that placeholder re-requests the image with the preference waived for this
  * one image — see [allowMeteredImage].
+ *
+ * How big the image turned out to be is remembered in [naturalImageSizes] rather than only in this
+ * composable. A thread scrolls, and a `remember` keyed on the URL dies with the row that left the
+ * screen: scrolling back put every image through its first-load path again — for an SVG that is two
+ * rasterisations, the first at full size purely to ask how big it is — with the row collapsed to a
+ * spinner in between. On a page of Check.Place reports that reads as the thread jumping under the
+ * finger every time it is scrolled up. Knowing the size on the first frame skips the measuring pass
+ * *and* lets the placeholder hold the space the image is about to take.
  */
 @Composable
 private fun BlockImage(
@@ -638,7 +648,7 @@ private fun BlockImage(
     onImageClick: (String) -> Unit,
     onLinkClick: (String) -> Unit,
 ) {
-    var naturalSize by remember(node.url) { mutableStateOf<IntSize?>(null) }
+    var naturalSize by remember(node.url) { mutableStateOf(naturalImageSizes[node.url]) }
     var allowMetered by remember(node.url) { mutableStateOf(false) }
     var retryToken by remember(node.url) { mutableIntStateOf(0) }
     var phase by remember(node.url, allowMetered, retryToken) {
@@ -677,9 +687,13 @@ private fun BlockImage(
         val natural = naturalSize
         val displayWidth =
             if (natural != null && natural.width.dp < availableWidth) natural.width.dp else availableWidth
-        val cropped =
-            natural != null &&
-                displayWidth * (natural.height.toFloat() / natural.width.toFloat()) > Sizes.maxInlineImageHeight
+        val displayHeight =
+            natural?.let { displayWidth * (it.height.toFloat() / it.width.toFloat()) }
+        val cropped = displayHeight != null && displayHeight > Sizes.maxInlineImageHeight
+        // The space to hold open while the image is on its way. A known size holds exactly the space
+        // the image will take, so nothing below it moves when it arrives; a first-ever load has
+        // nothing to go on and falls back to a spinner-sized band.
+        val pendingHeight = displayHeight?.coerceAtMost(Sizes.maxInlineImageHeight) ?: INLINE_IMAGE_LOADING_HEIGHT
         val density = LocalDensity.current
         val request =
             remember(node.url, allowMetered, retryToken, natural, displayWidth, density) {
@@ -727,7 +741,9 @@ private fun BlockImage(
                         // size in physical pixels, and recording that as "natural" would grow the
                         // image a density-multiple per pass.
                         if (naturalSize == null && image.width > 0 && image.height > 0) {
-                            naturalSize = IntSize(image.width, image.height)
+                            val measured = IntSize(image.width, image.height)
+                            naturalSize = measured
+                            naturalImageSizes.put(node.url, measured)
                         }
                     },
                     onError = { error ->
@@ -744,7 +760,7 @@ private fun BlockImage(
                         .fillMaxWidth()
                         .then(
                             if (phase == InlineImagePhase.Loading) {
-                                Modifier.height(INLINE_IMAGE_LOADING_HEIGHT)
+                                Modifier.height(pendingHeight)
                             } else {
                                 Modifier
                             },
@@ -755,7 +771,7 @@ private fun BlockImage(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(INLINE_IMAGE_LOADING_HEIGHT)
+                        .height(pendingHeight)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -883,6 +899,28 @@ private enum class InlineImagePhase { Loading, Success, Deferred, Error }
 private fun String.isSvgUrl(): Boolean = substringBefore('#').substringBefore('?').endsWith(".svg", ignoreCase = true)
 
 private val INLINE_IMAGE_LOADING_HEIGHT = 132.dp
+
+/**
+ * The size each image turned out to be, by URL, for as long as the process lives.
+ *
+ * Sizes only — two ints per entry, never pixels — so this is free to outlive any one screen and to
+ * hold more entries than a reader will scroll past. Coil's own memory cache is keyed by request
+ * *including* the size asked for, which is the one thing an image cannot say before it has been
+ * measured once; this is that missing first answer. See [BlockImage] for what it buys.
+ */
+private val naturalImageSizes = LruCache<String, IntSize>(NATURAL_IMAGE_SIZE_ENTRIES)
+
+private const val NATURAL_IMAGE_SIZE_ENTRIES = 512
+
+/**
+ * Forgets every measured image size.
+ *
+ * For tests: the cache is process-wide, and one JVM runs many of them. A test whose image is a
+ * different size from an earlier test's image at the same URL would otherwise lay out against the
+ * earlier one — the same hazard `SingletonImageLoader.reset()` exists for.
+ */
+@VisibleForTesting
+fun resetNaturalImageSizes(): Unit = naturalImageSizes.evictAll()
 
 /** The language tag and the copy button on a terminal ground: present, but not competing with it. */
 private const val TERMINAL_CHROME_ALPHA = 0.7f

@@ -20,6 +20,7 @@ import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.di.DefaultAppContainer
 import io.github.nodyssey.notifications.NotificationChannels
 import io.github.nodyssey.notifications.NotificationPollScheduler
+import io.github.plaza.core.image.CompatSvgParser
 import io.github.plaza.core.image.ImageNetworkPolicyInterceptor
 import io.github.plaza.core.image.hasValidatedUnmeteredNetwork
 import kotlinx.coroutines.CoroutineScope
@@ -126,7 +127,10 @@ open class NodysseyApp :
                 // An account that never uploaded a picture is served a generated cartoon *SVG* from
                 // `/avatar/<uid>.png` — the extension lies, the Content-Type does not. Without this
                 // decoder those all failed and every such user wore an initial instead.
-                add(SvgDecoder.Factory())
+                //
+                // [CompatSvgParser] rather than the stock parser: the 测评 reports are SVG too, and
+                // they use CSS units and text properties the underlying AndroidSVG never implemented.
+                add(SvgDecoder.Factory(parser = CompatSvgParser()))
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     add(AnimatedImageDecoder.Factory())
                 } else {

@@ -42,7 +42,11 @@ class BlockImageFailureTest {
 
     // See BlockImageLayoutTest: the singleton outlives the test that set it.
     @Before
-    fun resetImageLoader() = SingletonImageLoader.reset()
+    fun resetImageLoader() {
+        SingletonImageLoader.reset()
+        // The measured-size cache is process-wide too — same hazard, same place to clear it.
+        resetNaturalImageSizes()
+    }
 
     private val url = "https://img.example.invalid/file/screenshot.webp"
     private val links = mutableListOf<String>()

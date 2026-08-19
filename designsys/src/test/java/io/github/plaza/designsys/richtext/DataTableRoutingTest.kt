@@ -48,7 +48,11 @@ class DataTableRoutingTest {
     // supplies its own — every URL resolves to a small solid image, enough for a thumbnail to
     // exist and be measured.
     @Before
-    fun resetImageLoader() = SingletonImageLoader.reset()
+    fun resetImageLoader() {
+        SingletonImageLoader.reset()
+        // The measured-size cache is process-wide too — same hazard, same place to clear it.
+        resetNaturalImageSizes()
+    }
 
     private fun cell(text: String): List<InlineNode> = listOf(InlineNode.Text(text))
 

@@ -1,6 +1,7 @@
 # This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
+# To regenerate this file, run: ./gradlew :shared:dependencies --write-locks
 androidx.annotation:annotation-jvm:1.9.1=androidHostTestRuntimeClasspath,androidRuntimeClasspath
 androidx.annotation:annotation:1.9.1=androidHostTestRuntimeClasspath,androidRuntimeClasspath
 co.touchlab:stately-concurrency-iosarm64:2.1.0=iosArm64CompileKlibraries,iosArm64TestCompileKlibraries
