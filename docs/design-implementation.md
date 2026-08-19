@@ -99,10 +99,10 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 
 | 画板元素 | Compose 组件 | 说明 |
 |---|---|---|
-| 顶栏 返回 / 收藏 / 搜索 / ⋮ | `TopAppBar` + `IconButton` + `DropdownMenu` | 画板的 60px 高与 M3 small top app bar 的 64dp 同一档；⋮ 里放「离线管理」和「排序」 |
+| 顶栏 返回 / 收藏 / 搜索 / ⋮ | `OneHandTopAppBar`（designsys）+ `IconButton` | 见下方偏离项 9：换成单手模式的可拉大标题栏，副标题写「已离线 N 篇 · 占用 X」；⋮ 换成直接的「管理」按钮，排序在筛选行自己那一个 |
 | 筛选 chip 全部 12 / 已下载 5 / 有新回复 3 | `FilterChip` | 选中态画板是 primary 实心，M3 默认是 secondaryContainer，用 `FilterChipDefaults.filterChipColors` 覆盖两个颜色保真；未选中沿用 `surfaceContainerLow` |
 | 排序 `swap_vert` | `IconButton` + `PlazaIcons.SwapVert` | 画板 44dp，实现给满 48dp 触摸目标 |
-| 离线状态条 | `Surface` + `Row` + `TextButton`「管理」 | M3 没有这个条；上下 1dp `outlineVariant` 发丝线自绘，底色 `surfaceContainerLow` |
+| 离线状态条 | 不画，见偏离项 9 | 「已离线 N 篇 · 占用 X」搬到顶栏副标题；「仅 Wi-Fi 下载」和「管理」按钮都去掉 |
 | 列表行 | `ThreadRow`（designsys，本次加了两个槽） | 复用首页 PostRow 的几何：14/16 gutter、10dp 上下、10dp 间距、15/21 标题两行、12sp meta |
 | 行内「离线版落后 3 条回复」/「下载失败 · …」 | `ThreadRow` 新增的 `supporting` 槽 | 原来只有 title 和 meta 两层，这行是独立的第三层，塞进 meta 的 `FlowRow` 会和板块 tag 抢同一行 |
 | 右侧下载态列（48dp，图标 + 10sp 标签） | `ThreadRow` 新增的 `trailing` 槽 + `OfflineStateAction` | 五态一个组件：已离线 / 下载中 / 未下载 / 待同步 / 失败 |
@@ -146,8 +146,7 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 4. **Checkbox 用 M3 原生**（20dp / 圆角 2dp / 48dp 触摸目标），不复刻画板的 22dp / 圆角 6dp 方块。
    本次明确要走 Compose 原生，而勾选框是无障碍与触摸目标都由框架兜底的那类控件。
 
-5. **离线状态条长到 48dp**，画板是 34dp。那一行右端的「管理」是要点的，34dp 不是任何人能点中的目标，
-   而往 34dp 的条里塞一个 48dp 的按钮只会把条撑高。于是整条都可点，高度按触摸目标来。
+5. **~~离线状态条长到 48dp~~ —— 整条删了**，见偏离项 9。
 
 6. **多选工具栏不重复写「已选 N 项」**。画板那行是「3 项 · 约 4.6 MB」，体积由离线引擎估算；
    引擎给不出估算时这行只剩计数，而顶栏隔着一屏已经写了同一个数字，于是这行直接不画。
@@ -158,6 +157,18 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 
 8. **多了一个画板上没有的搜索态**。画板给了搜索图标但没给搜索面板；因为整份收藏都在内存里，
    按标题和作者本地过滤是真的即时，就做在顶栏里，没有单开一个目的地。
+
+9. **顶栏换成 `OneHandTopAppBar`，离线状态条整条删掉。** 三件事一起做的，因为它们是同一件：
+
+   - 画板那条独立的离线状态条（「已离线 5 篇 · 占用 12.4 MB · 仅 Wi-Fi 下载」+「管理」）在筛选 chip
+     和列表之间占一整行，说的却是一句关于整个页面的**陈述**而不是一个控件。搬到顶栏副标题里就不占
+     行了——这正是副标题的用途。「仅 Wi-Fi 下载」跟着去掉：它是离线管理面板里的一个开关，不需要在
+     列表上常驻复述。已离线 0 篇时副标题整个不画，理由和阅读历史一样：一行说不出东西的字仍然占一行。
+   - ⋮ 换成直接的「管理」图标按钮。画板往 ⋮ 里放了「离线管理」和「排序」两项，而排序在实现里有自己
+     的 `SwapVert`（就在筛选行末尾），于是 ⋮ 里只剩一项——一次点击换一个只有一行的菜单。
+   - 页面本身接上单手模式（批次 #92 那套）。可拉的大标题栏只在**普通态**用：多选有自己的工具栏，
+     搜索开着键盘、要的是尽可能多的行，两者都保留 64dp 的普通栏。`nestedScroll` 连接跟着同一个条件
+     挂——一条不在屏幕上的 bar 不能继续吃掉列表最前面那两百多 dp 的滚动。
 
 ### 真机上发现并修掉的两处
 

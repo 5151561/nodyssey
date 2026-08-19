@@ -1147,7 +1147,6 @@
 
     <string name="offline_manage">管理</string>
     <string name="offline_status">已离线 %1$d 篇 · 占用 %2$s</string>
-    <string name="offline_status_wifi_only">%1$s · 仅 Wi-Fi 下载</string>
     <string name="offline_state_downloaded">已离线</string>
     <string name="offline_state_downloading">下载中</string>
     <string name="offline_state_queued">排队中</string>

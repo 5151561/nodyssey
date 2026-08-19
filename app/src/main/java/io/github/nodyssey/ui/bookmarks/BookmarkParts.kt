@@ -327,58 +327,6 @@ private fun DownloadProgressRing(
 
 private val RING_STROKE = 3.5.dp
 
-/**
- * 已离线 5 篇 · 占用 12.4 MB · 仅 Wi-Fi 下载.
- *
- * The whole bar is the touch target rather than just the 管理 label at its end: the comp draws that
- * label at 34dp of row height, which is not a target anyone can hit, and a 48dp button dropped into
- * a 34dp bar sets the bar's height instead. So the bar grows to 48dp and all of it opens the sheet.
- */
-@Composable
-internal fun OfflineStatusBar(
-    usage: OfflineUsage,
-    wifiOnly: Boolean,
-    onManage: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier) {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, onClick = onManage) {
-            Row(
-                modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = Sizes.minTouchTarget)
-                    .padding(horizontal = Spacing.lg, vertical = 9.dp),
-                horizontalArrangement = Arrangement.spacedBy(9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = PlazaIcons.CloudDone,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(textScaledSize(18.sp)),
-                )
-                val summary =
-                    stringResource(R.string.offline_status, usage.posts, formatBytes(usage.totalBytes))
-                Text(
-                    text = if (wifiOnly) stringResource(R.string.offline_status_wifi_only, summary) else summary,
-                    style =
-                    MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = stringResource(R.string.offline_manage),
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-    }
-}
-
 /** 全部 12 / 已下载 5 / 有新回复 3, and ⇅ pinned to the end. */
 @Composable
 internal fun BookmarkFilterRow(

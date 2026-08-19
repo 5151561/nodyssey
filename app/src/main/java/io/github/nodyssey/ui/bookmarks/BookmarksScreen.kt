@@ -52,6 +52,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -66,12 +67,16 @@ import io.github.nodyssey.data.OfflineFailure
 import io.github.nodyssey.data.OfflineSettings
 import io.github.nodyssey.data.OfflineState
 import io.github.nodyssey.data.OfflineUsage
+import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.OneHandAppBarState
+import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.StatusView
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
@@ -201,8 +206,14 @@ fun BookmarksScreen(
         onBack = { onSearching(false) },
     )
 
+    val appBarState = rememberOneHandAppBarState()
+    // The pullable bar is the plain state's alone. Multi-select and 搜索 are modes with a job in
+    // hand — one has a toolbar of its own, the other has the keyboard up and wants every row it can
+    // get — and both keep the ordinary 64dp bar. The connection is attached on the same condition,
+    // because a bar that is not on screen must not go on eating the list's first 200dp of scroll.
+    val oneHanded = !state.inSelection && !state.isSearching
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.then(if (oneHanded) Modifier.nestedScroll(appBarState.nestedScrollConnection) else Modifier),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (state.inSelection) {
@@ -215,6 +226,7 @@ fun BookmarksScreen(
             } else {
                 BookmarksTopBar(
                     state = state,
+                    appBarState = appBarState,
                     onBack = onBack,
                     onSearching = onSearching,
                     onQuery = onQuery,
@@ -255,13 +267,6 @@ fun BookmarksScreen(
                         onFilter = onFilter,
                         sortMenu = { SortMenu(current = state.sort, onSort = onSort) },
                     )
-                    if (state.offlineAvailable) {
-                        OfflineStatusBar(
-                            usage = state.usage,
-                            wifiOnly = state.offlineSettings.wifiOnly,
-                            onManage = { managing = true },
-                        )
-                    }
                 }
                 BookmarkList(
                     state = state,
@@ -383,20 +388,14 @@ private val FLOATING_CLEARANCE = 96.dp
 @Composable
 private fun BookmarksTopBar(
     state: BookmarksUiState,
+    appBarState: OneHandAppBarState,
     onBack: () -> Unit,
     onSearching: (Boolean) -> Unit,
     onQuery: (String) -> Unit,
     onManage: () -> Unit,
 ) {
-    TopAppBar(
-        title = {
-            if (state.isSearching) {
-                BookmarkSearchField(query = state.query.orEmpty(), onQuery = onQuery)
-            } else {
-                Text(stringResource(R.string.bookmarks_title))
-            }
-        },
-        navigationIcon = {
+    val back =
+        @Composable {
             IconButton(onClick = { if (state.isSearching) onSearching(false) else onBack() }) {
                 Icon(
                     imageVector =
@@ -405,18 +404,48 @@ private fun BookmarksTopBar(
                     stringResource(if (state.isSearching) R.string.action_close else R.string.action_back),
                 )
             }
+        }
+    if (state.isSearching) {
+        // A plain bar for as long as the box is open: [OneHandTopAppBar] takes a title string rather
+        // than a slot, and a search field belongs in a bar that is not also a pull target.
+        TopAppBar(
+            title = { BookmarkSearchField(query = state.query.orEmpty(), onQuery = onQuery) },
+            navigationIcon = back,
+        )
+        return
+    }
+    OneHandTopAppBar(
+        title = stringResource(R.string.bookmarks_title),
+        state = appBarState,
+        // 已离线 N 篇 · 占用 X. It used to be a strip of its own between the chips and the list;
+        // as a subtitle it costs no row at all, and this is a standing fact about the screen rather
+        // than a control — which is what a subtitle is for. Null until something has been
+        // downloaded: 「已离线 0 篇 · 占用 0 B」 is a line that says nothing and still takes a line.
+        subtitle =
+        if (state.offlineAvailable && state.usage.posts > 0) {
+            stringResource(R.string.offline_status, state.usage.posts, formatBytes(state.usage.totalBytes))
+        } else {
+            null
         },
+        navigationIcon = back,
         actions = {
-            if (!state.isSearching) {
-                IconButton(onClick = { onSearching(true) }) {
+            IconButton(onClick = { onSearching(true) }) {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = stringResource(R.string.bookmarks_search),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (state.offlineAvailable) {
+                // Straight to 离线管理 rather than a ⋮ that opens onto a menu of one. The overflow
+                // was there when the board put 排序 in it too; 排序 has its own control beside the
+                // filter chips, so what was left was a tap to reveal a single item.
+                IconButton(onClick = onManage) {
                     Icon(
-                        Icons.Default.Search,
-                        contentDescription = stringResource(R.string.bookmarks_search),
+                        imageVector = PlazaIcons.CloudDone,
+                        contentDescription = stringResource(R.string.offline_manage),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                }
-                if (state.offlineAvailable) {
-                    BookmarksOverflow(onManage = onManage)
                 }
             }
         },
@@ -464,30 +493,6 @@ private fun BookmarkSearchField(
             unfocusedIndicatorColor = Color.Transparent,
         ),
     )
-}
-
-@Composable
-private fun BookmarksOverflow(onManage: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(
-                Icons.Default.MoreVert,
-                contentDescription = stringResource(R.string.action_more),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.offline_sheet_title)) },
-                leadingIcon = { Icon(PlazaIcons.CloudDone, contentDescription = null) },
-                onClick = {
-                    expanded = false
-                    onManage()
-                },
-            )
-        }
-    }
 }
 
 /** ⇅ — three orderings of a list that is entirely in memory. See [BookmarkSort]. */
