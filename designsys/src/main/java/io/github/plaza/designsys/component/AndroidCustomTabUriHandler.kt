@@ -17,6 +17,12 @@ import io.github.plaza.designsys.theme.LocalPlazaDarkTheme
  * A [UriHandler] that opens links in a Custom Tab, meant to be swapped in over the platform one at
  * the composition root.
  *
+ * The file is named for its platform because all of it is: Custom Tabs are `androidx.browser`, which
+ * is Android-only, and there is no cross-platform notion of "the browser, in this task". What is
+ * portable is the seam rather than the implementation — [UriHandler] and `LocalUriHandler` are
+ * Compose's own, so a platform that wants `SFSafariViewController` instead provides its own handler
+ * over the same local and every `openUri` call site is already pointing at it.
+ *
  * A forum thread is mostly other people's links, and every one of them otherwise starts a browser
  * task: read three links out of a thread and the app is three task switches behind whatever the
  * launcher shows. A Custom Tab is the browser doing the browsing — its process, its cookies, its

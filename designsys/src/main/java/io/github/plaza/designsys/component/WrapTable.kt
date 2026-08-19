@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -43,6 +42,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import io.github.plaza.core.image.ImagesDeferredException
 import io.github.plaza.core.image.allowMeteredImage
@@ -206,7 +206,7 @@ private fun CellThumbnail(
     var failure by remember(image.url, allowMetered, retryToken) {
         mutableStateOf<CellImageFailure?>(null)
     }
-    val context = LocalContext.current
+    val context = LocalPlatformContext.current
     val request =
         remember(image.url, allowMetered, retryToken) {
             ImageRequest

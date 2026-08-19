@@ -25,10 +25,15 @@ dependencies {
     implementation(libs.material.color.utilities)
 
     // `BackHandler`: the emoji panel stands in for the keyboard, so back has to dismiss it first.
+    // Reached from `AndroidBackHandler.kt` and nowhere else — Compose Multiplatform has the same
+    // function in `commonMain` and androidx publishes no `ui-backhandler`, so the one call site goes
+    // through this module's own wrapper rather than naming either artifact.
     implementation(libs.androidx.activity.compose)
 
     // Custom Tabs: a thread is mostly other people's links, and handing each one to the system
     // browser puts a task switch between the reader and the thread they were in.
+    // Reached from `AndroidCustomTabUriHandler.kt` and nowhere else; what the rest of the module
+    // knows about opening a link is Compose's own `LocalUriHandler`.
     implementation(libs.androidx.browser)
 
     // Avatars load over the network. Only `coil-compose` — the GIF and SVG decoders are a decision

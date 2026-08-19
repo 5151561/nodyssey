@@ -373,7 +373,7 @@ Compose
 | ✅ 2 | 基建 | `plaza.kmp.library` convention plugin、`:shared` 模块、`appleMain` 层级 | — |
 | ✅ 3 | A | model + 纯逻辑 | 2 |
 | ✅ 4 | A | parser + Ksoup | 3 |
-| **B1** | B | `:designsys` 去平台耦合：4 处 `android.*` + `BackHandler` + Custom Tabs，共 5 个文件 | 无 |
+| ✅ **B1** | B | `:designsys` 去平台耦合。计划记的是 5 个文件，实际 **6 个**——见下 | 无 |
 | **B2** | B | `core/image` 下沉，`:designsys` 改为直接依赖 `:shared` | B1 |
 | **B3** | B | `:designsys` 转 KMP 模块 + desktop target，单独跑起来 | B2 |
 | **A5** | A | 网络契约 + Apple transport | B3 |
@@ -430,6 +430,52 @@ B3：§2 的「为什么不共享 ViewModel」在 CMP 下整体失效（见 [`cm
 
 CMP 侧有没有 common 的 `BackHandler`、Custom Tabs 该换成什么，**未验证**——B1 动手前按
 `cmp-ui-decision.md` 附录那套 artifact 比对法查，不要按印象排期。
+
+### ✅ B1 实测：`:designsys` 去平台耦合
+
+平台耦合现在只出现在四个以平台命名的文件里，与 §4.1 给 `:core` 做的是同一件事、同一个理由——
+KMP 里一个文件不能一半 `commonMain` 一半 `androidMain`，拆过之后 B3 是移动文件而不是改写。
+
+| 文件 | 承担什么 |
+|---|---|
+| `component/AndroidClipboard.kt` | 把纯文本包成 `ClipEntry`；Android 13 以下补一个 Toast |
+| `component/AndroidBackHandler.kt` | `PlazaBackHandler` 委托给 `androidx.activity.compose.BackHandler` |
+| `component/AndroidCustomTabUriHandler.kt` | Custom Tab 的 `UriHandler`（原 `ExternalUriHandler.kt`，只改名） |
+| `theme/AndroidSystemColorScheme.kt` | 动态取色，取不到时返回 null |
+
+公开 API 一个没动，`:app` 侧零改动。门禁全绿：`testDebugUnitTest` 1,424 个测试 0 失败、
+`:app:assembleDebug`、`spotlessCheck`、`:app:lintDebug`。测试一个字没改。
+
+#### 动手前查掉的三个未知项（artifact 比对，不查文档）
+
+| 问题 | 答案 |
+|---|---|
+| CMP 有没有 common 的 `BackHandler`？ | **有**，`org.jetbrains.compose.ui:ui-backhandler` 1.12.0-rc01 的 `commonMain` 里是 `expect fun BackHandler(enabled: Boolean = true, onBack: () -> Unit)`，与 `androidx.activity.compose` 的签名一字不差 |
+| androidx 有没有同一个 artifact，好让 B1 只改 import？ | **没有**。`androidx.compose.ui:ui-backhandler` 在 Google Maven 上是 HTTP 404。所以必须自己留一层 `PlazaBackHandler`，B4 时把它的实现换成 CMP 的 |
+| 剪贴板在 common 能做到哪一步？ | `Clipboard.setClipEntry` 是 common 的，**但 `ClipEntry` 是 `expect class` 且 common 里没有任何纯文本工厂**（在 CMP 的 `ui` sources 里 grep 不到 `withPlainText` 之类）。造剪贴板内容天生是平台活，这一层拆不掉 |
+
+顺带确认两件让 B1 变便宜的事：`coil3.compose.LocalPlatformContext` 是 `commonMain` 的 `expect val`，
+所以三处 `LocalContext` 只是为了喂 `ImageRequest.Builder`，直接换成 Coil 自己的 common API 就没了；
+`androidx.annotation` 有真 Apple 变体（`iosArm64` / `macosArm64` 都在），`@VisibleForTesting` 不用动。
+
+#### 「数 `import android.*` 的文件」这个口径本身会漏
+
+计划说 5 个文件，实际 6 个。多出来的是 `component/WrapTable.kt` —— 它用 `LocalContext`，而
+`LocalContext` 的包名是 `androidx.compose.ui.platform`，不是 `android.*`。`RichContent.kt` 里同样的
+两处也是这么藏着的。**统计平台耦合不能只 grep `^import android\.`**，Android-only 的 androidx 构件
+和只在 Android 上存在的 CompositionLocal 都不长那个样子。
+
+#### 一处刻意的行为差异
+
+`android.util.LruCache` 每个方法都 synchronized，接替它的 `NaturalImageSizes`（`LinkedHashMap`，
+读的时候重新插入，所以队首永远是最久没用的）**不是**。两个调用点都在 composition 里——给
+`BlockImage` 打底的那个 `remember`，和 Coil 把结果送回来的 `onSuccess`。别处要用得自己带锁，
+KDoc 里写了。
+
+#### 留给 D2 的一处
+
+`editor/EmojiPanel.kt` 的 `@StringRes`。它来自 `androidx.annotation`（多平台，本身不是问题），
+但它标注的是 Android 资源 id ——这条随 Compose Resources 一起解决，不属于 B1。
 
 #### 为什么 D1 不可能提前
 

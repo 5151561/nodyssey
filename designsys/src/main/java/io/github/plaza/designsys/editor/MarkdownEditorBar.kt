@@ -1,6 +1,5 @@
 package io.github.plaza.designsys.editor
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.RowScope
@@ -16,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.Dp
+import io.github.plaza.designsys.component.PlazaBackHandler
 /**
  * What an emoji panel needs from the editor it hangs under.
  *
@@ -117,7 +117,7 @@ fun MarkdownEditorBar(
     val keyboard = LocalSoftwareKeyboardController.current
     // The panel stands in for the keyboard, and a keyboard is the one thing back is always expected to
     // dismiss before it leaves the screen.
-    BackHandler(enabled = editorState.emojiOpen) { editorState.closeEmoji() }
+    PlazaBackHandler(enabled = editorState.emojiOpen) { editorState.closeEmoji() }
 
     Column(modifier) {
         EditorToolbar(

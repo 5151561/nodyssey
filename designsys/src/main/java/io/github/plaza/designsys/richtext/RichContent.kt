@@ -1,7 +1,5 @@
 package io.github.plaza.designsys.richtext
 
-import android.util.LruCache
-import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -57,7 +55,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -87,6 +84,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.isUnspecified
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import io.github.plaza.core.image.ImageLoadFailure
 import io.github.plaza.core.image.ImagesDeferredException
@@ -634,7 +632,7 @@ private fun FoldBlock(
  * nothing, and a tap on that placeholder re-requests the image with the preference waived for this
  * one image — see [allowMeteredImage].
  *
- * How big the image turned out to be is remembered in [naturalImageSizes] rather than only in this
+ * How big the image turned out to be is remembered in [NaturalImageSizes] rather than only in this
  * composable. A thread scrolls, and a `remember` keyed on the URL dies with the row that left the
  * screen: scrolling back put every image through its first-load path again — for an SVG that is two
  * rasterisations, the first at full size purely to ask how big it is — with the row collapsed to a
@@ -648,7 +646,7 @@ private fun BlockImage(
     onImageClick: (String) -> Unit,
     onLinkClick: (String) -> Unit,
 ) {
-    var naturalSize by remember(node.url) { mutableStateOf(naturalImageSizes[node.url]) }
+    var naturalSize by remember(node.url) { mutableStateOf(NaturalImageSizes[node.url]) }
     var allowMetered by remember(node.url) { mutableStateOf(false) }
     var retryToken by remember(node.url) { mutableIntStateOf(0) }
     var phase by remember(node.url, allowMetered, retryToken) {
@@ -660,7 +658,7 @@ private fun BlockImage(
         mutableStateOf<ImageLoadFailure?>(null)
     }
 
-    val context = LocalContext.current
+    val context = LocalPlatformContext.current
 
     when (phase) {
         InlineImagePhase.Deferred -> {
@@ -743,7 +741,7 @@ private fun BlockImage(
                         if (naturalSize == null && image.width > 0 && image.height > 0) {
                             val measured = IntSize(image.width, image.height)
                             naturalSize = measured
-                            naturalImageSizes.put(node.url, measured)
+                            NaturalImageSizes.put(node.url, measured)
                         }
                     },
                     onError = { error ->
@@ -899,28 +897,6 @@ private enum class InlineImagePhase { Loading, Success, Deferred, Error }
 private fun String.isSvgUrl(): Boolean = substringBefore('#').substringBefore('?').endsWith(".svg", ignoreCase = true)
 
 private val INLINE_IMAGE_LOADING_HEIGHT = 132.dp
-
-/**
- * The size each image turned out to be, by URL, for as long as the process lives.
- *
- * Sizes only — two ints per entry, never pixels — so this is free to outlive any one screen and to
- * hold more entries than a reader will scroll past. Coil's own memory cache is keyed by request
- * *including* the size asked for, which is the one thing an image cannot say before it has been
- * measured once; this is that missing first answer. See [BlockImage] for what it buys.
- */
-private val naturalImageSizes = LruCache<String, IntSize>(NATURAL_IMAGE_SIZE_ENTRIES)
-
-private const val NATURAL_IMAGE_SIZE_ENTRIES = 512
-
-/**
- * Forgets every measured image size.
- *
- * For tests: the cache is process-wide, and one JVM runs many of them. A test whose image is a
- * different size from an earlier test's image at the same URL would otherwise lay out against the
- * earlier one — the same hazard `SingletonImageLoader.reset()` exists for.
- */
-@VisibleForTesting
-fun resetNaturalImageSizes(): Unit = naturalImageSizes.evictAll()
 
 /** The language tag and the copy button on a terminal ground: present, but not competing with it. */
 private const val TERMINAL_CHROME_ALPHA = 0.7f
@@ -1356,7 +1332,7 @@ private fun InlineText(
                     var failure by remember(sticker.url) { mutableStateOf<StickerFailure?>(null) }
                     val failed = failure
                     if (failed == null) {
-                        val context = LocalContext.current
+                        val context = LocalPlatformContext.current
                         val request =
                             remember(sticker.url) {
                                 ImageRequest

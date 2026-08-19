@@ -1,17 +1,13 @@
 package io.github.plaza.designsys.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
 /**
  * Whether the app is currently drawing dark.
@@ -54,22 +50,23 @@ fun PlazaTheme(
     /**
      * 使用系统调色板 — take the OS's own Monet scheme rather than generating one.
      *
-     * Ignored below API 31, where there is no such palette to take. The stored setting is left
-     * alone: it is the reader's answer, not this phone's capability.
+     * Ignored wherever the platform has no such palette to take — on Android that is below API 31.
+     * The stored setting is left alone: it is the reader's answer, not this phone's capability.
      */
     useSystemPalette: Boolean = false,
     fontScale: Float = 1f,
     content: @Composable () -> Unit,
 ) {
-    val context = LocalContext.current
-    val systemPalette = useSystemPalette && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    // Asked for only when it could win: 角色预设 beats it, and building a scheme that is about to be
+    // discarded is work on every recomposition of the whole app. Null means this platform — or this
+    // Android version — has no system palette; see [platformSystemColorScheme].
+    val systemColorScheme =
+        if (useSystemPalette && characterPalette == null) platformSystemColorScheme(darkTheme) else null
     val colorScheme =
         when {
             characterPalette != null -> characterPalette.colorScheme(darkTheme)
 
-            systemPalette && darkTheme -> dynamicDarkColorScheme(context)
-
-            systemPalette -> dynamicLightColorScheme(context)
+            systemColorScheme != null -> systemColorScheme
 
             // Remembered because generating one is real work — an HCT solve per role — and it would
             // otherwise rerun on every recomposition of the whole app.

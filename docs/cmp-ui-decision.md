@@ -194,5 +194,8 @@ grep -rlE "^import android\." --include="*.kt" app/src/main/java/io/github/nodys
 - iOS 的 WKWebView 会话链路（门槛 A 只覆盖 macOS）。
 - Compose Resources 对 1,059 条 strings 的迁移是否有可用的自动化路径，未调研。
 - CMP 在 iOS 上的中文 IME 组合输入、文本选择、滚动手感，未实测。
-- CMP 侧有没有 common 的 `BackHandler`，Custom Tabs 在非 Android 平台该换成什么，未查
-  （§4 补正）。整合表的 B1 动手前按本文附录那套 artifact 比对法核实。
+- ~~CMP 侧有没有 common 的 `BackHandler`，Custom Tabs 在非 Android 平台该换成什么~~ →
+  **2026-08-19 已查**，结论记在 [`kmp-migration-plan.md`](kmp-migration-plan.md) §5 的 B1 实测：
+  CMP 的 `BackHandler` 签名一致，但 androidx 没有同名 artifact；Custom Tabs 没有中性对应物，
+  中性的是 `LocalUriHandler` 这个座位而不是坐在上面的实现。`ClipEntry` 在 common 无工厂，
+  是同一次核实里查出来的第三件事。
