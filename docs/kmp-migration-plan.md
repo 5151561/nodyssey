@@ -374,7 +374,7 @@ Compose
 | ✅ 3 | A | model + 纯逻辑 | 2 |
 | ✅ 4 | A | parser + Ksoup | 3 |
 | ✅ **B1** | B | `:designsys` 去平台耦合。计划记的是 5 个文件，实际 **6 个**——见下 | 无 |
-| **B2** | B | `core/image` 下沉，`:designsys` 改为直接依赖 `:shared` | B1 |
+| ✅ **B2** | B | `core/image` 拆三份，`:designsys` 改为直接依赖 `:shared`。不是「下沉」——见下 | B1 |
 | **B3** | B | `:designsys` 转 KMP 模块 + desktop target，单独跑起来 | B2 |
 | **A5** | A | 网络契约 + Apple transport | B3 |
 | **B4** | B | `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group | B3 |
@@ -428,8 +428,16 @@ B3：§2 的「为什么不共享 ViewModel」在 CMP 下整体失效（见 [`cm
 `material-color-utilities` 不用担心：坐标是 `com.materialkolor:material-color-utilities`，本来就是
 多平台 Kotlin 移植。
 
-CMP 侧有没有 common 的 `BackHandler`、Custom Tabs 该换成什么，**未验证**——B1 动手前按
-`cmp-ui-decision.md` 附录那套 artifact 比对法查，不要按印象排期。
+~~CMP 侧有没有 common 的 `BackHandler`、Custom Tabs 该换成什么，未验证。~~ → B1 动手前查掉了，
+答案在下面的 B1 实测里。
+
+#### 为什么 D1 不可能提前
+
+实测 `app/src/main/.../ui` 的 124 个文件里，**73 个 import `io.github.nodyssey.data`**、77 个 import
+`:designsys`，其中 37 个 `ViewModel`。UI 进 `commonMain` 的前置就是 Repository 先进去，没有绕路。
+
+一个对 CMP 有利的现状：项目**没有 Hilt / Koin**，依赖装配是手写的 `di/AppContainer.kt`。
+KMP 里最常见的那个 DI 障碍在这里不存在。
 
 ### ✅ B1 实测：`:designsys` 去平台耦合
 
@@ -477,13 +485,47 @@ KDoc 里写了。
 `editor/EmojiPanel.kt` 的 `@StringRes`。它来自 `androidx.annotation`（多平台，本身不是问题），
 但它标注的是 Android 资源 id ——这条随 Compose Resources 一起解决，不属于 B1。
 
-#### 为什么 D1 不可能提前
+### ✅ B2 实测：`core/image` 拆三份，不是下沉
 
-实测 `app/src/main/.../ui` 的 124 个文件里，**73 个 import `io.github.nodyssey.data`**、77 个 import
-`:designsys`，其中 37 个 `ViewModel`。UI 进 `commonMain` 的前置就是 Repository 先进去，没有绕路。
+计划这一步写的是「`core/image` 下沉」，实测下来它该拆开：包里四个文件的受众不是一拨人。
 
-一个对 CMP 有利的现状：项目**没有 Hilt / Koin**，依赖装配是手写的 `di/AppContainer.kt`。
-KMP 里最常见的那个 DI 障碍在这里不存在。
+| 去处 | 内容 | 为什么 |
+|---|---|---|
+| `:designsys/image/` | `ImageLoadFailure` + `diagnoseImageFailure`；`AllowMeteredImage` / `allowMeteredImage` / `ImagesDeferredException` | 这是图片加载器与 UI 之间的**词汇**：占位图被点一下就设那个 extra，组件读那个异常才知道是「跳过了」而不是「坏了」 |
+| `:app/image/` | `ImageNetworkPolicyInterceptor` | 执行偏好设置是 app 的事，而且全仓只有 `NodysseyApp` 构造它 |
+| `:app/platform/` | `CompatSvgParser`、`hasValidatedUnmeteredNetwork` | 平台外壳，和 §4.1 把 `KeystoreSecretCipher` 搬进 `platform/` 是同一个做法 |
+
+`:designsys` 的 `api(project(":core"))` 因此换成 `api(project(":shared"))`，B2 的目标达成——
+`:designsys:dependencies` 的 `debugCompileClasspath` 里现在只有 `project ':shared'`。
+
+#### 为什么没有真的下沉到 `:shared`
+
+因为 `diagnoseImageFailure` 认的是 `java.net.SocketTimeoutException`、`UnknownHostException`、
+`java.io.InterruptedIOException`——三个在 common 里没有对应物的 JVM 异常（`java.io.IOException`
+有 `kotlin.io.IOException` 顶，另外三个没有）。下沉就得先做一层 expect/actual，还得让 `:shared`
+带上 coil。
+
+而 **B3 的闸是 desktop，desktop 就是 JVM**，`java.net.*` 在那儿根本不是问题；这三个异常真正拦路是
+在 D3 开 Native 的时候。按「不赌的先做」和 §4.4「不要过度抽象」，那层 expect/actual 留到需要它的
+那一步。反过来说也成立：**B3 若失败、CMP 不做了**，现在这个拆法仍然是净收益（`:core` 少了 422 行
+和一个它不该有的图片库依赖），而下沉方案会给 `:shared` 留一个白挂的 coil 依赖。
+
+#### `:core` 因此空掉的东西
+
+`core/image` 是 `:core` 里唯一用 coil 的地方，也是唯一需要 Robolectric 的地方。搬完之后
+`api(coil-core)` / `implementation(coil-network-core)` / `api(coil-svg)` 三个依赖、
+`robolectric` + `androidx-test-core` + `androidx-test-ext-junit` 三个测试依赖，以及
+`src/test/resources/robolectric.properties`，全部无人使用，一并删掉。**`:core` 现在一个
+Robolectric 测试都没有了。**
+
+#### 一个坑：搬测试要连资源一起搬
+
+`CompatSvgParserTest` 搬进 `:app` 之后报 `Missing fixture: check-place-ip-report.svg`——
+它通过 classloader 读 `fixtures/`，而那个 SVG 还在 `core/src/test/resources/`。编译期抓不到，
+只有跑起来才知道。`:core` 剩下的三个 `update-*.json` 是 update 测试的，留在原地。
+
+测试总数不变：`:app` 1,095 + `:designsys` 108 + `:core` 40 + `:shared` 181 = **1,424**，与 B1 后一致，
+0 失败。
 
 ### ✅ 步骤 2 实测：构建基础设施
 

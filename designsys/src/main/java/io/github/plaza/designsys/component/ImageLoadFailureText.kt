@@ -2,8 +2,8 @@ package io.github.plaza.designsys.component
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
-import io.github.plaza.core.image.ImageLoadFailure
 import io.github.plaza.designsys.R
+import io.github.plaza.designsys.image.ImageLoadFailure
 
 /**
  * One line saying why an image is missing, or null when there is nothing honest to say.

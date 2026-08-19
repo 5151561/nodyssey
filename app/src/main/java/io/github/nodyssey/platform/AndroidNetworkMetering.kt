@@ -1,4 +1,4 @@
-package io.github.plaza.core.image
+package io.github.nodyssey.platform
 
 import android.content.Context
 import android.net.ConnectivityManager

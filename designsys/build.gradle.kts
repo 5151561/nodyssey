@@ -8,9 +8,16 @@ android {
 }
 
 dependencies {
-    // `api` because `rememberTerminalText` takes `AnsiSpan` in its signature: a consumer building the
-    // list has to be able to name the type. Nothing else here reaches into `:core`.
-    api(project(":core"))
+    // `api` because `rememberTerminalText` takes `AnsiSpan` in its signature and `RichContent` takes a
+    // `RichNode`: a consumer building either has to be able to name the type.
+    //
+    // `:shared` rather than `:core`, which is what this used to say. The four symbols that made the
+    // difference were `core/image`'s — the failure vocabulary and the metered-image extra — and they
+    // are now this module's own, because both halves of that package's audience are on this side of
+    // the boundary: a component reads them, and the app that enforces the preference can see here.
+    // What is left in `:core` is an Android library with OkHttp on its api surface, and depending on
+    // it is what stopped this module from ever compiling for anything but Android.
+    api(project(":shared"))
 
     // `api`, not `implementation`: a consumer writes Compose against these types in its own source,
     // and both sides have to agree on one BOM or two Compose versions end up on the same classpath.
@@ -39,6 +46,16 @@ dependencies {
     // Avatars load over the network. Only `coil-compose` — the GIF and SVG decoders are a decision
     // about a particular site's content, so they stay with the app that needs them.
     implementation(libs.coil.compose)
+
+    // `api`, not `implementation`: `AllowMeteredImage` is an `Extras.Key` and `allowMeteredImage`
+    // extends `ImageRequest.Builder`, so both names are on this module's surface. It arrives through
+    // `coil-compose` anyway; saying so is what keeps that an accident rather than the reason.
+    api(libs.coil.core)
+
+    // `implementation`: reading why a fetch failed means naming Coil's `HttpException`, but that type
+    // stops here — [ImageLoadFailure] is what leaves, and a consumer matches on that. Carried over
+    // verbatim from `:core`, along with the code that made it true.
+    implementation(libs.coil.network.core)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 

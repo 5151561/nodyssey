@@ -18,11 +18,11 @@ import io.github.nodyssey.data.offline.OfflineImageInterceptor
 import io.github.nodyssey.data.offline.OfflineWork
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.di.DefaultAppContainer
+import io.github.nodyssey.image.ImageNetworkPolicyInterceptor
 import io.github.nodyssey.notifications.NotificationChannels
 import io.github.nodyssey.notifications.NotificationPollScheduler
-import io.github.plaza.core.image.CompatSvgParser
-import io.github.plaza.core.image.ImageNetworkPolicyInterceptor
-import io.github.plaza.core.image.hasValidatedUnmeteredNetwork
+import io.github.nodyssey.platform.CompatSvgParser
+import io.github.nodyssey.platform.hasValidatedUnmeteredNetwork
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -111,9 +111,9 @@ open class NodysseyApp :
                 add(OfflineImageInterceptor(OfflineFileStore.of(filesDir)))
                 add(
                     ImageNetworkPolicyInterceptor(
-                        // The interceptor is `:core`'s and knows neither this app's settings nor this
-                        // platform: which key means 仅 Wi-Fi 加载图片, and what counts as Wi-Fi, are
-                        // both decided here.
+                        // The interceptor is handed both rather than asking: which key means
+                        // 仅 Wi-Fi 加载图片 is a settings question and what counts as Wi-Fi is the
+                        // platform's, and it is testable without either.
                         imagesOnWifiOnly = container.settingsRepository.settings.map { it.imagesOnWifiOnly },
                         hasUnmeteredNetwork = context::hasValidatedUnmeteredNetwork,
                     ),

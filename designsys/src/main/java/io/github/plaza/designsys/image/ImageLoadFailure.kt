@@ -1,4 +1,4 @@
-package io.github.plaza.core.image
+package io.github.plaza.designsys.image
 
 import coil3.network.HttpException
 import java.io.IOException
@@ -15,7 +15,8 @@ import java.net.UnknownHostException
  * URL, or the phone being offline. These cases are the ones whose *fix* differs — retry, wait for
  * signal, or go look at it in a browser — so they are the ones worth naming.
  *
- * Wording lives with the UI. This is `:core`, which has no strings.
+ * Wording lives with the UI — [io.github.plaza.designsys.component.ImageLoadFailureText] is where
+ * these turn into sentences. This half is only the distinctions.
  */
 sealed interface ImageLoadFailure {
     /**

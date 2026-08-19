@@ -3,7 +3,7 @@ package io.github.plaza.designsys.component
 import androidx.compose.material3.Text
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import io.github.plaza.core.image.ImageLoadFailure
+import io.github.plaza.designsys.image.ImageLoadFailure
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Rule
 import org.junit.Test

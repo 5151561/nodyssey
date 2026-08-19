@@ -44,9 +44,9 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
-import io.github.plaza.core.image.ImagesDeferredException
-import io.github.plaza.core.image.allowMeteredImage
 import io.github.plaza.designsys.R
+import io.github.plaza.designsys.image.ImagesDeferredException
+import io.github.plaza.designsys.image.allowMeteredImage
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 

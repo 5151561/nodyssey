@@ -1,4 +1,4 @@
-package io.github.plaza.core.image
+package io.github.nodyssey.platform
 
 import coil3.svg.Svg
 import okio.Buffer

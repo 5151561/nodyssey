@@ -25,10 +25,10 @@ import coil3.intercept.Interceptor
 import coil3.request.ErrorResult
 import coil3.request.ImageResult
 import coil3.request.SuccessResult
-import io.github.plaza.core.image.AllowMeteredImage
-import io.github.plaza.core.image.ImagesDeferredException
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.image.AllowMeteredImage
+import io.github.plaza.designsys.image.ImagesDeferredException
 import io.github.plaza.designsys.richtext.resetNaturalImageSizes
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes

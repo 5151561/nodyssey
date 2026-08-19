@@ -86,10 +86,6 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
-import io.github.plaza.core.image.ImageLoadFailure
-import io.github.plaza.core.image.ImagesDeferredException
-import io.github.plaza.core.image.allowMeteredImage
-import io.github.plaza.core.image.diagnoseImageFailure
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.InlineStyle
 import io.github.plaza.core.richtext.RichNode
@@ -108,6 +104,10 @@ import io.github.plaza.designsys.component.imageLoadFailureText
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberTerminalText
 import io.github.plaza.designsys.component.specTableFits
+import io.github.plaza.designsys.image.ImageLoadFailure
+import io.github.plaza.designsys.image.ImagesDeferredException
+import io.github.plaza.designsys.image.allowMeteredImage
+import io.github.plaza.designsys.image.diagnoseImageFailure
 import io.github.plaza.designsys.theme.CodeStyle
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.PostBody

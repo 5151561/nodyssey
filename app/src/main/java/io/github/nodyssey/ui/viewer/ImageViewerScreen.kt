@@ -62,12 +62,12 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import io.github.nodyssey.R
-import io.github.plaza.core.image.ImageLoadFailure
-import io.github.plaza.core.image.ImagesDeferredException
-import io.github.plaza.core.image.allowMeteredImage
-import io.github.plaza.core.image.diagnoseImageFailure
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.imageLoadFailureText
+import io.github.plaza.designsys.image.ImageLoadFailure
+import io.github.plaza.designsys.image.ImagesDeferredException
+import io.github.plaza.designsys.image.allowMeteredImage
+import io.github.plaza.designsys.image.diagnoseImageFailure
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import kotlin.math.abs

@@ -12,11 +12,11 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.plaza.core.image.allowMeteredImage
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.editor.EmojiEntry
 import io.github.plaza.designsys.editor.EmojiGroup
 import io.github.plaza.designsys.editor.EmojiPanel
+import io.github.plaza.designsys.image.allowMeteredImage
 
 /**
  * The four groups NodeSeek's own editor offers, and how their previews are fetched.

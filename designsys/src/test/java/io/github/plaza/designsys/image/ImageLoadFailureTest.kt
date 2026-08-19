@@ -1,4 +1,4 @@
-package io.github.plaza.core.image
+package io.github.plaza.designsys.image
 
 import coil3.network.HttpException
 import coil3.network.NetworkHeaders
