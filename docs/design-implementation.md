@@ -21,6 +21,12 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 | f3 Telegram 绑定 | 已接入账号联系方式流程 | `ui/account/ContactScreen.kt`、`ContactViewModel.kt`、`data/account/AccountSettingsRepository.kt` | 绑定本身在网页完成（站点用 telegram.org 登录挂件），确认弹窗打开 `/setting#contact`，返回后轮询状态；绑定状态读取与解绑是原生请求 |
 | f4 App 通知设置 | 已接入 | `ui/settings/NotificationSettingsScreen.kt`、`NotificationSettingsViewModel.kt`、`notifications/` | WorkManager 是周期轮询，不承诺即时推送；系统省电策略可能延后执行 |
 
+## 批次 J
+
+| 画板 | 实现状态 | 主要代码 | 仍需注意 |
+|---|---|---|---|
+| j1 主题设置 · 配色 | 已按稿实现（四处替代，见下） | `ui/settings/theme/`（`ThemeSettingsScreen.kt`、`DynamicColorScreen.kt`、`SeedColorSheet.kt`、`ThemePreviewCard.kt`、`ThemeSwatch.kt`、`ThemePresets.kt`、`WallpaperPalette.kt`）、`designsys/theme/SeedColor.kt`、`Theme.kt` | 全部为 App 增强，站点无主题接口；六个预设、壁纸候选和自定义种子色都走同一个生成器，手调的品牌配色已退役 |
+
 以上代码路径均相对于 `app/src/main/java/io/github/nodyssey/`。
 
 ## f1 验收对照
@@ -294,3 +300,30 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 2. 实现时保留 Screen 纯状态 + callback 边界，并使用现有主题 token、间距和语义组件。
 3. 更新本文件与 `implementation-status.md`，明确“视觉已完成”和“数据/写操作已接入”的差别。
 4. UI 改动至少补 360×800 Compose/Robolectric 用例；提交前执行仓库完整门禁。
+
+## j1 验收对照
+
+- **替代 0：明暗没有搬走。** 画板把「跟随系统 / 浅色 / 深色」放在主题页开头，实现里它留在
+  「设置 › 外观」第一格，主题入口排在它下面。它是全套主题里唯一天天要动的——屋里光线变了就翻一次——
+  把它挪到两层之下换取画板完整，是把稿子里不该守的那一半守住了。主题页那一节整个不画。
+- 「设置 › 外观」是「明暗」加一个「主题」入口，配色相关的其余控件不再直接摆在设置列表里。
+- 配色来源是三块 96dp 瓦片（预设 / 动态取色 / 自定义），各自记住上次的种子色；
+  已选中的瓦片再点一次才打开它背后的东西（动态取色的页面、自定义的底部弹层），
+  这样「把旧颜色换回来」和「我要改颜色」是两次不同的点击。
+- 预设是 3×2 双色圆点，整格可点（圆点、名称、色值都是同一个目标）；
+  选中态是离开圆点的两层描环加勾。
+- 预设这一节只在「预设」是当前来源时展开，选了动态取色或自定义就收起来：两行 56dp 圆点占掉这页大半，
+  而那时六个里没有一个是生效的颜色。收起的是控件不是答案——瓦片上仍然写着它会还原成哪个预设。
+  其余各节不跟着收，「我的主题」尤其不能收：新建是颜色的来路，收起来就从它所属的来源够不着了。
+- 我的主题是保存过的自定义种子色，长按出重命名 / 删除；上限 12 条，超出从最早的丢。
+- 色彩风格五档对应 MaterialKolor 的 TonalSpot / Vibrant / Expressive / Neutral / Monochrome，
+  对三种配色来源一律生效；`SeedColorSchemeTest` 逐档验证文字对比度不低于 4.5:1。
+- 预览卡读当前主题的 token 重绘，字号写死不跟正文字号走——它是一张 App 的缩略图，不是 App 的一部分。
+- **替代 1：壁纸缩略图未画。** targetSdk 36 下 `WallpaperManager.getDrawable()` 需要
+  `MANAGE_EXTERNAL_STORAGE`，为一张缩略图申请全文件访问不划算；壁纸配色本身不需要权限，
+  所以候选色以下的内容原样保留，候选色直接顶到页面开头。
+- **替代 2：吸管改成从相册取色。** Android 没有系统级屏幕取色 API，点吸管走 PhotoPicker（免权限）
+  选一张图，再点图上任意位置采样。
+- 自定义种子色的调色面板画的是 HCT 的鲜艳度 × 明度，不是 HSV 的饱和度 × 明度：
+  生成器只读种子的色相和鲜艳度，HSV 面板上竖直拖半屏会几乎不改变 App 的观感。
+  外观与设计稿一致，但面板上每个位置都对应一套能分辨出来的配色。

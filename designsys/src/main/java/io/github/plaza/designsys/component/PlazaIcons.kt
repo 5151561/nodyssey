@@ -731,6 +731,85 @@ object PlazaIcons {
             pathData = "M6,6h12v12H6z",
         )
     }
+
+    /** 预设 — 配色来源 tile. 调色板, the one glyph that says "a set of colours somebody chose". */
+    val Palette: ImageVector by lazy {
+        materialIcon(
+            name = "Palette",
+            pathData =
+            "M12,2C6.49,2,2,6.49,2,12s4.49,10,10,10c1.38,0,2.5-1.12,2.5-2.5c0-0.61-0.23-1.2-0.64-1.67" +
+                "c-0.08-0.1-0.13-0.21-0.13-0.33c0-0.28,0.22-0.5,0.5-0.5H16c3.31,0,6-2.69,6-6C22,6.04,17.51,2,12,2" +
+                "z M17.5,13c-0.83,0-1.5-0.67-1.5-1.5c0-0.83,0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5" +
+                "C19,12.33,18.33,13,17.5,13z M14.5,9C13.67,9,13,8.33,13,7.5C13,6.67,13.67,6,14.5,6S16,6.67,16,7.5" +
+                "C16,8.33,15.33,9,14.5,9z M5,11.5C5,10.67,5.67,10,6.5,10S8,10.67,8,11.5C8,12.33,7.33,13,6.5,13" +
+                "S5,12.33,5,11.5z M11,7.5C11,8.33,10.33,9,9.5,9S8,8.33,8,7.5C8,6.67,8.67,6,9.5,6S11,6.67,11,7.5z",
+        )
+    }
+
+    /** 动态取色 — the source that reads the phone's own wallpaper. */
+    val Wallpaper: ImageVector by lazy {
+        materialIcon(
+            name = "Wallpaper",
+            pathData =
+            "M4 4h7V2H4c-1.1 0-2 .9-2 2v7h2V4zm6 9l-4 5h12l-3-4-2.03 2.71L10 13zm7-4.5c0-.83-.67-1.5-1.5-1.5" +
+                "S14 7.67 14 8.5s.67 1.5 1.5 1.5S17 9.33 17 8.5zM20 2h-7v2h7v7h2V4c0-1.1-.9-2-2-2zm0 18h-7v2h7" +
+                "c1.1 0 2-.9 2-2v-7h-2v7zM4 13H2v7c0 1.1.9 2 2 2h7v-2H4v-7z",
+        )
+    }
+
+    /** 吸管 — lifting a colour out of a picture the reader already has. */
+    val Colorize: ImageVector by lazy {
+        materialIcon(
+            name = "Colorize",
+            pathData =
+            "M20.71 5.63l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-3.12 3.12-1.93-1.91-1.41 1.41 1.42 1.42L3 16.25" +
+                "V21h4.75l8.92-8.92 1.42 1.42 1.41-1.41-1.92-1.92 3.12-3.12c.4-.4.4-1.03.01-1.42zM6.92 19L5 17.08" +
+                "l8.06-8.06 1.92 1.92L6.92 19z",
+        )
+    }
+
+    /** 保存为我的主题 — the bookmark with a plus, distinct from [Bookmark]'s "already saved". */
+    val BookmarkAdd: ImageVector by lazy {
+        materialIcon(
+            name = "BookmarkAdd",
+            pathData =
+            "M21,7h-2v2h-2V7h-2V5h2V3h2v2h2V7z M19,21l-7-3l-7,3V5c0-1.1,0.9-2,2-2l7,0c-0.63,0.84-1,1.87-1,3" +
+                "c0,2.76,2.24,5,5,5c0.34,0,0.68-0.03,1-0.1V21z",
+        )
+    }
+
+    /** 使用系统调色板 — the row that hands the decision to the OS. */
+    val Android: ImageVector by lazy {
+        materialIcon(
+            name = "Android",
+            pathData =
+            "M17.6,9.48l1.84-3.18c0.16-0.31,0.04-0.69-0.26-0.85c-0.29-0.15-0.65-0.06-0.83,0.22l-1.88,3.24" +
+                "c-2.86-1.21-6.08-1.21-8.94,0L5.65,5.67c-0.19-0.29-0.58-0.38-0.87-0.2C4.5,5.65,4.41,6.01,4.56,6.3" +
+                "L6.4,9.48C3.3,11.25,1.28,14.44,1,18h22C22.72,14.44,20.7,11.25,17.6,9.48z M7,15.25" +
+                "c-0.69,0-1.25-0.56-1.25-1.25c0-0.69,0.56-1.25,1.25-1.25S8.25,13.31,8.25,14" +
+                "C8.25,14.69,7.69,15.25,7,15.25z M17,15.25c-0.69,0-1.25-0.56-1.25-1.25c0-0.69,0.56-1.25,1.25-1.25" +
+                "s1.25,0.56,1.25,1.25C18.25,14.69,17.69,15.25,17,15.25z",
+        )
+    }
+
+    /** The wordmark's companion in 主题's preview card — a miniature of the app's own top bar. */
+    val Forum: ImageVector by lazy {
+        materialIcon(
+            name = "Forum",
+            pathData =
+            "M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3" +
+                "c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z",
+        )
+    }
+
+    /** The same preview card's trailing control. */
+    val Sort: ImageVector by lazy {
+        materialIcon(
+            name = "Sort",
+            pathData =
+            "M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z",
+        )
+    }
 }
 
 /**

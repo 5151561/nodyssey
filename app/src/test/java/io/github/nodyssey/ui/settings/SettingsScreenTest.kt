@@ -36,6 +36,12 @@ class SettingsScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    /**
+     * 明暗 stayed on this screen when the rest of 主题 moved to its own.
+     *
+     * It is the theme control people reach for daily, so these two tests live where the control does
+     * — `ThemeSettingsScreenTest` guards the other half, that it is not offered twice.
+     */
     @Test
     fun `theme choice exposes the new selected state`() {
         composeRule.setContent {
@@ -44,9 +50,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(themeMode = mode)),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = { mode = it },
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -75,9 +80,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings()),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -118,9 +122,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(stickerUniformSize = uniform)),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = { uniform = it },
                     onStickerSizeChange = {},
@@ -150,9 +153,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings()),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -180,9 +182,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(imagesOnWifiOnly = wifiOnly)),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -215,9 +216,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(externalLinkTarget = target)),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -249,9 +249,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(reportFormat = format)),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -282,9 +281,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(homePageBar = enabled)),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -317,9 +315,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(fontScale = 1f)),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = { appliedScale = it },
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -357,9 +354,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(fontScale = 1f)),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = { appliedScale = it },
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -392,9 +388,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(settings),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -428,9 +423,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(versionName = "9.9.9"),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -457,9 +451,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(versionName = "9.9.9", updateVersionName = "10.0.0"),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -488,9 +481,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(imageHostConnected = false),
                     onBack = {},
+                    onOpenTheme = {},
                     onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},

@@ -56,11 +56,19 @@ class SettingsRepository(
                     ?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                     ?: ThemeMode.SYSTEM,
                 colorSource = preferences[KEY_COLOR_SOURCE]
-                    ?.let { runCatching { ColorSource.valueOf(it) }.getOrNull() }
+                    ?.let(::decodeColorSource)
                     // 动态取色 used to be a bare switch. A store written by an older build has no
                     // 配色来源 at all, and the one thing it can say is whether that switch was on.
-                    ?: if (preferences[KEY_DYNAMIC_COLOR] == true) ColorSource.WALLPAPER else ColorSource.BRAND,
+                    ?: if (preferences[KEY_DYNAMIC_COLOR] == true) ColorSource.WALLPAPER else ColorSource.PRESET,
+                presetSeed = preferences[KEY_PRESET_SEED] ?: DEFAULT_SEED_COLOR,
                 seedColor = preferences[KEY_SEED_COLOR] ?: DEFAULT_SEED_COLOR,
+                wallpaperSeed = preferences[KEY_WALLPAPER_SEED],
+                wallpaperSystemPalette = preferences[KEY_WALLPAPER_SYSTEM_PALETTE] ?: true,
+                wallpaperAutoUpdate = preferences[KEY_WALLPAPER_AUTO_UPDATE] ?: false,
+                paletteStyle = preferences[KEY_PALETTE_STYLE]
+                    ?.let { runCatching { PaletteStyle.valueOf(it) }.getOrNull() }
+                    ?: PaletteStyle.SOFT,
+                savedThemes = decodeSavedThemes(preferences[KEY_SAVED_THEMES]),
                 fontScale = preferences[KEY_FONT_SCALE] ?: 1f,
                 stickerUniformSize = preferences[KEY_STICKER_UNIFORM_SIZE] ?: true,
                 stickerSize = (preferences[KEY_STICKER_SIZE] ?: DEFAULT_STICKER_SIZE_SP)
@@ -125,11 +133,70 @@ class SettingsRepository(
 
     suspend fun setColorSource(source: ColorSource) = edit { it[KEY_COLOR_SOURCE] = source.name }
 
+    /*
+     * One stored seed per source, rather than one shared between them.
+     *
+     * j1 asks for it in as many words — "切回「自定义」直接沿用 #2F6D8C，不用重新调色" — and the
+     * alternative is worse than it sounds: with a single field, tapping 预设 · 苔绿 to see what it
+     * looks like would silently overwrite a colour that took a minute in the picker to arrive at,
+     * and 自定义 has no way to get it back.
+     */
+
+    /** The preset that 预设 is currently on, as its seed. */
+    suspend fun setPresetSeed(argb: Int) = edit { it[KEY_PRESET_SEED] = argb }
+
     /**
-     * The seed 自选颜色 expands into a scheme from. Stored as ARGB, and kept even while another
-     * source is selected so that coming back to 自选颜色 returns the colour that was picked.
+     * The seed 自定义 expands into a scheme from. Stored as ARGB, and kept even while another source
+     * is selected so that coming back to 自定义 returns the colour that was picked.
      */
     suspend fun setSeedColor(argb: Int) = edit { it[KEY_SEED_COLOR] = argb }
+
+    /** Which of the wallpaper's candidates 动态取色 is on; absent means "the first one it finds". */
+    suspend fun setWallpaperSeed(argb: Int) = edit { it[KEY_WALLPAPER_SEED] = argb }
+
+    /**
+     * 使用系统调色板 — hand the OS's own Monet scheme through instead of generating one from the
+     * candidate above. On by default, and ignored below API 31 where there is no such palette.
+     */
+    suspend fun setWallpaperSystemPalette(enabled: Boolean) =
+        edit { it[KEY_WALLPAPER_SYSTEM_PALETTE] = enabled }
+
+    /** 壁纸变化时自动更新 — re-read the wallpaper on the next launch rather than keeping this seed. */
+    suspend fun setWallpaperAutoUpdate(enabled: Boolean) =
+        edit { it[KEY_WALLPAPER_AUTO_UPDATE] = enabled }
+
+    /** 色彩风格 — how far the generated scheme travels from whichever seed is in force. */
+    suspend fun setPaletteStyle(style: PaletteStyle) = edit { it[KEY_PALETTE_STYLE] = style.name }
+
+    /**
+     * 我的主题 — appends, or renames in place when the colour is already saved.
+     *
+     * Keyed on the colour rather than on the name: two entries the reader cannot tell apart in the
+     * chip row is the failure mode, and a name is what they would rename to tell them apart.
+     */
+    suspend fun saveTheme(name: String, argb: Int) =
+        edit { preferences ->
+            val existing = decodeSavedThemes(preferences[KEY_SAVED_THEMES])
+            val without = existing.filterNot { it.color == argb }
+            preferences[KEY_SAVED_THEMES] =
+                json.encodeToString(
+                    (without + SavedTheme(name = name.trim(), color = argb))
+                        .takeLast(MAX_SAVED_THEMES),
+                )
+        }
+
+    suspend fun deleteSavedTheme(argb: Int) =
+        edit { preferences ->
+            preferences[KEY_SAVED_THEMES] =
+                json.encodeToString(
+                    decodeSavedThemes(preferences[KEY_SAVED_THEMES]).filterNot { it.color == argb },
+                )
+        }
+
+    private fun decodeSavedThemes(encoded: String?): List<SavedTheme> {
+        if (encoded.isNullOrBlank()) return emptyList()
+        return runCatching { json.decodeFromString<List<SavedTheme>>(encoded) }.getOrNull().orEmpty()
+    }
 
     suspend fun setFontScale(scale: Float) =
         edit { it[KEY_FONT_SCALE] = scale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE) }
@@ -454,10 +521,33 @@ class SettingsRepository(
         /** Read only to migrate a store written before 配色来源 existed; nothing writes it now. */
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_COLOR_SOURCE = stringPreferencesKey("color_source")
+        private val KEY_PRESET_SEED = intPreferencesKey("preset_seed")
         private val KEY_SEED_COLOR = intPreferencesKey("seed_color")
+        private val KEY_WALLPAPER_SEED = intPreferencesKey("wallpaper_seed")
+        private val KEY_WALLPAPER_SYSTEM_PALETTE = booleanPreferencesKey("wallpaper_system_palette")
+        private val KEY_WALLPAPER_AUTO_UPDATE = booleanPreferencesKey("wallpaper_auto_update")
+        private val KEY_PALETTE_STYLE = stringPreferencesKey("palette_style")
+        private val KEY_SAVED_THEMES = stringPreferencesKey("saved_themes")
 
-        /** 石墨青's own `primary`, so 自选颜色 starts where 品牌配色 left off. */
+        /** 石墨青, the colour the app has always been, now as the seed every scheme starts from. */
         const val DEFAULT_SEED_COLOR: Int = 0xFF35606E.toInt()
+
+        /** Enough that the chip row still fits on a phone; past that it stops being a shortcut. */
+        const val MAX_SAVED_THEMES = 12
+
+        /**
+         * Stored names outlived the words on the screen.
+         *
+         * 品牌色 became 预设 and 自选 became 自定义 when 主题 grew a preset grid, but a store written
+         * before that says `BRAND` and `SEED`. Reading those as the source the reader chose — rather
+         * than dropping them and landing everyone back on the default — is the whole job here.
+         */
+        private fun decodeColorSource(stored: String): ColorSource? =
+            when (stored) {
+                "BRAND" -> ColorSource.PRESET
+                "SEED" -> ColorSource.CUSTOM
+                else -> runCatching { ColorSource.valueOf(stored) }.getOrNull()
+            }
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
         private val KEY_STICKER_UNIFORM_SIZE = booleanPreferencesKey("sticker_uniform_size")
         private val KEY_STICKER_SIZE = intPreferencesKey("sticker_size_sp")
@@ -560,9 +650,24 @@ enum class ComposerSurface { POST, REPLY, MESSAGE }
 
 data class UserSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val colorSource: ColorSource = ColorSource.BRAND,
-    /** ARGB. Only read while [colorSource] is [ColorSource.SEED]; see `setSeedColor`. */
+    val colorSource: ColorSource = ColorSource.PRESET,
+    /** ARGB. The preset 预设 is on; only read while [colorSource] is [ColorSource.PRESET]. */
+    val presetSeed: Int = SettingsRepository.DEFAULT_SEED_COLOR,
+    /** ARGB. Only read while [colorSource] is [ColorSource.CUSTOM]; see `setSeedColor`. */
     val seedColor: Int = SettingsRepository.DEFAULT_SEED_COLOR,
+    /**
+     * ARGB of the wallpaper candidate that was picked, or null for "whatever the wallpaper leads
+     * with". Null on a fresh install and after 壁纸变化时自动更新 discards a stale choice.
+     */
+    val wallpaperSeed: Int? = null,
+    /** 使用系统调色板 — the OS's own Monet scheme rather than one generated from [wallpaperSeed]. */
+    val wallpaperSystemPalette: Boolean = true,
+    /** 壁纸变化时自动更新 — re-read the wallpaper on the next launch instead of keeping a seed. */
+    val wallpaperAutoUpdate: Boolean = false,
+    /** 色彩风格 — applies to whichever seed is in force, and to all three sources alike. */
+    val paletteStyle: PaletteStyle = PaletteStyle.SOFT,
+    /** 我的主题 — hand-picked seeds the reader named and kept. Oldest first; see `saveTheme`. */
+    val savedThemes: List<SavedTheme> = emptyList(),
     val fontScale: Float = 1f,
     /**
      * 表情统一缩限. True — the default — draws every inline sticker in the same [stickerSize] square,
@@ -653,13 +758,39 @@ data class UserSettings(
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 /**
- * Where the colours come from: the app's own 石墨青 palette, the system wallpaper (API 31+), or a
- * seed colour the reader picks, expanded into a full Material 3 scheme.
+ * Where the seed comes from: one of the six presets, the system wallpaper (API 31+), or a colour the
+ * reader dialled in themselves. All three end up in the same generator.
  *
  * One choice rather than a switch per source — they are alternatives, and two of them being on at
- * once would have no answer.
+ * once would have no answer. Each remembers its own seed, so switching between them to compare is
+ * free; see `setPresetSeed` for why that matters.
+ *
+ * The names on disk are `BRAND` and `SEED` for the first and last, from the build where the first
+ * one meant a hand-tuned palette rather than a preset. `SettingsRepository.decodeColorSource` reads
+ * those; renaming the constants without it would land every upgrading phone back on the default.
  */
-enum class ColorSource { BRAND, WALLPAPER, SEED }
+enum class ColorSource { PRESET, WALLPAPER, CUSTOM }
+
+/**
+ * 色彩风格 — the five Material variants, in the order the chip row offers them.
+ *
+ * A thin mirror of `PlazaPaletteStyle`: `:designsys` cannot see this module, and the stored name has
+ * to survive a rename on either side of that line.
+ */
+enum class PaletteStyle { SOFT, VIBRANT, EXPRESSIVE, NEUTRAL, MONOCHROME }
+
+/**
+ * One entry of 我的主题.
+ *
+ * The name is optional on the way in — j1 labels the field 名称（可选） — and an empty one is drawn
+ * as the hex instead, so a chip is never blank.
+ */
+@Serializable
+data class SavedTheme(
+    val name: String,
+    /** ARGB, and the identity of the entry: saving the same colour twice renames it. */
+    val color: Int,
+)
 
 /**
  * Where a link that leaves the app goes.

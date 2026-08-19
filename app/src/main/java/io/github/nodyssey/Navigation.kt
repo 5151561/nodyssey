@@ -114,6 +114,9 @@ import io.github.nodyssey.ui.settings.ProxySettingsViewModel
 import io.github.nodyssey.ui.settings.SettingsRoute
 import io.github.nodyssey.ui.settings.SettingsViewModel
 import io.github.nodyssey.ui.settings.UpdateReminderDialog
+import io.github.nodyssey.ui.settings.theme.DynamicColorRoute
+import io.github.nodyssey.ui.settings.theme.ThemeSettingsRoute
+import io.github.nodyssey.ui.settings.theme.ThemeSettingsViewModel
 import io.github.nodyssey.ui.space.FollowRoute
 import io.github.nodyssey.ui.space.FollowViewModel
 import io.github.nodyssey.ui.space.UserSpaceRoute
@@ -498,11 +501,31 @@ fun MainNavigation(
                 SettingsRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
+                    onOpenTheme = { backStack.add(ThemeSettingsKey) },
                     onOpenNotifications = { backStack.add(NotificationSettingsKey) },
                     onOpenProxy = { backStack.add(ProxySettingsKey) },
                     onOpenImageHost = { backStack.add(ImageHostKey) },
                     onOpenAbout = { backStack.add(AboutAppKey) },
                     onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
+                )
+            }
+
+            entry<ThemeSettingsKey> {
+                val viewModel: ThemeSettingsViewModel =
+                    viewModel(factory = ThemeSettingsViewModel.factory(container))
+                ThemeSettingsRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenDynamicColor = { backStack.add(DynamicColorKey) },
+                )
+            }
+
+            entry<DynamicColorKey> {
+                val viewModel: ThemeSettingsViewModel =
+                    viewModel(factory = ThemeSettingsViewModel.factory(container))
+                DynamicColorRoute(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeLastOrNull() },
                 )
             }
 

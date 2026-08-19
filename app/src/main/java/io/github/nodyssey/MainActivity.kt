@@ -26,9 +26,10 @@ import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.ui.common.rememberExternalUriHandler
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.richtext.LocalReportFormat
+import io.github.nodyssey.ui.settings.theme.rememberActiveSeed
+import io.github.nodyssey.ui.settings.theme.toPlaza
 import io.github.plaza.designsys.richtext.LocalStickerSizing
 import io.github.plaza.designsys.richtext.StickerSizing
-import io.github.plaza.designsys.theme.PlazaColorSource
 import io.github.plaza.designsys.theme.PlazaTheme
 
 class MainActivity : ComponentActivity() {
@@ -73,12 +74,12 @@ class MainActivity : ComponentActivity() {
 
             PlazaTheme(
                 darkTheme = darkTheme,
-                colorSource = when (settings.colorSource) {
-                    ColorSource.BRAND -> PlazaColorSource.BRAND
-                    ColorSource.WALLPAPER -> PlazaColorSource.WALLPAPER
-                    ColorSource.SEED -> PlazaColorSource.SEED
-                },
-                seedColor = Color(settings.seedColor),
+                // The three sources differ only in where the seed came from; 动态取色 is the one that
+                // can also skip the generator and take the OS's palette whole.
+                seedColor = Color(rememberActiveSeed(settings)),
+                paletteStyle = settings.paletteStyle.toPlaza(),
+                useSystemPalette =
+                settings.colorSource == ColorSource.WALLPAPER && settings.wallpaperSystemPalette,
                 fontScale = settings.fontScale,
             ) {
                 // Every link that leaves the app goes through LocalUriHandler — the explicit

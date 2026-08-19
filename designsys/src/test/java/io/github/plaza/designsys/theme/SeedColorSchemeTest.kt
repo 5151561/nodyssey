@@ -21,31 +21,52 @@ import kotlin.math.min
  * screen.
  */
 class SeedColorSchemeTest {
+    /**
+     * Every ink sits legibly on the surface it is drawn on — under all five 色彩风格.
+     *
+     * 色彩风格 is five different generators, so the contrast contract has to survive all of them.
+     * [PlazaPaletteStyle.MONOCHROME] is the one worth naming: it discards the seed's hue entirely,
+     * which is what makes it the style most likely to collapse a container onto its own ink.
+     */
     @Test
-    fun `every ink sits legibly on the surface it is drawn on`() {
-        for (seed in Seeds) {
-            for (dark in listOf(false, true)) {
-                val scheme = plazaSeedColorScheme(seed, dark)
-                val pairs =
-                    listOf(
-                        "onSurface" to (scheme.onSurface to scheme.surface),
-                        "onSurfaceVariant" to (scheme.onSurfaceVariant to scheme.surface),
-                        "onPrimary" to (scheme.onPrimary to scheme.primary),
-                        "onPrimaryContainer" to (scheme.onPrimaryContainer to scheme.primaryContainer),
-                        "onSecondaryContainer" to
-                            (scheme.onSecondaryContainer to scheme.secondaryContainer),
-                        "onTertiaryContainer" to (scheme.onTertiaryContainer to scheme.tertiaryContainer),
-                        "onError" to (scheme.onError to scheme.error),
-                    )
-                for ((role, pair) in pairs) {
-                    val ratio = contrastRatio(pair.first, pair.second)
-                    assertTrue(
-                        "$role on ${hex(seed)} ${if (dark) "dark" else "light"} is $ratio:1",
-                        ratio >= 4.5,
-                    )
+    fun `every 色彩风格 keeps its text readable`() {
+        for (style in PlazaPaletteStyle.entries) {
+            for (seed in Seeds) {
+                for (dark in listOf(false, true)) {
+                    val scheme = plazaSeedColorScheme(seed, dark, style)
+                    val pairs =
+                        listOf(
+                            "onSurface" to (scheme.onSurface to scheme.surface),
+                            "onSurfaceVariant" to (scheme.onSurfaceVariant to scheme.surface),
+                            "onPrimary" to (scheme.onPrimary to scheme.primary),
+                            "onPrimaryContainer" to (scheme.onPrimaryContainer to scheme.primaryContainer),
+                            "onSecondaryContainer" to
+                                (scheme.onSecondaryContainer to scheme.secondaryContainer),
+                            "onTertiaryContainer" to
+                                (scheme.onTertiaryContainer to scheme.tertiaryContainer),
+                            "onError" to (scheme.onError to scheme.error),
+                        )
+                    for ((role, pair) in pairs) {
+                        val ratio = contrastRatio(pair.first, pair.second)
+                        assertTrue(
+                            "$style $role on ${hex(seed)} ${if (dark) "dark" else "light"} is $ratio:1",
+                            ratio >= 4.5,
+                        )
+                    }
                 }
             }
         }
+    }
+
+    /** Four of the five have to actually differ, or the chip row is offering the same thing twice. */
+    @Test
+    fun `the five 色彩风格 do not all land on the same scheme`() {
+        val seed = Color(0xFF35606E)
+        val primaries =
+            PlazaPaletteStyle.entries.map {
+                plazaSeedColorScheme(seed, darkTheme = false, style = it).primary.toArgb()
+            }
+        assertEquals(PlazaPaletteStyle.entries.size, primaries.distinct().size)
     }
 
     @Test
@@ -107,18 +128,15 @@ class SeedColorSchemeTest {
     }
 
     private companion object {
-        /** The nine the settings screen offers, plus the extremes a hand-picked colour can reach. */
+        /** The six presets 主题 offers, plus the extremes a hand-picked colour can reach. */
         val Seeds =
             listOf(
                 Color(0xFF35606E),
-                Color(0xFF00639B),
-                Color(0xFF6750A4),
-                Color(0xFF9C4472),
-                Color(0xFF9C4234),
-                Color(0xFF8A5100),
-                Color(0xFF5F6B2E),
-                Color(0xFF2E6B4F),
-                Color(0xFF5B5F66),
+                Color(0xFF7A6A54),
+                Color(0xFF4C5FA8),
+                Color(0xFF3F6B4E),
+                Color(0xFF8B4F72),
+                Color(0xFFA05A32),
                 Color(0xFF000000),
                 Color(0xFFFFFFFF),
                 Color(0xFFFF0000),

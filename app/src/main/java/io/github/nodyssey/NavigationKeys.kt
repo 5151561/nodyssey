@@ -21,6 +21,20 @@ data object ProfileKey : NavKey
 @Serializable
 data object SettingsKey : NavKey
 
+/**
+ * 主题 — 明暗, 配色来源, the preset grid, 我的主题 and 色彩风格, with a live preview under them.
+ *
+ * A child of [SettingsKey]'s 外观 group. Its own screen rather than a block in that group because
+ * every control on it changes the screen it is read on, and the preview card is only worth drawing
+ * where there is room to watch it.
+ */
+@Serializable
+data object ThemeSettingsKey : NavKey
+
+/** 动态取色 — the wallpaper's candidates and the two switches over them. A child of [ThemeSettingsKey]. */
+@Serializable
+data object DynamicColorKey : NavKey
+
 /** App notification polling (board f4) — a child of [SettingsKey]'s 通知 group. */
 @Serializable
 data object NotificationSettingsKey : NavKey
