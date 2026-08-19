@@ -82,15 +82,11 @@ dependencies {
     // of it by compilation rather than by review.
     implementation(project(":designsys"))
 
-    // The same rule for the non-visual half: HTTP, the WebView cookie bridge, the update check. What
-    // `:core` needs to know about nodeseek.com reaches it as `NodeSeekSite.CONFIG`, never as an
-    // import.
-    implementation(project(":core"))
-
-    // The domain model and the parsers, which no longer know they are running on Android. Named
-    // explicitly even though `:core` already exposes it transitively: this module imports
-    // `io.github.nodyssey.model` and `io.github.nodyssey.core.html` directly, and a dependency you
-    // import from is one you declare.
+    // The business core: the domain model, the parsers, and — since step A5 — the network layer
+    // this app talks to nodeseek.com through. `HtmlSource`, `JsonApi` and `HttpTransport` are
+    // `commonMain`; the `OkHttpClient` assembled below and the `OkHttpTransport` it is wrapped in are
+    // that module's `androidMain`. What it needs to know about nodeseek.com reaches it as
+    // `NodeSeekSite.CONFIG`, never as an import.
     implementation(project(":shared"))
 
     // The androidx Compose BOM, and it no longer governs what ships: everything below that used to

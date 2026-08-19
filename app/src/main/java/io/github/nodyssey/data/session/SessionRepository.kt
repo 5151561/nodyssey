@@ -1,6 +1,6 @@
 package io.github.nodyssey.data.session
 
-import io.github.plaza.core.net.WebViewCookieJar
+import io.github.plaza.core.net.SessionCookies
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * thumb mid-scroll.
  */
 class SessionRepository(
-    private val cookieJar: WebViewCookieJar,
+    private val cookies: SessionCookies,
 ) {
     private val _state = MutableStateFlow(read())
 
@@ -43,19 +43,19 @@ class SessionRepository(
         if (snapshot.fingerprint != current.fingerprint) {
             // Persist immediately: the cookie that just arrived is the entire point of the WebView,
             // and it usually came from an XHR, so no page load will flush it for us.
-            cookieJar.flush()
+            cookies.flush()
             _state.value = snapshot.copy(generation = current.generation + 1)
         }
         return _state.value
     }
 
     fun signOut() {
-        cookieJar.clearSession()
+        cookies.clearSession()
         sync()
     }
 
     private fun read(): SessionState {
-        val snapshot = cookieJar.snapshot()
+        val snapshot = cookies.snapshot()
         return SessionState(
             isSignedIn = snapshot.isSignedIn,
             hasClearance = snapshot.hasClearance,
@@ -67,7 +67,7 @@ class SessionRepository(
 data class SessionState(
     val isSignedIn: Boolean = false,
     val hasClearance: Boolean = false,
-    /** Opaque; only equality matters. See [WebViewCookieJar.snapshot]. */
+    /** Opaque; only equality matters. See [SessionCookies.snapshot]. */
     val fingerprint: Int = 0,
     /**
      * Bumped every time the deciding cookies change.

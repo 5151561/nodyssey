@@ -376,7 +376,7 @@ Compose
 | ✅ **B1** | B | `:designsys` 去平台耦合。计划记的是 5 个文件，实际 **6 个**——见下 | 无 |
 | ✅ **B2** | B | `core/image` 拆三份，`:designsys` 改为直接依赖 `:shared`。不是「下沉」——见下 | B1 |
 | ✅ **B3** | B | `:designsys` 转 KMP 模块 + desktop target，单独跑起来。顺带把 B4 的一半做掉了——见下 | B2 |
-| **A5** | A | 网络契约 + Apple transport | B3 |
+| ✅ **A5** | A | 网络契约 + Apple transport。`:core` 就此不存在——见下 | B3 |
 | ✅ **B4** | B | `:app` 的 `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group。`:designsys` 那半已在 B3 完成。不是纯改名——见下 | B3 |
 | **A6** | A | Room + DataStore（7 个手写 migration 要重写） | A5 |
 | **A7** | A | Repository 由简到繁：Terms/Search → Profile/Community → Post/Vote → Feed/Paging。**这一步就是「拆 `:app` 的 `data/`」** | A6 |
@@ -752,6 +752,75 @@ Activity，是一份 Android manifest，没有多平台对应物。
 `:app:lintAnalyzeDebugUnitTest` 第一次跑挂在 `OutOfMemoryError: Metaspace`，报出来的是「lint 或它
 依赖的库有 bug」。是 daemon 的事而不是这次改动的事：`./gradlew --stop` 之后重跑即过。
 
+### ✅ A5 实测：`HttpTransport`，以及 `:core` 的消失
+
+计划这一行写的是「网络契约 + Apple transport」。契约落成 `io.github.plaza.core.net.HttpTransport`：
+一次请求、一个回答，签名里没有任何平台类型。`SiteHtmlClient` 和 `NodeSeekJsonClient` 都改成对着它
+写，因此**整个进了 `commonMain`**；OkHttp 是它在 `androidMain` 的实现，`NSURLSession` 是它在
+`appleMain` 的实现。
+
+```text
+                    commonMain
+        HtmlSource / JsonApi  ← 站点问什么
+              HttpTransport   ← 平台答什么
+        ┌───────────┴───────────┐
+   OkHttpTransport      NSUrlSessionTransport
+     androidMain              appleMain
+```
+
+`:core` 因此空掉并**删除**。这不是顺手清理，是这一步的定义：`:core` 存在的理由就是「网络壳是
+Android 的」，契约下沉之后那句话不再成立。包名一个没改（`io.github.plaza.core.*` 原样搬进
+`:shared`），所以 `:app` 和 `:designsys` 的 import 一行没动。
+
+| 去处 | 内容 |
+|---|---|
+| `commonMain` | `AppClock`、`AppDispatchers`、`Coroutines`、`AppVersion`；`net/` 的 `AcceptLanguage`、`UserAgent`、`ChallengeDetector`、`MinIntervalGate`、`SessionCookieStore`、`SiteHtmlClient`，新写的 `HttpTransport` 与 `SessionCookies`；`update/` 的三个纯文件；`:app` 搬来的 `NodeSeekJsonClient` |
+| `androidMain` | `OkHttpTransport`（新）、`WebViewCookieJar`（只剩翻译）、`WebViewCookieStore`、`BrowserHeadersInterceptor`、`CrossOriginRefererInterceptor`、`DeviceAcceptLanguage`、`WebViewUserAgent`、`AndroidAppVersion`、`UpdateManifestSource` |
+| `jvmCommonMain`（新） | `TimeFormat`（`java.time`）、`Platform.jvmCommon.kt` |
+| `appleMain`（新） | `NSUrlSessionTransport`、`appleUrlSession`、`AppleCookieStore`、`Platform.apple.kt` |
+
+#### 四处不是搬家的改动
+
+**一、`WebViewCookieJar` 一分为二。**它原来同时是 OkHttp 的 `CookieJar` **和**「什么算登录」的
+判断者，而后者才是值钱的部分——哪些 cookie 名算 session、哪些是 Cloudflare 噪声、指纹算不算它们。
+那半变成 `commonMain` 的 `SessionCookies`，`SessionRepository` 收的是它；`WebViewCookieJar` 只剩
+`Set-Cookie` 字符串和 OkHttp `Cookie` 之间的翻译，留在 `androidMain`。第一阶段 §4.4 记的
+「`SessionCookieStore` 新写」是这条线的上一半，这是下一半。
+
+**二、`acceptLanguage` 不再收 `java.util.Locale`。**改收语言标签字符串，bare language 取第一个
+子标签——BCP 47 就是这么定义的。读设备偏好语言那半留在 `androidMain`（`LocaleList`）。一个坑：
+`LocaleList` **自己就有** `toLanguageTags()`，返回逗号拼好的**一个** String，同名扩展会被它悄悄
+吃掉，症状是「实参 String，形参 List<String>」——报在调用处而不是定义处。
+
+**三、`Dispatchers.IO` 在 Kotlin/Native 是 `internal`。**coroutines 1.11 里只有 JVM 那份是 public。
+`ioDispatcher()` 因此是 expect/actual，Apple 侧 actual 成 `Dispatchers.Default`——今天成立的理由是
+Apple 这侧没有任何东西阻塞线程（`NSURLSession` 是回调式的）。**A6 把 Room 搬过来那天这条就不成立
+了**，到时候要的是本模块自己的线程池，不是改这一行的名字。`System.currentTimeMillis()` 同样是
+expect/actual，Apple 侧走 `NSDate`。
+
+**四、`x-dynamic-sign` 没有跟着下沉。**`DynamicSignInterceptor` 是个 OkHttp interceptor，留在
+`:app`。把它做成公共的意味着 commonMain 里要有 SHA-1——Kotlin 没有公共的 crypto API，两个平台的
+C 函数都已 deprecated，剩下的选择是手写一份摘要算法。按「不要过度抽象」这条没做。**代价记在这里**：
+Apple 侧今天调 `/api/vote/*` 会拿到 403，这是 D3 的活。
+
+#### 测试
+
+`:core` 的 40 个测试跟着走：`AcceptLanguageTest` 进 `commonTest`（因此两端各跑一遍），其余六个类
+进 `androidHostTest`——`TimeFormat` 是 `java.time`，两个 interceptor 测试是 OkHttp，update 那三个
+读 `resources/` 里的 JSON fixture。新增 3 个（`DeviceAcceptLanguageTest` 拆出 Locale→tag 那半，
+外加一个 script 子标签的用例）。
+
+总数：`:app` 1,095 + `:designsys` 108 + `:shared` 224 = **1,427**（此前 1,424）；
+桌面端 58 + 182 + 3 = **243**，`macosArm64Test` **182**（此前 175）。
+
+#### 门禁
+
+`assembleDebug` / `testDebugUnitTest testAndroidHostTest jvmTest` / `:app:lintDebug` /
+`spotlessCheck` / `:shared:macosArm64Test` / `:gallery:jvmTest` 全绿。锁文件重生成：`:core` 的删掉，
+`:shared` 多了 coroutines 的四个平台变体和 okhttp 的 Android 那份。
+
+---
+
 ### ✅ 步骤 2 实测：构建基础设施
 
 `:shared` 是 KMP 模块，target 三个：android、`iosArm64`、`macosArm64`。**`appleMain` 不需要自己搭**
@@ -826,7 +895,7 @@ Apple 两个照锁不误，虽然 CI 永远不解析它们——锁文件的意�
 `:core` 对 `:shared` 是 `api`，所以 `:designsys` 和 `:app` 里那些 `io.github.plaza.core.*` 的 import
 一行没改。代价是 `io.github.plaza.core.net` 这个包**同时存在于两个模块**里——`SiteConfig` 在
 `:shared`，`SiteHtmlClient` 还在 `:core`。这是过渡态而不是终局：**A5** 之后 `:core` 的网络壳也进
-`:shared/androidMain`，包就合回去了。
+`:shared/androidMain`，包就合回去了。**——A5 已做，`:core` 整个不存在了，见上。**
 
 jsoup → Ksoup 确实是纯机械替换，只改 import，加上 spike 记过的 `TextNode.wholeText` 在 Ksoup 是函数
 `getWholeText()`。**jsoup 没能从 `:app` 完全删掉**：`UserSpaceRepository` 还有一行

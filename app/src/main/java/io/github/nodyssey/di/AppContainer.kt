@@ -90,6 +90,8 @@ import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
 import io.github.plaza.core.net.BrowserHeadersInterceptor
 import io.github.plaza.core.net.CrossOriginRefererInterceptor
+import io.github.plaza.core.net.OkHttpTransport
+import io.github.plaza.core.net.SessionCookies
 import io.github.plaza.core.net.SiteHtmlClient
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.core.net.WebViewCookieJar
@@ -122,7 +124,9 @@ import java.util.concurrent.TimeUnit
 interface AppContainer {
     val dispatchers: AppDispatchers
     val clock: AppClock
-    val cookieJar: WebViewCookieJar
+
+    /** What the shared cookie store says about this session. See [SessionCookies]. */
+    val sessionCookies: SessionCookies
     val postRepository: PostRepository
 
     /** Where each thread was left off — its own store, not part of a screen's settings. */
@@ -217,7 +221,13 @@ class DefaultAppContainer(
 ) : AppContainer {
     private val appContext = context.applicationContext
 
-    override val cookieJar: WebViewCookieJar by lazy { WebViewCookieJar(NodeSeekSite.CONFIG, WebViewCookieStore()) }
+    /**
+     * The one store OkHttp and the sign-in WebView share, and the two things built on it: the
+     * `CookieJar` OkHttp is configured with, and the session read model everything else asks.
+     */
+    private val cookieStore = WebViewCookieStore()
+
+    override val sessionCookies: SessionCookies by lazy { SessionCookies(NodeSeekSite.CONFIG, cookieStore) }
 
     override val userAgent: UserAgent by lazy { resolveUserAgent(appContext, NodeSeekSite.CONFIG) }
 
@@ -266,7 +276,7 @@ class DefaultAppContainer(
         java.net.Authenticator.setDefault(AppSocksAuthenticator(liveProxyConfig))
         OkHttpClient
             .Builder()
-            .cookieJar(cookieJar)
+            .cookieJar(WebViewCookieJar(cookieStore))
             .connectionPool(connectionPool)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
@@ -293,9 +303,15 @@ class DefaultAppContainer(
             .build()
     }
 
-    private val htmlClient by lazy { SiteHtmlClient(okHttpClient, dispatchers, NodeSeekSite.CONFIG) }
+    /**
+     * The one place OkHttp is named on the way *up*: everything above this line is written against
+     * `HttpTransport`, which is `commonMain`, and this is the Android implementation of it.
+     */
+    private val transport by lazy { OkHttpTransport(okHttpClient) }
 
-    private val jsonClient by lazy { NodeSeekJsonClient(okHttpClient, dispatchers) }
+    private val htmlClient by lazy { SiteHtmlClient(transport, dispatchers, NodeSeekSite.CONFIG) }
+
+    private val jsonClient by lazy { NodeSeekJsonClient(transport, dispatchers) }
 
     override val proxyConnectionTester: ProxyConnectionTester by lazy {
         NetworkProxyConnectionTester(jsonClient)
@@ -519,7 +535,7 @@ class DefaultAppContainer(
      * Shares the cookie jar rather than owning a store of its own: the cookies OkHttp sends and the
      * ones the WebView collects have to be the same cookies, or "am I signed in" gets two answers.
      */
-    override val sessionRepository: SessionRepository by lazy { SessionRepository(cookieJar) }
+    override val sessionRepository: SessionRepository by lazy { SessionRepository(sessionCookies) }
 
     override val appVersion: AppVersion by lazy { readAppVersion(appContext) }
 

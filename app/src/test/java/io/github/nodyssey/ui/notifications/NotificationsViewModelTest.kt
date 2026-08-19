@@ -11,7 +11,7 @@ import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.data.session.FakeSessionCookieStore
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.plaza.core.AppClock
-import io.github.plaza.core.net.WebViewCookieJar
+import io.github.plaza.core.net.SessionCookies
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -135,7 +135,7 @@ class NotificationsViewModelTest {
             repository = notifications,
             messages = NoMessages,
             search = NoSearch,
-            session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+            session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
             clock = clock,
         )
     }

@@ -20,9 +20,9 @@ import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.ThreadSnapshot
+import io.github.plaza.core.net.SessionCookies
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
-import io.github.plaza.core.net.WebViewCookieJar
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,7 +67,7 @@ class ProfileViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -101,7 +101,7 @@ class ProfileViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -130,7 +130,7 @@ class ProfileViewModelTest {
             val fresh = cached.copy(name = "网络新名字", chickenCount = 305)
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -160,7 +160,7 @@ class ProfileViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -186,7 +186,7 @@ class ProfileViewModelTest {
             val assets = FakeAssetsRepository(gain = 7)
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -229,7 +229,7 @@ class ProfileViewModelTest {
                 )
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(

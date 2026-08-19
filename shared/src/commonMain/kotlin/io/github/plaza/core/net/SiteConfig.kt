@@ -29,7 +29,7 @@ data class SiteConfig(
      * Cookie names that mean "signed in", any one of them.
      *
      * A guess by nature — a site does not document its session cookie — so nothing that reloads
-     * content is allowed to depend on it. See [WebViewCookieJar.snapshot].
+     * content is allowed to depend on it. See [SessionCookies.snapshot].
      */
     val sessionCookieNames: List<String>,
     val markers: PageMarkers,

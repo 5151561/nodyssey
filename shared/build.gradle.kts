@@ -1,3 +1,9 @@
+// The custom-hierarchy overload of `applyDefaultHierarchyTemplate` is the only way to declare a
+// source set between `commonMain` and two targets, and it is still marked experimental.
+@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
+
+import com.android.build.api.withAndroid
+
 plugins {
     id("plaza.kmp.library")
     alias(libs.plugins.kotlin.serialization)
@@ -136,6 +142,24 @@ kotlin {
     iosArm64()
     macosArm64()
 
+    // `java.time` is the JVM part of Android rather than the Android part of it, and both targets
+    // answer for it identically — as do `System.currentTimeMillis()` and `Dispatchers.IO`. Without a
+    // source set between `commonMain` and the two of them, `TimeFormat` and the two `actual`s in
+    // `Platform.jvmCommon.kt` would be the same file written twice.
+    //
+    // Through the hierarchy template rather than `dependsOn` by hand, for the reason
+    // `designsys/build.gradle.kts` records: doing it by hand switches the default template off for
+    // the whole module, and `appleMain` — where the `NSURLSession` transport lives — is that
+    // template's doing.
+    applyDefaultHierarchyTemplate {
+        common {
+            group("jvmCommon") {
+                withAndroid()
+                withJvm()
+            }
+        }
+    }
+
     android {
         // Neither of the two package roots this module holds — `io.github.plaza.core` and
         // `io.github.nodyssey` — owns the other, and the namespace only ever names a generated R
@@ -163,6 +187,20 @@ kotlin {
             // A public signature naming a type the consumer cannot resolve is one nobody can call:
             // either it is internal, or this line has to become `api`.
             implementation(libs.ksoup)
+
+            // `api`: `AppDispatchers` hands out `CoroutineDispatcher`s, `HttpTransport.execute` is
+            // `suspend`, and the repositories above this module are written in the same coroutines.
+            // The same reasoning `:core` recorded before this module absorbed it.
+            api(libs.kotlinx.coroutines.core)
+        }
+
+        androidMain.dependencies {
+            // OkHttp, and only on this side. `HttpTransport` is what the rest of the module is
+            // written against; `OkHttpTransport` is one of its two implementations, and the other one
+            // is `NSURLSession` in `appleMain`. `api` because the app assembles the `OkHttpClient`
+            // itself — the cookie jar, the proxy selector and the interceptors below are all named in
+            // this module's Android surface.
+            api(libs.okhttp)
         }
 
         commonTest {
@@ -176,6 +214,11 @@ kotlin {
         // are differential tests against `java.net.URI` and `java.net.URLEncoder`. What they preserve
         // is not a specification but the answers those two gave, so the JVM has to be in the room.
         androidHostTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
+        }
+
+        jvmTest.dependencies {
             implementation(kotlin("test"))
         }
     }

@@ -27,23 +27,28 @@ NodeSeek has no public API. A few JSON endpoints exist (`/api/statistics/*`, `/a
 search and terms pages also depend on server-rendered HTML. Everything sits behind Cloudflare, so requests have to look like a real mobile browser and
 carry cookies obtained from a WebView.
 
-Four Gradle modules:
+Three Gradle modules:
 
 ```text
 :app        NodeSeek itself — repositories, Room persistence, Compose screens
-:shared     the domain model and the parsers, as Kotlin Multiplatform: Android, iOS and macOS
-:core       HTTP against a scraped forum, the WebView/OkHttp cookie bridge, the update check;
-            what a site knows about itself arrives as `SiteConfig`, not as a constant in here
+:shared     the domain model, the parsers and the network layer, as Kotlin Multiplatform:
+            Android, the desktop JVM, iOS and macOS. What a site knows about itself arrives
+            as `SiteConfig`, not as a constant in here
 :designsys  theme, components and the rich-text renderer, with no knowledge of any forum
 ```
 
 `:shared` is the one module that does not know it is running on Android. Only the Android half of it
 is built in CI; the Apple targets build on a Mac. See [docs/kmp-migration-plan.md](docs/kmp-migration-plan.md).
 
+There used to be a fourth, `:core`, holding the Android network shell — OkHttp and the WebView
+cookie bridge. Step A5 of the migration moved it into `:shared`: the contract everything above the
+network is written against is `commonMain`, and OkHttp is one of its two implementations. The other
+is `NSURLSession`.
+
 `:core` and `:designsys` were extracted when a second client shared this repository. That app now
-lives in [5151561/plaza](https://github.com/5151561/plaza) carrying a *copy* of both modules, so
-edits here do not reach it; the boundary stays because it is what makes the site-specific half of
-this app visible as a thing with edges.
+lives in [5151561/plaza](https://github.com/5151561/plaza) carrying a *copy* of both modules as they
+then were, so edits here do not reach it; the boundary stays because it is what makes the
+site-specific half of this app visible as a thing with edges.
 
 ```text
 shared/src/commonMain/kotlin/          the half that does not know what it is running on
@@ -63,18 +68,26 @@ shared/src/commonMain/kotlin/          the half that does not know what it is ru
 │   │   │   ├── RichContentParser.kt post HTML → block/inline tree
 │   │   │   └── TermsParser.kt       terms article → native reading blocks
 │   │   └── report/                  NodeQuality report parsing
-│   └── model/                       the domain types
+│   ├── model/                       the domain types
+│   └── core/net/                    the JSON client, written against `HttpTransport`
 └── io/github/plaza/core/
-    ├── net/                         `SiteConfig`, `SiteError`, `WebUrl`
+    ├── net/                         `SiteConfig`, `SiteError`, `WebUrl`, `HttpTransport`,
+    │                                `SiteHtmlClient`, the Cloudflare challenge detector and
+    │                                the session read model over the shared cookie store
+    ├── update/                      the update manifests and version comparison
     ├── richtext/                    the block/inline tree and the Markdown that produces one
     ├── ansi/                        ANSI colour decoding for pasted terminal output
     └── TerminalColumns.kt           column widths for monospaced report tables
+
+shared/src/androidMain/kotlin/         OkHttp, `CookieManager`, `WebSettings`, `PackageManager`
+shared/src/appleMain/kotlin/           `NSURLSession` and `NSHTTPCookieStorage`
+shared/src/jvmCommonMain/kotlin/       what Android and the desktop JVM answer identically
 
 app/src/main/java/io/github/nodyssey/
 ├── core/
 │   ├── NodeImageSite.kt         nodeimage.com's own vocabulary (off-site, user API key)
 │   ├── LuckyDraw.kt             the 抽奖 vocabulary, still on `java.time`
-│   └── net/                     NodeSeek's JSON client and request signing
+│   └── net/                     vote request signing and the proxy routing OkHttp is given
 ├── data/                        repositories, Room, DataStore and composers
 │   ├── local/                   Room: feed cache, read marks, browse history, reading positions
 │   └── update/                  GitHub release lookup, APK download and install
@@ -119,7 +132,7 @@ Full verification matches CI:
 NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口，其余页面需要解析服务端 HTML；站点整体在
 Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cookie。请求频率保持克制，测试不访问线上站点。
 
-具体调用地址以 `:shared` 的 `core/NodeSeekSite.kt`、`core/html/` 和 `:core` 的 `net/` 为准。
+具体调用地址以 `:shared` 的 `core/NodeSeekSite.kt`、`core/html/` 和 `core/net/` 为准。
 本仓库不发布账号 Cookie、抓取凭据或已登录页面样本。
 
 ## Roadmap
