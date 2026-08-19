@@ -25,7 +25,7 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 
 | 画板 | 实现状态 | 主要代码 | 仍需注意 |
 |---|---|---|---|
-| j1 主题设置 · 配色 | 已按稿实现（两处替代，见下） | `ui/settings/theme/`（`ThemeSettingsScreen.kt`、`DynamicColorScreen.kt`、`SeedColorSheet.kt`、`ThemePreviewCard.kt`、`ThemeSwatch.kt`、`ThemePresets.kt`、`WallpaperPalette.kt`）、`designsys/theme/SeedColor.kt`、`Theme.kt` | 全部为 App 增强，站点无主题接口；六个预设、壁纸候选和自定义种子色都走同一个生成器，手调的品牌配色已退役 |
+| j1 主题设置 · 配色 | 已按稿实现（四处替代，见下） | `ui/settings/theme/`（`ThemeSettingsScreen.kt`、`DynamicColorScreen.kt`、`SeedColorSheet.kt`、`ThemePreviewCard.kt`、`ThemeSwatch.kt`、`ThemePresets.kt`、`WallpaperPalette.kt`）、`designsys/theme/SeedColor.kt`、`Theme.kt` | 全部为 App 增强，站点无主题接口；六个预设、壁纸候选和自定义种子色都走同一个生成器，手调的品牌配色已退役 |
 
 以上代码路径均相对于 `app/src/main/java/io/github/nodyssey/`。
 
@@ -303,7 +303,10 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 
 ## j1 验收对照
 
-- 「设置 › 外观」第一行是「主题」入口，明暗与配色不再直接摆在设置列表里。
+- **替代 0：明暗没有搬走。** 画板把「跟随系统 / 浅色 / 深色」放在主题页开头，实现里它留在
+  「设置 › 外观」第一格，主题入口排在它下面。它是全套主题里唯一天天要动的——屋里光线变了就翻一次——
+  把它挪到两层之下换取画板完整，是把稿子里不该守的那一半守住了。主题页那一节整个不画。
+- 「设置 › 外观」是「明暗」加一个「主题」入口，配色相关的其余控件不再直接摆在设置列表里。
 - 配色来源是三块 96dp 瓦片（预设 / 动态取色 / 自定义），各自记住上次的种子色；
   已选中的瓦片再点一次才打开它背后的东西（动态取色的页面、自定义的底部弹层），
   这样「把旧颜色换回来」和「我要改颜色」是两次不同的点击。

@@ -63,10 +63,8 @@ import io.github.nodyssey.data.settings.ColorSource
 import io.github.nodyssey.data.settings.PaletteStyle
 import io.github.nodyssey.data.settings.SavedTheme
 import io.github.nodyssey.data.settings.SettingsRepository
-import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.ui.common.longPressToEdit
-import io.github.nodyssey.ui.settings.ConnectedChoiceButtons
 import io.github.nodyssey.ui.settings.SettingsSectionTitle
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -85,7 +83,6 @@ fun ThemeSettingsRoute(
         settings = state.settings,
         onBack = onBack,
         onOpenDynamicColor = onOpenDynamicColor,
-        onThemeModeChange = viewModel::setThemeMode,
         onColorSourceChange = viewModel::setColorSource,
         onPresetSelected = viewModel::selectPreset,
         onCustomSeedSelected = viewModel::selectCustomSeed,
@@ -97,7 +94,12 @@ fun ThemeSettingsRoute(
 }
 
 /**
- * 主题 — j1 卡1.
+ * 主题 — j1 卡1, minus 明暗.
+ *
+ * The board opens with 跟随系统 / 浅色 / 深色 and this screen does not: that one control is reached far
+ * more often than everything below it put together — it is what someone flips when the room changes,
+ * not something they set once — and it stayed on 设置 where it has always been. Burying a daily
+ * control two taps deep to keep a board intact is the wrong half of the design to honour.
  *
  * Every section stays on screen whichever source is selected, rather than the grid appearing and
  * disappearing under the tiles. Two reasons: the sources each remember their own seed, so the grid
@@ -110,7 +112,6 @@ fun ThemeSettingsScreen(
     settings: UserSettings,
     onBack: () -> Unit,
     onOpenDynamicColor: () -> Unit,
-    onThemeModeChange: (ThemeMode) -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
     onPresetSelected: (Int) -> Unit,
     onCustomSeedSelected: (Int) -> Unit,
@@ -151,9 +152,6 @@ fun ThemeSettingsScreen(
                 .padding(bottom = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            SettingsSectionTitle(stringResource(R.string.settings_theme_mode))
-            ConnectedThemeModeButtons(settings.themeMode, onThemeModeChange)
-
             SettingsSectionTitle(stringResource(R.string.settings_color_source))
             ColorSourceTiles(
                 settings = settings,
@@ -235,24 +233,6 @@ fun ThemeSettingsScreen(
             },
         )
     }
-}
-
-@Composable
-private fun ConnectedThemeModeButtons(
-    selected: ThemeMode,
-    onSelected: (ThemeMode) -> Unit,
-) {
-    val choices =
-        listOf(
-            ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
-            ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
-            ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
-        )
-    ConnectedChoiceButtons(
-        labels = choices.map { it.second },
-        selectedIndex = choices.indexOfFirst { it.first == selected },
-        onSelect = { onSelected(choices[it].first) },
-    )
 }
 
 /**
@@ -617,7 +597,6 @@ private fun ThemeSettingsPreview() {
             ),
             onBack = {},
             onOpenDynamicColor = {},
-            onThemeModeChange = {},
             onColorSourceChange = {},
             onPresetSelected = {},
             onCustomSeedSelected = {},

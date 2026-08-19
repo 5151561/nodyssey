@@ -275,7 +275,7 @@
     <string name="settings_theme_system">跟随系统</string>
     <string name="settings_theme_light">浅色</string>
     <string name="settings_theme_dark">深色</string>
-    <string name="settings_theme_entry_hint">明暗、配色来源与色彩风格</string>
+    <string name="settings_theme_entry_hint">配色来源、预设与色彩风格</string>
     <string name="settings_theme_mode">明暗</string>
 
     <!-- 主题 · 配色来源 -->

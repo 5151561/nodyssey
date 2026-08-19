@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +46,7 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.ui.common.UpdateDot
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.richtext.InlineNode
@@ -88,6 +90,7 @@ fun SettingsRoute(
         },
         onBack = onBack,
         onOpenTheme = onOpenTheme,
+        onThemeModeChange = viewModel::setThemeMode,
         onFontScaleChange = viewModel::setFontScale,
         onStickerUniformSizeChange = viewModel::setStickerUniformSize,
         onStickerSizeChange = viewModel::setStickerSize,
@@ -115,6 +118,7 @@ fun SettingsScreen(
     onOpenAppLinkSettings: () -> Unit,
     onBack: () -> Unit,
     onOpenTheme: () -> Unit,
+    onThemeModeChange: (ThemeMode) -> Unit,
     onFontScaleChange: (Float) -> Unit,
     onStickerUniformSizeChange: (Boolean) -> Unit,
     onStickerSizeChange: (Int) -> Unit,
@@ -170,14 +174,27 @@ fun SettingsScreen(
         ) {
             SettingsSectionTitle(stringResource(R.string.settings_appearance))
             SettingsGroup {
-                // 明暗, 配色来源, the preset grid, 我的主题 and 色彩风格 all moved onto their own
-                // screen: five controls and a live preview card is more than a row in a group of
-                // eight can carry, and every one of them changes the screen they are read on.
+                // 明暗 stays here, one tap from 设置, while everything else about colour moved onto
+                // 主题's own screen. It is not that it fits the group better — it is that it is
+                // reached far more often than the rest of the theme put together, and a control
+                // people use daily does not belong two screens deep behind one they set once.
+                SettingsBlock(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    title = stringResource(R.string.settings_theme_mode),
+                    top = true,
+                ) {
+                    ConnectedThemeButtons(
+                        selected = state.settings.themeMode,
+                        onSelected = onThemeModeChange,
+                    )
+                }
+                // 配色来源, the preset grid, 我的主题 and 色彩风格 are behind this row: four controls
+                // and a live preview card is more than a group of eight can carry, and every one of
+                // them changes the screen it is read on.
                 SettingsRow(
                     leading = { Icon(PlazaIcons.Palette, contentDescription = null) },
                     title = stringResource(R.string.settings_theme),
                     subtitle = stringResource(R.string.settings_theme_entry_hint),
-                    top = true,
                     onClick = onOpenTheme,
                 )
                 SettingsBlock(
@@ -435,6 +452,29 @@ private fun ConnectedExternalLinkButtons(
     )
 }
 
+/**
+ * 跟随系统 / 浅色 / 深色.
+ *
+ * The one part of 主题 that did not move onto 主题's own screen — see the group above for why.
+ */
+@Composable
+private fun ConnectedThemeButtons(
+    selected: ThemeMode,
+    onSelected: (ThemeMode) -> Unit,
+) {
+    val choices =
+        listOf(
+            ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
+            ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
+            ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
+        )
+    ConnectedChoiceButtons(
+        labels = choices.map { it.second },
+        selectedIndex = choices.indexOfFirst { it.first == selected },
+        onSelect = { onSelected(choices[it].first) },
+    )
+}
+
 @Composable
 private fun ConnectedReportFormatButtons(
     selected: ReportFormat,
@@ -528,6 +568,7 @@ private fun SettingsPreview() {
             state = SettingsUiState(versionName = "1.1.1"),
             onBack = {},
             onOpenTheme = {},
+            onThemeModeChange = {},
             onFontScaleChange = {},
             onStickerUniformSizeChange = {},
             onStickerSizeChange = {},

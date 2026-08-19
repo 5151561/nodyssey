@@ -36,30 +36,20 @@ class ThemeSettingsScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    /**
+     * 明暗 belongs to 设置, not here.
+     *
+     * j1 opens this screen with it, and it is the one part of the board deliberately left behind —
+     * it is flipped far more often than anything below it. `SettingsScreenTest` owns its two tests;
+     * this one guards the other direction, that it did not end up on both screens.
+     */
     @Test
-    fun `theme choice exposes the new selected state`() {
-        var mode = ThemeMode.SYSTEM
-        setScreen(onThemeModeChange = { mode = it })
-
-        composeRule.onNodeWithText("跟随系统").assertIsSelected()
-        composeRule.onNodeWithText("深色").performClick()
-        composeRule.onNodeWithText("深色").assertIsSelected()
-        assertEquals(ThemeMode.DARK, mode)
-    }
-
-    @Test
-    fun `theme choices fill the row with equal segments`() {
+    fun `明暗 is not offered again on 主题`() {
         setScreen()
 
-        val bounds =
-            listOf("跟随系统", "浅色", "深色").map { label ->
-                composeRule.onNodeWithText(label).fetchSemanticsNode().boundsInRoot
-            }
-        val rootWidth = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.width
-        val groupWidth = bounds.last().right - bounds.first().left
-
-        assertTrue(groupWidth > rootWidth * 0.7f)
-        assertTrue(bounds.zipWithNext().all { (left, right) -> abs(left.width - right.width) <= 2f })
+        composeRule.onNodeWithText("跟随系统").assertDoesNotExist()
+        composeRule.onNodeWithText("浅色").assertDoesNotExist()
+        composeRule.onNodeWithText("深色").assertDoesNotExist()
     }
 
     /**
@@ -134,23 +124,17 @@ class ThemeSettingsScreenTest {
 
     private fun setScreen(
         settings: UserSettings = UserSettings(seedColor = SettingsRepository.DEFAULT_SEED_COLOR),
-        onThemeModeChange: (ThemeMode) -> Unit = {},
         onPresetSelected: (Int) -> Unit = {},
         onCustomSeedSelected: (Int) -> Unit = {},
         onPaletteStyleChange: (PaletteStyle) -> Unit = {},
         onSaveTheme: (String, Int) -> Unit = { _, _ -> },
     ) {
         composeRule.setContent {
-            var mode by remember { mutableStateOf(settings.themeMode) }
             PlazaTheme {
                 ThemeSettingsScreen(
-                    settings = settings.copy(themeMode = mode),
+                    settings = settings,
                     onBack = {},
                     onOpenDynamicColor = {},
-                    onThemeModeChange = {
-                        mode = it
-                        onThemeModeChange(it)
-                    },
                     onColorSourceChange = {},
                     onPresetSelected = onPresetSelected,
                     onCustomSeedSelected = onCustomSeedSelected,

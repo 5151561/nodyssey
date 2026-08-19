@@ -10,7 +10,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.data.settings.ColorSource
 import io.github.nodyssey.data.settings.PaletteStyle
 import io.github.nodyssey.data.settings.SettingsRepository
-import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.di.AppContainer
 import io.github.plaza.designsys.theme.PlazaPaletteStyle
@@ -38,10 +37,6 @@ class ThemeSettingsViewModel(
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = ThemeSettingsUiState(),
             )
-
-    fun setThemeMode(value: ThemeMode) {
-        viewModelScope.launch { settings.setThemeMode(value) }
-    }
 
     fun setColorSource(value: ColorSource) {
         viewModelScope.launch { settings.setColorSource(value) }
