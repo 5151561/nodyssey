@@ -63,6 +63,8 @@ internal open class NoOpPostRepository : PostRepository {
 
     override suspend fun markThreadRead(postId: Long) = Unit
 
+    override suspend fun noteOwnReplyPublished(postId: Long) = Unit
+
     override suspend fun react(postId: Long, commentId: Long, action: ReactionAction) = Unit
 
     override suspend fun freeChickenLegs(): FreeChickenLegs? = null

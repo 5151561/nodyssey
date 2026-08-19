@@ -253,6 +253,15 @@ interface PostRepository {
     suspend fun markThreadRead(postId: Long)
 
     /**
+     * Advances the unread baseline for one reply this account has just published.
+     *
+     * A normal read takes its baseline from the last feed refresh. That count necessarily predates
+     * a reply sent from the detail screen, so leaving it unchanged makes the user's own floor appear
+     * as "1 条新回复" when the feed next refreshes.
+     */
+    suspend fun noteOwnReplyPublished(postId: Long)
+
+    /**
      * Spends one mark on a floor and writes the site's new tally through Room.
      *
      * Throws on refusal, carrying the site's own sentence. Nothing is applied optimistically: these
@@ -644,6 +653,25 @@ class OfflineFirstPostRepository(
             authorUid = cached?.body?.authorUid ?: listRow?.authorUid,
             categoryTitle = cached?.body?.categoryTitle ?: listRow?.categoryTitle,
             totalComments = listRow?.commentCount,
+        )
+        trimReadHistory()
+    }
+
+    override suspend fun noteOwnReplyPublished(postId: Long) {
+        val previous = database.readMarkDao().find(postId)
+        val listRow = database.feedDao().findPost(postId)
+        val cached = database.postDetailDao().findDetail(postId)
+        database.readMarkDao().markRead(
+            postId = postId,
+            // Advance what was already seen by exactly our one accepted reply. Taking the latest
+            // feed count here could also consume somebody else's reply that arrived concurrently.
+            commentCount = (previous?.lastSeenCommentCount ?: listRow?.commentCount ?: 0) + 1,
+            nowMillis = clock.nowMillis(),
+            title = cached?.title ?: listRow?.title,
+            authorName = cached?.body?.authorName ?: listRow?.authorName,
+            authorUid = cached?.body?.authorUid ?: listRow?.authorUid,
+            categoryTitle = cached?.body?.categoryTitle ?: listRow?.categoryTitle,
+            totalComments = (previous?.commentCount ?: listRow?.commentCount)?.plus(1),
         )
         trimReadHistory()
     }

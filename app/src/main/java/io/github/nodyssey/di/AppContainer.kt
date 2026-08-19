@@ -443,7 +443,13 @@ class DefaultAppContainer(
     }
 
     override val commentComposerRepository: CommentComposerRepository by lazy {
-        DefaultCommentComposerRepository(appContext.commentComposerDataStore, okHttpClient, dispatchers, clock)
+        DefaultCommentComposerRepository(
+            appContext.commentComposerDataStore,
+            okHttpClient,
+            dispatchers,
+            clock,
+            postRepository::noteOwnReplyPublished,
+        )
     }
 
     override val postEditor: PostEditor by lazy {

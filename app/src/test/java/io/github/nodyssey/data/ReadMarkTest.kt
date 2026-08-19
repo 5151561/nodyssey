@@ -129,6 +129,21 @@ class ReadMarkTest {
             assertEquals(14, row.post.commentCount)
         }
 
+    @Test
+    fun `a published reply advances only this account's own part of the baseline`() =
+        runTest {
+            givenPost(postId = 7, commentCount = 10)
+            repository.markThreadRead(7)
+
+            repository.noteOwnReplyPublished(7)
+            // The next feed refresh includes our floor and one floor written by somebody else.
+            givenPost(postId = 7, commentCount = 12)
+
+            val feedPost = feedRows().first { it.summary.postId == 7L }
+            assertEquals(11, database.readMarkDao().find(7)?.lastSeenCommentCount)
+            assertEquals(1, feedPost.newCommentCount)
+        }
+
     /** Re-opening a thread the user had already read to the end must not reset the baseline. */
     @Test
     fun `the seen count never goes backwards`() =

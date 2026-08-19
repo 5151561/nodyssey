@@ -10,6 +10,7 @@ import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -90,6 +91,8 @@ class DefaultCommentComposerRepository(
     private val okHttpClient: OkHttpClient,
     private val dispatchers: AppDispatchers,
     private val clock: AppClock,
+    /** Keeps the feed from announcing this account's own accepted reply as new. */
+    private val onReplyPublished: suspend (Long) -> Unit = {},
 ) : CommentComposerRepository {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -136,7 +139,11 @@ class DefaultCommentComposerRepository(
                     detail = parseMessage(body),
                 )
             }
-            parsePublishResponse(body)
+            val floor = parsePublishResponse(body)
+            // The server has already accepted the reply. Local bookkeeping must not turn that into
+            // a reported publish failure and invite a duplicate retry if Room ever refuses a write.
+            runCatchingExceptCancellation { onReplyPublished(submission.postId) }
+            floor
         }
     }
 
