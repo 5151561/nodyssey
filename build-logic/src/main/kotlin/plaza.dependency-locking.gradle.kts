@@ -41,6 +41,11 @@ val lockedConfigurations =
         // What `commonMain` itself compiles against — the half every platform shares, so a drift here
         // reaches all of them at once.
         "metadataCommonMainCompileClasspath",
+        // The desktop JVM target `:designsys` declares. Same two categories again, one more platform.
+        "jvmCompileClasspath",
+        "jvmRuntimeClasspath",
+        "jvmTestCompileClasspath",
+        "jvmTestRuntimeClasspath",
         // The Apple targets. Locked even though CI never resolves them: the point of a lockfile is
         // that the graph is decided in the repository rather than by whichever machine ran the build,
         // and a Mac is the only machine that resolves these.

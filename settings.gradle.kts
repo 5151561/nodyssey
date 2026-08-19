@@ -59,3 +59,14 @@ include(":core")
 // the migration move the rest of that shell into this module's `androidMain`, at which point `:core`
 // stops existing.
 include(":shared")
+
+// `:designsys` with no Android under it, in a window.
+//
+// The module exists to be run by hand — `./gradlew :gallery:run` — and it is the whole evidence for
+// step B3 of `docs/kmp-migration-plan.md`: that the design system compiles, links and *draws* on a
+// platform that is not Android. Nothing ships it, nothing depends on it, and CI only compiles it.
+//
+// A separate module rather than a `main` inside `:designsys` on purpose: a consumer is what a
+// library's multiplatform variants are for, and this one resolves them exactly the way a future
+// Apple app would.
+include(":gallery")

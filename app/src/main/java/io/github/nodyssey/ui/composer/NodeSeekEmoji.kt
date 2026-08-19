@@ -40,11 +40,11 @@ import io.github.plaza.designsys.image.allowMeteredImage
  * knows none of it.
  */
 val NodeSeekEmojiGroups = listOf(
-    EmojiGroup(R.string.composer_emoji_group_acn, acStickers()),
-    EmojiGroup(R.string.composer_emoji_group_onion, yctStickers()),
-    EmojiGroup(R.string.composer_emoji_group_chick, xhjStickers()),
+    EmojiGroup({ stringResource(R.string.composer_emoji_group_acn) }, acStickers()),
+    EmojiGroup({ stringResource(R.string.composer_emoji_group_onion) }, yctStickers()),
+    EmojiGroup({ stringResource(R.string.composer_emoji_group_chick) }, xhjStickers()),
     EmojiGroup(
-        R.string.composer_emoji_group_fluent,
+        { stringResource(R.string.composer_emoji_group_fluent) },
         listOf(
             "😀", "😄", "😅", "🤣", "🙂", "😉",
             "😍", "😘", "🤔", "😐", "😴", "😭",

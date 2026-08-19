@@ -34,11 +34,21 @@ CMP 让这 68% 从「重写 N 次」变成「搬迁一次」。这是改定的�
 
 ---
 
+> **2026-08-20 结果**：本文§5 说 desktop target 那一步「是唯一还能证伪本文改定的实验」。
+> **那一步已经做完（B3），没有证伪。**`:designsys` 6,600 行 Compose 在桌面 JVM 上编译并绘制，
+> 新模块 `:gallery` 是那个窗口。实测记录在 [`kmp-migration-plan.md`](kmp-migration-plan.md) §5
+> 「B3 实测」，下面这一节的版本号有两处要按那里更正。
+
 ## 2. 实测核对（2026-08-19）
 
 **方法：下载 artifact 比对符号，不查文档。** 网上关于「CMP 的 Material 3 Expressive 跟不上
 androidx」的资料停留在 CMP 1.9 只有实验性 `MaterialExpressiveTheme` 的阶段，实际已发到
 **1.12.0-alpha03**。凡结论依赖版本能力，一律以 artifact 为准。
+
+> **2026-08-20 更正版本号**：Compose Multiplatform 主线（ui / foundation / runtime / resources）
+> 在 Maven Central 上已到 **1.12.0-rc01**，material3 是**单独一条版本线**，最新仍是本节比对的
+> **1.12.0-alpha03**。B3 用的就是这个组合。下面所有关于 material3 的结论不受影响——比对的正是
+> 那个 artifact——只是「1.12.0-alpha03」不再等于「CMP 的版本」。
 
 ### 2.1 material3：102 个符号，100 个在
 
@@ -85,6 +95,8 @@ CMP 1.12.0-alpha03 里有 `ScrollField.kt` 和 `SegmentedListItem`（androidx ma
 | **navigation3** | 1.2.0-alpha07 | ✅ **androidx 官方已全平台 KMP**，无需换 group |
 | material3-adaptive / navigation-suite / navigation3 集成 | — | ⚠️ androidx 侧**只有 android + stub**；换到 `org.jetbrains.compose.material3.adaptive` 1.3.0-beta02 与 `org.jetbrains.compose.material3:material3-adaptive-navigation-suite` 1.12.0-alpha03，均有 `iosArm64` |
 | **WorkManager** | 2.12.0-rc01 | ❌ **纯 Android，零 Apple 变体** |
+| material-icons-core | 1.7.3 | ⚠️ 上下游都冻结了：androidx 停在 1.7.8（2025-02），多平台镜像停在 1.7.3。本仓库只用五个最老的图标，B3 直接换了坐标 |
+| Skiko（经 Coil） | — | ⚠️ B3 实测：Coil 3.5.0 要 `0.144.6`，CMP 1.12 带 `0.150.1`，解析取高的。**desktop 独有**，Android 侧不涉及 |
 
 依赖侧只有两处要动手：换 adaptive 的 group、给 WorkManager 找 Apple 对应（`BGTaskScheduler`）。
 后者影响 5 个文件。

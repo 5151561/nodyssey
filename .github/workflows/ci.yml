@@ -63,13 +63,19 @@ jobs:
       # Unqualified so every module runs its own tests — `:app:testDebugUnitTest` would compile the
       # library modules but never execute a single test of theirs.
       #
-      # `testAndroidHostTest` is the second name because `:shared` is a Kotlin Multiplatform module and
-      # has no build types to name a task after. Its tests are `commonTest`, and this runs them on the
-      # host JVM; the Apple targets compile the same sources but only on a Mac, which is why
-      # `:shared:macosArm64Test` is a local gate and not one here. Both names are unqualified, and a
-      # name no project defines would be an error rather than a silent skip.
+      # `testAndroidHostTest` is the second name because `:shared` and `:designsys` are Kotlin
+      # Multiplatform modules and have no build types to name a task after. Their tests are
+      # `commonTest`, and this runs them on the host JVM; the Apple targets compile the same sources
+      # but only on a Mac, which is why `:shared:macosArm64Test` is a local gate and not one here.
+      #
+      # `jvmTest` is the third, and it is a different platform rather than a second name for the same
+      # one: it runs the common tests again on the desktop JVM, and it is what runs `:gallery` — the
+      # module that composes `:designsys` with no Android under it at all. Without this name the
+      # desktop target would be compiled and never executed, which is the failure mode step B3 exists
+      # to rule out. All three names are unqualified, and a name no project defines would be an error
+      # rather than a silent skip.
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest testAndroidHostTest
+        run: ./gradlew testDebugUnitTest testAndroidHostTest jvmTest
 
       # warningsAsErrors is on, so a new lint warning fails the build here. Qualified to the
       # application module because `plaza.android.application` sets `checkDependencies`, which pulls
@@ -108,6 +114,11 @@ jobs:
       # was declared on both sides with only the designsys one referenced), and prefixes alone cannot
       # prevent a repeat while `composer_*` names exist in both modules. Nested `<item>` entries are
       # skipped: they only exist inside a parent (a style, an array) and never merge on their own.
+      #
+      # `:designsys` is no longer one of the modules this can catch, and for the better reason: its
+      # strings are Compose resources now (step B3), read through a generated Kotlin object rather
+      # than merged into the application's resource table, so nothing can override them silently.
+      # The check stays because `:core` and `:app` still both declare `res/values`.
       - name: Check no two modules declare the same res/values resource
         run: |
           declared=$(for dir in */src/*/res/values*; do

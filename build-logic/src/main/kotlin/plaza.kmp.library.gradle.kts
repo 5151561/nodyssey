@@ -5,6 +5,12 @@
 // module slower to configure for nothing. This plugin is for the modules whose contents are supposed
 // to compile without an Android or a JVM under them.
 //
+// Targets other than Android belong to the module rather than here: which ones a module declares is
+// a decision about that module — `:shared` answers to Paging's missing `macosX64` artifact, and
+// `:designsys` has a desktop target because a JVM is the cheapest place to prove a Compose module
+// left Android. What every KMP module in this repository shares is the Android target below and the
+// gates around it.
+//
 // The Android side here is a *consumer*, not a platform this code is written against: `:app` and
 // `:core` are Android modules and resolve this module through its Android variant. That is why the
 // target arrives via `com.android.kotlin.multiplatform.library` — the Android target inside a KMP
@@ -37,10 +43,18 @@ kotlin {
         compileSdk = 37
         minSdk = 26
 
-        // `commonTest` has to execute somewhere CI can reach. The Apple targets only build on a Mac,
-        // so without a host test compilation the common tests would exist and never run on the Linux
-        // runner — the shape of failure where a suite is green because it is empty.
-        withHostTest {}
+        // `commonTest` has to execute somewhere CI can reach. A module's other targets may need a
+        // toolchain the Linux runner does not have — a Mac for Apple, a desktop JVM nobody runs on
+        // CI — so without a host test compilation the common tests would exist and never run there:
+        // the shape of failure where a suite is green because it is empty.
+        withHostTest {
+            // Robolectric reads the merged manifest and resources through the properties file this
+            // switch generates, and a Compose test needs it: `createComposeRule` launches a
+            // `ComponentActivity` that only the merged test manifest declares. The same line is in
+            // `plaza.android.library` as `testOptions.unitTests.isIncludeAndroidResources`; a KMP
+            // module spells it here because it has no `testOptions`.
+            isIncludeAndroidResources = true
+        }
 
         lint {
             // Stated rather than left to AGP's default search, the same as in `plaza.android.library`:
@@ -62,14 +76,4 @@ kotlin {
                 )
         }
     }
-
-    // Apple Silicon only, which is a constraint inherited from Paging: `paging-common` 3.5.0 ships no
-    // `macosX64` artifact. Supporting an Intel Mac would mean answering what the feed list is built on
-    // instead, so the decision is recorded here rather than discovered later.
-    //
-    // Neither target builds on the Linux runner CI uses, and `kotlin.native.ignoreDisabledTargets` in
-    // `gradle.properties` is what keeps that a skip rather than a failure. The consequence is stated
-    // there: only a Mac runs the Native compilation, so `macosArm64Test` is a local gate.
-    iosArm64()
-    macosArm64()
 }

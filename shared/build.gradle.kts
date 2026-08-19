@@ -119,6 +119,23 @@ tasks.matching { it.name in lintTasksReadingGeneratedSources }.configureEach {
 }
 
 kotlin {
+    // The desktop JVM. It is here because `:designsys` needs it: that module's own desktop target
+    // (step B3) resolves this one through `api(project(":shared"))`, and a target a dependency does
+    // not have is a variant that does not resolve. Nothing in `commonMain` had to change for it —
+    // which is the answer to whether the first phase's "nothing in here may know it is on Android"
+    // held, and it is also why this line is two words rather than a step of its own.
+    jvm()
+
+    // Apple Silicon only, which is a constraint inherited from Paging: `paging-common` 3.5.0 ships no
+    // `macosX64` artifact. Supporting an Intel Mac would mean answering what the feed list is built on
+    // instead, so the decision is recorded here rather than discovered later.
+    //
+    // Neither target builds on the Linux runner CI uses, and `kotlin.native.ignoreDisabledTargets` in
+    // `gradle.properties` is what keeps that a skip rather than a failure. The consequence is stated
+    // there: only a Mac runs the Native compilation, so `macosArm64Test` is a local gate.
+    iosArm64()
+    macosArm64()
+
     android {
         // Neither of the two package roots this module holds — `io.github.plaza.core` and
         // `io.github.nodyssey` — owns the other, and the namespace only ever names a generated R

@@ -375,9 +375,9 @@ Compose
 | ✅ 4 | A | parser + Ksoup | 3 |
 | ✅ **B1** | B | `:designsys` 去平台耦合。计划记的是 5 个文件，实际 **6 个**——见下 | 无 |
 | ✅ **B2** | B | `core/image` 拆三份，`:designsys` 改为直接依赖 `:shared`。不是「下沉」——见下 | B1 |
-| **B3** | B | `:designsys` 转 KMP 模块 + desktop target，单独跑起来 | B2 |
+| ✅ **B3** | B | `:designsys` 转 KMP 模块 + desktop target，单独跑起来。顺带把 B4 的一半做掉了——见下 | B2 |
 | **A5** | A | 网络契约 + Apple transport | B3 |
-| **B4** | B | `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group | B3 |
+| **B4** | B | `:app` 的 `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group。`:designsys` 那半已在 B3 完成 | B3 |
 | **A6** | A | Room + DataStore（7 个手写 migration 要重写） | A5 |
 | **A7** | A | Repository 由简到繁：Terms/Search → Profile/Community → Post/Vote → Feed/Paging。**这一步就是「拆 `:app` 的 `data/`」** | A6 |
 | **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」） | A7 + B4 |
@@ -526,6 +526,118 @@ Robolectric 测试都没有了。**
 
 测试总数不变：`:app` 1,095 + `:designsys` 108 + `:core` 40 + `:shared` 181 = **1,424**，与 B1 后一致，
 0 失败。
+
+### ✅ B3 实测：`:designsys` 转 KMP + desktop，`:gallery` 跑起来了
+
+**结论：CMP 成立，没有被证伪。**`:designsys` 6,600 行 Compose 在桌面 JVM 上编译、链接、开窗、
+绘制，`:app` 的 Android 侧一行业务代码没改。这一步的目的就是「唯一还能证伪 CMP 改定的实验」，
+它没证伪。
+
+证据有三条，从弱到强：
+
+| | 是什么 |
+|---|---|
+| `:designsys:compileKotlinJvm` | 编译得过 |
+| `:designsys:jvmTest` 58 个测试 | `commonTest` 的那部分在桌面 JVM 上和在 Android host 上跑出同样的结果 |
+| `:gallery:run` / `:gallery:jvmTest` | **画得出来**。新模块 `:gallery` 是个桌面窗口，`./gradlew :gallery:run` 打开它；三个 `runComposeUiTest` 测试是同一份内容的无头版本，CI 跑的是这个 |
+
+`:gallery` 单列一个模块而不是在 `:designsys` 里塞一个 `main`：库的多平台变体是给**消费方**用的，
+这个消费方解析变体的方式和将来的 Apple App 一模一样。它不发布、没人依赖，CI 只编译加跑测试。
+
+#### 计划说「移动文件而不是改写」，对了一半
+
+B1 拆出来的四个平台文件确实只是移动，一个字没改（`AndroidCustomTabUriHandler` 进 `androidMain`，
+另外三个加 `actual`）。计划没算到的是**依赖侧**：
+
+**一、`androidx.compose` → `org.jetbrains.compose` 是 B3 的必要条件，不是 B4 的独立步骤。**
+`commonMain` 只能有一套 Compose artifact，而 androidx 的那套没有 JVM 变体。所以 B4 表述里
+「`:designsys` 换 group」这半件事在这里就做完了，B4 剩下的是 `:app` 和 adaptive。
+
+代价比预期小：CMP 的 Android artifact 是**指针**——`org.jetbrains.compose.ui:ui` 的 android
+变体依赖 `androidx.compose.ui:ui`，同版本号。`:app` 因此从 `androidx.compose.ui:ui:1.12.0-beta01`
+走到 `1.12.0-rc01`（它本来就不在 BOM 的 1.11.3 上，是 material3 1.5.0-alpha24 把它顶上去的），
+material3 停在 1.5.0-alpha24 不动——CMP 的 material3 只要求 1.5.0-alpha22，输给了本仓库的 alpha24。
+
+版本号也要更正 [`cmp-ui-decision.md`](cmp-ui-decision.md) §2 的口径：Maven Central 上
+`org.jetbrains.compose` 主线已经到 **1.12.0-rc01**，而 material3 是单独一条版本线，最新仍是
+**1.12.0-alpha03**——就是那份文档比对过的那一个。§2 的结论不用改，版本号本身要改。
+
+**二、`:shared` 得跟着加 `jvm()`。**`:designsys` 的 jvm target 通过 `api(project(":shared"))`
+解析 `:shared`，而一个依赖没有的 target 就是一个解析不出来的变体，报的是三十行
+「No matching variant」。`commonMain` 一个字没改就通过了——这反过来是第一阶段那条「`:shared` 里
+不许知道自己在 Android 上」的验收。顺带 `:shared:jvmTest` 也有了：175 个 common 测试现在在桌面
+JVM 上再跑一遍。
+
+**三、44 条 strings 要走 Compose Resources。**`src/main/res/values/strings.xml` 原样搬到
+`src/commonMain/composeResources/values/`，`R.string.x` → `Res.string.x`，10 个文件。三处连带改动：
+
+- `EmojiGroup.titleRes: Int` → `title: @Composable () -> String`。资源 id 是 Android 传文案的
+  机制，而 `EmojiGroup` 是 `:app` 在 composition 外面构造的顶层 `val`。改成 `String` 会逼
+  `NodeSeekEmojiGroups` 变成 composable 函数并牵动它的测试；lambda 保住了惰性又不用点名谁的资源系统。
+- `EditorAction.labelRes: Int` → `label: StringResource`。只在 `:designsys` 内部用，纯改类型。
+- `:app` 那四行 `EmojiGroup(R.string.x, …)` 加一层 `{ stringResource(...) }`。**这是 B3 对 `:app`
+  的全部改动。**
+
+好处是顺带的：`:designsys` 的字符串不再进资源合并表，`:app` 再也不可能悄悄覆盖它们——CI 里那条
+「两个模块声明同名资源」的检查从此对这个模块无事可做。
+
+**四、`jvmCommonMain` 这一层是必要的。**`java.net.SocketTimeoutException`（B2 留下的
+`diagnoseImageFailure`）和 `java.text.BreakIterator`（emoji 面板的退格要按字素簇走）不是 Android
+的东西，是 JVM 的东西，两个 target 的答案一模一样。不给它们一个中间 source set，两个 `actual`
+就是同一个文件抄两遍。`applyDefaultHierarchyTemplate { common { group("jvmCommon") { withAndroid(); withJvm() } } }`——
+手写 `dependsOn` 会把整个默认模板关掉，连 `androidHostTest` 一起。
+
+**五、`ImagesDeferredException` 从 `java.io.IOException` 换成 `okio.IOException`。**JVM 上后者是前者
+的 typealias，所以 Android 侧 catch 什么一点没变，而 `commonMain` 里能直接写。okio 本来就通过 coil
+在依赖图里。
+
+**六、`PlazaBackHandler` 变成 common 的了。**B1 那个文件的注释预言过两种结局，落地的是好的那个：
+CMP 的 `androidx.compose.ui.backhandler.BackHandler` 是 commonMain 的，Android 上仍然接到同一个
+`OnBackPressedDispatcher`。`androidx.activity.compose` 这个依赖因此从 `:designsys` 删掉了。
+
+#### 六个坑，其中三个的症状都不指向原因
+
+| 坑 | 症状 |
+|---|---|
+| KMP Android library 默认 **`androidResources.enable = false`** | Compose Resources 把 `.cvr` 当 **asset** 打包，方式是向 variant 要 `sources.assets`，而这个开关关着时它是 null。报出来的是 `copyAndroidMainComposeResourcesToAndroidAssets` 的配置校验失败——「property 'outputDirectory' doesn't have a configured value」。一个没人接收输出的任务，报的是它没有输出 |
+| Robolectric + Compose Resources | 上一条不修，108 个测试里 21 个挂在 `MissingResourceException: … Android context is not initialized`，而问题跟 context 无关，是那个文件根本没打进 assets |
+| `platform(...)` 在 KMP 的 `sourceSets.xxx.dependencies {}` 里不存在 | `Unresolved reference 'platform'`。要写 `project.dependencies.platform(...)` |
+| `applyDefaultHierarchyTemplate {}` 的自定义重载仍是 experimental | 脚本编译失败，要 `@file:OptIn(ExperimentalKotlinGradlePluginApi::class)` |
+| `:gallery` 不能用 `alias(libs.plugins...)` 应用 Kotlin multiplatform | `build-logic` 已经把 KGP 放在根构建的 classpath 上，再按版本请求一次会失败为重复请求。用 `id("org.jetbrains.kotlin.multiplatform")`，版本仍然出自版本目录 |
+| `@Preview` 的 artifact 换了，包名没换 | 源码里的 `androidx.compose.ui.tooling.preview.Preview` 一个字不用改，换成 `org.jetbrains.compose.ui:ui-tooling-preview` 即可。**不要**换成 `org.jetbrains.compose.components:components-ui-tooling-preview`——它里面那个 `org.jetbrains.compose.ui.tooling.preview.Preview` 是前者的已弃用前身，换过去编译器会直接告诉你换回来 |
+
+#### 两条留给后面的
+
+- **Skiko 版本冲突。**Coil 3.5.0 要 skiko `0.144.6`，CMP 1.12 带的是 `0.150.1`，解析取高的那个，
+  构建期有一行 warning。桌面端 Coil 的解码路径因此跑在一个它没编译过的 Skia 上。目前没有观察到
+  问题（`:gallery` 的图片占位组件正常），但这是 desktop 独有的风险，Coil 跟上 CMP 之前一直在。
+- **`BackHandler` 在 CMP 1.12 已弃用**，提示换 `NavigationEventHandler`（`androidx.navigationevent`
+  已经在依赖图里）。那是 predictive back 的新 API，换过去是 Android 侧的行为变化，不属于这一步。
+  归 B4 / D1。
+
+#### 构建约定的一处调整
+
+`plaza.kmp.library` 不再声明 target。**声明哪些 target 是模块自己的决定**——`:shared` 回答的是
+Paging 没有 `macosX64`，`:designsys` 要 desktop 是因为 JVM 是证明「离开 Android」最便宜的地方——
+所以两个 `iosArm64()` / `macosArm64()` 连同那段理由搬回 `shared/build.gradle.kts`，约定插件里留下
+的是每个 KMP 模块都一样的东西：Android target、lint、锁定、toolchain。
+
+`plaza.dependency-locking` 的锁定清单加了 `jvm{Compile,Runtime}Classpath` 和
+`jvmTest{Compile,Runtime}Classpath` 四个。
+
+#### 测试
+
+`:designsys` 的 108 个测试一个没少，其中 58 个搬进了 `commonTest` / `jvmCommonTest`，于是在 Android
+host 和桌面 JVM 上各跑一遍。搬的时候撞到的还是那条老坑：**JUnit 的 message 是第一个参数，
+`kotlin.test` 的是最后一个**——`assertTrue(msg, cond)` → `assertTrue(cond, msg)`，
+`assertEquals(msg, expected, actual, delta)` → `assertEquals(expected, actual, delta, msg)`。8 处。
+
+留在 `androidHostTest` 的 50 个是 Robolectric + `createComposeRule` 的那批：`ui-test-manifest`
+提供的是 `createComposeRule` 启动的那个 Activity，是一份 Android manifest，没有多平台对应物。
+把它们改写成 `runComposeUiTest` 是可以的，但那是重写测试而不是搬运，不在这一步。
+
+总数：`:app` 1,095 + `:designsys` 108（androidHostTest）+ `:core` 40 + `:shared` 181 = **1,424**，与 B2 后
+一致；桌面端新增 `:designsys` 58 + `:shared` 175 + `:gallery` 3 = **236** 次执行，全部 0 失败。
 
 ### ✅ 步骤 2 实测：构建基础设施
 
