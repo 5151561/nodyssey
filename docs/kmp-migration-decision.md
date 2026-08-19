@@ -229,9 +229,15 @@ Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik
 
 第 3 条的分块脚本只是 spike 权宜之计，真正迁移时应改为 Gradle 任务从 resources 自动生成。
 
-**工具链补充记录：** 本机 active developer directory 指向 CommandLineTools，
+**工具链补充记录：** 当 active developer directory 指向 CommandLineTools 而不是完整 Xcode 时，
 `:linkDebugTestMacosArm64` 会失败在 `CurrentXcode.xcrun`。用 `DEVELOPER_DIR` 环境变量指向
 Xcode 即可，无须改全局 `xcode-select`。
+
+> **2026-08-20 更正**：这条当初写成了「本机指向 CommandLineTools」，现在不成立了——`xcode-select -p`
+> 已经指向一个完整 Xcode，`./gradlew :shared:macosArm64Test` 不加任何环境变量就能跑。反过来还有个
+> 陷阱：给 `DEVELOPER_DIR` 一个**不存在**的路径（比如照抄 `/Applications/Xcode.app/...` 而机器上装的
+> 是 beta），会盖掉本来正常的默认值，报出来的还是同一个 `CurrentXcode.xcrun`。先看 `xcode-select -p`
+> 再决定要不要加这个变量。
 
 **附带发现：** `NodeSeekSite.kt` 的 `import ...designsys.component.UserAvatar` 只服务于一句
 KDoc 链接，不是运行时依赖，删 import 即可 —— 与第 6 节那处 `SettingsRepository` 的反向依赖
