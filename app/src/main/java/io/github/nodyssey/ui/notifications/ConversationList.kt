@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -75,6 +77,7 @@ internal fun ConversationList(
     onDismiss: () -> Unit,
     onRecipientClick: (UserSearchResult) -> Unit,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     Box(modifier.fillMaxSize()) {
         if (state.conversations.isEmpty()) {
@@ -85,7 +88,10 @@ internal fun ConversationList(
                 modifier = Modifier.align(Alignment.Center),
             )
         } else {
-            LazyColumn(contentPadding = PaddingValues(bottom = FAB_CLEARANCE)) {
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
+            ) {
                 items(state.conversations, key = MessageConversation::uid) { conversation ->
                     ConversationRow(
                         conversation = conversation,
