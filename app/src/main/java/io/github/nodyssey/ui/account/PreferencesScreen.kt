@@ -21,13 +21,13 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
@@ -38,6 +38,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.data.settings.OPTIONAL_HOME_BOARD_SLUGS
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -88,12 +90,14 @@ fun PreferencesScreen(
     onBoardHiddenChange: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appBarState = rememberOneHandAppBarState()
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.account_preferences_title)) },
+            OneHandTopAppBar(
+                title = stringResource(R.string.account_preferences_title),
+                state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

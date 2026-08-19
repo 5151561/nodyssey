@@ -36,7 +36,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -67,8 +67,10 @@ import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.digitsOnly
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -158,11 +160,13 @@ fun StardustScreen(
     modifier: Modifier = Modifier,
 ) {
     val rows = entries.collectAsLazyPagingItems()
+    val appBarState = rememberOneHandAppBarState(initiallyExpanded = false)
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.stardust_title)) },
+            OneHandTopAppBar(
+                title = stringResource(R.string.stardust_title),
+                state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

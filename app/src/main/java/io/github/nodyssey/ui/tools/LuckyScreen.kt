@@ -39,7 +39,6 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.TimePickerDialogDefaults
 import androidx.compose.material3.TimePickerDisplayMode
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -50,6 +49,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -61,9 +61,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.LuckyDraw
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.digitsOnly
 import io.github.plaza.designsys.component.rememberClipboardCopy
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -124,11 +126,13 @@ fun LuckyScreen(
     val copyLabel = stringResource(R.string.lucky_title)
     val copiedText = stringResource(R.string.lucky_link_copied)
 
+    val appBarState = rememberOneHandAppBarState()
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.lucky_title)) },
+            OneHandTopAppBar(
+                title = stringResource(R.string.lucky_title),
+                state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

@@ -23,12 +23,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -37,7 +37,9 @@ import io.github.nodyssey.R
 import io.github.plaza.core.update.ReleaseNote
 import io.github.plaza.core.update.UpdateFailure
 import io.github.plaza.core.update.releaseNotesText
+import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.TonalTag
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -81,11 +83,13 @@ fun ChangelogScreen(
     onOpenRelease: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appBarState = rememberOneHandAppBarState()
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.about_changelog)) },
+            OneHandTopAppBar(
+                title = stringResource(R.string.about_changelog),
+                state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))

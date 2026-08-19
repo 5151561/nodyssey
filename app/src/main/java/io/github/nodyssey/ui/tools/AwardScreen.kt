@@ -15,12 +15,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,8 +34,11 @@ import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.postlist.PostRow
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.readableWidth
+import kotlinx.coroutines.launch
 
 @Composable
 fun AwardRoute(
@@ -81,11 +85,14 @@ fun AwardScreen(
     // content they have not seen.
     LaunchedEffect(state.page) { listState.scrollToItem(0) }
 
+    val appBarState = rememberOneHandAppBarState()
+    val scope = rememberCoroutineScope()
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.award_title)) },
+            OneHandTopAppBar(
+                title = stringResource(R.string.award_title),
+                state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -140,7 +147,13 @@ fun AwardScreen(
             NumericPager(
                 page = state.page,
                 totalPages = state.totalPages,
-                onPageSelected = onPageSelected,
+                // The jump above scrolls the list without a gesture, which dispatches no
+                // nested scroll, so the app bar has to be told or the new page arrives in whatever
+                // is left of the screen below a bar still standing at full height.
+                onPageSelected = { page ->
+                    scope.launch { appBarState.fold() }
+                    onPageSelected(page)
+                },
             )
         }
     }

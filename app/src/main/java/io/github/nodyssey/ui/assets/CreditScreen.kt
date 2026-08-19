@@ -17,11 +17,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,6 +41,8 @@ import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -91,11 +93,13 @@ fun CreditScreen(
     modifier: Modifier = Modifier,
 ) {
     val rows = entries.collectAsLazyPagingItems()
+    val appBarState = rememberOneHandAppBarState(initiallyExpanded = false)
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.credit_title)) },
+            OneHandTopAppBar(
+                title = stringResource(R.string.credit_title),
+                state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
