@@ -74,6 +74,7 @@ class MessageBubbleActionsTest {
                     onSignIn = {},
                     onVerify = {},
                     onOpenBrowser = {},
+                    onOpenSpace = {},
                     onRetryLoad = {},
                     onToggleMarkdown = {},
                     onSend = {},

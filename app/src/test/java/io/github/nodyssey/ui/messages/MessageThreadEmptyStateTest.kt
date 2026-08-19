@@ -42,6 +42,7 @@ class MessageThreadEmptyStateTest {
                     onSignIn = {},
                     onVerify = {},
                     onOpenBrowser = {},
+                    onOpenSpace = {},
                     onRetryLoad = {},
                     onToggleMarkdown = {},
                     onSend = {},
