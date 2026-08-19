@@ -1,6 +1,7 @@
 package io.github.nodyssey.ui.settings.theme
 
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -101,10 +102,11 @@ fun ThemeSettingsRoute(
  * not something they set once — and it stayed on 设置 where it has always been. Burying a daily
  * control two taps deep to keep a board intact is the wrong half of the design to honour.
  *
- * Every section stays on screen whichever source is selected, rather than the grid appearing and
- * disappearing under the tiles. Two reasons: the sources each remember their own seed, so the grid
- * is still showing a live answer while 自定义 is in force; and a settings screen that reflows as you
- * tap across it is one where the thing you were reaching for has moved by the time you get there.
+ * 预设 is the one section that comes and goes with the source: two rows of 56dp swatches is most of
+ * this page, and under 动态取色 or 自定义 none of them is the colour in force. Everything else stays
+ * put — 我的主题 in particular, because 新建 is how a colour gets made in the first place and it would
+ * be unreachable from the source it belongs to. The tiles carry each source's remembered value, so
+ * collapsing the grid hides a control, never an answer.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -180,11 +182,17 @@ fun ThemeSettingsScreen(
                 )
             }
 
-            SettingsSectionTitle(stringResource(R.string.settings_presets))
-            PresetGrid(
-                selected = settings.presetSeed.takeIf { settings.colorSource == ColorSource.PRESET },
-                onSelect = onPresetSelected,
-            )
+            // Two rows of swatches that cannot be the answer, sitting between the tiles and the rest
+            // of the screen, is most of this page's height spent on a section the reader has already
+            // navigated away from. The 预设 tile is what brings it back, and it still carries the
+            // preset's name while the grid is away, so nothing about the choice is hidden — only the
+            // six-way control for a choice that is not in force.
+            AnimatedVisibility(visible = settings.colorSource == ColorSource.PRESET) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    SettingsSectionTitle(stringResource(R.string.settings_presets))
+                    PresetGrid(selected = settings.presetSeed, onSelect = onPresetSelected)
+                }
+            }
 
             SettingsSectionTitle(stringResource(R.string.settings_my_themes))
             SavedThemeChips(
@@ -362,7 +370,8 @@ private fun ColorSourceTile(
  */
 @Composable
 private fun PresetGrid(
-    selected: Int?,
+    /** Non-null: the grid is only on screen while 预设 is the source, so one of the six always is. */
+    selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {

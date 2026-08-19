@@ -42,7 +42,14 @@ class ThemeSettingsViewModel(
         viewModelScope.launch { settings.setColorSource(value) }
     }
 
-    /** Picking a preset is also picking 预设 — the grid is the section under that tile. */
+    /**
+     * Picking a preset is also picking 预设.
+     *
+     * The grid only shows while 预设 is already the source, so the second line is an invariant rather
+     * than a transition anyone can currently trigger. It stays because the pairing is the rule — a
+     * seed and the source that reads it are set together — and a grid shown from somewhere else
+     * later must not be able to write a preset nothing is reading.
+     */
     fun selectPreset(argb: Int) {
         viewModelScope.launch {
             settings.setPresetSeed(argb)

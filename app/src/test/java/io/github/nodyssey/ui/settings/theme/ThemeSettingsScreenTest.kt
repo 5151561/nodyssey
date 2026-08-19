@@ -75,22 +75,38 @@ class ThemeSettingsScreenTest {
         composeRule.onNode(hasText("自定义").and(hasText("#2F6D8C"))).assertExists()
     }
 
-    /**
-     * Tapping a preset is also tapping 预设.
-     *
-     * A grid that only changed the stored preset while the app stayed on 自定义 would be six controls
-     * that do nothing until the reader finds the tile above them.
-     */
     @Test
-    fun `picking a preset selects it and switches the source`() {
+    fun `picking a preset reports the seed behind it`() {
         var picked: Int? = null
         setScreen(
-            settings = UserSettings(colorSource = ColorSource.CUSTOM),
+            settings = UserSettings(colorSource = ColorSource.PRESET),
             onPresetSelected = { picked = it },
         )
 
         composeRule.onNodeWithText("落日橙").performScrollTo().performClick()
         assertEquals(0xFFA05A32.toInt(), picked)
+    }
+
+    /**
+     * The grid is two rows of 56dp swatches — most of the page — and under the other two sources
+     * none of them is the colour in force. The 预设 tile still names the preset it would restore, so
+     * what collapses is the control, not the answer.
+     */
+    @Test
+    fun `自定义 collapses the preset grid`() {
+        setScreen(settings = UserSettings(colorSource = ColorSource.CUSTOM))
+
+        // 落日橙 exists only in the grid; 石墨青 is also the 预设 tile's own subtitle, which stays.
+        composeRule.onNodeWithText("落日橙").assertDoesNotExist()
+        composeRule.onNode(hasText("预设").and(hasText("石墨青"))).assertExists()
+    }
+
+    @Test
+    fun `动态取色 collapses the preset grid`() {
+        setScreen(settings = UserSettings(colorSource = ColorSource.WALLPAPER))
+
+        composeRule.onNodeWithText("落日橙").assertDoesNotExist()
+        composeRule.onNode(hasText("预设").and(hasText("石墨青"))).assertExists()
     }
 
     /** 我的主题 selects a saved seed; the same tap must not also save it again. */
