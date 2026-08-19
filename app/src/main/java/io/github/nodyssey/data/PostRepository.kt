@@ -26,6 +26,7 @@ import io.github.nodyssey.model.ThreadSnapshot
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -342,6 +343,22 @@ class OfflineFirstPostRepository(
      * the history is on screen, and the list has to re-length itself when it does.
      */
     private val readHistoryLimit: Flow<Int> = flowOf(SettingsRepository.DEFAULT_READ_HISTORY_LIMIT),
+    /**
+     * 离线阅读's store, consulted only when the site cannot be reached.
+     *
+     * Absent by default for the same reason the writers above are: most of this class's tests never
+     * go near it, and a build that did not wire it up simply has no fallback rather than a fake one.
+     * Nothing here writes into it — downloads are the offline library's own business — and the copy
+     * it hands back is stored into the ordinary post cache, so the detail screen needs to know
+     * nothing about any of this.
+     */
+    private val offlineThreads: OfflineThreadReader? = null,
+    /**
+     * Where what this device knows about a collected thread is written down — see
+     * [rememberCollectedThread]. Absent by default like the writers above, and a build without one
+     * simply remembers nothing rather than remembering something invented.
+     */
+    private val collectedMeta: CollectedPostMetaStore? = null,
 ) : PostRepository {
     override fun feed(
         categorySlug: String?,
@@ -510,7 +527,13 @@ class OfflineFirstPostRepository(
         page: Int,
         replacesWindow: Boolean,
     ) {
-        val detail = remote.loadDetail(postId, page)
+        val fetched =
+            runCatchingExceptCancellation { remote.loadDetail(postId, page) to clock.nowMillis() }
+                .recoverCatching { thrown ->
+                    val stored = storedPageFor(postId, page, thrown) ?: throw thrown
+                    stored.detail to stored.downloadedAtMillis
+                }.getOrThrow()
+        val (detail, cachedAtMillis) = fetched
         database.postDetailDao().saveThreadPage(
             postId = postId,
             title = detail.title,
@@ -526,13 +549,37 @@ class OfflineFirstPostRepository(
                     content = content,
                 )
             },
-            nowMillis = clock.nowMillis(),
+            nowMillis = cachedAtMillis,
             replacesWindow = replacesWindow,
             collected = detail.collected,
             collectionCount = detail.collectionCount,
             isAwarded = detail.isAwarded,
         )
         database.postDetailDao().trimTo(MAX_CACHED_THREADS)
+    }
+
+    /**
+     * The downloaded copy of this page, when the site could not be reached and one exists.
+     *
+     * Only for failures that are about *reaching* the site — no connection, or the site answering
+     * with its own breakage. A refusal is an answer: signed out, level-gated or deleted must reach
+     * the reader rather than being papered over with a copy from last week. A Cloudflare challenge
+     * is deliberately on that side of the line too, even though it is not about this thread: the
+     * screen's recovery for it is to open a WebView and clear it, and a reader served a stored copy
+     * instead would never find out their session needs attention.
+     *
+     * The copy is stored under its own download timestamp rather than under now, so the cache does
+     * not call a week-old page fresh and skip the refresh that would replace it.
+     */
+    private suspend fun storedPageFor(
+        postId: Long,
+        page: Int,
+        thrown: Throwable,
+    ): StoredThreadPage? {
+        val reader = offlineThreads ?: return null
+        val error = (thrown as? SiteException)?.error ?: return null
+        val unreachable = error is SiteError.Network || (error is SiteError.Http && error.statusCode >= 500)
+        return if (unreachable) reader.storedPage(postId, page) else null
     }
 
     override suspend fun isThreadFresh(postId: Long): Boolean {
@@ -646,6 +693,39 @@ class OfflineFirstPostRepository(
         val outcome = writer.setCollected(postId = postId, collected = collected)
         // The site's echo, not the request: see [CollectionOutcome.collected].
         database.postDetailDao().updateCollection(postId, outcome.collected, outcome.postCollectionCount)
+        if (outcome.collected) rememberCollectedThread(postId)
+    }
+
+    /**
+     * Writes down what this device already knows about a thread the moment it is collected.
+     *
+     * The star is pressed on a page that has just been read, so this is the one moment when the app
+     * is holding the board, the author, the reply count and the posting time — and it is also the
+     * last moment, because `list-collection` will not repeat any of them and the read mark that
+     * carries some of them is trimmed by 浏览历史保留条数.
+     *
+     * Three sources, coalesced rather than ranked, because they know different things: the feed row
+     * has the board and the site's reply count, the thread's opening post has the author and when it
+     * was posted, and the read mark is what is left of both after the thread leaves the feed cache.
+     * Nothing here is derived — every value was said by the site at some point.
+     */
+    private suspend fun rememberCollectedThread(postId: Long) {
+        val store = collectedMeta ?: return
+        val listed = database.feedDao().findPost(postId)
+        val cached = database.postDetailDao().findDetail(postId)
+        val mark = database.readMarkDao().find(postId)
+        val body = cached?.body
+        val meta =
+            CollectedPostMeta(
+                postId = postId,
+                title = cached?.title ?: listed?.title ?: mark?.title,
+                categoryTitle = listed?.categoryTitle ?: body?.categoryTitle ?: mark?.categoryTitle,
+                categorySlug = listed?.categorySlug,
+                authorName = body?.authorName ?: listed?.authorName ?: mark?.authorName,
+                commentCount = listed?.commentCount ?: mark?.commentCount,
+                createdAtText = body?.createdAtText,
+            )
+        if (!meta.isEmpty) store.remember(meta)
     }
 
     companion object {

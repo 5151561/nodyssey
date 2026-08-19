@@ -228,6 +228,70 @@ class NodeSeekDatabaseMigrationTest {
         migrated.close()
     }
 
+    /**
+     * Three new tables and nothing else touched.
+     *
+     * `runMigrationsAndValidate` is doing the load-bearing work here: it compares the migrated file
+     * against the exported v11 schema, so a column the hand-written `CREATE TABLE` spells
+     * differently from the entity fails here rather than on a reader's device at open time.
+     */
+    @Test
+    fun `migration 10 to 11 adds the offline tables and leaves the reader's cache alone`() {
+        helper.createDatabase(DATABASE_NAME, 10).apply {
+            execSQL(
+                """
+                INSERT INTO post_details(postId, title, body, totalPages, firstLoadedPage, loadedPages, cachedAtMillis)
+                VALUES(42, 'a cached thread', NULL, 9, 1, 3, 1000)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 11, true, MIGRATION_10_11)
+
+        migrated.query("SELECT title FROM post_details WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("a cached thread", it.getString(0))
+        }
+        listOf("offline_threads", "offline_comments", "offline_images").forEach { table ->
+            migrated.query("SELECT COUNT(*) FROM $table").use {
+                it.moveToFirst()
+                assertEquals(0, it.getInt(0))
+            }
+        }
+        migrated.close()
+    }
+
+    /**
+     * The empty start is the honest one: this device has been told plenty about its collected
+     * threads and never wrote any of it down, so there is nothing to back-fill and every row fills
+     * in the next time something learns it again.
+     */
+    @Test
+    fun `migration 11 to 12 adds the collected-thread details table`() {
+        helper.createDatabase(DATABASE_NAME, 11).apply {
+            execSQL(
+                """
+                INSERT INTO post_details(postId, title, body, totalPages, firstLoadedPage, loadedPages, cachedAtMillis)
+                VALUES(42, 'a cached thread', NULL, 9, 1, 3, 1000)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 12, true, MIGRATION_11_12)
+
+        migrated.query("SELECT title FROM post_details WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("a cached thread", it.getString(0))
+        }
+        migrated.query("SELECT COUNT(*) FROM collected_post_meta").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+        }
+        migrated.close()
+    }
+
     private companion object {
         const val DATABASE_NAME = "profile-migration-test"
     }

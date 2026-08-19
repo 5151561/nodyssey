@@ -13,6 +13,9 @@ import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
+import io.github.nodyssey.data.offline.OfflineFileStore
+import io.github.nodyssey.data.offline.OfflineImageInterceptor
+import io.github.nodyssey.data.offline.OfflineWork
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.di.DefaultAppContainer
 import io.github.nodyssey.notifications.NotificationChannels
@@ -70,6 +73,10 @@ open class NodysseyApp :
                 updates.checkOnLaunch()
             }
         }
+        // 离线内容保留 has to sweep a device nobody has opened 收藏 on for a fortnight, which is
+        // exactly the case a check at screen-open misses. Scheduled unconditionally and cheap: the
+        // sweep does nothing on a device that has downloaded nothing.
+        OfflineWork.ensureMaintenance(this)
         // The scheduler follows the settings SSOT rather than being poked from the settings screen,
         // so the schedule is correct even when a setting changes without that screen ever opening.
         applicationScope.launch {
@@ -98,6 +105,9 @@ open class NodysseyApp :
         ImageLoader
             .Builder(context)
             .components {
+                // Ahead of the data-usage policy on purpose: a downloaded picture is already on
+                // this device, so 仅 Wi-Fi 加载图片 has nothing to defer about it.
+                add(OfflineImageInterceptor(OfflineFileStore.of(filesDir)))
                 add(
                     ImageNetworkPolicyInterceptor(
                         // The interceptor is `:core`'s and knows neither this app's settings nor this

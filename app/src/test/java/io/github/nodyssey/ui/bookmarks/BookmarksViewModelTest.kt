@@ -1,5 +1,7 @@
 package io.github.nodyssey.ui.bookmarks
 
+import io.github.nodyssey.data.CollectedPostMeta
+import io.github.nodyssey.data.CollectedPostMetaStore
 import io.github.nodyssey.data.NoOpPostRepository
 import io.github.nodyssey.data.OfflineLibrary
 import io.github.nodyssey.data.OfflineSettings
@@ -15,6 +17,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -50,8 +54,10 @@ class BookmarksViewModelTest {
         Dispatchers.resetMain()
     }
 
+    private val known = FakeCollectedPostMetaStore()
+
     private fun viewModel(offline: OfflineLibrary = FakeOfflineLibrary()) =
-        BookmarksViewModel(space, posts, offline)
+        BookmarksViewModel(space, posts, offline, known)
 
     @Test
     fun `the whole collection is loaded, not one page of it`() =
@@ -63,6 +69,84 @@ class BookmarksViewModelTest {
             assertEquals(5, viewModel.uiState.value.entries.size)
             assertEquals(listOf(1, 2), space.requested)
             assertEquals(false, viewModel.uiState.value.truncated)
+        }
+
+    /**
+     * The endpoint answers with a title and, in practice, nothing else.
+     *
+     * Without this the 收藏 list is a column of bare headlines while the same row on the front page
+     * carries a board, an author and a reply count — all of which the site itself told this device
+     * somewhere else.
+     */
+    @Test
+    fun `a row the endpoint left bare is filled from what this device was told`() =
+        runTest(dispatcher) {
+            known.remember(
+                CollectedPostMeta(
+                    postId = 1,
+                    categoryTitle = "日常",
+                    authorName = "原作者",
+                    commentCount = 12,
+                    createdAtText = "3 天前",
+                ),
+            )
+            space.pages = listOf(page(1, 1..1, hasNext = false, row = ::bare))
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            val row = viewModel.uiState.value.entries.single()
+            assertEquals("日常", row.categoryTitle)
+            assertEquals("原作者", row.authorName)
+            assertEquals(12, row.commentCount)
+            assertEquals("3 天前", row.createdAtText)
+        }
+
+    /** A remembered answer is a fallback, never an override: the site is the one being asked. */
+    @Test
+    fun `the site's own answer wins over what was remembered`() =
+        runTest(dispatcher) {
+            known.remember(CollectedPostMeta(postId = 1, categoryTitle = "旧板块", commentCount = 1))
+            space.pages =
+                listOf(page(1, 1..1, hasNext = false) { it.copy(categoryTitle = "技术", commentCount = 9) })
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            val row = viewModel.uiState.value.entries.single()
+            assertEquals("技术", row.categoryTitle)
+            assertEquals(9, row.commentCount)
+        }
+
+    @Test
+    fun `whatever the endpoint did say is written down for next time`() =
+        runTest(dispatcher) {
+            space.pages =
+                listOf(page(1, 1..1, hasNext = false) { it.copy(categoryTitle = "技术", commentCount = 9) })
+            viewModel()
+            advanceUntilIdle()
+
+            val stored = requireNotNull(known.observe().first()[1L])
+            assertEquals("技术", stored.categoryTitle)
+            assertEquals(9, stored.commentCount)
+        }
+
+    /**
+     * A download backfills the row, and the list must pick it up without being reloaded.
+     *
+     * This is the route that reaches a collection made on the web years ago: nothing on the device
+     * has ever seen the thread, and the pages the download fetches are what finally name it.
+     */
+    @Test
+    fun `a row fills in as soon as something learns more about the thread`() =
+        runTest(dispatcher) {
+            space.pages = listOf(page(1, 1..1, hasNext = false, row = ::bare))
+            val viewModel = viewModel()
+            advanceUntilIdle()
+            assertNull(viewModel.uiState.value.entries.single().authorName)
+
+            known.remember(CollectedPostMeta(postId = 1, authorName = "原作者"))
+            advanceUntilIdle()
+
+            assertEquals("原作者", viewModel.uiState.value.entries.single().authorName)
         }
 
     /** An empty page ends the walk even when the payload claims another — see the loader's comment. */
@@ -248,27 +332,44 @@ class BookmarksViewModelTest {
 
     // --- fakes ------------------------------------------------------------------------------------
 
+    /**
+     * @param row shapes each generated row — used to reproduce what `list-collection` actually
+     * answers with, which is a title and, for most of these fields, nothing.
+     */
     private fun page(
         page: Int,
         ids: IntRange,
         hasNext: Boolean,
+        row: (SpacePost) -> SpacePost = { it },
     ) = SpacePage(
         items =
         ids.map {
-            SpacePost(
-                postId = it.toLong(),
-                title = "帖子 $it",
-                categoryTitle = "日常",
-                categorySlug = "daily",
-                authorName = "作者$it",
-                commentCount = it,
-                viewCount = null,
-                createdAtText = "上周",
+            row(
+                SpacePost(
+                    postId = it.toLong(),
+                    title = "帖子 $it",
+                    categoryTitle = "日常",
+                    categorySlug = "daily",
+                    authorName = "作者$it",
+                    commentCount = it,
+                    viewCount = null,
+                    createdAtText = "上周",
+                ),
             )
         },
         page = page,
         hasNextPage = hasNext,
     )
+
+    /** What the collection endpoint is observed to answer with: a title, and nothing else. */
+    private fun bare(post: SpacePost) =
+        post.copy(
+            categoryTitle = null,
+            categorySlug = null,
+            authorName = null,
+            commentCount = null,
+            createdAtText = null,
+        )
 
     private class FakeSpaceRepository : UserSpaceRepository {
         var pages: List<SpacePage<SpacePost>> = emptyList()
@@ -301,6 +402,32 @@ class BookmarksViewModelTest {
         }
     }
 
+    /** In-memory, with the same fill-the-gaps rule the Room store applies. */
+    private class FakeCollectedPostMetaStore : CollectedPostMetaStore {
+        private val rows = MutableStateFlow(emptyMap<Long, CollectedPostMeta>())
+
+        override fun observe(): Flow<Map<Long, CollectedPostMeta>> = rows
+
+        override suspend fun remember(metas: List<CollectedPostMeta>) {
+            rows.update { stored ->
+                stored +
+                    metas.associate { fresh ->
+                        val old = stored[fresh.postId]
+                        fresh.postId to
+                            CollectedPostMeta(
+                                postId = fresh.postId,
+                                title = fresh.title ?: old?.title,
+                                categoryTitle = fresh.categoryTitle ?: old?.categoryTitle,
+                                categorySlug = fresh.categorySlug ?: old?.categorySlug,
+                                authorName = fresh.authorName ?: old?.authorName,
+                                commentCount = fresh.commentCount ?: old?.commentCount,
+                                createdAtText = fresh.createdAtText ?: old?.createdAtText,
+                            )
+                    }
+            }
+        }
+    }
+
     private class FakeOfflineLibrary(
         states: Map<Long, OfflineState> = emptyMap(),
         override val isAvailable: Boolean = true,
@@ -310,8 +437,14 @@ class BookmarksViewModelTest {
         override val usage: Flow<OfflineUsage> = MutableStateFlow(OfflineUsage())
         override val settings: Flow<OfflineSettings> = MutableStateFlow(OfflineSettings())
 
+        val notedCounts = mutableListOf<Map<Long, Int>>()
+
         override suspend fun download(postIds: Collection<Long>) {
             queued += postIds.toList()
+        }
+
+        override suspend fun noteReplyCounts(counts: Map<Long, Int>) {
+            notedCounts += counts
         }
 
         override suspend fun estimateBytes(postIds: Collection<Long>): Long? = null

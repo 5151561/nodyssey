@@ -38,6 +38,10 @@ internal val Context.commentComposerDataStore: DataStore<Preferences> by prefere
     name = "comment-composer",
 )
 
+internal val Context.offlineDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "offline",
+)
+
 internal val Context.imageHostDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "imagehost",
     produceMigrations = { context ->

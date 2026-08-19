@@ -1,6 +1,6 @@
 # 设计稿与实现对照
 
-更新日期：2026-08-02
+更新日期：2026-08-19
 
 `design/boards.json` 的 `status` 表示**画板制作状态**，不表示 Android 功能已经可用。
 App 的总体真实状态以 [`implementation-status.md`](implementation-status.md) 为准；
@@ -88,7 +88,7 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 
 | 画板 | 实现状态 | 主要代码 | 仍需注意 |
 |---|---|---|---|
-| i1 收藏 · 独立页与离线下载 | 视觉与交互已按稿实现；离线下载引擎未实现 | `ui/bookmarks/`、`Navigation.kt`、`designsys/component/ThreadRow.kt`、`PlazaIcons.kt` | 列表、筛选、排序、多选、移出收藏走真实接口；离线那一整套由 `OfflineLibrary` 供给，当前实现返回“不可用”，整块离线 chrome 不画 |
+| i1 收藏 · 独立页与离线下载 | 已按稿实现，离线下载引擎已接入 | `ui/bookmarks/`、`data/offline/`、`data/local/Offline*.kt`、`Navigation.kt`、`designsys/component/ThreadRow.kt` | 列表、筛选、排序、多选、移出收藏走真实接口；离线下载、离线阅读、占用统计、保留期限清理、自动补新回复都是真的落盘与真的请求 |
 
 ## i1 组件映射
 
@@ -182,23 +182,79 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 `ProfileViewModelTest` 里私有的 `NoOpPostRepository` 提升到了 `data/NoOpPostRepository.kt`，
 改成 internal open class，本次的 `BookmarksViewModelTest` 继承它只覆盖 `setCollected`。
 
-### 收藏行的 meta 是空的（既有问题，未修）
+### 收藏行的 meta（后补，已用本地记忆补上）
 
 真机上收藏行只有标题：板块 tag、作者、回复数、时间全都不画。首页同样的 `ThreadRow` 这些都在，
 所以是 `UserSpaceRepository.toSpacePost` 在**收藏接口**的 payload 上没命中字段名——
 `category_title` / `member_name` / `comments` 那几个候选名都是按其它端点猜的。
-空间页的收藏 tab 一样是空的，所以不是本次改出来的。要修得先抓一次 `/api/…/collection` 的真实返回。
 
-### 本次没有实现的部分
+根治要抓一次 `/api/…/collection` 的真实返回，那个仍然没做。这次走的是另一条路：
+**站点说过的话，App 自己记下来。** 新表 `collected_post_meta`（schema v12），每一列可空，
+每次写入只补空缺、不覆盖已知，三处写入：
 
-画板 note 里「App 增强」那一整段——真正的离线下载引擎——不在本次范围：
-下载队列与进度、正文与图片落盘、落后回复的增量同步、占用统计、保留期限的清理任务、仅 Wi-Fi 条件。
-现有的 `post_details` 缓存是**读到哪缓存到哪的窗口缓存**，且完全不存图片，
-拿它冒充「已离线」会是一个站不住的说法。
+- **按下星标时**（`OfflineFirstPostRepository.rememberCollectedThread`）。这是 App 手上信息最全的
+  一刻，也是最后一刻：`list-collection` 不会再说一遍，而带着这些字段的 `post_read_marks` 会被
+  「浏览历史保留条数」修掉。三个来源合并而不是排序取一，因为它们知道的东西不一样——feed 行有板块和
+  站点的回复数，帖子的楼主楼有作者和发帖时间，读标记是这两者在帖子离开 feed 缓存之后剩下的部分。
+- **离线下载完成时**。这是**唯一**能补上「早年在网页端收藏、App 从没打开过」那批帖子的路径：
+  本机从没见过它，而下载抓的正是那几页。写在整篇下完之后而不是每页之后，免得一次半途失败的下载
+  让列表拿一页它随即又丢掉的内容去描述这篇帖子。
+- **收藏列表每次加载时**，把这一趟接口**确实**给了的字段存下来。
 
-因此离线相关的一切都从 `OfflineLibrary` 取值，它有一个 `isAvailable`：
-为 false 时状态条、每行的下载态列、「全部下载」胶囊、离线管理入口整块不画，
-收藏页就是一个干净的列表 + 筛选 + 多选。引擎落地后把实现换掉，UI 一行不用改。
+读的时候站点的答案永远优先，本地只填空。所有值都是站点在别处说过的，没有一个是推出来的。
+
+一处没解决：`OfflineLibrary.noteReplyCounts` 只收站点这一趟给的回复数。接口不给数，
+「离线版落后 N 条回复」就一直安静——宁可不说，不拿本地存的旧数字冒充「站点现在说的」。
+
+### 离线下载引擎（后补，已实现）
+
+画板 note 里「App 增强」那一整段现在是真的：下载队列与进度、正文与图片落盘、落后回复的增量同步、
+占用统计、保留期限的清理任务、仅 Wi-Fi 条件。实现在 `data/offline/`，落盘在 Room 的三张新表
+（`offline_threads` / `offline_comments` / `offline_images`，schema v11）。
+
+几处关键选择：
+
+1. **不复用 `post_details`。** 那是个窗口缓存：`saveThreadPage(replacesWindow = true)` 会把窗口以外
+   的页全删掉，而「在线打开一篇已下载的帖子」正好会触发它。给那些行加一个 pin 位，等于许一个下次
+   刷新就会毁约的诺。所以离线内容自己三张表，只由下载引擎写、只由用户/保留期限/清空删。
+
+2. **队列在 Room 里，不在内存里。** WorkManager 跑的是「把队列排干」这件事，进程被杀、Wi-Fi 明天才
+   来都不丢东西；丢的只是时机。`nextQueued` 把 `DOWNLOADING` 也算进去，就是为了让被系统掐掉的那一
+   篇下次能被重新捡起来。
+
+3. **离线阅读不需要详情页知道任何事。** `OfflineFirstPostRepository.loadThreadPage` 在请求失败且
+   失败原因是「连不上站点」时，从 `OfflineThreadReader` 取同一页，按**下载当时的时间戳**写进
+   `post_details`。写 now 会让缓存把上周的页当成刚拉的，刷新就此不会发生。站点明确拒绝
+   （未登录、等级不够、帖子没了）不走这条路——那是回答，不是连不上。
+
+4. **图片按 URL 的 SHA-256 命名，存 `filesDir/offline/images`。** 内容寻址的是 *URL* 而不是字节，
+   因为 Coil 的拦截器要在每一次画图片时同步回答「这张有没有」，一次数据库往返不能待在那个位置。
+   拦截器排在流量策略拦截器**前面**：已经在本机的图片没有流量可省，「仅 Wi-Fi 加载图片」不该让
+   专门下下来在路上看的帖子开天窗。两篇帖子引同一张图共用一个文件，`offline_images` 各存一行，
+   所以体积统计按 *文件* 去重（`SELECT DISTINCT fileName, bytes`），删帖只在没人再引用时删文件。
+
+5. **正文体积用 SQL 量，不累加。** `LENGTH(CAST(content AS BLOB))`——`LENGTH` 对 TEXT 数的是字符，
+   中文帖子会按实际占用的三分之一记账。不累加是因为增量同步会重写最后一页，加法会把那页记两遍。
+
+6. **「离线版落后 N 条回复」必须被告知。** 存下来的副本知道自己有几条回复，完全不知道站点后来多了
+   几条。收藏列表每次加载时手上正好两个数都有，所以由它调 `noteReplyCounts` 递过去，而不是让引擎
+   再发一轮请求去问 App 刚拿到的东西。
+
+7. **翻页之间有 400ms 间隔。** 一次排干十几篇收藏就是上百个请求，这是全 App 唯一一处会用站点回答
+   的最快速度连续要页面的地方。没人在看这个过程，间隔不花任何人的时间。
+
+8. **剩余空间读到 0 当作「读不出来」。** `StatFs` 对一个它建模不了的路径就返回 0，和真的满了分不
+   出来。于是不猜，让写入本身当裁判——它本来就得是裁判，检查和写入之间没法预留空间。
+
+`OfflineLibrary.isAvailable` 保留：它仍然是 UI 唯一的分支点，画板上那套「引擎不在时整块不画」的
+行为一行没改。删掉的是 `UnavailableOfflineLibrary`，接完之后没有任何地方再引用它。
+
+### 仍未做的部分
+
+- 收藏接口的真实字段名仍然没抓过。上一节那套是本地记忆，能补上 App 见过的帖子；
+  一篇在网页端收藏、在 App 里既没打开过也没下载过的帖子，行里依然只有标题。
+- 「离线版落后 N 条回复」依赖收藏接口给回复数，接口不给就一直安静。
+- 详情页没有「你正在看离线副本」的提示。画板没有这个元素，本次也不自己加。
 
 ## i1 验收对照
 

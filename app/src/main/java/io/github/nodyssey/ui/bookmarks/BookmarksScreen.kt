@@ -126,8 +126,8 @@ fun BookmarksRoute(
  * two is the top bar, the leading edge of each row and what floats at the bottom; the list itself is
  * the same list, which is why exiting multi-select does not cost a scroll position.
  *
- * Everything offline is behind [BookmarksUiState.offlineAvailable] — see `OfflineLibrary` for why
- * that is currently false and what it takes to make it true.
+ * Everything offline is behind [BookmarksUiState.offlineAvailable], which is what a build without a
+ * download engine behind it reads as — see `OfflineLibrary`.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

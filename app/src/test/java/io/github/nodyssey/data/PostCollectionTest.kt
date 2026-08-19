@@ -2,6 +2,7 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.nodyssey.data.local.toEntity
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.flow.first
@@ -45,6 +46,7 @@ class PostCollectionTest {
             remote,
             clock,
             collections = PostCollectionWriter(api),
+            collectedMeta = RoomCollectedPostMetaStore(database.collectedPostMetaDao(), clock),
         )
 
     @Test
@@ -185,6 +187,63 @@ class PostCollectionTest {
             assertEquals(true, thread.collected)
             assertEquals(7, thread.collectionCount)
         }
+
+    /**
+     * Collecting is the last moment the app is holding these facts.
+     *
+     * `list-collection` will not repeat the board, the author or the reply count, and the read mark
+     * that carries some of them is trimmed by 浏览历史保留条数 — so if the star does not write them
+     * down now, 收藏 has nothing but a headline to draw with for the life of the collection.
+     */
+    @Test
+    fun `collecting writes down what this device knows about the thread`() =
+        runTest {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource
+                    .detail(postId, page)
+                    .copy(
+                        body =
+                        FakePostRemoteDataSource
+                            .content("the opening post")
+                            .copy(authorName = "原作者", createdAtText = "3 天前"),
+                    )
+            }
+            val repository = repository(api("""{"success":true,"collected":true}"""))
+            repository.refreshThread(postId = 42, page = 1)
+            database.feedDao().upsertPosts(
+                listOf(
+                    FakePostRemoteDataSource
+                        .summary("daily", 1)
+                        .copy(postId = 42, categoryTitle = "日常", categorySlug = "daily", commentCount = 12)
+                        .toEntity(clock.nowMillis),
+                ),
+            )
+
+            repository.setCollected(postId = 42, collected = true)
+
+            val known = requireNotNull(store().observe().first()[42L])
+            assertEquals("日常", known.categoryTitle)
+            assertEquals("daily", known.categorySlug)
+            assertEquals("原作者", known.authorName)
+            assertEquals(12, known.commentCount)
+            assertEquals("3 天前", known.createdAtText)
+        }
+
+    /** Un-collecting is not new information about the thread, and must not blank what is known. */
+    @Test
+    fun `un-collecting leaves what is known alone`() =
+        runTest {
+            val repository = repository(api("""{"success":true,"collected":true}"""))
+            repository.refreshThread(postId = 42, page = 1)
+            repository.setCollected(postId = 42, collected = true)
+
+            val undo = repository(api("""{"success":true,"collected":false}"""))
+            undo.setCollected(postId = 42, collected = false)
+
+            assertEquals("thread 42", store().observe().first()[42L]?.title)
+        }
+
+    private fun store() = RoomCollectedPostMetaStore(database.collectedPostMetaDao(), clock)
 
     private fun api(answer: String) = FakeCollectionJsonApi(answer)
 }

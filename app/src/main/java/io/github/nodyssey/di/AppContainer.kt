@@ -18,6 +18,7 @@ import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.CoilImageCaches
+import io.github.nodyssey.data.CollectedPostMetaStore
 import io.github.nodyssey.data.CommunityRepository
 import io.github.nodyssey.data.CreditRepository
 import io.github.nodyssey.data.DefaultAppCacheStore
@@ -40,17 +41,18 @@ import io.github.nodyssey.data.NetworkVoteRepository
 import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.OfflineFirstPostRepository
 import io.github.nodyssey.data.OfflineLibrary
+import io.github.nodyssey.data.OfflineThreadReader
 import io.github.nodyssey.data.PostCollectionWriter
 import io.github.nodyssey.data.PostReactionWriter
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.ReadingPositionStore
+import io.github.nodyssey.data.RoomCollectedPostMetaStore
 import io.github.nodyssey.data.RoomReadingPositionStore
 import io.github.nodyssey.data.RulingRepository
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.data.TermsRepository
-import io.github.nodyssey.data.UnavailableOfflineLibrary
 import io.github.nodyssey.data.UserSpaceRepository
 import io.github.nodyssey.data.VoteRepository
 import io.github.nodyssey.data.account.AccountSettingsRepository
@@ -66,6 +68,11 @@ import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
 import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
+import io.github.nodyssey.data.offline.OfflineFileStore
+import io.github.nodyssey.data.offline.OfflineSettingsStore
+import io.github.nodyssey.data.offline.OkHttpOfflineImageSource
+import io.github.nodyssey.data.offline.RoomOfflineLibrary
+import io.github.nodyssey.data.offline.WorkManagerOfflineScheduler
 import io.github.nodyssey.data.proxy.DataStoreProxySettings
 import io.github.nodyssey.data.proxy.NetworkProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
@@ -140,13 +147,23 @@ interface AppContainer {
     val userSpaceRepository: UserSpaceRepository
 
     /**
-     * 离线阅读 — what 收藏 draws its download states from.
+     * 离线阅读 — what 收藏 draws its download states from, and what the download workers drive.
      *
-     * The engine behind it does not exist yet, so what is bound here reports
-     * [OfflineLibrary.isAvailable] false and the screen draws no offline chrome at all. See
-     * [OfflineLibrary] for why this is a contract rather than the `post_details` cache.
+     * Bound to `RoomOfflineLibrary`, which also implements `OfflineThreadReader` (the post cache's
+     * fallback when the site cannot be reached) and `OfflineDownloads` (what WorkManager calls).
+     * Both are found by casting off this one property rather than adding two more: the three are one
+     * object with three audiences, and only this one belongs on a screen's graph.
      */
     val offlineLibrary: OfflineLibrary
+
+    /**
+     * What this device remembers about the threads this account has collected.
+     *
+     * Its own dependency rather than a corner of [postRepository] because three unrelated things
+     * write into it — the star, the 收藏 list, an offline download — and only one of them is that
+     * repository. See [CollectedPostMetaStore] for why the app has to remember any of this.
+     */
+    val collectedPostMetaStore: CollectedPostMetaStore
     val assetsRepository: AssetsRepository
     val creditRepository: CreditRepository
     val stardustRepository: StardustRepository
@@ -298,7 +315,15 @@ class DefaultAppContainer(
             settingsRepository.showBlockedContent,
             PostCollectionWriter(jsonClient),
             settingsRepository.settings.map { it.readHistoryLimit }.distinctUntilChanged(),
+            // The downloaded copy, for the reads the network cannot serve. Handed over as the read
+            // interface only: the repository must not be able to start a download.
+            offlineLibrary as? OfflineThreadReader,
+            collectedPostMetaStore,
         )
+    }
+
+    override val collectedPostMetaStore: CollectedPostMetaStore by lazy {
+        RoomCollectedPostMetaStore(database.collectedPostMetaDao(), clock)
     }
 
     override val readingPositionStore: ReadingPositionStore by lazy {
@@ -363,7 +388,22 @@ class DefaultAppContainer(
         NetworkUserSpaceRepository(jsonClient, dispatchers)
     }
 
-    override val offlineLibrary: OfflineLibrary = UnavailableOfflineLibrary
+    override val offlineLibrary: OfflineLibrary by lazy {
+        RoomOfflineLibrary(
+            dao = database.offlineDao(),
+            remote = remotePosts,
+            files = OfflineFileStore.of(appContext.filesDir),
+            // The app's own client, so a stored picture arrives under the same cookies and headers
+            // as one on screen — see [OkHttpOfflineImageSource]. Lazily, because building it starts
+            // the proxy machinery and a graph that never downloads anything should not pay for that.
+            images = OkHttpOfflineImageSource({ okHttpClient }, dispatchers),
+            collectedMeta = collectedPostMetaStore,
+            settingsStore = OfflineSettingsStore(appContext.offlineDataStore),
+            scheduler = WorkManagerOfflineScheduler(appContext),
+            clock = clock,
+            dispatchers = dispatchers,
+        )
+    }
 
     override val assetsRepository: AssetsRepository by lazy {
         NetworkAssetsRepository(profileRepository, creditRepository, jsonClient, dispatchers, clock)
