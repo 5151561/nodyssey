@@ -32,6 +32,10 @@ dependencies {
     // stops here — [ImageLoadFailure] is what leaves, and a consumer matches on that.
     implementation(libs.coil.network.core)
 
+    // `api`, not `implementation`: [CompatSvgParser] *is* a `coil3.svg.Svg.Parser`, so the module
+    // that hands one to `SvgDecoder.Factory` needs that interface on its own classpath.
+    api(libs.coil.svg)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 
