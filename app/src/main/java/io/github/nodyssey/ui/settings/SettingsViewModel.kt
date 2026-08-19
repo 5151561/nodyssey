@@ -9,11 +9,9 @@ import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.session.SessionRepository
-import io.github.nodyssey.data.settings.ColorSource
 import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
-import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.di.AppContainer
@@ -68,18 +66,6 @@ class SettingsViewModel(
 
     init {
         measureCache()
-    }
-
-    fun setThemeMode(value: ThemeMode) {
-        viewModelScope.launch { settings.setThemeMode(value) }
-    }
-
-    fun setColorSource(value: ColorSource) {
-        viewModelScope.launch { settings.setColorSource(value) }
-    }
-
-    fun setSeedColor(argb: Int) {
-        viewModelScope.launch { settings.setSeedColor(argb) }
     }
 
     fun setFontScale(value: Float) {

@@ -12,12 +12,10 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
-import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertTrue
@@ -27,7 +25,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import kotlin.math.abs
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -35,75 +32,6 @@ import kotlin.math.abs
 class SettingsScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
-
-    @Test
-    fun `theme choice exposes the new selected state`() {
-        composeRule.setContent {
-            var mode by remember { mutableStateOf(ThemeMode.SYSTEM) }
-            PlazaTheme {
-                SettingsScreen(
-                    state = SettingsUiState(UserSettings(themeMode = mode)),
-                    onBack = {},
-                    onThemeModeChange = { mode = it },
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
-                    onFontScaleChange = {},
-                    onStickerUniformSizeChange = {},
-                    onStickerSizeChange = {},
-                    onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
-                    onReportFormatChange = {},
-                    onHomePageBarChange = {},
-                    onUpdateCheckOnLaunchChange = {},
-                    onUpdateDevChannelChange = {},
-                    onClearCache = {},
-                    appLinkHandlingEnabled = null,
-                    onOpenAppLinkSettings = {},
-                )
-            }
-        }
-
-        composeRule.onNodeWithText("跟随系统").assertIsSelected()
-        composeRule.onNodeWithText("深色").performClick()
-        composeRule.onNodeWithText("深色").assertIsSelected()
-    }
-
-    @Test
-    fun `theme choices fill the row with equal segments`() {
-        composeRule.setContent {
-            PlazaTheme {
-                SettingsScreen(
-                    state = SettingsUiState(UserSettings()),
-                    onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
-                    onFontScaleChange = {},
-                    onStickerUniformSizeChange = {},
-                    onStickerSizeChange = {},
-                    onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
-                    onReportFormatChange = {},
-                    onHomePageBarChange = {},
-                    onUpdateCheckOnLaunchChange = {},
-                    onUpdateDevChannelChange = {},
-                    onClearCache = {},
-                    appLinkHandlingEnabled = null,
-                    onOpenAppLinkSettings = {},
-                )
-            }
-        }
-
-        val bounds =
-            listOf("跟随系统", "浅色", "深色").map { label ->
-                composeRule.onNodeWithText(label).fetchSemanticsNode().boundsInRoot
-            }
-        val rootWidth = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.width
-        val groupWidth = bounds.last().right - bounds.first().left
-
-        assertTrue(groupWidth > rootWidth * 0.7f)
-        assertTrue(bounds.zipWithNext().all { (left, right) -> abs(left.width - right.width) <= 2f })
-    }
 
     /**
      * 表情统一缩限 is what the slider sizes, so switching it off takes the slider with it — a size
@@ -118,9 +46,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(stickerUniformSize = uniform)),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = { uniform = it },
                     onStickerSizeChange = {},
@@ -150,9 +76,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings()),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -180,9 +104,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(imagesOnWifiOnly = wifiOnly)),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -215,9 +137,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(externalLinkTarget = target)),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -249,9 +169,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(reportFormat = format)),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -282,9 +200,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(homePageBar = enabled)),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -317,9 +233,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(fontScale = 1f)),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = { appliedScale = it },
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -357,9 +271,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(UserSettings(fontScale = 1f)),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = { appliedScale = it },
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -392,9 +304,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(settings),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -428,9 +338,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(versionName = "9.9.9"),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -457,9 +365,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(versionName = "9.9.9", updateVersionName = "10.0.0"),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -488,9 +394,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     state = SettingsUiState(imageHostConnected = false),
                     onBack = {},
-                    onThemeModeChange = {},
-                    onColorSourceChange = {},
-                    onSeedColorChange = {},
+                    onOpenTheme = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},

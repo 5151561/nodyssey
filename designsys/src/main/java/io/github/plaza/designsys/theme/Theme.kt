@@ -38,33 +38,36 @@ val LocalPlazaFontScale = staticCompositionLocalOf { 1f }
 @Composable
 fun PlazaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // The brand palette is the default and the point: the app should be recognisable from a
-    // screenshot posted back to the forum. The wallpaper and a hand-picked seed stay available,
-    // but opt-in.
-    colorSource: PlazaColorSource = PlazaColorSource.BRAND,
+    // Every scheme in the app is now generated from a seed — the six presets, the wallpaper
+    // candidates and a hand-picked colour alike — so this one parameter is the whole colour input.
+    // The default is 石墨青, which is what the app should be recognisable as from a screenshot posted
+    // back to the forum.
     seedColor: Color = PlazaDefaultSeed,
+    paletteStyle: PlazaPaletteStyle = PlazaPaletteStyle.SOFT,
+    /**
+     * 使用系统调色板 — take the OS's own Monet scheme rather than generating one.
+     *
+     * Ignored below API 31, where there is no such palette to take. The stored setting is left
+     * alone: it is the reader's answer, not this phone's capability.
+     */
+    useSystemPalette: Boolean = false,
     fontScale: Float = 1f,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    // Below API 31 there is no wallpaper palette to read, so that source falls through to the brand
-    // one. The stored setting is left alone: it is the reader's answer, not this phone's capability.
-    val useWallpaper =
-        colorSource == PlazaColorSource.WALLPAPER && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val systemPalette = useSystemPalette && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val colorScheme =
         when {
-            useWallpaper && darkTheme -> dynamicDarkColorScheme(context)
+            systemPalette && darkTheme -> dynamicDarkColorScheme(context)
 
-            useWallpaper -> dynamicLightColorScheme(context)
+            systemPalette -> dynamicLightColorScheme(context)
 
             // Remembered because generating one is real work — an HCT solve per role — and it would
             // otherwise rerun on every recomposition of the whole app.
-            colorSource == PlazaColorSource.SEED ->
-                remember(seedColor, darkTheme) { plazaSeedColorScheme(seedColor, darkTheme) }
-
-            darkTheme -> PlazaDarkColorScheme
-
-            else -> PlazaLightColorScheme
+            else ->
+                remember(seedColor, darkTheme, paletteStyle) {
+                    plazaSeedColorScheme(seedColor, darkTheme, paletteStyle)
+                }
         }
 
     // The amber board-tag pair has no Material role, so it rides alongside the scheme rather than

@@ -275,25 +275,71 @@
     <string name="settings_theme_system">跟随系统</string>
     <string name="settings_theme_light">浅色</string>
     <string name="settings_theme_dark">深色</string>
-    <string name="settings_color_source">配色</string>
-    <string name="settings_color_source_hint">自选的颜色会按 Material 3 的规则展开成整套配色</string>
-    <string name="settings_color_source_brand">品牌色</string>
-    <string name="settings_color_source_wallpaper">壁纸色</string>
-    <string name="settings_color_source_seed">自选</string>
-    <string name="settings_seed_custom">自定义颜色</string>
-    <string name="settings_seed_hue">色相</string>
-    <string name="settings_seed_chroma">鲜艳度</string>
-    <string name="settings_seed_hex">色值</string>
-    <string name="settings_seed_preview">预览</string>
-    <string name="settings_seed_teal">石墨青</string>
-    <string name="settings_seed_blue">海蓝</string>
-    <string name="settings_seed_violet">靛紫</string>
-    <string name="settings_seed_magenta">玫红</string>
-    <string name="settings_seed_red">砖红</string>
-    <string name="settings_seed_amber">琥珀</string>
-    <string name="settings_seed_olive">苔绿</string>
-    <string name="settings_seed_green">松绿</string>
-    <string name="settings_seed_graphite">石墨灰</string>
+    <string name="settings_theme_entry_hint">明暗、配色来源与色彩风格</string>
+    <string name="settings_theme_mode">明暗</string>
+
+    <!-- 主题 · 配色来源 -->
+    <string name="settings_color_source">配色来源</string>
+    <string name="settings_color_source_preset">预设</string>
+    <string name="settings_color_source_wallpaper">动态取色</string>
+    <string name="settings_color_source_wallpaper_value">跟随壁纸</string>
+    <string name="settings_color_source_custom">自定义</string>
+    <string name="settings_color_source_memory_hint">三个来源各自记住上次的值：切回「自定义」直接沿用 %1$s，不用重新调色。</string>
+
+    <!-- 主题 · 预设与我的主题 -->
+    <string name="settings_presets">预设</string>
+    <string name="settings_preset_teal">石墨青</string>
+    <string name="settings_preset_warm_graphite">暖石墨</string>
+    <string name="settings_preset_indigo">靛蓝</string>
+    <string name="settings_preset_moss">苔绿</string>
+    <string name="settings_preset_rose">玫紫</string>
+    <string name="settings_preset_sunset">落日橙</string>
+    <string name="settings_my_themes">我的主题</string>
+    <string name="settings_my_themes_hint">长按已保存主题可重命名或删除</string>
+    <string name="action_new">新建</string>
+    <string name="action_rename">重命名</string>
+    <string name="action_delete">删除</string>
+
+    <!-- 主题 · 色彩风格 -->
+    <string name="settings_palette_style">色彩风格</string>
+    <string name="settings_palette_style_soft">柔和</string>
+    <string name="settings_palette_style_vibrant">鲜艳</string>
+    <string name="settings_palette_style_expressive">表现力</string>
+    <string name="settings_palette_style_neutral">中性</string>
+    <string name="settings_palette_style_monochrome">单色</string>
+
+    <!-- 主题 · 预览卡 -->
+    <string name="settings_theme_preview">预览</string>
+    <string name="settings_theme_preview_board">日常</string>
+    <string name="settings_theme_preview_meta">nssk · 3 小时前</string>
+    <string name="settings_theme_preview_title">终于把签到脚本改成协程版了</string>
+    <string name="settings_theme_preview_primary">主按钮</string>
+    <string name="settings_theme_preview_secondary">次按钮</string>
+    <string name="settings_theme_preview_accent">强调</string>
+
+    <!-- 主题 · 自定义种子色 -->
+    <string name="settings_seed_sheet_title">自定义种子色</string>
+    <string name="settings_seed_hex">十六进制</string>
+    <string name="settings_seed_name">名称（可选）</string>
+    <string name="settings_seed_apply_once">仅本次应用</string>
+    <string name="settings_seed_save">保存为我的主题</string>
+    <string name="settings_seed_pick_from_image">从图片取色</string>
+    <string name="settings_seed_pick_hint">点图片上任意位置取色</string>
+    <string name="settings_seed_pick_loading">正在读取图片…</string>
+
+    <!-- 主题 · 动态取色 -->
+    <string name="settings_dynamic_color">动态取色</string>
+    <string name="settings_wallpaper_candidates">从壁纸提取到 %1$d 个候选色</string>
+    <string name="settings_wallpaper_candidate_label">候选色 %1$d</string>
+    <string name="settings_wallpaper_candidates_hint">按占比排序，默认取第一个。点任意色即时预览，不用退出页面。</string>
+    <string name="settings_wallpaper_palette">生成的调色板</string>
+    <string name="settings_wallpaper_system_palette">使用系统调色板</string>
+    <string name="settings_wallpaper_system_palette_hint">本机 Android %1$s · 直接用系统 Monet 色板；关掉则由 App 从上面的候选色生成</string>
+    <string name="settings_wallpaper_system_palette_unavailable">本机 Android %1$s 没有系统调色板，配色由 App 从候选色生成</string>
+    <string name="settings_wallpaper_auto_update">壁纸变化时自动更新</string>
+    <string name="settings_wallpaper_auto_update_hint">换壁纸后下次启动重新取色</string>
+    <string name="settings_wallpaper_unreadable">读不到壁纸</string>
+    <string name="settings_wallpaper_unreadable_hint">系统没有交出壁纸配色，已沿用上次的种子色 %1$s。</string>
     <string name="settings_body_size">字号</string>
     <string name="settings_body_size_value">%1$dsp</string>
     <string name="settings_sticker_uniform">表情统一缩限</string>

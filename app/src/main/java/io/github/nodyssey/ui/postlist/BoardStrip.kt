@@ -14,8 +14,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,9 +63,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.LookaheadScope
@@ -82,6 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.github.nodyssey.R
 import io.github.nodyssey.data.Board
+import io.github.nodyssey.ui.common.longPressToEdit
 import io.github.plaza.designsys.theme.Spacing
 import kotlinx.coroutines.launch
 
@@ -749,39 +746,6 @@ internal fun List<BoardSlot>.reorderedFor(
     if (to < 0) return null
     return toMutableList().apply { add(to, removeAt(from)) }
 }
-
-/**
- * Fires once when a press is held without moving.
- *
- * Hand-rolled rather than `combinedClickable` because this sits *above* the chips: they consume the
- * pointer down for their own ripple, so anything watching on the main pass never sees a gesture
- * start. Reading the initial pass gets the press before the chip claims it, and watching for slop
- * means a scroll or a drag still cancels it.
- */
-private fun Modifier.longPressToEdit(onLongPress: () -> Unit): Modifier =
-    pointerInput(Unit) {
-        awaitEachGesture {
-            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            val heldStill =
-                try {
-                    withTimeout(viewConfiguration.longPressTimeoutMillis) {
-                        var travelled = Offset.Zero
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!change.pressed) break
-                            travelled += change.positionChangeIgnoreConsumed()
-                            if (travelled.getDistance() > viewConfiguration.touchSlop) break
-                        }
-                    }
-                    // Lifted, or moved far enough to be a scroll: either way, not a long press.
-                    false
-                } catch (_: PointerEventTimeoutCancellationException) {
-                    true
-                }
-            if (heldStill) onLongPress()
-        }
-    }
 
 /** 综合 has no slug, and a list key has to be something. */
 internal const val FRONT_PAGE_KEY = "front"

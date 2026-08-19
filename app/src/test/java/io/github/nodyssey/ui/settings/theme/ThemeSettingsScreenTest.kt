@@ -1,0 +1,164 @@
+package io.github.nodyssey.ui.settings.theme
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import io.github.nodyssey.data.settings.ColorSource
+import io.github.nodyssey.data.settings.PaletteStyle
+import io.github.nodyssey.data.settings.SavedTheme
+import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.settings.ThemeMode
+import io.github.nodyssey.data.settings.UserSettings
+import io.github.plaza.designsys.theme.PlazaTheme
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import kotlin.math.abs
+
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "w360dp-h800dp")
+class ThemeSettingsScreenTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @Test
+    fun `theme choice exposes the new selected state`() {
+        var mode = ThemeMode.SYSTEM
+        setScreen(onThemeModeChange = { mode = it })
+
+        composeRule.onNodeWithText("跟随系统").assertIsSelected()
+        composeRule.onNodeWithText("深色").performClick()
+        composeRule.onNodeWithText("深色").assertIsSelected()
+        assertEquals(ThemeMode.DARK, mode)
+    }
+
+    @Test
+    fun `theme choices fill the row with equal segments`() {
+        setScreen()
+
+        val bounds =
+            listOf("跟随系统", "浅色", "深色").map { label ->
+                composeRule.onNodeWithText(label).fetchSemanticsNode().boundsInRoot
+            }
+        val rootWidth = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.width
+        val groupWidth = bounds.last().right - bounds.first().left
+
+        assertTrue(groupWidth > rootWidth * 0.7f)
+        assertTrue(bounds.zipWithNext().all { (left, right) -> abs(left.width - right.width) <= 2f })
+    }
+
+    /**
+     * The tile carries the value it would restore, which is what makes the line under it true.
+     *
+     * Under 自定义 that value is the stored seed rather than the preset's — the whole point of three
+     * separate fields — so a build that collapsed them back into one would fail here.
+     */
+    @Test
+    fun `each source tile names the value it would put back`() {
+        setScreen(
+            settings =
+            UserSettings(
+                colorSource = ColorSource.PRESET,
+                presetSeed = 0xFF3F6B4E.toInt(),
+                seedColor = 0xFF2F6D8C.toInt(),
+            ),
+        )
+
+        // 预设 names the section as well as the tile, so the tile is the node that carries both it
+        // and the preset's own name.
+        composeRule.onNode(hasText("预设").and(hasText("苔绿"))).assertIsSelected()
+        composeRule.onNode(hasText("自定义").and(hasText("#2F6D8C"))).assertExists()
+    }
+
+    /**
+     * Tapping a preset is also tapping 预设.
+     *
+     * A grid that only changed the stored preset while the app stayed on 自定义 would be six controls
+     * that do nothing until the reader finds the tile above them.
+     */
+    @Test
+    fun `picking a preset selects it and switches the source`() {
+        var picked: Int? = null
+        setScreen(
+            settings = UserSettings(colorSource = ColorSource.CUSTOM),
+            onPresetSelected = { picked = it },
+        )
+
+        composeRule.onNodeWithText("落日橙").performScrollTo().performClick()
+        assertEquals(0xFFA05A32.toInt(), picked)
+    }
+
+    /** 我的主题 selects a saved seed; the same tap must not also save it again. */
+    @Test
+    fun `a saved theme chip applies its colour without resaving it`() {
+        var applied: Int? = null
+        var saved: Pair<String, Int>? = null
+        setScreen(
+            settings =
+            UserSettings(savedThemes = listOf(SavedTheme("海雾", 0xFF2F6D8C.toInt()))),
+            onCustomSeedSelected = { applied = it },
+            onSaveTheme = { name, argb -> saved = name to argb },
+        )
+
+        composeRule.onNodeWithText("海雾").performScrollTo().performClick()
+        assertEquals(0xFF2F6D8C.toInt(), applied)
+        assertNull(saved)
+    }
+
+    @Test
+    fun `the palette style row offers all five and reports the tap`() {
+        var style = UserSettings().paletteStyle
+        setScreen(onPaletteStyleChange = { style = it })
+
+        listOf("柔和", "鲜艳", "表现力", "中性", "单色").forEach {
+            composeRule.onNodeWithText(it).performScrollTo().assertExists()
+        }
+        composeRule.onNodeWithText("单色").performScrollTo().performClick()
+        assertEquals(PaletteStyle.MONOCHROME, style)
+    }
+
+    private fun setScreen(
+        settings: UserSettings = UserSettings(seedColor = SettingsRepository.DEFAULT_SEED_COLOR),
+        onThemeModeChange: (ThemeMode) -> Unit = {},
+        onPresetSelected: (Int) -> Unit = {},
+        onCustomSeedSelected: (Int) -> Unit = {},
+        onPaletteStyleChange: (PaletteStyle) -> Unit = {},
+        onSaveTheme: (String, Int) -> Unit = { _, _ -> },
+    ) {
+        composeRule.setContent {
+            var mode by remember { mutableStateOf(settings.themeMode) }
+            PlazaTheme {
+                ThemeSettingsScreen(
+                    settings = settings.copy(themeMode = mode),
+                    onBack = {},
+                    onOpenDynamicColor = {},
+                    onThemeModeChange = {
+                        mode = it
+                        onThemeModeChange(it)
+                    },
+                    onColorSourceChange = {},
+                    onPresetSelected = onPresetSelected,
+                    onCustomSeedSelected = onCustomSeedSelected,
+                    onPaletteStyleChange = onPaletteStyleChange,
+                    onSaveTheme = onSaveTheme,
+                    onDeleteTheme = {},
+                )
+            }
+        }
+    }
+}

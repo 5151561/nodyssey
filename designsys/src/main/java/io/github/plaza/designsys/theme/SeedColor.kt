@@ -9,24 +9,32 @@ import androidx.compose.ui.graphics.toArgb
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.hct.Hct
 import com.materialkolor.scheme.DynamicScheme
+import com.materialkolor.scheme.SchemeExpressive
+import com.materialkolor.scheme.SchemeMonochrome
+import com.materialkolor.scheme.SchemeNeutral
 import com.materialkolor.scheme.SchemeTonalSpot
+import com.materialkolor.scheme.SchemeVibrant
 
 /**
- * Where the app's colours come from.
+ * How far a scheme is allowed to travel from its seed.
  *
- * The three are mutually exclusive by nature — a scheme has exactly one origin — so they are one
- * choice rather than a pile of switches. [WALLPAPER] falls back to [BRAND] below API 31, which is
- * decided in [PlazaTheme] rather than here: the setting stores what the reader asked for, and a
- * phone that cannot honour it should not silently rewrite their answer.
+ * These are the five Material variants the algorithm ships, named for what they do to the reader's
+ * colour rather than for the class behind them: [SOFT] is the one Android itself runs on a
+ * wallpaper, and the default here for the same reason — it is the only one that produces a scheme
+ * nobody has to think about. The other four exist because a seed is a request, and a reader who
+ * picked a red wants some say in whether the app comes back red or merely warm.
+ *
+ * The four that are not [SOFT] rotate or crush the hue on purpose. [MONOCHROME] discards it
+ * entirely; that is the point of it, and not a seed that failed to reach the scheme.
  */
-enum class PlazaColorSource { BRAND, WALLPAPER, SEED }
+enum class PlazaPaletteStyle { SOFT, VIBRANT, EXPRESSIVE, NEUTRAL, MONOCHROME }
 
 /**
- * The seed a fresh install starts [PlazaColorSource.SEED] on: 石墨青's own `primary`.
+ * The seed a fresh install starts on: 石墨青, the colour the app has always been.
  *
- * Picking the brand tone means switching from 品牌配色 to 自选颜色 without touching anything else is a
- * near-no-op rather than a jump to some unrelated hue — the generated scheme is not identical to the
- * hand-tuned one, but it is recognisably the same app while the reader goes looking for their colour.
+ * It is a seed rather than a hand-tuned palette because every one of the six presets is, and a first
+ * preset that answered to neither 色彩风格 nor the preview card would have been the one entry in the
+ * grid the rest of the screen could not describe.
  */
 val PlazaDefaultSeed = Color(0xFF35606E)
 
@@ -61,13 +69,13 @@ fun Color.toPlazaSeedHct(): PlazaSeedHct =
  * Expands one seed colour into a full Material 3 scheme.
  *
  * This is the same algorithm the system runs on the wallpaper — HCT, five tonal palettes, then a
- * contrast-aware tone per role — so 自选颜色 and 壁纸取色 produce schemes of the same character
- * instead of two different-looking themes sharing a settings screen.
+ * contrast-aware tone per role — so 自定义 and 动态取色 produce schemes of the same character instead
+ * of two different-looking themes sharing a settings screen.
  *
- * `TONAL_SPOT` and `SPEC_2021` are pinned rather than left to the library's defaults. TonalSpot is
- * the variant Android itself uses, which is what makes the two sources match; the 2021 spec is what
- * produced every wallpaper palette on every phone this app runs on, so pinning it keeps the match
- * true. A newer default arriving in a library bump must not silently restyle everyone's app.
+ * `SPEC_2021` is pinned rather than left to the library's default: it is what produced every
+ * wallpaper palette on every phone this app runs on, so pinning it keeps 动态取色 matching the system
+ * it borrows from. A newer default arriving in a library bump must not silently restyle everyone's
+ * app.
  *
  * Only the seed's hue and chroma reach the palettes — its tone does not — so #35606E and a lighter
  * tint of the same teal land on the same scheme, give or take the step that rounding a colour to
@@ -75,15 +83,22 @@ fun Color.toPlazaSeedHct(): PlazaSeedHct =
  * colour family, and the scheme decides the lightness each role needs. The exception is a seed close
  * to black or white, where the chroma it claims does not fit in sRGB and gets clipped on the way in.
  */
-fun plazaSeedColorScheme(seed: Color, darkTheme: Boolean): ColorScheme {
+fun plazaSeedColorScheme(
+    seed: Color,
+    darkTheme: Boolean,
+    style: PlazaPaletteStyle = PlazaPaletteStyle.SOFT,
+): ColorScheme {
+    val source = Hct.fromInt(seed.toArgb())
+    val spec = ColorSpec.SpecVersion.SPEC_2021
+    val platform = DynamicScheme.Platform.PHONE
     val scheme =
-        SchemeTonalSpot(
-            sourceColorHct = Hct.fromInt(seed.toArgb()),
-            isDark = darkTheme,
-            contrastLevel = 0.0,
-            specVersion = ColorSpec.SpecVersion.SPEC_2021,
-            platform = DynamicScheme.Platform.PHONE,
-        )
+        when (style) {
+            PlazaPaletteStyle.SOFT -> SchemeTonalSpot(source, darkTheme, 0.0, spec, platform)
+            PlazaPaletteStyle.VIBRANT -> SchemeVibrant(source, darkTheme, 0.0, spec, platform)
+            PlazaPaletteStyle.EXPRESSIVE -> SchemeExpressive(source, darkTheme, 0.0, spec, platform)
+            PlazaPaletteStyle.NEUTRAL -> SchemeNeutral(source, darkTheme, 0.0, spec, platform)
+            PlazaPaletteStyle.MONOCHROME -> SchemeMonochrome(source, darkTheme, 0.0, spec, platform)
+        }
     return if (darkTheme) {
         darkColorScheme(
             primary = Color(scheme.primary),
