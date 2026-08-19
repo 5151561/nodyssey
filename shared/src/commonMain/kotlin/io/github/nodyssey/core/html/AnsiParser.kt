@@ -21,8 +21,13 @@ object AnsiParser {
 
     private const val CONTROL_CODE_ATTR = "data-ansicode"
 
-    /** Reassembles the escape-bearing source of a `<pre>`/`<code>` element. */
-    fun sourceOf(element: Element): String = buildString { appendSource(element) }
+    /**
+     * Reassembles the escape-bearing source of a `<pre>`/`<code>` element.
+     *
+     * `internal` for the reason [RichContentParser.parse] gives: the parameter is a Ksoup type, and
+     * Ksoup is an `implementation` dependency no consumer compiles against.
+     */
+    internal fun sourceOf(element: Element): String = buildString { appendSource(element) }
 
     private fun StringBuilder.appendSource(node: Node) {
         for (child in node.childNodes()) {

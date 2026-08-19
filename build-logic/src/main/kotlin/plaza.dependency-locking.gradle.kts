@@ -29,9 +29,9 @@ val lockedConfigurations =
         // configurations after targets and compilations instead.
         //
         // This list is the one that was measured rather than the one that looked right. `:shared`
-        // declares thirty-odd resolvable configurations — compiler plugin classpaths, commonizer
+        // declares eighty-odd resolvable configurations — compiler plugin classpaths, commonizer
         // classpaths, Swift export — and most of them produce no lock state at all, which under
-        // STRICT is a build failure rather than a no-op. These seven are what remain.
+        // STRICT is a build failure rather than a no-op. These nine are what remain.
         //
         // What ships to the Android consumers, and what its host tests execute:
         "androidCompileClasspath",
@@ -46,6 +46,13 @@ val lockedConfigurations =
         // and a Mac is the only machine that resolves these.
         "iosArm64CompileKlibraries",
         "macosArm64CompileKlibraries",
+        // …and what their tests compile against. Separate configurations from the two above, so
+        // locking only those left `macosArm64Test` resolving `kotlin("test")` and everything it drags
+        // in with no lock state at all — unlocked under STRICT, because STRICT only judges the
+        // configurations this set names. The Android side has had both halves since the beginning
+        // (`androidHostTest*` above); this is the same rule reaching the targets a Mac runs.
+        "iosArm64TestCompileKlibraries",
+        "macosArm64TestCompileKlibraries",
     )
 
 dependencyLocking {
@@ -58,8 +65,8 @@ dependencyLocking {
 // Named configurations rather than `lockAllConfigurations()`: AGP registers internal configurations
 // such as `androidApis` that are lockable but never produce lock state, and under STRICT every one of
 // those fails the build. Library modules add more of them — `debugApiElements` and friends — so the
-// named set matters more here than it did when only `:app` existed. These six are the ones whose
-// contents actually determine what ships and what the tests execute.
+// named set matters more here than it did when only `:app` existed. The ones named above are those
+// whose contents actually determine what ships and what the tests execute.
 configurations.configureEach {
     if (name in lockedConfigurations) {
         resolutionStrategy.activateDependencyLocking()
