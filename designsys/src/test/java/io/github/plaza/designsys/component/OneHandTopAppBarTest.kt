@@ -256,6 +256,39 @@ class OneHandAppBarScrollTest {
         assertEquals(0f, state.fraction, 0f)
     }
 
+    /**
+     * What a screen with pull-to-refresh buys by handing the pull over.
+     *
+     * Both want the same leftover downward drag out of the same `onPostScroll`, and the bar getting
+     * there first would put its whole travel — a third of the screen — in front of every refresh.
+     * Folding has to keep working: the bar still has to get out of the way on the way down.
+     */
+    @Test
+    fun `a bar that handed the pull over does not reopen`() {
+        val state = OneHandAppBarState(Float.NaN, 0f, reopenOnPull = false).apply { maxHeightPx = max }
+        state.nestedScrollConnection.onPreScroll(Offset(0f, -max), NestedScrollSource.UserInput)
+
+        val taken =
+            state.nestedScrollConnection.onPostScroll(
+                consumed = Offset.Zero,
+                available = Offset(0f, 60f),
+                source = NestedScrollSource.UserInput,
+            )
+
+        assertEquals(0f, taken.y, 0f)
+        assertEquals(0f, state.heightPx, 0f)
+    }
+
+    @Test
+    fun `a bar that handed the pull over still folds`() {
+        val state = OneHandAppBarState(Float.NaN, 0f, reopenOnPull = false).apply { maxHeightPx = max }
+
+        val taken = state.nestedScrollConnection.onPreScroll(Offset(0f, -50f), NestedScrollSource.UserInput)
+
+        assertEquals(-50f, taken.y, 0f)
+        assertEquals(max - 50f, state.heightPx, 0f)
+    }
+
     @Test
     fun `a rotation into a shorter window brings an open bar down with it`() {
         val state = state()

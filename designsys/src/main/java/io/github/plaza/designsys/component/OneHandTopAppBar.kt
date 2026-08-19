@@ -81,7 +81,7 @@ fun OneHandTopAppBar(
     state: OneHandAppBarState,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    navigationIcon: @Composable () -> Unit = {},
+    navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val density = LocalDensity.current
@@ -165,12 +165,17 @@ fun OneHandTopAppBar(
                     .padding(horizontal = ToolbarEdgePadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                navigationIcon()
+                navigationIcon?.invoke()
                 Column(
                     modifier =
                     Modifier
                         .weight(1f)
-                        .padding(start = ToolbarEdgePadding)
+                        // Material puts a title 16dp from the edge with no navigation icon and 56dp
+                        // with one, and the icon is a 48dp box sitting on the row's own 4dp inset.
+                        .padding(
+                            start =
+                            if (navigationIcon == null) TitleEdgePadding else ToolbarEdgePadding,
+                        )
                         .graphicsLayer { alpha = collapsedTitleAlpha(state.fraction) }
                         .then(
                             if (expandedTitleIsLive) Modifier.clearAndSetSemantics {} else Modifier,
@@ -207,7 +212,11 @@ fun OneHandTopAppBar(
  * scroll through the shared nested-scroll chain.
  */
 @Stable
-class OneHandAppBarState internal constructor(initialHeightPx: Float, initialContentOffset: Float) {
+class OneHandAppBarState internal constructor(
+    initialHeightPx: Float,
+    initialContentOffset: Float,
+    private val reopenOnPull: Boolean = true,
+) {
     /**
      * `NaN` until the first measurement, which is how "start expanded" is expressed: the bar opens
      * to whatever [maxHeightPx] turns out to be on this window, and that is not known until the
@@ -274,7 +283,10 @@ class OneHandAppBarState internal constructor(initialHeightPx: Float, initialCon
                 // where the page is already back at its top. Taking it here rather than in
                 // `onPreScroll` is what stops a scroll from reopening the bar while there is still
                 // page left to scroll back.
-                if (available.y <= 0f) return Offset.Zero
+                //
+                // It is also the one slot pull-to-refresh wants, so a screen that has one hands this
+                // over: see `reopenOnPull`.
+                if (!reopenOnPull || available.y <= 0f) return Offset.Zero
                 val before = heightPx
                 heightPx = before + available.y
                 return Offset(0f, heightPx - before)
@@ -304,10 +316,10 @@ class OneHandAppBarState internal constructor(initialHeightPx: Float, initialCon
     }
 
     internal companion object {
-        val Saver: Saver<OneHandAppBarState, *> =
+        fun saver(reopenOnPull: Boolean): Saver<OneHandAppBarState, *> =
             listSaver(
                 save = { listOf(it.heightPx, it.contentOffset) },
-                restore = { OneHandAppBarState(it[0], it[1]) },
+                restore = { OneHandAppBarState(it[0], it[1], reopenOnPull) },
             )
     }
 }
@@ -320,11 +332,21 @@ class OneHandAppBarState internal constructor(initialHeightPx: Float, initialCon
  * blank is something to scroll past before the screen starts being useful, and the bar is better off
  * waiting to be asked. It is the same bar either way: a pull still opens it, which is the point of
  * making this a starting position rather than a mode.
+ *
+ * Pass `reopenOnPull = false` where something else already owns the pull — pull-to-refresh, which
+ * takes the same leftover downward drag out of the same `onPostScroll`. The two can be chained by
+ * nesting, so that the bar fills first and the refresh arms after, but the bar's travel is a third
+ * of the screen: on a list anyone refreshes often, that is a third of a screen of dragging in front
+ * of every refresh. Handing the pull over instead leaves the bar as the screen's opening layout —
+ * open on arrival, folded by the first scroll, and not in the way of the gesture that matters.
  */
 @Composable
-fun rememberOneHandAppBarState(initiallyExpanded: Boolean = true): OneHandAppBarState =
-    rememberSaveable(saver = OneHandAppBarState.Saver) {
-        OneHandAppBarState(if (initiallyExpanded) Float.NaN else 0f, 0f)
+fun rememberOneHandAppBarState(
+    initiallyExpanded: Boolean = true,
+    reopenOnPull: Boolean = true,
+): OneHandAppBarState =
+    rememberSaveable(saver = OneHandAppBarState.saver(reopenOnPull)) {
+        OneHandAppBarState(if (initiallyExpanded) Float.NaN else 0f, 0f, reopenOnPull)
     }
 
 /**
@@ -385,6 +407,9 @@ private val CollapsedHeight = 64.dp
 
 /** Puts the title's left edge at Material's 56dp, given the 48dp navigation icon between them. */
 private val ToolbarEdgePadding = 4.dp
+
+/** Material's 16dp, less the row's own inset, for a bar with nothing to the left of its title. */
+private val TitleEdgePadding = 12.dp
 
 /** The handover band. Wide, because a narrow one reads as a flicker under a slow drag. */
 private const val CROSSFADE_START = 0.25f

@@ -29,13 +29,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -59,8 +59,10 @@ import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -134,15 +136,22 @@ fun NotificationsScreen(
     onRecipientClick: (UserSearchResult) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // `reopenOnPull = false`: this screen's downward drag belongs to pull-to-refresh, whole. The bar
+    // is here as the opening layout — big title on arrival, folded by the first scroll — and does not
+    // compete for the gesture. Chaining the two (bar fills, then refresh arms) was the alternative
+    // and would have put a third of a screen of dragging in front of every refresh on the one screen
+    // people refresh most.
+    val appBarState = rememberOneHandAppBarState(reopenOnPull = false)
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             // `readableWidth` stays on the bar itself: the content column below is constrained the
             // same way, and a full-bleed bar over a centred list is the one thing this screen has
             // never done.
-            TopAppBar(
+            OneHandTopAppBar(
                 modifier = Modifier.readableWidth(),
-                title = { Text(stringResource(R.string.tab_notifications)) },
+                title = stringResource(R.string.tab_notifications),
+                state = appBarState,
                 actions = {
                     TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
                         Icon(Icons.Default.Check, contentDescription = null)
