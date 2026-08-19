@@ -11,9 +11,9 @@
 |---|---|---|
 | `kmp-migration-decision.md` §0 表格末行 | 前端「已定：永远原生」 | 改为 CMP，见本文 |
 | [`kmp-migration-plan.md`](kmp-migration-plan.md) §2「不共享（永远 Android-only）」 | `:designsys` / `app/ui` / Navigation 3 / Compose | 均为迁移目标 |
-| [`kmp-migration-plan.md`](kmp-migration-plan.md) §5 步骤 8 | 「Apple 前端：SwiftUI」 | 「Apple 前端：CMP，与 Android 同一套」 |
+| [`kmp-migration-plan.md`](kmp-migration-plan.md) §5 步骤 8 | 「Apple 前端：SwiftUI」 | 该步已被整合表的 B1–B4 + D1 取代（2026-08-19，见本文 §5） |
 
-**没有**受影响的：第一阶段 KMP-ready 的全部内容（2026-08-18 已验收全绿）、第二阶段步骤 1–7、
+**没有**受影响的：第一阶段 KMP-ready 的全部内容（2026-08-18 已验收全绿）、第二阶段除前端外的全部步骤（今为整合表的 A 线与基建，编号已变）、
 三道门槛的实测结论、共享层的成本计价。改定只动前端归属，不动 Repository 以下的任何判断。
 
 ---
@@ -130,7 +130,7 @@ Apple 端时按当时情况决定，不必现在定。§2 那段「为什么不�
 2. **iOS 的 WebView 会话链路待复验。** `WebViewCookieJar` / `WebViewCookieStore` /
    `WebViewUserAgent` 在 `:core`，`SiteHtmlClient` 依赖它们，且是 Cloudflare 过检的关键路径。
    **门槛 A 已在 macOS 上全链路通过**（WKWebView → `WKHTTPCookieStore` → `URLSession`，HTTP 200），
-   iOS 需按 [`kmp-migration-plan.md`](kmp-migration-plan.md) §5 步骤 1 复验。风险因此低于初判。
+   iOS 需按 [`kmp-migration-plan.md`](kmp-migration-plan.md) §5 的 **D3** 复验。风险因此低于初判。
 3. **1,059 条 strings + 16 个 res xml + 9 个 drawable** 要搬到 Compose Resources。机械活，量大，
    可脚本化。
 4. **动态取色**一层 expect/actual（§2.2）。
@@ -140,23 +140,31 @@ Apple 端时按当时情况决定，不必现在定。§2 那段「为什么不�
 （`Clipboard.kt`、`ExternalUriHandler.kt`、`Theme.kt`、`RichContent.kt` 的 `LruCache`），
 `app/src/main/.../ui` 124 个文件里只有 18 个。
 
+> **2026-08-19 补正**：上面数的是 import `android.*` 的文件，漏了两个 Android-only 的**依赖**——
+> `MarkdownEditorBar.kt` 的 `BackHandler`（来自 `androidx.activity.compose`，是第 5 个文件）和
+> `ExternalUriHandler.kt` 的 Custom Tabs（来自 `androidx.browser`，与 4 个之一重合）。
+> `:designsys` 的实际耦合面是 **5 个文件**。`material-color-utilities` 不在此列：坐标是
+> `com.materialkolor:material-color-utilities`，本来就是多平台 Kotlin 移植。
+
 ---
 
-## 5. 执行顺序
+## 5. 执行顺序 → 见 [`kmp-migration-plan.md`](kmp-migration-plan.md) §5
 
-原则与第一阶段相同：**不赌的先做，赌注推到最后。**
+本节原有一张前端步骤表。它与 `kmp-migration-plan.md` §5 的后端步骤表互不引用，其中一步还是同一件事
+的两个说法（这边的「继续拆 `:app`」= 那边的步骤 7）。**2026-08-19 已把两张表合成一张**，放在
+[`kmp-migration-plan.md`](kmp-migration-plan.md) §5，那里是唯一的执行顺序。
 
-| 步 | 内容 | 赌注 |
-|---|---|---|
-| 1 | `:designsys` 去掉 4 处 `android.*`（剪贴板 / 外链 / Toast 抽 interface，`LruCache` 换 Kotlin 实现） | 无，本身是架构改善 |
-| 2 | 按 `kmp-migration-plan.md` 第一阶段的方式继续拆 `:app` | 无，Android 侧净收益 |
-| 3 | 给 `:designsys` 加 desktop target 单独跑起来 | 小，且是最便宜的「真的脱离 Android 了」验证——不需要 Mac 工具链 |
-| 4 | `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group | **这一步才是赌注** |
-| 5 | strings / res → Compose Resources | 机械 |
-| 6 | iOS：门槛 A 复验 + WKWebView 桥 + 生命周期 + IME | 最后 |
+合并时改了三处，理由记在那份文档里：
 
-第 3 步之前的任何一步失败，都不损失已完成的工作——与第一阶段「若最终不做 KMP 全部是净收益」
-同构。
+1. **新增一步「`core/image` 下沉」**。本节原来把「给 `:designsys` 加 desktop target」标成「无前置」，
+   实际卡在 `:designsys → :core → :shared` 这条链上，而 `:core` 是 Android library 且把 OkHttp 摆在
+   api 面上。好在耦合是虚的：`:designsys` 从 `:core` 只用了 4 个符号，全在 `core/image/`。
+2. **desktop target 那步提到后端「网络契约 + Apple transport」之前**。它是唯一还能证伪本文改定的
+   实验，而后端边界要不要按 §3.2 上移到 ViewModel，依据正是它的结果。
+3. **Compose Resources 挪到 `:app` 拆完之后**。对着一个马上要整体搬走的目录做 1,059 条机械替换不划算。
+
+原则本身不变，与第一阶段相同：**不赌的先做，赌注推到最后**；desktop target 之前的任何一步失败，
+都不损失已完成的工作。
 
 ---
 
@@ -186,3 +194,5 @@ grep -rlE "^import android\." --include="*.kt" app/src/main/java/io/github/nodys
 - iOS 的 WKWebView 会话链路（门槛 A 只覆盖 macOS）。
 - Compose Resources 对 1,059 条 strings 的迁移是否有可用的自动化路径，未调研。
 - CMP 在 iOS 上的中文 IME 组合输入、文本选择、滚动手感，未实测。
+- CMP 侧有没有 common 的 `BackHandler`，Custom Tabs 在非 Android 平台该换成什么，未查
+  （§4 补正）。整合表的 B1 动手前按本文附录那套 artifact 比对法核实。

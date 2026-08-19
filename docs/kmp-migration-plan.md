@@ -24,7 +24,9 @@
 
 ## 1. 最终架构
 
-前端永远原生，KMP 只承担业务核心。
+> **2026-08-19 改定**：本节原文写的是「前端永远原生」，Apple 侧 SwiftUI。前端已改走 Compose
+> Multiplatform，见 [`cmp-ui-decision.md`](cmp-ui-decision.md)。下图是改定后的形状；Repository
+> 以下的判断一个没变。
 
 ```text
                         shared / commonMain
@@ -34,8 +36,8 @@
    Kotlin/JVM         Kotlin/Native        Kotlin/Native
        ART               iosArm64             macosArm64
         │                    │                    │
- Android Compose         SwiftUI              SwiftUI
-                        / UIKit               / AppKit
+        └──────── Compose Multiplatform ──────────┘
+              一套 UI，各端只留很薄的平台外壳
 ```
 
 source set 层级用 KMP 的 hierarchical source sets，`appleMain` 让两个 Apple 平台共用实现：
@@ -358,18 +360,84 @@ Compose
 > **执行记录（2026-08-18）**：步骤 2 / 3 / 4 已完成。下面每一节里带 ✅ / ⚠️ 的段落是事后按实测补写
 > 的，未标注的部分是当初的计划原文。
 
-大致顺序（细节到时按当时的工具链状态重定）：
+### 顺序（2026-08-19 整合版）
 
-| 步骤 | 内容 | 说明 |
+原来这里是一张只管后端的表，而 [`cmp-ui-decision.md`](cmp-ui-decision.md) §5 另有一张只管前端的
+表，两张互不引用，其中一步还是同一件事的两个说法（那边的「继续拆 `:app`」= 这边的步骤 7）。
+**本节现在是唯一的执行顺序**，前端步骤从那份文档并进来；那边只保留改定的理由和实测依据。
+
+前端记作 **B**，后端记作 **A**，两条线汇合之后记作 **D**。
+
+| 步 | 线 | 内容 | 前置 |
+|---|---|---|---|
+| ✅ 2 | 基建 | `plaza.kmp.library` convention plugin、`:shared` 模块、`appleMain` 层级 | — |
+| ✅ 3 | A | model + 纯逻辑 | 2 |
+| ✅ 4 | A | parser + Ksoup | 3 |
+| **B1** | B | `:designsys` 去平台耦合：4 处 `android.*` + `BackHandler` + Custom Tabs，共 5 个文件 | 无 |
+| **B2** | B | `core/image` 下沉，`:designsys` 改为直接依赖 `:shared` | B1 |
+| **B3** | B | `:designsys` 转 KMP 模块 + desktop target，单独跑起来 | B2 |
+| **A5** | A | 网络契约 + Apple transport | B3 |
+| **B4** | B | `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group | B3 |
+| **A6** | A | Room + DataStore（7 个手写 migration 要重写） | A5 |
+| **A7** | A | Repository 由简到繁：Terms/Search → Profile/Community → Post/Vote → Feed/Paging。**这一步就是「拆 `:app` 的 `data/`」** | A6 |
+| **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」） | A7 + B4 |
+| **D2** | D | 1,059 条 strings + 16 个 res xml + 9 个 drawable → Compose Resources | D1 |
+| **D3** | D | iOS：门槛 A 复验 + WKWebView 桥 + 生命周期 + IME | D1 |
+| **D4** | D | WorkManager → `BGTaskScheduler`（5 个文件） | A7 |
+
+原表的步骤 1「Apple 平台 spike」并入 **D3** —— 门槛 A 已在 macOS 上通过，剩下的 iOS 复验和
+WKWebView 桥是同一件活，没必要拆成两步排在两头。原表的步骤 8「Apple 前端」被 B1–B4 + D1 取代。
+
+#### 与两份文档原表的三处差异，以及理由
+
+**一、新增 B2，它是 B3 的真前置。**`cmp-ui-decision.md` §5 把「给 `:designsys` 加 desktop
+target」标成「无前置、小赌注」。实际的依赖是：
+
+```text
+:designsys ──api──> :core ──api──> :shared
+                    plaza.android.library
+                    api(libs.okhttp)
+```
+
+`:core` 是 Android library 且把 OkHttp 摆在 api 面上，`:designsys` 不可能越过它变成多平台。
+
+**但这个耦合是虚的。**实测 `:designsys` 从 `io.github.plaza.core.*` 只 import 了 4 个符号，
+全部在 `core/image/`（422 行）——`ImageLoadFailure`、`diagnoseImageFailure`、`allowMeteredImage`、
+`ImagesDeferredException`。richtext 和 ansi 已经在 `:shared` 里了。所以 B2 不是「等 `:core` 多平台
+化」，只是把 `image/` 的中性部分下沉：错误分类的**类型**本来就是中性的，`diagnoseImageFailure` 认
+`java.io.IOException` / `SocketTimeoutException` 的那半不是。
+
+**二、B3 排在 A5 前面，而不是和后端并行到最后。**A5–A7 是无论如何都要做的活，但它的**形状**取决于
+B3：§2 的「为什么不共享 ViewModel」在 CMP 下整体失效（见 [`cmp-ui-decision.md`](cmp-ui-decision.md)
+§3.2），边界要不要从 Repository 上移到 ViewModel，依据就是 CMP 到底成不成。B3 是唯一还能证伪 CMP
+改定的实验，也是最便宜的一个——不需要 Mac 工具链。先做 B3，A7 才不会按错的口径做一遍。
+
+**三、Compose Resources（D2）从「机械活、早做」挪到汇合点之后。**`cmp-ui-decision.md` §5 把它排在
+第 5 步。1,059 条 strings 的迁移在 `:app` 还没拆开时做，等于对着一个马上要整体搬走的目录做机械替换。
+
+#### 顺带纠正：`:designsys` 的耦合面比 §4 数的大
+
+`cmp-ui-decision.md` §4 结尾数的是 import `android.*` 的 4 个文件（`Clipboard.kt`、
+`ExternalUriHandler.kt`、`Theme.kt`、`RichContent.kt`）。漏了两个 Android-only 的**依赖**：
+
+| 依赖 | 用在 | 备注 |
 |---|---|---|
-| 1 | Apple 平台 spike | WKWebView / `WKHTTPCookieStore` / `URLSession` / Keychain。**门槛 A 已在 macOS 上验证通过**，iOS 需复验 |
-| ✅ 2 | 构建基础设施 | `plaza.kmp.library` convention plugin、`:shared` 模块、`appleMain` 层级 |
-| ✅ 3 | model + 纯逻辑 | 第一阶段做完后基本是搬文件 |
-| ✅ 4 | parser + Ksoup | 门槛 B 已验证是纯机械替换 |
-| 5 | 网络契约 + Apple transport | |
-| 6 | Room + DataStore | 7 个手写 migration 要重写 |
-| 7 | Repository 由简到繁 | Terms/Search → Profile/Community → Post/Vote → Feed/Paging |
-| 8 | Apple 前端 | ~~SwiftUI~~ → **CMP，与 Android 同一套**（2026-08-19 改定，见 [`cmp-ui-decision.md`](cmp-ui-decision.md)）|
+| `androidx.activity.compose` | `MarkdownEditorBar.kt` 的 `BackHandler` | **第 5 个文件**，它 import 的是 `androidx.activity`，不在那 4 个里 |
+| `androidx.browser` | `ExternalUriHandler.kt` 的 Custom Tabs | 与 4 个之一重合 |
+
+`material-color-utilities` 不用担心：坐标是 `com.materialkolor:material-color-utilities`，本来就是
+多平台 Kotlin 移植。
+
+CMP 侧有没有 common 的 `BackHandler`、Custom Tabs 该换成什么，**未验证**——B1 动手前按
+`cmp-ui-decision.md` 附录那套 artifact 比对法查，不要按印象排期。
+
+#### 为什么 D1 不可能提前
+
+实测 `app/src/main/.../ui` 的 124 个文件里，**73 个 import `io.github.nodyssey.data`**、77 个 import
+`:designsys`，其中 37 个 `ViewModel`。UI 进 `commonMain` 的前置就是 Repository 先进去，没有绕路。
+
+一个对 CMP 有利的现状：项目**没有 Hilt / Koin**，依赖装配是手写的 `di/AppContainer.kt`。
+KMP 里最常见的那个 DI 障碍在这里不存在。
 
 ### ✅ 步骤 2 实测：构建基础设施
 
@@ -444,12 +512,12 @@ Apple 两个照锁不误，虽然 CI 永远不解析它们——锁文件的意�
 
 `:core` 对 `:shared` 是 `api`，所以 `:designsys` 和 `:app` 里那些 `io.github.plaza.core.*` 的 import
 一行没改。代价是 `io.github.plaza.core.net` 这个包**同时存在于两个模块**里——`SiteConfig` 在
-`:shared`，`SiteHtmlClient` 还在 `:core`。这是过渡态而不是终局：步骤 5 之后 `:core` 的网络壳也进
+`:shared`，`SiteHtmlClient` 还在 `:core`。这是过渡态而不是终局：**A5** 之后 `:core` 的网络壳也进
 `:shared/androidMain`，包就合回去了。
 
 jsoup → Ksoup 确实是纯机械替换，只改 import，加上 spike 记过的 `TextNode.wholeText` 在 Ksoup 是函数
 `getWholeText()`。**jsoup 没能从 `:app` 完全删掉**：`UserSpaceRepository` 还有一行
-`Jsoup.parse(raw).text()` 在把 HTML 抽成纯文本做摘要。那是 repository，归步骤 7。
+`Jsoup.parse(raw).text()` 在把 HTML 抽成纯文本做摘要。那是 repository，归 **A7**。
 
 模块边界逼出来的三处改动，都不是清理：
 
@@ -503,31 +571,25 @@ lock state，照抄猜测的清单在 STRICT 下会失败），或让 `:shared` 
 另：convention plugin 里只用 `//` 注释 —— Kotlin 会嵌套块注释，散文里一个 `/*`
 会静默吞掉文件剩余部分，唯一症状是「插件找不到」。
 
-### Apple 侧还能再共享一层
+### ~~Apple 侧还能再共享一层~~ → CMP 下不再适用
 
-iOS 与 macOS 的 Swift 代码不必各写一套：
-
-```text
-AppleFrontendCore/     (Swift Package)
-├── model adapters / view models / formatting
-└── 共用 SwiftUI 组件
-
-iOSApp/     iOS navigation / lifecycle / iOS 特有 UI
-macOSApp/   菜单命令 / 窗口管理 / macOS 特有 UI
-```
-
-最终形成两层共享：
+本节原来规划的是一个 `AppleFrontendCore` Swift Package，让 iOS 与 macOS 的 Swift 代码不必各写一套，
+形成「KMP Core + Apple Swift layer」两层共享。**前端改定为 CMP 后这一层没有了**：UI 本身就是
+`commonMain` 里的一套 Kotlin，各端只剩启动壳和平台外壳。
 
 ```text
-                     KMP Core
-        Android / iOS / macOS 共享
-                       │
-           ┌───────────┴───────────┐
-      Android UI              Apple Swift layer
-       Compose                     │
-                             ┌─────┴─────┐
-                           iOS         macOS
+                  shared / commonMain
+        model / parser / repository / database
+                        │
+              Compose Multiplatform UI
+                        │
+        ┌───────────────┼───────────────┐
+     Android           iOS            macOS
+   Activity 壳      UIScene 壳      NSWindow 壳
+   WorkManager    BGTaskScheduler   平台外壳
 ```
+
+Swift 只在真正的平台外壳里出现（生命周期、系统权限、后台任务），不承担 presentation。
 
 ---
 

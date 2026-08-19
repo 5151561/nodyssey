@@ -8,8 +8,8 @@
 | [`architecture.md`](architecture.md) | SSOT/UDF、依赖、线程、会话、安全和技术债 | 是，工程约束 |
 | [`compose-styles-api.md`](compose-styles-api.md) | Compose Styles API 为什么没接进 `:designsys` | 是，评估结论（随 foundation 版本失效） |
 | [`kmp-migration-decision.md`](kmp-migration-decision.md) | KMP 可行性评估：代码分布、生态核对、成本计价与三道门槛的实测结论 | 是，评估结论（2026-08-18 快照，目标已修订见其第 0 节） |
-| [`kmp-migration-plan.md`](kmp-migration-plan.md) | KMP-ready 架构改造：共享边界、第一阶段五项改造、第二阶段触发条件 | 是，执行计划 |
-| [`cmp-ui-decision.md`](cmp-ui-decision.md) | 前端路线改定为 Compose Multiplatform：依据、依赖实测核对与执行顺序 | 是，前端路线唯一入口（覆盖前两份文档中的前端结论） |
+| [`kmp-migration-plan.md`](kmp-migration-plan.md) | KMP-ready 架构改造：共享边界、第一阶段五项改造、第二阶段的**唯一执行顺序**（前后端已合成一张表） | 是，执行计划 |
+| [`cmp-ui-decision.md`](cmp-ui-decision.md) | 前端路线改定为 Compose Multiplatform：依据与依赖实测核对 | 是，前端路线**为什么**的唯一入口（覆盖前两份文档中的前端结论）；**做什么顺序**看上一行 |
 | [`design-implementation.md`](design-implementation.md) | 已核对画板到 Compose/Repository 的映射 | 是，设计交付对照 |
 | [`design-requirements.md`](design-requirements.md) | 新版设计总纲、信息架构与视觉约束 | 是，设计目标 |
 | [`design-requirements-remaining.md`](design-requirements-remaining.md) | 登录态站点实测词典与批次 A–E 完成记录 | 是，真实数据样本 |
