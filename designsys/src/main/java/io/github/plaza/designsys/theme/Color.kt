@@ -6,10 +6,13 @@ import androidx.compose.ui.graphics.Color
 
 /*
  * The app's own palette used to live here as a pair of hand-tuned `ColorScheme`s. It does not any
- * more: 主题 offers six presets, a wallpaper and a hand-picked seed, all of them expanded by the same
- * generator (see `plazaSeedColorScheme`), and a seventh scheme that answered to neither 色彩风格 nor
- * the preview card would have been the one entry the screen could not describe. 石墨青 survives as
+ * more: 石墨青, the wallpaper and a hand-picked seed are all expanded by the same generator (see
+ * `plazaSeedColorScheme`), and a fourth scheme that answered to neither 色彩风格 nor the preview card
+ * would have been the one source the screen could not describe. 石墨青 survives as
  * `PlazaDefaultSeed` — the same #35606E, now as a seed.
+ *
+ * Hand-written schemes came back for 角色预设 (see `PlazaCharacterPalette`), which is a different
+ * argument: those five are not one colour a generator could have been handed.
  */
 
 /**

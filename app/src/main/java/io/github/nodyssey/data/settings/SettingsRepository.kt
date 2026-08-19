@@ -60,7 +60,7 @@ class SettingsRepository(
                     // 动态取色 used to be a bare switch. A store written by an older build has no
                     // 配色来源 at all, and the one thing it can say is whether that switch was on.
                     ?: if (preferences[KEY_DYNAMIC_COLOR] == true) ColorSource.WALLPAPER else ColorSource.PRESET,
-                presetSeed = preferences[KEY_PRESET_SEED] ?: DEFAULT_SEED_COLOR,
+                presetId = preferences[KEY_PRESET_ID] ?: DEFAULT_PRESET_ID,
                 seedColor = preferences[KEY_SEED_COLOR] ?: DEFAULT_SEED_COLOR,
                 wallpaperSeed = preferences[KEY_WALLPAPER_SEED],
                 wallpaperSystemPalette = preferences[KEY_WALLPAPER_SYSTEM_PALETTE] ?: true,
@@ -134,16 +134,21 @@ class SettingsRepository(
     suspend fun setColorSource(source: ColorSource) = edit { it[KEY_COLOR_SOURCE] = source.name }
 
     /*
-     * One stored seed per source, rather than one shared between them.
+     * One stored answer per source, rather than one shared between them.
      *
      * j1 asks for it in as many words — "切回「自定义」直接沿用 #2F6D8C，不用重新调色" — and the
-     * alternative is worse than it sounds: with a single field, tapping 预设 · 苔绿 to see what it
-     * looks like would silently overwrite a colour that took a minute in the picker to arrive at,
+     * alternative is worse than it sounds: with a single field, tapping 预设 · 初音未来 to see what
+     * it looks like would silently overwrite a colour that took a minute in the picker to arrive at,
      * and 自定义 has no way to get it back.
      */
 
-    /** The preset that 预设 is currently on, as its seed. */
-    suspend fun setPresetSeed(argb: Int) = edit { it[KEY_PRESET_SEED] = argb }
+    /**
+     * The preset 预设 is currently on, by id.
+     *
+     * An id rather than a seed since j2: five of the six are hand-written schemes and have no seed
+     * to store. An id this build does not know resolves back to 石墨青 — see `presetById`.
+     */
+    suspend fun setPresetId(id: String) = edit { it[KEY_PRESET_ID] = id }
 
     /**
      * The seed 自定义 expands into a scheme from. Stored as ARGB, and kept even while another source
@@ -521,7 +526,7 @@ class SettingsRepository(
         /** Read only to migrate a store written before 配色来源 existed; nothing writes it now. */
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_COLOR_SOURCE = stringPreferencesKey("color_source")
-        private val KEY_PRESET_SEED = intPreferencesKey("preset_seed")
+        private val KEY_PRESET_ID = stringPreferencesKey("preset_id")
         private val KEY_SEED_COLOR = intPreferencesKey("seed_color")
         private val KEY_WALLPAPER_SEED = intPreferencesKey("wallpaper_seed")
         private val KEY_WALLPAPER_SYSTEM_PALETTE = booleanPreferencesKey("wallpaper_system_palette")
@@ -531,6 +536,9 @@ class SettingsRepository(
 
         /** 石墨青, the colour the app has always been, now as the seed every scheme starts from. */
         const val DEFAULT_SEED_COLOR: Int = 0xFF35606E.toInt()
+
+        /** 石墨青 again, as the 预设 id — the one preset that is a seed rather than a character. */
+        const val DEFAULT_PRESET_ID: String = "graphite"
 
         /** Enough that the chip row still fits on a phone; past that it stops being a shortcut. */
         const val MAX_SAVED_THEMES = 12
@@ -651,8 +659,8 @@ enum class ComposerSurface { POST, REPLY, MESSAGE }
 data class UserSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val colorSource: ColorSource = ColorSource.PRESET,
-    /** ARGB. The preset 预设 is on; only read while [colorSource] is [ColorSource.PRESET]. */
-    val presetSeed: Int = SettingsRepository.DEFAULT_SEED_COLOR,
+    /** The preset 预设 is on, by id; only read while [colorSource] is [ColorSource.PRESET]. */
+    val presetId: String = SettingsRepository.DEFAULT_PRESET_ID,
     /** ARGB. Only read while [colorSource] is [ColorSource.CUSTOM]; see `setSeedColor`. */
     val seedColor: Int = SettingsRepository.DEFAULT_SEED_COLOR,
     /**

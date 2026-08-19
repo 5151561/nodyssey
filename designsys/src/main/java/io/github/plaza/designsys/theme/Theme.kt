@@ -38,12 +38,19 @@ val LocalPlazaFontScale = staticCompositionLocalOf { 1f }
 @Composable
 fun PlazaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Every scheme in the app is now generated from a seed — the six presets, the wallpaper
-    // candidates and a hand-picked colour alike — so this one parameter is the whole colour input.
-    // The default is 石墨青, which is what the app should be recognisable as from a screenshot posted
-    // back to the forum.
+    // Every generated scheme in the app comes from a seed — 石墨青, the wallpaper candidates and a
+    // hand-picked colour alike — so this one parameter is the whole colour input for all three. The
+    // default is 石墨青, which is what the app should be recognisable as from a screenshot posted
+    // back to the forum. 角色预设 is the exception; see [characterPalette].
     seedColor: Color = PlazaDefaultSeed,
     paletteStyle: PlazaPaletteStyle = PlazaPaletteStyle.SOFT,
+    /**
+     * 角色预设 — a scheme written by hand rather than grown from [seedColor].
+     *
+     * It wins over both of the other two when set, because it is not a seed and there is nothing
+     * for the generator or the system palette to do with it. See [PlazaCharacterPalette].
+     */
+    characterPalette: PlazaCharacterPalette? = null,
     /**
      * 使用系统调色板 — take the OS's own Monet scheme rather than generating one.
      *
@@ -58,6 +65,8 @@ fun PlazaTheme(
     val systemPalette = useSystemPalette && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val colorScheme =
         when {
+            characterPalette != null -> characterPalette.colorScheme(darkTheme)
+
             systemPalette && darkTheme -> dynamicDarkColorScheme(context)
 
             systemPalette -> dynamicLightColorScheme(context)

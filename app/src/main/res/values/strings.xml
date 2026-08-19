@@ -288,12 +288,19 @@
 
     <!-- 主题 · 预设与我的主题 -->
     <string name="settings_presets">预设</string>
-    <string name="settings_preset_teal">石墨青</string>
-    <string name="settings_preset_warm_graphite">暖石墨</string>
-    <string name="settings_preset_indigo">靛蓝</string>
-    <string name="settings_preset_moss">苔绿</string>
-    <string name="settings_preset_rose">玫紫</string>
-    <string name="settings_preset_sunset">落日橙</string>
+    <string name="settings_preset_graphite">石墨青</string>
+    <string name="settings_preset_graphite_desc">默认</string>
+    <string name="settings_preset_miku">初音未来</string>
+    <string name="settings_preset_miku_desc">青×灰×粉</string>
+    <string name="settings_preset_twins">镜音双子</string>
+    <string name="settings_preset_twins_desc">黄×橙×黑灰</string>
+    <string name="settings_preset_tianyi">洛天依</string>
+    <string name="settings_preset_tianyi_desc">蓝×白×粉</string>
+    <string name="settings_preset_reimu">博丽灵梦</string>
+    <string name="settings_preset_reimu_desc">红×白×金</string>
+    <string name="settings_preset_marisa">雾雨魔理沙</string>
+    <string name="settings_preset_marisa_desc">黑×金×紫</string>
+    <string name="settings_presets_hint">角色预设是整套手工配色，主色、次色、强调色和中性面都按角色定，不经种子色生成，和「自定义」不是一路；头像是内置的极简画像。选中角色预设时「色彩风格」不起作用。</string>
     <string name="settings_my_themes">我的主题</string>
     <string name="settings_my_themes_hint">长按已保存主题可重命名或删除</string>
     <string name="action_new">新建</string>

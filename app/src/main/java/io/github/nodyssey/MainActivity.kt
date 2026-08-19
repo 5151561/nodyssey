@@ -26,6 +26,7 @@ import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.ui.common.rememberExternalUriHandler
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.richtext.LocalReportFormat
+import io.github.nodyssey.ui.settings.theme.activeCharacterPalette
 import io.github.nodyssey.ui.settings.theme.rememberActiveSeed
 import io.github.nodyssey.ui.settings.theme.toPlaza
 import io.github.plaza.designsys.richtext.LocalStickerSizing
@@ -78,6 +79,9 @@ class MainActivity : ComponentActivity() {
                 // can also skip the generator and take the OS's palette whole.
                 seedColor = Color(rememberActiveSeed(settings)),
                 paletteStyle = settings.paletteStyle.toPlaza(),
+                // 角色预设 is the one answer that is not a seed at all: five whole schemes written by
+                // hand, which is why they win over both of the lines above.
+                characterPalette = activeCharacterPalette(settings),
                 useSystemPalette =
                 settings.colorSource == ColorSource.WALLPAPER && settings.wallpaperSystemPalette,
                 fontScale = settings.fontScale,

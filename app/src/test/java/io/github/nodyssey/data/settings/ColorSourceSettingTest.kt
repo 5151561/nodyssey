@@ -81,10 +81,10 @@ class ColorSourceSettingTest {
         }
 
     @Test
-    fun `each source keeps its own seed`() =
+    fun `each source keeps its own answer`() =
         runTest {
             val repository = repository()
-            repository.setPresetSeed(PRESET)
+            repository.setPresetId(PRESET_ID)
             repository.setSeedColor(CUSTOM)
             repository.setWallpaperSeed(WALLPAPER)
 
@@ -92,7 +92,7 @@ class ColorSourceSettingTest {
             // must not overwrite the colour that took a minute in the picker to arrive at.
             repository.setColorSource(ColorSource.PRESET)
             repository.settings.first().let {
-                assertEquals(PRESET, it.presetSeed)
+                assertEquals(PRESET_ID, it.presetId)
                 assertEquals(CUSTOM, it.seedColor)
                 assertEquals(WALLPAPER, it.wallpaperSeed)
             }
@@ -159,7 +159,7 @@ class ColorSourceSettingTest {
         val KEY_COLOR_SOURCE = stringPreferencesKey("color_source")
         val KEY_SAVED_THEMES = stringPreferencesKey("saved_themes")
 
-        const val PRESET = 0xFF3F6B4E.toInt()
+        const val PRESET_ID = "miku"
         const val CUSTOM = 0xFF2F6D8C.toInt()
         const val WALLPAPER = 0xFF7C6A50.toInt()
     }

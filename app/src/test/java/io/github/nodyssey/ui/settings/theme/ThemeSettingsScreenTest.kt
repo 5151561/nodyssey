@@ -64,27 +64,58 @@ class ThemeSettingsScreenTest {
             settings =
             UserSettings(
                 colorSource = ColorSource.PRESET,
-                presetSeed = 0xFF3F6B4E.toInt(),
+                presetId = "tianyi",
                 seedColor = 0xFF2F6D8C.toInt(),
             ),
         )
 
         // 预设 names the section as well as the tile, so the tile is the node that carries both it
         // and the preset's own name.
-        composeRule.onNode(hasText("预设").and(hasText("苔绿"))).assertIsSelected()
+        composeRule.onNode(hasText("预设").and(hasText("洛天依"))).assertIsSelected()
         composeRule.onNode(hasText("自定义").and(hasText("#2F6D8C"))).assertExists()
     }
 
     @Test
-    fun `picking a preset reports the seed behind it`() {
-        var picked: Int? = null
+    fun `picking a preset reports the id behind it`() {
+        var picked: String? = null
         setScreen(
             settings = UserSettings(colorSource = ColorSource.PRESET),
             onPresetSelected = { picked = it },
         )
 
-        composeRule.onNodeWithText("落日橙").performScrollTo().performClick()
-        assertEquals(0xFFA05A32.toInt(), picked)
+        composeRule.onNodeWithText("雾雨魔理沙").performScrollTo().performClick()
+        assertEquals("marisa", picked)
+    }
+
+    /**
+     * 色彩风格 steers the generator, and a 角色预设 never reaches it.
+     *
+     * The five chips stay on screen — they are still the answer under 自定义 and 动态取色 — but they
+     * stop being tappable, which is the only honest thing for a control that would do nothing.
+     */
+    @Test
+    fun `色彩风格 goes flat under a 角色预设`() {
+        var style: PaletteStyle? = null
+        setScreen(
+            settings = UserSettings(colorSource = ColorSource.PRESET, presetId = "miku"),
+            onPaletteStyleChange = { style = it },
+        )
+
+        composeRule.onNodeWithText("单色").performScrollTo().performClick()
+        assertNull(style)
+    }
+
+    /** 石墨青 is a seed like every other source, so its chips still work. */
+    @Test
+    fun `色彩风格 still works under 石墨青`() {
+        var style: PaletteStyle? = null
+        setScreen(
+            settings = UserSettings(colorSource = ColorSource.PRESET),
+            onPaletteStyleChange = { style = it },
+        )
+
+        composeRule.onNodeWithText("单色").performScrollTo().performClick()
+        assertEquals(PaletteStyle.MONOCHROME, style)
     }
 
     /**
@@ -96,8 +127,8 @@ class ThemeSettingsScreenTest {
     fun `自定义 collapses the preset grid`() {
         setScreen(settings = UserSettings(colorSource = ColorSource.CUSTOM))
 
-        // 落日橙 exists only in the grid; 石墨青 is also the 预设 tile's own subtitle, which stays.
-        composeRule.onNodeWithText("落日橙").assertDoesNotExist()
+        // 初音未来 exists only in the grid; 石墨青 is also the 预设 tile's own subtitle, which stays.
+        composeRule.onNodeWithText("初音未来").assertDoesNotExist()
         composeRule.onNode(hasText("预设").and(hasText("石墨青"))).assertExists()
     }
 
@@ -105,7 +136,7 @@ class ThemeSettingsScreenTest {
     fun `动态取色 collapses the preset grid`() {
         setScreen(settings = UserSettings(colorSource = ColorSource.WALLPAPER))
 
-        composeRule.onNodeWithText("落日橙").assertDoesNotExist()
+        composeRule.onNodeWithText("初音未来").assertDoesNotExist()
         composeRule.onNode(hasText("预设").and(hasText("石墨青"))).assertExists()
     }
 
@@ -140,7 +171,7 @@ class ThemeSettingsScreenTest {
 
     private fun setScreen(
         settings: UserSettings = UserSettings(seedColor = SettingsRepository.DEFAULT_SEED_COLOR),
-        onPresetSelected: (Int) -> Unit = {},
+        onPresetSelected: (String) -> Unit = {},
         onCustomSeedSelected: (Int) -> Unit = {},
         onPaletteStyleChange: (PaletteStyle) -> Unit = {},
         onSaveTheme: (String, Int) -> Unit = { _, _ -> },
