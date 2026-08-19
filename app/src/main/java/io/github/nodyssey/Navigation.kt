@@ -454,6 +454,10 @@ fun MainNavigation(
                         )
                     },
                     onOpenBrowser = openWebUrl,
+                    // Pushed rather than swapped in: on a wide window the space lands in the list
+                    // pane and the conversation stays beside it, which is why `paneRoleOf` calls a
+                    // space a list wherever it is reached from.
+                    onOpenSpace = { openSpace(key.uid) },
                     onLinkClick = openContentUrl,
                 )
             }

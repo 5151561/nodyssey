@@ -20,6 +20,10 @@ dependencies {
     api(libs.androidx.compose.ui.tooling.preview)
     api(libs.androidx.compose.material.icons.core)
 
+    // The seed-colour scheme generator. `implementation`, not `api`: a caller hands `PlazaTheme` a
+    // `Color` and gets a `ColorScheme` back, and never names an Hct or a DynamicScheme itself.
+    implementation(libs.material.color.utilities)
+
     // `BackHandler`: the emoji panel stands in for the keyboard, so back has to dismiss it first.
     implementation(libs.androidx.activity.compose)
 

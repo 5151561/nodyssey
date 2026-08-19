@@ -62,8 +62,14 @@ jobs:
       # Includes the Room, Paging and Compose tests: they run on Robolectric, so no emulator is needed.
       # Unqualified so every module runs its own tests — `:app:testDebugUnitTest` would compile the
       # library modules but never execute a single test of theirs.
+      #
+      # `testAndroidHostTest` is the second name because `:shared` is a Kotlin Multiplatform module and
+      # has no build types to name a task after. Its tests are `commonTest`, and this runs them on the
+      # host JVM; the Apple targets compile the same sources but only on a Mac, which is why
+      # `:shared:macosArm64Test` is a local gate and not one here. Both names are unqualified, and a
+      # name no project defines would be an error rather than a silent skip.
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testDebugUnitTest testAndroidHostTest
 
       # warningsAsErrors is on, so a new lint warning fails the build here. Qualified to the
       # application module because `plaza.android.application` sets `checkDependencies`, which pulls

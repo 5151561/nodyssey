@@ -348,18 +348,138 @@ Compose
 
 **触发条件：决定真的要开 iOS/macOS App。**在此之前不必开始。
 
+> **执行记录（2026-08-18）**：步骤 2 / 3 / 4 已完成。下面每一节里带 ✅ / ⚠️ 的段落是事后按实测补写
+> 的，未标注的部分是当初的计划原文。
+
 大致顺序（细节到时按当时的工具链状态重定）：
 
 | 步骤 | 内容 | 说明 |
 |---|---|---|
 | 1 | Apple 平台 spike | WKWebView / `WKHTTPCookieStore` / `URLSession` / Keychain。**门槛 A 已在 macOS 上验证通过**，iOS 需复验 |
-| 2 | 构建基础设施 | `plaza.kmp.library` convention plugin、`:shared` 模块、`appleMain` 层级 |
-| 3 | model + 纯逻辑 | 第一阶段做完后基本是搬文件 |
-| 4 | parser + Ksoup | 门槛 B 已验证是纯机械替换 |
+| ✅ 2 | 构建基础设施 | `plaza.kmp.library` convention plugin、`:shared` 模块、`appleMain` 层级 |
+| ✅ 3 | model + 纯逻辑 | 第一阶段做完后基本是搬文件 |
+| ✅ 4 | parser + Ksoup | 门槛 B 已验证是纯机械替换 |
 | 5 | 网络契约 + Apple transport | |
 | 6 | Room + DataStore | 7 个手写 migration 要重写 |
 | 7 | Repository 由简到繁 | Terms/Search → Profile/Community → Post/Vote → Feed/Paging |
 | 8 | Apple 前端 | SwiftUI，见下 |
+
+### ✅ 步骤 2 实测：构建基础设施
+
+`:shared` 是 KMP 模块，target 三个：android、`iosArm64`、`macosArm64`。**`appleMain` 不需要自己搭**
+—— 默认的 hierarchy template 见到这两个 Native target 就会生成它，`compileAppleMainKotlinMetadata`
+是它存在的证据。
+
+Android target 走 **`com.android.kotlin.multiplatform.library`**，不是在 KMP 插件旁边再应用一次
+`com.android.library`：AGP 9 不再支持后者那种组合。DSL 入口在 AGP 9.2.1 里是 `kotlin { android { } }`，
+文档里常见的 `androidLibrary { }` 已经打上 deprecated，编译时会告警。
+
+四处不写就不通的地方，**其中两处的症状都是「静默地什么都不跑」而不是报错**：
+
+| | 症状 |
+|---|---|
+| `build-logic` 要加 `kotlin-gradle-plugin` 依赖 | 约定插件里 `id("org.jetbrains.kotlin.multiplatform")` 找不到 |
+| `gradle.properties` 加 `kotlin.native.ignoreDisabledTargets=true` | Apple target 在 Linux 上不可构建，不写这条则 **configure 阶段就失败**，CI 连 Android 的门禁都跑不到 |
+| CI 的测试步骤补 `testAndroidHostTest` | `testDebugUnitTest` 在 KMP 模块里根本不存在（没有 build type），`commonTest` 会一个都不跑而 CI 全绿 |
+| 约定插件里还要应用 **`com.android.lint`** | 不写则 `commonMain` 完全不进 lint，见下 |
+
+#### KMP 模块的 lint 是有条件注册的
+
+`com.android.kotlin.multiplatform.library` 单独用的时候，模块只会得到
+`lintAnalyzeAndroidHostTest`，**主组件一个 lint 任务都没有** —— 没有 `lint`、没有
+`lintAnalyzeAndroidMain`、没有 `generateAndroidMainLintModel`。于是 `:app:lintDebug` 的
+`checkDependencies` 里 `:core`、`:designsys` 都在，`:shared` 只有个 host test，搬进去的 4,600 行生产
+代码一行都没被检查过，而约定插件里的 `warningsAsErrors = true` 守着一间空屋子。
+
+根因在 AGP 的 `KmpTaskManager` 里，反编译可见：
+
+```text
+1116: ldc_w  "com.android.lint"
+1119: PluginContainer.hasPlugin
+1124: ifeq   1181                  ← 没有这个插件就整段跳过
+...
+1172: LintTaskManager.createLintTasks(KMP_ANDROID, ...)
+```
+
+所以 `plaza.kmp.library` 里 `com.android.lint` 和 `com.android.kotlin.multiplatform.library` 要一起
+应用。补上之后 `lintAnalyzeAndroidMain` 出现并进入 `:app:lintDebug` 的任务图，lint model 里也能看到
+`javaDirectories="src/androidMain/kotlin:src/commonMain/kotlin"`。
+
+**验过覆盖是真的**：在 `commonMain` 和 `androidMain` 各放一句 `// STOPSHIP`（这条检查默认只在 release
+变体开，所以探针里临时 `enable += "StopShip"`），lint 两处都报了出来。
+
+**CI 只跑 JVM/Android**（2026-08-18 拍板）。`commonMain` 在 CI 里只按 Android 编一次，只有 Native
+编不过的写法 CI 抓不到，本机 `./gradlew :shared:macosArm64Test` 才是那道闸。
+
+#### dependency locking：计划里的警告是对的
+
+`:shared` 声明了三十多个可解析配置（compiler plugin classpath、commonizer classpath、Swift export
+…），绝大多数不产生 lock state，而 STRICT 下「没有 lock state」就是失败。实测**只有这 7 个**有：
+
+```text
+androidCompileClasspath / androidRuntimeClasspath
+androidHostTestCompileClasspath / androidHostTestRuntimeClasspath
+metadataCommonMainCompileClasspath
+iosArm64CompileKlibraries / macosArm64CompileKlibraries
+```
+
+Apple 两个照锁不误，虽然 CI 永远不解析它们——锁文件的意义是图由仓库定，而不是由哪台机器跑的构建定。
+
+**并且验过这道闸是活的**：临时给 `:shared` 加一个 `okio` 依赖，构建立刻报
+`Resolved 'com.squareup.okio:okio:3.9.0' which is not part of the dependency lock state`。
+
+### ✅ 步骤 3 / 4 实测：搬了什么
+
+| 从 | 内容 |
+|---|---|
+| `:app` | `io.github.nodyssey.model` 全部；`NodeSeekSite`、`StardustReceiveMarkup`、`VoteMarkup`；`core/html` 的 11 个 parser；`core/report` 的 `QualityReport` 与 `QualityReportParser` |
+| `:core` | `TerminalColumns`、`ansi/AnsiDecoder`、`richtext/RichNode`、`richtext/Markdown`、`net/SiteError`、`net/SiteConfig`、`net/WebUrl` |
+
+`:core` 对 `:shared` 是 `api`，所以 `:designsys` 和 `:app` 里那些 `io.github.plaza.core.*` 的 import
+一行没改。代价是 `io.github.plaza.core.net` 这个包**同时存在于两个模块**里——`SiteConfig` 在
+`:shared`，`SiteHtmlClient` 还在 `:core`。这是过渡态而不是终局：步骤 5 之后 `:core` 的网络壳也进
+`:shared/androidMain`，包就合回去了。
+
+jsoup → Ksoup 确实是纯机械替换，只改 import，加上 spike 记过的 `TextNode.wholeText` 在 Ksoup 是函数
+`getWholeText()`。**jsoup 没能从 `:app` 完全删掉**：`UserSpaceRepository` 还有一行
+`Jsoup.parse(raw).text()` 在把 HTML 抽成纯文本做摘要。那是 repository，归步骤 7。
+
+模块边界逼出来的三处改动，都不是清理：
+
+- `SiteBootstrap`、`PostSourceParser` 两个 `internal object` 变 public —— 它们的调用方在 `:app`。
+- `VoteCard` 里 `item.count` 要先读进局部变量：`val` 来自另一个模块，编译器不做 smart cast。
+- 8 个测试函数名里的逗号要去掉，见下。
+
+### ⚠️ 测试迁移：spike 那张单子不全
+
+21 个测试类进 `commonTest`，175 个测试在 Android host JVM 和 `macosArm64` 上各跑一遍。
+
+**两个故意留在 JVM**（`androidHostTest`）：`WebUrlTest` 对着 `java.net.URI`、`NodeSeekSiteEncodingTest`
+对着 `java.net.URLEncoder`，都是差分测试——要保住的不是规范而是那一个实现给出的答案，所以 JVM 必须在场。
+后者是从 `NodeSeekSiteTest` 里拆出来的一个测试，类名换了，测试内容一字未改。
+
+fixture 按计划改成 Gradle 任务（`generateFixtureSources`）从 `src/commonTest/resources/fixtures`
+生成 Kotlin 常量，按 6000 字符分块且不在代理对中间断开。留在 `:app` 的那几个测试（challenge detector、
+两个 repository、回复编辑器）读的还是同一批文件，`app/build.gradle.kts` 把那个 resources 目录加成了
+自己的测试资源根——一份文件两个读法，而不是两份文件。
+
+spike 只记了 `assertTrue` 参数顺序。实际还撞到四条：
+
+| 坑 | 处置 |
+|---|---|
+| **Kotlin/Native 不允许反引号函数名里有 `,`，JVM 允许** | 8 个测试名重写。这条 spike 完全没有——它迁的 41 个测试里恰好没有带逗号的名字 |
+| `@Test(expected = X::class)` 是 JUnit 的 | 换 `assertFailsWith<X> { }` |
+| `String.toByteArray()` 是 JVM 扩展 | 换 `encodeToByteArray()`，UTF-8 是定义而不是默认值 |
+| lint 的 `lintAnalyzeAndroidHostTest` / `generateAndroidHostTestLintModel` 直接读源码目录 | 它们不认 Kotlin source set 上的生成依赖，要按任务名手工 `dependsOn` |
+
+### ⚠️ 顺带发现：`main` 上的单测编译是坏的
+
+`ProxySettingsTest` 在 `5e053fd`（第一阶段）里引用了一个已经不存在的 `context` ——
+`DataStoreProxySettings(context, ReversingCipher)`。第一阶段把 `ProxySettings` 改成收 `DataStore`，
+而这个测试是 `fabc543`（代理主开关）新加的，两边合到一起之后没有人再跑过
+`:app:compileDebugUnitTestKotlin`。已顺手改成 `store.dataStore`。
+
+**这不是这次改动引入的**：在把本次全部改动 stash 掉的干净树上照样复现。
 
 ### 构建基础设施的已知障碍
 
@@ -370,6 +490,8 @@ Compose
 
 处置二选一，需在该步骤开始时就定：给 KMP 模块补一套配置名（推荐，但必须**实测**哪些真的产生
 lock state，照抄猜测的清单在 STRICT 下会失败），或让 `:shared` 不应用这个插件。
+
+**✅ 已按前者做，实测的 7 个配置名见上面的执行记录。**
 
 另：convention plugin 里只用 `//` 注释 —— Kotlin 会嵌套块注释，散文里一个 `/*`
 会静默吞掉文件剩余部分，唯一症状是「插件找不到」。

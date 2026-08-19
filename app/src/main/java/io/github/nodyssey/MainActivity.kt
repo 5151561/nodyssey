@@ -16,9 +16,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.data.settings.ColorSource
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.ui.common.rememberExternalUriHandler
@@ -26,6 +28,7 @@ import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.richtext.LocalReportFormat
 import io.github.plaza.designsys.richtext.LocalStickerSizing
 import io.github.plaza.designsys.richtext.StickerSizing
+import io.github.plaza.designsys.theme.PlazaColorSource
 import io.github.plaza.designsys.theme.PlazaTheme
 
 class MainActivity : ComponentActivity() {
@@ -70,7 +73,12 @@ class MainActivity : ComponentActivity() {
 
             PlazaTheme(
                 darkTheme = darkTheme,
-                dynamicColor = settings.dynamicColor,
+                colorSource = when (settings.colorSource) {
+                    ColorSource.BRAND -> PlazaColorSource.BRAND
+                    ColorSource.WALLPAPER -> PlazaColorSource.WALLPAPER
+                    ColorSource.SEED -> PlazaColorSource.SEED
+                },
+                seedColor = Color(settings.seedColor),
                 fontScale = settings.fontScale,
             ) {
                 // Every link that leaves the app goes through LocalUriHandler — the explicit

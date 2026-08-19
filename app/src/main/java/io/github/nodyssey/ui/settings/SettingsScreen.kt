@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.settings
 
+import android.os.Build
 import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,6 +37,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -46,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.data.settings.ColorSource
 import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
@@ -90,6 +94,8 @@ fun SettingsRoute(
         },
         onBack = onBack,
         onThemeModeChange = viewModel::setThemeMode,
+        onColorSourceChange = viewModel::setColorSource,
+        onSeedColorChange = viewModel::setSeedColor,
         onFontScaleChange = viewModel::setFontScale,
         onStickerUniformSizeChange = viewModel::setStickerUniformSize,
         onStickerSizeChange = viewModel::setStickerSize,
@@ -118,6 +124,8 @@ fun SettingsScreen(
     onOpenAppLinkSettings: () -> Unit,
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
+    onColorSourceChange: (ColorSource) -> Unit,
+    onSeedColorChange: (Int) -> Unit,
     onFontScaleChange: (Float) -> Unit,
     onStickerUniformSizeChange: (Boolean) -> Unit,
     onStickerSizeChange: (Int) -> Unit,
@@ -182,6 +190,23 @@ fun SettingsScreen(
                         selected = state.settings.themeMode,
                         onSelected = onThemeModeChange,
                     )
+                }
+                SettingsBlock(
+                    title = stringResource(R.string.settings_color_source),
+                    subtitle = stringResource(R.string.settings_color_source_hint),
+                ) {
+                    ConnectedColorSourceButtons(
+                        selected = state.settings.colorSource,
+                        onSelected = onColorSourceChange,
+                    )
+                    // The swatches only mean anything while 自选 is the source; under the other two
+                    // they would offer a choice that changes nothing on screen.
+                    if (state.settings.colorSource == ColorSource.SEED) {
+                        SeedSwatchRow(
+                            seed = Color(state.settings.seedColor),
+                            onSeedChange = { onSeedColorChange(it.toArgb()) },
+                        )
+                    }
                 }
                 SettingsBlock(
                     title = stringResource(R.string.settings_body_size),
@@ -455,6 +480,32 @@ private fun ConnectedReportFormatButtons(
     )
 }
 
+/**
+ * 品牌色 / 壁纸色 / 自选.
+ *
+ * 壁纸色 is dropped rather than disabled below API 31: there is no wallpaper palette to read there,
+ * and a segment that can never be picked is worse than one that was never offered.
+ */
+@Composable
+private fun ConnectedColorSourceButtons(
+    selected: ColorSource,
+    onSelected: (ColorSource) -> Unit,
+) {
+    val choices =
+        buildList {
+            add(ColorSource.BRAND to stringResource(R.string.settings_color_source_brand))
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                add(ColorSource.WALLPAPER to stringResource(R.string.settings_color_source_wallpaper))
+            }
+            add(ColorSource.SEED to stringResource(R.string.settings_color_source_seed))
+        }
+    ConnectedChoiceButtons(
+        labels = choices.map { it.second },
+        selectedIndex = choices.indexOfFirst { it.first == selected },
+        onSelect = { onSelected(choices[it].first) },
+    )
+}
+
 @Composable
 private fun ConnectedThemeButtons(
     selected: ThemeMode,
@@ -549,6 +600,8 @@ private fun SettingsPreview() {
             state = SettingsUiState(versionName = "1.1.1"),
             onBack = {},
             onThemeModeChange = {},
+            onColorSourceChange = {},
+            onSeedColorChange = {},
             onFontScaleChange = {},
             onStickerUniformSizeChange = {},
             onStickerSizeChange = {},

@@ -243,6 +243,7 @@
     <string name="message_thread_subtitle">UID %1$d</string>
     <string name="message_thread_subtitle_level">UID %1$d · Lv %2$d</string>
     <string name="message_thread_empty">还没有消息，说点什么吧</string>
+    <string name="message_thread_open_space">查看主页</string>
     <string name="message_input_hint_markdown">发消息（Markdown 已开）</string>
     <string name="message_input_hint_plain">发消息</string>
     <string name="message_markdown_toggle">Markdown 开关</string>
@@ -274,6 +275,25 @@
     <string name="settings_theme_system">跟随系统</string>
     <string name="settings_theme_light">浅色</string>
     <string name="settings_theme_dark">深色</string>
+    <string name="settings_color_source">配色</string>
+    <string name="settings_color_source_hint">自选的颜色会按 Material 3 的规则展开成整套配色</string>
+    <string name="settings_color_source_brand">品牌色</string>
+    <string name="settings_color_source_wallpaper">壁纸色</string>
+    <string name="settings_color_source_seed">自选</string>
+    <string name="settings_seed_custom">自定义颜色</string>
+    <string name="settings_seed_hue">色相</string>
+    <string name="settings_seed_chroma">鲜艳度</string>
+    <string name="settings_seed_hex">色值</string>
+    <string name="settings_seed_preview">预览</string>
+    <string name="settings_seed_teal">石墨青</string>
+    <string name="settings_seed_blue">海蓝</string>
+    <string name="settings_seed_violet">靛紫</string>
+    <string name="settings_seed_magenta">玫红</string>
+    <string name="settings_seed_red">砖红</string>
+    <string name="settings_seed_amber">琥珀</string>
+    <string name="settings_seed_olive">苔绿</string>
+    <string name="settings_seed_green">松绿</string>
+    <string name="settings_seed_graphite">石墨灰</string>
     <string name="settings_body_size">字号</string>
     <string name="settings_body_size_value">%1$dsp</string>
     <string name="settings_sticker_uniform">表情统一缩限</string>
@@ -645,9 +665,6 @@
     <string name="status_http_title">服务器返回了 HTTP %1$d</string>
     <string name="status_unknown_title">加载失败</string>
     <string name="status_generic_body">再试一次，或者到网页里看看。</string>
-
-    <string name="status_coming_soon_title">%1$s 还在做</string>
-    <string name="status_coming_soon_body">这个页面的设计稿还没定，先用首页凑合一下。</string>
 
     <string name="status_not_wired_title">这一页还没接进 App</string>
     <string name="status_not_wired_body">NodeSeek 这一页是网页端渲染的，没有可读的接口，App 不会拿猜出来的数据糊弄你。先到网页里看，接口对上就会补进来。</string>

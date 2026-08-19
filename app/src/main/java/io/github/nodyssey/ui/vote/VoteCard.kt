@@ -504,8 +504,12 @@ private fun VoteResultRow(
     onLoadMore: () -> Unit,
     onUserClick: (Long) -> Unit,
 ) {
+    // Read once into a local: `count` is a `val` on a data class that now lives in another module, and
+    // the compiler will not smart-cast across that boundary — a module it does not compile could
+    // replace the property with a custom getter.
+    val count = item.count
     val fraction =
-        if (item.count != null && total != null && total > 0) item.count.toFloat() / total else 0f
+        if (count != null && total != null && total > 0) count.toFloat() / total else 0f
     // Grown rather than snapped: this row is redrawn the moment the submit comes back, and a bar that
     // appears at its final length loses the only feedback the reader gets that the vote was counted.
     val grown by animateFloatAsState(
@@ -571,9 +575,9 @@ private fun VoteResultRow(
                     modifier = Modifier.size(17.dp).padding(end = 3.dp),
                 )
             }
-            if (item.count != null) {
+            if (count != null) {
                 Text(
-                    stringResource(R.string.vote_count, item.count),
+                    stringResource(R.string.vote_count, count),
                     style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

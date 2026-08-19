@@ -55,7 +55,12 @@ class SettingsRepository(
                 themeMode = preferences[KEY_THEME_MODE]
                     ?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                     ?: ThemeMode.SYSTEM,
-                dynamicColor = preferences[KEY_DYNAMIC_COLOR] ?: false,
+                colorSource = preferences[KEY_COLOR_SOURCE]
+                    ?.let { runCatching { ColorSource.valueOf(it) }.getOrNull() }
+                    // 动态取色 used to be a bare switch. A store written by an older build has no
+                    // 配色来源 at all, and the one thing it can say is whether that switch was on.
+                    ?: if (preferences[KEY_DYNAMIC_COLOR] == true) ColorSource.WALLPAPER else ColorSource.BRAND,
+                seedColor = preferences[KEY_SEED_COLOR] ?: DEFAULT_SEED_COLOR,
                 fontScale = preferences[KEY_FONT_SCALE] ?: 1f,
                 stickerUniformSize = preferences[KEY_STICKER_UNIFORM_SIZE] ?: true,
                 stickerSize = (preferences[KEY_STICKER_SIZE] ?: DEFAULT_STICKER_SIZE_SP)
@@ -118,7 +123,13 @@ class SettingsRepository(
 
     suspend fun setThemeMode(mode: ThemeMode) = edit { it[KEY_THEME_MODE] = mode.name }
 
-    suspend fun setDynamicColor(enabled: Boolean) = edit { it[KEY_DYNAMIC_COLOR] = enabled }
+    suspend fun setColorSource(source: ColorSource) = edit { it[KEY_COLOR_SOURCE] = source.name }
+
+    /**
+     * The seed 自选颜色 expands into a scheme from. Stored as ARGB, and kept even while another
+     * source is selected so that coming back to 自选颜色 returns the colour that was picked.
+     */
+    suspend fun setSeedColor(argb: Int) = edit { it[KEY_SEED_COLOR] = argb }
 
     suspend fun setFontScale(scale: Float) =
         edit { it[KEY_FONT_SCALE] = scale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE) }
@@ -439,7 +450,14 @@ class SettingsRepository(
         const val DEFAULT_READ_HISTORY_LIMIT = 300
 
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+
+        /** Read only to migrate a store written before 配色来源 existed; nothing writes it now. */
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
+        private val KEY_COLOR_SOURCE = stringPreferencesKey("color_source")
+        private val KEY_SEED_COLOR = intPreferencesKey("seed_color")
+
+        /** 石墨青's own `primary`, so 自选颜色 starts where 品牌配色 left off. */
+        const val DEFAULT_SEED_COLOR: Int = 0xFF35606E.toInt()
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
         private val KEY_STICKER_UNIFORM_SIZE = booleanPreferencesKey("sticker_uniform_size")
         private val KEY_STICKER_SIZE = intPreferencesKey("sticker_size_sp")
@@ -542,7 +560,9 @@ enum class ComposerSurface { POST, REPLY, MESSAGE }
 
 data class UserSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColor: Boolean = false,
+    val colorSource: ColorSource = ColorSource.BRAND,
+    /** ARGB. Only read while [colorSource] is [ColorSource.SEED]; see `setSeedColor`. */
+    val seedColor: Int = SettingsRepository.DEFAULT_SEED_COLOR,
     val fontScale: Float = 1f,
     /**
      * 表情统一缩限. True — the default — draws every inline sticker in the same [stickerSize] square,
@@ -631,6 +651,15 @@ data class UserSettings(
  * reads as [SYSTEM] again, which is what that setting was asking for anyway.
  */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+/**
+ * Where the colours come from: the app's own 石墨青 palette, the system wallpaper (API 31+), or a
+ * seed colour the reader picks, expanded into a full Material 3 scheme.
+ *
+ * One choice rather than a switch per source — they are alternatives, and two of them being on at
+ * once would have no answer.
+ */
+enum class ColorSource { BRAND, WALLPAPER, SEED }
 
 /**
  * Where a link that leaves the app goes.

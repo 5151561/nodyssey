@@ -24,6 +24,28 @@ val lockedConfigurations =
         // What the tests run against, since a test-only dependency drifting is just as confusing.
         "debugUnitTestCompileClasspath",
         "debugUnitTestRuntimeClasspath",
+        // The same two categories again for a Kotlin Multiplatform module, where none of the six
+        // names above exists: build types are an Android idea, and a KMP module names its
+        // configurations after targets and compilations instead.
+        //
+        // This list is the one that was measured rather than the one that looked right. `:shared`
+        // declares thirty-odd resolvable configurations — compiler plugin classpaths, commonizer
+        // classpaths, Swift export — and most of them produce no lock state at all, which under
+        // STRICT is a build failure rather than a no-op. These seven are what remain.
+        //
+        // What ships to the Android consumers, and what its host tests execute:
+        "androidCompileClasspath",
+        "androidRuntimeClasspath",
+        "androidHostTestCompileClasspath",
+        "androidHostTestRuntimeClasspath",
+        // What `commonMain` itself compiles against — the half every platform shares, so a drift here
+        // reaches all of them at once.
+        "metadataCommonMainCompileClasspath",
+        // The Apple targets. Locked even though CI never resolves them: the point of a lockfile is
+        // that the graph is decided in the repository rather than by whichever machine ran the build,
+        // and a Mac is the only machine that resolves these.
+        "iosArm64CompileKlibraries",
+        "macosArm64CompileKlibraries",
     )
 
 dependencyLocking {
