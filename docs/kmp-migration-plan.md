@@ -377,7 +377,7 @@ Compose
 | ✅ **B2** | B | `core/image` 拆三份，`:designsys` 改为直接依赖 `:shared`。不是「下沉」——见下 | B1 |
 | ✅ **B3** | B | `:designsys` 转 KMP 模块 + desktop target，单独跑起来。顺带把 B4 的一半做掉了——见下 | B2 |
 | **A5** | A | 网络契约 + Apple transport | B3 |
-| **B4** | B | `:app` 的 `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group。`:designsys` 那半已在 B3 完成 | B3 |
+| ✅ **B4** | B | `:app` 的 `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group。`:designsys` 那半已在 B3 完成。不是纯改名——见下 | B3 |
 | **A6** | A | Room + DataStore（7 个手写 migration 要重写） | A5 |
 | **A7** | A | Repository 由简到繁：Terms/Search → Profile/Community → Post/Vote → Feed/Paging。**这一步就是「拆 `:app` 的 `data/`」** | A6 |
 | **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」） | A7 + B4 |
@@ -638,6 +638,119 @@ host 和桌面 JVM 上各跑一遍。搬的时候撞到的还是那条老坑：*
 
 总数：`:app` 1,095 + `:designsys` 108（androidHostTest）+ `:core` 40 + `:shared` 181 = **1,424**，与 B2 后
 一致；桌面端新增 `:designsys` 58 + `:shared` 175 + `:gallery` 3 = **236** 次执行，全部 0 失败。
+
+### ✅ B4 实测：`:app` 换 group，以及三处会被悄悄降级的依赖
+
+五行 `libs.androidx.compose.*` 换成 `libs.compose.*`，`adaptive-navigation3` 换到
+`org.jetbrains.compose.material3.adaptive`，源码一个 import 没动——这半是预期内的。**预期外的是：
+换 group 把「用哪个 androidx 版本」的决定权交给了指针，而这个仓库跑在比指针更新的版本上。**
+
+#### 指针里是空的
+
+`org.jetbrains.compose.ui:ui` 的 android 变体是个 6KB 的 aar，`classes.jar` **273 字节**，什么类都
+没有；aar 里唯一有内容的是一条依赖 `androidx.compose.ui:ui`，和一份写着「本库可以安全 shrink」的
+空 proguard 规则。所以换 group 不改变编译时看见的任何一个类——但它改变*看见哪个版本*的类。
+
+（**一个例外，见下面的「`ui-tooling` 留在 androidx」**：空 `classes.jar` 不等于空 aar，manifest
+是它们能带的另一样东西。）
+
+三处指针落后于版本目录：
+
+| 坐标 | 指针要 | 本仓库在 |
+|---|---|---|
+| `androidx.compose.material3:material3` | 1.5.0-alpha22 | 1.5.0-alpha24 |
+| `androidx.compose.material3.adaptive:*` | 1.3.0-beta02 | 1.3.0-rc01 |
+| `androidx.compose.material:material-icons-core` | 1.7.6 | 1.7.8 |
+
+不写一句话，B4 就是三个库的静默降级——而 AGENTS.md 里「Material 3 停在 1.5 的 alpha，是因为这些
+API 只在那儿是公开的」正是不能降的那条。
+
+处置用 `constraints` 而不是 `dependencies`：模块**名字**上仍然只有多平台坐标。**一个 group 一行就
+够**，因为 androidx 在每个 module 元数据里都发布了对同组兄弟的 constraint——实测
+`material3-android-1.5.0-alpha24.module` 里有 `material3-adaptive-navigation-suite`、
+`material3-ripple`、`material3-window-size-class`、`material3-lint` 四条，
+`adaptive-navigation3-android-1.3.0-rc01.module` 里有 `adaptive`、`adaptive-layout`、
+`adaptive-navigation` 三条。
+
+#### `ui-tooling` 留在 androidx——空 `classes.jar` 不代表这个 aar 是空的
+
+`org.jetbrains.compose.ui:ui-tooling` 的 `classes.jar` 同样是 275 字节的空壳，但它的 aar 里还有一份
+**AndroidManifest**，声明 `org.jetbrains.androidx.compose.ui.tooling.PreviewActivity`——而这个类它
+自己不提供，整个依赖图里也没有（grep 过打出来的 dex，0 处）。换过去的后果是 debug 的合并 manifest
+里多一个 `android:exported="true"` 的 activity 指向一个不存在的类。
+
+所以这一行改回了 androidx，理由归到和两个测试构件同一类：**带 AndroidManifest 的构件留在 androidx**，
+因为 manifest 正是多平台构件没有对应物的那样东西。换过去也没有任何好处——类反正都从底下的 androidx
+来，而 `ui-tooling` 是 `debugImplementation`，从来不进 release。
+
+这一处是**先换了、比对产物时才发现、然后撤回**的。下一节那张「行为不变」的表是撤回之后测的。
+
+#### 锁文件就是「Android 行为不变」的证明
+
+`resolveAndLockAll --write-locks` 之后，`app/gradle.lockfile` 解析出的 316 个模块里**没有一个版本
+变化，也没有一个消失**。新增 9 条：CMP 的 navigation-suite 与 adaptive 指针，加上 adaptive 拖进来的
+三个 JetBrains 镜像，每一个都输给图里已有的 androidx：
+
+| 新增 | 图里已有的 | 结果 |
+|---|---|---|
+| `org.jetbrains.androidx.navigation3:navigation3-ui:1.1.0` | `androidx.navigation3:navigation3-ui:1.1.4` | 1.1.4 |
+| `org.jetbrains.androidx.navigationevent:navigationevent-compose:1.0.1` | `androidx.navigationevent:navigationevent-compose:1.1.2` | 1.1.2 |
+| `org.jetbrains.androidx.window:window-core:1.5.0` | `androidx.window:window-core:1.5.0` | 同版本 |
+
+唯一的减法是 `compose-bom` 从 `releaseCompileClasspath` / `releaseRuntimeClasspath` 上消失。
+
+**但锁文件只证明图没变，不证明产物没变**，所以又比了一次装出来的东西——`git stash` 出一个 HEAD 的
+debug APK，和改动后的逐项对：
+
+| | 改前 | 改后 |
+|---|---|---|
+| zip 条目 | 238 | 238，无增无减 |
+| 合并后的 AndroidManifest | | **零差异** |
+| dex 里定义的类 | 30,199 | 30,200 |
+| dex 里定义的方法 | 184,100 | 184,101 |
+
+多出来的那**一个类**是 `org.jetbrains.androidx.compose.material3.adaptive.navigationsuite.R`，一个空
+资源类加它的默认构造函数——指针 aar 带了自己的包名和一份空的 `res/values/values.xml`，AGP 就给它
+生成一个 `R`。release 里 R8 把它去掉了（`base/dex` 里 0 处引用）。除此之外每一个类、每一个方法都
+逐个对得上。
+
+这一步的正确验证是**比类和 manifest**，不是比包大小：APK 总字节数改前改后恰好相同，但那是压缩碰巧
+抵消，不构成证据。
+
+#### BOM 还剩什么用
+
+不再是 `implementation`。它留在 `debugImplementation` / `testImplementation` /
+`androidTestImplementation` 上，只为 `ui-test-junit4` 和 `ui-test-manifest` 供版本——就是 B3 里
+`:designsys` 留下的同两个，同一个理由：`ui-test-manifest` 提供的是 `createComposeRule` 启动的那个
+Activity，是一份 Android manifest，没有多平台对应物。
+
+#### CMP 的版本线现在是三条
+
+`composeMultiplatform = 1.12.0-rc01` 主线、`composeMultiplatformMaterial3 = 1.12.0-alpha03`，再加新
+的 `composeMultiplatformAdaptive = 1.3.0-beta02`。navigation-suite 不在第三条上，它跟 material3 走
+（`org.jetbrains.compose.material3:material3-adaptive-navigation-suite`）。
+
+#### 没做的两件事，以及为什么
+
+- **Navigation 3 和 lifecycle 仍是 androidx。**它们不是 `androidx.compose.*`，而真正需要它们多平台
+  的是 `ui/`，那是 D1。顺带一提这一步已经把 `org.jetbrains.androidx.navigation3` 的镜像拖进依赖图
+  了（CMP adaptive 要它），D1 换过去时它不是新面孔。
+- **B3 留下的 `BackHandler` 弃用没有在这里换。**`NavigationEventHandler` 是 predictive back 的行为
+  变化，而 B4 全程没换过一个类。按 §7「同一个 PR 不要既搬代码又改行为」，整条归 D1。
+
+顺带更正 B3 写下的一处理由：`PlazaBackHandler` 的 KDoc 说它还在，是因为「消费方还在 androidx 上，
+点不到这个名字，而 `:app` 就是这样一个消费方」。B4 之后 `:app` 不在 androidx 上了，这条理由作废。
+它现在存在的理由是 `ui-backhandler` 在 `:designsys` 是 `implementation`，不在任何别人的编译路径上；
+而全仓库只有一个调用点，就在 `:designsys` 自己内部——真要删它，那是独立一步。
+
+#### 门禁
+
+`spotlessCheck`、`testDebugUnitTest testAndroidHostTest jvmTest`、`:app:lintDebug`、
+`:app:assembleDebug`、`:app:bundleRelease` 全绿。测试数一个没变：`:app` 1,095 + `:designsys` 108 +
+`:core` 40 + `:shared` 181 = **1,424**，桌面端 58 + 175 + 3 = **236**。
+
+`:app:lintAnalyzeDebugUnitTest` 第一次跑挂在 `OutOfMemoryError: Metaspace`，报出来的是「lint 或它
+依赖的库有 bug」。是 daemon 的事而不是这次改动的事：`./gradlew --stop` 之后重跑即过。
 
 ### ✅ 步骤 2 实测：构建基础设施
 

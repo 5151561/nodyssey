@@ -6,15 +6,24 @@ androidxActivity = "1.13.0"
 androidxBrowser = "1.10.0"
 androidxComposeBom = "2026.06.00"
 androidxMaterial3 = "1.5.0-alpha24"
+# Where androidx's icons stopped; see `composeMultiplatformIcons` below for the freeze on both sides.
+# Stated as a version here only so the multiplatform pointer, which asks for 1.7.6, does not decide it
+# — the constraints at the end of `app/build.gradle.kts` are what use it.
+androidxMaterialIcons = "1.7.8"
 # Compose Multiplatform. Its Android artifacts are pointers: `org.jetbrains.compose.ui:ui` resolves
 # to `androidx.compose.ui:ui` of the matching version, so an Android consumer ends up on exactly the
-# androidx classes it was on before. Only the modules that have to compile for something other than
-# Android name these coordinates; `:app` still names androidx and the BOM.
+# androidx classes it was on before. Every module that compiles Compose names these coordinates now,
+# `:app` included; the androidx aliases that remain below are the two test artifacts with no
+# multiplatform counterpart, plus three versions held forward by constraint.
 composeMultiplatform = "1.12.0-rc01"
 # Material 3 is versioned on its own line in Compose Multiplatform and moves slower than the rest of
 # it: this is the newest one published, and it is what `1.12.0-rc01` expects beside it. On Android it
 # asks for androidx material3 1.5.0-alpha22, which loses to the alpha24 above.
 composeMultiplatformMaterial3 = "1.12.0-alpha03"
+# And the adaptive libraries are a third version line, `org.jetbrains.compose.material3.adaptive`.
+# The newest published, and its Android pointer asks for androidx adaptive 1.3.0-beta02 — behind the
+# `material3Adaptive` rc01 above, which is why that one is held forward by constraint.
+composeMultiplatformAdaptive = "1.3.0-beta02"
 # Frozen upstream, on both sides: androidx stopped at 1.7.8 (2025-02) and the multiplatform mirror at
 # 1.7.3. The five icons this repository takes from it are Material's oldest and have not changed; the
 # pin is only stated here because the version cannot come from the Compose Multiplatform line.
@@ -51,15 +60,20 @@ ktlint = "1.8.0"
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
 androidx-browser = { module = "androidx.browser:browser", version.ref = "androidxBrowser" }
+# The BOM and three artifacts are all that is still named as androidx Compose, and none of them is in
+# anything that ships: what they have in common is an AndroidManifest, which is the one thing a
+# multiplatform counterpart cannot carry. `ui-test-manifest` contributes the activity
+# `createComposeRule` launches; `ui-test-junit4` comes along with it; `ui-tooling` is debug-only, and
+# the multiplatform one declares a `PreviewActivity` whose class it does not ship — see the comment
+# at that line in `app/build.gradle.kts`. The two versioned aliases after them are not dependencies at
+# all — they are constraints that hold the androidx artifacts under the multiplatform pointers at the
+# versions this repository is on.
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
-androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "androidxMaterial3" }
-androidx-compose-material3-adaptive-navigation-suite = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite"}
-androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core"}
-androidx-compose-ui = { group = "androidx.compose.ui", name = "ui"}
-androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview"}
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4"}
-androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling"}
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest"}
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling"}
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "androidxMaterial3" }
+androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "androidxMaterialIcons" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidxLifecycle" }
@@ -121,6 +135,10 @@ compose-ui-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler", v
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 compose-ui-test = { module = "org.jetbrains.compose.ui:ui-test", version.ref = "composeMultiplatform" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMultiplatformMaterial3" }
+# On the material3 version line rather than the main one, like `material3` itself.
+compose-material3-adaptive-navigation-suite = { module = "org.jetbrains.compose.material3:material3-adaptive-navigation-suite", version.ref = "composeMultiplatformMaterial3" }
+# …and this one on the adaptive line, which is a third.
+compose-material3-adaptive-navigation3 = { module = "org.jetbrains.compose.material3.adaptive:adaptive-navigation3", version.ref = "composeMultiplatformAdaptive" }
 compose-material-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "composeMultiplatformIcons" }
 # `Res` and the string accessors generated from `composeResources/`. The Compose Multiplatform plugin
 # generates the code; this is the runtime that reads the packaged resource.

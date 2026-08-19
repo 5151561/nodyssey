@@ -36,11 +36,22 @@ Before submitting, run the same gates as `.github/workflows/ci.yml`. After build
 
 `gradle/libs.versions.toml` is the single source of truth for every version, and it is kept current
 on purpose: AGP 9.3.1 / Kotlin 2.4.10 / Compose BOM 2026.06.00 / Material 3 1.5.0-alpha24 /
-Compose Multiplatform 1.12.0-rc01 (its Material 3 is a separate version line, 1.12.0-alpha03) /
-Navigation 3 / OkHttp 5 / Coil 3 / Room 2.8 / Paging 3.5 / coroutines 1.11, on JDK 21, compileSdk 37,
-minSdk 26, targetSdk 36. Never inline a version in a build file, and run
-`./gradlew resolveAndLockAll --write-locks` after any dependency change. The SDK levels and the JDK
-now live in the `build-logic` convention plugins rather than in a module's build file.
+Compose Multiplatform 1.12.0-rc01 (Material 3 and the adaptive libraries are separate version lines,
+1.12.0-alpha03 and 1.3.0-beta02) / Navigation 3 / OkHttp 5 / Coil 3 / Room 2.8 / Paging 3.5 /
+coroutines 1.11, on JDK 21, compileSdk 37, minSdk 26, targetSdk 36. Never inline a version in a build
+file, and run `./gradlew resolveAndLockAll --write-locks` after any dependency change. The SDK levels
+and the JDK now live in the `build-logic` convention plugins rather than in a module's build file.
+
+**Every module names Compose as `org.jetbrains.compose`, `:app` included** (step B4). The package
+names are androidx's either way, so no source file cares; on Android each of those coordinates is an
+empty pointer aar that depends on the androidx artifact of the same name. Which androidx version it
+asks for is the pointer's choice, and for material3, the adaptive libraries and material-icons it is
+older than this catalog — the `constraints` block at the end of `app/build.gradle.kts` is what holds
+those three forward, so read it before changing any of the four version lines above. The androidx
+Compose BOM is no longer on `implementation` anywhere: it versions `ui-test-junit4`,
+`ui-test-manifest` and `ui-tooling`, and nothing else. Those three are the exception to the rule
+above, and what they have in common is an AndroidManifest — the one thing a multiplatform artifact
+cannot carry, and in `ui-tooling`'s case one that declares a class it does not ship.
 
 Before writing code against any of these libraries, find out what the **pinned** version actually
 offers — read its release notes or the resolved sources, do not code from memory of an older

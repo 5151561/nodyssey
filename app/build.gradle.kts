@@ -93,8 +93,13 @@ dependencies {
     // import from is one you declare.
     implementation(project(":shared"))
 
+    // The androidx Compose BOM, and it no longer governs what ships: everything below that used to
+    // take its version from here is named as `org.jetbrains.compose` now, and the androidx artifacts
+    // underneath those come with versions of their own. What is left for it are the two test
+    // artifacts that are still androidx because they have no multiplatform counterpart, so it is
+    // applied to the configurations those are declared on and nowhere else.
     val composeBom = platform(libs.androidx.compose.bom)
-    implementation(composeBom)
+    debugImplementation(composeBom)
     androidTestImplementation(composeBom)
 
     // Core Android dependencies
@@ -107,15 +112,23 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-    // Compose
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
+    // Compose, as `org.jetbrains.compose` — the swap `:designsys` made in B3, arriving here in B4.
+    // The package names are androidx's either way, so not one import in this module changes; what
+    // changes is that no module in the repository still asks for Compose by an Android-only
+    // coordinate, which is the precondition for `ui/` moving into `commonMain` in step D1.
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.material3)
     // NavigationSuiteScaffold: the bar becomes a rail once the window is wide enough, which
     // targetSdk 36 makes unavoidable — large screens can no longer be told to stay phone-shaped.
-    implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
-    implementation(libs.androidx.compose.material.icons.core)
-    // Tooling
+    implementation(libs.compose.material3.adaptive.navigation.suite)
+    implementation(libs.compose.material.icons.core)
+    // Tooling, and the one Compose line that stayed androidx. `org.jetbrains.compose.ui:ui-tooling`
+    // is the same empty pointer as the rest, except that its aar also carries an AndroidManifest
+    // declaring `org.jetbrains.androidx.compose.ui.tooling.PreviewActivity` — a class that ships in
+    // none of its artifacts. Swapping this line put an `exported` activity into the merged debug
+    // manifest naming a class not present in any dex (checked by grepping the built APK). Nothing
+    // launches it, but it buys nothing either: the classes come from androidx underneath either way.
     debugImplementation(libs.androidx.compose.ui.tooling)
     // Instrumented tests
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
@@ -145,7 +158,10 @@ dependencies {
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
-    implementation(libs.androidx.material3.adaptive.navigation3)
+    // The list-detail scene strategy, on the multiplatform coordinate for the same reason as the
+    // Compose block above. Navigation 3 itself stays androidx: `ui/` is what would need it
+    // multiplatform, and that is D1.
+    implementation(libs.compose.material3.adaptive.navigation3)
 
     // Networking: OkHttp shares its cookie jar with the WebView used for login.
     implementation(libs.okhttp)
@@ -184,4 +200,26 @@ dependencies {
     implementation(libs.coil.network.cache.control)
     // The site's generated default avatars are SVG served from a `.png` path.
     implementation(libs.coil.svg)
+
+    /*
+     * The androidx versions underneath the multiplatform pointers.
+     *
+     * An `org.jetbrains.compose` artifact's Android variant is a 6KB aar whose `classes.jar` is 273
+     * bytes of nothing and whose only content is a dependency on the androidx artifact of the same
+     * name. So the swap above changes no class this app compiles against — but it does hand the
+     * choice of *which* androidx version to the pointer, and for three of them the pointer is behind
+     * where this repository runs: material3 asks for 1.5.0-alpha22 against the catalog's alpha24,
+     * adaptive for 1.3.0-beta02 against rc01, and the icons mirror for 1.7.6 against the 1.7.8
+     * androidx stopped at. Unstated, B4 would have been a silent downgrade of three libraries.
+     *
+     * Constraints rather than dependencies, so what this module *names* is still the multiplatform
+     * coordinate. One line per group is enough: androidx publishes constraints on its siblings inside
+     * every module, so material3 alpha24 brings `material3-adaptive-navigation-suite` with it and
+     * adaptive-navigation3 rc01 brings `adaptive`, `adaptive-layout` and `adaptive-navigation`.
+     */
+    constraints {
+        implementation(libs.androidx.compose.material3)
+        implementation(libs.androidx.material3.adaptive.navigation3)
+        implementation(libs.androidx.compose.material.icons.core)
+    }
 }
