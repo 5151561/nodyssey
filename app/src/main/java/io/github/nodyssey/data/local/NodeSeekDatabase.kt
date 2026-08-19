@@ -25,8 +25,12 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ReadingPositionEntity::class,
         CacheSessionEntity::class,
         SelfProfileEntity::class,
+        OfflineThreadEntity::class,
+        OfflineCommentEntity::class,
+        OfflineImageEntity::class,
+        CollectedPostMetaEntity::class,
     ],
-    version = 10,
+    version = 13,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -44,6 +48,10 @@ abstract class NodeSeekDatabase : RoomDatabase() {
     abstract fun cacheSessionDao(): CacheSessionDao
 
     abstract fun profileDao(): ProfileDao
+
+    abstract fun offlineDao(): OfflineDao
+
+    abstract fun collectedPostMetaDao(): CollectedPostMetaDao
 }
 
 /** Adds the signed-in profile cache without disturbing existing posts or read marks. */
@@ -186,6 +194,119 @@ internal val MIGRATION_9_10 =
     }
 
 /**
+ * Gives 离线阅读 somewhere to put the threads it downloads.
+ *
+ * Three new tables and not one existing column touched, which is the point: the download engine is
+ * a second store beside the reader's cache, not a flag on it — see `OfflineEntities.kt` for why a
+ * pin bit on `post_details` could not have held. Nothing to back-fill either; a device upgrading
+ * has downloaded nothing, and that is exactly what an empty table says.
+ */
+internal val MIGRATION_10_11 =
+    object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `offline_threads` (
+                    `postId` INTEGER NOT NULL,
+                    `title` TEXT NOT NULL,
+                    `body` TEXT,
+                    `totalPages` INTEGER NOT NULL,
+                    `storedCommentCount` INTEGER NOT NULL,
+                    `remoteCommentCount` INTEGER,
+                    `status` INTEGER NOT NULL,
+                    `progress` REAL,
+                    `failure` INTEGER,
+                    `textBytes` INTEGER NOT NULL,
+                    `collected` INTEGER,
+                    `collectionCount` INTEGER,
+                    `isAwarded` INTEGER,
+                    `queuedAtMillis` INTEGER NOT NULL,
+                    `downloadedAtMillis` INTEGER,
+                    PRIMARY KEY(`postId`)
+                )
+                """.trimIndent(),
+            )
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `offline_comments` (
+                    `postId` INTEGER NOT NULL,
+                    `page` INTEGER NOT NULL,
+                    `position` INTEGER NOT NULL,
+                    `content` TEXT NOT NULL,
+                    PRIMARY KEY(`postId`, `page`, `position`),
+                    FOREIGN KEY(`postId`) REFERENCES `offline_threads`(`postId`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `offline_images` (
+                    `postId` INTEGER NOT NULL,
+                    `url` TEXT NOT NULL,
+                    `fileName` TEXT NOT NULL,
+                    `bytes` INTEGER NOT NULL,
+                    PRIMARY KEY(`postId`, `url`),
+                    FOREIGN KEY(`postId`) REFERENCES `offline_threads`(`postId`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_offline_images_fileName` ON `offline_images` (`fileName`)")
+        }
+    }
+
+/**
+ * Gives 收藏 somewhere to keep what the site has already said about a collected thread.
+ *
+ * One table, every column nullable, nothing back-filled — and the empty start is honest rather than
+ * merely convenient: on the device this upgrades, the app has been told plenty about these threads
+ * and never wrote any of it down. The rows fill in as they are learned again, which for a thread the
+ * reader opens or downloads is immediately, and for one they never touch again is never — the same
+ * bare row the list already draws today.
+ */
+internal val MIGRATION_11_12 =
+    object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `collected_post_meta` (
+                    `postId` INTEGER NOT NULL,
+                    `title` TEXT,
+                    `categoryTitle` TEXT,
+                    `categorySlug` TEXT,
+                    `authorName` TEXT,
+                    `commentCount` INTEGER,
+                    `createdAtText` TEXT,
+                    `updatedAtMillis` INTEGER NOT NULL,
+                    PRIMARY KEY(`postId`)
+                )
+                """.trimIndent(),
+            )
+        }
+    }
+
+/**
+ * Gives a remembered thread its author's picture.
+ *
+ * Two columns, both null on every existing row, and null is the honest value: v12 stored the
+ * author's *name* and never asked anything for a face, so no row can be back-filled from what is
+ * already in the file. They fill in the next time the thread is opened, collected or downloaded.
+ *
+ * A version of its own rather than a wider v12, even though v12 has never shipped: the identity
+ * hash is checked at open time and a changed one at an unchanged version is not something
+ * `fallbackToDestructiveMigration` catches — it throws, and every device carrying a test build of
+ * v12 would crash on launch rather than upgrade.
+ */
+internal val MIGRATION_12_13 =
+    object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `collected_post_meta` ADD COLUMN `avatarUrl` TEXT")
+            db.execSQL("ALTER TABLE `collected_post_meta` ADD COLUMN `authorUid` INTEGER")
+        }
+    }
+
+/**
  * Every migration this schema has, in order — the list `createNodeSeekDatabase` opens the file with.
  *
  * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
@@ -200,4 +321,7 @@ internal val NODESEEK_MIGRATIONS = arrayOf(
     MIGRATION_7_8,
     MIGRATION_8_9,
     MIGRATION_9_10,
+    MIGRATION_10_11,
+    MIGRATION_11_12,
+    MIGRATION_12_13,
 )

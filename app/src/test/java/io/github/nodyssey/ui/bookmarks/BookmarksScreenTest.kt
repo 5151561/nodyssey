@@ -1,8 +1,11 @@
 package io.github.nodyssey.ui.bookmarks
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -12,6 +15,7 @@ import io.github.nodyssey.data.OfflineState
 import io.github.nodyssey.data.OfflineUsage
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,12 +65,14 @@ class BookmarksScreenTest {
     private fun state(
         selection: Set<Long>? = null,
         offlineAvailable: Boolean = true,
+        usage: OfflineUsage =
+            OfflineUsage(posts = 2, textBytes = 1_000_000, imageBytes = 12_000_000, freeBytes = 3_435_973_836),
     ) = BookmarksUiState(
         entries = entries,
         isLoading = false,
         selection = selection,
         offlineAvailable = offlineAvailable,
-        usage = OfflineUsage(posts = 2, textBytes = 1_000_000, imageBytes = 12_000_000, freeBytes = 3_435_973_836),
+        usage = usage,
     )
 
     private fun setScreen(
@@ -76,6 +82,7 @@ class BookmarksScreenTest {
         onToggleSelection: (Long) -> Unit = {},
         onRowOfflineAction: (BookmarkEntry) -> Unit = {},
         onDownloadPending: () -> Unit = {},
+        onOfflineSettings: (io.github.nodyssey.data.OfflineSettings) -> Unit = {},
     ) {
         composeRule.setContent {
             PlazaTheme {
@@ -98,7 +105,7 @@ class BookmarksScreenTest {
                     onDownloadSelected = {},
                     onDownloadPending = onDownloadPending,
                     onRowOfflineAction = onRowOfflineAction,
-                    onOfflineSettings = {},
+                    onOfflineSettings = onOfflineSettings,
                     onClearOffline = {},
                 )
             }
@@ -130,13 +137,36 @@ class BookmarksScreenTest {
         composeRule.onNodeWithText("下载失败 · 图片超出剩余空间").assertIsDisplayed()
     }
 
+    /** What is stored is a standing fact about the screen, so it rides in the bar's subtitle. */
     @Test
-    fun `the status bar and the download-all pill count what is actually there`() {
+    fun `the subtitle and the download-all pill count what is actually there`() {
         setScreen(state())
 
-        composeRule.onNodeWithText("已离线 2 篇 · 占用 12.4 MB · 仅 Wi-Fi 下载").assertIsDisplayed()
+        composeRule.onAllNodesWithText("已离线 2 篇 · 占用 12.4 MB").onFirst().assertIsDisplayed()
         // 未下载 + 失败 = 2. Already-offline and in-flight rows are not things left to download.
         composeRule.onNodeWithText("全部下载 · 2 篇").assertIsDisplayed()
+    }
+
+    /** Nothing downloaded is not a fact worth a line; the bar drops it rather than printing zeroes. */
+    @Test
+    fun `an empty library leaves the subtitle off entirely`() {
+        setScreen(state(usage = OfflineUsage()))
+
+        composeRule.onNodeWithText("已离线 0 篇 · 占用 0 B").assertDoesNotExist()
+    }
+
+    /**
+     * 离线管理 was one item behind a ⋮ once 排序 moved out to its own control beside the chips.
+     */
+    @Test
+    fun `offline management is one tap, not a menu of one`() {
+        var managed = false
+        setScreen(state(), onOfflineSettings = { managed = true })
+
+        composeRule.onNodeWithContentDescription("更多").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("管理").performClick()
+        composeRule.onNodeWithText("离线阅读").assertIsDisplayed()
+        assertFalse(managed)
     }
 
     /**
@@ -150,7 +180,8 @@ class BookmarksScreenTest {
         composeRule.onNodeWithText("全部 5").assertIsDisplayed()
         composeRule.onNodeWithText("已下载 0").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("已离线").assertDoesNotExist()
-        composeRule.onNodeWithText("管理").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("管理").assertDoesNotExist()
+        composeRule.onAllNodesWithText("已离线 2 篇 · 占用 12.4 MB").assertCountEquals(0)
     }
 
     @Test

@@ -1,24 +1,27 @@
 package io.github.nodyssey.data
 
 import androidx.compose.runtime.Immutable
+import io.github.nodyssey.model.PostDetail
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 
 /**
  * What this device has stored for reading with the network off.
  *
- * Declared as an interface with no working implementation yet, on purpose. 收藏 (board i1) is drawn
- * around offline reading — five per-row states, a queue, a size budget, an incremental catch-up on
- * new replies — and every one of those is a claim about bytes on disk. The screen is built and the
- * shape of the answer is fixed here; the engine that fills it in is a separate piece of work.
+ * 收藏 (board i1) is drawn around offline reading — five per-row states, a queue, a size budget, an
+ * incremental catch-up on new replies — and every one of those is a claim about bytes on disk. The
+ * engine that makes them true is `data/offline/RoomOfflineLibrary`.
  *
  * It is deliberately *not* built on `post_details`. That cache is a window — the pages a reader
- * happened to scroll through — and it stores no images at all, so calling a row in it 「已离线」 would
- * be a promise the cache cannot keep the moment the reader goes offline and pages past the window.
+ * happened to scroll through, replaced wholesale by the next refresh — and it stores no images at
+ * all, so calling a row in it 「已离线」 would be a promise the cache cannot keep the moment the
+ * reader goes offline and pages past the window. Downloads live in tables of their own, and the two
+ * meet only in [OfflineThreadReader], where a stored page is handed to the post cache as a read the
+ * network could not serve.
  *
- * [isAvailable] is how the screen finds out. While it is false the status bar, the per-row download
- * column, the 「全部下载」 pill and the 离线管理 entry are not drawn — 收藏 is a list, filters and
- * multi-select, and nothing on it says anything about offline that is not true.
+ * [isAvailable] is how the screen finds out whether this build has an engine behind it at all. While
+ * it is false the status bar, the per-row download column, the 「全部下载」 pill and the 离线管理
+ * entry are not drawn — 收藏 is a list, filters and multi-select, and nothing on it says anything
+ * about offline that is not true.
  */
 interface OfflineLibrary {
     val isAvailable: Boolean
@@ -32,6 +35,19 @@ interface OfflineLibrary {
 
     /** Queues these threads. Already-offline ones are refreshed rather than re-fetched whole. */
     suspend fun download(postIds: Collection<Long>)
+
+    /**
+     * Tells the library what the site currently says these threads' reply counts are.
+     *
+     * This is where 「离线版落后 3 条回复」 comes from, and it has to be *told*: a stored copy knows
+     * exactly how many replies it contains and nothing whatever about how many have arrived since.
+     * The collection list is the one screen that already holds both numbers for every downloaded
+     * thread, so it hands them over on every load rather than the library issuing a second sweep of
+     * requests to learn what the app had just been given.
+     *
+     * Counts for threads this device has not downloaded are ignored.
+     */
+    suspend fun noteReplyCounts(counts: Map<Long, Int>)
 
     /**
      * Roughly what downloading these would cost, for the 多选 toolbar's 「约 4.6 MB」.
@@ -52,27 +68,32 @@ interface OfflineLibrary {
 }
 
 /**
- * The implementation that ships until the download engine exists.
+ * The read side of the download store, for the post cache to fall back on.
  *
- * Empty rather than absent so the screen has one code path: the view model always collects these
- * flows, and [isAvailable] is the single thing it branches on.
+ * Separate from [OfflineLibrary] because it has a different caller and a different question: the
+ * library is what 收藏 manages downloads through, this is what the *reader* silently benefits from
+ * when the site cannot be reached. Kept to one method so nothing about how threads are downloaded
+ * leaks into the repository that consumes them.
  */
-object UnavailableOfflineLibrary : OfflineLibrary {
-    override val isAvailable: Boolean = false
-    override val states: Flow<Map<Long, OfflineState>> = flowOf(emptyMap())
-    override val usage: Flow<OfflineUsage> = flowOf(OfflineUsage())
-    override val settings: Flow<OfflineSettings> = flowOf(OfflineSettings())
-
-    override suspend fun download(postIds: Collection<Long>) = Unit
-
-    override suspend fun estimateBytes(postIds: Collection<Long>): Long? = null
-
-    override suspend fun cancel(postId: Long) = Unit
-
-    override suspend fun clearAll() = Unit
-
-    override suspend fun updateSettings(settings: OfflineSettings) = Unit
+interface OfflineThreadReader {
+    /** One stored page as though it had just been fetched, or null when this device has no copy. */
+    suspend fun storedPage(
+        postId: Long,
+        page: Int,
+    ): StoredThreadPage?
 }
+
+/**
+ * A page out of the download store, with the moment its copy was made.
+ *
+ * [downloadedAtMillis] travels with it because the post cache stamps what it stores, and stamping a
+ * three-day-old copy with "now" would make the reader's own screen call it fresh — no refresh
+ * offered, no indication that the replies below are the ones from Tuesday.
+ */
+data class StoredThreadPage(
+    val detail: PostDetail,
+    val downloadedAtMillis: Long,
+)
 
 /**
  * One thread's offline state — the five the row can draw, and no sixth.

@@ -361,3 +361,52 @@ data class SelfProfileEntity(
     val commentCount: Int?,
     val cachedAtMillis: Long,
 )
+
+// ---------------------------------------------------------------------------------------------
+// Collected threads
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * What this device knows about a collected thread beyond its id and title.
+ *
+ * The site's `list-collection` payload answers with a title and little else — no board, no author,
+ * no reply count — so a 收藏 list built from it alone is a column of bare headlines while the same
+ * `ThreadRow` on the front page carries all four. This table is where the app keeps what it has
+ * *already been told* about those threads, by whatever route: the feed row that carried one, the
+ * thread page opened to press the star, the offline copy downloaded later.
+ *
+ * Every column is nullable and every write fills gaps rather than replacing the row, because each
+ * source knows a different subset — a feed row has the board and the reply count, a thread body has
+ * the author and the posting time — and a later write knowing less must not erase what an earlier
+ * one knew.
+ *
+ * Nothing here is authoritative. It is a cache of the site's own past statements, kept because the
+ * one endpoint that should repeat them does not, and every value in it came from the site rather
+ * than from a guess.
+ *
+ * [updatedAtMillis] exists to order the trim; a device that has collected and un-collected for
+ * years must not accumulate rows for threads nobody will list again.
+ */
+@Entity(tableName = "collected_post_meta")
+data class CollectedPostMetaEntity(
+    @PrimaryKey val postId: Long,
+    val title: String? = null,
+    val categoryTitle: String? = null,
+    val categorySlug: String? = null,
+    val authorName: String? = null,
+    /**
+     * The picture the page actually rendered for the author.
+     *
+     * Stored alongside [authorUid] rather than derived from it, even though `/avatar/<uid>.png` is
+     * the canonical address and seven other screens build it that way: this is also the URL an
+     * offline download stored a *file* under, and asking for the same string is what makes the
+     * avatar appear on a downloaded row with the network off.
+     */
+    val avatarUrl: String? = null,
+    /** The durable half of the same fact — every source that names an author carries it. */
+    val authorUid: Long? = null,
+    /** The site's own reply count when it was last stated, not the number of replies stored. */
+    val commentCount: Int? = null,
+    val createdAtText: String? = null,
+    val updatedAtMillis: Long,
+)

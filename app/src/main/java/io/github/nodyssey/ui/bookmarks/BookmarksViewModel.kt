@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nodyssey.data.CollectedPostMeta
+import io.github.nodyssey.data.CollectedPostMetaStore
 import io.github.nodyssey.data.OfflineLibrary
 import io.github.nodyssey.data.OfflineSettings
 import io.github.nodyssey.data.OfflineState
@@ -13,6 +15,7 @@ import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.data.UserSpaceRepository
+import io.github.nodyssey.data.isEmpty
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.plaza.core.net.SiteError
@@ -33,6 +36,8 @@ data class BookmarkEntry(
     val categoryTitle: String?,
     val categorySlug: String?,
     val authorName: String?,
+    /** Resolved from what this device remembers; the collection payload carries no author at all. */
+    val avatarUrl: String? = null,
     val commentCount: Int?,
     val createdAtText: String?,
     val offline: OfflineState = OfflineState.NotDownloaded,
@@ -161,9 +166,21 @@ class BookmarksViewModel(
     private val spaceRepository: UserSpaceRepository,
     private val postRepository: PostRepository,
     private val offline: OfflineLibrary,
+    private val collectedMeta: CollectedPostMetaStore,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(BookmarksUiState(offlineAvailable = offline.isAvailable))
     val uiState: StateFlow<BookmarksUiState> = _uiState.asStateFlow()
+
+    /**
+     * The list exactly as the site returned it, before anything local is laid over it.
+     *
+     * Kept apart from [BookmarksUiState.entries] because a row is built from three sources that
+     * change independently — the site's list, what this device knows about those threads, and what
+     * it has downloaded of them — and folding each new arrival into the previous row would make the
+     * result depend on the order they happened to land in. Rebuilding from the three is the only
+     * version where a later, better answer can replace an earlier, thinner one.
+     */
+    private val siteRows = MutableStateFlow<List<SpacePost>>(emptyList())
 
     private var loadJob: Job? = null
     private var estimateJob: Job? = null
@@ -171,14 +188,18 @@ class BookmarksViewModel(
     init {
         load(refresh = false)
         viewModelScope.launch {
-            combine(offline.states, offline.usage, offline.settings, ::Triple).collect { (states, usage, settings) ->
-                _uiState.update { state ->
-                    state.copy(
-                        entries = state.entries.map { it.copy(offline = states[it.postId] ?: OfflineState.NotDownloaded) },
-                        usage = usage,
-                        offlineSettings = settings,
+            combine(siteRows, offline.states, collectedMeta.observe()) { rows, states, meta ->
+                rows.map { post ->
+                    post.toEntry(
+                        offline = states[post.postId] ?: OfflineState.NotDownloaded,
+                        known = meta[post.postId],
                     )
                 }
+            }.collect { entries -> _uiState.update { it.copy(entries = entries) } }
+        }
+        viewModelScope.launch {
+            combine(offline.usage, offline.settings, ::Pair).collect { (usage, settings) ->
+                _uiState.update { it.copy(usage = usage, offlineSettings = settings) }
             }
         }
     }
@@ -273,7 +294,8 @@ class BookmarksViewModel(
         if (target.isEmpty()) return
         viewModelScope.launch {
             val ids = target.map { it.postId }.toSet()
-            _uiState.update { it.copy(entries = it.entries.filterNot { entry -> entry.postId in ids }, selection = null) }
+            siteRows.update { rows -> rows.filterNot { row -> row.postId in ids } }
+            _uiState.update { it.copy(selection = null) }
             val failure =
                 target.firstNotNullOfOrNull { entry ->
                     runCatchingExceptCancellation { postRepository.setCollected(entry.postId, collected = false) }
@@ -340,10 +362,18 @@ class BookmarksViewModel(
                 }
                 runCatchingExceptCancellation { loadAllPages() }
                     .onSuccess { (posts, truncated) ->
-                        val states = _uiState.value.entries.associate { it.postId to it.offline }
+                        // Whatever this load *did* carry is written down, because the endpoint is not
+                        // reliably going to say it again and something on this device may want it
+                        // when it does not — see [CollectedPostMetaStore].
+                        collectedMeta.remember(posts.map(SpacePost::toKnownMeta).filterNot { it.isEmpty })
+                        // What the site says each thread's reply count is *now* — the only half of
+                        // 「离线版落后 N 条回复」 a stored copy cannot work out for itself. This screen
+                        // is holding both numbers already, so it hands them over rather than leaving
+                        // the library to go and ask for what the app was just given.
+                        offline.noteReplyCounts(posts.mapNotNull { post -> post.commentCount?.let { post.postId to it } }.toMap())
+                        siteRows.value = posts
                         _uiState.update { state ->
                             state.copy(
-                                entries = posts.map { it.toEntry(states[it.postId] ?: OfflineState.NotDownloaded) },
                                 isLoading = false,
                                 isRefreshing = false,
                                 error = null,
@@ -394,14 +424,40 @@ class BookmarksViewModel(
                         spaceRepository = container.userSpaceRepository,
                         postRepository = container.postRepository,
                         offline = container.offlineLibrary,
+                        collectedMeta = container.collectedPostMetaStore,
                     )
                 }
             }
     }
 }
 
-private fun SpacePost.toEntry(offline: OfflineState) =
-    BookmarkEntry(
+/**
+ * One row: the site's answer, with what this device already knew filling the gaps it leaves.
+ *
+ * `list-collection` returns a title and, in practice, nothing else — no board, no author, no reply
+ * count — which is why the same `ThreadRow` that carries four pieces of information on the front
+ * page carries one here. [known] is what the site itself said about the thread somewhere else, so
+ * the fallback is a remembered answer rather than an invented one, and the site's own value always
+ * wins where it has one.
+ */
+private fun SpacePost.toEntry(
+    offline: OfflineState,
+    known: CollectedPostMeta?,
+) = BookmarkEntry(
+    postId = postId,
+    title = title,
+    categoryTitle = categoryTitle ?: known?.categoryTitle,
+    categorySlug = categorySlug ?: known?.categorySlug,
+    authorName = authorName ?: known?.authorName,
+    avatarUrl = known?.resolvedAvatarUrl,
+    commentCount = commentCount ?: known?.commentCount,
+    createdAtText = createdAtText ?: known?.createdAtText,
+    offline = offline,
+)
+
+/** What one row of the site's answer is worth writing down. */
+private fun SpacePost.toKnownMeta() =
+    CollectedPostMeta(
         postId = postId,
         title = title,
         categoryTitle = categoryTitle,
@@ -409,5 +465,4 @@ private fun SpacePost.toEntry(offline: OfflineState) =
         authorName = authorName,
         commentCount = commentCount,
         createdAtText = createdAtText,
-        offline = offline,
     )
