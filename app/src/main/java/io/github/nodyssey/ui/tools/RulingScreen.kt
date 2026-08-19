@@ -26,7 +26,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -40,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -64,7 +64,9 @@ import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -136,6 +138,7 @@ fun RulingScreen(
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val appBarState = rememberOneHandAppBarState()
     var showPageSheet by remember { mutableStateOf(false) }
     var toolbarPinned by rememberSaveable { mutableStateOf(true) }
 
@@ -161,6 +164,10 @@ fun RulingScreen(
 
     /** Scrolls when the page is already in the list, and asks for it when it is not. */
     fun goToPage(target: Int) {
+        // Both branches move the list without a gesture, so neither would fold the app bar on its
+        // own and the page asked for would arrive in the half-screen left under it. Its own
+        // coroutine rather than in front of the scroll below: the two run together.
+        scope.launch { appBarState.fold() }
         val index = state.firstIndexOfPage(target)
         if (index != null && state.isPageLoaded(target)) {
             scope.launch { listState.animateScrollToItem(index) }
@@ -184,14 +191,16 @@ fun RulingScreen(
     val toolbarExpanded = toolbarPinned || atListTop || state.error != null || showPageSheet
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.ruling_title)) },
-                // The slot rather than a hand-stacked Column: the subtitle then takes its type and
-                // colour from TopAppBarColors (labelMedium, subtitleContentColor) instead of two
-                // values chosen here, and the bar measures itself for two lines.
-                subtitle = { Text(stringResource(R.string.ruling_subtitle)) },
+            OneHandTopAppBar(
+                title = stringResource(R.string.ruling_title),
+                state = appBarState,
+                // A parameter rather than a hand-stacked Column: the subtitle then takes its type
+                // and colour from the bar — labelMedium in the toolbar, bodyMedium under the big
+                // centred title — instead of two values chosen here, and it follows the title
+                // through the fold without this screen knowing how far along that fold is.
+                subtitle = stringResource(R.string.ruling_subtitle),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

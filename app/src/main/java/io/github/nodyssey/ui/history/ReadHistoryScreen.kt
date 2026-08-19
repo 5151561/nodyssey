@@ -35,7 +35,6 @@ import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +43,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -64,6 +64,7 @@ import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
+import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.StatusView
@@ -71,6 +72,7 @@ import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
@@ -136,29 +138,26 @@ fun ReadHistoryScreen(
         }
     }
 
+    val appBarState = rememberOneHandAppBarState()
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(stringResource(R.string.history_title))
-                        // The one place the retention setting is visible without opening a menu:
-                        // "how much does this thing keep" is the question the screen itself raises.
-                        if (state.entries.isNotEmpty()) {
-                            Text(
-                                text =
-                                stringResource(
-                                    R.string.history_subtitle,
-                                    state.entries.size,
-                                    limitLabel(state.limit),
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+            OneHandTopAppBar(
+                title = stringResource(R.string.history_title),
+                state = appBarState,
+                // The one place the retention setting is visible without opening a menu: "how much
+                // does this thing keep" is the question the screen itself raises. Absent rather than
+                // empty on an empty history, so the bar drops the line instead of reserving it.
+                subtitle =
+                if (state.entries.isEmpty()) {
+                    null
+                } else {
+                    stringResource(
+                        R.string.history_subtitle,
+                        state.entries.size,
+                        limitLabel(state.limit),
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

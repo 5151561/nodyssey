@@ -18,17 +18,14 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -54,7 +51,9 @@ import io.github.nodyssey.ui.common.UpdateDot
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.richtext.LocalStickerSizing
 import io.github.plaza.designsys.richtext.StickerSizing
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -109,7 +108,6 @@ fun SettingsRoute(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     state: SettingsUiState,
@@ -143,13 +141,13 @@ fun SettingsScreen(
     var stickerSize by remember(state.settings.stickerSize) {
         mutableFloatStateOf(state.settings.stickerSize.toFloat())
     }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val appBarState = rememberOneHandAppBarState()
     Scaffold(
-        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
-            MediumTopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                scrollBehavior = scrollBehavior,
+            OneHandTopAppBar(
+                title = stringResource(R.string.settings_title),
+                state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
