@@ -21,6 +21,13 @@ kotlin {
     // Both arches, and both are load-bearing: the simulator is what step D3b runs on this machine,
     // and the device arch is the one an installable build needs. A framework is per-architecture, so
     // leaving either out is not a smaller build — it is a destination Xcode cannot select.
+    //
+    // Two arches, not three: there is no `iosX64()`, so an Intel simulator slice does not exist. That
+    // is a decision rather than an omission — this project is Apple-silicon-only — but Xcode does not
+    // know it, and a plain `xcodebuild -sdk iphonesimulator` asks for a universal `arm64 + x86_64`
+    // binary and fails on the half that was never built. The answer lives in the Xcode project as
+    // `EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64`, in both configurations; it is recorded here too
+    // because Xcode rewrites `project.pbxproj` freely and this file is where the reason is.
     listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
         target.binaries.framework {
             // What the Xcode project imports. Named for what it is rather than for the app: the app

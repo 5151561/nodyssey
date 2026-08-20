@@ -194,7 +194,12 @@ fun appleUrlSession(
  * other side.
  */
 internal class ForumSessionDelegate(
-    private val proxyCredential: NSURLCredential? = null,
+    // Readable for one caller: the bounded read in `UrlSessionBytes.kt` has to install a *task*
+    // delegate to see the body arrive, and it forwards the two jobs above to an instance of this
+    // class rather than reimplementing them — which it cannot do without the password. Forwarding
+    // rather than subclassing because Kotlin/Native does not allow a non-final subclass of an
+    // Objective-C class, and this one is not final-able while it is also a delegate.
+    internal val proxyCredential: NSURLCredential? = null,
     private val onUploadProgress: UploadProgress? = null,
 ) : NSObject(),
     NSURLSessionTaskDelegateProtocol {
