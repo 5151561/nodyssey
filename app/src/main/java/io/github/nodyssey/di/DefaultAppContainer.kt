@@ -9,10 +9,9 @@ import io.github.nodyssey.core.NodysseyRelease
 import io.github.nodyssey.core.net.AppProxyAuthenticator
 import io.github.nodyssey.core.net.AppProxySelector
 import io.github.nodyssey.core.net.AppSocksAuthenticator
-import io.github.nodyssey.core.net.DynamicSignInterceptor
+import io.github.nodyssey.core.net.DynamicSignTransport
 import io.github.nodyssey.core.net.LiveProxyConfig
 import io.github.nodyssey.core.net.NodeSeekJsonClient
-import io.github.nodyssey.core.net.ProxyClientKind
 import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
@@ -76,6 +75,7 @@ import io.github.nodyssey.data.offline.RoomOfflineLibrary
 import io.github.nodyssey.data.offline.WorkManagerOfflineScheduler
 import io.github.nodyssey.data.proxy.DataStoreProxySettings
 import io.github.nodyssey.data.proxy.NetworkProxyConnectionTester
+import io.github.nodyssey.data.proxy.ProxyClientKind
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.session.SessionRepository
@@ -205,9 +205,6 @@ class DefaultAppContainer(
                     referer = "${NodeSeekSite.BASE_URL}/",
                 ),
             )
-            // After the one above, and not merged into it: the vote signature covers the very
-            // `User-Agent` that interceptor just set, so it has to observe the finished request.
-            .addInterceptor(DynamicSignInterceptor())
             // A *network* interceptor, because it is about a hop the application layer never sees:
             // the `Referer` stamped above must not follow a redirect off the host it was addressed
             // to, or an image host that 302s to a CDN with hotlink protection refuses every image.
@@ -218,8 +215,13 @@ class DefaultAppContainer(
     /**
      * The one place OkHttp is named on the way *up*: everything above this line is written against
      * `HttpTransport`, which is `commonMain`, and this is the Android implementation of it.
+     *
+     * The vote signature wraps it rather than sitting in the chain above. It was an interceptor
+     * until step D3c, ordered after `BrowserHeadersInterceptor` so that it could read the finished
+     * `User-Agent` off the chain; as a decorator it writes that header itself, which is what lets the
+     * same code sign a request on a platform with no interceptors — see [DynamicSignTransport].
      */
-    private val transport by lazy { OkHttpTransport(okHttpClient) }
+    private val transport by lazy { DynamicSignTransport(OkHttpTransport(okHttpClient), userAgent.value) }
 
     private val htmlClient by lazy { SiteHtmlClient(transport, dispatchers, NodeSeekSite.CONFIG) }
 
@@ -431,7 +433,9 @@ class DefaultAppContainer(
     override val imageHostRepository: ImageHostRepository by lazy {
         DefaultImageHostRepository(
             settings = DataStoreImageHostSettings(appContext.imageHostDataStore, KeystoreSecretCipher()),
-            http = imageHostClient,
+            // Not wrapped in `DynamicSignTransport`: that signature is NodeSeek's, and these are six
+            // third parties. [transport] is the forum's.
+            http = OkHttpTransport(imageHostClient),
             dispatchers = dispatchers,
         )
     }

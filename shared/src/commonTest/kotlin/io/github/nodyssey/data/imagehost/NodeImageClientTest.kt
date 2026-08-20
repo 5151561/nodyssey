@@ -1,11 +1,17 @@
 package io.github.nodyssey.data.imagehost
 
 import io.github.nodyssey.core.NodeImageSite
+import io.github.plaza.core.net.RecordingTransport
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.host
+import io.github.plaza.core.net.httpResponse
+import io.github.plaza.core.net.multipart
+import io.github.plaza.core.net.path
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * What the **key-authenticated** endpoint answers — captured off the device on 2026-07-28, verbatim.
@@ -37,7 +43,7 @@ class NodeImageClientTest {
 
     @Test
     fun `upload posts the file as multipart with the key in a header`() = runTest {
-        val recorder = RecordingInterceptor(UPLOAD_RESPONSE)
+        val recorder = RecordingTransport(httpResponse(UPLOAD_RESPONSE))
         val progress = mutableListOf<Float>()
 
         val result = repositoryFor(NODE_IMAGE, recorder).upload(bytes(40_000), progress::add)
@@ -48,59 +54,78 @@ class NodeImageClientTest {
 
         val request = recorder.request!!
         assertEquals("POST", request.method)
-        assertEquals("api.nodeimage.com", request.url.host)
-        assertEquals(NodeImageSite.UPLOAD_PATH, request.url.encodedPath)
-        assertEquals(API_KEY, request.header(NodeImageSite.API_KEY_HEADER))
-        assertTrue(
-            "The file must go in the part the host reads",
-            recorder.bodyUtf8.contains("""name="image"""") &&
-                recorder.bodyUtf8.contains("""filename="photo.webp""""),
-        )
-        // Chunked writes are what make the tray's ring move; a single write reports 0 then 1.
-        assertTrue("progress should be reported incrementally, was $progress", progress.size > 2)
-        assertEquals(1f, progress.last(), 0.001f)
+        assertEquals("api.nodeimage.com", request.host)
+        assertEquals(NodeImageSite.UPLOAD_PATH, request.path)
+        assertEquals(API_KEY, request.headers[NodeImageSite.API_KEY_HEADER])
+        assertEquals("image", request.multipart.fileField, "the file must go in the part the host reads")
+        assertEquals("photo.webp", request.multipart.fileName)
+        // The ring is drawn from what the transport reports, so what this asserts is that the
+        // listener reached it. That it then moves in more than two steps is a fact about a real
+        // transport rather than about this client — see `OkHttpTransportProgressTest`.
+        assertTrue(recorder.listened, "the upload listener has to reach the transport")
+        assertEquals(1f, progress.last())
     }
 
     /** The site's own flat shape still parses, so a host-side revert would not break uploads. */
     @Test
     fun `the flat camelCase answer shape is read too`() = runTest {
-        val result = repositoryFor(NODE_IMAGE, RecordingInterceptor(LEGACY_UPLOAD_RESPONSE)).upload(bytes())
+        val recorder = RecordingTransport(httpResponse(LEGACY_UPLOAD_RESPONSE))
+
+        val result = repositoryFor(NODE_IMAGE, recorder).upload(bytes())
 
         assertEquals("https://cdn.nodeimage.com/i/Yzk9P567htkDWMzJzUiQXvqADYMuLJs2.webp", result.url)
         assertEquals("Yzk9P567htkDWMzJzUiQXvqADYMuLJs2", result.id)
     }
 
     /**
-     * A NodeSeek cookie must never reach this host. The image hosts get their own OkHttp client for
-     * that reason, and the key is the only credential on the wire.
+     * A NodeSeek cookie must never reach this host, and the key is the only credential on the wire.
+     *
+     * What this test can hold is the client's half: it adds no header of its own beyond the key. The
+     * other half is which transport the client is handed — a session with no cookie jar and no forum
+     * referrer — and that is container wiring on both platforms (`DefaultAppContainer`'s
+     * `imageHostClient`, `IosAppContainer`'s `imageHostSession`), not something reachable from here.
      */
     @Test
-    fun `upload sends no cookie header`() = runTest {
-        val recorder = RecordingInterceptor(UPLOAD_RESPONSE)
+    fun `upload sends nothing but the key and an Accept header`() = runTest {
+        val recorder = RecordingTransport(httpResponse(UPLOAD_RESPONSE))
+
         repositoryFor(NODE_IMAGE, recorder).upload(bytes())
 
-        assertNull(recorder.request?.header("Cookie"))
+        assertEquals(
+            setOf("Accept", NodeImageSite.API_KEY_HEADER),
+            recorder.request!!.headers.keys,
+        )
     }
 
     @Test
     fun `a call with no stored key fails before any request goes out`() = runTest {
-        val recorder = RecordingInterceptor(UPLOAD_RESPONSE)
+        val recorder = RecordingTransport(httpResponse(UPLOAD_RESPONSE))
         val repository = repositoryFor(ImageHostConfig(ImageHostProvider.NODE_IMAGE), recorder)
 
-        val error = assertFails { repository.images() }
+        val error = assertImageHostFails { repository.images() }
 
         assertEquals(ImageHostError.NotConfigured, error.error)
-        assertNull("nothing may be sent without a key", recorder.request)
+        assertNull(recorder.request, "nothing may be sent without a key")
     }
 
     @Test
     fun `a rejected key is told apart from a server fault`() = runTest {
-        val recorder = RecordingInterceptor("""{"error":"Invalid API key"}""", code = 401)
+        val recorder = RecordingTransport(httpResponse("""{"error":"Invalid API key"}""", code = 401))
 
-        val error = assertFails { repositoryFor(NODE_IMAGE, recorder).upload(bytes()) }
+        val error = assertImageHostFails { repositoryFor(NODE_IMAGE, recorder).upload(bytes()) }
 
         assertEquals(ImageHostError.InvalidKey, error.error)
         assertEquals("Invalid API key", error.detail)
+    }
+
+    /** A call that never completed is the host being unreachable, not the key being wrong. */
+    @Test
+    fun `a transport failure comes back as a network error`() = runTest {
+        val recorder = RecordingTransport(httpResponse(UPLOAD_RESPONSE)).apply { failWith = SiteError.Network }
+
+        val error = assertImageHostFails { repositoryFor(NODE_IMAGE, recorder).upload(bytes()) }
+
+        assertEquals(ImageHostError.Network, error.error)
     }
 
     /**
@@ -109,22 +134,27 @@ class NodeImageClientTest {
      * list. Reporting that as a bad key would push the user to regenerate a working credential.
      */
     @Test
-    fun `a 401 from the list means the website is needed, not a new key`() = runTest {
-        val recorder = RecordingInterceptor("""{"error":"未认证，请先通过NodeSeek授权登录"}""", code = 401)
-        val repository = repositoryFor(NODE_IMAGE, recorder)
+    fun `a 401 from the list means the website is needed rather than a new key`() = runTest {
+        val body = httpResponse("""{"error":"未认证，请先通过NodeSeek授权登录"}""", code = 401)
 
-        assertEquals(ImageHostError.SessionRequired, assertFails { repository.images() }.error)
         assertEquals(
             ImageHostError.SessionRequired,
-            assertFails { repository.delete(HostedImage(id = "abc", fileName = "a", url = "u")) }.error,
+            assertImageHostFails { repositoryFor(NODE_IMAGE, RecordingTransport(body)).images() }.error,
+        )
+        assertEquals(
+            ImageHostError.SessionRequired,
+            assertImageHostFails {
+                repositoryFor(NODE_IMAGE, RecordingTransport(body))
+                    .delete(HostedImage(id = "abc", fileName = "a", url = "u"))
+            }.error,
         )
     }
 
     @Test
     fun `a file the host refuses is not reported as a broken key`() = runTest {
-        val recorder = RecordingInterceptor("""{"error":"File too large"}""", code = 413)
+        val recorder = RecordingTransport(httpResponse("""{"error":"File too large"}""", code = 413))
 
-        val error = assertFails { repositoryFor(NODE_IMAGE, recorder).upload(bytes()) }
+        val error = assertImageHostFails { repositoryFor(NODE_IMAGE, recorder).upload(bytes()) }
 
         assertEquals(ImageHostError.Rejected(413), error.error)
     }
@@ -136,24 +166,28 @@ class NodeImageClientTest {
      */
     @Test
     fun `a Cloudflare interstitial is not mistaken for a bad key`() = runTest {
-        val recorder = RecordingInterceptor(
-            "<html><head><title>Just a moment...</title></head>" +
-                "<body><script src=\"/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1\">" +
-                "</script></body></html>",
-            code = 403,
+        val recorder = RecordingTransport(
+            httpResponse(
+                "<html><head><title>Just a moment...</title></head>" +
+                    "<body><script src=\"/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1\">" +
+                    "</script></body></html>",
+                code = 403,
+            ),
         )
 
-        val error = assertFails { repositoryFor(NODE_IMAGE, recorder).upload(bytes()) }
+        val error = assertImageHostFails { repositoryFor(NODE_IMAGE, recorder).upload(bytes()) }
 
         assertEquals(ImageHostError.Cloudflare, error.error)
     }
 
     @Test
     fun `the image list reads the host's own row shape`() = runTest {
-        val recorder = RecordingInterceptor(
-            """[{"imageId":"abc","filename":"abc.webp","userId":"52425",""" +
-                """"url":"https://cdn.nodeimage.com/i/abc.webp","uploadTime":"2026-07-28T04:04:11Z",""" +
-                """"size":1214,"mimetype":"image/webp"}]""",
+        val recorder = RecordingTransport(
+            httpResponse(
+                """[{"imageId":"abc","filename":"abc.webp","userId":"52425",""" +
+                    """"url":"https://cdn.nodeimage.com/i/abc.webp","uploadTime":"2026-07-28T04:04:11Z",""" +
+                    """"size":1214,"mimetype":"image/webp"}]""",
+            ),
         )
 
         val images = repositoryFor(NODE_IMAGE, recorder).images()
@@ -167,21 +201,21 @@ class NodeImageClientTest {
 
     @Test
     fun `delete addresses the image by id`() = runTest {
-        val recorder = RecordingInterceptor("""{"success":true}""")
+        val recorder = RecordingTransport(httpResponse("""{"success":true}"""))
 
         repositoryFor(NODE_IMAGE, recorder)
             .delete(HostedImage(id = "abc", fileName = "abc.webp", url = "u"))
 
         assertEquals("DELETE", recorder.request?.method)
-        assertEquals("/api/image/abc", recorder.request?.url?.encodedPath)
+        assertEquals("/api/image/abc", recorder.request?.path)
     }
 
     /** 200 with `success:false` is a refusal the host can describe, not an upload that worked. */
     @Test
     fun `a 200 that says success false is a refusal`() = runTest {
-        val recorder = RecordingInterceptor("""{"success":false,"message":"格式不支持"}""")
+        val recorder = RecordingTransport(httpResponse("""{"success":false,"message":"格式不支持"}"""))
 
-        val error = assertFails { repositoryFor(NODE_IMAGE, recorder).upload(bytes()) }
+        val error = assertImageHostFails { repositoryFor(NODE_IMAGE, recorder).upload(bytes()) }
 
         assertEquals(ImageHostError.Rejected(200), error.error)
         assertEquals("格式不支持", error.detail)

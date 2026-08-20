@@ -1,10 +1,8 @@
 package io.github.nodyssey.data.imagehost
 
+import io.github.nodyssey.core.urlEncode
+import io.github.plaza.core.net.HttpTransport
 import kotlinx.serialization.json.jsonObject
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
 /**
  * imgbb — public, free, and the simplest of the six: one endpoint, and the key rides in the query
@@ -14,24 +12,23 @@ import okhttp3.Request
  * answers with a `delete_url`, but that is a page a human opens, not something to call — so 图床管理
  * says as much for this host instead of pretending the account is empty.
  */
-internal class ImgbbClient(private val http: OkHttpClient) : ImageHostClient {
+internal class ImgbbClient(private val http: HttpTransport) : ImageHostClient {
 
-    override fun upload(
+    override suspend fun upload(
         config: ImageHostConfig,
         upload: ImageHostUpload,
         onProgress: (Float) -> Unit,
     ): HostedImage {
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addImagePart(FILE_FIELD, upload, onProgress)
-            .addFormDataPart(NAME_FIELD, upload.fileName)
-            .build()
+        // The name field goes beside the file rather than after it — see [multipart].
+        val body = upload.multipart(FILE_FIELD, fields = mapOf(NAME_FIELD to upload.fileName))
+        val url = "$UPLOAD_URL?$KEY_PARAM=${config.token.trim().urlEncode()}"
 
-        val url = UPLOAD_URL.toHttpUrl().newBuilder()
-            .addQueryParameter(KEY_PARAM, config.token.trim())
-            .build()
-
-        val payload = http.readBody(Request.Builder().url(url).post(body).build())
+        val payload = http.readBody(
+            // No `Accept`, unlike the other five: this host answers JSON to everything and the
+            // request it has been served since release did not carry one.
+            postRequest(url, headers = emptyMap(), body = body),
+            onUploadProgress = onProgress,
+        )
         val root = payload.asJsonObject()
         val data = runCatching { root["data"]!!.jsonObject }.getOrNull()
             ?: throw ImageHostException(ImageHostError.Unparsable, detail = payload.take(DETAIL_CHARS))

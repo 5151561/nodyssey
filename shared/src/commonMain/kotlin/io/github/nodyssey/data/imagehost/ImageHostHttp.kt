@@ -1,6 +1,10 @@
 package io.github.nodyssey.data.imagehost
 
 import io.github.nodyssey.core.html.Selectors
+import io.github.plaza.core.net.HttpRequest
+import io.github.plaza.core.net.HttpTransport
+import io.github.plaza.core.net.SiteException
+import io.github.plaza.core.net.UploadProgress
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -10,12 +14,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
-import okhttp3.MediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody
-import okio.BufferedSink
-import java.io.IOException
 
 /** One parser for every host. None of them send anything this app would rather reject than ignore. */
 internal val imageHostJson = Json { ignoreUnknownKeys = true }
@@ -27,46 +25,53 @@ internal val imageHostJson = Json { ignoreUnknownKeys = true }
  * their payloads do not: everybody's 401 means the credential, everybody's 413 means the file, and
  * anybody sitting behind Cloudflare answers with an interstitial that is neither.
  *
+ * On [HttpTransport] rather than on an `OkHttpClient`, which is what let this whole directory leave
+ * `:app` — see [ImageHostClient]. The transport reports a call that never completed as
+ * [SiteException] with `Network`, and that is the one exception shape a caller of this has to
+ * translate: everything else it hands back is an answer, which is what the `when` below reads.
+ *
  * @param keyIsEnough whether a token alone authenticates this endpoint. It decides what a 401
  *   *means*, which is the difference between "your token is broken" and "this one needs the
  *   website". See [ImageHostError.SessionRequired].
  */
-internal fun OkHttpClient.readBody(request: Request, keyIsEnough: Boolean = true): String {
+internal suspend fun HttpTransport.readBody(
+    request: HttpRequest,
+    keyIsEnough: Boolean = true,
+    onUploadProgress: UploadProgress? = null,
+): String {
     val response = try {
-        newCall(request).execute()
-    } catch (error: IOException) {
+        execute(request, onUploadProgress)
+    } catch (error: SiteException) {
         throw ImageHostException(ImageHostError.Network, cause = error)
     }
-    return response.use {
-        val payload = it.body.string()
-        // Runs first, and before the status check: Cloudflare wraps its interstitial in a 403, which
-        // is the same status a host uses for a bad token. Reading the challenge as a bad token would
-        // send the user off to regenerate a credential that was never the problem.
-        //
-        // Only the markers count, not "the body starts with `<`". A self-hosted host answers with an
-        // HTML error page often enough that the looser test would report somebody's PHP stack trace
-        // as a human-verification block; an HTML body with no marker falls through to [asJsonObject]
-        // and comes out as [ImageHostError.Unparsable], which is what it is.
-        val isChallenge =
-            it.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
-                Selectors.CLOUDFLARE_MARKERS.any(payload::contains)
-        if (isChallenge) throw ImageHostException(ImageHostError.Cloudflare)
+    val payload = response.body
+    // Runs first, and before the status check: Cloudflare wraps its interstitial in a 403, which
+    // is the same status a host uses for a bad token. Reading the challenge as a bad token would
+    // send the user off to regenerate a credential that was never the problem.
+    //
+    // Only the markers count, not "the body starts with `<`". A self-hosted host answers with an
+    // HTML error page often enough that the looser test would report somebody's PHP stack trace
+    // as a human-verification block; an HTML body with no marker falls through to [asJsonObject]
+    // and comes out as [ImageHostError.Unparsable], which is what it is.
+    val isChallenge =
+        response.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
+            Selectors.CLOUDFLARE_MARKERS.any(payload::contains)
+    if (isChallenge) throw ImageHostException(ImageHostError.Cloudflare)
 
-        val detail = payload.errorDetail()
-        when {
-            it.isSuccessful -> payload
+    val detail = payload.errorDetail()
+    return when {
+        response.isSuccessful -> payload
 
-            it.code == 401 || it.code == 403 -> throw ImageHostException(
-                if (keyIsEnough) ImageHostError.InvalidKey else ImageHostError.SessionRequired,
-                detail,
-            )
+        response.code == 401 || response.code == 403 -> throw ImageHostException(
+            if (keyIsEnough) ImageHostError.InvalidKey else ImageHostError.SessionRequired,
+            detail,
+        )
 
-            // 413 is over the size cap, 415 an unsupported format, 422 a file it could not decode.
-            it.code == 413 || it.code == 415 || it.code == 422 ->
-                throw ImageHostException(ImageHostError.Rejected(it.code), detail)
+        // 413 is over the size cap, 415 an unsupported format, 422 a file it could not decode.
+        response.code == 413 || response.code == 415 || response.code == 422 ->
+            throw ImageHostException(ImageHostError.Rejected(response.code), detail)
 
-            else -> throw ImageHostException(ImageHostError.Http(it.code), detail)
-        }
+        else -> throw ImageHostException(ImageHostError.Http(response.code), detail)
     }
 }
 
@@ -118,35 +123,3 @@ internal fun JsonObject.longAt(vararg keys: String): Long? =
 
 /** How much of an unreadable body is worth carrying into an error message. */
 internal const val DETAIL_CHARS = 200
-
-/**
- * A byte-array body that reports how much of itself has been written.
- *
- * OkHttp gives no upload-progress callback of its own, and wrapping the sink is the documented way
- * to get one. Written in chunks rather than one `write` call because a single write reports 0% and
- * then 100%, which makes the tray's ring a decoration instead of a signal.
- */
-internal class ProgressRequestBody(
-    private val bytes: ByteArray,
-    private val contentType: MediaType,
-    private val onProgress: (Float) -> Unit,
-) : RequestBody() {
-    override fun contentType() = contentType
-
-    override fun contentLength(): Long = bytes.size.toLong()
-
-    override fun writeTo(sink: BufferedSink) {
-        var written = 0
-        onProgress(0f)
-        while (written < bytes.size) {
-            val count = minOf(CHUNK_BYTES, bytes.size - written)
-            sink.write(bytes, written, count)
-            written += count
-            onProgress(written.toFloat() / bytes.size)
-        }
-    }
-
-    private companion object {
-        const val CHUNK_BYTES = 16 * 1024
-    }
-}

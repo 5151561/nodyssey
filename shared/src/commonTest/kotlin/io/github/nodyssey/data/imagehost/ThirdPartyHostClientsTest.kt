@@ -1,11 +1,16 @@
 package io.github.nodyssey.data.imagehost
 
+import io.github.plaza.core.net.RecordingTransport
+import io.github.plaza.core.net.httpResponse
+import io.github.plaza.core.net.multipart
+import io.github.plaza.core.net.path
+import io.github.plaza.core.net.queryParameter
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The five hosts that are not nodeimage.com.
@@ -27,7 +32,7 @@ class ThirdPartyHostClientsTest {
 
     @Test
     fun `lsky posts to the v1 route with a bearer token and the file in file`() = runTest {
-        val recorder = RecordingInterceptor(LSKY_UPLOAD)
+        val recorder = RecordingTransport(httpResponse(LSKY_UPLOAD))
 
         val result = repositoryFor(lsky, recorder).upload(bytes())
 
@@ -35,19 +40,19 @@ class ThirdPartyHostClientsTest {
         assertEquals("abc", result.id)
         val request = recorder.request!!
         // The trailing slash on the configured site URL must not become a double slash in the path.
-        assertEquals("/api/v1/upload", request.url.encodedPath)
-        assertEquals("Bearer 1|abcdefg", request.header("Authorization"))
-        assertTrue(recorder.bodyUtf8.contains("""name="file""""))
+        assertEquals("/api/v1/upload", request.path)
+        assertEquals("Bearer 1|abcdefg", request.headers["Authorization"])
+        assertEquals("file", request.multipart.fileField)
     }
 
     /** A token pasted with the prefix already on it must not be sent as `Bearer Bearer …`. */
     @Test
     fun `lsky does not double the bearer prefix`() = runTest {
-        val recorder = RecordingInterceptor(LSKY_UPLOAD)
+        val recorder = RecordingTransport(httpResponse(LSKY_UPLOAD))
 
         repositoryFor(lsky.copy(token = "Bearer 1|abcdefg"), recorder).upload(bytes())
 
-        assertEquals("Bearer 1|abcdefg", recorder.request?.header("Authorization"))
+        assertEquals("Bearer 1|abcdefg", recorder.request?.headers?.get("Authorization"))
     }
 
     /**
@@ -55,8 +60,8 @@ class ThirdPartyHostClientsTest {
      * photo would show up as 2 KB and the 图床管理 total as a rounding error.
      */
     @Test
-    fun `lsky sizes are kilobytes, not bytes`() = runTest {
-        val result = repositoryFor(lsky, RecordingInterceptor(LSKY_UPLOAD)).upload(bytes())
+    fun `lsky sizes are kilobytes rather than bytes`() = runTest {
+        val result = repositoryFor(lsky, RecordingTransport(httpResponse(LSKY_UPLOAD))).upload(bytes())
 
         assertEquals(117_146L, result.sizeBytes)
     }
@@ -64,9 +69,9 @@ class ThirdPartyHostClientsTest {
     /** This host answers HTTP 200 with `status:false` for a refusal it can describe. */
     @Test
     fun `lsky reports a 200 refusal as a rejected file`() = runTest {
-        val recorder = RecordingInterceptor("""{"status":false,"message":"图片格式不允许","data":[]}""")
+        val recorder = RecordingTransport(httpResponse("""{"status":false,"message":"图片格式不允许","data":[]}"""))
 
-        val error = assertFails { repositoryFor(lsky, recorder).upload(bytes()) }
+        val error = assertImageHostFails { repositoryFor(lsky, recorder).upload(bytes()) }
 
         assertEquals(ImageHostError.Rejected(200), error.error)
         assertEquals("图片格式不允许", error.detail)
@@ -74,11 +79,13 @@ class ThirdPartyHostClientsTest {
 
     @Test
     fun `lsky reads its paginated list and deletes by key`() = runTest {
-        val listing = RecordingInterceptor(
-            """{"status":true,"message":"success","data":{"current_page":1,"data":[""" +
-                """{"key":"abc","name":"abc.png","origin_name":"照片.png","size":114.4,""" +
-                """"mimetype":"image/png","date":"2026-08-12 09:31:00",""" +
-                """"links":{"url":"https://img.example.com/i/abc.png"}}]}}""",
+        val listing = RecordingTransport(
+            httpResponse(
+                """{"status":true,"message":"success","data":{"current_page":1,"data":[""" +
+                    """{"key":"abc","name":"abc.png","origin_name":"照片.png","size":114.4,""" +
+                    """"mimetype":"image/png","date":"2026-08-12 09:31:00",""" +
+                    """"links":{"url":"https://img.example.com/i/abc.png"}}]}}""",
+            ),
         )
         val images = repositoryFor(lsky, listing).images()
 
@@ -86,11 +93,11 @@ class ThirdPartyHostClientsTest {
         assertEquals("照片.png", images.first().fileName)
         assertEquals(117_146L, images.first().sizeBytes)
 
-        val deletion = RecordingInterceptor("""{"status":true,"message":"删除成功"}""")
+        val deletion = RecordingTransport(httpResponse("""{"status":true,"message":"删除成功"}"""))
         repositoryFor(lsky, deletion).delete(images.first())
 
         assertEquals("DELETE", deletion.request?.method)
-        assertEquals("/api/v1/images/abc", deletion.request?.url?.encodedPath)
+        assertEquals("/api/v1/images/abc", deletion.request?.path)
     }
 
     // ---- 简单图床 EasyImage -----------------------------------------------------------------
@@ -103,18 +110,20 @@ class ThirdPartyHostClientsTest {
 
     @Test
     fun `easyimage sends the token as a form field beside the image`() = runTest {
-        val recorder = RecordingInterceptor(
-            """{"result":"success","code":200,"url":"https://img.example.com/i/2026/08/a.jpg",""" +
-                """"srcName":"a","thumb":"https://img.example.com/i/2026/08/a.th.jpg","message":"success"}""",
+        val recorder = RecordingTransport(
+            httpResponse(
+                """{"result":"success","code":200,"url":"https://img.example.com/i/2026/08/a.jpg",""" +
+                    """"srcName":"a","thumb":"https://img.example.com/i/2026/08/a.th.jpg","message":"success"}""",
+            ),
         )
 
         val result = repositoryFor(easyImage, recorder).upload(bytes())
 
         assertEquals("https://img.example.com/i/2026/08/a.jpg", result.url)
-        assertEquals("/api/index.php", recorder.request?.url?.encodedPath)
-        assertTrue(recorder.bodyUtf8.contains("""name="token""""))
-        assertTrue(recorder.bodyUtf8.contains("tok123"))
-        assertTrue(recorder.bodyUtf8.contains("""name="image""""))
+        val request = recorder.request!!
+        assertEquals("/api/index.php", request.path)
+        assertEquals(mapOf("token" to "tok123"), request.multipart.fields)
+        assertEquals("image", request.multipart.fileField)
     }
 
     /**
@@ -123,11 +132,13 @@ class ThirdPartyHostClientsTest {
      */
     @Test
     fun `easyimage failures arrive as HTTP 200 and are still failures`() = runTest {
-        val recorder = RecordingInterceptor(
-            """{"result":"failed","code":204,"message":"没有选择上传的文件"}""",
+        val recorder = RecordingTransport(
+            httpResponse(
+                """{"result":"failed","code":204,"message":"没有选择上传的文件"}""",
+            ),
         )
 
-        val error = assertFails { repositoryFor(easyImage, recorder).upload(bytes()) }
+        val error = assertImageHostFails { repositoryFor(easyImage, recorder).upload(bytes()) }
 
         assertEquals(ImageHostError.Rejected(204), error.error)
         assertEquals("没有选择上传的文件", error.detail)
@@ -136,13 +147,13 @@ class ThirdPartyHostClientsTest {
     /** Upload is the only endpoint it publishes; the screen must be told, not shown an empty list. */
     @Test
     fun `easyimage refuses to pretend it has a listing`() = runTest {
-        val recorder = RecordingInterceptor("{}")
+        val recorder = RecordingTransport(httpResponse("{}"))
 
         assertEquals(
             ImageHostError.Unsupported,
-            assertFails { repositoryFor(easyImage, recorder).images() }.error,
+            assertImageHostFails { repositoryFor(easyImage, recorder).images() }.error,
         )
-        assertNull("no request may go out for an endpoint that does not exist", recorder.request)
+        assertNull(recorder.request, "no request may go out for an endpoint that does not exist")
     }
 
     // ---- sm.ms ------------------------------------------------------------------------------
@@ -151,14 +162,14 @@ class ThirdPartyHostClientsTest {
 
     @Test
     fun `smms authorizes without a bearer prefix and posts smfile`() = runTest {
-        val recorder = RecordingInterceptor(SMMS_UPLOAD)
+        val recorder = RecordingTransport(httpResponse(SMMS_UPLOAD))
 
         val result = repositoryFor(smms, recorder).upload(bytes())
 
         assertEquals("https://s2.loli.net/2026/08/12/abc.png", result.url)
         assertEquals("deletehash", result.deleteToken)
-        assertEquals("smtoken", recorder.request?.header("Authorization"))
-        assertTrue(recorder.bodyUtf8.contains("""name="smfile""""))
+        assertEquals("smtoken", recorder.request?.headers?.get("Authorization"))
+        assertEquals("smfile", recorder.request!!.multipart.fileField)
     }
 
     /**
@@ -168,9 +179,11 @@ class ThirdPartyHostClientsTest {
      */
     @Test
     fun `smms reuses the existing link when the image is a duplicate`() = runTest {
-        val recorder = RecordingInterceptor(
-            """{"success":false,"code":"image_repeated","message":"Image upload repeated limit",""" +
-                """"images":"https://s2.loli.net/2026/08/12/abc.png"}""",
+        val recorder = RecordingTransport(
+            httpResponse(
+                """{"success":false,"code":"image_repeated","message":"Image upload repeated limit",""" +
+                    """"images":"https://s2.loli.net/2026/08/12/abc.png"}""",
+            ),
         )
 
         val result = repositoryFor(smms, recorder).upload(bytes())
@@ -179,24 +192,26 @@ class ThirdPartyHostClientsTest {
     }
 
     @Test
-    fun `smms deletes by hash, not by file name`() = runTest {
-        val recorder = RecordingInterceptor("""{"success":true,"code":"success"}""")
+    fun `smms deletes by hash rather than by file name`() = runTest {
+        val recorder = RecordingTransport(httpResponse("""{"success":true,"code":"success"}"""))
 
         repositoryFor(smms, recorder).delete(
             HostedImage(id = "abc.png", fileName = "abc.png", url = "u", deleteToken = "deletehash"),
         )
 
-        assertEquals("/api/v2/delete/deletehash", recorder.request?.url?.encodedPath)
+        assertEquals("/api/v2/delete/deletehash", recorder.request?.path)
     }
 
     // ---- imgbb ------------------------------------------------------------------------------
 
     @Test
     fun `imgbb puts the key in the query string and reads the original url`() = runTest {
-        val recorder = RecordingInterceptor(
-            """{"data":{"id":"abc","title":"photo","url":"https://i.ibb.co/abc/photo.png",""" +
-                """"display_url":"https://i.ibb.co/abc/photo-small.png","size":4096,""" +
-                """"delete_url":"https://ibb.co/abc/deletetoken"},"success":true,"status":200}""",
+        val recorder = RecordingTransport(
+            httpResponse(
+                """{"data":{"id":"abc","title":"photo","url":"https://i.ibb.co/abc/photo.png",""" +
+                    """"display_url":"https://i.ibb.co/abc/photo-small.png","size":4096,""" +
+                    """"delete_url":"https://ibb.co/abc/deletetoken"},"success":true,"status":200}""",
+            ),
         )
 
         val result = repositoryFor(
@@ -206,8 +221,8 @@ class ThirdPartyHostClientsTest {
 
         // The original, not the resized copy — the forum decides how wide to draw it.
         assertEquals("https://i.ibb.co/abc/photo.png", result.url)
-        assertEquals("imgbbkey", recorder.request?.url?.queryParameter("key"))
-        assertEquals("/1/upload", recorder.request?.url?.encodedPath)
+        assertEquals("imgbbkey", recorder.request?.queryParameter("key"))
+        assertEquals("/1/upload", recorder.request?.path)
     }
 
     // ---- 自定义图床 ---------------------------------------------------------------------------
@@ -226,18 +241,19 @@ class ThirdPartyHostClientsTest {
 
     @Test
     fun `a custom host is posted exactly as described and read at the given path`() = runTest {
-        val recorder = RecordingInterceptor(
-            """{"result":{"files":[{"link":"https://img.example.com/i/a.png"}]}}""",
+        val recorder = RecordingTransport(
+            httpResponse(
+                """{"result":{"files":[{"link":"https://img.example.com/i/a.png"}]}}""",
+            ),
         )
 
         val result = repositoryFor(custom, recorder).upload(bytes())
 
         assertEquals("https://img.example.com/i/a.png", result.url)
-        assertEquals("secret", recorder.request?.header("X-Token"))
-        assertTrue(recorder.bodyUtf8.contains("""name="smfile""""))
-        assertTrue(recorder.bodyUtf8.contains("""name="album""""))
-        assertTrue(recorder.bodyUtf8.contains("forum"))
-        assertTrue(recorder.bodyUtf8.contains("""name="quality""""))
+        val request = recorder.request!!
+        assertEquals("secret", request.headers["X-Token"])
+        assertEquals("smfile", request.multipart.fileField)
+        assertEquals(mapOf("album" to "forum", "quality" to "90"), request.multipart.fields)
     }
 
     /**
@@ -245,12 +261,12 @@ class ThirdPartyHostClientsTest {
      * image with no clue as to why. The prefix is what the field exists for.
      */
     @Test
-    fun `a relative link is completed with the prefix, an absolute one is left alone`() = runTest {
+    fun `a relative link is completed with the prefix and an absolute one is left alone`() = runTest {
         val relative = repositoryFor(
             custom.copy(
                 custom = custom.custom.copy(urlPath = "url", urlPrefix = "https://cdn.example.com/"),
             ),
-            RecordingInterceptor("""{"url":"/i/2026/a.png"}"""),
+            RecordingTransport(httpResponse("""{"url":"/i/2026/a.png"}""")),
         ).upload(bytes())
         assertEquals("https://cdn.example.com/i/2026/a.png", relative.url)
 
@@ -258,7 +274,7 @@ class ThirdPartyHostClientsTest {
             custom.copy(
                 custom = custom.custom.copy(urlPath = "url", urlPrefix = "https://cdn.example.com/"),
             ),
-            RecordingInterceptor("""{"url":"https://other.example.com/a.png"}"""),
+            RecordingTransport(httpResponse("""{"url":"https://other.example.com/a.png"}""")),
         ).upload(bytes())
         assertEquals("https://other.example.com/a.png", absolute.url)
     }
@@ -266,12 +282,12 @@ class ThirdPartyHostClientsTest {
     /** A wrong path is the likeliest mistake here, so the answer itself comes back with the error. */
     @Test
     fun `a path that finds nothing carries the raw answer into the error`() = runTest {
-        val recorder = RecordingInterceptor("""{"data":{"link":"https://img.example.com/i/a.png"}}""")
+        val recorder = RecordingTransport(httpResponse("""{"data":{"link":"https://img.example.com/i/a.png"}}"""))
 
-        val error = assertFails { repositoryFor(custom, recorder).upload(bytes()) }
+        val error = assertImageHostFails { repositoryFor(custom, recorder).upload(bytes()) }
 
         assertEquals(ImageHostError.Unparsable, error.error)
-        assertTrue("the body is what tells the user their path is wrong", error.detail!!.contains("link"))
+        assertTrue(error.detail!!.contains("link"), "the body is what tells the user their path is wrong")
     }
 
     /** A LAN uploader with no credential at all is a legitimate configuration for this host only. */

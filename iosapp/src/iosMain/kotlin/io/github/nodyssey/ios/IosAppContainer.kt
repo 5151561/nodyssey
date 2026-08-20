@@ -3,6 +3,7 @@ package io.github.nodyssey.ios
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.net.DynamicSignTransport
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.AssetsRepository
@@ -57,14 +58,18 @@ import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.createPreferenceDataStore
 import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
+import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.local.createNodeSeekDatabase
 import io.github.nodyssey.data.offline.OfflineSettingsStore
 import io.github.nodyssey.data.offline.RoomOfflineLibrary
 import io.github.nodyssey.data.offline.UrlSessionOfflineImageSource
 import io.github.nodyssey.data.proxy.DataStoreProxySettings
+import io.github.nodyssey.data.proxy.ProxyClientKind
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
+import io.github.nodyssey.data.proxy.ProxyType
+import io.github.nodyssey.data.proxy.routes
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.update.AppUpdateRepository
@@ -74,6 +79,9 @@ import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
 import io.github.plaza.core.net.AppleCookieStore
 import io.github.plaza.core.net.NSUrlSessionTransport
+import io.github.plaza.core.net.ProxiedUrlSession
+import io.github.plaza.core.net.ProxyRoute
+import io.github.plaza.core.net.ProxyRouteType
 import io.github.plaza.core.net.SessionCookies
 import io.github.plaza.core.net.SiteHtmlClient
 import io.github.plaza.core.net.UserAgent
@@ -83,24 +91,33 @@ import io.github.plaza.core.readAppVersion
 import io.github.plaza.core.runCatchingExceptCancellation
 import io.github.plaza.core.update.ApkInstaller
 import io.github.plaza.core.update.isPreReleaseVersionName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import platform.Foundation.NSHTTPCookieStorage
+import platform.Foundation.NSURLSession
 
 /**
  * The dependency graph on iOS — the counterpart of `DefaultAppContainer` in `:app`.
  *
- * Read side by side with that file, the interesting thing is how little differs. Thirty of the
- * thirty-six members are the same expression on both platforms, because steps A5–A7 put the
- * repositories, the database and the network contracts in `commonMain`; what is left here is a
- * transport, a cookie jar, three directories and the four seams gathered in `Unavailable.kt`.
+ * Read side by side with that file, the interesting thing is how little differs. D3b counted thirty
+ * of the thirty-six members as the same expression on both platforms, because steps A5–A7 put the
+ * repositories, the database and the network contracts in `commonMain`; D3c sent the six image-host
+ * clients and the vote signature after them, so [imageHostRepository] joined them. What is left here
+ * is two sessions, a cookie jar, three directories and the three seams gathered in `Unavailable.kt`.
  *
- * **No proxy.** Every OkHttp client in the Android container carries an `AppProxySelector` and the
- * app's 代理设置 routes all three. `NSURLSession` takes a proxy through
- * `connectionProxyDictionary`, which is a different shape — per-session and set once, where the
- * selector is consulted per request precisely so an edit takes effect on the next one. [proxySettings]
- * is real here and the screen stores what it is given; nothing reads it yet. That is a gap and it is
- * named as one in `docs/kmp-migration-plan.md`.
+ * **Two sessions, where Android has three clients.** The split is the same one and drawn for the same
+ * reason: [forumSession] carries the NodeSeek cookies and stamps the forum's `Referer`, and
+ * [imageHostSession] carries neither, because every host behind it is a third party holding a
+ * bearer-equivalent secret. Android's third client is the GitHub update check, which this platform
+ * does not make.
+ *
+ * **The proxy is a rebuilt session rather than a selector.** `NSURLSession` takes its proxy in
+ * `connectionProxyDictionary`, which is part of the configuration a session is created from, so a
+ * saved edit in 代理设置 cannot be applied to a live one — see [ProxiedUrlSession]. Both sessions read
+ * the same setting and honour [ProxyScope] the same way the two Android clients do.
  *
  * @param userAgent resolved before the graph is built — see [NodysseyApp] and `resolveWebKitUserAgent`
  *   for why it cannot be read synchronously and must not be guessed at.
@@ -125,26 +142,100 @@ class IosAppContainer(
     /** See `DeviceAcceptLanguage.kt` — a request without this one is a request no browser makes. */
     private val acceptLanguage: String by lazy { deviceAcceptLanguage() }
 
+    /** Collects the proxy setting for as long as the process lives; nothing else runs on it. */
+    private val appScope = CoroutineScope(SupervisorJob() + dispatchers.default)
+
     /**
-     * The one session everything HTTP goes through — the pages, the JSON, the pictures.
+     * 代理设置 as a route, or null when this kind of client is meant to go direct.
+     *
+     * The Apple counterpart of `AppProxySelector`, and it answers exactly the same question — it just
+     * answers it once per saved edit instead of once per request, because that is as often as a
+     * session can be told. `distinctUntilChanged` on the whole route is what keeps a keystroke in the
+     * 备注 field from rebuilding two sessions.
+     */
+    private fun proxyRoute(kind: ProxyClientKind): Flow<ProxyRoute?> =
+        proxySettings.config
+            .map { config ->
+                if (!config.routes(kind)) {
+                    null
+                } else {
+                    ProxyRoute(
+                        type = when (config.type) {
+                            ProxyType.HTTP -> ProxyRouteType.HTTP
+                            ProxyType.SOCKS -> ProxyRouteType.SOCKS
+                        },
+                        host = config.host,
+                        port = config.port,
+                        username = config.username,
+                        password = config.password,
+                    )
+                }
+            }.distinctUntilChanged()
+
+    /**
+     * The session the forum, its JSON and its pictures all go through.
      *
      * Internal rather than private because the image loader is built outside this class and has to be
      * given it: `:app` puts its `OkHttpClient` on `AndroidAppContainer` for the same reason, and for
      * the same reason it is not on `AppContainer` — no screen reads it.
      */
-    internal val urlSession by lazy {
-        appleUrlSession(
-            userAgent = userAgent.value,
-            acceptLanguage = acceptLanguage,
-            // Applied to page *and* image requests, which both have to look like the mobile site —
-            // the same argument `DefaultAppContainer` makes for its `BrowserHeadersInterceptor`. The
-            // image half is not theoretical: without it an attachment host answers
-            // 「只允许将图片嵌入网页」 with a 403, which is what the first run of this shell drew.
-            referer = "${NodeSeekSite.BASE_URL}/",
-        )
+    internal val forumSession by lazy {
+        ProxiedUrlSession(appScope, proxyRoute(ProxyClientKind.FORUM)) { proxy ->
+            appleUrlSession(
+                userAgent = userAgent.value,
+                acceptLanguage = acceptLanguage,
+                // Applied to page *and* image requests, which both have to look like the mobile site —
+                // the same argument `DefaultAppContainer` makes for its `BrowserHeadersInterceptor`. The
+                // image half is not theoretical: without it an attachment host answers
+                // 「只允许将图片嵌入网页」 with a 403, which is what the first run of this shell drew.
+                referer = "${NodeSeekSite.BASE_URL}/",
+                proxy = proxy,
+            )
+        }
     }
 
-    private val transport by lazy { NSUrlSessionTransport(urlSession) }
+    /** What the image loader and the offline downloader read; the current one, not the first one. */
+    internal val urlSession: NSURLSession get() = forumSession.current
+
+    /**
+     * A session of its own for the six image hosts, sharing with [forumSession] only what the user
+     * set once for the whole app.
+     *
+     * The reasoning is `DefaultAppContainer`'s `imageHostClient`, line for line. That client carries
+     * the WebView cookie jar and stamps `Referer: nodeseek.com` on anything without one; neither is
+     * appropriate for a third party we hand an API key to — the key is the credential, the cookies are
+     * not its business, and the referrer would tell nodeimage.com about a browsing session it has no
+     * part in. What *is* shared is the proxy, because that one is a setting rather than a property of
+     * this host, and the user agent, because `api.nodeimage.com` sits behind a Cloudflare managed
+     * challenge and a device's real browser UA is what a challenge expects to see.
+     *
+     * The longer timeout is the other difference: an upload on a weak connection takes longer than a
+     * page read ever does.
+     */
+    private val imageHostSession by lazy {
+        ProxiedUrlSession(appScope, proxyRoute(ProxyClientKind.THIRD_PARTY)) { proxy ->
+            appleUrlSession(
+                userAgent = userAgent.value,
+                acceptLanguage = acceptLanguage,
+                referer = null,
+                timeoutSeconds = IMAGE_HOST_TIMEOUT_SECONDS,
+                cookies = null,
+                proxy = proxy,
+            )
+        }
+    }
+
+    /**
+     * The forum's transport, signed.
+     *
+     * [DynamicSignTransport] is what makes the `/api/vote/` family answer anything but 403, and until D3c
+     * it was an OkHttp interceptor that only Android had — which is why the D3b notes recorded voting
+     * as expected to fail here. It wraps the forum's transport only: the signature is NodeSeek's, and
+     * the image hosts are six other people's.
+     */
+    private val transport by lazy {
+        DynamicSignTransport(NSUrlSessionTransport { forumSession.current }, userAgent.value)
+    }
 
     private val htmlClient by lazy { SiteHtmlClient(transport, dispatchers, NodeSeekSite.CONFIG) }
 
@@ -292,8 +383,10 @@ class IosAppContainer(
     }
 
     override val imageHostRepository: ImageHostRepository by lazy {
-        UnavailableImageHostRepository(
-            DataStoreImageHostSettings(createPreferenceDataStore("imagehost"), secretCipher),
+        DefaultImageHostRepository(
+            settings = DataStoreImageHostSettings(createPreferenceDataStore("imagehost"), secretCipher),
+            http = NSUrlSessionTransport { imageHostSession.current },
+            dispatchers = dispatchers,
         )
     }
 
@@ -310,6 +403,11 @@ class IosAppContainer(
     override val appUpdateRepository: AppUpdateRepository get() = NoAppUpdates
 
     override val apkInstaller: ApkInstaller get() = NoApkInstaller
+
+    private companion object {
+        /** Sixty seconds, as `DefaultAppContainer` gives its image-host client, and for its reason. */
+        const val IMAGE_HOST_TIMEOUT_SECONDS = 60.0
+    }
 
     override val appCacheStore: AppCacheStore by lazy {
         IosAppCacheStore(

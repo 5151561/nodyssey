@@ -1,12 +1,5 @@
 package io.github.nodyssey.ios
 
-import io.github.nodyssey.data.imagehost.HostedImage
-import io.github.nodyssey.data.imagehost.ImageHostConfig
-import io.github.nodyssey.data.imagehost.ImageHostError
-import io.github.nodyssey.data.imagehost.ImageHostException
-import io.github.nodyssey.data.imagehost.ImageHostRepository
-import io.github.nodyssey.data.imagehost.ImageHostSettings
-import io.github.nodyssey.data.imagehost.ImageHostUpload
 import io.github.nodyssey.data.offline.OfflineWorkScheduler
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.plaza.core.update.ApkInstaller
@@ -14,11 +7,8 @@ import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.AppUpdateState
 import io.github.plaza.core.update.InstallOutcome
 import io.github.plaza.core.update.ReleaseNote
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
 
 /*
  * What this shell declines to do, gathered in one file so the list reads as a list.
@@ -30,14 +20,15 @@ import kotlinx.coroutines.flow.flatMapLatest
  *   - **Not a gap.** Sideloading an APK and checking GitHub for a newer build are Android's answer to
  *     a question this platform answers differently: software arrives from the App Store. There is
  *     nothing here to implement later.
- *   - **A gap, and it is named.** Uploading to an image host is behind six clients in `:app` written
- *     against `OkHttpClient` rather than `HttpTransport`; background download scheduling is step D4.
- *     Both are recorded in `docs/kmp-migration-plan.md`.
+ *   - **A gap, and it is named.** Background download scheduling is step D4's `BGTaskScheduler`, and
+ *     it is recorded in `docs/kmp-migration-plan.md`.
+ *
+ * There were four of these when this shell first ran. The image-host upload was the third, and it is
+ * gone: step D3c moved the six clients into `commonMain` and gave `HttpTransport` the upload-progress
+ * callback that had kept them out. `IosAppContainer` builds the real repository now.
  *
  * Nothing here throws where a button leads to it. A `TODO()` would be a crash waiting for the first
- * person to press one, and what is behind these is *nothing* rather than something broken — the one
- * exception is the upload, which raises the error its own interface already defines for "this host
- * cannot do that", because the tray words that and a silent no-op would leave a row spinning.
+ * person to press one, and what is behind these is *nothing* rather than something broken.
  */
 
 /** There is no sideloading here, and no screen asks: `rememberInstallPermissionRequest` draws nothing. */
@@ -89,39 +80,4 @@ internal object NoOfflineWorkScheduler : OfflineWorkScheduler {
     override fun startDrain(wifiOnly: Boolean, restart: Boolean) = Unit
 
     override fun ensureMaintenance() = Unit
-}
-
-/**
- * 图床设置 in full; the upload itself declines.
- *
- * The split is where the code is rather than where the feature is. Everything about *which* host and
- * *what credential* is `DataStoreImageHostSettings` in `commonMain` — so the settings screen, the
- * credential in the Keychain, the switching between six providers all work here exactly as they do on
- * Android. What does not is the six clients that speak those six protocols: they live in `:app` and
- * are written against `OkHttpClient`, including the progress callback the tray's ring reads, which
- * `HttpTransport` has no shape for. Porting them is a step, not a footnote.
- *
- * [ImageHostError.Unsupported] is the error the interface already defines for "this host has no
- * endpoint for that", and the tray words it. It is not exactly what is true — the host is fine, this
- * build is not — but it is the one of nine that leads to the right reaction, which is to stop rather
- * than to check the token or try again.
- */
-internal class UnavailableImageHostRepository(
-    private val settings: ImageHostSettings,
-) : ImageHostRepository,
-    ImageHostSettings by settings {
-    // The same expression `DefaultImageHostRepository` uses: which host is selected and what its
-    // fields are is settings, and settings are the half that works here.
-    @OptIn(ExperimentalCoroutinesApi::class)
-    override val current: Flow<ImageHostConfig> =
-        settings.selected.flatMapLatest { provider -> settings.config(provider) }
-
-    override suspend fun upload(
-        upload: ImageHostUpload,
-        onProgress: (Float) -> Unit,
-    ): HostedImage = throw ImageHostException(ImageHostError.Unsupported)
-
-    override suspend fun images(): List<HostedImage> = throw ImageHostException(ImageHostError.Unsupported)
-
-    override suspend fun delete(image: HostedImage) = throw ImageHostException(ImageHostError.Unsupported)
 }

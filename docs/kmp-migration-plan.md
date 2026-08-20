@@ -384,6 +384,7 @@ Compose
 | ✅ **D2** | D | ~~1,059 条 strings~~ 1,056 条 + 5 个 drawable → Compose Resources。**在 D1 里做掉了**，理由见下；剩下的 res xml 是 manifest 和图标，本来就不该动 | D1 |
 | ✅ **D3a** | D | iOS：`:designsys` 与 `:ui` 开 `iosArm64`，21 个 `expect` 补齐（四个是空壳），WKWebView 桥（`WKHTTPCookieStore` ↔ `NSHTTPCookieStorage` 双向 + observer）。**只到编译为止**——见下 | D1 |
 | ✅ **D3b** | D | iOS：新模块 `:iosapp` —— Xcode 工程 + `IosAppContainer`，App 在模拟器上跑起来了；门槛 A 在 iOS 上复验通过（登录 + 发评论）；四个图片能力落地；IME 正常——见下 | D3a |
+| ✅ **D3c** | D | iOS：三笔明写的欠账一起还——六家图床的客户端下沉（`HttpTransport` 加上传进度）、`x-dynamic-sign` 下沉（okio 的 `sha1()`，A5 记的理由是错的）、`NSURLSession` 代理落地并**实测**（SOCKS 对 `http://` 是静默失效的）——见下 | D3b |
 | **D4** | D | WorkManager → `BGTaskScheduler`（5 个文件） | A7 |
 
 原表的步骤 1「Apple 平台 spike」并入 **D3** —— 门槛 A 已在 macOS 上通过，剩下的 iOS 复验和
@@ -802,7 +803,14 @@ expect/actual，Apple 侧走 `NSDate`。
 **四、`x-dynamic-sign` 没有跟着下沉。**`DynamicSignInterceptor` 是个 OkHttp interceptor，留在
 `:app`。把它做成公共的意味着 commonMain 里要有 SHA-1——Kotlin 没有公共的 crypto API，两个平台的
 C 函数都已 deprecated，剩下的选择是手写一份摘要算法。按「不要过度抽象」这条没做。**代价记在这里**：
-Apple 侧今天调 `/api/vote/*` 会拿到 403，这是 D3 的活。
+Apple 侧今天调 `/api/vote/` 那一族会拿到 403，这是 D3 的活。
+
+> **D3c 补记：上面这段推理是错的。**「剩下的选择是手写摘要」漏了一个已经在依赖里的答案——okio 的
+> `ByteString.sha1()` 是纯 Kotlin，`commonMain` 就有，而 DataStore 早就把 okio 拖进了这个模块的每一条
+> 编译路径（`commonMain` 里那句 `okio.IOException` 就是证据）。这笔债的实际宽度是一行 import。留着的
+> 那几个月里它变成了「Apple 侧不能投票」这条一直被引用的结论，而结论的依据从来没被复核过。
+> 现在下沉成了 `DynamicSignTransport`——一个 `HttpTransport` 装饰器而不是 interceptor，因为 Apple
+> 侧没有 chain 可读；见下面 D3c 那节。
 
 **五、Apple 的 cookie 桥没有做，而且它和 Android 不是同一个形状。**这条在 #101 的 review 里被点
 出来，点得对——原来的 KDoc 写着「`WKWebView` 登录后 cookie 落进
@@ -926,7 +934,7 @@ Room 生成的代码调用 `@RestrictTo(LIBRARY_GROUP)` 类型，这是 Room 的
 | `offline/AndroidOfflineFileStore.kt`、`OfflineImageInterceptor.kt` | 文件系统 + `StatFs`；后者给 Coil 递 `File` |
 | `offline/OfflineWork.kt`、`OfflineWorkers.kt` | WorkManager，按 §4.4「不要过度抽象」原样留下 |
 | `proxy/ProxyConnectionTester.kt` | 靠 `java.net` 的异常类型分类失败原因 |
-| `imagehost/` 的 9 个 | 六家图床的协议，见下 |
+| `imagehost/` 的 9 个 | 六家图床的协议，见下（**D3c 已搬进 `commonMain`**，`data/` 因此只剩 7 个） |
 
 `:shared` 这侧：`commonMain` 63 个，`androidMain` 3 个（OkHttp 取图、更新仓库的实现、数据库工厂）。
 
@@ -945,7 +953,7 @@ Room 生成的代码调用 `@RestrictTo(LIBRARY_GROUP)` 类型，这是 Room 的
 `:shared/androidMain`。理由都写在文件头上——图片要的是**字节**，APK 要的是**流**，而
 `HttpTransport` 交出来的是解码好的文本。
 
-#### `imagehost/` 是唯一整片没走的
+#### `imagehost/` 是唯一整片没走的（D3c 搬完了）
 
 九个文件、六家图床的协议，全部还在 `:app`。原因只有一个：**上传进度**。`HttpTransport` 读完一整个
 回答才返回，请求飞在半空时它什么都不说；而托盘上那个进度环要的正好是相反的东西，OkHttp 那侧是靠包
@@ -1410,17 +1418,17 @@ has no actual declaration」**——和那个块上方注释预言的一字不�
 | | 为什么 |
 |---|---|
 | `ApkInstaller` / `AppUpdateRepository` | **不是缺口。**旁加载和查 GitHub Releases 是 Android 对「新版本从哪来」的答案；这个平台的答案是 App Store，而 App 不被允许绕过它。`NoAppUpdates` 永远停在 idle，那正是 Android 上「今天没有新版本」的同一个状态 |
-| `ImageHostRepository.upload` | **是缺口。**六家图床的客户端在 `:app` 里，写的是 `OkHttpClient` 而不是 `HttpTransport`，连托盘那个进度环读的回调都是 OkHttp 的形状。但**设置那半是好的**——`DataStoreImageHostSettings` 在 `commonMain`，所以选哪家、密钥存哪、六家之间怎么切，在 iOS 上和 Android 一模一样，只有上传本身抛 `ImageHostError.Unsupported` |
+| `ImageHostRepository.upload` | **是缺口，D3c 已还。**六家图床的客户端当时在 `:app` 里，写的是 `OkHttpClient` 而不是 `HttpTransport`，连托盘那个进度环读的回调都是 OkHttp 的形状。但**设置那半是好的**——`DataStoreImageHostSettings` 在 `commonMain`，所以选哪家、密钥存哪、六家之间怎么切，在 iOS 上和 Android 一模一样，只有上传本身抛 `ImageHostError.Unsupported` |
 | `OfflineWorkScheduler` | **是缺口，且已排期。**D4 的 `BGTaskScheduler`。这不等于离线阅读关着：`RoomOfflineLibrary` 在前台自己抽干队列，缺的是退到后台之后继续 |
 
 没有一个是 `TODO()`。抛异常的空实现是一颗等着第一个人按下去的雷，而这些按钮背后是*没有东西*，不是坏
 掉的东西——唯一的例外是上传，它抛的是自己接口早就定义好的那个错误，因为托盘要给它一句话，静默 no-op
 会留下一行永远转着的进度。
 
-**代理整个没有。**Android 那三个 OkHttp 客户端各挂一个 `AppProxySelector`，一个设置路由全部三个。
-`NSURLSession` 收代理走 `connectionProxyDictionary`，形状不同——按 session 设一次，而 selector 是每
-个请求问一遍，为的正是改完下一个请求就生效。`proxySettings` 在 iOS 上是真的、屏幕存得进去，**但没有
-任何东西读它**。这是缺口，记在这里。
+**代理整个没有。（D3c 已还。）**Android 那三个 OkHttp 客户端各挂一个 `AppProxySelector`，一个设置路由
+全部三个。`NSURLSession` 收代理走 `connectionProxyDictionary`，形状不同——按 session 设一次，而
+selector 是每个请求问一遍，为的正是改完下一个请求就生效。`proxySettings` 在 iOS 上是真的、屏幕存得
+进去，**但没有任何东西读它**。这是缺口，记在这里。
 
 #### `:shared/appleMain` 新增的六样，以及一样放错了源集
 
@@ -1560,16 +1568,150 @@ D3a 建那座桥时说它该去的地方。顺带印证了同一节的怀疑：`
 在这套 cookie 里根本不存在，登录判定靠的是 `session`。
 
 **一件没有跟着通过的事：**A5 记的 `x-dynamic-sign` 欠账仍然成立。`DynamicSignInterceptor` 是个 OkHttp
-interceptor，没有下沉，所以 Apple 侧调 `/api/vote/*` 预期仍是 403。评论不走那条签名，所以它能发不构成
-对投票的任何证据。
+interceptor，没有下沉，所以 Apple 侧调 `/api/vote/` 那一族预期仍是 403。评论不走那条签名，所以它能发不
+构成对投票的任何证据。**（D3c 已还，见下。）**
 
 **没验的：**
 
-另外几项没验：图床上传（见上，客户端还在 `:app`）、代理（iOS 侧没有实现）、后台下载调度（D4）、
+另外几项没验：图床上传（见上，客户端还在 `:app`；D3c 下沉了，但**仍然没有拿真账号跑过一次上传**）、
+代理（iOS 侧没有实现；D3c 已实测，见下）、后台下载调度（D4）、
 `KeychainSecretCipher`（代理密码和图床密钥都经过它，但这一轮没有走到那两个屏幕）、`IosAppCacheStore`
 的清除动作（头像那次修复没有经过它——Coil 缓存的是编码后的字节，解码器是后加的，所以旧缓存直接就能
 用），以及 `CacheControlCacheStrategy` 的回源行为（要等一次真的换头像才看得出来）。`👨‍👩‍👧` 这类 ZWJ
 序列的退格行为沿用 D3a 记的已知代价，本轮没有单独复验。
+
+---
+
+### ✅ D3c 实测：三笔欠账，以及其中两笔的理由本来就是错的
+
+D3b 收尾时计划表上还挂着三笔 iOS 侧的欠账，都不属于 D4：六家图床的客户端还绑在 `OkHttpClient`、代理在
+iOS 侧没实现、`x-dynamic-sign` 没下沉。三笔一起还了。值得写下来的不是「还了」，而是**其中两笔当初记的
+理由经不起复核，而第三笔的实现方式必须靠实测才能定**。
+
+#### 一、`HttpTransport` 加上传进度，六家图床因此能下沉
+
+这是三笔里唯一一笔当初的理由是**对的**。A7 记的是：`HttpTransport` 读完整个回答才返回，请求飞在半空时
+它什么都不说，而托盘那个进度环要的正好是相反的东西；给 transport 加一个上传进度回调是改一个**所有调用方
+共享**的契约，那属于真正需要 Apple 上传器的那一步。这一步就是那一步。
+
+契约上多的是一个可选参数：
+
+```kotlin
+suspend fun execute(request: HttpRequest, onUploadProgress: UploadProgress? = null): HttpResponse
+```
+
+`UploadProgress` 是 `(Float) -> Unit`，`null` 是除了上传以外每一个调用方。两端各自实现自己那半：
+
+| | 怎么报 |
+|---|---|
+| `OkHttpTransport` | 老办法，`ProgressRequestBody` 从 `:app` 原样搬过来——OkHttp 不发布上传回调，包一层 body 数着写进 sink 的字节是官方那条路。**分块写而不是一次写完**：一次 `write` 只会报 0% 和 100%，那是装饰不是信号 |
+| `NSUrlSessionTransport` | 有人听的时候换成 `uploadTaskWithRequest:fromData:`，挂一个**任务级** delegate 读 `didSendBodyData`。任务级而不是 session 级，因为 session 是所有请求共用的；而那个 delegate 同时实现了重定向和代理认证两个方法，这样就不依赖「task delegate 没实现的方法会回落到 session delegate」这条文档说法是否属实 |
+
+九个文件从 `app/src/main/java/io/github/nodyssey/data/imagehost/` 整片搬进 `commonMain`，六家的协议一行
+没改——改的只有「请求怎么发出去」。`readBody` 从 `OkHttpClient` 的扩展变成 `HttpTransport` 的扩展，
+`Request.Builder` 变成 `HttpRequest`，`MultipartBody.Builder` 变成早就在 `commonMain` 里的
+`HttpBody.Multipart`。
+
+**测试跟着搬进 `commonTest`，于是六家的协议现在四个平台各跑一遍**，而它们过去只在 JVM 上跑过。搬的过程里
+有三件事值得记：
+
+- **Kotlin/Native 不允许反引号测试名里有逗号**（「Name contains illegal characters」）。五个从 `:app` 搬
+  过来的名字因此改了措辞。JVM 上跑了很久的测试名不等于能跑在四个平台上。
+- **断言反而变强了。**过去要在编码后的 multipart 字符串里找 `name="image"` 这个子串；现在
+  `HttpBody.Multipart` 是结构化的，直接断言 `fileField == "image"`、`fields == mapOf("token" to "tok123")`。
+- **有一条断言必须留在 Android 侧。**「进度环真的会动」（`progress.size > 2`）测的是 `ProgressRequestBody`
+  的分块，不是客户端的行为——假 transport 只能证明监听器传下去了。它成了 `androidHostTest` 里的
+  `OkHttpTransportProgressTest`，跑在真的 `OkHttpClient` 上，由一个读 body 的终端 interceptor 触发写入。
+
+iOS 侧因此多了一条 session：`imageHostSession`，没有 cookie 罐、不盖论坛的 `Referer`、超时 60 秒。理由
+和 `DefaultAppContainer` 里 `imageHostClient` 那段逐字一样——密钥才是凭据，论坛的会话不该跟着去第三方。
+`Unavailable.kt` 从四条变成三条。
+
+#### 二、`x-dynamic-sign`：A5 记的理由是错的，代价是「Apple 不能投票」这条结论被引用了几个月
+
+A5 写的是：下沉意味着 `commonMain` 里要有 SHA-1，Kotlin 没有公共 crypto API，两个平台的 C 函数都已
+deprecated，**剩下的选择是手写一份摘要算法**。
+
+剩下的选择不是。okio 的 `ByteString.sha1()` 是纯 Kotlin，`commonMain` 就有，而 DataStore 早就把 okio 拖进
+了 `:shared` 的每一条编译路径——`shared/gradle.lockfile` 里 `com.squareup.okio:okio:3.9.1` 挂在
+`metadataCommonMainCompileClasspath` 上，`ProxySettings.kt` 里那句 `import okio.IOException` 就是现成的
+证据。这笔债的实际宽度是一行 import。（这次顺手把 okio 写成了显式依赖：import 了的东西应该自己管版本。
+lockfile 没有因此变化，因为解析出来的还是同一个。）
+
+**下沉的形态不是 interceptor 而是 transport 装饰器**，`DynamicSignTransport`。这一条不是风格问题：
+
+签名要盖住 `User-Agent`，而服务端是拿它收到的那个请求重算的，所以**签的那个串和发出去的那个串必须是同
+一个**。老 interceptor 靠的是排在 `BrowserHeadersInterceptor` 后面、从 chain 上读已经填好的请求——这个
+保证寄存在两行 builder 调用的先后顺序里。装饰器没有 chain 可读，所以它反过来**自己写这个头**：
+`BrowserHeadersInterceptor` 只在调用方没填时才填，`NSURLSession` 的 per-request 头压过
+`HTTPAdditionalHeaders`，两边因此都发出被签过的那一个。调用方自己设了的，就用它设的那个签。
+
+范围仍然只有 `/api/vote/` 那一族，而且判断改成读**绝对 URL 的 path** 而不是前缀匹配整串——站点自己会发
+`/jump?to=…/api/vote/…` 这种链接，按整串匹配会给一个发往别处的请求签名。这条单独有测试。
+
+测试分两处，而分法是这个仓库已有的那条规矩：
+
+- `commonTest` 的 `DynamicSignTest` 测**行为**——谁被签、签的是哪个串、UA 谁赢、query 算不算、body 有没有
+  被动过、上传监听器有没有透传。
+- `androidHostTest` 的 `DynamicSignDigestTest` 测**摘要**，拿 JVM 的 `MessageDigest` 做差分对照，四组向量
+  含一组中文。理由和 `WebUrlTest`、`NodeSeekSiteEncodingTest` 一样：它保的不是本项目的规范，是另一个实现
+  给出的答案。这个值原来**就是** `MessageDigest` 算的，现在换成了 okio，所以这道对照是必须的。
+
+#### 三、代理：形状不同，而且 SOCKS 的行为只能靠实测知道
+
+Android 那侧 `ProxySelector` 是**每个请求问一遍**的，所以一个 `OkHttpClient` 能活过用户的每一次编辑。
+`NSURLSession` 的代理在 `connectionProxyDictionary` 里，那是 session **创建时**复制走的 configuration 的
+一部分——`session.configuration` 交还的是副本，往上写什么都不会发生。所以这边的答案是**换一个 session**：
+`ProxiedUrlSession` 收一条 `Flow<ProxyRoute?>`，路由变了就建一个新的，`NSUrlSessionTransport` 因此收的是
+`() -> NSURLSession` 而不是一个 session。
+
+两处细节：
+
+- **旧 session 是延迟失效的。**不 `finishTasksAndInvalidate` 会漏掉它强引的 delegate；立刻失效则更糟——
+  在一个已失效的 session 上建任务**不会失败，而是什么都不做**，completion handler 永不调用，发请求的那个
+  协程就永远等下去。所以中间隔一段，覆盖住「刚读到旧 session 就被换掉」的调用方。
+- **`kCFNetworkProxies…` 那些常量一半在 CFNetwork 里标着 macOS-only**（`HTTPSEnable` 就是），
+  Kotlin/Native 的 iOS binary 根本引用不到。字典读的是字符串，所以键直接写字面量——**值是那套 API 稳定的
+  一半，符号不是**。
+
+**实测。**Apple 用「见 CFNetwork」来文档这个字典，而 CFNetwork 是按 stream 而不是按 `NSURLSession` 写
+的，所以只能量。方法是在 Mac 上起两个一次性代理（HTTP CONNECT 一个、SOCKS5 一个，各自把每条隧道记一行
+日志），在 iOS 27 模拟器上跑 `NSUrlSessionTransport` 打过去，**并且每一项都跑一次「端口写死」的对照**——
+只看「成功了」是分不出「走了代理」和「绕过代理直连」的。
+
+| | `https://` | `http://` |
+|---|---|---|
+| HTTP/HTTPS 键 | 认。代理日志出现 `CONNECT`，端口写死时请求失败 | 认。代理日志出现 absolute-URI 的 `GET`，端口写死时请求失败 |
+| SOCKS 键 | 认。代理日志出现 `SOCKS-CONNECT`，端口写死时请求失败 | **不认，而且是静默的。**端口写死时请求照样 200——它根本没去过那里 |
+
+最后那格是这一步真正的产出。一个为了隐私把代理设成 SOCKS 的用户，明文请求会在开关显示「已开启」的时候
+直接从设备发出去；而这个 App 唯一可能拿到 `http://` 地址的地方，是用户自己填的自建图床——那条请求带着他
+的 API key。
+
+所以**一条 SOCKS 路由会把自己同时写进 HTTP 键**。明文请求于是撞到 SOCKS 端口上说 HTTP，SOCKS 服务端拒
+绝，请求**失败**——这正是 Android 那条规矩：代理送不动的请求就是送不动的请求，而不是一条悄悄绕过它的直
+连。同一轮验过它不打扰 `https://`：两组键都在时，安全请求照样是 SOCKS `CONNECT`。
+
+**端到端也验了**，因为「transport 会用代理」和「设置屏存的东西能到 transport」是两回事。做法是直接往
+模拟器容器里写 `proxy.preferences_pb`（DataStore 的 protobuf，手写一个编码器就够），删掉 Room 库逼它冷
+启动取一次：
+
+- 代理设成 `127.0.0.1:18080`（HTTP）：代理日志出现 `HTTP-CONNECT www.nodeseek.com:443`。
+- 同一份设置换成一个没人监听的端口：App 停在「网络开小差了 / 连不上 NodeSeek」，**没有直连**。
+
+顺带记两条**这台机器的坑**：模拟器里对公网站点的 TLS 一律报「certificate is invalid」，因为本机时钟对真实
+证书来说已经过期——排查时它看起来像代理的问题，其实和代理无关，本地明文源站一测就分清了。另外
+`mcp__Claude_Code_iOS_Simulator__*` 的 `tap`/`button` 在这台机器上完全没反应（不只是面板会崩，见
+D3b），所以上面那次端到端是靠写文件而不是靠点屏幕做的。
+
+#### 没验的
+
+图床上传**还是没有拿真账号跑过一次**——六家都要用户自己的密钥，而密钥不是我该去填的东西。下沉后的代码
+路径由 `commonTest` 里那两个协议测试守着（四个平台各跑一遍），Android 侧的行为不变，但「iOS 上真的传上去
+一张图」这句话现在还没有人能说。同样没验的还有：iOS 上的投票（签名下沉了，但要登录态才看得到
+`/api/vote/` 不再 403）、`KeychainSecretCipher`（代理密码和图床密钥都经过它，这一轮仍然没走到那两个屏
+幕）、SOCKS 代理的**认证**（实测那两个代理没开密码，`SOCKSUser`/`SOCKSPassword` 是否被 iOS 读走没有量
+过）。
 
 ---
 

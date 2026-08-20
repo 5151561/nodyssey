@@ -1,8 +1,6 @@
 package io.github.nodyssey.data.imagehost
 
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import io.github.plaza.core.net.HttpTransport
 
 /**
  * Whatever the user is running, described field by field.
@@ -17,32 +15,34 @@ import okhttp3.Request
  * [DETAIL_CHARS] characters of the body into the error. The settings screen shows that text — with a
  * host this app cannot introspect, seeing what actually came back is the only way to fix the path.
  */
-internal class CustomImageHostClient(private val http: OkHttpClient) : ImageHostClient {
+internal class CustomImageHostClient(private val http: HttpTransport) : ImageHostClient {
 
-    override fun upload(
+    override suspend fun upload(
         config: ImageHostConfig,
         upload: ImageHostUpload,
         onProgress: (Float) -> Unit,
     ): HostedImage {
         val fields = config.custom
-        val body = MultipartBody.Builder().setType(MultipartBody.FORM)
-        // Before the file: multipart parts go out in the order they are added, so the credential is
+        // Before the file: multipart parts go out in the order they were put in, so the credential is
         // on the wire before the megabytes are, and the progress ring starts at the image rather
-        // than after a few text fields have already ticked it forward.
-        fields.formParts().forEach { (name, value) -> body.addFormDataPart(name, value) }
-        body.addImagePart(fields.fileField.trim(), upload, onProgress)
+        // than after a few text fields have already ticked it forward. A user who lists the same
+        // field name twice gets one part rather than two, which is the one thing this loses against
+        // the builder it replaced — and a form with two fields of a name is not a shape any of these
+        // uploaders reads.
+        val body = upload.multipart(fields.fileField.trim(), fields = fields.formParts().toMap())
 
-        val request = Request.Builder()
-            .url(config.siteUrl.normalizedSiteUrl())
-            .header("Accept", "application/json")
-            .apply {
+        val request = postRequest(
+            url = config.siteUrl.normalizedSiteUrl(),
+            headers = buildMap {
+                put("Accept", "application/json")
                 if (fields.headerName.isNotBlank()) {
-                    header(fields.headerName.trim(), fields.headerValue.trim())
+                    put(fields.headerName.trim(), fields.headerValue.trim())
                 }
-            }.post(body.build())
-            .build()
+            },
+            body = body,
+        )
 
-        val payload = http.readBody(request)
+        val payload = http.readBody(request, onUploadProgress = onProgress)
         val link = runCatching { imageHostJson.parseToJsonElement(payload) }
             .getOrNull()
             ?.stringAtPath(fields.urlPath.trim())

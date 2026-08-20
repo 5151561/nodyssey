@@ -1,13 +1,11 @@
 package io.github.nodyssey.data.imagehost
 
+import io.github.plaza.core.net.HttpTransport
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
 /**
  * sm.ms — public, free, and the only host here the user does not have to run themselves.
@@ -23,19 +21,17 @@ import okhttp3.Request
  * rather than from the specification. Both fail soft: a shape that does not match surfaces the
  * host's own `message`, never a wrong URL.
  */
-internal class SmmsClient(private val http: OkHttpClient) : ImageHostClient {
+internal class SmmsClient(private val http: HttpTransport) : ImageHostClient {
 
-    override fun upload(
+    override suspend fun upload(
         config: ImageHostConfig,
         upload: ImageHostUpload,
         onProgress: (Float) -> Unit,
     ): HostedImage {
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addImagePart(FILE_FIELD, upload, onProgress)
-            .build()
-
-        val payload = http.readBody(request(config, UPLOAD_PATH).post(body).build())
+        val payload = http.readBody(
+            postRequest(url(UPLOAD_PATH), headers(config), upload.multipart(FILE_FIELD)),
+            onUploadProgress = onProgress,
+        )
         val root = payload.asJsonObject()
         val data = runCatching { root["data"]!!.jsonObject }.getOrNull()
 
@@ -66,8 +62,8 @@ internal class SmmsClient(private val http: OkHttpClient) : ImageHostClient {
         )
     }
 
-    override fun images(config: ImageHostConfig): List<HostedImage> {
-        val payload = http.readBody(request(config, HISTORY_PATH).get().build())
+    override suspend fun images(config: ImageHostConfig): List<HostedImage> {
+        val payload = http.readBody(getRequest(url(HISTORY_PATH), headers(config)))
         val rows = runCatching { payload.asJsonObject()["data"]!!.jsonArray }
             .getOrElse { throw ImageHostException(ImageHostError.Unparsable, detail = payload.take(DETAIL_CHARS)) }
         return rows.mapNotNull { row ->
@@ -75,10 +71,10 @@ internal class SmmsClient(private val http: OkHttpClient) : ImageHostClient {
         }
     }
 
-    override fun delete(config: ImageHostConfig, image: HostedImage) {
+    override suspend fun delete(config: ImageHostConfig, image: HostedImage) {
         if (image.deleteToken.isBlank()) throw ImageHostException(ImageHostError.Unsupported)
         // A GET, oddly, but that is the route this host publishes for it.
-        val payload = http.readBody(request(config, "$DELETE_PATH/${image.deleteToken}").get().build())
+        val payload = http.readBody(getRequest(url("$DELETE_PATH/${image.deleteToken}"), headers(config)))
         val root = payload.asJsonObject()
         if (root["success"]?.jsonPrimitive?.booleanOrNull == false) {
             throw ImageHostException(ImageHostError.Rejected(200), detail = root.stringAt("message"))
@@ -98,11 +94,12 @@ internal class SmmsClient(private val http: OkHttpClient) : ImageHostClient {
         )
     }
 
-    private fun request(config: ImageHostConfig, path: String): Request.Builder =
-        Request.Builder()
-            .url(BASE_URL + path)
-            .header("Accept", "application/json")
-            .header("Authorization", config.token.trim())
+    private fun url(path: String): String = BASE_URL + path
+
+    private fun headers(config: ImageHostConfig): Map<String, String> = mapOf(
+        "Accept" to "application/json",
+        "Authorization" to config.token.trim(),
+    )
 
     private companion object {
         const val BASE_URL = "https://sm.ms"

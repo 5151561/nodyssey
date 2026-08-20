@@ -1,14 +1,12 @@
 package io.github.nodyssey.data.imagehost
 
 import io.github.nodyssey.core.NodeImageSite
+import io.github.plaza.core.net.HttpTransport
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
 /**
  * nodeimage.com — the host NodeSeek's own editor reaches through a browser extension.
@@ -18,21 +16,21 @@ import okhttp3.Request
  * the documented key-authenticated one instead, because it needs no OAuth round trip through
  * NodeSeek and no shared browser session.
  */
-internal class NodeImageClient(private val http: OkHttpClient) : ImageHostClient {
+internal class NodeImageClient(private val http: HttpTransport) : ImageHostClient {
 
-    override fun upload(
+    override suspend fun upload(
         config: ImageHostConfig,
         upload: ImageHostUpload,
         onProgress: (Float) -> Unit,
     ): HostedImage {
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addImagePart(NodeImageSite.UPLOAD_FILE_FIELD, upload, onProgress)
-            .build()
-
         val payload = http.readBody(
-            request(config, NodeImageSite.UPLOAD_PATH).post(body).build(),
+            postRequest(
+                url(NodeImageSite.UPLOAD_PATH),
+                headers(config),
+                upload.multipart(NodeImageSite.UPLOAD_FILE_FIELD),
+            ),
             keyIsEnough = true,
+            onUploadProgress = onProgress,
         )
         val root = payload.asJsonObject()
         // The host answers 200 with `success:false` for a rejection it can describe, so a status
@@ -66,9 +64,9 @@ internal class NodeImageClient(private val http: OkHttpClient) : ImageHostClient
         )
     }
 
-    override fun images(config: ImageHostConfig): List<HostedImage> {
+    override suspend fun images(config: ImageHostConfig): List<HostedImage> {
         val payload = http.readBody(
-            request(config, NodeImageSite.IMAGES_PATH).get().build(),
+            getRequest(url(NodeImageSite.IMAGES_PATH), headers(config)),
             keyIsEnough = false,
         )
         val element = runCatching { imageHostJson.parseToJsonElement(payload) }
@@ -87,9 +85,9 @@ internal class NodeImageClient(private val http: OkHttpClient) : ImageHostClient
         }
     }
 
-    override fun delete(config: ImageHostConfig, image: HostedImage) {
+    override suspend fun delete(config: ImageHostConfig, image: HostedImage) {
         http.readBody(
-            request(config, NodeImageSite.imagePath(image.deleteToken)).delete().build(),
+            deleteRequest(url(NodeImageSite.imagePath(image.deleteToken)), headers(config)),
             keyIsEnough = false,
         )
     }
@@ -106,9 +104,10 @@ internal class NodeImageClient(private val http: OkHttpClient) : ImageHostClient
         )
     }
 
-    private fun request(config: ImageHostConfig, path: String): Request.Builder =
-        Request.Builder()
-            .url(NodeImageSite.absoluteApiUrl(path))
-            .header("Accept", "application/json")
-            .header(NodeImageSite.API_KEY_HEADER, config.token)
+    private fun url(path: String): String = NodeImageSite.absoluteApiUrl(path)
+
+    private fun headers(config: ImageHostConfig): Map<String, String> = mapOf(
+        "Accept" to "application/json",
+        NodeImageSite.API_KEY_HEADER to config.token,
+    )
 }

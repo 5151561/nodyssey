@@ -1,14 +1,12 @@
 package io.github.nodyssey.data.imagehost
 
+import io.github.plaza.core.net.HttpTransport
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import kotlin.math.roundToLong
 
 /**
@@ -22,19 +20,17 @@ import kotlin.math.roundToLong
  * Every answer is wrapped in `{"status":bool,"message":string,"data":…}` and arrives with HTTP 200
  * even when `status` is false, so the envelope is checked before anything is read out of it.
  */
-internal class LskyProClient(private val http: OkHttpClient) : ImageHostClient {
+internal class LskyProClient(private val http: HttpTransport) : ImageHostClient {
 
-    override fun upload(
+    override suspend fun upload(
         config: ImageHostConfig,
         upload: ImageHostUpload,
         onProgress: (Float) -> Unit,
     ): HostedImage {
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addImagePart(FILE_FIELD, upload, onProgress)
-            .build()
-
-        val payload = http.readBody(request(config, UPLOAD_PATH).post(body).build())
+        val payload = http.readBody(
+            postRequest(url(config, UPLOAD_PATH), headers(config), upload.multipart(FILE_FIELD)),
+            onUploadProgress = onProgress,
+        )
         val data = payload.unwrap()
         return data.toHostedImage() ?: throw ImageHostException(
             ImageHostError.Unparsable,
@@ -42,8 +38,8 @@ internal class LskyProClient(private val http: OkHttpClient) : ImageHostClient {
         )
     }
 
-    override fun images(config: ImageHostConfig): List<HostedImage> {
-        val payload = http.readBody(request(config, IMAGES_PATH).get().build())
+    override suspend fun images(config: ImageHostConfig): List<HostedImage> {
+        val payload = http.readBody(getRequest(url(config, IMAGES_PATH), headers(config)))
         // Laravel pagination: the envelope's `data` is the page object, and the page's own `data` is
         // the row array. A flat array is accepted too so a future unpaged answer does not empty the
         // screen without a word.
@@ -55,9 +51,9 @@ internal class LskyProClient(private val http: OkHttpClient) : ImageHostClient {
         }
     }
 
-    override fun delete(config: ImageHostConfig, image: HostedImage) {
+    override suspend fun delete(config: ImageHostConfig, image: HostedImage) {
         val payload = http.readBody(
-            request(config, "$IMAGES_PATH/${image.deleteToken}").delete().build(),
+            deleteRequest(url(config, "$IMAGES_PATH/${image.deleteToken}"), headers(config)),
         )
         payload.unwrapOrThrow()
     }
@@ -101,14 +97,16 @@ internal class LskyProClient(private val http: OkHttpClient) : ImageHostClient {
             ?.let { (it * BYTES_PER_KB).roundToLong() }
             ?: 0L
 
-    private fun request(config: ImageHostConfig, path: String): Request.Builder =
-        Request.Builder()
-            .url(config.siteUrl.normalizedSiteUrl() + path)
-            // Accept matters more than usual here: without it Laravel answers a validation failure
-            // with an HTML redirect instead of JSON, which reads as Unparsable rather than as the
-            // sentence the host was trying to say.
-            .header("Accept", "application/json")
-            .header("Authorization", config.token.asBearer())
+    private fun url(config: ImageHostConfig, path: String): String =
+        config.siteUrl.normalizedSiteUrl() + path
+
+    private fun headers(config: ImageHostConfig): Map<String, String> = mapOf(
+        // Accept matters more than usual here: without it Laravel answers a validation failure
+        // with an HTML redirect instead of JSON, which reads as Unparsable rather than as the
+        // sentence the host was trying to say.
+        "Accept" to "application/json",
+        "Authorization" to config.token.asBearer(),
+    )
 
     private companion object {
         const val UPLOAD_PATH = "/api/v1/upload"

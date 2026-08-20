@@ -1,8 +1,10 @@
 package io.github.nodyssey.core.net
 
+import io.github.nodyssey.data.proxy.ProxyClientKind
 import io.github.nodyssey.data.proxy.ProxyConfig
 import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.ProxyType
+import io.github.nodyssey.data.proxy.routes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.launchIn
@@ -21,25 +23,18 @@ import java.net.SocketAddress
 import java.net.URI
 
 /**
- * Which side of [ProxyScope] a client sits on.
- *
- * [FORUM] is the client that carries the NodeSeek session — the one the proxy exists for, and the one
- * [ProxyScope.FORUM_ONLY] keeps routed. [THIRD_PARTY] is the image host and the update check: same
- * setting, same address, but the user is allowed to leave them direct.
- */
-enum class ProxyClientKind { FORUM, THIRD_PARTY }
-
-/** Whether a client of this [kind] should be routed through this config right now. */
-fun ProxyConfig.routes(kind: ProxyClientKind): Boolean =
-    enabled && isUsable && (kind == ProxyClientKind.FORUM || scope == ProxyScope.EVERYTHING)
-
-/**
  * The proxy setting's current value, kept in sync with [io.github.nodyssey.data.proxy.ProxySettings]
  * and readable from OkHttp's own threads without suspending.
  *
  * [ProxySelector.select] and [okhttp3.Authenticator.authenticate] both run synchronously on a call
  * OkHttp is actively routing, so they cannot collect a [Flow] themselves — this collects it once, on
  * [scope], and hands the two of them a plain volatile read instead.
+ *
+ * Android-only, and it is the *asking* that makes it so. `NSURLSession` cannot be asked at all: its
+ * proxy is fixed when a session is created, so the Apple side reacts to the same flow by building a
+ * new session rather than by keeping a value something can read — see `ProxiedUrlSession`. What the
+ * two do share is [io.github.nodyssey.data.proxy.routing], the tuple that decides whether a saved
+ * edit is worth acting on.
  */
 class LiveProxyConfig(
     scope: CoroutineScope,
@@ -67,7 +62,15 @@ class LiveProxyConfig(
             }.launchIn(scope)
     }
 
-    /** The fields a live connection was opened against; the rest can change without disturbing one. */
+    /**
+     * The fields a live connection was opened against; the rest can change without disturbing one.
+     *
+     * The credentials are deliberately *not* here. OkHttp answers a `407` per request, so a re-typed
+     * password reaches the next call whatever the pool holds — and emptying the pool for one would
+     * drop working connections to punish a change that cost them nothing. The Apple side has to be
+     * stricter, because a SOCKS credential is baked into the session it was built with; it compares
+     * whole `ProxyRoute` values rather than reusing this.
+     */
     private fun ProxyConfig.routing() = listOf(enabled, type, host, port, scope)
 }
 

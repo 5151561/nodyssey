@@ -245,6 +245,12 @@ kotlin {
             // is *opening* one, which is why `PreferenceStores.kt` stays in `:app` and the factories
             // beside it here are per target.
             api(libs.androidx.datastore.preferences)
+
+            // `ByteString.sha1()`, which is the whole of what `DynamicSign.kt` needs and the reason
+            // the vote signature could finally leave `:app`. Already on every one of this module's
+            // compile classpaths — DataStore is written against it — but declared here because
+            // `commonMain` imports it, and a dependency you import is one you own the version of.
+            implementation(libs.okio)
         }
 
         nativeMain.dependencies {
@@ -266,6 +272,11 @@ kotlin {
             kotlin.srcDir(generateFixtureSources)
             dependencies {
                 implementation(kotlin("test"))
+
+                // `runTest`, which every test below a `suspend` contract needs — and since step D3c
+                // that is most of them: the six image-host clients and the vote signature are
+                // `HttpTransport` callers, and `HttpTransport.execute` suspends.
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 

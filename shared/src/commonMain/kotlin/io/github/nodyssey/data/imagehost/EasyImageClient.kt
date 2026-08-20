@@ -1,8 +1,6 @@
 package io.github.nodyssey.data.imagehost
 
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import io.github.plaza.core.net.HttpTransport
 
 /**
  * 简单图床 EasyImage 2.0 — a PHP uploader with no database, and no API past this one endpoint.
@@ -16,26 +14,22 @@ import okhttp3.Request
  * first — it ships off. Whatever that refusal looks like, it reaches the user as the host's own
  * sentence rather than as a guess from this end.
  */
-internal class EasyImageClient(private val http: OkHttpClient) : ImageHostClient {
+internal class EasyImageClient(private val http: HttpTransport) : ImageHostClient {
 
-    override fun upload(
+    override suspend fun upload(
         config: ImageHostConfig,
         upload: ImageHostUpload,
         onProgress: (Float) -> Unit,
     ): HostedImage {
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart(TOKEN_FIELD, config.token.trim())
-            .addImagePart(FILE_FIELD, upload, onProgress)
-            .build()
+        // The token is a form field on this host, and it goes out before the file — see [multipart].
+        val body = upload.multipart(FILE_FIELD, fields = mapOf(TOKEN_FIELD to config.token.trim()))
+        val request = postRequest(
+            url = config.siteUrl.normalizedSiteUrl() + UPLOAD_PATH,
+            headers = mapOf("Accept" to "application/json"),
+            body = body,
+        )
 
-        val request = Request.Builder()
-            .url(config.siteUrl.normalizedSiteUrl() + UPLOAD_PATH)
-            .header("Accept", "application/json")
-            .post(body)
-            .build()
-
-        val root = http.readBody(request).asJsonObject()
+        val root = http.readBody(request, onUploadProgress = onProgress).asJsonObject()
         if (root.stringAt("result") != RESULT_SUCCESS) {
             throw ImageHostException(
                 // Its own codes, not HTTP ones: 204 no file, 205 blocked by the IP list, 400 the

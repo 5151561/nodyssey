@@ -20,9 +20,32 @@ interface HttpTransport {
      * Throws [SiteException] with [SiteError.Network] when the call did not complete — a DNS
      * failure, a refused connection, a timeout. A completed call with an unhappy status is an
      * answer, not a failure, and comes back as an [HttpResponse] for the caller to read.
+     *
+     * @param onUploadProgress see [UploadProgress]. Null for every caller that is not an upload,
+     *   which is all but one of them.
      */
-    suspend fun execute(request: HttpRequest): HttpResponse
+    suspend fun execute(request: HttpRequest, onUploadProgress: UploadProgress? = null): HttpResponse
 }
+
+/**
+ * How much of a request body has gone out, `0f`–`1f`.
+ *
+ * The one thing in this file that is about a request *while it is still in flight*, and it is here
+ * under protest: everything else on [HttpTransport] describes a finished call, which is the shape
+ * that let two platforms answer for the same contract. An upload is the one caller that needs the
+ * other thing — the attachment tray draws a ring, and a ring that only knows 0% and 100% is a
+ * decoration. It stayed out of `commonMain` for exactly this reason until the six image-host
+ * clients needed to run on a platform with no OkHttp in it.
+ *
+ * Called on whatever thread the platform reports progress on, which is not the caller's: OkHttp
+ * calls it from the thread writing the sink, `NSURLSession` from its delegate queue. A listener
+ * that touches UI state has to hop for itself — [io.github.nodyssey.data.composer.ImageUploader]
+ * does.
+ *
+ * A transport is allowed to never call this (a body small enough to go out in one write), but one
+ * that calls it at all must finish at `1f`.
+ */
+typealias UploadProgress = (fraction: Float) -> Unit
 
 /**
  * @property url absolute; resolving a site-relative path is the caller's business — see
