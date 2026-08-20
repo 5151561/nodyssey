@@ -10,17 +10,11 @@ import io.github.nodyssey.ui.resources.preset_avatar_reimu
 import io.github.nodyssey.ui.resources.preset_avatar_tianyi
 import io.github.nodyssey.ui.resources.preset_avatar_twins
 import io.github.nodyssey.ui.resources.settings_preset_graphite
-import io.github.nodyssey.ui.resources.settings_preset_graphite_desc
 import io.github.nodyssey.ui.resources.settings_preset_marisa
-import io.github.nodyssey.ui.resources.settings_preset_marisa_desc
 import io.github.nodyssey.ui.resources.settings_preset_miku
-import io.github.nodyssey.ui.resources.settings_preset_miku_desc
 import io.github.nodyssey.ui.resources.settings_preset_reimu
-import io.github.nodyssey.ui.resources.settings_preset_reimu_desc
 import io.github.nodyssey.ui.resources.settings_preset_tianyi
-import io.github.nodyssey.ui.resources.settings_preset_tianyi_desc
 import io.github.nodyssey.ui.resources.settings_preset_twins
-import io.github.nodyssey.ui.resources.settings_preset_twins_desc
 import io.github.plaza.designsys.theme.PlazaCharacterPalette
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
@@ -40,9 +34,11 @@ import org.jetbrains.compose.resources.StringResource
 internal data class ThemePreset(
     /** What the store holds. Stable across releases — the label is not. */
     val id: String,
+    /**
+     * The one line under the dot: 石墨青's name, or one of the five schemes' three-colour summary —
+     * 青×灰×粉 and the rest.
+     */
     val label: StringResource,
-    /** The line under the name: the character's three-colour summary, or 默认 for 石墨青. */
-    val subtitle: StringResource,
     /** The hand-written scheme, or null for 石墨青 — the one preset still expanded from a seed. */
     val palette: PlazaCharacterPalette?,
     /** The flat portrait, or null for 石墨青, which is a two-tone dot rather than a face. */
@@ -54,42 +50,36 @@ internal val ThemePresets =
         ThemePreset(
             id = SettingsRepository.DEFAULT_PRESET_ID,
             label = Res.string.settings_preset_graphite,
-            subtitle = Res.string.settings_preset_graphite_desc,
             palette = null,
             avatar = null,
         ),
         ThemePreset(
             id = "miku",
             label = Res.string.settings_preset_miku,
-            subtitle = Res.string.settings_preset_miku_desc,
             palette = PlazaCharacterPalette.MIKU,
             avatar = Res.drawable.preset_avatar_miku,
         ),
         ThemePreset(
             id = "twins",
             label = Res.string.settings_preset_twins,
-            subtitle = Res.string.settings_preset_twins_desc,
             palette = PlazaCharacterPalette.TWINS,
             avatar = Res.drawable.preset_avatar_twins,
         ),
         ThemePreset(
             id = "tianyi",
             label = Res.string.settings_preset_tianyi,
-            subtitle = Res.string.settings_preset_tianyi_desc,
             palette = PlazaCharacterPalette.TIANYI,
             avatar = Res.drawable.preset_avatar_tianyi,
         ),
         ThemePreset(
             id = "reimu",
             label = Res.string.settings_preset_reimu,
-            subtitle = Res.string.settings_preset_reimu_desc,
             palette = PlazaCharacterPalette.REIMU,
             avatar = Res.drawable.preset_avatar_reimu,
         ),
         ThemePreset(
             id = "marisa",
             label = Res.string.settings_preset_marisa,
-            subtitle = Res.string.settings_preset_marisa_desc,
             palette = PlazaCharacterPalette.MARISA,
             avatar = Res.drawable.preset_avatar_marisa,
         ),

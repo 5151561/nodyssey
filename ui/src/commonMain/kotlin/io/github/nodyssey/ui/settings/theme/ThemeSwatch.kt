@@ -213,7 +213,7 @@ private fun Color.desaturated(): Color {
 /** 44dp: the wallpaper candidates, and Material's minimum for something you have to hit. */
 internal val SwatchSize = 44.dp
 
-/** 56dp, the preset grid's — it carries a name and a colour summary under it and can afford it. */
+/** 56dp, the preset grid's — it is the whole cell bar one line of label and can afford it. */
 internal val PresetSwatchSize = 56.dp
 
 private const val KEPT_SATURATION = 0.3f

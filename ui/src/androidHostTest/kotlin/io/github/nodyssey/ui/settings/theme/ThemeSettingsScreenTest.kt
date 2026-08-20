@@ -71,7 +71,7 @@ class ThemeSettingsScreenTest {
 
         // 预设 names the section as well as the tile, so the tile is the node that carries both it
         // and the preset's own name.
-        composeRule.onNode(hasText("预设").and(hasText("洛天依"))).assertIsSelected()
+        composeRule.onNode(hasText("预设").and(hasText("蓝×白×粉"))).assertIsSelected()
         composeRule.onNode(hasText("自定义").and(hasText("#2F6D8C"))).assertExists()
     }
 
@@ -83,18 +83,18 @@ class ThemeSettingsScreenTest {
             onPresetSelected = { picked = it },
         )
 
-        composeRule.onNodeWithText("雾雨魔理沙").performScrollTo().performClick()
+        composeRule.onNodeWithText("黑×金×紫").performScrollTo().performClick()
         assertEquals("marisa", picked)
     }
 
     /**
-     * 色彩风格 steers the generator, and a 角色预设 never reaches it.
+     * 色彩风格 steers the generator, and a hand-written preset never reaches it.
      *
      * The five chips stay on screen — they are still the answer under 自定义 and 动态取色 — but they
      * stop being tappable, which is the only honest thing for a control that would do nothing.
      */
     @Test
-    fun `色彩风格 goes flat under a 角色预设`() {
+    fun `色彩风格 goes flat under a hand-written preset`() {
         var style: PaletteStyle? = null
         setScreen(
             settings = UserSettings(colorSource = ColorSource.PRESET, presetId = "miku"),
@@ -127,8 +127,8 @@ class ThemeSettingsScreenTest {
     fun `自定义 collapses the preset grid`() {
         setScreen(settings = UserSettings(colorSource = ColorSource.CUSTOM))
 
-        // 初音未来 exists only in the grid; 石墨青 is also the 预设 tile's own subtitle, which stays.
-        composeRule.onNodeWithText("初音未来").assertDoesNotExist()
+        // 青×灰×粉 exists only in the grid; 石墨青 is also the 预设 tile's own subtitle, which stays.
+        composeRule.onNodeWithText("青×灰×粉").assertDoesNotExist()
         composeRule.onNode(hasText("预设").and(hasText("石墨青"))).assertExists()
     }
 
@@ -136,7 +136,7 @@ class ThemeSettingsScreenTest {
     fun `动态取色 collapses the preset grid`() {
         setScreen(settings = UserSettings(colorSource = ColorSource.WALLPAPER))
 
-        composeRule.onNodeWithText("初音未来").assertDoesNotExist()
+        composeRule.onNodeWithText("青×灰×粉").assertDoesNotExist()
         composeRule.onNode(hasText("预设").and(hasText("石墨青"))).assertExists()
     }
 
