@@ -31,35 +31,77 @@ import kotlin.coroutines.resume
  * 3. [drain] copies once more and waits for it, for the change that lands as the screen is closing.
  *    NodeSeek issues its session over an XHR, so there is no navigation to hang that last copy on.
  *
- * **Deletions are mirrored, and only for cookies WebKit is known to own.** A signed-out site clears
- * its cookie and the app has to notice, so a cookie that was in WebKit and no longer is gets deleted
- * from the storage too. The set is tracked rather than assumed because the two jars are not the same
- * shape: `NSURLSession` writes cookies into the storage that WebKit never saw, and deleting those on
- * the grounds that WebKit does not have them would throw away the session a plain API call just
- * issued.
+ * **Deletions are mirrored, and only for cookies WebKit is known to own and still holds unchanged.**
+ * A signed-out site clears its cookie and the app has to notice, so a cookie that was in WebKit and no
+ * longer is gets deleted from the storage too. What was there is tracked rather than assumed, because
+ * the two jars are not the same shape: `NSURLSession` writes cookies into the storage that WebKit
+ * never saw, and deleting those on the grounds that WebKit does not have them would throw away the
+ * session a plain API call just issued.
+ *
+ * Ownership is narrower than "WebKit has it", in two directions, and both are the same rule read
+ * twice — *nothing the app put there is WebKit's until WebKit writes over it*:
+ *
+ * - What [seed] injected does not become WebKit's by virtue of being handed to it. Everything the
+ *   storage holds goes in, so claiming it all back would hand WebKit ownership of the session a plain
+ *   API call issued — the exact cookie the paragraph above refuses to delete — one step later and
+ *   through the front door. It becomes WebKit's the moment WebKit writes a different value under it,
+ *   which is what a sign-in does and what a sign-out is preceded by.
+ * - The value is tracked with the key, because a session the app refreshed over a plain API call
+ *   carries the same name, domain and path as the one WebKit is about to drop, and a diff on the key
+ *   alone deletes the new cookie along with the old.
+ *
+ * Both err the same way: a delete that should have been mirrored and was not costs one stale cookie,
+ * which the next request answers with a 401 the app already handles. The other direction signs the
+ * user out of an app that was never signed out.
  */
 class WebKitCookieBridge(
     private val cookieStore: WKHTTPCookieStore,
     private val storage: NSHTTPCookieStorage = NSHTTPCookieStorage.sharedHTTPCookieStorage,
 ) {
     /**
-     * The cookies last seen in WebKit, by name-domain-path.
+     * The cookies last seen in WebKit *and* WebKit's to lose: name-domain-path to the value that was
+     * under it.
      *
-     * What [drain] and the observer diff against, so a cookie that disappears from WebKit can be told
-     * apart from one that was never there.
+     * What the deletion diff runs against, so a cookie that disappeared from WebKit can be told apart
+     * both from one that was never there and from one that is still there under a newer value.
      */
-    private var webKitOwned: Set<String> = emptySet()
-
-    private val observer = ChangeObserver { copyOut(onDone = {}) }
+    private var webKitOwned: Map<String, String> = emptyMap()
 
     /**
-     * Puts the app's cookies into WebKit and takes note of what WebKit then holds.
+     * What [seed] handed to WebKit and WebKit has not written over yet, by the same key.
+     *
+     * Held out of [webKitOwned] for as long as the value matches. An entry leaves the moment WebKit
+     * reports something else under that key — from there it is WebKit's, and its disappearance is a
+     * sign-out worth mirroring.
+     */
+    private var seeded: Map<String, String> = emptyMap()
+
+    /**
+     * One pass at a time, with at most one more queued behind it.
+     *
+     * `getAllCookies` answers on a callback, so two changes in quick succession put two passes in
+     * flight over the same [webKitOwned]: they diff against the same stale snapshot, and the one that
+     * lands second re-`setCookie`s what the first just deleted — a sign-out undone. Every line that
+     * touches this state runs on the main queue, the observer because that is where WebKit calls it and
+     * [drain] because it hops there, so a flag is enough and a lock is not.
+     */
+    private var copying = false
+    private var recopyQueued = false
+    private val awaiting = mutableListOf<() -> Unit>()
+
+    private val observer = ChangeObserver { copyOut() }
+
+    /**
+     * Puts the app's cookies into WebKit and takes note of what it put there.
      *
      * Awaited rather than fired off: the caller's next act is to load a URL, and a page that starts
      * before its cookies arrive is a page loaded as a stranger.
      */
     suspend fun seed() = withContext(Dispatchers.Main) {
-        storage.cookies.orEmpty().filterIsInstance<NSHTTPCookie>().forEach { cookie ->
+        val mine = storage.cookies.orEmpty().filterIsInstance<NSHTTPCookie>()
+        // Recorded before the first copy back out, which is what reads it.
+        seeded = mine.associate { it.key() to it.value }
+        mine.forEach { cookie ->
             suspendCancellableCoroutine { continuation ->
                 cookieStore.setCookie(cookie) { continuation.resume(Unit) }
             }
@@ -84,25 +126,58 @@ class WebKitCookieBridge(
         }
     }
 
-    private fun copyOut(onDone: () -> Unit) {
+    /**
+     * Asks for a pass, and for one after it if a pass is already running.
+     *
+     * [onDone] fires after a pass that began no earlier than this call, which is what lets [drain]
+     * promise that what WebKit holds *now* is in the storage rather than that some recent version of
+     * it is.
+     */
+    private fun copyOut(onDone: (() -> Unit)? = null) {
+        if (onDone != null) awaiting += onDone
+        if (copying) {
+            recopyQueued = true
+            return
+        }
+        copying = true
+        runCopy()
+    }
+
+    private fun runCopy() {
         cookieStore.getAllCookies { cookies ->
             val live = cookies.orEmpty().filterIsInstance<NSHTTPCookie>()
-            val liveKeys = live.mapTo(mutableSetOf()) { it.key() }
+            val liveByKey = live.associate { it.key() to it.value }
 
-            // Gone from WebKit, and WebKit had it: the site cleared it, so the mirror clears it too.
-            val vanished = webKitOwned - liveKeys
+            // Gone from WebKit, and WebKit had it under this very value: the site cleared it, so the
+            // mirror clears it too. A value that no longer matches means something outside WebKit wrote
+            // it in the meantime — a plain API call issuing a fresh session is exactly that — and the
+            // cookie sitting there now is not the one that vanished.
+            val vanished = webKitOwned.filterKeys { it !in liveByKey }
             if (vanished.isNotEmpty()) {
                 storage.cookies.orEmpty()
                     .filterIsInstance<NSHTTPCookie>()
-                    .filter { it.key() in vanished }
+                    .filter { vanished[it.key()] == it.value }
                     .forEach { storage.deleteCookie(it) }
             }
 
             // `setCookie` replaces one with the same name, domain and path, so this is an update as
             // much as an insert.
             live.forEach { storage.setCookie(it) }
-            webKitOwned = liveKeys
-            onDone()
+
+            // What `seed` handed over stays the app's until WebKit writes a different value under it;
+            // only then does its later disappearance mean the site cleared something.
+            seeded = seeded.filter { (key, value) -> liveByKey[key] == value }
+            webKitOwned = liveByKey.filterKeys { it !in seeded }
+
+            if (recopyQueued) {
+                recopyQueued = false
+                runCopy()
+            } else {
+                copying = false
+                val done = awaiting.toList()
+                awaiting.clear()
+                done.forEach { it() }
+            }
         }
     }
 

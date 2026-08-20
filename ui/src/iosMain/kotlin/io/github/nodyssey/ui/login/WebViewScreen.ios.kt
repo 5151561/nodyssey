@@ -23,7 +23,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +39,10 @@ import io.github.plaza.core.net.WebKitCookieBridge
 import io.github.plaza.designsys.component.PlazaBackHandler
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.readValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -94,30 +97,33 @@ actual fun WebViewRoute(
     val policy = remember(goal, session, baseline, isBound) { webViewPolicy(goal, session, baseline, isBound) }
     val bridge =
         remember { WebKitCookieBridge(WKWebsiteDataStore.defaultDataStore().httpCookieStore) }
-    val scope = rememberCoroutineScope()
+    // Outlives the composition on purpose: `rememberCoroutineScope` is cancelled by the very teardown
+    // that runs `onDispose`, and the last copy out of WebKit has to survive that teardown to happen.
+    val exit = remember { CoroutineScope(Dispatchers.Main + SupervisorJob()) }
 
     DisposableEffect(bridge) {
-        // Publishing happens here and nowhere else, exactly as on Android: the feed reload lands after
-        // this screen is gone rather than while a challenge is still being solved.
+        // Every way off this screen ends here — the ✕, the goal poll, the back gesture, and a route
+        // removed out from under us — so the final copy hangs off `onDispose` rather than off the one
+        // exit that happens to have a coroutine to hand. Hanging it off the ✕ is what made the other
+        // exits publish the session as it was one change ago.
+        //
+        // The observer has been mirroring all along, so this is only the change that landed in the last
+        // instant, but that instant is exactly when a sign-in finishes.
         onDispose {
-            bridge.stop()
-            session.sync()
+            exit.launch {
+                try {
+                    // Stopped first, so no observer pass can start behind the one being awaited.
+                    bridge.stop()
+                    bridge.drain()
+                } finally {
+                    // Publishing happens here and nowhere else, exactly as on Android: the feed reload
+                    // lands after this screen is gone rather than while a challenge is still being
+                    // solved — and now never before the session it would reload with has arrived.
+                    session.sync()
+                    exit.cancel()
+                }
+            }
         }
-    }
-
-    /**
-     * Closes by way of one last awaited copy out of WebKit.
-     *
-     * The observer has been mirroring all along, so this is only the change that landed in the last
-     * instant — but that instant is exactly when a sign-in finishes. `onDispose` cannot wait for
-     * anything, which is why the wait happens on the way out rather than on the way down.
-     */
-    val closeAfterDrain: () -> Unit = {
-        scope.launch {
-            bridge.drain()
-            onClose()
-        }
-        Unit
     }
 
     WebViewScreen(
@@ -126,7 +132,7 @@ actual fun WebViewRoute(
         userAgent = userAgent,
         bridge = bridge,
         onOpenExternal = onOpenExternal,
-        onClose = closeAfterDrain,
+        onClose = onClose,
         onCheckGoal = policy.onCheckGoal,
         pollIntervalMillis = policy.pollIntervalMillis,
         isInScope = policy.isInScope,
