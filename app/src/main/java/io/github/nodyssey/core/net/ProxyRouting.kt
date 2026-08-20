@@ -77,14 +77,35 @@ class LiveProxyConfig(
  * A [ProxySelector] is consulted on every request, unlike `OkHttpClient.Builder.proxy(Proxy)` which
  * bakes one address into the client forever — so flipping the setting or editing the address takes
  * effect on the next request, no client rebuild and no restart.
+ *
+ * When 代理设置 is off this defers to [platform] rather than answering `NO_PROXY`, because "the user
+ * has not configured a proxy" is not the same statement as "there is no proxy". A VPN can declare one
+ * for the network it puts up — `VpnService.Builder.setHttpProxy` — and Android publishes it to every
+ * app through the `https.proxyHost`/`http.nonProxyHosts` system properties that the platform selector
+ * reads. That is the proxy the browser and the WebView use, and it is why they keep working when the
+ * app does not: a request handed to an HTTP proxy carries the *hostname*, so nothing on the device
+ * has to resolve it. Answering `NO_PROXY` opted out of that and made every request depend on the
+ * system resolver — which, with 私人 DNS 设成主机名 and that DoT server unreachable, resolves nothing
+ * at all (measured 2026-08-20 on Clash Meta + `PrivateDnsBroken`: direct `UnknownHostException`, the
+ * same request through the declared proxy fine).
  */
 class AppProxySelector(
     private val live: LiveProxyConfig,
     private val kind: ProxyClientKind,
+    /**
+     * Where an unrouted call goes: the selector Android installs, which is the one that knows about
+     * proxies the app did not configure. Injected so a test can hand over its own; never null in the
+     * app, but [ProxySelector.getDefault] is declared nullable and a null there means only that there
+     * is nothing to defer to.
+     *
+     * Captured once instead of read per call. The instance is stable — it is the properties behind it
+     * that change as networks come and go, and it re-reads them on every [select].
+     */
+    private val platform: ProxySelector? = getDefault(),
 ) : ProxySelector() {
     override fun select(uri: URI): List<Proxy> {
         val config = live.value
-        if (!config.routes(kind)) return listOf(Proxy.NO_PROXY)
+        if (!config.routes(kind)) return platform?.select(uri) ?: listOf(Proxy.NO_PROXY)
         val type = when (config.type) {
             ProxyType.HTTP -> Proxy.Type.HTTP
             ProxyType.SOCKS -> Proxy.Type.SOCKS
@@ -94,9 +115,16 @@ class AppProxySelector(
         return listOf(Proxy(type, InetSocketAddress.createUnresolved(config.host, config.port)))
     }
 
-    // Nothing to fall back to — the alternative to a broken proxy is a broken request, not a silent
-    // direct connection that skips it.
-    override fun connectFailed(uri: URI, socketAddress: SocketAddress, exception: IOException) = Unit
+    /**
+     * Reported onward only for the routes [platform] chose.
+     *
+     * A failure on the app's own proxy has nothing to fall back to — the alternative to a broken proxy
+     * is a broken request, not a silent direct connection that skips it. One on a route the platform
+     * handed out is the platform's to know about, since it is the half that keeps that bookkeeping.
+     */
+    override fun connectFailed(uri: URI, socketAddress: SocketAddress, exception: IOException) {
+        if (!live.value.routes(kind)) platform?.connectFailed(uri, socketAddress, exception)
+    }
 }
 
 /**
