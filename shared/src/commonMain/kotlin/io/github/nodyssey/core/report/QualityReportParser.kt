@@ -224,7 +224,14 @@ object QualityReportParser {
                 return RawRow(
                     label = match.groupValues[1].trim(),
                     line = line,
-                    valueFrom = match.groups[2]!!.range.first,
+                    // Derived from the length rather than read off `match.groups[2]!!.range`,
+                    // which is not in the common stdlib: `MatchGroup` carries a `range` on every
+                    // platform this compiles for and none in the metadata compilation, so that
+                    // spelling built for android, jvm and both Apple targets while
+                    // `compileCommonMainKotlinMetadata` failed. The regex is anchored at both ends,
+                    // so group 2 runs to the end of the line and its start is the line's length
+                    // minus its own.
+                    valueFrom = line.length - match.groupValues[2].length,
                     lineOffset = offset,
                 )
             }

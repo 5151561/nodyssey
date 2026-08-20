@@ -83,6 +83,7 @@ import io.github.nodyssey.ui.resources.post_reply_publish_unavailable
 import io.github.nodyssey.ui.resources.post_reply_quote_remove
 import io.github.nodyssey.ui.stardust.StardustReceiveComposeDialog
 import io.github.nodyssey.ui.vote.VoteComposeDialog
+import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.PlazaBackHandler
@@ -97,8 +98,6 @@ import io.github.plaza.designsys.theme.CommentBody
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.stringResource
-import java.text.DateFormat
-import java.util.Date
 
 /**
  * The reply editor: a modal sheet (6d) that expands to a full-screen preview (C4).
@@ -625,8 +624,10 @@ private fun replyErrorReason(error: SiteError, detail: String?): String = when (
     else -> detail?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.post_reply_publish_unavailable)
 }
 
-private fun formatTime(timestamp: Long): String =
-    DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(timestamp))
+// `TimeFormat.clock` rather than `java.text.DateFormat`, which is not the only reason it changed:
+// the stamp is now 24-hour on every device instead of following the locale's short form. It is the
+// same `09:44` a message bubble already carries, and this is the app's only other one.
+private fun formatTime(timestamp: Long): String = TimeFormat.clock(timestamp)
 
 private val MIN_EDITOR_HEIGHT = 96.dp
 private val MAX_EDITOR_HEIGHT = 260.dp

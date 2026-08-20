@@ -20,13 +20,17 @@ kotlin {
     // The same desktop JVM `:designsys` and `:shared` carry, and for the same reason: it is the
     // cheapest place to find out whether a screen still needs Android under it.
     //
-    // No Apple target here, and the reason is `:designsys`: a screen is built out of its components,
-    // and that module declares android and jvm only. A target a dependency does not have is a variant
-    // that does not resolve, so `iosArm64` here would have to be preceded by `iosArm64` there — which
-    // is step D3, where the WKWebView bridge and the IME are also answered for. What this module has
-    // to show for D1 is that 40,000 lines of screen compile with no Android under them, and the
-    // desktop JVM asks that question for the price of a JDK.
     jvm()
+
+    // The Apple target, which step D1 could not have: a screen is built out of `:designsys`
+    // components, and that module declared android and jvm only, so `iosArm64` here would have been a
+    // variant that does not resolve. It declares one now — the same single Apple target, for the same
+    // reason: macOS is answered by the JVM above, iOS is not answered by anything else.
+    //
+    // Compiling is all it is. There is no iOS shell to launch this from and no simulator target, so
+    // what the compiler checks is that 40,000 lines of screen name nothing Android-only — which is
+    // the half of step D3 that can be checked without an app.
+    iosArm64()
 
     applyDefaultHierarchyTemplate {
         common {

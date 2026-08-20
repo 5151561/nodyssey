@@ -48,9 +48,8 @@ import org.jetbrains.compose.resources.stringResource
 /**
  * Stateful entry point: turns a [WebViewGoal] into the cookie condition the screen watches for.
  *
- * The baseline matters. Auto-return fires on a *change*, not on presence, so a stale `cf_clearance`
- * that was already in the jar — and that is very likely why the request failed in the first place —
- * cannot bounce the user straight back out before they have done anything.
+ * The turning is [webViewPolicy], in `commonMain` — none of what a goal decides is about Android, and
+ * the iOS actual asks the same question.
  */
 @Composable
 actual fun WebViewRoute(
@@ -75,6 +74,7 @@ actual fun WebViewRoute(
     }
 
     val baseline = remember { session.peek() }
+    val policy = remember(goal, session, baseline, isBound) { webViewPolicy(goal, session, baseline, isBound) }
 
     DisposableEffect(Unit) {
         // Publishing happens here and nowhere else. The whole session change — cache invalidation, the
@@ -89,51 +89,10 @@ actual fun WebViewRoute(
         userAgent = userAgent,
         onOpenExternal = onOpenExternal,
         onClose = onClose,
-        // `peek` rather than `sync`: this runs twice a second, and it must observe without announcing.
-        onCheckGoal =
-        when (goal) {
-            WebViewGoal.SIGN_IN -> {
-                {
-                    val state = session.peek()
-                    state.isSignedIn && state.fingerprint != baseline.fingerprint
-                }
-            }
-
-            WebViewGoal.CHALLENGE -> {
-                {
-                    val state = session.peek()
-                    state.hasClearance && state.fingerprint != baseline.fingerprint
-                }
-            }
-
-            WebViewGoal.MANAGE -> null
-
-            WebViewGoal.TELEGRAM_BIND -> isBound
-        },
-        // A poll that costs a request is paced for the server, not for the eye; the cookie goals
-        // above read a local jar and can afford twice a second.
-        pollIntervalMillis =
-        if (goal == WebViewGoal.TELEGRAM_BIND) BINDING_POLL_MILLIS else GOAL_POLL_MILLIS,
-        // 绑定 Telegram is the one errand on these pages that has to leave nodeseek.com and come
-        // back; letting the detour out to the browser strands the return leg in a jar with no
-        // session. Sign-in and challenge pages keep the narrower rule.
-        isInScope =
-        when (goal) {
-            WebViewGoal.MANAGE, WebViewGoal.TELEGRAM_BIND -> {
-                { target ->
-                    NodeSeekSite.isTrustedWebViewUrl(target) || NodeSeekSite.isTelegramOAuthUrl(target)
-                }
-            }
-
-            WebViewGoal.SIGN_IN, WebViewGoal.CHALLENGE -> NodeSeekSite::isTrustedWebViewUrl
-        },
-        // 管理 pages only. Now that every nodeseek.com link opens here rather than in a Custom Tab,
-        // a page this view renders badly — or that the user would rather read with their browser's
-        // own tools — would otherwise have no way out. The other three goals must not offer it: each
-        // one exists to put a cookie in *this* jar, and finishing the errand in the browser would
-        // write it somewhere the app cannot read, which is the failure this screen was built to
-        // avoid.
-        canLeaveToBrowser = goal == WebViewGoal.MANAGE,
+        onCheckGoal = policy.onCheckGoal,
+        pollIntervalMillis = policy.pollIntervalMillis,
+        isInScope = policy.isInScope,
+        canLeaveToBrowser = policy.canLeaveToBrowser,
         modifier = modifier,
     )
 }
@@ -200,9 +159,6 @@ private fun WebViewScreen(
         while (true) {
             delay(pollIntervalMillis)
             if (checkGoal?.invoke() == true) {
-                // NodeSeek redirects to the front page right after a successful sign-in, and that
-                // navigation carries the rest of the cookies. Waiting a beat also stops the return
-                // from looking like a crash.
                 delay(GOAL_SETTLE_MILLIS)
                 close()
                 return@LaunchedEffect
@@ -389,11 +345,3 @@ private fun WebView.configureForNodeSeek(
         }
     }
 }
-
-/** Fast enough that the return feels immediate, slow enough to be free at 60fps. */
-private const val GOAL_POLL_MILLIS = 500L
-
-/** One `/setting` fetch each; slow enough to sit politely behind a page the user is still reading. */
-private const val BINDING_POLL_MILLIS = 4_000L
-
-private const val GOAL_SETTLE_MILLIS = 500L

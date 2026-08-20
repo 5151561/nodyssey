@@ -24,7 +24,6 @@ import io.github.nodyssey.ui.resources.settings_preset_twins_desc
 import io.github.plaza.designsys.theme.PlazaCharacterPalette
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
-import java.util.Locale
 
 /**
  * The six 预设, as j2 lays them out: three columns, 石墨青 first, five characters after it.
@@ -111,7 +110,7 @@ internal val GraphiteCompanion = Color(0xFF7E5700)
 
 /** `#RRGGBB`, upper case — the form the hex field reads back and the form the labels print. */
 internal fun Color.toHexString(): String =
-    String.format(Locale.ROOT, "#%06X", toArgb() and 0xFFFFFF)
+    "#" + (toArgb() and 0xFFFFFF).toString(16).uppercase().padStart(6, '0')
 
 /** `#RRGGBB` or bare `RRGGBB`; anything else is still being typed. */
 internal fun parseHexColor(text: String): Color? {

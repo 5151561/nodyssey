@@ -146,7 +146,7 @@ import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
-import java.util.Locale
+import kotlin.math.roundToLong
 
 @Composable
 fun ImageHostRoute(
@@ -845,7 +845,10 @@ internal fun formatBytes(bytes: Long): String {
         value /= UNIT
         index++
     }
-    return String.format(Locale.US, "%.1f %s", value, UNITS[index])
+    // One decimal place, written out: `String.format` is a JVM extension. Rounding half up on a
+    // positive number is what `%.1f` does too, so the printed figure is unchanged.
+    val tenths = (value * 10).roundToLong()
+    return "${tenths / 10}.${tenths % 10} ${UNITS[index]}"
 }
 
 private const val UNIT = 1024

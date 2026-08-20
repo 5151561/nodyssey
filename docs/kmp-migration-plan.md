@@ -382,7 +382,8 @@ Compose
 | ✅ **A7** | A | Repository 全部下沉。**「拆 `:app` 的 `data/`」：74 个文件剩 16 个**——见下 | A6 |
 | ✅ **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」），新模块 `:ui`。两笔债都还了，**D2 有一半是它的前置而不是后续**——见下 | A7 + B4 |
 | ✅ **D2** | D | ~~1,059 条 strings~~ 1,056 条 + 5 个 drawable → Compose Resources。**在 D1 里做掉了**，理由见下；剩下的 res xml 是 manifest 和图标，本来就不该动 | D1 |
-| **D3** | D | iOS：门槛 A 复验 + WKWebView 桥（`WKHTTPCookieStore` ↔ `NSHTTPCookieStorage` 双向 + observer，A5 只交付了 `URLSession` 那侧）+ 生命周期 + IME | D1 |
+| ✅ **D3a** | D | iOS：`:designsys` 与 `:ui` 开 `iosArm64`，21 个 `expect` 补齐（四个是空壳），WKWebView 桥（`WKHTTPCookieStore` ↔ `NSHTTPCookieStorage` 双向 + observer）。**只到编译为止**——见下 | D1 |
+| **D3b** | D | iOS：壳 + 门槛 A 复验 + 生命周期 + IME，以及 D3a 留下的四个图片能力 | D3a |
 | **D4** | D | WorkManager → `BGTaskScheduler`（5 个文件） | A7 |
 
 原表的步骤 1「Apple 平台 spike」并入 **D3** —— 门槛 A 已在 macOS 上通过，剩下的 iOS 复验和
@@ -1088,7 +1089,8 @@ API，而它们本来是实现细节——分页窗口大小、一个请求体�
 `commonMain`，`:app` 从 160 个 Kotlin 文件剩 **33 个**。
 
 `:ui` 的 target 是 android + jvm，**没有 Apple**：`:designsys` 只有这两个，而一个依赖没有的 target
-是解析不出来的变体。给前端开 Apple target 是 D3 的事——那一步同时要回答 WKWebView 桥和 IME。桌面
+是解析不出来的变体。给前端开 Apple target 是 D3 的事——那一步同时要回答 WKWebView 桥和 IME。**桥和
+target 已在 D3a 做掉，IME 归 D3b。**桌面
 JVM 已经足够回答 D1 要证明的那件事：四万行屏幕在没有 Android 的地方编译。
 
 #### D2 的一半是 D1 的前置，不是后续
@@ -1136,7 +1138,10 @@ launcher 显示的同一个名字，debug 覆盖照样生效，而且从此只�
 **`WebViewRoute` 是唯一一处放弃拆缝的**，而且是想清楚了才放弃的：Android 的答案是一个 `WebView`，
 它的 cookie 落在 OkHttp 读的同一个 `CookieManager` 里；Apple 的答案是 `WKWebView` 加一座
 `WKHTTPCookieStore` ↔ `NSHTTPCookieStorage` 的桥——不是同一个对象藏在参数后面，生命周期也不一样。
-对着一个实现设计缝，等于猜第二个。那座桥是 D3，工具栏和轮询到时候值得回头再拆。
+对着一个实现设计缝，等于猜第二个。那座桥是 D3。
+
+> **✅ D3a 已建桥**，工具栏和轮询也确实回头拆了——`webViewPolicy` 进 `commonMain`，两个 `actual`
+> 共用。见下面的「D3a 实测」。
 
 另外三处是白捡的：五个屏幕的 `BackHandler` 换成 `:designsys` 的 `PlazaBackHandler`（B1 已经把它变
 common 了，当时还写着「没有别的调用方，也许该删」）；`LocalContext` 喂 Coil 的三处换成
@@ -1206,6 +1211,157 @@ constraint——镜像 1.1.0 指向 androidx 1.1.0，而本仓库跑 1.1.4，不
 而且不是版本：`components-resources` 从「只在 runtime」变成「compile 也在」，因为 `:app` 现在
 通过 `:ui` 的 api 面读 Compose Resources。**没有一个版本变，没有一个 artifact 增减。**这是「Android
 行为不变」这句话能给出的最硬的一条证据。
+
+---
+
+### ✅ D3a 实测：两个模块开 `iosArm64`，以及那座桥
+
+计划把 D3 写成一行四件事：门槛 A 复验、WKWebView 桥、生命周期、IME。**后两件要一个能启动的 iOS
+壳**，前两件不要，所以这一步只做前两件加它们的前置——`:designsys` 和 `:ui` 各开一个 `iosArm64`，
+把 21 个 `expect` 补齐，桥写在 `:shared/appleMain`。**没有跑过任何一行**：这一步交付的是「编译得
+过」，不是「跑得起来」。
+
+**只开 `iosArm64`，不开 `macosArm64`，也不开模拟器。**macOS 已经被 `jvm()` 回答了——`:gallery`
+跑的就是那个 target——而 iOS 没有任何东西回答。模拟器 target 今天没有消费者，它的意义在 D3b 那步
+才出现，现在加等于多一份锁文件里没人解析的图。
+
+#### `:designsys`：6,600 行 Compose，六个 `actual`
+
+加上 target 之后编译器报了六条，**一条不多一条不少**，六条全是 `expect` 没有 Native 实现——也就是
+说这个模块的其余部分早就是中性的了。
+
+| `expect` | iOS 侧 |
+|---|---|
+| `rememberPlainTextClip` | `ClipEntry.withPlainText`——这个平台上 `ClipEntry` 的构造函数是 internal，Compose 自己包 `NSItemProvider`。label 丢掉，`UIPasteboard` 没有逐项标签 |
+| `rememberCopyConfirmation` | 空的，和桌面同一个答案：iOS 也不自己提示，但也没有 toast 形状的东西可用 |
+| `rememberExternalUriHandler` | `LocalUriHandler.current`。`SFSafariViewController` 才是这条缝的名字，但呈现它要一个 view controller，而这个 App 没有 iOS 壳 |
+| `platformSystemColorScheme` | null。iOS 根本不把壁纸交给 App |
+| `previousGraphemeBoundary` | `rangeOfComposedCharacterSequenceAtIndex` |
+| `platformImageFailure` | `Unknown`，故意不猜——见下 |
+
+**字素边界这条要说清楚差在哪。**Foundation 的 composed character sequence 不等于
+`BreakIterator` 的字素簇：基字符加组合标记它认（表情面板那个带变体选择符的 ❤️ 就在这一类，而且
+面板里一个 ZWJ 序列都没有），**粘贴进来的 `👨‍👩‍👧` 它不认**——那是一个字素、三个 composed
+sequence，iOS 上退格会一个人一个人地删。`NSString` 没有字素簇 API 可换，Swift 是在标准库里做这件
+事的，不在 Foundation 里。
+
+**图片失败分类没有写 `when`，这是有意的。**`Unreachable` / `Timeout` / `Connection` 三条是照异常
+*类型*分的，而这个平台上还没有那些类型：`java.net` 不在，取而代之的是什么由 Coil 拿到哪个网络引擎
+决定，而 iOS 侧一个引擎都还没有。现在写 `when` 就是在写没有任何代码能抛出的分支。
+
+#### `:designsys` 的 commonTest 里有三样东西不是 common 的
+
+`:designsys:build` **包含** `compileTestKotlinIosArm64`，所以这三样是硬报错而不是提醒：
+
+- **`TestMonotonicFrameClock` 是 JVM artifact。**`org.jetbrains.compose.ui:ui-test` 的 iOS 变体里
+  没有它——desktop jar 里连 `TestMonotonicFrameClock_jvmKt` 都在。它一直待在 `commonTest` 里而编
+  译得过，只是因为这个模块以前只有两个 JVM target。换成文件末尾自己写的 `SteppedFrameClock`：一次
+  `withFrameNanos` 走一帧，弹簧动画有时长所以循环会自己结束。那个测试断言的是动画停在哪，不是动画
+  中途，所以虚拟时钟协调那部分本来就没用上。
+- **四个反引号测试名里有逗号**，Kotlin/Native 不允许。按步骤 3/4 立的规矩改写句子而不是换标点。
+- **`String.format`** 在一个失败信息的 hex 辅助函数里。
+
+#### `:ui`：先是九个文件还在用 `java.*`，然后才是十五个 `expect`
+
+D1 说的是「四万行屏幕在没有 Android 的地方编译」，那句话是真的。**但「没有 Android」不等于「没有
+JVM」**——`commonMain` 里九个文件、65 处引用的是 `java.time` / `java.text.DateFormat` /
+`String.format` / `java.util.Locale` / `System.currentTimeMillis`，android 和 jvm 两个 target 都
+是 JVM，所以两边都编得过，直到来了第三个。
+
+换成 kotlinx-datetime 和手写格式化，都是机械替换，**只有一处不是**：
+
+- **草稿保存时间从 locale short form 变成 24 小时制。**`DateFormat.getTimeInstance(SHORT)` 没有
+  多平台对应物，换成了 `TimeFormat.clock`——也就是私信气泡下面那个 `09:44`。全 App 从此只有一种
+  时间戳写法，但这是一次行为改动，Android 上看得见。
+
+补齐之后 15 个 `expect` 才浮出来。**其中十一个落了地，四个没有**：
+
+| 落地的 | iOS 侧 |
+|---|---|
+| `rememberFileSizeLabel` | `NSByteCountFormatter`，`CountStyleFile`——十进制、标 MB/GB，和 Android API 26 起的口径一致 |
+| `rememberGroupedNumber` | `NSNumberFormatter` 的 decimal style |
+| `rememberShareText` | `UIActivityViewController`，宿主从前台 scene 的 key window 往上找到最顶层那个 |
+| `rememberNotificationPermissionRequest` | `UNUserNotificationCenter`，要 alert/badge/sound 三项 |
+| `rememberInstallPermissionRequest` | 空的。iOS 没有旁加载，`ApkInstaller` 也没有 Apple 实现，那一行设置根本不画 |
+| `rememberAppLinkHandlingEnabled` / `…SettingsLauncher` | null + 空。iOS 有 Universal Links，**没有开关**——同样是拿不到 nodeseek.com 的关联文件，但连让用户手动打开的地方都没有 |
+| `rememberWallpaperPalette` / `osVersionName` / `supportsWallpaperColorSource` | 空调色板 / `UIDevice.systemVersion` / false |
+| `WebViewRoute` | 见下 |
+
+**没落地的四个都是图片能力**：`rememberImagePicker`、`rememberAvatarPicker`、
+`rememberImageSamplePicker`、`rememberImageGallerySaver`。不是缺 API——`PHPickerViewController`
+和 `PHPhotoLibrary` 都在，呈现方式和 `rememberShareText` 找宿主是同一套。是每一个都要一屏的图片
+管道（`NSItemProvider` 逐个加载、写到图片加载器读得回的地方、`UIImage` 经 Skia 变成
+`ImageBitmap`、按边长采样、JPEG 编码），**而没有任何东西能跑其中一行**。写成空 lambda 而不是
+`TODO()`：抛异常的 lambda 是一颗等着第一个壳踩上去的雷，而这是几个背后没东西的按钮，两件事不一样。
+`rememberImageGallerySaver` 返回 `UNSUPPORTED_OS`——三个结果里最接近的一个，措辞是「这里做不了」
+而不是「失败了，重试吧」，而重试恰好是没用的那件事。
+
+#### 那座桥：三步，以及删除为什么要记账
+
+`WebKitCookieBridge` 在 `:shared/appleMain`，`AppleCookieStore` 旁边。三步按顺序：
+
+1. **`seed()`**——把 App 已有的 cookie 灌进 WebKit，**而且是 await 的**。调用方下一件事是 load
+   一个 URL，cookie 还没到就开始的页面是以陌生人身份加载的页面，而以陌生人身份答的 Cloudflare
+   挑战什么都过不了。
+2. **`start()`**——注册 `WKHTTPCookieStoreObserver`，WebKit 每报一次变更就往外抄一次。这是
+   `AppleCookieStore.cookieHeader` 在页面活着的时候还诚实的原因：屏幕每 500ms poll 一次读的是镜像，
+   不是 WebKit——后者的取值器是回调式的。
+3. **`drain()`**——最后再抄一次并等它完成。NodeSeek 的会话走 XHR 下发，没有导航可以挂这最后一抄。
+
+**删除是镜像的，但只镜像「WebKit 名下」的那些。**站内登出会把 cookie 清掉，App 必须看得见，所以
+曾在 WebKit 里、现在不在了的那些要从 storage 删掉。为什么要记一个集合而不是直接按「WebKit 没有就
+删」：两个罐子形状不一样——`NSURLSession` 会把 WebKit 从没见过的 cookie 写进 storage，照那条规则
+删，删掉的正好是一次普通 API 调用刚拿到的会话。
+
+`stop()` 之后 `session.sync()` 在 `onDispose` 里，和 Android 同一个位置、同一个理由。**最后那次
+`drain()` 挂在关闭动作上而不是挂在 `onDispose` 上**——`onDispose` 等不了任何东西，而「最后一瞬间」
+恰好就是登录完成的那一瞬间。
+
+#### `WebViewGoal` 的那套判断提到了 `commonMain`
+
+D1 写「工具栏和轮询到时候值得回头再拆」，就是现在：两个平台各有一个内嵌浏览器，而「什么时候关」
+「多久问一次」「哪些链接算自己的」「有没有出口去真浏览器」四件事一件都不关平台的事。抽成
+`webViewPolicy(goal, session, baseline, isBound)`，两个 `actual` 共用。**动机是编译器**：抄两份的
+`when` 是那种加了一个 goal 只改一处、而编译器一句话都不说的东西。
+
+view 本身仍然是 `expect`。理由没变：Android 的答案是一个 `WebView`，cookie 落在 OkHttp 读的同一个
+`CookieManager` 里；iOS 的答案是 `WKWebView` 加上面那座桥。
+
+iOS 那份是照 Android 那份逐段翻的：`decidePolicyForNavigationAction` 对应
+`shouldOverrideUrlLoading`，`createWebViewWithConfiguration` 对应 `onCreateWindow`（Telegram 的
+登录挂件在 `window.open` 的子窗口里授权，再 post 回 opener），`javaScriptCanOpenWindowsAutomatically
+= false` 对应 Android 那条「弹窗是因为用户点了什么，不是因为脚本想弹」。
+
+#### 顺带修掉一处早就坏了的：`compileCommonMainKotlinMetadata`
+
+`QualityReportParser` 里 `match.groups[2]!!.range` —— **`MatchGroup.range` 不在 common stdlib
+里**。它在 android、jvm、iosArm64、macosArm64 上全都有，所以四个平台编译全绿，而
+`:shared:compileCommonMainKotlinMetadata` 一直是红的。CI 抓不到：CI 跑的是
+`testAndroidHostTest`，不跑 `build`。
+
+**在把这次改动全部 stash 掉的干净树上照样复现**，和它一起复现的还有「`:designsys:build` 和
+`:ui:build` 因此都进不去」——那正是这一步要用的那道闸，所以顺手改了：正则两头都锚定，group 2 一直
+到行尾，起点就是行长减它自己的长度。
+
+#### 门禁
+
+`spotlessCheck`、`testDebugUnitTest testAndroidHostTest jvmTest`（1,683 个，0 失败）、
+`:app:lintDebug`、`:app:assembleDebug :app:bundleRelease` 全绿；本机那道
+`:shared:macosArm64Test` 也绿。iOS 侧是 `:designsys:compileKotlinIosArm64`、
+`:designsys:compileTestKotlinIosArm64`、`:ui:compileKotlinIosArm64` ——**全部只是编译**。
+
+`:app` 的锁文件一行没动，`:shared` 的也没有（WebKit 是平台库，不进依赖图）。变的是
+`designsys/gradle.lockfile` 和 `ui/gradle.lockfile` 各多一份 `iosArm64CompileKlibraries`。
+
+#### 动手前查掉的两个未知项
+
+- **CMP 的 Apple 变体是齐的。**`material3`、`foundation`、`components-resources`、`ui-backhandler`
+  都发 `iosarm64` / `iossimulatorarm64` / `macosarm64`。`material-icons-core` 1.7.3 的变体名是
+  `uikitArm64` 而不是 `iosarm64`，**但属性里写的是 `target=ios_arm64`**——变体名是装饰，属性才是
+  解析依据。
+- **androidx lifecycle 2.11.0 是真多平台。**2.10.0 的 `lifecycle-viewmodel-compose` /
+  `lifecycle-viewmodel-navigation3` 只有 android 加 `jvmstubs` 加 `linuxx64stubs`，正是 B4 记的那
+  个坑；2.11.0（本仓库跑的这个）有 `iosarm64`。差一个版本就要多两条镜像坐标。
 
 ---
 

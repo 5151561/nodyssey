@@ -81,6 +81,7 @@ import io.github.nodyssey.ui.resources.history_title
 import io.github.nodyssey.ui.resources.history_undo
 import io.github.nodyssey.ui.resources.history_untitled
 import io.github.nodyssey.ui.resources.post_reply_count
+import io.github.plaza.core.AppClock
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.ChoiceRow
@@ -100,11 +101,12 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
-import java.time.Instant
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
+import kotlin.time.Instant
 
 @Composable
 fun ReadHistoryRoute(
@@ -138,7 +140,7 @@ fun ReadHistoryScreen(
     onLimitChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
     /** Injectable so the relative stamps and the day grouping can be asserted without racing the clock. */
-    nowMillis: Long = System.currentTimeMillis(),
+    nowMillis: Long = AppClock.System.nowMillis(),
 ) {
     var confirmClear by remember { mutableStateOf(false) }
     var pickingLimit by remember { mutableStateOf(false) }
@@ -553,16 +555,16 @@ internal data class HistorySection(
 internal fun historySections(
     entries: List<ReadHistoryEntry>,
     nowMillis: Long,
-    zone: ZoneId = ZoneId.systemDefault(),
+    zone: TimeZone = TimeZone.currentSystemDefault(),
 ): List<HistorySection> {
-    val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
+    val today = Instant.fromEpochMilliseconds(nowMillis).toLocalDateTime(zone).date
     return entries
         .groupBy { entry ->
-            val day = Instant.ofEpochMilli(entry.lastReadAtMillis).atZone(zone).toLocalDate()
-            when (ChronoUnit.DAYS.between(day, today)) {
-                1L -> HistoryBucket.Yesterday
-                in 2L..6L -> HistoryBucket.Week
-                in 7L..Long.MAX_VALUE -> HistoryBucket.Earlier
+            val day = Instant.fromEpochMilliseconds(entry.lastReadAtMillis).toLocalDateTime(zone).date
+            when (day.daysUntil(today)) {
+                1 -> HistoryBucket.Yesterday
+                in 2..6 -> HistoryBucket.Week
+                in 7..Int.MAX_VALUE -> HistoryBucket.Earlier
                 else -> HistoryBucket.Today
             }
         }.map { (bucket, rows) -> HistorySection(bucket, rows) }
