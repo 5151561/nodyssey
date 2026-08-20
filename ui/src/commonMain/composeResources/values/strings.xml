@@ -277,6 +277,8 @@
     <string name="settings_theme_dark">深色</string>
     <string name="settings_theme_entry_hint">配色来源、预设与色彩风格</string>
     <string name="settings_theme_mode">明暗</string>
+    <string name="settings_one_hand">单手模式</string>
+    <string name="settings_one_hand_hint">二级页面用可下拉的大标题栏，最多占四成屏幕；关掉是普通标题栏</string>
 
     <!-- 主题 · 配色来源 -->
     <string name="settings_color_source">配色来源</string>

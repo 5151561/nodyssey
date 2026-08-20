@@ -71,6 +71,8 @@ import io.github.nodyssey.ui.resources.settings_home_page_bar
 import io.github.nodyssey.ui.resources.settings_home_page_bar_hint
 import io.github.nodyssey.ui.resources.settings_licenses
 import io.github.nodyssey.ui.resources.settings_network
+import io.github.nodyssey.ui.resources.settings_one_hand
+import io.github.nodyssey.ui.resources.settings_one_hand_hint
 import io.github.nodyssey.ui.resources.settings_proxy_entry
 import io.github.nodyssey.ui.resources.settings_proxy_entry_hint
 import io.github.nodyssey.ui.resources.settings_report_format
@@ -134,6 +136,7 @@ fun SettingsRoute(
         onBack = onBack,
         onOpenTheme = onOpenTheme,
         onThemeModeChange = viewModel::setThemeMode,
+        onOneHandModeChange = viewModel::setOneHandMode,
         onFontScaleChange = viewModel::setFontScale,
         onStickerUniformSizeChange = viewModel::setStickerUniformSize,
         onStickerSizeChange = viewModel::setStickerSize,
@@ -162,6 +165,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenTheme: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
+    onOneHandModeChange: (Boolean) -> Unit,
     onFontScaleChange: (Float) -> Unit,
     onStickerUniformSizeChange: (Boolean) -> Unit,
     onStickerSizeChange: (Int) -> Unit,
@@ -239,6 +243,18 @@ fun SettingsScreen(
                     title = stringResource(Res.string.settings_theme),
                     subtitle = stringResource(Res.string.settings_theme_entry_hint),
                     onClick = onOpenTheme,
+                )
+                // One switch for every screen that carries the bar rather than one per screen:
+                // whether the title should come down to the thumb is a fact about the hand holding
+                // the phone, and it does not change between 收藏 and 设置.
+                SettingsRow(
+                    title = stringResource(Res.string.settings_one_hand),
+                    subtitle = stringResource(Res.string.settings_one_hand_hint),
+                    checked = state.settings.oneHandMode,
+                    onCheckedChange = onOneHandModeChange,
+                    trailing = {
+                        Switch(checked = state.settings.oneHandMode, onCheckedChange = null)
+                    },
                 )
                 SettingsBlock(
                     title = stringResource(Res.string.settings_body_size),
@@ -611,6 +627,7 @@ private fun SettingsPreview() {
             onBack = {},
             onOpenTheme = {},
             onThemeModeChange = {},
+            onOneHandModeChange = {},
             onFontScaleChange = {},
             onStickerUniformSizeChange = {},
             onStickerSizeChange = {},
