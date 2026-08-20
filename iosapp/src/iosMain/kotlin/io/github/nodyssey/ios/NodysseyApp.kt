@@ -9,8 +9,10 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.plaza.core.net.resolveWebKitUserAgent
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import platform.UIKit.UIViewController
 
@@ -45,44 +47,53 @@ import platform.UIKit.UIViewController
 object NodysseyApp {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    private var container: IosAppContainer? = null
     private var root: UIViewController? = null
+    private var building: Deferred<UIViewController>? = null
 
     fun start(onReady: (UIViewController) -> Unit) {
         root?.let {
             onReady(it)
             return
         }
-        scope.launch {
-            // Checked again inside the coroutine: two `willConnectTo` calls before the first user
-            // agent arrives would otherwise both get past the check above.
-            root?.let {
-                onReady(it)
-                return@launch
+        // The build, not a flag saying one is under way. Re-checking `root` inside the coroutine was
+        // not enough and could not be: [resolveWebKitUserAgent] suspends, and two `willConnectTo`
+        // calls before the first answer arrives both get past *any* check made before that point.
+        // The second one would then build a second container over the same Room database and the same
+        // six DataStore files — the corruption this object's KDoc is about — and hand the window a
+        // second controller with an empty back stack. Awaiting one `Deferred` is what makes the
+        // second caller a listener rather than a builder.
+        //
+        // No lock, and none needed: `start` is called from `scene(_:willConnectTo:)`, which is the
+        // main thread, and this scope dispatches to the main thread — so the read and the write below
+        // cannot interleave with another call's.
+        val pending = building ?: scope.async { build() }.also { building = it }
+        scope.launch { onReady(pending.await()) }
+    }
+
+    private suspend fun build(): UIViewController {
+        val graph = IosAppContainer(userAgent = resolveWebKitUserAgent(NodeSeekSite.CONFIG))
+
+        // Set before the first composition asks for an image, and once: `setSafe` is a no-op if
+        // something already installed a loader, which is what makes a second call harmless.
+        SingletonImageLoader.setSafe { context -> imageLoader(context, graph) }
+
+        val controller =
+            ComposeUIViewController {
+                NodysseyRoot(
+                    container = graph,
+                    // No notification extra and no deep link to read yet: both arrive through
+                    // `UIApplicationDelegate`, and neither has an iOS half — the poll worker is
+                    // step D4 and Universal Links have no association file. See
+                    // `AppLinkHandling.ios.kt`.
+                    initialTab = TopLevelDestination.HOME,
+                    launchRequest = null,
+                    onLaunchRequestHandled = {},
+                )
             }
-            val graph = container ?: IosAppContainer(userAgent = resolveWebKitUserAgent(NodeSeekSite.CONFIG))
-            container = graph
-
-            // Set before the first composition asks for an image, and once: `setSafe` is a no-op if
-            // something already installed a loader, which is what makes a second call harmless.
-            SingletonImageLoader.setSafe { context -> imageLoader(context, graph) }
-
-            val controller =
-                ComposeUIViewController {
-                    NodysseyRoot(
-                        container = graph,
-                        // No notification extra and no deep link to read yet: both arrive through
-                        // `UIApplicationDelegate`, and neither has an iOS half — the poll worker is
-                        // step D4 and Universal Links have no association file. See
-                        // `AppLinkHandling.ios.kt`.
-                        initialTab = TopLevelDestination.HOME,
-                        launchRequest = null,
-                        onLaunchRequestHandled = {},
-                    )
-                }
-            root = controller
-            onReady(controller)
-        }
+        root = controller
+        // Nothing left to await; the fast path above answers from here on.
+        building = null
+        return controller
     }
 
     private fun imageLoader(context: PlatformContext, container: IosAppContainer): ImageLoader =

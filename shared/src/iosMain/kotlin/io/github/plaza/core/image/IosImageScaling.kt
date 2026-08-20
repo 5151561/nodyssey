@@ -4,12 +4,15 @@ package io.github.plaza.core.image
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.convert
+import kotlinx.cinterop.useContents
 import platform.CoreFoundation.CFDataRef
 import platform.CoreFoundation.CFDictionaryRef
 import platform.CoreFoundation.CFRelease
 import platform.CoreFoundation.CFRetain
 import platform.CoreFoundation.CFStringRef
 import platform.CoreGraphics.CGImageRef
+import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.CFBridgingRelease
 import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSData
@@ -19,6 +22,8 @@ import platform.ImageIO.CGImageSourceCreateWithData
 import platform.ImageIO.kCGImageSourceCreateThumbnailFromImageAlways
 import platform.ImageIO.kCGImageSourceCreateThumbnailWithTransform
 import platform.ImageIO.kCGImageSourceThumbnailMaxPixelSize
+import platform.UIKit.UIGraphicsImageRenderer
+import platform.UIKit.UIGraphicsImageRendererFormat
 import platform.UIKit.UIImage
 import platform.UIKit.UIImageJPEGRepresentation
 import platform.UIKit.UIImagePNGRepresentation
@@ -49,6 +54,49 @@ import platform.UIKit.UIImagePNGRepresentation
  */
 fun NSData.downscaledJpeg(maxEdgePx: Int, quality: Double): NSData? =
     withBoundedImage(maxEdgePx) { image -> UIImageJPEGRepresentation(image, quality) }
+
+/**
+ * The same bound, for a picture that is *already* decoded.
+ *
+ * The camera hands its result over as a `UIImage`, not as bytes, so [withBoundedImage]'s trick — read
+ * the header, decode only the pixels asked for — has nothing left to save: the pixels exist. What is
+ * still worth not doing is the round trip through a full-resolution JPEG. Encoding one at quality 1.0
+ * only so that the result can be decoded again at 512 px costs a second copy of the picture and the
+ * slowest encode the format has, and the camera delegate is called on the main thread.
+ *
+ * So this scales the decoded image straight to the bound and encodes once. `UIImage.size` is already
+ * in the oriented coordinate space and `drawInRect` honours `imageOrientation`, which is the same
+ * correction `kCGImageSourceCreateThumbnailWithTransform` makes above — a portrait photo arrives
+ * upright either way.
+ *
+ * @param quality 0..1, JPEG's own scale, as above.
+ */
+fun UIImage.downscaledJpeg(maxEdgePx: Int, quality: Double): NSData? {
+    val widthPx = size.useContents { width } * scale
+    val heightPx = size.useContents { height } * scale
+    val longest = maxOf(widthPx, heightPx)
+    if (longest <= 0.0) return null
+    // Already inside the bound: scaling up is not what a bound means.
+    if (longest <= maxEdgePx.toDouble()) return UIImageJPEGRepresentation(this, quality)
+
+    val factor = maxEdgePx / longest
+    val targetWidth = widthPx * factor
+    val targetHeight = heightPx * factor
+    val format =
+        UIGraphicsImageRendererFormat.defaultFormat().apply {
+            // Pixels, not points: the size above was converted to pixels already, and letting the
+            // renderer apply the screen's scale on top would draw a 3x-too-large image on a phone.
+            setScale(1.0)
+            // No alpha channel to carry through a format that has none anyway.
+            setOpaque(true)
+        }
+    val scaled =
+        UIGraphicsImageRenderer(size = CGSizeMake(targetWidth, targetHeight), format = format)
+            .imageWithActions {
+                this@downscaledJpeg.drawInRect(CGRectMake(0.0, 0.0, targetWidth, targetHeight))
+            }
+    return UIImageJPEGRepresentation(scaled, quality)
+}
 
 /**
  * The same, as PNG.

@@ -16,7 +16,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import platform.Foundation.NSData
 import platform.UIKit.UIImage
-import platform.UIKit.UIImageJPEGRepresentation
 import platform.UIKit.UIImagePickerController
 import platform.UIKit.UIImagePickerControllerDelegateProtocol
 import platform.UIKit.UIImagePickerControllerOriginalImage
@@ -44,26 +43,30 @@ internal actual fun rememberAvatarPicker(
     val currentPicked = rememberUpdatedState(onPicked)
     val currentFailed = rememberUpdatedState(onFailed)
 
-    /** Both sources end here: bytes in, a downscaled JPEG and its preview out. */
-    fun accept(data: NSData?) {
-        if (data == null) {
-            currentFailed.value()
-            return
-        }
+    /**
+     * Both sources end here, and each hands over the shape it has rather than a common one — the
+     * gallery's bytes, the camera's decoded image. [prepare] is called off the main thread, which is
+     * the whole reason it is a lambda: the camera's delegate runs on the main thread and the work
+     * behind it is a downscale and a JPEG encode.
+     */
+    fun accept(prepare: () -> PendingAvatar?) {
         scope.launch {
-            val avatar = withContext(Dispatchers.Default) { data.toPendingAvatar() }
+            val avatar = withContext(Dispatchers.Default) { prepare() }
             if (avatar == null) currentFailed.value() else currentPicked.value(avatar)
         }
     }
 
     val pickImage = rememberPhotoPicker(selectionLimit = 1) { providers ->
-        scope.launch { accept(providers.first().loadImageData()) }
+        scope.launch {
+            val data = providers.first().loadImageData()
+            accept { data?.toPendingAvatar() }
+        }
     }
 
     // Held across recomposition for the reason the photo picker's delegate is: the controller keeps
     // only a weak reference to it, and a delegate collected while the camera is open is a camera that
     // hands its picture to nothing.
-    val cameraDelegate = remember { CameraDelegate(::accept) }
+    val cameraDelegate = remember { CameraDelegate { image -> accept { image?.toPendingAvatar() } } }
 
     return remember(pickImage, cameraDelegate) {
         AvatarPickerController(
@@ -90,13 +93,14 @@ internal actual fun rememberAvatarPicker(
 /**
  * The camera's half of the wiring.
  *
- * The picture arrives as a decoded `UIImage`, and the pipeline below takes bytes — so it is encoded
- * once at full quality on the way in and re-encoded at [AVATAR_JPEG_QUALITY] on the way out. That
- * round trip buys one downscale path for both sources instead of two, and it costs a JPEG of an image
- * that is already in memory, once, at the moment the shutter closes.
+ * The picture is handed on as the `UIImage` it arrives as. An earlier version turned it into bytes
+ * here — `UIImageJPEGRepresentation(image, 1.0)` — so that both sources could share one downscale
+ * path, and that line was three bad things at once: a full-resolution encode, at the slowest quality
+ * JPEG has, on the main thread, producing a copy that the next step decoded again and threw away. The
+ * shared path is now shared one step later instead, at [PendingAvatar].
  */
 private class CameraDelegate(
-    private val onImage: (NSData?) -> Unit,
+    private val onImage: (UIImage?) -> Unit,
 ) : NSObject(),
     UIImagePickerControllerDelegateProtocol,
     UINavigationControllerDelegateProtocol {
@@ -105,8 +109,7 @@ private class CameraDelegate(
         didFinishPickingMediaWithInfo: Map<Any?, *>,
     ) {
         picker.dismissViewControllerAnimated(true, completion = null)
-        val image = didFinishPickingMediaWithInfo[UIImagePickerControllerOriginalImage] as? UIImage
-        onImage(image?.let { UIImageJPEGRepresentation(it, 1.0) })
+        onImage(didFinishPickingMediaWithInfo[UIImagePickerControllerOriginalImage] as? UIImage)
     }
 
     /** Backing out of the camera is neither callback — the same as Android's null bitmap. */
@@ -122,9 +125,16 @@ private class CameraDelegate(
  * camera roll photo is several thousand pixels on a side, and decoding one in full so it can be
  * scaled down to 512 is how a settings screen runs a phone out of memory.
  */
-private fun NSData.toPendingAvatar(): PendingAvatar? {
-    val jpeg = downscaledJpeg(AVATAR_MAX_EDGE_PX, AVATAR_JPEG_QUALITY / 100.0) ?: return null
-    val bytes = jpeg.toByteArray()
+private fun NSData.toPendingAvatar(): PendingAvatar? =
+    pendingAvatarOf(downscaledJpeg(AVATAR_MAX_EDGE_PX, AVATAR_JPEG_QUALITY / 100.0))
+
+/** The camera's, from an image that is already decoded — the same bound, without the round trip. */
+private fun UIImage.toPendingAvatar(): PendingAvatar? =
+    pendingAvatarOf(downscaledJpeg(AVATAR_MAX_EDGE_PX, AVATAR_JPEG_QUALITY / 100.0))
+
+/** The tail both share: the preview is decoded from the *encoded* bytes, so it is what will upload. */
+private fun pendingAvatarOf(jpeg: NSData?): PendingAvatar? {
+    val bytes = (jpeg ?: return null).toByteArray()
     val preview = bytes.toImageBitmapOrNull() ?: return null
     return PendingAvatar(
         preview = preview,

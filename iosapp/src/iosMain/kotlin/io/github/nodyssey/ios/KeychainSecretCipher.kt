@@ -11,6 +11,7 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
 import platform.CoreFoundation.CFDictionaryRef
+import platform.CoreFoundation.CFRelease
 import platform.CoreFoundation.CFRetain
 import platform.CoreFoundation.CFStringRef
 import platform.CoreFoundation.CFTypeRefVar
@@ -72,48 +73,56 @@ class KeychainSecretCipher(
     private fun store(handle: String, data: NSData): Boolean {
         // An item under this name cannot already exist — the handle is freshly minted — but a delete
         // first is what makes the add idempotent if it ever does, and it costs one syscall.
-        SecItemDelete(query(handle) as CFDictionaryRef)
-        val attributes =
-            CFBridgingRetain(
-                mapOf<Any?, Any?>(
-                    keyClass to valueClassGenericPassword,
-                    keyService to service,
-                    keyAccount to handle,
+        asDictionary(identity(handle)) { SecItemDelete(it) }
+        return asDictionary(
+            identity(handle) +
+                mapOf(
                     keyValueData to data,
                     keyAccessible to valueAccessible,
                 ),
-            ) as CFDictionaryRef
-        return SecItemAdd(attributes, null) == errSecSuccess
+        ) { attributes -> SecItemAdd(attributes, null) == errSecSuccess }
     }
 
     private fun load(handle: String): NSData? =
         memScoped {
-            val query =
-                CFBridgingRetain(
-                    mapOf<Any?, Any?>(
-                        keyClass to valueClassGenericPassword,
-                        keyService to service,
-                        keyAccount to handle,
-                        keyReturnData to true,
-                    ),
-                ) as CFDictionaryRef
             val result = alloc<CFTypeRefVar>()
-            if (SecItemCopyMatching(query, result.ptr) != errSecSuccess) return@memScoped null
-            CFBridgingRelease(result.value) as? NSData
+            val found =
+                asDictionary(identity(handle) + mapOf(keyReturnData to true)) { query ->
+                    SecItemCopyMatching(query, result.ptr) == errSecSuccess
+                }
+            // Outliving the query dictionary is fine and is the point of `kSecReturnData`: what
+            // `result` holds came back owned, which is the reference `CFBridgingRelease` consumes.
+            if (!found) null else CFBridgingRelease(result.value) as? NSData
         }
 
-    private fun query(handle: String): CFDictionaryRef =
-        CFBridgingRetain(
-            mapOf<Any?, Any?>(
-                keyClass to valueClassGenericPassword,
-                keyService to service,
-                keyAccount to handle,
-            ),
-        ) as CFDictionaryRef
+    /** The three attributes that name one item — every call needs them, and two add to them. */
+    private fun identity(handle: String): Map<Any?, Any?> =
+        mapOf(
+            keyClass to valueClassGenericPassword,
+            keyService to service,
+            keyAccount to handle,
+        )
 
     private companion object {
         /** The service every item of this app's is filed under, so they can be told from anyone else's. */
         const val KEYCHAIN_SERVICE = "io.github.nodyssey.secrets"
+    }
+}
+
+/**
+ * Hands [entries] to [use] as a `CFDictionary`, and releases it afterwards.
+ *
+ * `CFBridgingRetain` hands ownership *out* — it is `__bridge_retained`, and the +1 it returns is the
+ * caller's to give back. Kotlin has no ARC to do that at the end of a scope, so every one of these
+ * that was not released was a dictionary leaked per save and per read: small, unbounded, and invisible
+ * until a profiler is pointed at it.
+ */
+private inline fun <R> asDictionary(entries: Map<Any?, Any?>, use: (CFDictionaryRef) -> R): R {
+    val dictionary = CFBridgingRetain(entries) as CFDictionaryRef
+    return try {
+        use(dictionary)
+    } finally {
+        CFRelease(dictionary)
     }
 }
 
