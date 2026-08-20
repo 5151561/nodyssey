@@ -36,10 +36,19 @@ import kotlin.coroutines.resumeWithException
  * configuration this app would use, and it is a function rather than a default argument so that a
  * caller has to have looked at it.
  *
- * The cookie half is what threshold A of `docs/kmp-migration-plan.md` measured: a `WKWebView`
- * signs in, its cookies land in [NSHTTPCookieStorage.sharedHTTPCookieStorage], and a session
- * configured to use that storage sends them — which is the same arrangement Android reaches through
- * `CookieManager` and [WebViewCookieJar].
+ * **The cookie half is not finished here, and the arrangement is not the one Android has.** On
+ * Android a single store — `CookieManager` — is both what the sign-in WebView writes to and what
+ * OkHttp reads, so [WebViewCookieJar] is pure translation and nothing has to be copied. WebKit has
+ * no such store: a `WKWebView` writes to its `WKWebsiteDataStore.httpCookieStore`, which is a
+ * different jar from [NSHTTPCookieStorage.sharedHTTPCookieStorage] that `NSURLSession` reads, and
+ * its API is asynchronous besides. Threshold A of `docs/kmp-migration-decision.md` proved the round
+ * trip *by hand*: read the cookies out of `WKHTTPCookieStore` after signing in, hand them to
+ * `URLSession`, get HTTP 200. It did not show the two jars sharing anything on their own.
+ *
+ * So what this file provides is the `URLSession` side only. Bridging it to WebKit — copying both
+ * ways and keeping up with a `WKHTTPCookieStoreObserver` while a challenge is live — is step D3,
+ * which is where the `WKWebView` it would observe first exists. Nothing constructs this class or
+ * [appleUrlSession] yet for that reason.
  */
 class NSUrlSessionTransport(
     private val session: NSURLSession,
@@ -95,9 +104,10 @@ class NSUrlSessionTransport(
 /**
  * The session this app talks to a scraped forum through.
  *
- * `defaultSessionConfiguration` rather than `ephemeral`: the shared cookie storage is the whole
- * point — see the class KDoc — and the ephemeral one has a storage of its own that the sign-in
- * browser never writes to.
+ * `defaultSessionConfiguration` rather than `ephemeral`: the shared storage persists across
+ * launches, and it is the jar the D3 bridge will deposit the browser's cookies into. That is the
+ * reason, and it is worth stating exactly because the tempting one — "the sign-in browser writes
+ * there" — is false; see the class KDoc.
  */
 fun appleUrlSession(
     userAgent: String,
@@ -115,9 +125,17 @@ fun appleUrlSession(
     return NSURLSession.sessionWithConfiguration(configuration)
 }
 
-/** [SessionCookieStore] on Apple's own cookie jar, the one a `WKWebView` signs in into. */
+/**
+ * [SessionCookieStore] on the cookie jar `NSURLSession` reads — **not** on the one a `WKWebView`
+ * writes to. See the [NSUrlSessionTransport] KDoc for why those are two jars on this platform.
+ *
+ * The storage is a required argument rather than a defaulted one so that D3 has to say which jar it
+ * means. It is also why the interface's synchronous [cookieHeader] is still honest here and would
+ * not be if this read WebKit directly: `WKHTTPCookieStore.getAllCookies` answers on a callback, so
+ * the bridge has to keep a mirror this can read rather than reaching across at call time.
+ */
 class AppleCookieStore(
-    private val storage: NSHTTPCookieStorage = NSHTTPCookieStorage.sharedHTTPCookieStorage,
+    private val storage: NSHTTPCookieStorage,
 ) : SessionCookieStore {
 
     override fun cookieHeader(url: String): String? {

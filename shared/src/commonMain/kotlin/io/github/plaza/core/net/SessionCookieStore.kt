@@ -6,7 +6,7 @@ package io.github.plaza.core.net
  * An interface rather than the platform's own type because *which* store it is — Android's
  * `CookieManager`, `WKHTTPCookieStore`, a map in a test — is the only part of sharing cookies that
  * is about the platform. Everything else, and in particular reading a signed-in state off the names
- * a site issues, is about the site; that lives in [WebViewCookieJar] and now needs no device.
+ * a site issues, is about the site; that lives in [SessionCookies] and now needs no device.
  *
  * The whole interface speaks in raw header strings for the same reason: `Set-Cookie` is what every
  * one of those stores already takes and returns, so nothing has to be parsed to cross this line.

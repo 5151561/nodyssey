@@ -40,6 +40,28 @@ kotlin {
     }
 }
 
+/*
+ * The two artefacts `compose.desktop.currentOs` picks by host, left out of the lockfile.
+ *
+ * A lockfile records the graph so that the repository decides it rather than whichever machine ran
+ * the build — and these are the one dependency in the repository where that is the wrong goal on
+ * purpose (see `jvmMain` above). Locked, they pin the Skiko and Compose desktop natives of the
+ * machine that last ran `--write-locks`; a Mac writes `macos-arm64`, CI resolves `linux-x64`, and
+ * STRICT mode fails it both ways at once — "resolved something not in the lock state" and "did not
+ * resolve something that is". Wildcards rather than the two exact coordinates because the host suffix
+ * is the whole thing being ignored.
+ *
+ * Everything else in this module stays locked; nothing else here is chosen by the host.
+ */
+dependencyLocking {
+    ignoredDependencies.addAll(
+        listOf(
+            "org.jetbrains.compose.desktop:desktop-jvm-*",
+            "org.jetbrains.skiko:skiko-awt-runtime-*",
+        ),
+    )
+}
+
 compose.desktop {
     application {
         // `run` is the whole point; no `nativeDistributions` block, because nothing packages this

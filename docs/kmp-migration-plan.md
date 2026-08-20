@@ -803,6 +803,23 @@ expect/actual，Apple 侧走 `NSDate`。
 C 函数都已 deprecated，剩下的选择是手写一份摘要算法。按「不要过度抽象」这条没做。**代价记在这里**：
 Apple 侧今天调 `/api/vote/*` 会拿到 403，这是 D3 的活。
 
+**五、Apple 的 cookie 桥没有做，而且它和 Android 不是同一个形状。**这条在 #101 的 review 里被点
+出来，点得对——原来的 KDoc 写着「`WKWebView` 登录后 cookie 落进
+`NSHTTPCookieStorage.sharedHTTPCookieStorage`，门槛 A 测的就是这个」，**这句是编的**。门槛 A 实际
+测的（见 `docs/kmp-migration-decision.md` §4）是**手动**把 cookie 从 `WKHTTPCookieStore` 读出来交给
+`URLSession`，证明的是「同一份 cookie 能用」，不是「两个 jar 自己会同步」。
+
+Android 之所以简单，是因为 `CookieManager` **同时**是 WebView 写的地方和 OkHttp 读的地方，
+`WebViewCookieJar` 因此纯粹是翻译。WebKit 没有这样一个共用 jar：`WKWebView` 写的是
+`WKWebsiteDataStore.httpCookieStore`，`NSURLSession` 读的是 `NSHTTPCookieStorage`，两者是两个东西，
+而且前者的 API 是异步的——`SessionCookieStore.cookieHeader()` 这个同步签名在 Apple 侧只有在「桥维护
+一份镜像」的前提下才成立，不能改成直接问 WebKit。
+
+因此 A5 交付的是**只有 `URLSession` 那一侧**。桥（双向复制 + `WKHTTPCookieStoreObserver` 跟住 live
+challenge）是 **D3**，也就是 `WKWebView` 第一次存在的那一步。今天没有任何地方 new 出
+`AppleCookieStore` 或 `appleUrlSession`，所以这不是一个线上缺陷，但它曾经是一句会被 D3 直接采信的
+错话。`AppleCookieStore` 的 storage 参数顺手去掉了默认值，逼 D3 明确说自己要的是哪个 jar。
+
 #### 测试
 
 `:core` 的 40 个测试跟着走：`AcceptLanguageTest` 进 `commonTest`（因此两端各跑一遍），其余六个类
@@ -1189,6 +1206,13 @@ Room 2.8.4、Paging 3.5.0、DataStore 1.2.1（项目用的是 Preferences，正�
 ```
 
 lockfile 是 STRICT 模式，不更新就直接失败。
+
+**一个例外，`:gallery`。**`compose.desktop.currentOs` 按宿主机挑 Skiko 和 Compose desktop 的原生
+件，是仓库里唯一「由机器而不是由 build 决定」的依赖——而锁文件的目的恰恰是消灭这件事。锁住的结果
+是：Mac 上 `--write-locks` 写进 `macos-arm64`，CI 在 Ubuntu 上解析出 `linux-x64`，STRICT 同时报两
+条（「解析出了不在锁里的」和「锁里的没解析出来」），构建在跑单元测试之前就挂。B4 合进 `main` 之后
+CI 一直是红的就是这个原因，#101 只是继承了它。修法是把这两组坐标按通配符加进
+`gallery/build.gradle.kts` 的 `dependencyLocking.ignoredDependencies`；该模块其余部分照锁。
 
 ### 第二阶段的测试迁移坑
 
