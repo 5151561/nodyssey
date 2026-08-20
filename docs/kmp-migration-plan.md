@@ -380,9 +380,9 @@ Compose
 | ✅ **B4** | B | `:app` 的 `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group。`:designsys` 那半已在 B3 完成。不是纯改名——见下 | B3 |
 | ✅ **A6** | A | Room + DataStore。手写 migration 是 **10 个**不是 7 个——见下 | A5 |
 | ✅ **A7** | A | Repository 全部下沉。**「拆 `:app` 的 `data/`」：74 个文件剩 16 个**——见下 | A6 |
-| **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」） | A7 + B4 |
+| **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」）。**外加还 A5–A7 的两笔债**——见下 | A7 + B4 |
 | **D2** | D | 1,059 条 strings + 16 个 res xml + 9 个 drawable → Compose Resources | D1 |
-| **D3** | D | iOS：门槛 A 复验 + WKWebView 桥 + 生命周期 + IME | D1 |
+| **D3** | D | iOS：门槛 A 复验 + WKWebView 桥（`WKHTTPCookieStore` ↔ `NSHTTPCookieStorage` 双向 + observer，A5 只交付了 `URLSession` 那侧）+ 生命周期 + IME | D1 |
 | **D4** | D | WorkManager → `BGTaskScheduler`（5 个文件） | A7 |
 
 原表的步骤 1「Apple 平台 spike」并入 **D3** —— 门槛 A 已在 macOS 上通过，剩下的 iOS 复验和
@@ -1010,6 +1010,40 @@ D1 把 `ui/` 搬下来之后两半在同一个模块里，整棵测试树一次�
 
 `assembleDebug` / `testDebugUnitTest testAndroidHostTest jvmTest` / `:app:lintDebug` /
 `spotlessCheck` / `:shared:macosArm64Test` / `:gallery:jvmTest` 全绿。
+
+---
+
+### A5–A7 留下的两笔债
+
+两条都出自 #101 的 review，都不是缺陷，是这三步为了「一个 PR 只降低一个平台耦合」主动挂的账。
+记在这里是因为它们各自有明确的还款点，过了那个点还不还就会变成永久的。
+
+#### 一、八个 `internal` 变 public，还款点是 D1
+
+上面那节讲了为什么测试没跟着搬（fake 和 ViewModel 测试共用一份）。要补的是**这笔债的另一头**：
+`FEED_PAGING_CONFIG`、`markViewedBody`、两个 `ImageHost*Keys` 这些东西现在是 `:shared` 的公开
+API，而它们本来是实现细节——分页窗口大小、一个请求体的拼法、图床的 key 名。公开 API 是会被人用的，
+用一次就还不掉了。
+
+**D1 把 `ui/` 搬进 `:shared` 之后，测试和被测在同一个模块里，这八个应当当场改回 `internal`。**
+这是 D1 的验收项之一，不是「有空再说」——D1 的 PR 里如果没有这一步，债就永久了。
+
+顺带：`SiteBootstrap`、`PostSourceParser` 两个 `internal object` 变 public 是同一类事（B2 记的），
+它们的调用方在 `:app`，同样跟着 D1 回收。
+
+#### 二、`:designsys → :shared` 现在拖着整个数据层，还款点没定
+
+`:designsys` 需要 `:shared` 的只有 RichNode 那棵树和几个 parser。它拿到的是今天的 `:shared`：
+网络层、Room、Paging、DataStore、站点业务，全部。`:gallery` 也跟着解析一整套数据库依赖——一个
+组件画廊为了画一段富文本，classpath 上有 SQLite。锁文件的膨胀已经把这件事写在纸面上了。
+
+**这是 A7 的直接后果，不是 B2 的**：B2 把 `core/image` 拆三份的时候 `:shared` 里还没有 Room。
+真正的修法是从 `:shared` 里再切出一层「只有 model + richtext + parser」的模块，`:designsys` 和
+`:gallery` 依赖那一层。
+
+**没有现在做，理由是排序**：这一刀切在哪里取决于 D1 之后 `ui/` 需要什么，现在切等于猜。
+但它也不该无限期拖着——**D1 收尾时重新评估一次**，那时两边需要什么都是已知的。届时如果
+`:designsys` 仍然只用到 RichNode 那棵树，就切。
 
 ---
 
