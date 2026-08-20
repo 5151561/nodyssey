@@ -68,6 +68,9 @@ fun NodysseyRoot(
         useSystemPalette =
         settings.colorSource == ColorSource.WALLPAPER && settings.wallpaperSystemPalette,
         fontScale = settings.fontScale,
+        // 单手模式 reaches the twenty-odd screens that carry a `OneHandTopAppBar` through a
+        // composition local, so none of them has to be told about the setting.
+        oneHandMode = settings.oneHandMode,
     ) {
         // Every link that leaves the app goes through LocalUriHandler — the explicit `openUri` calls
         // in Navigation and the ones Compose resolves for a link inside post text alike. Overriding

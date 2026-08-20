@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.plaza.designsys.theme.LocalOneHandMode
 import io.github.plaza.designsys.theme.Spacing
 import kotlin.math.roundToInt
 
@@ -368,9 +369,14 @@ fun rememberOneHandAppBarState(initiallyExpanded: Boolean = true): OneHandAppBar
  * that reads back empty, which the interface's own default allows for. A tablet stops growing at
  * [MAX_EXPANDED_BLANK]; past a phone's height the extra gap has stopped buying reach and is just an
  * empty screen.
+ *
+ * Zero as well when the reader has switched 单手模式 off, which is the same answer arrived at for a
+ * different reason and lands every bar in the app on the pinned toolbar it already falls back to in
+ * landscape. See [LocalOneHandMode].
  */
 @Composable
 fun oneHandExpandedBlank(): Dp {
+    if (!LocalOneHandMode.current) return 0.dp
     val heightPx = LocalWindowInfo.current.containerSize.height
     if (heightPx <= 0) return 0.dp
     return oneHandExpandedBlank(with(LocalDensity.current) { heightPx.toDp() })

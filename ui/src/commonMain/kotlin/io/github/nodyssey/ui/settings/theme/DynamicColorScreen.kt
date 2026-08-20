@@ -16,17 +16,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -57,7 +54,9 @@ import io.github.nodyssey.ui.resources.settings_wallpaper_unreadable_hint
 import io.github.nodyssey.ui.settings.SettingsGroup
 import io.github.nodyssey.ui.settings.SettingsRow
 import io.github.nodyssey.ui.settings.SettingsSectionTitle
+import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaDarkTheme
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -90,7 +89,6 @@ fun DynamicColorRoute(
  * colours themselves need no permission, so everything below the thumbnail is intact and the
  * candidates simply start at the top.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DynamicColorScreen(
     settings: UserSettings,
@@ -102,15 +100,15 @@ fun DynamicColorScreen(
 ) {
     val (retryKey, retry) = rememberRetryKey()
     val palette = rememberWallpaperPalette(retryKey)
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val appBarState = rememberOneHandAppBarState()
     val selected = settings.wallpaperSeed ?: palette.candidates.firstOrNull()?.toArgb()
 
     Scaffold(
-        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
-            MediumTopAppBar(
-                title = { Text(stringResource(Res.string.settings_dynamic_color)) },
-                scrollBehavior = scrollBehavior,
+            OneHandTopAppBar(
+                title = stringResource(Res.string.settings_dynamic_color),
+                state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

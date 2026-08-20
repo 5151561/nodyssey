@@ -52,6 +52,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = { mode = it },
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -82,6 +83,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -124,6 +126,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = { uniform = it },
                     onStickerSizeChange = {},
@@ -155,6 +158,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -184,6 +188,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -218,6 +223,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -251,6 +257,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -283,6 +290,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -317,6 +325,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = { appliedScale = it },
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -356,6 +365,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = { appliedScale = it },
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -380,6 +390,45 @@ class SettingsScreenTest {
         assertTrue(appliedScale != null)
     }
 
+    /**
+     * 单手模式 is one switch for every screen that carries the bar, so this is the only place it can
+     * be flipped — and it starts on, which is what every build since the bar landed has done.
+     */
+    @Test
+    fun `单手模式 is on by default and can be switched off`() {
+        composeRule.setContent {
+            var settings by remember { mutableStateOf(UserSettings()) }
+            PlazaTheme {
+                SettingsScreen(
+                    state = SettingsUiState(settings),
+                    onBack = {},
+                    onOpenTheme = {},
+                    onThemeModeChange = {},
+                    onOneHandModeChange = { settings = settings.copy(oneHandMode = it) },
+                    onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onExternalLinkTargetChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = {},
+                    onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
+                    onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("单手模式")
+            .performScrollTo()
+            .assertIsOn()
+            .performClick()
+            .assertIsOff()
+    }
+
     @Test
     fun `the launch update check is on by default and can be switched off`() {
         composeRule.setContent {
@@ -390,6 +439,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -425,6 +475,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -453,6 +504,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
@@ -483,6 +535,7 @@ class SettingsScreenTest {
                     onBack = {},
                     onOpenTheme = {},
                     onThemeModeChange = {},
+                    onOneHandModeChange = {},
                     onFontScaleChange = {},
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},

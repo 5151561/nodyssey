@@ -74,6 +74,11 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setThemeMode(value) }
     }
 
+    /** 单手模式 — one answer for every screen that carries a `OneHandTopAppBar`. */
+    fun setOneHandMode(value: Boolean) {
+        viewModelScope.launch { settings.setOneHandMode(value) }
+    }
+
     fun setFontScale(value: Float) {
         viewModelScope.launch { settings.setFontScale(value) }
     }

@@ -31,6 +31,20 @@ val LocalPlazaDarkTheme = staticCompositionLocalOf { false }
  */
 val LocalPlazaFontScale = staticCompositionLocalOf { 1f }
 
+/**
+ * 单手模式 — whether [io.github.plaza.designsys.component.OneHandTopAppBar] is allowed any blank
+ * above its toolbar at all.
+ *
+ * A composition local rather than a parameter on the bar, because the answer is the same on all
+ * twenty-odd screens that carry one and none of them has anything to add to it. Off, every such bar
+ * measures its blank at zero and is an ordinary pinned Material toolbar — the screens themselves do
+ * not change, which is what keeps the switch from being a second layout to maintain.
+ *
+ * Defaults to on, so a preview or a test that only calls [PlazaTheme] gets the bar the app ships
+ * with.
+ */
+val LocalOneHandMode = staticCompositionLocalOf { true }
+
 @Composable
 fun PlazaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -55,6 +69,8 @@ fun PlazaTheme(
      */
     useSystemPalette: Boolean = false,
     fontScale: Float = 1f,
+    /** 单手模式; see [LocalOneHandMode] for what turning it off does. */
+    oneHandMode: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     // Asked for only when it could win: 角色预设 beats it, and building a scheme that is about to be
@@ -82,6 +98,7 @@ fun PlazaTheme(
         LocalPlazaExtraColors provides if (darkTheme) DarkExtraColors else LightExtraColors,
         LocalPlazaDarkTheme provides darkTheme,
         LocalPlazaFontScale provides fontScale.coerceIn(MIN_TYPE_SCALE, MAX_TYPE_SCALE),
+        LocalOneHandMode provides oneHandMode,
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme,

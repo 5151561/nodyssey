@@ -70,6 +70,7 @@ class SettingsRepository(
                     ?: PaletteStyle.SOFT,
                 savedThemes = decodeSavedThemes(preferences[KEY_SAVED_THEMES]),
                 fontScale = preferences[KEY_FONT_SCALE] ?: 1f,
+                oneHandMode = preferences[KEY_ONE_HAND_MODE] ?: true,
                 stickerUniformSize = preferences[KEY_STICKER_UNIFORM_SIZE] ?: true,
                 stickerSize = (preferences[KEY_STICKER_SIZE] ?: DEFAULT_STICKER_SIZE_SP)
                     .coerceIn(MIN_STICKER_SIZE_SP, MAX_STICKER_SIZE_SP),
@@ -205,6 +206,9 @@ class SettingsRepository(
 
     suspend fun setFontScale(scale: Float) =
         edit { it[KEY_FONT_SCALE] = scale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE) }
+
+    /** 单手模式; see [UserSettings.oneHandMode] for what switching it off costs and buys. */
+    suspend fun setOneHandMode(enabled: Boolean) = edit { it[KEY_ONE_HAND_MODE] = enabled }
 
     /**
      * 表情统一缩限. On — the default, and what every build before this one did — every inline sticker
@@ -557,6 +561,7 @@ class SettingsRepository(
                 else -> runCatching { ColorSource.valueOf(stored) }.getOrNull()
             }
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
+        private val KEY_ONE_HAND_MODE = booleanPreferencesKey("one_hand_mode")
         private val KEY_STICKER_UNIFORM_SIZE = booleanPreferencesKey("sticker_uniform_size")
         private val KEY_STICKER_SIZE = intPreferencesKey("sticker_size_sp")
         private val KEY_IMAGES_WIFI_ONLY = booleanPreferencesKey("images_on_wifi_only")
@@ -677,6 +682,16 @@ data class UserSettings(
     /** 我的主题 — hand-picked seeds the reader named and kept. Oldest first; see `saveTheme`. */
     val savedThemes: List<SavedTheme> = emptyList(),
     val fontScale: Float = 1f,
+    /**
+     * 单手模式 — whether a second-level screen opens with its title dropped into a band of blank
+     * within the thumb's reach, which the reader then drags to whatever height suits them.
+     *
+     * On by default, which is what every build since that bar landed has done. Off turns all of them
+     * back into ordinary pinned toolbars: nothing is hidden and nothing moves, the top of the screen
+     * simply goes back to being content. It is one answer for the whole app rather than one per
+     * screen, because it is a fact about the hand and not about the page — see `LocalOneHandMode`.
+     */
+    val oneHandMode: Boolean = true,
     /**
      * 表情统一缩限. True — the default — draws every inline sticker in the same [stickerSize] square,
      * which at its smallest is the 20sp box that keeps a sticker inside a line of body text. False
