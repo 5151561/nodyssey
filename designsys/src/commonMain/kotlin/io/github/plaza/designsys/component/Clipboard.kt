@@ -12,8 +12,9 @@ import kotlinx.coroutines.launch
  *
  * Goes through [LocalClipboard] rather than the platform `ClipboardManager`: the composition-local is
  * substitutable, so a screen test can assert what a copy button put on the clipboard without a real
- * system service. `setClipEntry` suspends, hence the scope — the returned lambda stays synchronous so
- * call sites are unaffected.
+ * system service. `setClipEntry` suspends, hence the scope — the lambda *this* one returns stays
+ * synchronous so its call sites are unaffected; [rememberSilentClipboardCopy] hands the suspension
+ * on instead, for the reason written there.
  *
  * The two things this cannot do itself are the two the platforms disagree about. `ClipEntry` is an
  * `expect class` with no common way to build one from plain text, and whether a copy needs to be
@@ -23,14 +24,14 @@ import kotlinx.coroutines.launch
 @Composable
 fun rememberClipboardCopy(): (label: String, text: String, confirmation: String) -> Unit {
     val scope = rememberCoroutineScope()
-    val write = rememberClipWrite()
+    val write = rememberSilentClipboardCopy()
     val confirm: (String) -> Unit = rememberCopyConfirmation()
     return remember(scope, write, confirm) {
         { label, text, confirmation ->
-            // Inside the coroutine, after the write: the announcement is a claim that the clipboard
+            // In one coroutine, after the write: the announcement is a claim that the clipboard
             // holds the text, and a claim made before the suspending write returns is one the app
             // cannot back — a cancelled scope would leave the reader told about a copy that never
-            // happened.
+            // happened. It is the same reason [rememberSilentClipboardCopy] suspends.
             scope.launch {
                 write(label, text)
                 confirm(confirmation)
@@ -44,26 +45,13 @@ fun rememberClipboardCopy(): (label: String, text: String, confirmation: String)
  *
  * A screen showing a snackbar of its own would otherwise say it twice on the versions of Android
  * that leave the announcing to the app — see [rememberCopyConfirmation].
- */
-@Composable
-fun rememberSilentClipboardCopy(): (label: String, text: String) -> Unit {
-    val scope = rememberCoroutineScope()
-    val write = rememberClipWrite()
-    return remember(scope, write) {
-        { label, text ->
-            scope.launch { write(label, text) }
-        }
-    }
-}
-
-/**
- * The write itself, still suspending, so the callers above decide what happens after it.
  *
- * Shared rather than duplicated because the ordering is the part worth having in one place — see
- * the comment in [rememberClipboardCopy].
+ * Suspends, and that is the point rather than an inconvenience: a caller announcing the copy itself
+ * has to be able to do it *after* the write, and a fire-and-forget lambda would leave it launching a
+ * second coroutine that races the first. Its own snackbar goes in the same `launch` as this call.
  */
 @Composable
-private fun rememberClipWrite(): suspend (label: String, text: String) -> Unit {
+fun rememberSilentClipboardCopy(): suspend (label: String, text: String) -> Unit {
     val clipboard = LocalClipboard.current
     val plainText: (String, String) -> ClipEntry = rememberPlainTextClip()
     return remember(clipboard, plainText) {

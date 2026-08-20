@@ -81,7 +81,7 @@ fun AboutCommunityRoute(
     onOpenAboutSite: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenUri: (String) -> Unit,
-    onCopyRss: () -> Unit,
+    onCopyRss: suspend () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val statsState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -105,7 +105,7 @@ fun AboutCommunityScreen(
     onOpenAboutSite: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenUri: (String) -> Unit,
-    onCopyRss: () -> Unit,
+    onCopyRss: suspend () -> Unit,
     modifier: Modifier = Modifier,
     statsState: CommunityStatsUiState? = null,
     onRetryStats: () -> Unit = {},
@@ -169,9 +169,13 @@ fun AboutCommunityScreen(
                         contentDescription = stringResource(Res.string.about_copy_rss),
                     )
                 },
+                // Both in one coroutine, in this order: the snackbar says the clipboard holds the
+                // feed URL, which is only true once the suspending copy has returned.
                 onClick = {
-                    onCopyRss()
-                    scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
+                    scope.launch {
+                        onCopyRss()
+                        snackbarHostState.showSnackbar(copiedMessage)
+                    }
                 },
             )
 
