@@ -355,18 +355,9 @@ fun PostDetailScreen(
             lastVisible >= listState.layoutInfo.totalItemsCount - 4
         }
     }
-    // `canScrollBackward` is the same predicate, already maintained by LazyListState as plain state —
-    // no derivedStateOf and no per-frame read of the two scroll fields. Its `canScrollForward` twin is
-    // deliberately *not* used for [atListEnd] below: that one becomes true only once the list is
-    // actually scrolled to the bottom, where this reads true as soon as the last item shows its head.
+    // `canScrollBackward` is the predicate itself, already maintained by LazyListState as plain
+    // state — no derivedStateOf and no per-frame read of the two scroll fields.
     val atListTop = !listState.canScrollBackward
-    val atListEnd by remember {
-        derivedStateOf {
-            val totalItems = listState.layoutInfo.totalItemsCount
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            totalItems > 0 && lastVisible >= totalItems - 1
-        }
-    }
     LaunchedEffect(shouldLoadMore, state.comments.size) {
         if (shouldLoadMore) onLoadMore()
     }
@@ -520,15 +511,13 @@ fun PostDetailScreen(
         onScrollHandled()
     }
     /*
-     * The nested-scroll state drives the toolbar; boundaries only pin it open where that is stable.
-     * The bottom counts solely once the thread is fully loaded — while auto-append still runs, the
-     * "last item visible" instant flips back and forth with every batch of inserted comments, and
-     * tying expansion to it (or to isAppending itself) made the bar blink through a long scroll.
+     * The nested-scroll state drives the toolbar; only the top pins it open. The foot of the thread
+     * deliberately does not: reaching the end is where the reader is *reading*, and a bar that
+     * unfolds itself there is furniture arriving over the last floor rather than a control asked for.
      */
     val toolbarExpanded =
         pageToolbarExpanded ||
             atListTop ||
-            (atListEnd && !state.hasNextPage && !state.isAppending) ||
             state.error != null ||
             showPageSheet
 
@@ -594,8 +583,8 @@ fun PostDetailScreen(
                             isRefreshing = state.isRefreshingTail,
                             onRefresh = onRefreshTail,
                             enabled = state.hasContent && !state.hasNextPage && !state.isAppending,
-                            // Above the floating page bar rather than under it: that bar is expanded
-                            // at exactly the moment this gesture becomes available.
+                            // Clear of the floating controls rather than under them: the same room
+                            // the list's last floor keeps puts the spinner where it can be seen.
                             indicatorBottomPadding = ThreadBottomBarRoom,
                             modifier = Modifier.fillMaxSize(),
                         ) {
@@ -918,8 +907,21 @@ private fun DetailTopBar(
     )
 }
 
-/** The room the floating page bar takes at the foot of the thread, reserved by everything under it. */
-private val ThreadBottomBarRoom = 80.dp
+/** What Material's extended FAB stands at, collapsed or not — the rail is stacked on top of it. */
+private val ReplyFabHeight = 56.dp
+
+/**
+ * The room the floating controls take at the foot of the thread, reserved by everything under them.
+ *
+ * Measured against the *retracted* rail, which is what a reader scrolling to the last floor has:
+ * the group's own 16dp of bottom padding, the FAB, the 4dp gap above it, and the single page key
+ * the rail keeps when its two arrows are away — plus a line of air, so the last floor ends clear of
+ * the keys instead of flush against them. Expanded the rail is two keys taller and does overlap,
+ * but that is a state the reader taps into and out of, and resizing the list under a thumb
+ * mid-scroll is worse than the overlap.
+ */
+private val ThreadBottomBarRoom =
+    Spacing.lg + ReplyFabHeight + Spacing.xs + Sizes.minTouchTarget + Spacing.sm
 
 /**
  * The thread as one scroll.
