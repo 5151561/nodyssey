@@ -383,7 +383,7 @@ Compose
 | ✅ **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」），新模块 `:ui`。两笔债都还了，**D2 有一半是它的前置而不是后续**——见下 | A7 + B4 |
 | ✅ **D2** | D | ~~1,059 条 strings~~ 1,056 条 + 5 个 drawable → Compose Resources。**在 D1 里做掉了**，理由见下；剩下的 res xml 是 manifest 和图标，本来就不该动 | D1 |
 | ✅ **D3a** | D | iOS：`:designsys` 与 `:ui` 开 `iosArm64`，21 个 `expect` 补齐（四个是空壳），WKWebView 桥（`WKHTTPCookieStore` ↔ `NSHTTPCookieStorage` 双向 + observer）。**只到编译为止**——见下 | D1 |
-| **D3b** | D | iOS：壳 + 门槛 A 复验 + 生命周期 + IME，以及 D3a 留下的四个图片能力 | D3a |
+| ✅ **D3b** | D | iOS：新模块 `:iosapp` —— Xcode 工程 + `IosAppContainer`，App 在模拟器上跑起来了；门槛 A 在 iOS 上复验通过（登录 + 发评论）；四个图片能力落地；IME 正常——见下 | D3a |
 | **D4** | D | WorkManager → `BGTaskScheduler`（5 个文件） | A7 |
 
 原表的步骤 1「Apple 平台 spike」并入 **D3** —— 门槛 A 已在 macOS 上通过，剩下的 iOS 复验和
@@ -1365,6 +1365,214 @@ iOS 那份是照 Android 那份逐段翻的：`decidePolicyForNavigationAction` 
 
 ---
 
+### ✅ D3b 实测：`:iosapp`，以及 App 第一次真的跑起来
+
+D3a 交付的是「编译得过」。这一步交付的是**一台 iPhone 17 模拟器上装着的 App**：真实首页、真实头像、
+真实富文本、Compose Resources 的中文、Room 的「4 条新回复」角标、跨覆盖安装存活的 DataStore 设置。
+
+**门槛 A 在 iOS 上复验通过**，而且比 spike 当年的标准更硬——见最后一节。
+
+#### 新模块 `:iosapp`：Kotlin 壳 + Xcode 工程是一件东西
+
+`:app` 之于 Android 是什么，它之于 iOS 就是什么：入口、依赖图、以及所有指名 UIKit 或 Foundation 的
+部分。**不套 `plaza.kmp.library`**——那个约定插件的全部意义是每个*库*模块共享的 Android target，而这
+个模块恰恰不能有；它也不是库，没有任何东西依赖它，它依赖所有东西，产出是一个 Xcode 链接的 framework
+而不是别的模块解析的 klib。
+
+Xcode 工程放在同一个模块里而不是仓库根：两者是一件交付物，一个没人链接的 framework 不是壳。
+`iosapp/build/DerivedData` 也在那个模块的 `build/` 下——`.gitignore` 里那条不加锚点的 `build/` 已经
+覆盖它，Xcode 和 Gradle 的产物落在同一个被忽略的地方。
+
+| 产物 | 说明 |
+|---|---|
+| `NodysseyShell.framework` | 静态，两个 arch。静态是 CMP 模板的选择，代价是链接时间，省掉的是内嵌动态库的第二次签名 |
+| `Nodyssey.xcodeproj` | 手写 pbxproj，一个 target、一个 shared scheme。仓库里没有 xcodegen，装一个等于让所有人都得装 |
+| `App.swift` | 三十行。Swift 侧只知道 `NodysseyApp.shared.start { }` 这一个符号 |
+
+#### 四个模块开 `iosSimulatorArm64`，以及那条 KSP
+
+`:shared` / `:designsys` / `:ui` / `:richtext` 各加一个。D3a 那句「模拟器 target 今天没有消费者」到
+这一步失效了——壳就是消费者，而 framework 是按 arch 出的，少一个不是「构建小一点」，是 Xcode 里少一
+个能选的 destination。
+
+`plaza.dependency-locking` 补 `iosSimulatorArm64CompileKlibraries` 和它的 test 版；`:shared` 的
+`dependencies` 块补 `kspIosSimulatorArm64`。**后者不补的报错是「Expected NodeSeekDatabaseConstructor
+has no actual declaration」**——和那个块上方注释预言的一字不差，Room 的名字一次都不会出现。
+
+#### `IosAppContainer`：三十六个成员里，只有六个不是同一行表达式
+
+和 `DefaultAppContainer` 并排读，有意思的地方是**差得有多少**。A5–A7 把 repository、数据库和网络契约
+放进了 `commonMain`，所以两边逐字相同的是三十个；剩下的是一个 transport、一罐 cookie、三个目录，加上
+下面这张「不做」的单子。
+
+**不做的四件事，分两类，而只有一类是待办：**
+
+| | 为什么 |
+|---|---|
+| `ApkInstaller` / `AppUpdateRepository` | **不是缺口。**旁加载和查 GitHub Releases 是 Android 对「新版本从哪来」的答案；这个平台的答案是 App Store，而 App 不被允许绕过它。`NoAppUpdates` 永远停在 idle，那正是 Android 上「今天没有新版本」的同一个状态 |
+| `ImageHostRepository.upload` | **是缺口。**六家图床的客户端在 `:app` 里，写的是 `OkHttpClient` 而不是 `HttpTransport`，连托盘那个进度环读的回调都是 OkHttp 的形状。但**设置那半是好的**——`DataStoreImageHostSettings` 在 `commonMain`，所以选哪家、密钥存哪、六家之间怎么切，在 iOS 上和 Android 一模一样，只有上传本身抛 `ImageHostError.Unsupported` |
+| `OfflineWorkScheduler` | **是缺口，且已排期。**D4 的 `BGTaskScheduler`。这不等于离线阅读关着：`RoomOfflineLibrary` 在前台自己抽干队列，缺的是退到后台之后继续 |
+
+没有一个是 `TODO()`。抛异常的空实现是一颗等着第一个人按下去的雷，而这些按钮背后是*没有东西*，不是坏
+掉的东西——唯一的例外是上传，它抛的是自己接口早就定义好的那个错误，因为托盘要给它一句话，静默 no-op
+会留下一行永远转着的进度。
+
+**代理整个没有。**Android 那三个 OkHttp 客户端各挂一个 `AppProxySelector`，一个设置路由全部三个。
+`NSURLSession` 收代理走 `connectionProxyDictionary`，形状不同——按 session 设一次，而 selector 是每
+个请求问一遍，为的正是改完下一个请求就生效。`proxySettings` 在 iOS 上是真的、屏幕存得进去，**但没有
+任何东西读它**。这是缺口，记在这里。
+
+#### `:shared/appleMain` 新增的六样，以及一样放错了源集
+
+| 文件 | 对应的 Android 那半 |
+|---|---|
+| `WebKitUserAgent.kt` | `WebViewUserAgent.kt`。**异步，而 Android 那半是同步的**——见下 |
+| `DeviceAcceptLanguage.apple.kt` | 同名文件。`NSLocale.preferredLanguages` 本来就是 BCP 47 列表，Android 那半还得先从 `LocaleList` 拼出来 |
+| `AppleAppVersion.kt` | `AndroidAppVersion.kt`。三个 `Info.plist` 键对应 `PackageInfo` 的三个字段，`CFBundleDisplayName` 就是主屏幕上那个名字 |
+| `NSDataBytes.kt` | 无。`NSData` ↔ `ByteArray` 的两个方向，原来在三个 Apple 源集里各有一份 |
+| `UrlSessionBytes.kt` | `OkHttpOfflineImageSource` 里那半。`HttpTransport` 只回 `String`，而图片是这个 App 里唯一既不是 HTML 也不是 JSON 的东西 |
+| `UrlSessionOfflineImageSource.kt` | `OkHttpOfflineImageSource` |
+
+**放错源集的那一样值得单记。**图片缩放（`CGImageSourceCreateThumbnailAtIndex` 那套）一开始写在
+`appleMain`，四个 iOS 编译任务全绿——**而 `appleMain` 也覆盖 `macosArm64`，那边没有 UIKit，只有
+AppKit**。抓到它的是本机那道 `:shared:macosArm64Test`，也就是步骤 2 那节写「只有 Native 编不过的写法
+CI 抓不到，本机 `macosArm64Test` 才是那道闸」时说的同一件事。文件挪进 `iosMain`（两个 iOS arch 共用的
+那层，默认 hierarchy template 自己会生成）。**`:designsys` 和 `:ui` 复现不了这个**，它们没有 macOS
+target——所以「所有模块都编过了」在这个仓库里不等于「`appleMain` 是对的」。
+
+#### 用户代理为什么必须异步，以及壳因此长成这样
+
+`WebSettings.getDefaultUserAgent(context)` 是个静态方法；WebKit 没有受支持的同步对应物——用户代理是
+一个正在跑的 web content 进程的属性，读它的办法是问一个页面。所以 `resolveWebKitUserAgent` 是
+`suspend`，`NodysseyApp.start` 收一个回调，启动屏多停那几毫秒。
+
+**不能先猜一个再改。**`cf_clearance` 是针对解出挑战的那个 UA 签发的，换一个就被拒——改正一次 UA 等于
+扔掉一张刚拿到的通行证。这条和 `resolveUserAgent` 的 KDoc 是同一个理由的两半。
+
+#### 壳必须是进程级单例，而这不是观察出来的
+
+`NodysseyApp` 第一版每次 `scene(_:willConnectTo:)` 都 new 一个 `IosAppContainer`。**那是个缺陷，与
+有没有观测到无关**：容器持有一个 Room 数据库和六个 DataStore 文件，而 DataStore 在一个进程里两个实例
+服务同一个文件时是直接抛 `IllegalStateException` 的。iPad 多窗口、或者系统真的断开重连 scene 时会踩
+到。改成进程级单例之后顺带让导航栈跨重连活下来。
+
+`UIApplicationSupportsMultipleScenes` 是 false，这才是「一个 controller 是对的数量」的前提——跨两个
+活着的 scene 复用一个 view controller 并不对。
+
+#### 跑起来之前踩到的三个，都不在 Kotlin 里
+
+**一、iOS 26 起，不采用 scene 生命周期的 App 启动即 trap。**老式的「AppDelegate 在
+`didFinishLaunchingWithOptions` 里自己造 `UIWindow`」不再只是警告：`UIKit` 在
+`_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption` 里直接 `EXC_BREAKPOINT`。症状是图标
+点下去黑一下就没了，和「App 起不来」长得一模一样。修法是 `Info.plist` 里一个
+`UIApplicationSceneManifest` 加一个 `UIWindowSceneDelegate`。
+
+**二、CMP 要求 `CADisableMinimumFrameDurationOnPhone`。**`PlistSanityCheck` 在启动时抛异常，缺这个键
+或者写成 false 都不行。它是 ProMotion 的 opt-in——不写，iOS 把 `CADisplayLink` 压在 60Hz，Compose 会
+以设备一半的帧率滚。
+
+**三、Xcode 27 里没有 `Simulator.app` 了。**它并进了
+`Xcode-beta.app/Contents/Applications/DeviceHub.app`。查「模拟器窗口怎么开」的时候值得知道。
+
+#### 图片 403：`Referer`，以及它必须在重定向时掉
+
+第一次跑起来，帖子里的测评报告图全是 403，而图床把原因印在图上：「只允许将图片嵌入网页，禁止使用直链
+下载」。这是按 `Referer` 做的防盗链。
+
+Android 侧 Coil 用的就是 `okHttpClient`，那上面挂着 `BrowserHeadersInterceptor(..., referer =
+"${NodeSeekSite.BASE_URL}/")`；iOS 侧的 `appleUrlSession` 只设了 UA 和 `Accept-Language`。补上第三个头
+就好了——**但只补一半会换来另一个 403**：`CrossOriginRefererInterceptor` 记的那个 `pic1.imgdb.cn`
+下发 `Referrer-Policy: no-referrer` 并 302 到百度 CDN，那边拒绝任何还带着 `Referer: nodeseek.com` 的
+请求。`NSURLSession` 和 OkHttp 一样，跟随重定向时把头原样带过去。
+
+所以 `appleUrlSession` 现在带一个 `NSURLSessionTaskDelegate`，在
+`willPerformHTTPRedirection` 里比对 host，跨主机就把 `Referer` 摘掉。**注意用完成回调创建的 task 照样
+会走这个代理方法**——被完成回调接管的只有数据和响应那两个。
+
+#### Coil 在这个平台上什么都没有，而「补上 fetcher」只是三分之一
+
+`coil-core` 的 iOS 变体**不带任何网络 fetcher**，装不上就是每张远程图都画成失败。可选项是加 ktor，或
+者自己实现 `coil-network-core` 的 `NetworkClient`——后者是「发一个请求、读一个 body」这么大的面，比往
+仓库里加一个 HTTP 客户端便宜，而且它走的就是 App 自己那个 session，头和 cookie 一份不差。
+
+补上之后图能出来了，于是很容易以为这件事做完了。**没有**——`NodysseyApp.kt` 在 `:app` 里给 Coil 装
+的是三样东西，另外两样是自查时对着截图发现漏的：
+
+- **`SvgDecoder`。**没上传过头像的账号，站点从 `/avatar/<uid>.png` 下发的是一张生成的卡通 **SVG**——
+  扩展名撒谎，`Content-Type` 没有。缺这个解码器，每一个这样的用户都变成首字母方块，而那正是这个壳第
+  一次跑起来的截图里的样子。（`:app` 那边还额外换了 `CompatSvgParser`，因为 AndroidSVG 缺 CSS 单位和
+  文本属性；iOS 侧的 SVG 渲染是另一套实现，没有这个问题。）
+- **`CacheControlCacheStrategy`。**Coil 的默认策略是「有缓存就给缓存，永不问服务器」。对附件是无所谓
+  的——它的 URL 随字节变；对头像是错的——`/avatar/<uid>.png` 终身不变，于是换了头像 App 里永远不变。
+  这条 `:app` 的 KDoc 早就写着，iOS 侧照抄。
+
+**还有一个「改对了但看不出来」的坑**：第一版的 `NetworkClient` 把响应头丢了（`NetworkHeaders.EMPTY`），
+磁盘缓存里那条元数据于是是 `200\n0\n0\n0\n`——没有 `Cache-Control`，没有 `ETag`。在默认策略下这不
+影响什么（它本来就不问），但换成上面那个策略之后，没有头就等于没有可校验的东西。头要整条透传。
+
+顺带记两个**没有补**的：`OfflineImageInterceptor`（离线库里的图优先于网络）和
+`ImageNetworkPolicyInterceptor`（仅 Wi-Fi 加载图片）都在 `:app`，后者读的是 Android 的网络计费状态。
+iOS 侧对应的是 `NWPathMonitor`，没做。
+
+#### 门禁
+
+`spotlessCheck`、`:app:lintDebug`、四个模块的 Android 测试、`:app:assembleDebug`、
+`:app:bundleRelease`、本机 `:shared:macosArm64Test`、`:shared:compileCommonMainKotlinMetadata`，以及
+两个 arch 的 iOS 编译，全绿。Xcode 侧是
+`xcodebuild -scheme Nodyssey -sdk iphonesimulator … build` 加 `simctl install` / `launch`。
+
+`:app` 的锁文件一行没动。变的是 `designsys` / `richtext` / `shared` / `ui` 各多一份
+`iosSimulatorArm64CompileKlibraries`，外加新的 `iosapp/gradle.lockfile`。
+
+#### 真机（模拟器）上验过的，和没验的
+
+**验过：**首页与分类切换、帖子详情、富文本与 ANSI 终端块、SVG 与 PNG 图片、头像（**包括那批生成的
+卡通 SVG 头像**——补上 `SvgDecoder` 之后从首字母方块变回图像，这是这一步里唯一一个先在截图里看出来、
+后在 `:app` 的代码里找到根据的问题）、Room 的「N 条新回复」角标、跨覆盖安装存活的主题设置、登录、
+发评论、中文输入法（软键盘不弹是模拟器抢了宿主键盘，不是 App 的事）。
+
+#### 门槛 A 在 iOS 上复验通过，而且标准比 spike 高
+
+`kmp-migration-decision.md` §4 的门槛 A 是**手动**把 cookie 从 `WKHTTPCookieStore` 读出来交给
+`URLSession`，证明「同一份 cookie 能用」。这一轮验的是同一件事的自动版加一步：
+
+1. 在 App 内置的 `WKWebView` 里真人登录 NodeSeek，Cloudflare 人机验证在这个 `WKWebView` 里解出来；
+2. `WebKitCookieBridge`（`seed` / `start` / `drain`）把 WebKit 那罐 cookie 镜像进
+   `NSHTTPCookieStorage.sharedHTTPCookieStorage`；
+3. **发出一条评论**——一次带会话的 POST，走 `NSUrlSessionTransport`。
+
+第三步是关键：spike 证明的是能*读*到登录态内容，这次是能*写*。一次成功的写意味着 `session` 和
+`cf_clearance` 都被服务端接受了，而不只是页面看起来对。
+
+**落在磁盘上的证据**（容器里 `Library/Cookies/io.github.nodyssey.binarycookies`）：
+
+```text
+A.nodeseek.com
+Awww.nodeseek.com
+cf_clearance
+pjwt
+session
+smac
+```
+
+这正是 §6 那节记的「站点实际下发 6 个 cookie」里承重的四个，落在 `NSURLSession` 读的那罐里——也就是
+D3a 建那座桥时说它该去的地方。顺带印证了同一节的怀疑：`SiteConfig.sessionCookieNames` 里的 `token`
+在这套 cookie 里根本不存在，登录判定靠的是 `session`。
+
+**一件没有跟着通过的事：**A5 记的 `x-dynamic-sign` 欠账仍然成立。`DynamicSignInterceptor` 是个 OkHttp
+interceptor，没有下沉，所以 Apple 侧调 `/api/vote/*` 预期仍是 403。评论不走那条签名，所以它能发不构成
+对投票的任何证据。
+
+**没验的：**
+
+另外几项没验：图床上传（见上，客户端还在 `:app`）、代理（iOS 侧没有实现）、后台下载调度（D4）、
+`KeychainSecretCipher`（代理密码和图床密钥都经过它，但这一轮没有走到那两个屏幕）、`IosAppCacheStore`
+的清除动作（头像那次修复没有经过它——Coil 缓存的是编码后的字节，解码器是后加的，所以旧缓存直接就能
+用），以及 `CacheControlCacheStrategy` 的回源行为（要等一次真的换头像才看得出来）。`👨‍👩‍👧` 这类 ZWJ
+序列的退格行为沿用 D3a 记的已知代价，本轮没有单独复验。
+
+---
+
 ### ✅ 步骤 2 实测：构建基础设施
 
 `:shared` 是 KMP 模块，target 三个：android、`iosArm64`、`macosArm64`。**`appleMain` 不需要自己搭**
@@ -1527,7 +1735,7 @@ Swift 只在真正的平台外壳里出现（生命周期、系统权限、后�
 
 | | 结论 | 第二阶段的用途 |
 |---|---|---|
-| A 会话链路 | macOS WKWebView cookie → `URLSession` 拿到帖子 HTML（HTTP 200，44KB） | Apple transport 有已验证路径；iOS 需复验 |
+| A 会话链路 | macOS WKWebView cookie → `URLSession` 拿到帖子 HTML（HTTP 200，44KB） | **✅ D3b 已在 iOS 上复验，且标准更高**：真人登录后 `WebKitCookieBridge` 自动镜像，App 发出一条评论——一次带会话的写，不只是读 |
 | B parser | 41 测试两端全绿，jsoup→Ksoup 纯机械替换 | 直接照搬 |
 | C Swift 互操作 | Swift Export 导出类型化 `StateFlow`/`Flow`/`suspend` | 证明边界即使上移也可行；当前不依赖 |
 

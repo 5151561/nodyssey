@@ -22,15 +22,16 @@ kotlin {
     //
     jvm()
 
-    // The Apple target, which step D1 could not have: a screen is built out of `:designsys`
-    // components, and that module declared android and jvm only, so `iosArm64` here would have been a
-    // variant that does not resolve. It declares one now — the same single Apple target, for the same
-    // reason: macOS is answered by the JVM above, iOS is not answered by anything else.
+    // The Apple targets, which step D1 could not have: a screen is built out of `:designsys`
+    // components, and that module declared android and jvm only, so an `iosArm64` here would have been
+    // a variant that does not resolve. It declares both of these now, for the same reason this module
+    // does: macOS is answered by the JVM above, iOS is not answered by anything else.
     //
-    // Compiling is all it is. There is no iOS shell to launch this from and no simulator target, so
-    // what the compiler checks is that 40,000 lines of screen name nothing Android-only — which is
-    // the half of step D3 that can be checked without an app.
+    // D3a stopped at compiling: with no shell to launch it from, what the device arch bought was a
+    // compiler checking that 40,000 lines of screen name nothing Android-only. D3b adds the simulator
+    // arch, which is the one the shell is actually run on.
     iosArm64()
+    iosSimulatorArm64()
 
     applyDefaultHierarchyTemplate {
         common {

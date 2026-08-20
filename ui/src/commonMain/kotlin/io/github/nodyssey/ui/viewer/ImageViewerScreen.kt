@@ -71,6 +71,7 @@ import io.github.nodyssey.ui.resources.viewer_load_failed
 import io.github.nodyssey.ui.resources.viewer_page
 import io.github.nodyssey.ui.resources.viewer_save
 import io.github.nodyssey.ui.resources.viewer_save_failed
+import io.github.nodyssey.ui.resources.viewer_save_no_permission
 import io.github.nodyssey.ui.resources.viewer_save_unsupported
 import io.github.nodyssey.ui.resources.viewer_saved
 import io.github.plaza.designsys.component.PlazaIcons
@@ -119,6 +120,7 @@ fun ImageViewerScreen(
             null -> null
             SaveOutcome.SAVED -> stringResource(Res.string.viewer_saved)
             SaveOutcome.UNSUPPORTED_OS -> stringResource(Res.string.viewer_save_unsupported)
+            SaveOutcome.PERMISSION_DENIED -> stringResource(Res.string.viewer_save_no_permission)
             SaveOutcome.FAILED -> stringResource(Res.string.viewer_save_failed)
         }
 

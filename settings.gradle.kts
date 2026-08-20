@@ -83,3 +83,11 @@ include(":gallery")
 // Step D1 of `docs/kmp-migration-plan.md`. What stays in `:app` is the Android shell: the activity,
 // the notification worker, the image pickers — the parts that name a platform rather than a screen.
 include(":ui")
+
+// The iOS shell: the entry point, the dependency graph, and the platform pieces that name UIKit or
+// Foundation — what `:app` is for Android, on the other platform. Step D3b of
+// `docs/kmp-migration-plan.md`.
+//
+// It holds the Xcode project as well as the Kotlin: the two are one deliverable, and a framework
+// nobody links is not a shell. Nothing depends on this module; it depends on everything.
+include(":iosapp")

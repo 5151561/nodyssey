@@ -6,8 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.UIKit.UIActivityViewController
-import platform.UIKit.UIApplication
-import platform.UIKit.UIWindowScene
 import platform.UIKit.popoverPresentationController
 
 /**
@@ -16,11 +14,7 @@ import platform.UIKit.popoverPresentationController
  * [chooserTitle] is dropped: the share sheet is titled by the system and labelling it is not
  * something the API offers. It stays in the signature because Android's chooser does take one.
  *
- * The presenting controller is found rather than injected — the topmost one on the foreground scene's
- * key window, walking past anything already presented so the sheet does not try to come up behind a
- * dialog. That walk is the part with no test: nothing has launched this yet, because iOS has no shell
- * to launch it from. It is written out rather than left a no-op so that the day a shell exists this is
- * a thing to run, not a thing to notice missing.
+ * The presenting controller comes from [topmostViewController], which every modal here shares.
  */
 @Composable
 actual fun rememberShareText(): (text: String, chooserTitle: String?) -> Unit =
@@ -36,14 +30,3 @@ actual fun rememberShareText(): (text: String, chooserTitle: String?) -> Unit =
             }
         }
     }
-
-private fun topmostViewController(): platform.UIKit.UIViewController? {
-    val scene = UIApplication.sharedApplication.connectedScenes.firstOrNull { it is UIWindowScene }
-    val window = (scene as? UIWindowScene)?.windows?.firstOrNull { window ->
-        (window as? platform.UIKit.UIWindow)?.isKeyWindow() == true
-    } as? platform.UIKit.UIWindow
-    var controller = window?.rootViewController ?: return null
-    while (true) {
-        controller = controller.presentedViewController ?: return controller
-    }
-}

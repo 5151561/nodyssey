@@ -43,3 +43,10 @@ settings-gradle.lockfile
 /ds-bundle/
 /ns-bundle/
 /.design-sync/
+
+# Xcode's per-user state inside the iOS project: window layouts, breakpoints, the last scheme someone
+# selected. The project file and the shared scheme are committed; none of this is. Build output is
+# already covered by the unanchored `build/` above — `iosapp/build/DerivedData` lives there on
+# purpose, so an Xcode build and a Gradle build put their artefacts in the same ignored place.
+iosapp/**/xcuserdata/
+iosapp/**/*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist

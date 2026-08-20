@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh_CN</string>
+	<key>CFBundleDisplayName</key>
+	<string>Nodyssey</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<!-- Read back by `readAppVersion()` in `:shared/appleMain`, which is what the 关于 screen shows. -->
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<!-- Compose Multiplatform refuses to start without this: `PlistSanityCheck` throws on launch when
+	     it is missing or false. It is the ProMotion opt-in — without it iOS caps a `CADisplayLink` at
+	     60 Hz, and a Compose app would scroll at half the rate of the device it is on. -->
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<!-- An empty dictionary is the modern launch screen: a plain window in the app's own background. -->
+	<key>UILaunchScreen</key>
+	<dict/>
+	<!-- Required since iOS 26: an app that declares no scene manifest traps at launch inside
+	     `_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`, which reads as an app that
+	     simply will not start. `SceneDelegate` in `App.swift` is what adopts it. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<!-- 个人信息 offers 拍照 as one of two avatar sources — see `AvatarPicker.ios.kt`. -->
+	<key>NSCameraUsageDescription</key>
+	<string>拍一张照片用作头像。照片只会上传到 NodeSeek，不会发往别处。</string>
+	<!-- 保存到相册 in the image viewer. Add-only: this app never reads the library — the picker it
+	     uses runs out of process precisely so that it does not. -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>把看到的图片存进相册。</string>
+</dict>
+</plist>

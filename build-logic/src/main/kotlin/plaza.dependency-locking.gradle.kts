@@ -50,6 +50,11 @@ val lockedConfigurations =
         // that the graph is decided in the repository rather than by whichever machine ran the build,
         // and a Mac is the only machine that resolves these.
         "iosArm64CompileKlibraries",
+        // The simulator arch, which step D3b added so there is something to run the iOS shell on. A
+        // second Apple target is a second graph to decide in the repository, not a duplicate of the
+        // first: it resolves the `iossimulatorarm64` artifacts, and a library missing one of those is
+        // a failure that only appears on the machine that launches the simulator.
+        "iosSimulatorArm64CompileKlibraries",
         "macosArm64CompileKlibraries",
         // …and what their tests compile against. Separate configurations from the two above, so
         // locking only those left `macosArm64Test` resolving `kotlin("test")` and everything it drags
@@ -57,6 +62,7 @@ val lockedConfigurations =
         // configurations this set names. The Android side has had both halves since the beginning
         // (`androidHostTest*` above); this is the same rule reaching the targets a Mac runs.
         "iosArm64TestCompileKlibraries",
+        "iosSimulatorArm64TestCompileKlibraries",
         "macosArm64TestCompileKlibraries",
     )
 

@@ -17,12 +17,15 @@ kotlin {
     // enough to find out whether that is still true. See `docs/kmp-migration-plan.md` §5, step B3.
     jvm()
 
-    // The Apple target, and the reason there is exactly one: macOS is already answered by the JVM
-    // above — that is the target `:gallery` runs — while iOS has no substitute at all. Device arch
-    // rather than the simulator because nothing here is launched yet; what this target buys today is
-    // a compiler that refuses `java.text.BreakIterator` in a source set claiming to be neutral. Step
-    // D3 of `docs/kmp-migration-plan.md`.
+    // The Apple targets. macOS is already answered by the JVM above — that is the target
+    // `:gallery` runs — while iOS has no substitute at all, so these two are it.
+    //
+    // D3a declared the device arch alone, because what an unlaunchable module gets from a target is a
+    // compiler that refuses `java.text.BreakIterator` in a source set claiming to be neutral, and one
+    // arch is enough for that. D3b adds the simulator: it is where the shell actually runs, and every
+    // module under it has to publish a variant for the arch the shell links against.
     iosArm64()
+    iosSimulatorArm64()
 
     // `java.net.SocketTimeoutException` and `java.text.BreakIterator` are not the Android part of
     // Android — they are the JVM part, and both targets answer for them identically. Without a

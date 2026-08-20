@@ -2,6 +2,7 @@
 
 package io.github.plaza.core.net
 
+import io.github.plaza.core.toNSData
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -14,8 +15,11 @@ import platform.Foundation.NSMutableData
 import platform.Foundation.NSMutableURLRequest
 import platform.Foundation.NSString
 import platform.Foundation.NSURL
+import platform.Foundation.NSURLRequest
 import platform.Foundation.NSURLSession
 import platform.Foundation.NSURLSessionConfiguration
+import platform.Foundation.NSURLSessionTask
+import platform.Foundation.NSURLSessionTaskDelegateProtocol
 import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.appendData
 import platform.Foundation.create
@@ -23,6 +27,7 @@ import platform.Foundation.dataTaskWithRequest
 import platform.Foundation.setHTTPBody
 import platform.Foundation.setHTTPMethod
 import platform.Foundation.setValue
+import platform.darwin.NSObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -105,24 +110,79 @@ class NSUrlSessionTransport(
  * The session this app talks to a scraped forum through.
  *
  * `defaultSessionConfiguration` rather than `ephemeral`: the shared storage persists across
- * launches, and it is the jar the D3 bridge will deposit the browser's cookies into. That is the
+ * launches, and it is the jar the WebKit bridge deposits the browser's cookies into. That is the
  * reason, and it is worth stating exactly because the tempting one — "the sign-in browser writes
  * there" — is false; see the class KDoc.
+ *
+ * The three headers are the ones `BrowserHeadersInterceptor` fills in on the OkHttp side, and each
+ * is there because leaving it out has cost this app a visible failure. The [referer] is the one that
+ * needs the delegate below: some image hosts serve *only* requests referred by the forum, and others
+ * refuse any request that still carries one after a redirect. See [ForumSessionDelegate].
+ *
+ * @param referer null for a third-party host — an API key's host has no part in the forum's browsing
+ *   session and should not be told about it. The forum's own client passes the site's base URL.
  */
 fun appleUrlSession(
     userAgent: String,
     acceptLanguage: String,
+    referer: String? = null,
     timeoutSeconds: Double = 20.0,
 ): NSURLSession {
     val configuration = NSURLSessionConfiguration.defaultSessionConfiguration
     configuration.HTTPCookieStorage = NSHTTPCookieStorage.sharedHTTPCookieStorage
     configuration.HTTPShouldSetCookies = true
     configuration.timeoutIntervalForRequest = timeoutSeconds
-    // The same two headers `BrowserHeadersInterceptor` fills in on Android, and for the same reason:
-    // a request without them is a request no browser makes, and Cloudflare scores that.
     configuration.HTTPAdditionalHeaders =
-        mapOf<Any?, Any?>("User-Agent" to userAgent, "Accept-Language" to acceptLanguage)
-    return NSURLSession.sessionWithConfiguration(configuration)
+        buildMap<Any?, Any?> {
+            put("User-Agent", userAgent)
+            put("Accept-Language", acceptLanguage)
+            if (referer != null) put("Referer", referer)
+        }
+    return NSURLSession.sessionWithConfiguration(
+        configuration,
+        delegate = ForumSessionDelegate(),
+        delegateQueue = null,
+    )
+}
+
+/**
+ * Drops `Referer` once a redirect has carried a request to another host.
+ *
+ * The Apple half of `CrossOriginRefererInterceptor`, and the same two hosts are behind it. Hotlink
+ * protection is one of them: an image host that answers a direct request with
+ * 「只允许将图片嵌入网页」 and a 403 needs the referrer on the first hop. The other is the opposite —
+ * `pic1.imgdb.cn` sends `Referrer-Policy: no-referrer` and a 302 to a Baidu CDN that refuses anything
+ * still carrying `Referer: nodeseek.com`. A browser drops it on that hop; `NSURLSession`, like OkHttp,
+ * carries it through unless told otherwise, and this is where it is told.
+ *
+ * Host, not origin: an `http` → `https` upgrade of the same host is not the situation this is about,
+ * and hotlink protection is keyed on the host anyway.
+ *
+ * A task delegate rather than anything the caller does: redirects are followed inside the session, so
+ * this is the only place a hop that the caller never asked for can be seen. It is still called when
+ * the task was created with a completion handler — only the data and response callbacks are the ones
+ * that handler takes over.
+ */
+private class ForumSessionDelegate :
+    NSObject(),
+    NSURLSessionTaskDelegateProtocol {
+    override fun URLSession(
+        session: NSURLSession,
+        task: NSURLSessionTask,
+        willPerformHTTPRedirection: NSHTTPURLResponse,
+        newRequest: NSURLRequest,
+        completionHandler: (NSURLRequest?) -> Unit,
+    ) {
+        val addressed = task.originalRequest?.URL?.host
+        val hop = newRequest.URL?.host
+        if (addressed == null || hop == null || hop == addressed) {
+            completionHandler(newRequest)
+            return
+        }
+        val stripped = newRequest.mutableCopy() as NSMutableURLRequest
+        stripped.setValue(null, forHTTPHeaderField = "Referer")
+        completionHandler(stripped)
+    }
 }
 
 /**
@@ -206,12 +266,5 @@ private fun HttpBody.toNSData(): NSData =
     }
 
 private const val MULTIPART_BOUNDARY = "----NodysseyFormBoundary7MA4YWxkTrZu0gW"
-
-private fun ByteArray.toNSData(): NSData =
-    if (isEmpty()) {
-        NSData()
-    } else {
-        usePinned { pinned -> NSData.create(bytes = pinned.addressOf(0), length = size.toULong()) }
-    }
 
 private fun NSData.decodeUtf8(): String? = NSString.create(data = this, encoding = NSUTF8StringEncoding)?.toString()

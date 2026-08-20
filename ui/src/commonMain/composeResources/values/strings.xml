@@ -859,6 +859,7 @@
     <string name="viewer_saved">已保存到相册</string>
     <string name="viewer_save_failed">保存失败，稍后再试</string>
     <string name="viewer_save_unsupported">Android 10 以下不能免权限写相册，可用「分享」发到其他应用</string>
+    <string name="viewer_save_no_permission">没有相册权限，无法保存</string>
     <string name="viewer_load_failed">图片加载失败</string>
     <string name="viewer_deferred_wifi_only">已开启「仅 Wi-Fi 加载图片」，当前不是 Wi-Fi</string>
     <string name="action_load_anyway">仍要加载</string>

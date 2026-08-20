@@ -149,6 +149,12 @@ kotlin {
     // `gradle.properties` is what keeps that a skip rather than a failure. The consequence is stated
     // there: only a Mac runs the Native compilation, so `macosArm64Test` is a local gate.
     iosArm64()
+
+    // The simulator, added by step D3b: it is what the iOS shell is launched on, and a target the
+    // shell's framework has no variant for is a link that does not resolve. Until that shell existed
+    // this would have been a klib nothing consumed — which is why D3a left it out and this step does
+    // not.
+    iosSimulatorArm64()
     macosArm64()
 
     // `java.time` is the JVM part of Android rather than the Android part of it, and both targets
@@ -305,5 +311,6 @@ dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspJvm", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
     add("kspMacosArm64", libs.androidx.room.compiler)
 }

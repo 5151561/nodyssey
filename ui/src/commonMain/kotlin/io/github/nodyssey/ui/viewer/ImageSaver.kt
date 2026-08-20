@@ -6,7 +6,19 @@ import io.github.plaza.core.AppDispatchers
 /** Why a save did not happen, so the screen can say something more useful than "失败". */
 enum class SaveOutcome {
     SAVED,
+
+    /** There is no way to write a picture here at all — see [rememberImageGallerySaver]. */
     UNSUPPORTED_OS,
+
+    /**
+     * There is, and the user has said no to it.
+     *
+     * Its own outcome rather than a [FAILED] because the two ask for opposite things: one is worth
+     * retrying and the other will give the same answer every time until a setting changes. Only
+     * platforms whose photo library costs a permission can produce it — Android's scoped storage
+     * write costs none, so the Android saver never returns this.
+     */
+    PERMISSION_DENIED,
     FAILED,
 }
 
