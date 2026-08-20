@@ -488,3 +488,40 @@ jobs:
           } > release-notes-with-ios.md
           gh release edit "$tag" --notes-file release-notes-with-ios.md
           echo "Added the iOS note to $tag."
+
+      # The channel gets the `.ipa` too, for the same reason it gets the APK: a test build nobody
+      # hears about gets no testers. Its own message rather than a second attachment on the one the
+      # release job sent, because this one needs a caption of its own — a file that cannot be
+      # installed by tapping it, sent with no explanation, reads as a broken build.
+      #
+      # Sent from this job so that it goes out only when the file exists, which is the same rule the
+      # release-notes step above follows.
+      #
+      # `--form-string` for everything that is not the file: TELEGRAM_CHAT_ID holds the channel in
+      # `@name` form, and `-F chat_id=@name` sends curl looking for a local file by that name. The
+      # optional-secret skip and the warn-rather-than-fail ending are both copied from the release
+      # job deliberately — by here the `.ipa` is already on the release, and a notification that did
+      # not go out is not worth painting the run red.
+      - name: Send the .ipa to the Telegram channel
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "::warning::TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set; skipping the iOS notification."
+            exit 0
+          fi
+          tag="${{ needs.release.outputs.tag }}"
+          caption="Nodyssey $tag · iOS 测试包
+
+          这个 .ipa 没有签名，点开装不上。要用 AltStore、Sideloadly、TrollStore 或 Xcode，拿你自己的 Apple ID 重签之后再装；免费账号签出来 7 天到期，到期要重签。
+
+          iOS 版还在迁移中，功能少于 Android 版。"
+          if curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
+            --form-string chat_id="${TELEGRAM_CHAT_ID}" \
+            -F document=@"${{ steps.ipa.outputs.path }}" \
+            --form-string caption="$caption"; then
+            echo "Sent the .ipa for $tag to the channel."
+          else
+            echo "::warning::Could not send the .ipa for $tag to the channel."
+          fi
