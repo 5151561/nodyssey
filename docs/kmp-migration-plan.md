@@ -1749,9 +1749,21 @@ release 说明里把它是什么写清楚（那段话由 `ios` job 自己追加�
 本机产物（arm64、`CODE_SIGN_IDENTITY=""`）：`.app` 56 MB，压出来的 `.ipa` 18 MB，`codesign -dv` 答
 `code object is not signed at all`，`Info.plist` 里是 `1.2.11-dev.3` / `24`，整个 archive 约 7 分钟。
 
+`ios` job 在 `v1.2.11-dev.3` 上跑通了，一次过。Android SDK 在 macOS 镜像里不预装，所以那一步多一个
+`android-actions/setup-android`；AGP 会像在 Linux 上一样自己下 `compileSdk 37`。
+
+**代价是时间，而且是这一步独占的时间**：同一个 run 里 `release` 全程 4 分钟（门禁 + 签名 APK + 清单 +
+频道），`ios` 的「Build the unsigned app」一步 **43 分 43 秒**，其余步骤加起来 13 秒。3 核 M1 的 runner、
+每个模块的 `iosArm64` 从零编译、GB 级的 Kotlin/Native 工具链现下，最后再加那段 release LTO 链接。
+
+所以之后补了两条缓存：`~/.konan`（工具链在 `GRADLE_USER_HOME` 之外，Gradle 那份缓存盖不到它，key 取版本
+目录的哈希），以及让这个 job **写**自己的 Gradle 缓存。后者看着与 release job 那条「发版不该是写缓存的那
+个」相抵，其实不是同一件事：那条规矩防的是 tag 构建污染所有 PR 读的那份，而 `setup-gradle` 的 key 里带
+runner 的操作系统，这个仓库里没有第二个在 macOS 上构建的东西——它写的那条只有它自己下一次读。压到多少要
+等下一个 dev tag 才知道。
+
 **没验的**：这个 `.ipa` 没有在任何一台真机上装过——重签需要一个 Apple 账号，这台机器上没有。到「产物是
-对的形状」为止。`ios` job 本身也还没在 GitHub 的 runner 上跑过一次（Android SDK 在 macOS 镜像里不预装，
-所以那一步多一个 `android-actions/setup-android`；AGP 会像在 Linux 上一样自己下 `compileSdk 37`）。
+对的形状」为止。
 
 ---
 

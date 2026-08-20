@@ -371,12 +371,37 @@ jobs:
       - name: Set up the Android SDK
         uses: android-actions/setup-android@v3
 
+      # The Kotlin/Native compiler and its toolchain, which live outside `GRADLE_USER_HOME` and so
+      # are not covered by the Gradle cache below. Downloading them is over a gigabyte, and it
+      # happened on every run before this step existed.
+      #
+      # Keyed on the version catalogue because that is where the Kotlin version is declared: bump
+      # Kotlin and the key changes, which is exactly when a different compiler has to be fetched.
+      # Any other dependency bump changes it too — a cache miss that costs one re-download — and the
+      # `restore-keys` fallback takes the last macOS entry in that case, into which Gradle downloads
+      # only what is actually missing.
+      - name: Cache the Kotlin/Native toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-
+
       # Pinned to v5 for the licensing reason spelled out in ci.yml.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
         with:
-          # A release must never be the thing that writes the shared cache.
-          cache-read-only: true
+          # The one place in this workflow that writes a Gradle cache, and the exception is narrower
+          # than it looks. "A release must never write the shared cache" — the rule the release job
+          # above follows — is about not letting a tag build poison what every pull request reads.
+          # This job cannot: `setup-gradle` puts the runner's OS in the cache key, and nothing else
+          # in this repository builds on macOS, so the entry it writes has exactly one reader — the
+          # next run of this job.
+          #
+          # Without it there is no reader at all. This job is a from-scratch Kotlin/Native build of
+          # every module on a 3-core runner: 44 minutes on the first one that ran, against 4 for the
+          # whole Android release beside it.
+          cache-read-only: false
 
       # `CODE_SIGNING_ALLOWED=NO` is what makes this an unsigned build rather than a failed one:
       # the Xcode project is set to automatic signing, which on a runner with no account and no
