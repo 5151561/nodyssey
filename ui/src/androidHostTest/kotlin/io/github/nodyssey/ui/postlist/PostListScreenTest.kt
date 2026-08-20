@@ -541,16 +541,29 @@ class PostListScreenTest {
 
     /**
      * The behaviour offline-first exists for: a failed refresh with rows already cached keeps the rows
-     * and does not replace the screen with an error.
+     * rather than replacing the screen with an error.
+     *
+     * It says so all the same. Keeping the content and keeping quiet are different decisions, and the
+     * second one was never made on purpose — a list that stops moving reads as a quiet forum, which is
+     * what sent a real debugging session after the network instead of after 私人 DNS.
      */
     @Test
-    fun `a refresh failure with cached rows keeps the content on screen`() {
+    fun `a refresh failure with cached rows keeps the content and still says what happened`() {
         setScreen(
             posts = listOf(feedPost(1, "cached post")),
             refresh = LoadState.Error(SiteException(SiteError.Network)),
         )
 
         composeRule.onNodeWithText("cached post").assertIsDisplayed()
+        composeRule.onNodeWithText("网络开小差了").assertIsDisplayed()
+        composeRule.onNodeWithText("重试").assertIsDisplayed()
+    }
+
+    /** Nothing to announce while the rows are current — the snackbar is a failure's, not a refresh's. */
+    @Test
+    fun `a successful refresh says nothing`() {
+        setScreen(posts = listOf(feedPost(1, "cached post")))
+
         composeRule.onNodeWithText("网络开小差了").assertDoesNotExist()
     }
 

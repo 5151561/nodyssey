@@ -46,6 +46,9 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -105,8 +108,10 @@ import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
 import io.github.nodyssey.ui.common.sharedThreadBoard
 import io.github.nodyssey.ui.common.sharedThreadTitle
+import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_create_post
+import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.action_scroll_to_top
 import io.github.nodyssey.ui.resources.action_sort
 import io.github.nodyssey.ui.resources.feed_page_size_note
@@ -317,6 +322,32 @@ fun PostListScreen(
     val appendState = posts.loadState.append
 
     /*
+     * A refresh that failed onto rows already on screen.
+     *
+     * The full-screen error below deliberately does not take this case — losing the cached feed over
+     * a failed reload is worse than keeping it. But saying nothing at all leaves the reader pulling a
+     * list that simply does not move, with no way to tell a quiet network from a quiet forum. It cost
+     * a debugging session (2026-08-20: 私人 DNS 设成主机名, that DoT server unreachable, so every
+     * refresh threw `UnknownHostException` and the screen looked merely stale).
+     *
+     * Keyed on the message: a refresh starting clears it to null, which cancels the snackbar the way
+     * a new attempt should, and the next failure re-raises it even when it says the same thing.
+     */
+    val snackbarHostState = remember { SnackbarHostState() }
+    val staleRefreshMessage =
+        (refreshState as? LoadState.Error)
+            ?.takeIf { posts.itemCount > 0 }
+            ?.error
+            ?.toSiteError()
+            ?.shortMessage()
+    val retryLabel = stringResource(Res.string.action_retry)
+    LaunchedEffect(staleRefreshMessage) {
+        val message = staleRefreshMessage ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(message = message, actionLabel = retryLabel)
+        if (result == SnackbarResult.ActionPerformed) posts.refresh()
+    }
+
+    /*
      * 首页翻页栏 — off unless 设置 asks for it, and hidden while there is only one page to be on.
      *
      * It does not replace the scroll: pages still append as the reader reaches the foot, exactly as
@@ -394,6 +425,7 @@ fun PostListScreen(
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
                 HomeTopBar(
