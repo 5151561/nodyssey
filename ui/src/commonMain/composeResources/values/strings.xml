@@ -286,23 +286,15 @@
     <string name="settings_color_source_wallpaper">动态取色</string>
     <string name="settings_color_source_wallpaper_value">跟随壁纸</string>
     <string name="settings_color_source_custom">自定义</string>
-    <string name="settings_color_source_memory_hint">三个来源各自记住上次的值：切回「自定义」直接沿用 %1$s，不用重新调色。</string>
 
     <!-- 主题 · 预设与我的主题 -->
     <string name="settings_presets">预设</string>
     <string name="settings_preset_graphite">石墨青</string>
-    <string name="settings_preset_graphite_desc">默认</string>
-    <string name="settings_preset_miku">初音未来</string>
-    <string name="settings_preset_miku_desc">青×灰×粉</string>
-    <string name="settings_preset_twins">镜音双子</string>
-    <string name="settings_preset_twins_desc">黄×橙×黑灰</string>
-    <string name="settings_preset_tianyi">洛天依</string>
-    <string name="settings_preset_tianyi_desc">蓝×白×粉</string>
-    <string name="settings_preset_reimu">博丽灵梦</string>
-    <string name="settings_preset_reimu_desc">红×白×金</string>
-    <string name="settings_preset_marisa">雾雨魔理沙</string>
-    <string name="settings_preset_marisa_desc">黑×金×紫</string>
-    <string name="settings_presets_hint">角色预设是整套手工配色，主色、次色、强调色和中性面都按角色定，不经种子色生成，和「自定义」不是一路；头像是内置的极简画像。选中角色预设时「色彩风格」不起作用。</string>
+    <string name="settings_preset_miku">青×灰×粉</string>
+    <string name="settings_preset_twins">黄×橙×黑灰</string>
+    <string name="settings_preset_tianyi">蓝×白×粉</string>
+    <string name="settings_preset_reimu">红×白×金</string>
+    <string name="settings_preset_marisa">黑×金×紫</string>
     <string name="settings_my_themes">我的主题</string>
     <string name="settings_my_themes_hint">长按已保存主题可重命名或删除</string>
     <string name="action_new">新建</string>

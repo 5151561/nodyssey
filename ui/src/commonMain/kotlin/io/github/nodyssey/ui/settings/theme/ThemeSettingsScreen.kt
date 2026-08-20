@@ -21,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -69,7 +68,6 @@ import io.github.nodyssey.ui.resources.action_new
 import io.github.nodyssey.ui.resources.action_rename
 import io.github.nodyssey.ui.resources.settings_color_source
 import io.github.nodyssey.ui.resources.settings_color_source_custom
-import io.github.nodyssey.ui.resources.settings_color_source_memory_hint
 import io.github.nodyssey.ui.resources.settings_color_source_preset
 import io.github.nodyssey.ui.resources.settings_color_source_wallpaper
 import io.github.nodyssey.ui.resources.settings_color_source_wallpaper_value
@@ -82,7 +80,6 @@ import io.github.nodyssey.ui.resources.settings_palette_style_neutral
 import io.github.nodyssey.ui.resources.settings_palette_style_soft
 import io.github.nodyssey.ui.resources.settings_palette_style_vibrant
 import io.github.nodyssey.ui.resources.settings_presets
-import io.github.nodyssey.ui.resources.settings_presets_hint
 import io.github.nodyssey.ui.resources.settings_seed_name
 import io.github.nodyssey.ui.resources.settings_theme
 import io.github.nodyssey.ui.resources.settings_theme_preview
@@ -183,12 +180,6 @@ fun ThemeSettingsScreen(
                 onOpenDynamicColor = onOpenDynamicColor,
                 onOpenSeedSheet = { sheetOpen = true },
             )
-            InfoLine(
-                stringResource(
-                    Res.string.settings_color_source_memory_hint,
-                    Color(settings.seedColor).toHexString(),
-                ),
-            )
 
             // Two rows of swatches that cannot be the answer, sitting between the tiles and the rest
             // of the screen, is most of this page's height spent on a section the reader has already
@@ -199,7 +190,6 @@ fun ThemeSettingsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     SettingsSectionTitle(stringResource(Res.string.settings_presets))
                     PresetGrid(selected = settings.presetId, onSelect = onPresetSelected)
-                    InfoLine(stringResource(Res.string.settings_presets_hint))
                 }
             }
 
@@ -413,10 +403,10 @@ private fun PresetGrid(
 }
 
 /**
- * One face, its name, and the three colours it is made of.
+ * One face and what it is made of — 青×灰×粉 rather than a hex, because a hex names one colour and
+ * none of these presets is one colour. 石墨青, the seed, is the one that goes by a name.
  *
- * The line under the name is the character's own summary — 青×灰×粉 — rather than a hex, because a
- * hex names one colour and none of these presets is one colour. 石墨青 keeps the slot and says 默认.
+ * One line, so the six cells are the same height and the grid closes up under the dots.
  */
 @Composable
 private fun PresetCell(
@@ -446,34 +436,6 @@ private fun PresetCell(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             textAlign = TextAlign.Center,
-        )
-        Text(
-            stringResource(preset.subtitle),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-/** The 说明 line j1 and j2 both put under a section: one small icon, one paragraph, no card. */
-@Composable
-private fun InfoLine(text: String) {
-    Row(
-        modifier = Modifier.padding(horizontal = Spacing.xs),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Icon(
-            Icons.Default.Info,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(15.dp).padding(top = 1.dp),
-        )
-        Text(
-            text,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
