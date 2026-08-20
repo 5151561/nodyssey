@@ -1,15 +1,23 @@
 package io.github.plaza.core.net
 
 /**
- * The one cookie store OkHttp and the sign-in browser both use.
+ * The cookie view the HTTP client and the sign-in browser share.
  *
- * An interface rather than the platform's own type because *which* store it is — Android's
- * `CookieManager`, `WKHTTPCookieStore`, a map in a test — is the only part of sharing cookies that
- * is about the platform. Everything else, and in particular reading a signed-in state off the names
- * a site issues, is about the site; that lives in [SessionCookies] and now needs no device.
+ * A *view*, not a store, and the distinction is the whole reason this is an interface rather than
+ * the platform's own type. On Android there is genuinely one store behind it — `CookieManager` is
+ * both what the WebView writes and what OkHttp reads — so the implementation is a direct handle on
+ * it. On Apple there are two jars: WebKit writes to `WKWebsiteDataStore.httpCookieStore` and
+ * `NSURLSession` reads `NSHTTPCookieStorage`, and nothing syncs them on its own. The
+ * implementation there is therefore the `NSHTTPCookieStorage` side, kept in step with WebKit by the
+ * bridge step D3 owns — see `NSUrlSessionTransport`. A test implements this with a map.
  *
- * The whole interface speaks in raw header strings for the same reason: `Set-Cookie` is what every
- * one of those stores already takes and returns, so nothing has to be parsed to cross this line.
+ * What is *not* about the platform, in any of those three, is reading a signed-in state off the
+ * names a site issues; that lives in [SessionCookies] and needs no device.
+ *
+ * The interface speaks in raw header strings, and is synchronous. Both are affordable only because
+ * every implementation is something that can answer immediately: `WKHTTPCookieStore.getAllCookies`
+ * answers on a callback and so must never sit directly behind [cookieHeader] — the mirror is what
+ * makes this signature honest, not an implementation detail of it.
  */
 interface SessionCookieStore {
     /**

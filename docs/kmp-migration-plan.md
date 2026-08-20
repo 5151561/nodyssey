@@ -380,7 +380,7 @@ Compose
 | ✅ **B4** | B | `:app` 的 `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group。`:designsys` 那半已在 B3 完成。不是纯改名——见下 | B3 |
 | ✅ **A6** | A | Room + DataStore。手写 migration 是 **10 个**不是 7 个——见下 | A5 |
 | ✅ **A7** | A | Repository 全部下沉。**「拆 `:app` 的 `data/`」：74 个文件剩 16 个**——见下 | A6 |
-| **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」）。**外加还 A5–A7 的两笔债**——见下 | A7 + B4 |
+| **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」）。**外加还 A5–A7 的两笔债，两笔都是硬验收项**——见下 | A7 + B4 |
 | **D2** | D | 1,059 条 strings + 16 个 res xml + 9 个 drawable → Compose Resources | D1 |
 | **D3** | D | iOS：门槛 A 复验 + WKWebView 桥（`WKHTTPCookieStore` ↔ `NSHTTPCookieStorage` 双向 + observer，A5 只交付了 `URLSession` 那侧）+ 生命周期 + IME | D1 |
 | **D4** | D | WorkManager → `BGTaskScheduler`（5 个文件） | A7 |
@@ -1031,7 +1031,7 @@ API，而它们本来是实现细节——分页窗口大小、一个请求体�
 顺带：`SiteBootstrap`、`PostSourceParser` 两个 `internal object` 变 public 是同一类事（B2 记的），
 它们的调用方在 `:app`，同样跟着 D1 回收。
 
-#### 二、`:designsys → :shared` 现在拖着整个数据层，还款点没定
+#### 二、`:designsys → :shared` 现在拖着整个数据层，还款点是 D1 的一个二选一
 
 `:designsys` 需要 `:shared` 的只有 RichNode 那棵树和几个 parser。它拿到的是今天的 `:shared`：
 网络层、Room、Paging、DataStore、站点业务，全部。`:gallery` 也跟着解析一整套数据库依赖——一个
@@ -1042,8 +1042,13 @@ API，而它们本来是实现细节——分页窗口大小、一个请求体�
 `:gallery` 依赖那一层。
 
 **没有现在做，理由是排序**：这一刀切在哪里取决于 D1 之后 `ui/` 需要什么，现在切等于猜。
-但它也不该无限期拖着——**D1 收尾时重新评估一次**，那时两边需要什么都是已知的。届时如果
-`:designsys` 仍然只用到 RichNode 那棵树，就切。
+
+但「D1 时重新评估」不是还款点——**重新评估最容易的结果就是无限期展期**。所以钉成一个二选一，
+列为 D1 的验收项：
+
+> D1 收尾时，要么把 model + richtext + parser 切成独立模块、`:designsys` 与 `:gallery` 改依赖
+> 那一层，**要么在本文档里写下不拆的具体依据**——`ui/` 实际用到了 `:shared` 的哪些部分、因此
+> 这一刀切不出来。两者必居其一，D1 的 PR 里两样都没有就是没做完。
 
 ---
 
