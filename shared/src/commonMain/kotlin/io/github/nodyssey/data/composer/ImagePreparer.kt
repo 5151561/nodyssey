@@ -14,7 +14,7 @@ fun interface ImagePreparer {
 }
 
 /** `IMG_0421.HEIC` → `IMG_0421.webp`; a name with no extension just gains one. */
-internal fun String.withExtension(extension: String): String {
+fun String.withExtension(extension: String): String {
     val base = substringBeforeLast('.', missingDelimiterValue = this).ifBlank { "image" }
     return "$base.$extension"
 }

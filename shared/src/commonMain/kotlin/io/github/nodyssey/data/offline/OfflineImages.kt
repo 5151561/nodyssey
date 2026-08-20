@@ -15,7 +15,7 @@ import io.github.plaza.core.richtext.RichNode
  *
  * Stickers count too — they are the site's own emoji and a body written in them is empty without.
  */
-internal fun PostContent.imageUrls(): Set<String> {
+fun PostContent.imageUrls(): Set<String> {
     val urls = LinkedHashSet<String>()
     avatarUrl?.let(urls::add)
     nodes.forEach { it.collectImageUrls(urls) }

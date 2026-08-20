@@ -92,9 +92,13 @@ fun RulingRoute(
         onScrollHandled = viewModel::onScrollHandled,
         onRetry = viewModel::retry,
         onRecordClick = { record ->
+            // Locals for the same reason as in `AssetsScreen`: these are `val`s in another module,
+            // so the null check does not narrow the type at the use site.
+            val postId = record.postId
+            val targetUid = record.targetUid
             when {
-                record.postId != null -> onPostClick(record.postId, record.floor)
-                record.targetUid != null -> onUserClick(record.targetUid)
+                postId != null -> onPostClick(postId, record.floor)
+                targetUid != null -> onUserClick(targetUid)
             }
         },
         // The page the user is on, not the top of the log: a decision they are looking at is on page

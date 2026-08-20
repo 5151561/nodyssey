@@ -7,7 +7,6 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
-import androidx.room.withTransaction
 import io.github.nodyssey.data.local.CacheSessionEntity
 import io.github.nodyssey.data.local.CommentEntity
 import io.github.nodyssey.data.local.FeedPostRow
@@ -17,6 +16,7 @@ import io.github.nodyssey.data.local.ReadMarkEntity
 import io.github.nodyssey.data.local.ReadingPositionEntity
 import io.github.nodyssey.data.local.toSnapshot
 import io.github.nodyssey.data.local.toSummary
+import io.github.nodyssey.data.local.writeTransaction
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostDetail
@@ -86,7 +86,7 @@ data class ReadHistoryEntry(
  * draw its empty state instead, and what stops `asSnapshot` in tests waiting for a page that is
  * never coming.
  */
-internal fun emptyLoadedPagingData(): PagingData<FeedPost> =
+fun emptyLoadedPagingData(): PagingData<FeedPost> =
     PagingData.empty(
         LoadStates(
             refresh = LoadState.NotLoading(endOfPaginationReached = true),
@@ -416,7 +416,7 @@ class OfflineFirstPostRepository(
             // nothing to sweep, and doing it here rather than at submit time keeps it on the
             // mediator's dispatcher, inside the load that is about to write the replacement.
             if (page == FeedRemoteMediator.FIRST_PAGE) {
-                database.withTransaction {
+                database.writeTransaction {
                     database.feedDao().clearOtherSearchFeeds(SEARCH_FEED_KEY_PREFIX, feedKey)
                     database.feedDao().clearOtherSearchRemoteKeys(SEARCH_FEED_KEY_PREFIX, feedKey)
                 }
@@ -467,7 +467,7 @@ class OfflineFirstPostRepository(
     }
 
     override suspend fun clearSessionData() {
-        database.withTransaction {
+        database.writeTransaction {
             clearPostData()
             database.cacheSessionDao().upsert(
                 CacheSessionEntity(authenticated = false, fingerprint = 0),
@@ -479,7 +479,7 @@ class OfflineFirstPostRepository(
         isSignedIn: Boolean,
         fingerprint: Int,
     ) {
-        database.withTransaction {
+        database.writeTransaction {
             clearPostData()
             database.cacheSessionDao().upsert(
                 CacheSessionEntity(
@@ -494,7 +494,7 @@ class OfflineFirstPostRepository(
         isSignedIn: Boolean,
         fingerprint: Int,
     ): Boolean =
-        database.withTransaction {
+        database.writeTransaction {
             val previous = database.cacheSessionDao().find()
             val mustClear =
                 previous?.authenticated == true &&
@@ -820,7 +820,7 @@ class OfflineFirstPostRepository(
          * price is a placeholder row for anything outside the window, which at this prefetch distance
          * is rarely on screen.
          */
-        internal val FEED_PAGING_CONFIG =
+        val FEED_PAGING_CONFIG =
             PagingConfig(
                 pageSize = NETWORK_PAGE_SIZE,
                 // Matches the old hand-rolled "load when eight rows from the end" heuristic.

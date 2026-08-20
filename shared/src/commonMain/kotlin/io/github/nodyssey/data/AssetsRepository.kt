@@ -14,11 +14,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+import kotlin.time.Instant
 
 /**
  * A daily allowance, as `/progress` shows it: how much of today's cap has been earned.
@@ -381,8 +382,9 @@ class NetworkAssetsRepository(
  * reader's zone — see [CreditEntry].
  */
 private fun CreditEntry.dateInNodeSeekZone(): LocalDate? =
-    createdAtMillis?.let { Instant.ofEpochMilli(it).atZone(NODESEEK_ZONE).toLocalDate() }
+    createdAtMillis?.let { it.toDate() }
 
-private fun Long.toDate(): LocalDate = Instant.ofEpochMilli(this).atZone(NODESEEK_ZONE).toLocalDate()
+private fun Long.toDate(): LocalDate =
+    Instant.fromEpochMilliseconds(this).toLocalDateTime(NODESEEK_ZONE).date
 
-private val NODESEEK_ZONE: ZoneId = ZoneId.of("Asia/Shanghai")
+private val NODESEEK_ZONE: TimeZone = TimeZone.of("Asia/Shanghai")

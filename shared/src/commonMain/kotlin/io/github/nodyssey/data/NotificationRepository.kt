@@ -186,7 +186,10 @@ class NotificationRepository(
 }
 
 /** `{"atMe":[1,2]}` / `{"replys":[…]}` / `{"messages":[…]}` — numbers, as the site sends them. */
-internal fun markViewedBody(
+// Public rather than `internal` only because the test that pins it is still in `:app`: the
+// fakes it shares with the ViewModel tests are one file, and two copies of a fake drift. Step
+// D1 brings `ui/` down here and the whole test tree with it.
+fun markViewedBody(
     category: NotificationCategory,
     ids: List<Long>,
 ): String =

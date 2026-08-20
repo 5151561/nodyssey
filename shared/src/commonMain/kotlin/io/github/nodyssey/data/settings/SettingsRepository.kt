@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.IOException
+import okio.IOException
 
 /**
  * The single source of truth for user settings.

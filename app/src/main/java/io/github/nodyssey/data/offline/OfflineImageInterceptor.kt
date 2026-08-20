@@ -16,7 +16,7 @@ import coil3.request.ImageResult
  * halve the cache for every image in a stored thread.
  */
 class OfflineImageInterceptor(
-    private val files: OfflineFileStore,
+    private val files: AndroidOfflineFileStore,
 ) : Interceptor {
     override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
         val url = chain.request.data.toString()

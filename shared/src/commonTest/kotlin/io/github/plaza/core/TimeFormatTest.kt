@@ -1,12 +1,12 @@
 package io.github.plaza.core
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
-import java.time.ZoneId
+import kotlinx.datetime.TimeZone
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class TimeFormatTest {
-    private val zone = ZoneId.of("Asia/Shanghai")
+    private val zone = TimeZone.of("Asia/Shanghai")
 
     /** 10:22 +08:00 — the wall clock every board draws in its status bar. Elapsed time floors. */
     private val now = TimeFormat.parseTimestamp("2026-07-26 10:22:03", zone)!!

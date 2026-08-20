@@ -11,7 +11,7 @@ import io.github.nodyssey.data.security.SecretCipher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import java.io.IOException
+import okio.IOException
 
 /**
  * Carries a pre-existing NodeImage key into the multi-host store, once.
@@ -20,7 +20,7 @@ import java.io.IOException
  * that ignored it would silently disconnect everybody who had already set the app up, and the first
  * they would hear of it is a failed attachment halfway through writing a post.
  */
-internal class LegacyNodeImageKeyMigration(
+class LegacyNodeImageKeyMigration(
     /** Reads the old store. A parameter so this can be exercised without a DataStore at all. */
     private val readLegacyKey: suspend () -> String?,
 ) : DataMigration<Preferences> {
@@ -49,9 +49,12 @@ internal class LegacyNodeImageKeyMigration(
  * Named here rather than at the store that still holds it, because [LegacyNodeImageKeyMigration] is
  * the only reader left and this is the file that says why the read happens at all.
  */
-internal val LEGACY_NODE_IMAGE_KEY = stringPreferencesKey("api-key")
+val LEGACY_NODE_IMAGE_KEY = stringPreferencesKey("api-key")
 
-internal object ImageHostKeys {
+// Public rather than `internal` only because the test that pins it is still in `:app`: the
+// fakes it shares with the ViewModel tests are one file, and two copies of a fake drift. Step
+// D1 brings `ui/` down here and the whole test tree with it.
+object ImageHostKeys {
     val SELECTED = stringPreferencesKey("selected")
 
     fun token(provider: ImageHostProvider) = stringPreferencesKey("${provider.id}.token")
@@ -74,7 +77,7 @@ internal object ImageHostKeys {
  * already treats them as a credential: a custom host's secret goes either in the header value or in a
  * `token=…` line among these, which is why 断开 clears both.
  */
-internal object ImageHostSecretKeys {
+object ImageHostSecretKeys {
     val all: List<Preferences.Key<String>> =
         ImageHostProvider.entries.map(ImageHostKeys::token) +
             listOf(ImageHostKeys.CUSTOM_HEADER_VALUE, ImageHostKeys.CUSTOM_FORM_FIELDS)
@@ -89,7 +92,7 @@ internal object ImageHostSecretKeys {
  * user next happens to open 图床设置 and press 保存. For most people that day never comes, and the
  * backup would keep copying the token off the device until it did.
  */
-internal class ImageHostSecretEncryptionMigration(private val cipher: SecretCipher) : DataMigration<Preferences> {
+class ImageHostSecretEncryptionMigration(private val cipher: SecretCipher) : DataMigration<Preferences> {
     override suspend fun shouldMigrate(currentData: Preferences): Boolean =
         ImageHostSecretKeys.all.any { currentData[it].orEmpty().isPlaintextSecret() }
 

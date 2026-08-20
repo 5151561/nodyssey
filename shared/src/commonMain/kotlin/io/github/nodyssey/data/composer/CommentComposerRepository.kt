@@ -8,6 +8,9 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.Selectors
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.HttpBody
+import io.github.plaza.core.net.HttpRequest
+import io.github.plaza.core.net.HttpTransport
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import io.github.plaza.core.runCatchingExceptCancellation
@@ -20,12 +23,8 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * An unsent reply.
@@ -88,7 +87,7 @@ interface CommentComposerRepository {
  */
 class DefaultCommentComposerRepository(
     private val dataStore: DataStore<Preferences>,
-    private val okHttpClient: OkHttpClient,
+    private val transport: HttpTransport,
     private val dispatchers: AppDispatchers,
     private val clock: AppClock,
     /** Keeps the feed from announcing this account's own accepted reply as new. */
@@ -120,31 +119,22 @@ class DefaultCommentComposerRepository(
                 postId = submission.postId,
             ),
         )
-        val request = requestTo(NodeSeekSite.NEW_COMMENT_API_PATH, submission.postId, payload)
-
-        val response = try {
-            okHttpClient.newCall(request).execute()
-        } catch (error: IOException) {
-            throw SiteException(SiteError.Network, error)
+        val response = transport.execute(requestTo(NodeSeekSite.NEW_COMMENT_API_PATH, submission.postId, payload))
+        throwIfChallenge(response.header("cf-mitigated"), response.body)
+        if (response.code == 401 || response.code == 403) {
+            throw SiteException(SiteError.LoginRequired)
         }
-        response.use {
-            val body = it.body.string()
-            throwIfChallenge(it.header("cf-mitigated"), body)
-            if (it.code == 401 || it.code == 403) {
-                throw SiteException(SiteError.LoginRequired)
-            }
-            if (!it.isSuccessful) {
-                throw SiteException(
-                    error = SiteError.Http(it.code),
-                    detail = parseMessage(body),
-                )
-            }
-            val floor = parsePublishResponse(body)
-            // The server has already accepted the reply. Local bookkeeping must not turn that into
-            // a reported publish failure and invite a duplicate retry if Room ever refuses a write.
-            runCatchingExceptCancellation { onReplyPublished(submission.postId) }
-            floor
+        if (!response.isSuccessful) {
+            throw SiteException(
+                error = SiteError.Http(response.code),
+                detail = parseMessage(response.body),
+            )
         }
+        val floor = parsePublishResponse(response.body)
+        // The server has already accepted the reply. Local bookkeeping must not turn that into
+        // a reported publish failure and invite a duplicate retry if Room ever refuses a write.
+        runCatchingExceptCancellation { onReplyPublished(submission.postId) }
+        floor
     }
 
     override suspend fun edit(postId: Long, commentId: Long, body: String): Unit = withContext(dispatchers.io) {
@@ -155,32 +145,23 @@ class DefaultCommentComposerRepository(
                 commentId = commentId,
             ),
         )
-        val request = requestTo(NodeSeekSite.EDIT_COMMENT_API_PATH, postId, payload)
-
-        val response = try {
-            okHttpClient.newCall(request).execute()
-        } catch (error: IOException) {
-            throw SiteException(SiteError.Network, error)
+        val response = transport.execute(requestTo(NodeSeekSite.EDIT_COMMENT_API_PATH, postId, payload))
+        throwIfChallenge(response.header("cf-mitigated"), response.body)
+        if (response.code == 401 || response.code == 403) {
+            throw SiteException(SiteError.LoginRequired)
         }
-        response.use {
-            val body = it.body.string()
-            throwIfChallenge(it.header("cf-mitigated"), body)
-            if (it.code == 401 || it.code == 403) {
-                throw SiteException(SiteError.LoginRequired)
-            }
-            if (!it.isSuccessful) {
-                throw SiteException(error = SiteError.Http(it.code), detail = parseMessage(body))
-            }
-            // Same reason [parsePublishResponse] re-reads a 200: a refusal the board makes rather
-            // than the router arrives as `success:false` with the sentence to show.
-            val root = runCatching { json.parseToJsonElement(body).jsonObject }
-                .getOrElse { throw SiteException(SiteError.Unparsable, it) }
-            if (root["success"]?.jsonPrimitive?.booleanOrNull != true) {
-                throw SiteException(
-                    error = SiteError.Unknown,
-                    detail = root["message"]?.jsonPrimitive?.contentOrNull,
-                )
-            }
+        if (!response.isSuccessful) {
+            throw SiteException(error = SiteError.Http(response.code), detail = parseMessage(response.body))
+        }
+        // Same reason [parsePublishResponse] re-reads a 200: a refusal the board makes rather
+        // than the router arrives as `success:false` with the sentence to show.
+        val root = runCatching { json.parseToJsonElement(response.body).jsonObject }
+            .getOrElse { throw SiteException(SiteError.Unparsable, it) }
+        if (root["success"]?.jsonPrimitive?.booleanOrNull != true) {
+            throw SiteException(
+                error = SiteError.Unknown,
+                detail = root["message"]?.jsonPrimitive?.contentOrNull,
+            )
         }
     }
 
@@ -190,16 +171,20 @@ class DefaultCommentComposerRepository(
      * `Csrf-Token` is present rather than correct: the server checks that a value arrived, and the
      * site's own editor sends a fresh random one per page load without ever echoing a cookie back.
      */
-    private fun requestTo(path: String, postId: Long, payload: String): Request =
-        Request.Builder()
-            .url(NodeSeekSite.absoluteUrl(path) ?: error("Invalid comment path"))
-            .header("Accept", "application/json, text/plain, */*")
-            .header("X-Requested-With", "XMLHttpRequest")
-            .header("Csrf-Token", UUID.randomUUID().toString().replace("-", "").take(CSRF_TOKEN_LENGTH))
-            .header("Origin", NodeSeekSite.BASE_URL)
-            .header("Referer", NodeSeekSite.BASE_URL + NodeSeekSite.postPath(postId))
-            .post(payload.toRequestBody(JSON_MEDIA_TYPE))
-            .build()
+    private fun requestTo(path: String, postId: Long, payload: String): HttpRequest =
+        HttpRequest(
+            url = NodeSeekSite.absoluteUrl(path) ?: error("Invalid comment path"),
+            method = "POST",
+            headers =
+            mapOf(
+                "Accept" to "application/json, text/plain, */*",
+                "X-Requested-With" to "XMLHttpRequest",
+                "Csrf-Token" to Uuid.random().toString().replace("-", "").take(CSRF_TOKEN_LENGTH),
+                "Origin" to NodeSeekSite.BASE_URL,
+                "Referer" to NodeSeekSite.BASE_URL + NodeSeekSite.postPath(postId),
+            ),
+            body = HttpBody.Text(payload),
+        )
 
     /**
      * Cloudflare answers a blocked write with 403 plus challenge HTML, so this runs before any
@@ -255,7 +240,6 @@ class DefaultCommentComposerRepository(
     private fun key(postId: Long) = stringPreferencesKey("draft-$postId")
 
     private companion object {
-        val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         const val CSRF_TOKEN_LENGTH = 16
         const val MAX_ERROR_DETAIL_LENGTH = 200
     }

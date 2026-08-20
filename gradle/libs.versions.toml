@@ -42,6 +42,10 @@ jsoup = "1.22.2"
 ksoup = "0.2.6"
 coil = "3.5.0"
 kotlinxSerialization = "1.11.0"
+# Calendar arithmetic in `commonMain`. `java.time` is what this repository used and it is not
+# common; the stdlib has an instant but no time zone and no civil date, and one of the two things
+# a forum needs from a calendar is "which day was this, in the site's zone".
+kotlinxDatetime = "0.8.0"
 # Google's material-color-utilities, ported to multiplatform Kotlin (MIT). Only the algorithm half —
 # no Compose dependency of its own, so it adds a seed-to-scheme function and nothing else.
 materialColorUtilities = "5.0.0"
@@ -99,6 +103,7 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 # against this; `:app` keeps jsoup for the HTML it still handles on the Android side.
 ksoup = { module = "com.fleeksoft.ksoup:ksoup", version.ref = "ksoup" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 material-color-utilities = { module = "com.materialkolor:material-color-utilities", version.ref = "materialColorUtilities" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidxDatastore" }
 androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "androidxWork" }

@@ -30,10 +30,11 @@ carry cookies obtained from a WebView.
 Three Gradle modules:
 
 ```text
-:app        NodeSeek itself — repositories, Room persistence, Compose screens
-:shared     the domain model, the parsers, the network layer and the Room schema, as Kotlin
-            Multiplatform: Android, the desktop JVM, iOS and macOS. What a site knows about
-            itself arrives as `SiteConfig`, not as a constant in here
+:app        NodeSeek itself — Compose screens, view models, and the Android shells
+:shared     everything below the screens — the domain model, the parsers, the network layer,
+            the Room schema and the repositories — as Kotlin Multiplatform: Android, the
+            desktop JVM, iOS and macOS. What a site knows about itself arrives as
+            `SiteConfig`, not as a constant in here
 :designsys  theme, components and the rich-text renderer, with no knowledge of any forum
 ```
 
@@ -70,6 +71,7 @@ shared/src/commonMain/kotlin/          the half that does not know what it is ru
 │   │   └── report/                  NodeQuality report parsing
 │   ├── model/                       the domain types
 │   ├── core/net/                    the JSON client, written against `HttpTransport`
+│   ├── data/                        every repository, and the offline download engine
 │   └── data/local/                  Room: the schema, the DAOs and every migration
 └── io/github/plaza/core/
     ├── net/                         `SiteConfig`, `SiteError`, `WebUrl`, `HttpTransport`,
@@ -91,8 +93,8 @@ app/src/main/java/io/github/nodyssey/
 │   ├── NodeImageSite.kt         nodeimage.com's own vocabulary (off-site, user API key)
 │   ├── LuckyDraw.kt             the 抽奖 vocabulary, still on `java.time`
 │   └── net/                     vote request signing and the proxy routing OkHttp is given
-├── data/                        repositories, DataStore and composers
-│   └── update/                  GitHub release lookup, APK download and install
+├── data/                        what a repository needs a platform for: the offline
+│                                files, WorkManager, Coil's caches, six upload protocols
 ├── platform/                    the Android shells behind `data`'s interfaces
 ├── di/                          `AppContainer`: constructor injection, no global singletons
 ├── notifications/               WorkManager polling and Android notifications

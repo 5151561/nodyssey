@@ -1,5 +1,6 @@
 package io.github.nodyssey.data
 
+import com.fleeksoft.ksoup.Ksoup
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonSource
 import io.github.nodyssey.core.net.NodeSeekJsonClient
@@ -9,7 +10,6 @@ import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import org.jsoup.Jsoup
 
 /** A thread as it appears in a space tab: the user's own topics, or a row of their collections. */
 data class SpacePost(
@@ -171,7 +171,7 @@ private fun JsonObject.toSpaceComment(): SpaceComment? {
         postTitle = text("post_title", "title", "subject"),
         // Comments come back as the site's rendered markup. Rendering it properly is the detail
         // screen's job; here it has to fit one line, so it is flattened to text.
-        excerpt = Jsoup.parse(raw).text().trim().take(COMMENT_EXCERPT_LENGTH),
+        excerpt = Ksoup.parse(raw).text().trim().take(COMMENT_EXCERPT_LENGTH),
         createdAtText = text("created_at_str", "created_at", "createdAt", "time", "date"),
         floor = long("floor_id", "floorId", "floor")?.let { "#$it" },
     )

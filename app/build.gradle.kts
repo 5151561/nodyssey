@@ -160,10 +160,6 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
 
-    // NodeSeek has no public API for lists/details, so pages are scraped. The parsers themselves have
-    // moved to `:shared` and are written against Ksoup; jsoup stays here because this module is still
-    // what turns a response body into the `Document` it hands them.
-    implementation(libs.jsoup)
     implementation(libs.kotlinx.serialization.json)
 
     // Settings SSOT

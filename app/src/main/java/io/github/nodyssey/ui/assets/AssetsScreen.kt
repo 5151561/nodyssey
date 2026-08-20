@@ -411,12 +411,17 @@ private fun QuotaRow(
 }
 
 @Composable
-private fun DailyQuota.label(): String =
-    when {
+private fun DailyQuota.label(): String {
+    // Read into locals first: `used` and `total` are `val`s in another module, where the compiler
+    // will not smart-cast a null check into the branch that uses them.
+    val used = used
+    val total = total
+    return when {
         used != null && total != null -> stringResource(R.string.assets_quota_value, used, total)
         total != null -> stringResource(R.string.assets_quota_value_unknown, total)
         else -> UNKNOWN
     }
+}
 
 private fun DailyQuota.progress(): Float? {
     val cap = total?.takeIf { it > 0 } ?: return null

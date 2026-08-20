@@ -4,6 +4,7 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.testPreferenceStore
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.OkHttpTransport
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -165,7 +166,7 @@ class CommentComposerRepositoryTest {
         StandardTestDispatcher(testScheduler).let { dispatcher ->
             DefaultCommentComposerRepository(
                 dataStore = testPreferenceStore(backgroundScope, "comment-composer"),
-                okHttpClient = OkHttpClient.Builder().addInterceptor(interceptor).build(),
+                transport = OkHttpTransport(OkHttpClient.Builder().addInterceptor(interceptor).build()),
                 dispatchers = AppDispatchers(dispatcher, dispatcher),
                 clock = AppClock { 0L },
                 onReplyPublished = onReplyPublished,

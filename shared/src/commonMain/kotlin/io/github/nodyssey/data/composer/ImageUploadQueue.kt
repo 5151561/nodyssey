@@ -12,7 +12,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /** An image the picker handed back, before the queue has given it an identity. */
 data class PickedImage(val source: String, val name: String)
@@ -32,7 +33,7 @@ data class PickedImage(val source: String, val name: String)
 class ImageUploadQueue(
     private val scope: CoroutineScope,
     private val uploader: ImageUploader,
-    private val newId: () -> String = { UUID.randomUUID().toString() },
+    private val newId: () -> String = { Uuid.random().toString() },
 ) {
     private val _attachments = MutableStateFlow<List<ImageAttachment>>(emptyList())
     val attachments: StateFlow<List<ImageAttachment>> = _attachments.asStateFlow()

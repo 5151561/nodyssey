@@ -10,6 +10,9 @@ import io.github.nodyssey.core.html.Selectors
 import io.github.nodyssey.model.FeedSort
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.HttpBody
+import io.github.plaza.core.net.HttpRequest
+import io.github.plaza.core.net.HttpTransport
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import io.github.plaza.core.runCatchingExceptCancellation
@@ -30,12 +33,8 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /** User-authored draft and publish contract for the native post editor. */
 @Serializable
@@ -148,7 +147,7 @@ interface PostComposerRepository {
 
 class DefaultPostComposerRepository(
     private val dataStore: DataStore<Preferences>,
-    private val okHttpClient: OkHttpClient,
+    private val transport: HttpTransport,
     private val dispatchers: AppDispatchers,
     private val clock: AppClock,
 ) : PostComposerRepository {
@@ -180,43 +179,41 @@ class DefaultPostComposerRepository(
                 mode = "new-discussion",
             ),
         )
-        val request = Request.Builder()
-            .url(NodeSeekSite.absoluteUrl(NodeSeekSite.NEW_DISCUSSION_API_PATH) ?: error("Invalid publish path"))
-            .header("Accept", "application/json")
-            .header("Content-Type", "application/json")
-            .header("X-Requested-With", "XMLHttpRequest")
-            .header("Csrf-Token", UUID.randomUUID().toString().replace("-", "").take(16))
-            .header("Origin", NodeSeekSite.BASE_URL)
-            .header("Referer", NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH)
-            .post(payload.toRequestBody(JSON_MEDIA_TYPE))
-            .build()
-
-        val response = try {
-            okHttpClient.newCall(request).execute()
-        } catch (error: IOException) {
-            throw SiteException(SiteError.Network, error)
+        val response =
+            transport.execute(
+                HttpRequest(
+                    url = NodeSeekSite.absoluteUrl(NodeSeekSite.NEW_DISCUSSION_API_PATH) ?: error("Invalid publish path"),
+                    method = "POST",
+                    headers =
+                    mapOf(
+                        "Accept" to "application/json",
+                        "X-Requested-With" to "XMLHttpRequest",
+                        "Csrf-Token" to Uuid.random().toString().replace("-", "").take(16),
+                        "Origin" to NodeSeekSite.BASE_URL,
+                        "Referer" to NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH,
+                    ),
+                    body = HttpBody.Text(payload),
+                ),
+            )
+        val body = response.body
+        // Cloudflare answers a blocked request with 403 plus challenge HTML, so the challenge
+        // check must run before the status check — "please verify" and "please sign in" send the
+        // user down entirely different recovery paths.
+        val isChallenge =
+            response.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
+                Selectors.CLOUDFLARE_MARKERS.any(body::contains)
+        if (isChallenge) throw SiteException(SiteError.Cloudflare)
+        if (response.code == 401 || response.code == 403) {
+            throw SiteException(SiteError.LoginRequired)
         }
-        response.use {
-            val body = it.body.string()
-            // Cloudflare answers a blocked request with 403 plus challenge HTML, so the challenge
-            // check must run before the status check — "please verify" and "please sign in" send the
-            // user down entirely different recovery paths.
-            val isChallenge =
-                it.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
-                    Selectors.CLOUDFLARE_MARKERS.any(body::contains)
-            if (isChallenge) throw SiteException(SiteError.Cloudflare)
-            if (it.code == 401 || it.code == 403) {
-                throw SiteException(SiteError.LoginRequired)
-            }
-            if (!it.isSuccessful) {
-                throw SiteException(
-                    error = SiteError.Http(it.code),
-                    detail = parseErrorDetail(body),
-                )
-            }
-            if (body.trimStart().startsWith("<")) throw SiteException(SiteError.Cloudflare)
-            parsePublishResponse(body, it.header("Location")) ?: findPublishedPostId(submission)
+        if (!response.isSuccessful) {
+            throw SiteException(
+                error = SiteError.Http(response.code),
+                detail = parseErrorDetail(body),
+            )
         }
+        if (body.trimStart().startsWith("<")) throw SiteException(SiteError.Cloudflare)
+        parsePublishResponse(body, response.header("Location")) ?: findPublishedPostId(submission)
     }
 
     override suspend fun edit(submission: PostEditSubmission): Unit = withContext(dispatchers.io) {
@@ -230,41 +227,39 @@ class DefaultPostComposerRepository(
             ),
         )
         val postUrl = NodeSeekSite.BASE_URL + NodeSeekSite.postPath(submission.postId)
-        val request = Request.Builder()
-            .url(
-                NodeSeekSite.absoluteUrl(NodeSeekSite.EDIT_DISCUSSION_API_PATH)
-                    ?: error("Invalid edit path"),
-            ).header("Accept", "application/json, text/plain, */*")
-            .header("Content-Type", "application/json")
-            .header("X-Requested-With", "XMLHttpRequest")
-            // Presence is what the server checks; see the comment on the same header in
-            // `DefaultCommentComposerRepository`.
-            .header("Csrf-Token", UUID.randomUUID().toString().replace("-", "").take(CSRF_TOKEN_LENGTH))
-            .header("Origin", NodeSeekSite.BASE_URL)
-            .header("Referer", postUrl)
-            .post(payload.toRequestBody(JSON_MEDIA_TYPE))
-            .build()
-
-        val response = try {
-            okHttpClient.newCall(request).execute()
-        } catch (error: IOException) {
-            throw SiteException(SiteError.Network, error)
+        val response =
+            transport.execute(
+                HttpRequest(
+                    url =
+                    NodeSeekSite.absoluteUrl(NodeSeekSite.EDIT_DISCUSSION_API_PATH)
+                        ?: error("Invalid edit path"),
+                    method = "POST",
+                    headers =
+                    mapOf(
+                        "Accept" to "application/json, text/plain, */*",
+                        "X-Requested-With" to "XMLHttpRequest",
+                        // Presence is what the server checks; see the comment on the same header in
+                        // `DefaultCommentComposerRepository`.
+                        "Csrf-Token" to Uuid.random().toString().replace("-", "").take(CSRF_TOKEN_LENGTH),
+                        "Origin" to NodeSeekSite.BASE_URL,
+                        "Referer" to postUrl,
+                    ),
+                    body = HttpBody.Text(payload),
+                ),
+            )
+        val body = response.body
+        // Challenge first, then status, then the body's own verdict — the same order and the
+        // same reasons as [publish].
+        val isChallenge =
+            response.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
+                Selectors.CLOUDFLARE_MARKERS.any(body::contains) ||
+                body.trimStart().startsWith("<")
+        if (isChallenge) throw SiteException(SiteError.Cloudflare)
+        if (response.code == 401 || response.code == 403) throw SiteException(SiteError.LoginRequired)
+        if (!response.isSuccessful) {
+            throw SiteException(error = SiteError.Http(response.code), detail = parseErrorDetail(body))
         }
-        response.use {
-            val body = it.body.string()
-            // Challenge first, then status, then the body's own verdict — the same order and the
-            // same reasons as [publish].
-            val isChallenge =
-                it.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
-                    Selectors.CLOUDFLARE_MARKERS.any(body::contains) ||
-                    body.trimStart().startsWith("<")
-            if (isChallenge) throw SiteException(SiteError.Cloudflare)
-            if (it.code == 401 || it.code == 403) throw SiteException(SiteError.LoginRequired)
-            if (!it.isSuccessful) {
-                throw SiteException(error = SiteError.Http(it.code), detail = parseErrorDetail(body))
-            }
-            throwIfRefused(body)
-        }
+        throwIfRefused(body)
     }
 
     /**
@@ -329,27 +324,24 @@ class DefaultPostComposerRepository(
      * the board's post-time feed; failure here must not turn a successful publish into a retry
      * prompt, otherwise the next tap creates a duplicate topic.
      */
-    private fun findPublishedPostId(submission: PostSubmission): Long? {
+    private suspend fun findPublishedPostId(submission: PostSubmission): Long? {
         val path = NodeSeekSite.listPath(submission.boardSlug, page = 1, sort = FeedSort.POST_TIME)
-        val request = Request.Builder()
-            .url(NodeSeekSite.absoluteUrl(path) ?: return null)
-            .header("Accept", NodeSeekSite.HTML_ACCEPT)
-            .header("Referer", NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH)
-            .get()
-            .build()
-        val response =
-            runCatchingExceptCancellation { okHttpClient.newCall(request).execute() }
-                .getOrNull()
-                ?: return null
-        return response.use {
-            if (!it.isSuccessful) return@use null
-            val html = it.body.string()
-            runCatching {
-                PostListParser.parse(html, page = 1).posts.firstOrNull { post ->
-                    post.title == submission.title.trim() && post.categorySlug == submission.boardSlug
-                }?.postId
-            }.getOrNull()
-        }
+        val request =
+            HttpRequest(
+                url = NodeSeekSite.absoluteUrl(path) ?: return null,
+                headers =
+                mapOf(
+                    "Accept" to NodeSeekSite.HTML_ACCEPT,
+                    "Referer" to NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH,
+                ),
+            )
+        val response = runCatchingExceptCancellation { transport.execute(request) }.getOrNull() ?: return null
+        if (!response.isSuccessful) return null
+        return runCatching {
+            PostListParser.parse(response.body, page = 1).posts.firstOrNull { post ->
+                post.title == submission.title.trim() && post.categorySlug == submission.boardSlug
+            }?.postId
+        }.getOrNull()
     }
 
     private fun parseErrorDetail(body: String): String? {
@@ -365,7 +357,6 @@ class DefaultPostComposerRepository(
 
     private companion object {
         val DRAFT_KEY = stringPreferencesKey("draft")
-        val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         val POST_ID = Regex("""/post-(\d+)""")
         const val CSRF_TOKEN_LENGTH = 16
         const val MAX_ERROR_DETAIL_LENGTH = 200

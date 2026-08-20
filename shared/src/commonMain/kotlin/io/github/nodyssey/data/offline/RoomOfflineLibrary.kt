@@ -375,7 +375,7 @@ class RoomOfflineLibrary(
         urls.forEachIndexed { index, url ->
             val name = files.nameOf(url)
             val known = dao.imageByFile(name)
-            if (known != null && files.fileOf(url) != null) {
+            if (known != null && files.hasStored(url)) {
                 rows += OfflineImageEntity(postId = postId, url = url, fileName = name, bytes = known.bytes)
             } else {
                 delayBetweenRequests()
@@ -489,7 +489,9 @@ private fun OfflineStateRow.toState(): OfflineState =
 private fun PostContent.sizeBytes(): Long =
     RichContentJson.format
         .encodeToString(this)
-        .toByteArray()
+        // `encodeToByteArray`, not `toByteArray()`: the latter is a JVM extension whose charset is a
+        // default rather than a definition, and this number is compared against a stored one.
+        .encodeToByteArray()
         .size
         .toLong()
 

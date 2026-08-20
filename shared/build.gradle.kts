@@ -217,6 +217,18 @@ kotlin {
             api(libs.androidx.room.paging)
             api(libs.androidx.paging.common)
 
+            // `LocalDate` in the site's own zone, which is what makes a 签到 receipt cacheable —
+            // see `AssetsRepository`. `api` because that date is on `AttendanceStatus`.
+            api(libs.kotlinx.datetime)
+
+            // Compose's stability annotations, and nothing else from Compose. A `@Immutable` data
+            // class from a module the Compose compiler never ran over is read as unstable, which
+            // means a screen holding one recomposes on every frame that touches it — so the
+            // annotation is not decoration, and dropping it on the way down here would have been a
+            // silent performance change. The runtime is `api` because the annotation is on public
+            // types.
+            api(libs.compose.runtime)
+
             // The settings files. `DataStore<Preferences>` is already platform-neutral; what is not
             // is *opening* one, which is why `PreferenceStores.kt` stays in `:app` and the factories
             // beside it here are per target.

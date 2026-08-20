@@ -36,6 +36,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,7 +44,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -279,7 +279,7 @@ private class FakeAssetsRepository(
     override suspend fun attendanceBoard(page: Int): List<AttendanceBoardEntry> = board
 
     private companion object {
-        val TODAY: LocalDate = LocalDate.of(2026, 8, 2)
+        val TODAY: LocalDate = LocalDate(2026, 8, 2)
     }
 }
 

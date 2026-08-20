@@ -112,7 +112,7 @@ private fun CollectedPostMeta.toEntity(nowMillis: Long) =
     )
 
 /** True when this carries nothing worth a write — every source drew a blank. */
-internal val CollectedPostMeta.isEmpty: Boolean
+val CollectedPostMeta.isEmpty: Boolean
     get() =
         title == null &&
             categoryTitle == null &&

@@ -146,7 +146,7 @@ enum class ConfigProblem { BAD_SITE_URL, MISSING_TOKEN, IMPLAUSIBLE_TOKEN, MISSI
  * A pasted address arrives with a trailing slash about half the time, and every path this app
  * appends starts with one; normalising on the way in is what keeps `//api/v1/upload` from happening.
  */
-internal fun String.normalizedSiteUrl(): String = trim().trimEnd('/')
+fun String.normalizedSiteUrl(): String = trim().trimEnd('/')
 
 private fun String.looksLikeHttpUrl(): Boolean {
     val value = trim()

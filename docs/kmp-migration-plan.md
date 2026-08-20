@@ -379,7 +379,7 @@ Compose
 | ✅ **A5** | A | 网络契约 + Apple transport。`:core` 就此不存在——见下 | B3 |
 | ✅ **B4** | B | `:app` 的 `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group。`:designsys` 那半已在 B3 完成。不是纯改名——见下 | B3 |
 | ✅ **A6** | A | Room + DataStore。手写 migration 是 **10 个**不是 7 个——见下 | A5 |
-| **A7** | A | Repository 由简到繁：Terms/Search → Profile/Community → Post/Vote → Feed/Paging。**这一步就是「拆 `:app` 的 `data/`」** | A6 |
+| ✅ **A7** | A | Repository 全部下沉。**「拆 `:app` 的 `data/`」：74 个文件剩 16 个**——见下 | A6 |
 | **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」） | A7 + B4 |
 | **D2** | D | 1,059 条 strings + 16 个 res xml + 9 个 drawable → Compose Resources | D1 |
 | **D3** | D | iOS：门槛 A 复验 + WKWebView 桥 + 生命周期 + IME | D1 |
@@ -890,6 +890,109 @@ Room 生成的代码调用 `@RestrictTo(LIBRARY_GROUP)` 类型，这是 Room 的
 `assembleDebug` / `testDebugUnitTest testAndroidHostTest jvmTest` / `:app:lintDebug` /
 `spotlessCheck` / `:shared:macosArm64Test` / `:gallery:jvmTest` 全绿，Room 与 DataStore 在
 `iosArm64`、`macosArm64` 上都编译通过。
+
+---
+
+### ✅ A7 实测：`data/` 74 个文件剩 16 个
+
+计划写的是「由简到繁：Terms/Search → Profile/Community → Post/Vote → Feed/Paging」。实际没有按这个
+顺序分批，因为**分不开**：`FeedRemoteMediator` 要 `PostRemoteDataSource`，后者要 `HtmlSource`，
+`OfflineFirstPostRepository` 又同时要数据库、Paging 和离线库。一次搬完再按编译器报的错逐个处置，比
+按主题切四刀省事。
+
+搬完之后 `:app` 的 `data/` 只剩 **16 个**文件，每一个都是平台外壳或图床协议：
+
+| 留下的 | 为什么 |
+|---|---|
+| `AppCacheStore.kt`（只剩实现）、`CoilImageCaches.kt` | Coil 的缓存 + `java.io.File` |
+| `offline/AndroidOfflineFileStore.kt`、`OfflineImageInterceptor.kt` | 文件系统 + `StatFs`；后者给 Coil 递 `File` |
+| `offline/OfflineWork.kt`、`OfflineWorkers.kt` | WorkManager，按 §4.4「不要过度抽象」原样留下 |
+| `proxy/ProxyConnectionTester.kt` | 靠 `java.net` 的异常类型分类失败原因 |
+| `imagehost/` 的 9 个 | 六家图床的协议，见下 |
+
+`:shared` 这侧：`commonMain` 63 个，`androidMain` 3 个（OkHttp 取图、更新仓库的实现、数据库工厂）。
+
+#### 一分为二的四个
+
+不是整体搬走也不是整体留下，接口下去、实现留下：
+
+| | `commonMain` | 留在原地 |
+|---|---|---|
+| `AppCacheStore` | 两个 suspend 函数的接口 | `ImageCaches` + `DefaultAppCacheStore`（`:app`） |
+| `OfflineFileStore` | **新写的接口**，七个方法 | `AndroidOfflineFileStore`（`:app`，多一个 `fileOf(): File?` 给 Coil 拦截器） |
+| `OfflineImageSource` | 接口 | `OkHttpOfflineImageSource`（`:shared/androidMain`） |
+| `AppUpdateRepository` / `UpdateCheckStore` | 两个接口 | `DefaultAppUpdateRepository`（`:shared/androidMain`） |
+
+后两个进 `androidMain` 而不是留 `:app`：它们要的是 OkHttp 和 `File`，而 OkHttp 从 A5 起就住在
+`:shared/androidMain`。理由都写在文件头上——图片要的是**字节**，APK 要的是**流**，而
+`HttpTransport` 交出来的是解码好的文本。
+
+#### `imagehost/` 是唯一整片没走的
+
+九个文件、六家图床的协议，全部还在 `:app`。原因只有一个：**上传进度**。`HttpTransport` 读完一整个
+回答才返回，请求飞在半空时它什么都不说；而托盘上那个进度环要的正好是相反的东西，OkHttp 那侧是靠包
+一层 `RequestBody` 拿到的。给 transport 加一个上传进度回调是改一个**所有调用方共享**的契约，那属于
+真正需要 Apple 上传器的那一步，不属于这一步。
+
+接口 `ImageHostRepository` 还是下去了（ViewModel 只认它），`ImageHost` / `ImageHostModels` /
+`ImageHostSettings`（纯 DataStore）也下去了。
+
+#### 六处不是搬家的改动
+
+**一、`java.time` → kotlinx-datetime。**`AssetsRepository` 要「这条流水属于站点的哪一天」，
+`TimeFormat` 要五种时间标签。stdlib 有 `Instant` 但没有时区也没有 civil date，所以加了
+`kotlinx-datetime 0.8.0`。`TimeFormat` 因此从 `jvmCommonMain` 升到 `commonMain`——五个仓库调它的
+`parseTimestamp`，五个都在 `commonMain` 了。它的测试跟着进 `commonTest`，于是三端各跑一遍。
+
+**二、`@Immutable` 逼出一个 Compose 依赖。**`OfflineState`、`ImageUploadState` 这三个类带
+`@Immutable`。Compose 编译器没跑过的模块，它的类在使用方一律按 unstable 处理——所以那个注解不是装饰，
+删掉是一次**静默的性能退化**。`:shared` 因此 `api(libs.compose.runtime)`：只要注解，不要编译器插件。
+
+**三、`androidx.room.withTransaction` 不存在了。**它在 `room-ktx` 里，A6 已经说过那个包没跟来。
+多平台 runtime 给的是 `useWriterConnection { it.immediateTransaction { … } }`，两句话写成
+`RoomDatabase.writeTransaction`。`immediateTransaction`（`BEGIN IMMEDIATE`）而不是 deferred：这里
+每个调用方都在写。块里的 DAO 调用会**加入**同一个事务而不是自己开一个——Room 把连接放在协程上下文里，
+这也是块内不能换 dispatcher 的原因。
+
+**四、`java.io.IOException` → `okio.IOException`。**三个 DataStore 读取器都有
+`catch { if (it is IOException) emit(emptyPreferences()) }`。okio 的那个在 JVM 上就是
+`java.io.IOException` 的 typealias，行为一字不差。
+
+**五、`java.util.UUID` → `kotlin.uuid.Uuid`。**两处 `Csrf-Token`（服务端只检查有值）和一处上传队列
+的行 id。
+
+**六、`@Volatile` 和 `String.toByteArray()`。**前者要显式 `import kotlin.concurrent.Volatile`，
+后者是 JVM 扩展，换 `encodeToByteArray()`——UTF-8 从默认值变成定义，而那个数字是要和存下来的比的。
+
+**顺带：jsoup 从 APK 里删掉了。**计划里点名的 `UserSpaceRepository` 那一行 `Jsoup.parse(raw).text()`
+换成 Ksoup 之后，`:app` 再没有一个 `org.jsoup` import——依赖和开源许可页上的那一条一起删。
+
+#### 智能转换在跨模块会失效
+
+四处 `x != null -> f(x)` 编译不过了：`val` 来自另一个模块，编译器不做 smart cast。和步骤 3/4 记的
+`VoteCard` 是同一条，处置也一样——先读进局部变量。这条在把一整个包搬出模块时会成片出现，值得当成
+可预期成本而不是意外。
+
+#### 八个 `internal` 变 public，以及为什么测试没跟着搬
+
+`FRONT_PAGE_FEED_KEY`、`feedKeyFor`、`searchFeedKeyFor`、`SEARCH_FEED_KEY_PREFIX`、
+`FEED_PAGING_CONFIG`、`markViewedBody`、`ImageHostKeys`、`ImageHostSecretKeys`——都是因为钉着它们的
+测试还在 `:app`。
+
+**测试没搬是权衡过的**，不是漏了。`app/src/test/.../data/` 的 fake 是**和 ViewModel 测试共用的一份**：
+`FakePostRemoteDataSource` 被 UI 测试引用 51 次，`testSettingsRepository` 23 次，`inMemoryDatabase`
+8 次。把 data 测试搬进 `:shared/androidHostTest` 就得把这些 fake 复制一份留给 `:app`——四百多行的
+假实现两份，而**漂移的总是失败的那条测试没在读的那一份**（步骤 3/4 讲 fixture 时是同一个道理）。
+D1 把 `ui/` 搬下来之后两半在同一个模块里，整棵测试树一次搬完，fake 仍然只有一份。
+
+#### 测试与门禁
+
+测试总数不变：`:app` 1,095 + `:designsys` 108 + `:shared` 224 = **1,427**。
+`TimeFormatTest` 的 7 个从 `androidHostTest` 挪到 `commonTest`，所以桌面端 58 + 189 + 3 = **250**，
+`macosArm64Test` **189**。
+
+`assembleDebug` / `testDebugUnitTest testAndroidHostTest jvmTest` / `:app:lintDebug` /
+`spotlessCheck` / `:shared:macosArm64Test` / `:gallery:jvmTest` 全绿。
 
 ---
 

@@ -11,7 +11,7 @@ import io.github.nodyssey.data.security.SecretCipher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import java.io.IOException
+import okio.IOException
 
 /** HTTP proxies speak CONNECT/plain proxying; SOCKS ones tunnel raw sockets, DNS included. */
 enum class ProxyType { HTTP, SOCKS }

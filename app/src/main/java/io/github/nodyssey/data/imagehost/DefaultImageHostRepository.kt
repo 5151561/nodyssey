@@ -8,34 +8,13 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
-/**
- * The app's one door to whichever image host is selected.
- *
- * Everything above this line — the editor, the attachment tray, 图床设置 — talks to this and never to
- * a host. That is what keeps six protocols from leaking into the composer: [upload] takes bytes and
- * answers a URL, and which of nodeimage.com, 兰空, 简单图床, sm.ms, imgbb or somebody's own uploader
- * produced it is not a question anything upstream is in a position to ask.
- *
- * It extends [ImageHostSettings] rather than wrapping it because the settings screen needs both
- * halves — the stored configuration and the calls that prove it works — and one dependency reads
- * better there than two that have to be kept in step.
+/*
+ * The six protocols themselves, and the OkHttp they are written against, are what kept this half
+ * of `imagehost/` out of `commonMain` in step A7. `HttpTransport` reads a whole answer and reports
+ * nothing while a request is in flight; an upload's progress ring needs the opposite. Giving the
+ * transport an upload-progress callback is a change to a contract every other caller shares, and it
+ * belongs to whichever step actually needs an Apple uploader rather than to this one.
  */
-interface ImageHostRepository : ImageHostSettings {
-    /** The selected host's configuration, re-emitting when either the selection or its fields change. */
-    val current: Flow<ImageHostConfig>
-
-    /** @param onProgress 0f–1f as bytes go out, for the tray's progress ring. */
-    suspend fun upload(
-        upload: ImageHostUpload,
-        onProgress: (Float) -> Unit = {},
-    ): HostedImage
-
-    /** @throws ImageHostException with [ImageHostError.Unsupported] on a host that publishes no list. */
-    suspend fun images(): List<HostedImage>
-
-    suspend fun delete(image: HostedImage)
-}
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class DefaultImageHostRepository(
     private val settings: ImageHostSettings,

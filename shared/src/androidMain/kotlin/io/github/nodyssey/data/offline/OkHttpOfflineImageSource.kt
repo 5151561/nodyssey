@@ -5,14 +5,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
-/** Fetches one picture's bytes for storage. Null when it could not be had, or is not worth keeping. */
-interface OfflineImageSource {
-    suspend fun fetch(
-        url: String,
-        maxBytes: Long,
-    ): ByteArray?
-}
-
 /**
  * The app's own OkHttp client, so a stored picture arrives under the same cookies, `User-Agent`,
  * `Accept-Language` and `Referer` as one the reader is looking at.
@@ -24,6 +16,10 @@ interface OfflineImageSource {
  * The size limit is checked against `Content-Length` before the body is read where the server
  * offers one, and against the body afterwards where it does not — a background worker must not
  * discover a 40 MB screenshot by holding it in memory.
+ *
+ * Here rather than in `commonMain` because what it needs is *bytes*, and `HttpTransport`
+ * hands back decoded text — every other caller in this app reads HTML or JSON. A picture is
+ * the one thing that is neither, so this one reaches for the client directly.
  */
 class OkHttpOfflineImageSource(
     private val client: () -> OkHttpClient,

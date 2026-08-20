@@ -69,7 +69,7 @@ import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
 import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.local.createNodeSeekDatabase
-import io.github.nodyssey.data.offline.OfflineFileStore
+import io.github.nodyssey.data.offline.AndroidOfflineFileStore
 import io.github.nodyssey.data.offline.OfflineSettingsStore
 import io.github.nodyssey.data.offline.OkHttpOfflineImageSource
 import io.github.nodyssey.data.offline.RoomOfflineLibrary
@@ -388,7 +388,7 @@ class DefaultAppContainer(
     }
 
     override val postComposerRepository: PostComposerRepository by lazy {
-        DefaultPostComposerRepository(appContext.postComposerDataStore, okHttpClient, dispatchers, clock)
+        DefaultPostComposerRepository(appContext.postComposerDataStore, transport, dispatchers, clock)
     }
 
     override val accountSettingsRepository: AccountSettingsRepository by lazy {
@@ -408,7 +408,7 @@ class DefaultAppContainer(
         RoomOfflineLibrary(
             dao = database.offlineDao(),
             remote = remotePosts,
-            files = OfflineFileStore.of(appContext.filesDir),
+            files = AndroidOfflineFileStore.of(appContext.filesDir),
             // The app's own client, so a stored picture arrives under the same cookies and headers
             // as one on screen — see [OkHttpOfflineImageSource]. Lazily, because building it starts
             // the proxy machinery and a graph that never downloads anything should not pay for that.
@@ -461,7 +461,7 @@ class DefaultAppContainer(
     override val commentComposerRepository: CommentComposerRepository by lazy {
         DefaultCommentComposerRepository(
             appContext.commentComposerDataStore,
-            okHttpClient,
+            transport,
             dispatchers,
             clock,
             postRepository::noteOwnReplyPublished,
