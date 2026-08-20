@@ -36,6 +36,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Read by the `ios` job below, which builds the same tag and needs the same three answers. It
+    # resolves them from `steps.version` here rather than repeating the parsing, so a change to what
+    # counts as a release tag is made in one place.
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      is_dev: ${{ steps.version.outputs.is_dev }}
     env:
       # Where the app reads its update manifests from; `NodysseyRelease.UPDATES_BASE_URL` is the
       # other end of this name.
@@ -323,3 +330,161 @@ jobs:
           else
             echo "::warning::Could not send the APK to the channel; the text notice went out on its own."
           fi
+
+  # The same tag's iOS build: an unsigned `.ipa`, published beside the APK.
+  #
+  # Unsigned is the product, not a shortcoming of this job. Apple has no equivalent of "download an
+  # APK": an app installs only if it carries a signature from a certificate the device already
+  # trusts, and every such certificate belongs to one Apple Developer account. There is no key this
+  # project could hold that would install on a stranger's iPhone the way the release APK does. What
+  # an unsigned `.ipa` is for is re-signing — AltStore, Sideloadly, TrollStore or Xcode itself take
+  # this file and sign it with the user's own account. So it is worth publishing, and worth saying
+  # plainly what it is; the note this job appends to the release body is that sentence.
+  #
+  # A job of its own, and one that runs *after* the release rather than gating it. Two reasons, both
+  # about not letting the iOS side hold the Android one hostage: this is a macOS runner doing a
+  # from-scratch Kotlin/Native link of the whole app (tens of minutes, and no cache shared with the
+  # Linux jobs), and the iOS shell is mid-migration — see `docs/kmp-migration-plan.md`, step D3. If
+  # it breaks, the APK and the update manifests are already out; the run goes red, and the `.ipa`
+  # arrives when the break is fixed and the workflow is re-run for the same tag.
+  ios:
+    needs: release
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      # Not decoration on an iOS build: `:iosapp` depends on `:ui` → `:designsys` → `:shared`, every
+      # one of them a KMP module that also declares an Android target, so the Android Gradle plugin
+      # is applied and *configuring* the build fails outright without an SDK to point at. The Linux
+      # runners have one preinstalled and the macOS images do not, which is the whole reason this
+      # step exists here and in neither of the other two jobs.
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+
+      # Pinned to v5 for the licensing reason spelled out in ci.yml.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          # A release must never be the thing that writes the shared cache.
+          cache-read-only: true
+
+      # `CODE_SIGNING_ALLOWED=NO` is what makes this an unsigned build rather than a failed one:
+      # the Xcode project is set to automatic signing, which on a runner with no account and no
+      # provisioning profile has nothing to resolve. The three settings together tell every phase —
+      # the app, and the Kotlin framework `:iosapp` embeds — to skip signing instead of looking.
+      #
+      # The two version settings override what `project.pbxproj` holds. `gradle.properties` is the
+      # single place this app's version is declared (`nodyssey.versionCode` / `nodyssey.versionName`,
+      # already checked against the tag by the release job above), and Xcode has no way to read it;
+      # rather than keeping a second copy in the project file in sync, the copy in the project file
+      # is left as a placeholder for local builds and the real answer is passed in here. `:shared`'s
+      # `readAppVersion()` reads both back out of `Info.plist`, which is what the 关于 screen shows.
+      #
+      # `MARKETING_VERSION` therefore carries the `-dev.N` suffix verbatim on a dev tag. Apple's
+      # guidance is three dotted integers, but that is an App Store submission rule, and this build
+      # never goes near the App Store — a sideloaded `.ipa` installs with the string as written, and
+      # a tester who cannot tell which dev build is on their phone is the worse outcome.
+      - name: Build the unsigned app
+        env:
+          # Raises the Gradle daemon's heap for this job only, and it is not a precaution: at the
+          # project's own `-Xmx4096m` the release link of the iOS framework dies with
+          #
+          #   error: Compilation failed: Java heap space
+          #     at ...optimizations.StaticInitializersOptimization$InterproceduralAnalysis.analyze
+          #
+          # — Kotlin/Native's whole-program optimization pass, which only runs for a *release*
+          # binary, which is why nothing before this job ever needed the headroom (the simulator
+          # builds `docs/kmp-migration-plan.md` step D3b describes are debug ones). The Kotlin/Native
+          # compiler runs inside the Gradle daemon here rather than a process of its own, so this is
+          # the knob, and `kotlin.native.jvmArgs` is not.
+          #
+          # `GRADLE_OPTS` rather than editing a `gradle.properties`: the Gradle invocation this has
+          # to reach is the one inside the Xcode project's "Build Kotlin framework" run script,
+          # which takes no arguments from here.
+          #
+          # 5g, not more, because this runner has 7 GB in total (GitHub's macOS runners are 3-core
+          # M1s) and xcodebuild wants its share. Measured at 4g fails, 5g succeeds, ~7 minutes for
+          # the link. If a future version of the compiler needs more than fits, the fallback is a
+          # `macos-15-intel` runner — same build, 14 GB.
+          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx5g -XX:MaxMetaspaceSize=2g -Dfile.encoding=UTF-8"
+        run: |
+          xcodebuild \
+            -project iosapp/Nodyssey.xcodeproj \
+            -scheme Nodyssey \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Nodyssey.xcarchive" \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="${{ needs.release.outputs.version }}" \
+            CURRENT_PROJECT_VERSION="$(sed -n 's/^nodyssey\.versionCode=//p' gradle.properties | head -1)"
+
+      # An `.ipa` is a zip with the `.app` under `Payload/` and nothing else required. `xcodebuild
+      # -exportArchive` is the usual way to produce one and cannot be used here: export is a signing
+      # step, and it refuses an archive with no signature to re-sign. Building the zip by hand is the
+      # supported path for exactly this case.
+      #
+      # `-y` keeps symlinks as symlinks. Nothing in this bundle is a framework today — the Kotlin
+      # framework is static and links in — but the flag is what stops a future embedded one from
+      # being flattened into an invalid bundle.
+      - name: Pack the .ipa
+        id: ipa
+        run: |
+          name="nodyssey-${{ needs.release.outputs.tag }}.ipa"
+          mkdir -p "$RUNNER_TEMP/Payload"
+          cp -R "$RUNNER_TEMP/Nodyssey.xcarchive/Products/Applications/Nodyssey.app" "$RUNNER_TEMP/Payload/"
+          (cd "$RUNNER_TEMP" && zip -qry "$name" Payload)
+          echo "path=$RUNNER_TEMP/$name" >> "$GITHUB_OUTPUT"
+          ls -lh "$RUNNER_TEMP/$name"
+
+      # `--clobber` for the same reason the APK upload has it: re-running a tag replaces the asset
+      # rather than failing on the one already there.
+      - name: Attach the .ipa to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.release.outputs.tag }}" "${{ steps.ipa.outputs.path }}" --clobber
+
+      # Written here rather than in the release body the job above composes, because it is a claim
+      # about a file: if this job failed, the release should not carry a paragraph about an `.ipa`
+      # that is not attached to it. The marker check is what makes a re-run idempotent.
+      #
+      # Only the GitHub release body gets this. The update manifests on the `updates` branch — what
+      # the in-app updater shows — are written by the job above and are the Android app's own release
+      # notes; a paragraph about sideloading an iOS build has no reader there.
+      - name: Say in the release notes what the .ipa is
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ needs.release.outputs.tag }}"
+          marker='### iOS（未签名，需要自己签）'
+          body=$(gh release view "$tag" --json body -q .body)
+          case "$body" in
+            *"$marker"*)
+              echo "The note is already in the body; leaving it alone."
+              exit 0
+              ;;
+          esac
+          {
+            printf '%s\n' "$body"
+            echo
+            echo "$marker"
+            echo
+            echo "iOS 版还在迁移中，这个 \`.ipa\` 是测试构建，**没有签名**，双击装不上。"
+            echo "需要用 AltStore、Sideloadly、TrollStore 或 Xcode，拿你自己的 Apple ID 重新签名后再装。"
+            echo "免费账号签出来的有效期是 7 天，到期要重签。"
+          } > release-notes-with-ios.md
+          gh release edit "$tag" --notes-file release-notes-with-ios.md
+          echo "Added the iOS note to $tag."

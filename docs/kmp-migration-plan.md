@@ -1715,6 +1715,44 @@ D3b），所以上面那次端到端是靠写文件而不是靠点屏幕做的�
 
 ---
 
+### ✅ 发布：dev tag 也出一个未签名 `.ipa`
+
+`release.yml` 多一个 `ios` job（`macos-latest`，`needs: release`）：同一个 tag，除了签名的 APK 之外再
+出一个 `nodyssey-vX.Y.Z-dev.N.ipa` 挂到同一个 release 上。
+
+**未签名是产物本身，不是这条流水线的缺陷。**Apple 没有「下载一个 APK 装上」这回事：一个 App 要装得进
+去，就必须带一份设备已经信任的证书的签名，而每一张这样的证书都挂在某个 Apple Developer 账号下。这个项
+目手里不存在一把「谁都能装」的 key。未签名的 `.ipa` 的用途是**被重签**——AltStore / Sideloadly /
+TrollStore / Xcode 拿用户自己的账号签一遍再装，免费账号签出来 7 天到期。所以这个文件值得发，也值得在
+release 说明里把它是什么写清楚（那段话由 `ios` job 自己追加，附件真的传上去了才会出现）。
+
+几个当时不知道、试出来才知道的点：
+
+- **`xcodebuild -exportArchive` 用不了。**export 本身是一个签名步骤，它拒绝一个「没有签名可重签」的
+  archive。手工把 `.app` 塞进 `Payload/` 再 zip 才是这种情况下的正路，`.ipa` 本来就只是这么一个 zip。
+- **版本号从命令行覆盖。**`project.pbxproj` 里写死的是 `MARKETING_VERSION = 0.1.0`，那是本地构建的占
+  位；`gradle.properties` 才是这个 App 唯一声明版本的地方，而 Xcode 读不到它。所以 CI 在命令行上传
+  `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`，`readAppVersion()` 再从 `Info.plist` 读回来给 关于
+  页。`-dev.N` 后缀原样带着：Apple 那条「三段数字」的规矩是 App Store 提审规则，这个包永远不过 App
+  Store，而让测试者说不出自己装的是哪一版才是更坏的结果。
+- **`-Xmx4096m` 不够，release link 会 OOM。**报的是
+  `Compilation failed: Java heap space`，栈顶在 `StaticInitializersOptimization`——Kotlin/Native 的全
+  程序优化，只有 **release** 二进制才跑，所以 D3b 那些模拟器 debug 构建一次都没碰到过。**Kotlin/Native
+  编译器是跑在 Gradle daemon 进程里的**（`ps` 上没有独立的 konan JVM），因此该调的是
+  `org.gradle.jvmargs` 而不是 `kotlin.native.jvmArgs`；而要够得着 Xcode「Build Kotlin framework」那条
+  run script 里的 `./gradlew`（它不接受外面传的参数），走的是 `GRADLE_OPTS`。本机实测 4g 失败、5g 通
+  过。5g 也是上限：GitHub 的 macOS runner 是 3 核 M1、共 7 GB，再多就和 xcodebuild 抢内存了；真不够用
+  时的退路是 `macos-15-intel`，14 GB。
+
+本机产物（arm64、`CODE_SIGN_IDENTITY=""`）：`.app` 56 MB，压出来的 `.ipa` 18 MB，`codesign -dv` 答
+`code object is not signed at all`，`Info.plist` 里是 `1.2.11-dev.3` / `24`，整个 archive 约 7 分钟。
+
+**没验的**：这个 `.ipa` 没有在任何一台真机上装过——重签需要一个 Apple 账号，这台机器上没有。到「产物是
+对的形状」为止。`ios` job 本身也还没在 GitHub 的 runner 上跑过一次（Android SDK 在 macOS 镜像里不预装，
+所以那一步多一个 `android-actions/setup-android`；AGP 会像在 Linux 上一样自己下 `compileSdk 37`）。
+
+---
+
 ### ✅ 步骤 2 实测：构建基础设施
 
 `:shared` 是 KMP 模块，target 三个：android、`iosArm64`、`macosArm64`。**`appleMain` 不需要自己搭**
