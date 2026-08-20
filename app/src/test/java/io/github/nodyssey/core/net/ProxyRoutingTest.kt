@@ -1,5 +1,6 @@
 package io.github.nodyssey.core.net
 
+import io.github.nodyssey.data.proxy.ProxyClientKind
 import io.github.nodyssey.data.proxy.ProxyConfig
 import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.ProxyType

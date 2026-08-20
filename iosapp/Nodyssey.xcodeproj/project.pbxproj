@@ -1,0 +1,269 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000000000000000000001 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010 /* App.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A1000000000000000000010 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		A1000000000000000000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1000000000000000000020 /* Nodyssey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nodyssey.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A1000000000000000000030 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A1000000000000000000040 = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000041 /* Nodyssey */,
+				A1000000000000000000042 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1000000000000000000041 /* Nodyssey */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000010 /* App.swift */,
+				A1000000000000000000011 /* Info.plist */,
+			);
+			path = Nodyssey;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000042 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000020 /* Nodyssey.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A1000000000000000000050 /* Nodyssey */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000000000000000000060 /* Build configuration list for PBXNativeTarget "Nodyssey" */;
+			buildPhases = (
+				A1000000000000000000070 /* Build Kotlin framework */,
+				A1000000000000000000080 /* Sources */,
+				A1000000000000000000030 /* Frameworks */,
+				A1000000000000000000090 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Nodyssey;
+			productName = Nodyssey;
+			productReference = A1000000000000000000020 /* Nodyssey.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1000000000000000000100 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					A1000000000000000000050 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = A1000000000000000000110 /* Build configuration list for PBXProject "Nodyssey" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A1000000000000000000040;
+			productRefGroup = A1000000000000000000042 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A1000000000000000000050 /* Nodyssey */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1000000000000000000090 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A1000000000000000000070 /* Build Kotlin framework */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Build Kotlin framework";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Builds `:iosapp`'s framework for whatever Xcode is currently building for, copies it\n# where the linker below will look, and copies the Compose Resources beside it.\n#\n# `alwaysOutOfDate` because Gradle is the one that knows whether anything changed: Xcode\n# cannot see 40,000 lines of Kotlin from here, and a stale framework is a build that\n# succeeds with the previous version of the app in it.\ncd \"$SRCROOT/..\"\n./gradlew --quiet :iosapp:embedAndSignAppleFrameworkForXcode :iosapp:syncComposeResourcesForIos\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A1000000000000000000080 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000000000000000000001 /* App.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A1000000000000000000120 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A1000000000000000000130 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A1000000000000000000140 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*]" = "$(SRCROOT)/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(SRCROOT)/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Nodyssey/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					NodysseyShell,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.nodyssey;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1000000000000000000150 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*]" = "$(SRCROOT)/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(SRCROOT)/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Nodyssey/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					NodysseyShell,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.nodyssey;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A1000000000000000000110 /* Build configuration list for PBXProject "Nodyssey" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000120 /* Debug */,
+				A1000000000000000000130 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000000000000000000060 /* Build configuration list for PBXNativeTarget "Nodyssey" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000140 /* Debug */,
+				A1000000000000000000150 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A1000000000000000000100 /* Project object */;
+}

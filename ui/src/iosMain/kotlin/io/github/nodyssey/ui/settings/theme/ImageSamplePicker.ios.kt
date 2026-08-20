@@ -1,23 +1,44 @@
 package io.github.nodyssey.ui.settings.theme
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.ImageBitmap
+import io.github.nodyssey.ui.common.loadImageData
+import io.github.nodyssey.ui.common.rememberPhotoPicker
+import io.github.nodyssey.ui.common.toImageBitmapOrNull
+import io.github.plaza.core.image.downscaledPng
+import io.github.plaza.core.toByteArray
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
- * Not wired up yet, for the reason [io.github.nodyssey.ui.composer.rememberImagePicker] gives, plus
- * one of its own: the decode.
+ * `PHPickerViewController` again — no photo library permission, and the app sees only the one picture.
  *
- * This seam's `expect` says both halves are the platform's, and on iOS the second half is the harder
- * one — a `UIImage` is not an [ImageBitmap], and bridging them goes through Skia rather than through
- * anything Foundation offers. Neither half is guesswork; both are code with nothing to run it.
- *
- * The sheet handles this correctly as it stands: [onPicking] never fires, so it never enters the state
- * that waits for a decode.
+ * The decode is bounded the way the Android side's `setTargetSampleSize` is: what the sheet does with
+ * the result is read a handful of pixels out of it to seed a palette, and a full-resolution decode of
+ * a modern photo would be forty megabytes to answer a question about three colours.
  */
 @Composable
 actual fun rememberImageSamplePicker(
     targetSizePx: Int,
     onPicking: () -> Unit,
     onPicked: (ImageBitmap?) -> Unit,
-): () -> Unit = remember { {} }
+): () -> Unit {
+    val scope = rememberCoroutineScope()
+    return rememberPhotoPicker(selectionLimit = 1) { providers ->
+        // On the main thread, and before anything is loaded: this is the callback that puts the sheet
+        // into its waiting state, and the wait it is announcing starts here.
+        onPicking()
+        scope.launch {
+            val data = providers.first().loadImageData()
+            val sampled =
+                data?.let {
+                    withContext(Dispatchers.Default) {
+                        it.downscaledPng(targetSizePx)?.toByteArray()?.toImageBitmapOrNull()
+                    }
+                }
+            onPicked(sampled)
+        }
+    }
+}

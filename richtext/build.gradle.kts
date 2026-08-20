@@ -9,6 +9,7 @@ kotlin {
     // least the targets that one declares, or the dependency is a variant that does not resolve.
     jvm()
     iosArm64()
+    iosSimulatorArm64()
     macosArm64()
 
     android {

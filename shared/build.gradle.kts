@@ -149,6 +149,12 @@ kotlin {
     // `gradle.properties` is what keeps that a skip rather than a failure. The consequence is stated
     // there: only a Mac runs the Native compilation, so `macosArm64Test` is a local gate.
     iosArm64()
+
+    // The simulator, added by step D3b: it is what the iOS shell is launched on, and a target the
+    // shell's framework has no variant for is a link that does not resolve. Until that shell existed
+    // this would have been a klib nothing consumed — which is why D3a left it out and this step does
+    // not.
+    iosSimulatorArm64()
     macosArm64()
 
     // `java.time` is the JVM part of Android rather than the Android part of it, and both targets
@@ -239,6 +245,12 @@ kotlin {
             // is *opening* one, which is why `PreferenceStores.kt` stays in `:app` and the factories
             // beside it here are per target.
             api(libs.androidx.datastore.preferences)
+
+            // `ByteString.sha1()`, which is the whole of what `DynamicSign.kt` needs and the reason
+            // the vote signature could finally leave `:app`. Already on every one of this module's
+            // compile classpaths — DataStore is written against it — but declared here because
+            // `commonMain` imports it, and a dependency you import is one you own the version of.
+            implementation(libs.okio)
         }
 
         nativeMain.dependencies {
@@ -260,6 +272,11 @@ kotlin {
             kotlin.srcDir(generateFixtureSources)
             dependencies {
                 implementation(kotlin("test"))
+
+                // `runTest`, which every test below a `suspend` contract needs — and since step D3c
+                // that is most of them: the six image-host clients and the vote signature are
+                // `HttpTransport` callers, and `HttpTransport.execute` suspends.
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
@@ -305,5 +322,6 @@ dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspJvm", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
     add("kspMacosArm64", libs.androidx.room.compiler)
 }
