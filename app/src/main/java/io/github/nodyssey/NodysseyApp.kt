@@ -16,7 +16,7 @@ import coil3.svg.SvgDecoder
 import io.github.nodyssey.data.offline.AndroidOfflineFileStore
 import io.github.nodyssey.data.offline.OfflineImageInterceptor
 import io.github.nodyssey.data.offline.OfflineWork
-import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.di.AndroidAppContainer
 import io.github.nodyssey.di.DefaultAppContainer
 import io.github.nodyssey.image.ImageNetworkPolicyInterceptor
 import io.github.nodyssey.notifications.NotificationChannels
@@ -38,7 +38,7 @@ open class NodysseyApp :
     SingletonImageLoader.Factory,
     Configuration.Provider {
     /** The one place the dependency graph is built. Everything else receives it. */
-    lateinit var container: AppContainer
+    lateinit var container: AndroidAppContainer
         private set
 
     /**

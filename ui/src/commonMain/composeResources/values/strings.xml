@@ -420,7 +420,6 @@
     <string name="about_title">关于 Nodyssey</string>
     <string name="about_community_title">关于 · 社区</string>
     <string name="about_community_hint">论坛信息、联络方式与友站</string>
-    <string name="about_app_name">Nodyssey</string>
     <string name="about_version">版本 %1$s (%2$d)</string>
     <string name="about_check_updates">检查更新</string>
     <string name="about_update_unknown">尚未检查</string>

@@ -179,10 +179,16 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // `api`: `RichNode` and `AnsiSpan` are `@Serializable` and consumers nest them inside
-            // their own serializable types, so the generated serializers are part of this module's
-            // surface rather than an implementation detail — the same reasoning `:core` recorded when
-            // these types lived there.
+            // The rich-text tree, which the parsers below produce and the screens above draw. `api`
+            // because it is on this module's surface everywhere: `PostContent` holds a `RichNode`.
+            // It was four files in here until step D1 — see `settings.gradle.kts` for why they are
+            // their own module now.
+            api(project(":richtext"))
+
+            // `api`: the domain model is `@Serializable` and consumers nest it inside their own
+            // serializable types, so the generated serializers are part of this module's surface
+            // rather than an implementation detail — the same reasoning `:core` recorded when these
+            // types lived there.
             api(libs.kotlinx.serialization.json)
 
             // `implementation`, and it has to stay that way: no Ksoup type may appear anywhere on
@@ -263,6 +269,22 @@ kotlin {
         androidHostTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
+
+            // The repository tests arrived here in step D1, and they are Robolectric tests: the
+            // interesting logic below `PostRepository` is *SQL*, so `inMemoryDatabase` opens a real
+            // Room database rather than faking a DAO — see `data/doubles/TestDoubles.kt`.
+            implementation(libs.junit)
+            implementation(libs.robolectric)
+            implementation(libs.androidx.test.core)
+            implementation(libs.androidx.test.ext.junit)
+            implementation(libs.androidx.paging.testing)
+            implementation(libs.androidx.room.testing)
+
+            // `AsyncPagingDataDiffer`, which is the only way to ask a `PagingData` what a *list* saw
+            // — `FeedPagingWindowTest` asserts on the window Paging actually loaded. It lives in
+            // `paging-runtime`, the Android half, which is why this line is here and not in
+            // `commonTest`.
+            implementation(libs.androidx.paging.runtime)
         }
 
         jvmTest.dependencies {

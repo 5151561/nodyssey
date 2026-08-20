@@ -2,8 +2,11 @@
 <!--
     Debug-only overrides of the app's own name.
 
-    A build-type resource wins over the same name in `main`, so the launcher entry, the task switcher
-    and the About screen all read Nodyssey·D without the release build knowing this file exists.
+    A build-type resource wins over the same name in `main`, so the launcher entry and the task
+    switcher read Nodyssey·D without the release build knowing this file exists. The 关于 screen reads
+    it too, one step removed: since step D1 that screen is in `:ui` and its strings are Compose
+    Resources, which have no build types — so it prints `AppVersion.label`, which is this label as the
+    package manager reports it.
 
     The name is only half of what keeps the two builds apart — the debug build also carries an
     `applicationIdSuffix`, which is what actually lets a debug-signed and a release-signed copy be
@@ -11,5 +14,4 @@
 -->
 <resources>
     <string name="app_name">Nodyssey·D</string>
-    <string name="about_app_name">Nodyssey·D</string>
 </resources>

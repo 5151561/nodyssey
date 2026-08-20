@@ -54,7 +54,7 @@ val LEGACY_NODE_IMAGE_KEY = stringPreferencesKey("api-key")
 // Public rather than `internal` only because the test that pins it is still in `:app`: the
 // fakes it shares with the ViewModel tests are one file, and two copies of a fake drift. Step
 // D1 brings `ui/` down here and the whole test tree with it.
-object ImageHostKeys {
+internal object ImageHostKeys {
     val SELECTED = stringPreferencesKey("selected")
 
     fun token(provider: ImageHostProvider) = stringPreferencesKey("${provider.id}.token")
@@ -77,7 +77,7 @@ object ImageHostKeys {
  * already treats them as a credential: a custom host's secret goes either in the header value or in a
  * `token=…` line among these, which is why 断开 clears both.
  */
-object ImageHostSecretKeys {
+internal object ImageHostSecretKeys {
     val all: List<Preferences.Key<String>> =
         ImageHostProvider.entries.map(ImageHostKeys::token) +
             listOf(ImageHostKeys.CUSTOM_HEADER_VALUE, ImageHostKeys.CUSTOM_FORM_FIELDS)

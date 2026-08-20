@@ -52,7 +52,12 @@ kotlin {
         commonMain.dependencies {
             // `api` because `rememberTerminalText` takes `AnsiSpan` in its signature and `RichContent`
             // takes a `RichNode`: a consumer building either has to be able to name the type.
-            api(project(":shared"))
+            //
+            // `:richtext` and not `:shared`, which is what this line said between steps B2 and D1.
+            // Six symbols is all this module ever imported from below it, all of them in these two
+            // packages — and the rest of `:shared` is a network layer, Room and Paging, which
+            // `:gallery` was resolving in order to draw a paragraph.
+            api(project(":richtext"))
 
             // Compose Multiplatform rather than androidx, which is the change that made this module
             // buildable off Android at all. The package names are androidx's either way — no import
@@ -77,7 +82,8 @@ kotlin {
             // `Res` and the generated string accessors. The 44 strings this module owns were
             // `src/main/res/values/strings.xml` and are now `commonMain/composeResources/values`:
             // same file, same names, read through a generated Kotlin object instead of a generated
-            // `R`. `:app`'s 1,059 are a separate step (D2) — nothing here reaches them.
+            // `R`. The app's own 1,056 went the same way in step D1 and live in `:ui`; nothing here
+            // reaches them, and nothing there reaches these.
             implementation(libs.compose.components.resources)
 
             // The seed-colour scheme generator. `implementation`, not `api`: a caller hands

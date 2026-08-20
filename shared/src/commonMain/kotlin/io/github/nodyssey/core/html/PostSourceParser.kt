@@ -27,7 +27,7 @@ import kotlinx.serialization.json.longOrNull
  * meantime — plus the source of a long thread is a second copy of every floor's text, which is not
  * worth carrying on disk for something used once.
  */
-object PostSourceParser {
+internal object PostSourceParser {
     private val json = Json { ignoreUnknownKeys = true }
 
     /**

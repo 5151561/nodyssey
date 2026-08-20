@@ -18,7 +18,7 @@ import kotlin.io.encoding.Base64
  * reads the account's email and whether Telegram is bound straight off this object, because no
  * endpoint returns them.
  */
-object SiteBootstrap {
+internal object SiteBootstrap {
     private const val ELEMENT_ID = "temp-script"
 
     /**

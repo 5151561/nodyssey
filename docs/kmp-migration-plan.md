@@ -380,8 +380,8 @@ Compose
 | ✅ **B4** | B | `:app` 的 `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group。`:designsys` 那半已在 B3 完成。不是纯改名——见下 | B3 |
 | ✅ **A6** | A | Room + DataStore。手写 migration 是 **10 个**不是 7 个——见下 | A5 |
 | ✅ **A7** | A | Repository 全部下沉。**「拆 `:app` 的 `data/`」：74 个文件剩 16 个**——见下 | A6 |
-| **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」）。**外加还 A5–A7 的两笔债，两笔都是硬验收项**——见下 | A7 + B4 |
-| **D2** | D | 1,059 条 strings + 16 个 res xml + 9 个 drawable → Compose Resources | D1 |
+| ✅ **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」），新模块 `:ui`。两笔债都还了，**D2 有一半是它的前置而不是后续**——见下 | A7 + B4 |
+| ✅ **D2** | D | ~~1,059 条 strings~~ 1,056 条 + 5 个 drawable → Compose Resources。**在 D1 里做掉了**，理由见下；剩下的 res xml 是 manifest 和图标，本来就不该动 | D1 |
 | **D3** | D | iOS：门槛 A 复验 + WKWebView 桥（`WKHTTPCookieStore` ↔ `NSHTTPCookieStorage` 双向 + observer，A5 只交付了 `URLSession` 那侧）+ 生命周期 + IME | D1 |
 | **D4** | D | WorkManager → `BGTaskScheduler`（5 个文件） | A7 |
 
@@ -1013,12 +1013,14 @@ D1 把 `ui/` 搬下来之后两半在同一个模块里，整棵测试树一次�
 
 ---
 
-### A5–A7 留下的两笔债
+### ✅ A5–A7 留下的两笔债：都在 D1 还了
 
 两条都出自 #101 的 review，都不是缺陷，是这三步为了「一个 PR 只降低一个平台耦合」主动挂的账。
 记在这里是因为它们各自有明确的还款点，过了那个点还不还就会变成永久的。
 
-#### 一、八个 `internal` 变 public，还款点是 D1
+**两笔都在 D1 结清**，怎么还的记在下面各自那一节的末尾。
+
+#### ✅ 一、八个 `internal` 变 public，还款点是 D1
 
 上面那节讲了为什么测试没跟着搬（fake 和 ViewModel 测试共用一份）。要补的是**这笔债的另一头**：
 `FEED_PAGING_CONFIG`、`markViewedBody`、两个 `ImageHost*Keys` 这些东西现在是 `:shared` 的公开
@@ -1030,6 +1032,19 @@ API，而它们本来是实现细节——分页窗口大小、一个请求体�
 
 顺带：`SiteBootstrap`、`PostSourceParser` 两个 `internal object` 变 public 是同一类事（B2 记的），
 它们的调用方在 `:app`，同样跟着 D1 回收。
+
+> **✅ 已还（D1）。十个全部改回 `internal`。**
+>
+> 但**前提句是错的**：D1 没有把 `ui/` 搬进 `:shared`，搬进了新模块 `:ui`（为什么见「D1 实测」）。
+> 于是「测试和被测在同一个模块里」并不自动成立——`data/` 的测试要进 `:shared`，`ui/` 的测试要进
+> `:ui`，而那 44 个 data 测试和 4 个 ui 测试共用同一份 `TestDoubles.kt`，正是 A7 当初不搬测试的
+> 那个理由。
+>
+> 解法不是复制，是**同一个文件编译两遍**：`TestDoubles.kt` 放在
+> `shared/src/androidHostTest/kotlin/io/github/nodyssey/data/doubles/`，`:ui` 和 `:app` 的测试源集
+> 各自 `srcDir` 指向那个目录。`internal` 是按编译单元解析的，所以每个模块拿到自己的一份，而磁盘上
+> 只有一份——和 `app/build.gradle.kts` 里「指过去而不是拷过去」的抓包文件是同一个手法，理由也一样：
+> 两份会漂，而漂掉的总是失败的那条测试没在读的那一份。
 
 #### 二、`:designsys → :shared` 现在拖着整个数据层，还款点是 D1 的一个二选一
 
@@ -1049,6 +1064,148 @@ API，而它们本来是实现细节——分页窗口大小、一个请求体�
 > D1 收尾时，要么把 model + richtext + parser 切成独立模块、`:designsys` 与 `:gallery` 改依赖
 > 那一层，**要么在本文档里写下不拆的具体依据**——`ui/` 实际用到了 `:shared` 的哪些部分、因此
 > 这一刀切不出来。两者必居其一，D1 的 PR 里两样都没有就是没做完。
+
+> **✅ 已还（D1），选了第一条：新模块 `:richtext`。**
+>
+> 动手前先量了一遍，结果比这一节假设的还小：`:designsys` 和 `:gallery` 从下面**一共只 import 六个
+> 符号**——`AnsiDecoder`、`AnsiSpan`、`RichNode`、`InlineNode`、`InlineStyle`、`parseMarkdown`——
+> 全在 `plaza.core.richtext` 和 `plaza.core.ansi` 两个包里。`io.github.nodyssey.model` 一个都没用到,
+> 所以这一刀不需要切「model + richtext + parser」，切四个文件就够：`RichNode.kt`、`Markdown.kt`、
+> `AnsiDecoder.kt`，加上 `AnsiDecoder` 自己要的 `TerminalColumns.kt`。993 行，除了
+> kotlinx-serialization 没有任何别的依赖，这是它值得切而不是值得讨论的原因。
+>
+> `:shared` 反过来依赖 `:richtext`（`QualityReportParser` 要 `TerminalColumns`），`:designsys` 与
+> `:gallery` 改依赖 `:richtext`。锁文件是这件事的证据：`designsys/gradle.lockfile` 少 85 行，
+> `gallery/gradle.lockfile` 少 46 行——一个组件画廊的 classpath 上不再有 SQLite。
+
+---
+
+### ✅ D1 实测：`ui/` 的 40,047 行进 `commonMain`，以及 `:app` 只剩 33 个文件
+
+计划这一行写的是「`ui/` + ViewModel 进 `commonMain`」，没说是哪个模块的 `commonMain`。**不能是
+`:shared`**：`:designsys` 在 `:shared` 下面，而一个屏幕同时要这两个，同一个模块装不下——那是个环。
+所以 D1 的产物是新模块 `:ui`，124 个文件 + `Navigation.kt` / `NavigationKeys.kt` 全部进它的
+`commonMain`，`:app` 从 160 个 Kotlin 文件剩 **33 个**。
+
+`:ui` 的 target 是 android + jvm，**没有 Apple**：`:designsys` 只有这两个，而一个依赖没有的 target
+是解析不出来的变体。给前端开 Apple target 是 D3 的事——那一步同时要回答 WKWebView 桥和 IME。桌面
+JVM 已经足够回答 D1 要证明的那件事：四万行屏幕在没有 Android 的地方编译。
+
+#### D2 的一半是 D1 的前置，不是后续
+
+计划把 1,059 条 strings 排在 D1 之后，理由是「对着一个马上要整体搬走的目录做机械替换不划算」。
+**这个排序是做不到的**：`ui/` 的 124 个文件里 77 个认 `R`，而 `R` 是 `:app` 的——它们进
+`commonMain` 的前一刻必须已经不认了。所以字符串先搬，在 `ui/` 还在 `:app` 里的时候搬完，这样每一步
+都有一个能编译的 `:app` 兜底；替换本身两种顺序一模一样，没有一条是白做的。
+
+三处不是机械替换，前两处是单测抓到的：
+
+- **`%%` 五处。**Android 的 formatter 把它折成一个 `%`，Compose Resources 自己实现 `%n$type` 替换，
+  不认这个转义，屏幕上于是是 `62%%`。
+- **`%1$,d` 一处。**同一个原因——它不认 flag，千分位得在进 formatter 之前加好。
+- **`toPickedImages` 的兜底文件名改成参数。**它不是 composable，而 Compose Resources 在组合之外
+  只有 suspend 访问器。
+
+`res/values/strings.xml` 留下 7 条：manifest 读的 label、三个通知渠道名（`NotificationManager` 在
+建渠道时把名字存下来）、三条只有轮询 worker 会拼的通知正文。前四条在 `:ui` 也有一份，是有意的副本。
+
+**顺带发现一个 debug 构建的坑。**`about_app_name` 原来靠 `src/debug/res` 覆盖成「Nodyssey·D」，而
+**Compose Resources 没有 build type**。搬过去之后 debug 包的关于页会悄悄说「Nodyssey」。改法是让它
+不再是字符串资源：`AppVersion` 多一个 `label`，Android 侧从 `applicationInfo.loadLabel` 读——那正是
+launcher 显示的同一个名字，debug 覆盖照样生效，而且从此只有一个答案而不是两个。
+
+#### 平台耦合面：23 个文件，最后落成 9 个 `expect`
+
+`ui/` 的 124 个文件里 23 个 import `android.*`。落地之后 `androidMain` 只有 6 个文件，其余的耦合
+收成九个 `expect`：
+
+| `expect` | 谁要它 | Android 侧 |
+|---|---|---|
+| `rememberImagePicker` | 两个编辑器 + 私信 | `PickMultipleVisualMedia` + 内容提供者查文件名 |
+| `rememberAvatarPicker` | 个人信息 | 相册 + 相机，两条都要解码和缩放 |
+| `rememberImageSamplePicker` | 自定义取色 | `ImageDecoder` 按目标尺寸采样 |
+| `rememberImageGallerySaver` | 图片查看器 | `MediaStore` scoped storage |
+| `rememberShareText` | 帖子详情、图片查看器 | `ACTION_SEND` |
+| `rememberFileSizeLabel` | 关于、设置、更新提醒 | `Formatter.formatShortFileSize` |
+| `rememberAppLinkHandlingEnabled` / `…SettingsLauncher` | 设置 | `DomainVerificationManager` |
+| `rememberNotificationPermissionRequest` | 通知设置 | `POST_NOTIFICATIONS` |
+| `rememberInstallPermissionRequest` | 关于 | 「允许安装未知应用」 |
+| `rememberWallpaperPalette` / `osVersionName` / `supportsWallpaperColorSource` | 动态取色 | `WallpaperManager` + 系统强调色 |
+| `WebViewRoute` | 登录 / 过盾 / 管理页 | 整个屏幕 |
+
+**`WebViewRoute` 是唯一一处放弃拆缝的**，而且是想清楚了才放弃的：Android 的答案是一个 `WebView`，
+它的 cookie 落在 OkHttp 读的同一个 `CookieManager` 里；Apple 的答案是 `WKWebView` 加一座
+`WKHTTPCookieStore` ↔ `NSHTTPCookieStorage` 的桥——不是同一个对象藏在参数后面，生命周期也不一样。
+对着一个实现设计缝，等于猜第二个。那座桥是 D3，工具栏和轮询到时候值得回头再拆。
+
+另外三处是白捡的：五个屏幕的 `BackHandler` 换成 `:designsys` 的 `PlazaBackHandler`（B1 已经把它变
+common 了，当时还写着「没有别的调用方，也许该删」）；`LocalContext` 喂 Coil 的三处换成
+`LocalPlatformContext`；`ProfileScreen` 的一个 `@Preview` 用了 `Configuration.UI_MODE_NIGHT_YES`。
+
+#### `AppContainer` 一分为二，`ApkInstaller` 变接口
+
+37 个 ViewModel 的工厂都要 `AppContainer`。它本来就是接口，36 个成员里 **34 个的类型已经在
+`:shared`**——A7 干的。只有两个不是：`apkInstaller` 和 `proxyConnectionTester`。
+
+- `ApkInstaller` 从 `:app` 的类变成 `:shared` 的接口（`install(apkPath: String)`，不是 `File`），
+  实现改名 `AndroidApkInstaller`。「允许安装未知应用」那个 `Intent` **没有**上接口——那是一个设置页
+  加一个 activity result，没有中性形状，走上面那个 `expect`。
+- `ProxyConnectionTester` 多一个 `classify(Throwable)`。分类靠的是 `java.net` 的异常类型，原来是
+  `:app` 的一个扩展函数，而看结果的屏幕现在没有 `java.net` 了；挂到接口上比 expect/actual 省事，
+  因为有 HTTP 客户端的那一侧本来就知道自己会抛什么。
+
+接口进 `:ui/commonMain`，`OkHttpClient` 和 `SessionCookies` 两个成员留在 `:app` 的
+`AndroidAppContainer`——两个都不是从屏幕上读的：前者是 Coil 的 call factory，后者只在容器内部用。
+
+`MainActivity` 从 163 行变成 76 行：`setContent { }` 里那一整块主题 + CompositionLocal + 导航搬进
+`:ui` 的 `NodysseyRoot`。这不是顺手做的——不搬的话，`ui.settings.theme` 里那五个组配色的函数都得
+从 `internal` 变 public，而那正是这一步在还的那类债。
+
+#### 两个 androidx 的坑，都是桌面编译才暴露出来的
+
+**一、`rememberNavBackStack(vararg)` 只有 Android 有。**多平台那份的签名是
+`rememberNavBackStack(configuration: SavedStateConfiguration, vararg elements)`，而且**必须**传一个
+注册了 `NavKey` 全部子类型的 `SerializersModule`——Android 那个重载是靠反射跳过这件事的，它在
+`androidMain` 里。所以 38 个 key 现在写在 `NavKeySerialization.kt` 里一行一个。代价说清楚：新增一个
+目的地要记得往这里加一笔，编译器不会提醒，症状是进程被杀之后那条返回栈恢复不了。没有加
+`@SerialName`，判别符还是全限定类名，也就是反射那条路本来写的东西。
+
+**二、`androidx.navigation3:navigation3-ui` 的 jvm 变体是 stub。**同一个 group 里
+`navigation3-runtime` 是真多平台，`navigation3-ui`——`NavDisplay` 在里面——是 android 加一个
+`jvmstubs`。`cmp-ui-decision.md` §2.4 那行「navigation3 androidx 官方已全平台 KMP」只对一半。
+`:ui` 因此对 UI 那半换 `org.jetbrains.androidx.navigation3` 的镜像，并按 B4 的老规矩加一条
+constraint——镜像 1.1.0 指向 androidx 1.1.0，而本仓库跑 1.1.4，不写就是一次静默降级。
+
+**还有一个只有单测抓得到的：`:ui` 少了 `kotlin-serialization` 插件。**`@Serializable` 从 `:shared`
+的 api 面上传下来，所以 38 个 key 编译得好好的，但**一个序列化器都没生成**——返回栈存档整个是坏的。
+`PostDetailKeySavedStateTest` 是唯一会响的东西。
+
+#### 整棵测试树一次搬完，1,427 个一个没少
+
+| | 之前 | 之后 |
+|---|---|---|
+| `:app` | 1,095 | 109 |
+| `:shared` `androidHostTest` | 32 | 583 |
+| `:ui` `androidHostTest` | — | 608 |
+| `:designsys` | 108 | 108 |
+| `:richtext` | — | 19 |
+| 合计（Android 侧） | **1,427** | **1,427** |
+
+桌面侧 250 → 254，`macosArm64` 189 → 193，多的四个是 `LuckyDrawTest`：`LuckyDraw` 从 `:app` 下沉到
+`:shared/commonMain`（`java.time` → kotlinx-datetime，`URLEncoder` → `NodeSeekSite` 那份手写的
+`urlEncode`，现在是包内 `internal`），测试跟着进 `commonTest`，于是三端各跑一遍。
+
+留在 `:app` 的 109 个都是主语是 Android 外壳的：六家图床的客户端、离线文件存储、图片缓存、
+`toProxyConnectionFailure` 的异常分类、数据库迁移测试。
+
+`:ui` 没有 `jvmTest`——那 608 个是 Robolectric + Compose 的 Android 测试。把它们搬进 `commonTest`
+要换掉 `createComposeRule`（`ui-test-manifest` 是 Android artifact），那是另一件事，不是这一步的。
+
+#### `:app` 的锁文件只动了两行
+
+而且不是版本：`components-resources` 从「只在 runtime」变成「compile 也在」，因为 `:app` 现在
+通过 `:ui` 的 api 面读 Compose Resources。**没有一个版本变，没有一个 artifact 增减。**这是「Android
+行为不变」这句话能给出的最硬的一条证据。
 
 ---
 

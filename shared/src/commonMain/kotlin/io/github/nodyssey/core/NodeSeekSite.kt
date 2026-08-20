@@ -541,36 +541,40 @@ object NodeSeekSite {
             ?.takeIf { it.path == "/member" }
             ?.queryParameter("t")
             ?.ifBlank { null }
+}
 
-    /**
-     * A value going *into* one of the paths above, encoded the way `URLEncoder` encoded it.
-     *
-     * The unreserved set is `URLEncoder`'s and not `encodeURIComponent`'s — they differ over
-     * `~!'()`, and these strings become search URLs the app has been building for releases. Written
-     * out rather than delegated because `java.net.URLEncoder` is JVM API; the `+` it writes for a
-     * space was already being corrected to `%20` at every call site, so that is simply done here.
-     *
-     * `StardustReceiveMarkup` has a near-twin of this with a different set, deliberately: that one
-     * has to match the site's own editor character for character, and this one has to match the URLs
-     * already in use.
-     */
-    private fun String.urlEncode(): String = buildString {
-        for (byte in encodeToByteArray()) {
-            val octet = byte.toInt() and 0xFF
-            val char = octet.toChar()
-            if (octet < 0x80 && (char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char in URL_ENCODER_SAFE)) {
-                append(char)
-            } else {
-                append('%')
-                append(HEX[octet shr 4])
-                append(HEX[octet and 0xF])
-            }
+/**
+ * A value going *into* one of the paths above, encoded the way `URLEncoder` encoded it.
+ *
+ * The unreserved set is `URLEncoder`'s and not `encodeURIComponent`'s — they differ over `~!'()`,
+ * and these strings become search URLs the app has been building for releases. Written out rather
+ * than delegated because `java.net.URLEncoder` is JVM API; the `+` it writes for a space was already
+ * being corrected to `%20` at every call site, so that is simply done here.
+ *
+ * Top-level and `internal` rather than a private member of [NodeSeekSite], because [LuckyDraw] needs
+ * the same answer: the draw link it builds is pasted into a public thread and opened by other people,
+ * so it has to encode the way every URL this app has ever produced does.
+ *
+ * `StardustReceiveMarkup` has a near-twin of this with a different set, deliberately: that one has to
+ * match the site's own editor character for character, and this one has to match the URLs already in
+ * use.
+ */
+internal fun String.urlEncode(): String = buildString {
+    for (byte in encodeToByteArray()) {
+        val octet = byte.toInt() and 0xFF
+        val char = octet.toChar()
+        if (octet < 0x80 && (char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char in URL_ENCODER_SAFE)) {
+            append(char)
+        } else {
+            append('%')
+            append(HEX[octet shr 4])
+            append(HEX[octet and 0xF])
         }
     }
-
-    private const val URL_ENCODER_SAFE = ".-*_"
-    private const val HEX = "0123456789ABCDEF"
 }
+
+private const val URL_ENCODER_SAFE = ".-*_"
+private const val HEX = "0123456789ABCDEF"
 
 /**
  * One level's chicken-leg span; see [NodeSeekSite.levelChickenSpan].

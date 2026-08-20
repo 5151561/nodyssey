@@ -10,37 +10,14 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 
-/**
- * "测试连接" — one round trip through whatever [io.github.nodyssey.di.AppContainer.okHttpClient] is
- * currently routed through, so a saved proxy is verified against the exact client the forum uses,
- * not a client built specially for the test.
- */
-interface ProxyConnectionTester {
-    suspend fun test(): Result<Unit>
-}
-
 /** 分类列表 needs no session and no signature, which makes it the cheapest real answer the site gives. */
 class NetworkProxyConnectionTester(
     private val jsonSource: JsonSource,
 ) : ProxyConnectionTester {
     override suspend fun test(): Result<Unit> =
         runCatchingExceptCancellation { jsonSource.getJson(NodeSeekJsonClient.PATH_CATEGORIES) }.map {}
-}
 
-/** A connection-test failure reduced to distinctions that point at different network layers. */
-data class ProxyConnectionFailure(
-    val kind: Kind,
-    /** The concrete cause stays visible so a screenshot is useful even for an unclassified failure. */
-    val exceptionName: String,
-) {
-    enum class Kind {
-        DNS,
-        TIMEOUT,
-        CONNECTION,
-        SOCKS_AUTHENTICATION,
-        TLS,
-        OTHER,
-    }
+    override fun classify(failure: Throwable): ProxyConnectionFailure = failure.toProxyConnectionFailure()
 }
 
 /**

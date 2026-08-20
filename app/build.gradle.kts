@@ -71,6 +71,14 @@ android {
     // captures. Pointed at rather than copied: two copies of a 100KB capture drift, and the one that
     // drifts is whichever the failing test is not reading.
     sourceSets["test"].resources.directories.add(project(":shared").projectDir.resolve("src/commonTest/resources").path)
+
+    // The repository test doubles, for the same reason and by the same means — see the note in
+    // `ui/build.gradle.kts`, which points at the same directory. What is left here that needs them
+    // is the handful of tests whose subject is an Android shell: the offline file store, the image
+    // cache, the six image-host clients.
+    sourceSets["test"].kotlin.directories.add(
+        project(":shared").projectDir.resolve("src/androidHostTest/kotlin/io/github/nodyssey/data/doubles").path,
+    )
 }
 
 dependencies {
@@ -113,7 +121,12 @@ dependencies {
     // Compose, as `org.jetbrains.compose` — the swap `:designsys` made in B3, arriving here in B4.
     // The package names are androidx's either way, so not one import in this module changes; what
     // changes is that no module in the repository still asks for Compose by an Android-only
-    // coordinate, which is the precondition for `ui/` moving into `commonMain` in step D1.
+    // coordinate, which was the precondition for `ui/` moving into `commonMain` in step D1.
+    //
+    // Most of these are now named here only because this module *ships* them: what composes against
+    // them is `:ui`, and it names its own. They are kept rather than trimmed because this
+    // `constraints` block at the bottom is what pins three androidx versions above what the
+    // multiplatform pointers ask for, and a constraint governs the configuration it is declared on.
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
@@ -157,8 +170,10 @@ dependencies {
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     // The list-detail scene strategy, on the multiplatform coordinate for the same reason as the
-    // Compose block above. Navigation 3 itself stays androidx: `ui/` is what would need it
-    // multiplatform, and that is D1.
+    // Compose block above. Navigation 3 itself stays androidx, and step D1 confirmed it can:
+    // `navigation3-runtime` publishes a real desktop variant. `navigation3-ui` does not — it is
+    // android plus a jvm *stub* — so `:ui` takes the `org.jetbrains.androidx.navigation3` mirror for
+    // that half, which the adaptive line below was already dragging in.
     implementation(libs.compose.material3.adaptive.navigation3)
 
     // Networking: OkHttp shares its cookie jar with the WebView used for login.

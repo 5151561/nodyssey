@@ -8,6 +8,12 @@ plugins {
     id("plaza.kmp.library")
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose.multiplatform)
+
+    // The navigation keys are `@Serializable`: `rememberNavBackStack` saves the stack across process
+    // death by serializing them. The annotation arrives through `:shared`, but the plugin that turns
+    // it into a serializer does not — without this line every key compiles and none of them restores,
+    // which is a runtime failure `PostDetailKeySavedStateTest` is what catches.
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -66,10 +72,14 @@ kotlin {
             // `collectAsStateWithLifecycle`, which is how every one of those screens reads its state.
             api(libs.androidx.lifecycle.runtime.compose)
 
-            // Navigation 3. androidx rather than a mirror: navigation3 is published as a
-            // multiplatform library by androidx itself — see `docs/cmp-ui-decision.md` §2.4.
+            // Navigation 3, and only half of it is what `docs/cmp-ui-decision.md` §2.4 said it was:
+            // `navigation3-runtime` is genuinely multiplatform androidx, but `navigation3-ui` — the
+            // one that has `NavDisplay` in it — publishes android plus a jvm *stub*. That is the
+            // shape B4 warned about, and the desktop compilation here is what surfaced it. So the
+            // runtime is androidx and the UI half is the mirror; the constraint at the bottom of
+            // this file is what stops the mirror's older pointer from deciding the version.
             api(libs.androidx.navigation3.runtime)
-            api(libs.androidx.navigation3.ui)
+            api(libs.compose.navigation3.ui)
             api(libs.androidx.lifecycle.viewmodel.navigation3)
 
             // The adaptive half, on the multiplatform coordinates: androidx publishes these two with
@@ -90,6 +100,29 @@ kotlin {
             implementation(libs.compose.ui.backhandler)
         }
 
+        androidHostTest.dependencies {
+            implementation(libs.junit)
+            implementation(libs.kotlinx.coroutines.test)
+
+            // The androidx Compose test artifacts, and there is no multiplatform substitute for the
+            // second one: `ui-test-manifest` contributes the activity `createComposeRule` launches,
+            // which is an Android manifest and therefore an Android artifact. Same two lines, same
+            // reason, as `designsys/build.gradle.kts`.
+            implementation(project.dependencies.platform(libs.androidx.compose.bom))
+            implementation(libs.androidx.compose.ui.test.junit4)
+            implementation(libs.androidx.compose.ui.test.manifest)
+
+            implementation(libs.robolectric)
+            implementation(libs.androidx.test.core)
+            implementation(libs.androidx.test.ext.junit)
+
+            // The feed is a `PagingData` and the screens that draw one are tested against it.
+            implementation(libs.androidx.paging.testing)
+
+            // `inMemoryDatabase` in the shared test doubles below opens a real Room database.
+            implementation(libs.androidx.room.testing)
+        }
+
         androidMain.dependencies {
             // The photo picker and `rememberLauncherForActivityResult`. Eight screens reach for it,
             // and there is no neutral seat for it yet — see the `expect` in `commonMain` for which
@@ -103,6 +136,43 @@ kotlin {
         }
     }
 }
+
+/*
+ * The androidx version underneath the multiplatform pointer above.
+ *
+ * `org.jetbrains.androidx.navigation3:navigation3-ui` 1.1.0 asks for `androidx.navigation3` 1.1.0,
+ * and this repository runs 1.1.4. Unstated, naming the mirror would have been a silent downgrade of
+ * navigation for every module below `:app` — the same trap `app/build.gradle.kts` records for
+ * material3 and the adaptive libraries in step B4.
+ *
+ * A constraint rather than a dependency, so what this module *names* is still the multiplatform
+ * coordinate. One line covers both artifacts: androidx publishes constraints on its siblings.
+ */
+dependencies {
+    constraints {
+        "commonMainApi"(libs.androidx.navigation3.ui)
+    }
+}
+
+/*
+ * The repository's test doubles, compiled into this module's tests rather than depended on.
+ *
+ * `TestDoubles.kt` lives with the repository tests in `:shared`, and a test source set is not
+ * published — so a screen test that needs `FakePostRemoteDataSource` or `inMemoryDatabase` has two
+ * options: a second copy, or the same file compiled twice. The same file, for the reason
+ * `app/build.gradle.kts` gives about the captured pages: two copies drift, and the one that drifts
+ * is whichever the failing test is not reading. `internal` resolves per compilation, so each module
+ * gets its own — which is also why this is a source directory and not a dependency.
+ */
+kotlin.sourceSets.getByName("androidHostTest").kotlin.srcDir(
+    project(":shared").file("src/androidHostTest/kotlin/io/github/nodyssey/data/doubles"),
+)
+
+// The captured pages, read as a classpath resource — see `Fixtures` in the test sources. Pointed at
+// rather than copied, the same way `:app` points at them.
+kotlin.sourceSets.getByName("androidHostTest").resources.srcDir(
+    project(":shared").file("src/commonTest/resources"),
+)
 
 compose.resources {
     // Named for the module rather than left to the default `io.github.nodyssey.ui.generated.resources`,

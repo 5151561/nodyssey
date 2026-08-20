@@ -17,11 +17,12 @@ import androidx.compose.ui.backhandler.BackHandler
  * The module's own name stays rather than call sites importing `BackHandler` directly, because
  * `ui-backhandler` is an `implementation` dependency here and so reaches nobody else's compile
  * classpath — and there is no androidx artifact of that name to reach for instead
- * (`androidx.compose.ui:ui-backhandler` is a 404 on Google Maven, checked 2026-08-19). That was
- * originally written as "a consumer still on androidx cannot name it, and one of those consumers is
- * `:app`", which stopped being true in step B4 when `:app` moved to the multiplatform coordinates
- * too. The wrapper has no caller outside this module — `MarkdownEditorBar` is the only one — so if
- * that stays true it is worth deleting rather than keeping.
+ * (`androidx.compose.ui:ui-backhandler` is a 404 on Google Maven, checked 2026-08-19).
+ *
+ * This used to end with "the wrapper has no caller outside this module, so it is worth deleting
+ * rather than keeping". Step D1 answered that: the five screens that were on
+ * `androidx.activity.compose.BackHandler` — the two composers, 收藏, the board strip, the web view —
+ * are in `commonMain` now and all of them call this.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable

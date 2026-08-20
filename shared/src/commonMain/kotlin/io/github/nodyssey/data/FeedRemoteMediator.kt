@@ -180,7 +180,7 @@ class FeedRemoteMediator(
 // Public rather than `internal` only because the test that pins it is still in `:app`: the
 // fakes it shares with the ViewModel tests are one file, and two copies of a fake drift. Step
 // D1 brings `ui/` down here and the whole test tree with it.
-fun feedKeyFor(
+internal fun feedKeyFor(
     categorySlug: String?,
     sort: FeedSort = FeedSort.LAST_REPLY,
 ): String {
@@ -192,7 +192,7 @@ fun feedKeyFor(
 }
 
 /** Empty string is safe as a key because NodeSeek slugs are never blank. */
-const val FRONT_PAGE_FEED_KEY = ""
+internal const val FRONT_PAGE_FEED_KEY = ""
 
 /**
  * The key under which one search's results are stored.
@@ -202,7 +202,7 @@ const val FRONT_PAGE_FEED_KEY = ""
  * Everything the query means is in the key — text, board, order — so changing any of them is a
  * different feed rather than an append onto the previous answer.
  */
-fun searchFeedKeyFor(
+internal fun searchFeedKeyFor(
     query: String,
     categorySlug: String?,
     sort: FeedSort,
@@ -220,4 +220,4 @@ fun searchFeedKeyFor(
  * Not `"search|"`: board keys are `slug` or `slug|postTime`, so a board actually called `search`
  * would produce `search|postTime` and get swept along with the searches.
  */
-const val SEARCH_FEED_KEY_PREFIX = "search:"
+internal const val SEARCH_FEED_KEY_PREFIX = "search:"

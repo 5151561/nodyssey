@@ -22,16 +22,31 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun rememberClipboardCopy(): (label: String, text: String, confirmation: String) -> Unit {
+    val copy = rememberSilentClipboardCopy()
+    val confirm: (String) -> Unit = rememberCopyConfirmation()
+    return remember(copy, confirm) {
+        { label, text, confirmation ->
+            copy(label, text)
+            confirm(confirmation)
+        }
+    }
+}
+
+/**
+ * The same copy without the announcement, for a caller that makes its own.
+ *
+ * A screen showing a snackbar of its own would otherwise say it twice on the versions of Android
+ * that leave the announcing to the app — see [rememberCopyConfirmation].
+ */
+@Composable
+fun rememberSilentClipboardCopy(): (label: String, text: String) -> Unit {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val plainText: (String, String) -> ClipEntry = rememberPlainTextClip()
-    val confirm: (String) -> Unit = rememberCopyConfirmation()
-    return remember(clipboard, scope, plainText, confirm) {
-        { label, text, confirmation ->
-            scope.launch {
-                clipboard.setClipEntry(plainText(label, text))
-                confirm(confirmation)
-            }
+    return remember(clipboard, scope, plainText) {
+        { label, text ->
+            scope.launch { clipboard.setClipEntry(plainText(label, text)) }
+            Unit
         }
     }
 }
