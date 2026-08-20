@@ -2,6 +2,7 @@ package io.github.nodyssey.ui.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import java.text.NumberFormat
 
 /**
  * Powers of ten and one decimal, which is what Android's formatter settled on — without the locale
@@ -25,3 +26,8 @@ actual fun rememberFileSizeLabel(bytes: Long): String =
             "${tenths / 10}.${tenths % 10} ${units[index]}"
         }
     }
+
+/** The JVM's default locale, which on the desktop is the one the user set on their machine. */
+@Composable
+actual fun rememberGroupedNumber(value: Long): String =
+    remember(value) { NumberFormat.getIntegerInstance().format(value) }

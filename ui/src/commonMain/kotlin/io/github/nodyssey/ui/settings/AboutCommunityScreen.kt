@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.ui.common.rememberGroupedNumber
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.about_community
 import io.github.nodyssey.ui.resources.about_community_title
@@ -241,7 +242,7 @@ private fun CommunityStats(
                         CommunityStatsUiState.Loading -> stringResource(Res.string.about_forum_stats_loading)
 
                         is CommunityStatsUiState.Content ->
-                            stringResource(Res.string.about_forum_stats_value, state.memberCount.grouped())
+                            stringResource(Res.string.about_forum_stats_value, rememberGroupedNumber(state.memberCount))
 
                         CommunityStatsUiState.Error -> stringResource(Res.string.about_forum_stats_error)
                     },
@@ -334,14 +335,3 @@ private fun AboutCommunityPreview() {
         )
     }
 }
-
-/**
- * A thousands separator every three digits.
- *
- * The string used to be `%1$,d` and Android's formatter did this. Compose Resources implements its
- * own `%n$type` substitution and knows no flags, so the grouping has to happen before the value
- * reaches it. Written out rather than delegated to a platform formatter because the only number this
- * screen prints is a member count, and comma-every-three is what every locale this forum is read in
- * does with one.
- */
-private fun Long.grouped(): String = toString().reversed().chunked(3).joinToString(",").reversed()

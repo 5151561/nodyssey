@@ -17,6 +17,7 @@ import io.github.nodyssey.data.settings.ColorSource
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.common.LocalAppName
 import io.github.nodyssey.ui.common.rememberExternalUriHandler
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.richtext.LocalReportFormat
@@ -85,6 +86,10 @@ fun NodysseyRoot(
             LocalUriHandler provides rememberExternalUriHandler(settings.externalLinkTarget),
             LocalReportFormat provides settings.reportFormat,
             LocalStickerSizing provides stickerSizing,
+            // The one thing on this list that is not a setting: it is what the platform says this
+            // build is called, so that a debug build's screens say "Nodyssey·D" like its launcher
+            // icon does. See `LocalAppName`.
+            LocalAppName provides container.appVersion.label,
         ) {
             Surface(
                 modifier = modifier.fillMaxSize(),

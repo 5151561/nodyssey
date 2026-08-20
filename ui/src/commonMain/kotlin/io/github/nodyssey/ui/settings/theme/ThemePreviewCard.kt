@@ -31,8 +31,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.nodyssey.ui.common.appName
 import io.github.nodyssey.ui.resources.Res
-import io.github.nodyssey.ui.resources.app_name
 import io.github.nodyssey.ui.resources.settings_theme_preview_accent
 import io.github.nodyssey.ui.resources.settings_theme_preview_board
 import io.github.nodyssey.ui.resources.settings_theme_preview_meta
@@ -85,7 +85,7 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    stringResource(Res.string.app_name),
+                    appName(),
                     style =
                     TextStyle(
                         fontSize = 15.sp,

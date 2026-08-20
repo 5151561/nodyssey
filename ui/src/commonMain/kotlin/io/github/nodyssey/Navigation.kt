@@ -71,6 +71,7 @@ import io.github.nodyssey.ui.assets.StardustViewModel
 import io.github.nodyssey.ui.bookmarks.BookmarksRoute
 import io.github.nodyssey.ui.bookmarks.BookmarksViewModel
 import io.github.nodyssey.ui.common.LocalThreadTransition
+import io.github.nodyssey.ui.common.appName
 import io.github.nodyssey.ui.composer.PostComposerRoute
 import io.github.nodyssey.ui.composer.PostComposerViewModel
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
@@ -94,7 +95,6 @@ import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.about_privacy
 import io.github.nodyssey.ui.resources.about_rss
 import io.github.nodyssey.ui.resources.about_site
-import io.github.nodyssey.ui.resources.app_name
 import io.github.nodyssey.ui.resources.home_pane_empty
 import io.github.nodyssey.ui.resources.notifications_pane_empty
 import io.github.nodyssey.ui.resources.search_pane_empty
@@ -159,7 +159,7 @@ fun MainNavigation(
     val signInUrl = NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH
 
     // Hoisted out of the navigation lambdas below, which are not composable.
-    val siteTitle = stringResource(Res.string.app_name)
+    val siteTitle = appName()
     val aboutSiteTitle = stringResource(Res.string.about_site)
     val privacyTitle = stringResource(Res.string.about_privacy)
     val rssLabel = stringResource(Res.string.about_rss)

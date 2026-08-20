@@ -22,12 +22,19 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun rememberClipboardCopy(): (label: String, text: String, confirmation: String) -> Unit {
-    val copy = rememberSilentClipboardCopy()
+    val scope = rememberCoroutineScope()
+    val write = rememberClipWrite()
     val confirm: (String) -> Unit = rememberCopyConfirmation()
-    return remember(copy, confirm) {
+    return remember(scope, write, confirm) {
         { label, text, confirmation ->
-            copy(label, text)
-            confirm(confirmation)
+            // Inside the coroutine, after the write: the announcement is a claim that the clipboard
+            // holds the text, and a claim made before the suspending write returns is one the app
+            // cannot back — a cancelled scope would leave the reader told about a copy that never
+            // happened.
+            scope.launch {
+                write(label, text)
+                confirm(confirmation)
+            }
         }
     }
 }
@@ -40,14 +47,27 @@ fun rememberClipboardCopy(): (label: String, text: String, confirmation: String)
  */
 @Composable
 fun rememberSilentClipboardCopy(): (label: String, text: String) -> Unit {
-    val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val plainText: (String, String) -> ClipEntry = rememberPlainTextClip()
-    return remember(clipboard, scope, plainText) {
+    val write = rememberClipWrite()
+    return remember(scope, write) {
         { label, text ->
-            scope.launch { clipboard.setClipEntry(plainText(label, text)) }
-            Unit
+            scope.launch { write(label, text) }
         }
+    }
+}
+
+/**
+ * The write itself, still suspending, so the callers above decide what happens after it.
+ *
+ * Shared rather than duplicated because the ordering is the part worth having in one place — see
+ * the comment in [rememberClipboardCopy].
+ */
+@Composable
+private fun rememberClipWrite(): suspend (label: String, text: String) -> Unit {
+    val clipboard = LocalClipboard.current
+    val plainText: (String, String) -> ClipEntry = rememberPlainTextClip()
+    return remember(clipboard, plainText) {
+        { label, text -> clipboard.setClipEntry(plainText(label, text)) }
     }
 }
 

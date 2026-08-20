@@ -17,9 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.tooling.preview.Preview
+import io.github.nodyssey.ui.common.appName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
-import io.github.nodyssey.ui.resources.app_name
 import io.github.nodyssey.ui.resources.licenses_app_section
 import io.github.nodyssey.ui.resources.licenses_dependencies_section
 import io.github.nodyssey.ui.resources.licenses_lockfile_note
@@ -75,7 +75,7 @@ fun OpenSourceLicensesScreen(
             SettingsSectionTitle(stringResource(Res.string.licenses_app_section))
             SettingsGroup {
                 SettingsRow(
-                    title = stringResource(Res.string.app_name),
+                    title = appName(),
                     subtitle = "GNU General Public License v3.0",
                     top = true,
                     bottom = true,

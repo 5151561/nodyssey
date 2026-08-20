@@ -15,3 +15,16 @@ import androidx.compose.runtime.Composable
  */
 @Composable
 expect fun rememberFileSizeLabel(bytes: Long): String
+
+/**
+ * An integer with the reader's own thousands separator — "70,123", or "70.123" where that is what a
+ * reader expects.
+ *
+ * The same argument as [rememberFileSizeLabel], one string over. `about_forum_stats_value` used to
+ * be `%1$,d` and Android's formatter grouped it by the configuration's locale. Compose Resources
+ * implements its own `%n$type` substitution and knows no flags, so the grouping has to happen before
+ * the value reaches the string — and doing it here rather than with a hand-written `chunked(3)` is
+ * what keeps the separator the platform's answer instead of one this file picked for everyone.
+ */
+@Composable
+expect fun rememberGroupedNumber(value: Long): String

@@ -100,6 +100,7 @@ import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.appName
 import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
 import io.github.nodyssey.ui.common.sharedThreadBoard
@@ -108,7 +109,6 @@ import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_create_post
 import io.github.nodyssey.ui.resources.action_scroll_to_top
 import io.github.nodyssey.ui.resources.action_sort
-import io.github.nodyssey.ui.resources.app_name
 import io.github.nodyssey.ui.resources.feed_page_size_note
 import io.github.nodyssey.ui.resources.page_jump_newest
 import io.github.nodyssey.ui.resources.post_badge_awarded
@@ -657,7 +657,7 @@ private fun HomeTopBar(
     TopAppBar(
         title = {
             Text(
-                text = stringResource(Res.string.app_name),
+                text = appName(),
                 style = MaterialTheme.typography.titleLarge,
                 // The wordmark doubles as the second way back to the top, and the only one that
                 // works while the navigation bar is hidden — which is exactly when a reader deep in
