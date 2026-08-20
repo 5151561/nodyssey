@@ -42,12 +42,12 @@ class OfflineLibraryTest {
     private val clock = MutableClock()
     private val scheduler = RecordingScheduler()
     private val images = FakeImageSource()
-    private lateinit var files: OfflineFileStore
+    private lateinit var files: AndroidOfflineFileStore
 
     @Before
     fun setUp() {
         database = inMemoryDatabase()
-        files = OfflineFileStore.of(Files.createTempDirectory("offline-test").toFile().apply { deleteOnExit() })
+        files = AndroidOfflineFileStore.of(Files.createTempDirectory("offline-test").toFile().apply { deleteOnExit() })
     }
 
     @After

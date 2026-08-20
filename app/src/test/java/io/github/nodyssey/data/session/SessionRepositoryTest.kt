@@ -1,7 +1,7 @@
 package io.github.nodyssey.data.session
 
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.plaza.core.net.WebViewCookieJar
+import io.github.plaza.core.net.SessionCookies
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -21,7 +21,7 @@ class SessionRepositoryTest {
 
     @Before
     fun setUp() {
-        repository = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies))
+        repository = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies))
     }
 
     private fun setCookie(raw: String) = cookies.setCookie(NodeSeekSite.BASE_URL, raw)

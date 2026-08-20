@@ -20,9 +20,9 @@ import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.ReactionAction
 import io.github.nodyssey.model.ThreadSnapshot
+import io.github.plaza.core.net.SessionCookies
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
-import io.github.plaza.core.net.WebViewCookieJar
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,6 +36,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,7 +44,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -67,7 +67,7 @@ class ProfileViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -101,7 +101,7 @@ class ProfileViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -130,7 +130,7 @@ class ProfileViewModelTest {
             val fresh = cached.copy(name = "网络新名字", chickenCount = 305)
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -160,7 +160,7 @@ class ProfileViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -186,7 +186,7 @@ class ProfileViewModelTest {
             val assets = FakeAssetsRepository(gain = 7)
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -229,7 +229,7 @@ class ProfileViewModelTest {
                 )
             val viewModel =
                 ProfileViewModel(
-                    session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
                     postRepository = NoOpPostRepository(),
                     profileRepository =
                     FakeProfileRepository(
@@ -279,7 +279,7 @@ private class FakeAssetsRepository(
     override suspend fun attendanceBoard(page: Int): List<AttendanceBoardEntry> = board
 
     private companion object {
-        val TODAY: LocalDate = LocalDate.of(2026, 8, 2)
+        val TODAY: LocalDate = LocalDate(2026, 8, 2)
     }
 }
 

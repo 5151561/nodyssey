@@ -4,25 +4,10 @@ import io.github.plaza.core.AppDispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/**
- * 清除缓存 — the files under the app's cache directory, and the number the settings row reports.
- *
- * The database has bounded itself since the beginning: [OfflineFirstPostRepository] trims to
- * [PostRepository.MAX_CACHED_THREADS] threads on every write, and 浏览历史's own limit trims the
- * marks and positions. That covers the *text*, which is around a megabyte. What grows is what sits
- * beside it on disk and belongs to no repository at all — Coil's image cache, which the default
- * loader is free to run to 250 MB, WebView's HTTP cache, and an update APK whose install never
- * reported success. 清除缓存 cleared only the database, so none of that ever went anywhere and the
- * figure in system settings kept climbing whatever the user did in the app.
+/*
+ * `AppCacheStore` itself — two suspend functions and no types — went to `commonMain` in step A7.
+ * What stayed is everything that names a directory or an image loader, which is all of it.
  */
-interface AppCacheStore {
-    /** Bytes currently held under the cache directory. */
-    suspend fun sizeBytes(): Long
-
-    /** Empties everything [sizeBytes] counts. */
-    suspend fun clear()
-}
-
 /**
  * The image caches, as much of the loader as 清除缓存 has any business with.
  *

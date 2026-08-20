@@ -4,6 +4,7 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.testPreferenceStore
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
+import io.github.plaza.core.net.OkHttpTransport
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -36,7 +37,7 @@ class PostComposerRepositoryTest {
             val repository =
                 DefaultPostComposerRepository(
                     dataStore = testPreferenceStore(backgroundScope, "post-composer"),
-                    okHttpClient = OkHttpClient.Builder().addInterceptor(recorder).build(),
+                    transport = OkHttpTransport(OkHttpClient.Builder().addInterceptor(recorder).build()),
                     dispatchers = AppDispatchers(dispatcher, dispatcher),
                     clock = AppClock { 0L },
                 )
@@ -75,7 +76,7 @@ class PostComposerRepositoryTest {
             val repository =
                 DefaultPostComposerRepository(
                     dataStore = testPreferenceStore(backgroundScope, "post-composer"),
-                    okHttpClient = OkHttpClient.Builder().addInterceptor(recorder).build(),
+                    transport = OkHttpTransport(OkHttpClient.Builder().addInterceptor(recorder).build()),
                     dispatchers = AppDispatchers(dispatcher, dispatcher),
                     clock = AppClock { 0L },
                 )
@@ -138,8 +139,10 @@ class PostComposerRepositoryTest {
             val repository =
                 DefaultPostComposerRepository(
                     dataStore = testPreferenceStore(backgroundScope, "post-composer"),
-                    okHttpClient =
-                    OkHttpClient.Builder().addInterceptor(requests).addInterceptor(recorder).build(),
+                    transport =
+                    OkHttpTransport(
+                        OkHttpClient.Builder().addInterceptor(requests).addInterceptor(recorder).build(),
+                    ),
                     dispatchers = AppDispatchers(dispatcher, dispatcher),
                     clock = AppClock { 0L },
                 )
@@ -175,14 +178,16 @@ class PostComposerRepositoryTest {
             val repository =
                 DefaultPostComposerRepository(
                     dataStore = testPreferenceStore(backgroundScope, "post-composer"),
-                    okHttpClient =
-                    OkHttpClient.Builder()
-                        .addInterceptor(
-                            StaticResponseInterceptor(
-                                code = 200,
-                                body = """{"success":false,"message":"帖子已锁定"}""",
-                            ),
-                        ).build(),
+                    transport =
+                    OkHttpTransport(
+                        OkHttpClient.Builder()
+                            .addInterceptor(
+                                StaticResponseInterceptor(
+                                    code = 200,
+                                    body = """{"success":false,"message":"帖子已锁定"}""",
+                                ),
+                            ).build(),
+                    ),
                     dispatchers = AppDispatchers(dispatcher, dispatcher),
                     clock = AppClock { 0L },
                 )
@@ -226,7 +231,7 @@ class PostComposerRepositoryTest {
         val repository =
             DefaultPostComposerRepository(
                 dataStore = testPreferenceStore(backgroundScope, "post-composer"),
-                okHttpClient = OkHttpClient.Builder().addInterceptor(interceptor).build(),
+                transport = OkHttpTransport(OkHttpClient.Builder().addInterceptor(interceptor).build()),
                 dispatchers = AppDispatchers(dispatcher, dispatcher),
                 clock = AppClock { 0L },
             )

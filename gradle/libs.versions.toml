@@ -42,6 +42,10 @@ jsoup = "1.22.2"
 ksoup = "0.2.6"
 coil = "3.5.0"
 kotlinxSerialization = "1.11.0"
+# Calendar arithmetic in `commonMain`. `java.time` is what this repository used and it is not
+# common; the stdlib has an instant but no time zone and no civil date, and one of the two things
+# a forum needs from a calendar is "which day was this, in the site's zone".
+kotlinxDatetime = "0.8.0"
 # Google's material-color-utilities, ported to multiplatform Kotlin (MIT). Only the algorithm half —
 # no Compose dependency of its own, so it adds a seed-to-scheme function and nothing else.
 materialColorUtilities = "5.0.0"
@@ -51,6 +55,10 @@ androidxWork = "2.11.2"
 # so keep it on its own release line instead of coupling the two version numbers.
 ksp = "2.3.10"
 room = "2.8.4"
+# androidx.sqlite, which Room 2.8.4 resolves anyway. Named on its own line because the
+# multiplatform half of Room reaches it directly: a `Migration` in `commonMain` is written against
+# `SQLiteConnection`, and the Apple targets need the bundled driver to have a SQLite at all.
+sqlite = "2.6.2"
 paging = "3.5.0"
 robolectric = "4.16.1"
 spotless = "8.9.0"
@@ -95,6 +103,7 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 # against this; `:app` keeps jsoup for the HTML it still handles on the Android side.
 ksoup = { module = "com.fleeksoft.ksoup:ksoup", version.ref = "ksoup" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 material-color-utilities = { module = "com.materialkolor:material-color-utilities", version.ref = "materialColorUtilities" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidxDatastore" }
 androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "androidxWork" }
@@ -114,6 +123,13 @@ androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
+# `SQLiteConnection` and `execSQL`, which the hand-written migrations are written against now that
+# they live in `commonMain` — `SupportSQLiteDatabase` is the Android-only predecessor.
+androidx-sqlite = { module = "androidx.sqlite:sqlite", version.ref = "sqlite" }
+# SQLite compiled into the binary, for the targets that ship no system copy of it. Android has one
+# and keeps using it — see `NodeSeekDatabaseFactory` in `androidMain` for why swapping that would
+# be a behaviour change rather than a build-file change.
+androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 androidx-paging-runtime = { module = "androidx.paging:paging-runtime", version.ref = "paging" }
 androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
 androidx-paging-common = { module = "androidx.paging:paging-common", version.ref = "paging" }

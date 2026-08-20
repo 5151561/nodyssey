@@ -376,13 +376,13 @@ Compose
 | ✅ **B1** | B | `:designsys` 去平台耦合。计划记的是 5 个文件，实际 **6 个**——见下 | 无 |
 | ✅ **B2** | B | `core/image` 拆三份，`:designsys` 改为直接依赖 `:shared`。不是「下沉」——见下 | B1 |
 | ✅ **B3** | B | `:designsys` 转 KMP 模块 + desktop target，单独跑起来。顺带把 B4 的一半做掉了——见下 | B2 |
-| **A5** | A | 网络契约 + Apple transport | B3 |
+| ✅ **A5** | A | 网络契约 + Apple transport。`:core` 就此不存在——见下 | B3 |
 | ✅ **B4** | B | `:app` 的 `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group。`:designsys` 那半已在 B3 完成。不是纯改名——见下 | B3 |
-| **A6** | A | Room + DataStore（7 个手写 migration 要重写） | A5 |
-| **A7** | A | Repository 由简到繁：Terms/Search → Profile/Community → Post/Vote → Feed/Paging。**这一步就是「拆 `:app` 的 `data/`」** | A6 |
-| **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」） | A7 + B4 |
+| ✅ **A6** | A | Room + DataStore。手写 migration 是 **10 个**不是 7 个——见下 | A5 |
+| ✅ **A7** | A | Repository 全部下沉。**「拆 `:app` 的 `data/`」：74 个文件剩 16 个**——见下 | A6 |
+| **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」）。**外加还 A5–A7 的两笔债，两笔都是硬验收项**——见下 | A7 + B4 |
 | **D2** | D | 1,059 条 strings + 16 个 res xml + 9 个 drawable → Compose Resources | D1 |
-| **D3** | D | iOS：门槛 A 复验 + WKWebView 桥 + 生命周期 + IME | D1 |
+| **D3** | D | iOS：门槛 A 复验 + WKWebView 桥（`WKHTTPCookieStore` ↔ `NSHTTPCookieStorage` 双向 + observer，A5 只交付了 `URLSession` 那侧）+ 生命周期 + IME | D1 |
 | **D4** | D | WorkManager → `BGTaskScheduler`（5 个文件） | A7 |
 
 原表的步骤 1「Apple 平台 spike」并入 **D3** —— 门槛 A 已在 macOS 上通过，剩下的 iOS 复验和
@@ -752,6 +752,306 @@ Activity，是一份 Android manifest，没有多平台对应物。
 `:app:lintAnalyzeDebugUnitTest` 第一次跑挂在 `OutOfMemoryError: Metaspace`，报出来的是「lint 或它
 依赖的库有 bug」。是 daemon 的事而不是这次改动的事：`./gradlew --stop` 之后重跑即过。
 
+### ✅ A5 实测：`HttpTransport`，以及 `:core` 的消失
+
+计划这一行写的是「网络契约 + Apple transport」。契约落成 `io.github.plaza.core.net.HttpTransport`：
+一次请求、一个回答，签名里没有任何平台类型。`SiteHtmlClient` 和 `NodeSeekJsonClient` 都改成对着它
+写，因此**整个进了 `commonMain`**；OkHttp 是它在 `androidMain` 的实现，`NSURLSession` 是它在
+`appleMain` 的实现。
+
+```text
+                    commonMain
+        HtmlSource / JsonApi  ← 站点问什么
+              HttpTransport   ← 平台答什么
+        ┌───────────┴───────────┐
+   OkHttpTransport      NSUrlSessionTransport
+     androidMain              appleMain
+```
+
+`:core` 因此空掉并**删除**。这不是顺手清理，是这一步的定义：`:core` 存在的理由就是「网络壳是
+Android 的」，契约下沉之后那句话不再成立。包名一个没改（`io.github.plaza.core.*` 原样搬进
+`:shared`），所以 `:app` 和 `:designsys` 的 import 一行没动。
+
+| 去处 | 内容 |
+|---|---|
+| `commonMain` | `AppClock`、`AppDispatchers`、`Coroutines`、`AppVersion`；`net/` 的 `AcceptLanguage`、`UserAgent`、`ChallengeDetector`、`MinIntervalGate`、`SessionCookieStore`、`SiteHtmlClient`，新写的 `HttpTransport` 与 `SessionCookies`；`update/` 的三个纯文件；`:app` 搬来的 `NodeSeekJsonClient` |
+| `androidMain` | `OkHttpTransport`（新）、`WebViewCookieJar`（只剩翻译）、`WebViewCookieStore`、`BrowserHeadersInterceptor`、`CrossOriginRefererInterceptor`、`DeviceAcceptLanguage`、`WebViewUserAgent`、`AndroidAppVersion`、`UpdateManifestSource` |
+| `jvmCommonMain`（新） | `TimeFormat`（`java.time`）、`Platform.jvmCommon.kt` |
+| `appleMain`（新） | `NSUrlSessionTransport`、`appleUrlSession`、`AppleCookieStore`、`Platform.apple.kt` |
+
+#### 四处不是搬家的改动
+
+**一、`WebViewCookieJar` 一分为二。**它原来同时是 OkHttp 的 `CookieJar` **和**「什么算登录」的
+判断者，而后者才是值钱的部分——哪些 cookie 名算 session、哪些是 Cloudflare 噪声、指纹算不算它们。
+那半变成 `commonMain` 的 `SessionCookies`，`SessionRepository` 收的是它；`WebViewCookieJar` 只剩
+`Set-Cookie` 字符串和 OkHttp `Cookie` 之间的翻译，留在 `androidMain`。第一阶段 §4.4 记的
+「`SessionCookieStore` 新写」是这条线的上一半，这是下一半。
+
+**二、`acceptLanguage` 不再收 `java.util.Locale`。**改收语言标签字符串，bare language 取第一个
+子标签——BCP 47 就是这么定义的。读设备偏好语言那半留在 `androidMain`（`LocaleList`）。一个坑：
+`LocaleList` **自己就有** `toLanguageTags()`，返回逗号拼好的**一个** String，同名扩展会被它悄悄
+吃掉，症状是「实参 String，形参 List<String>」——报在调用处而不是定义处。
+
+**三、`Dispatchers.IO` 在 Kotlin/Native 是 `internal`。**coroutines 1.11 里只有 JVM 那份是 public。
+`ioDispatcher()` 因此是 expect/actual，Apple 侧 actual 成 `Dispatchers.Default`——今天成立的理由是
+Apple 这侧没有任何东西阻塞线程（`NSURLSession` 是回调式的）。**A6 把 Room 搬过来那天这条就不成立
+了**，到时候要的是本模块自己的线程池，不是改这一行的名字。`System.currentTimeMillis()` 同样是
+expect/actual，Apple 侧走 `NSDate`。
+
+**四、`x-dynamic-sign` 没有跟着下沉。**`DynamicSignInterceptor` 是个 OkHttp interceptor，留在
+`:app`。把它做成公共的意味着 commonMain 里要有 SHA-1——Kotlin 没有公共的 crypto API，两个平台的
+C 函数都已 deprecated，剩下的选择是手写一份摘要算法。按「不要过度抽象」这条没做。**代价记在这里**：
+Apple 侧今天调 `/api/vote/*` 会拿到 403，这是 D3 的活。
+
+**五、Apple 的 cookie 桥没有做，而且它和 Android 不是同一个形状。**这条在 #101 的 review 里被点
+出来，点得对——原来的 KDoc 写着「`WKWebView` 登录后 cookie 落进
+`NSHTTPCookieStorage.sharedHTTPCookieStorage`，门槛 A 测的就是这个」，**这句是编的**。门槛 A 实际
+测的（见 `docs/kmp-migration-decision.md` §4）是**手动**把 cookie 从 `WKHTTPCookieStore` 读出来交给
+`URLSession`，证明的是「同一份 cookie 能用」，不是「两个 jar 自己会同步」。
+
+Android 之所以简单，是因为 `CookieManager` **同时**是 WebView 写的地方和 OkHttp 读的地方，
+`WebViewCookieJar` 因此纯粹是翻译。WebKit 没有这样一个共用 jar：`WKWebView` 写的是
+`WKWebsiteDataStore.httpCookieStore`，`NSURLSession` 读的是 `NSHTTPCookieStorage`，两者是两个东西，
+而且前者的 API 是异步的——`SessionCookieStore.cookieHeader()` 这个同步签名在 Apple 侧只有在「桥维护
+一份镜像」的前提下才成立，不能改成直接问 WebKit。
+
+因此 A5 交付的是**只有 `URLSession` 那一侧**。桥（双向复制 + `WKHTTPCookieStoreObserver` 跟住 live
+challenge）是 **D3**，也就是 `WKWebView` 第一次存在的那一步。今天没有任何地方 new 出
+`AppleCookieStore` 或 `appleUrlSession`，所以这不是一个线上缺陷，但它曾经是一句会被 D3 直接采信的
+错话。`AppleCookieStore` 的 storage 参数顺手去掉了默认值，逼 D3 明确说自己要的是哪个 jar。
+
+#### 测试
+
+`:core` 的 40 个测试跟着走：`AcceptLanguageTest` 进 `commonTest`（因此两端各跑一遍），其余六个类
+进 `androidHostTest`——`TimeFormat` 是 `java.time`，两个 interceptor 测试是 OkHttp，update 那三个
+读 `resources/` 里的 JSON fixture。新增 3 个（`DeviceAcceptLanguageTest` 拆出 Locale→tag 那半，
+外加一个 script 子标签的用例）。
+
+总数：`:app` 1,095 + `:designsys` 108 + `:shared` 224 = **1,427**（此前 1,424）；
+桌面端 58 + 182 + 3 = **243**，`macosArm64Test` **182**（此前 175）。
+
+#### 门禁
+
+`assembleDebug` / `testDebugUnitTest testAndroidHostTest jvmTest` / `:app:lintDebug` /
+`spotlessCheck` / `:shared:macosArm64Test` / `:gallery:jvmTest` 全绿。锁文件重生成：`:core` 的删掉，
+`:shared` 多了 coroutines 的四个平台变体和 okhttp 的 Android 那份。
+
+---
+
+### ✅ A6 实测：Room 整个进 commonMain，schema 一个字节没变
+
+计划写的是「7 个手写 migration 要重写」。实际是 **10 个**（3→4 一直到 12→13），而重写的内容比
+「重写」这个词轻：`migrate(db: SupportSQLiteDatabase)` 变 `migrate(connection: SQLiteConnection)`，
+`db.execSQL` 变 `connection.execSQL`，**SQL 字符串一个字都没动**。
+
+`data/local/` 的 13 个文件整体进 `commonMain`，一个都不用留在 Android 侧——因为 DAO 的每个函数本来
+就是 `suspend`、`Flow` 或 `PagingSource`，没有一个是阻塞查询。这不是运气，是第一阶段那条
+「不要在 data 层写阻塞调用」的规矩顺手买到的。
+
+| 去处 | 内容 |
+|---|---|
+| `commonMain` | `NodeSeekDatabase` + 10 个 migration、9 个 DAO、两组 entity、`RichContentConverters`；从 `CategoryRepository.kt` 里拆出来的 `Board` |
+| `androidMain` | `createNodeSeekDatabase(context)`——原 `platform/NodeSeekDatabaseFactory.kt` |
+| `appleMain` | `createNodeSeekDatabase()`（Application Support 目录 + `BundledSQLiteDriver`）、`createPreferenceDataStore(name)` |
+| `shared/schemas/` | 13 个 schema JSON，从 `app/schemas/` 整体搬来 |
+
+**验证「Android 行为不变」的那一条是 schema JSON**：处理器在新模块里重新生成之后，
+`13.json`、`12.json`、`11.json` 与搬家前逐字节相同——identityHash 没变，所以装机的库不会被当成
+另一个 schema。10 个 migration 测试也全绿。
+
+#### 五处必须知道的
+
+**一、`@ConstructedBy` + `expect object`。**`@Database` 类在 `commonMain`，实现是每个 target 一份，
+`commonMain` 只能指着一个 `expect object`。**四个 `actual` 全部由 Room 的 KSP 生成**，手写一个是
+这里最容易犯的错；「expected object has no actual declaration」的真实含义是「那个 target 没跑
+处理器」。
+
+**二、`dependencies { add("kspAndroid", …) }` 必须写在 `kotlin { }` 之后。**这些配置名是声明 target
+时创建的，写在前面直接报 `Configuration with name 'kspJvm' not found`——报的是配置名，不提 KMP，
+也不提顺序。
+
+**三、Android 侧故意不指定 driver。**`Room.databaseBuilder(context, …)` 默认走 Android 自带的
+SQLite，也就是每台装机设备现在正在跑的那个。在这里写上 `BundledSQLiteDriver`（Apple 侧别无选择的
+那个）等于把一个活着的数据库文件底下的 SQLite 实现换掉——那是行为变更，不是构建细节。
+
+**四、`room-ktx` 没有跟着来。**它是 Android 专有的协程适配层，多平台 runtime 自带同样的 `suspend`
+支持。**但 `androidx.room.withTransaction` 就在里面**，而 `PostRepository` 和 `FeedRemoteMediator`
+还在用它——这两个文件因此还在 `:app`，归 A7。
+
+**五、迁移测试留在 `:app`。**Room 的 Android `MigrationTestHelper` 通过 `AssetManager` 读 schema，
+而 KMP 模块的 host test 没有配 assets 目录的地方。`:app` 的 debug assets 改成**指向**
+`shared/schemas`（和 fixture 那处同样的理由：两份 100KB 的拷贝会 drift，而 drift 的总是失败的测试
+没在读的那一份）。代价是 `MIGRATION_*` 与 `NODESEEK_MIGRATIONS` 从 `internal` 变 public——顺带也是
+`appleMain` 那个 factory 需要的。
+
+#### DataStore 这半
+
+`androidx.datastore:datastore-preferences` 本来就是多平台的，`DataStore<Preferences>` 里没有一个
+Android 类型，所以这一半不需要改写任何东西：加依赖，加一个 `appleMain` 的
+`createPreferenceDataStore(name)`。Android 那半（`di/PreferenceStores.kt` 的 `Context` 扩展）留在
+`:app`——`preferencesDataStore` 就是个 `Context` 扩展，「文件放哪」正是平台唯一贡献的东西。
+两边用同一批文件名（`settings`、`proxy`、`offline`…），Android 那侧这些名字是装机文件名，改不得。
+
+#### 一个 lint 门禁的松动
+
+`:app:lintDebug` 开始报 `RestrictedApi`，位置在 `shared/build/generated/ksp/.../BoardDao_Impl.kt`：
+Room 生成的代码调用 `@RestrictTo(LIBRARY_GROUP)` 类型，这是 Room 的设计。以前不报，是因为 AGP 会把
+**被 lint 的那个工程自己**的 KSP 产物标成 generated 并跳过；KMP 模块通过 `checkDependencies` 贡献
+的 lint model 不标，同样的生成代码就被当成普通源码读了。`lint { checkGeneratedSources = false }`
+不管用（默认本来就是 false，问题在于 lint 不知道那是生成的）。处置是 `lint.xml` 里按**路径**豁免
+`build/generated/ksp/`——人写的代码里出现 `@RestrictTo` 违规照样挂。
+
+#### 测试与门禁
+
+测试总数不变：`:app` 1,095（含 10 个迁移测试）+ `:designsys` 108 + `:shared` 224 = **1,427**。
+`assembleDebug` / `testDebugUnitTest testAndroidHostTest jvmTest` / `:app:lintDebug` /
+`spotlessCheck` / `:shared:macosArm64Test` / `:gallery:jvmTest` 全绿，Room 与 DataStore 在
+`iosArm64`、`macosArm64` 上都编译通过。
+
+---
+
+### ✅ A7 实测：`data/` 74 个文件剩 16 个
+
+计划写的是「由简到繁：Terms/Search → Profile/Community → Post/Vote → Feed/Paging」。实际没有按这个
+顺序分批，因为**分不开**：`FeedRemoteMediator` 要 `PostRemoteDataSource`，后者要 `HtmlSource`，
+`OfflineFirstPostRepository` 又同时要数据库、Paging 和离线库。一次搬完再按编译器报的错逐个处置，比
+按主题切四刀省事。
+
+搬完之后 `:app` 的 `data/` 只剩 **16 个**文件，每一个都是平台外壳或图床协议：
+
+| 留下的 | 为什么 |
+|---|---|
+| `AppCacheStore.kt`（只剩实现）、`CoilImageCaches.kt` | Coil 的缓存 + `java.io.File` |
+| `offline/AndroidOfflineFileStore.kt`、`OfflineImageInterceptor.kt` | 文件系统 + `StatFs`；后者给 Coil 递 `File` |
+| `offline/OfflineWork.kt`、`OfflineWorkers.kt` | WorkManager，按 §4.4「不要过度抽象」原样留下 |
+| `proxy/ProxyConnectionTester.kt` | 靠 `java.net` 的异常类型分类失败原因 |
+| `imagehost/` 的 9 个 | 六家图床的协议，见下 |
+
+`:shared` 这侧：`commonMain` 63 个，`androidMain` 3 个（OkHttp 取图、更新仓库的实现、数据库工厂）。
+
+#### 一分为二的四个
+
+不是整体搬走也不是整体留下，接口下去、实现留下：
+
+| | `commonMain` | 留在原地 |
+|---|---|---|
+| `AppCacheStore` | 两个 suspend 函数的接口 | `ImageCaches` + `DefaultAppCacheStore`（`:app`） |
+| `OfflineFileStore` | **新写的接口**，七个方法 | `AndroidOfflineFileStore`（`:app`，多一个 `fileOf(): File?` 给 Coil 拦截器） |
+| `OfflineImageSource` | 接口 | `OkHttpOfflineImageSource`（`:shared/androidMain`） |
+| `AppUpdateRepository` / `UpdateCheckStore` | 两个接口 | `DefaultAppUpdateRepository`（`:shared/androidMain`） |
+
+后两个进 `androidMain` 而不是留 `:app`：它们要的是 OkHttp 和 `File`，而 OkHttp 从 A5 起就住在
+`:shared/androidMain`。理由都写在文件头上——图片要的是**字节**，APK 要的是**流**，而
+`HttpTransport` 交出来的是解码好的文本。
+
+#### `imagehost/` 是唯一整片没走的
+
+九个文件、六家图床的协议，全部还在 `:app`。原因只有一个：**上传进度**。`HttpTransport` 读完一整个
+回答才返回，请求飞在半空时它什么都不说；而托盘上那个进度环要的正好是相反的东西，OkHttp 那侧是靠包
+一层 `RequestBody` 拿到的。给 transport 加一个上传进度回调是改一个**所有调用方共享**的契约，那属于
+真正需要 Apple 上传器的那一步，不属于这一步。
+
+接口 `ImageHostRepository` 还是下去了（ViewModel 只认它），`ImageHost` / `ImageHostModels` /
+`ImageHostSettings`（纯 DataStore）也下去了。
+
+#### 六处不是搬家的改动
+
+**一、`java.time` → kotlinx-datetime。**`AssetsRepository` 要「这条流水属于站点的哪一天」，
+`TimeFormat` 要五种时间标签。stdlib 有 `Instant` 但没有时区也没有 civil date，所以加了
+`kotlinx-datetime 0.8.0`。`TimeFormat` 因此从 `jvmCommonMain` 升到 `commonMain`——五个仓库调它的
+`parseTimestamp`，五个都在 `commonMain` 了。它的测试跟着进 `commonTest`，于是三端各跑一遍。
+
+**二、`@Immutable` 逼出一个 Compose 依赖。**`OfflineState`、`ImageUploadState` 这三个类带
+`@Immutable`。Compose 编译器没跑过的模块，它的类在使用方一律按 unstable 处理——所以那个注解不是装饰，
+删掉是一次**静默的性能退化**。`:shared` 因此 `api(libs.compose.runtime)`：只要注解，不要编译器插件。
+
+**三、`androidx.room.withTransaction` 不存在了。**它在 `room-ktx` 里，A6 已经说过那个包没跟来。
+多平台 runtime 给的是 `useWriterConnection { it.immediateTransaction { … } }`，两句话写成
+`RoomDatabase.writeTransaction`。`immediateTransaction`（`BEGIN IMMEDIATE`）而不是 deferred：这里
+每个调用方都在写。块里的 DAO 调用会**加入**同一个事务而不是自己开一个——Room 把连接放在协程上下文里，
+这也是块内不能换 dispatcher 的原因。
+
+**四、`java.io.IOException` → `okio.IOException`。**三个 DataStore 读取器都有
+`catch { if (it is IOException) emit(emptyPreferences()) }`。okio 的那个在 JVM 上就是
+`java.io.IOException` 的 typealias，行为一字不差。
+
+**五、`java.util.UUID` → `kotlin.uuid.Uuid`。**两处 `Csrf-Token`（服务端只检查有值）和一处上传队列
+的行 id。
+
+**六、`@Volatile` 和 `String.toByteArray()`。**前者要显式 `import kotlin.concurrent.Volatile`，
+后者是 JVM 扩展，换 `encodeToByteArray()`——UTF-8 从默认值变成定义，而那个数字是要和存下来的比的。
+
+**顺带：jsoup 从 APK 里删掉了。**计划里点名的 `UserSpaceRepository` 那一行 `Jsoup.parse(raw).text()`
+换成 Ksoup 之后，`:app` 再没有一个 `org.jsoup` import——依赖和开源许可页上的那一条一起删。
+
+#### 智能转换在跨模块会失效
+
+四处 `x != null -> f(x)` 编译不过了：`val` 来自另一个模块，编译器不做 smart cast。和步骤 3/4 记的
+`VoteCard` 是同一条，处置也一样——先读进局部变量。这条在把一整个包搬出模块时会成片出现，值得当成
+可预期成本而不是意外。
+
+#### 八个 `internal` 变 public，以及为什么测试没跟着搬
+
+`FRONT_PAGE_FEED_KEY`、`feedKeyFor`、`searchFeedKeyFor`、`SEARCH_FEED_KEY_PREFIX`、
+`FEED_PAGING_CONFIG`、`markViewedBody`、`ImageHostKeys`、`ImageHostSecretKeys`——都是因为钉着它们的
+测试还在 `:app`。
+
+**测试没搬是权衡过的**，不是漏了。`app/src/test/.../data/` 的 fake 是**和 ViewModel 测试共用的一份**：
+`FakePostRemoteDataSource` 被 UI 测试引用 51 次，`testSettingsRepository` 23 次，`inMemoryDatabase`
+8 次。把 data 测试搬进 `:shared/androidHostTest` 就得把这些 fake 复制一份留给 `:app`——四百多行的
+假实现两份，而**漂移的总是失败的那条测试没在读的那一份**（步骤 3/4 讲 fixture 时是同一个道理）。
+D1 把 `ui/` 搬下来之后两半在同一个模块里，整棵测试树一次搬完，fake 仍然只有一份。
+
+#### 测试与门禁
+
+测试总数不变：`:app` 1,095 + `:designsys` 108 + `:shared` 224 = **1,427**。
+`TimeFormatTest` 的 7 个从 `androidHostTest` 挪到 `commonTest`，所以桌面端 58 + 189 + 3 = **250**，
+`macosArm64Test` **189**。
+
+`assembleDebug` / `testDebugUnitTest testAndroidHostTest jvmTest` / `:app:lintDebug` /
+`spotlessCheck` / `:shared:macosArm64Test` / `:gallery:jvmTest` 全绿。
+
+---
+
+### A5–A7 留下的两笔债
+
+两条都出自 #101 的 review，都不是缺陷，是这三步为了「一个 PR 只降低一个平台耦合」主动挂的账。
+记在这里是因为它们各自有明确的还款点，过了那个点还不还就会变成永久的。
+
+#### 一、八个 `internal` 变 public，还款点是 D1
+
+上面那节讲了为什么测试没跟着搬（fake 和 ViewModel 测试共用一份）。要补的是**这笔债的另一头**：
+`FEED_PAGING_CONFIG`、`markViewedBody`、两个 `ImageHost*Keys` 这些东西现在是 `:shared` 的公开
+API，而它们本来是实现细节——分页窗口大小、一个请求体的拼法、图床的 key 名。公开 API 是会被人用的，
+用一次就还不掉了。
+
+**D1 把 `ui/` 搬进 `:shared` 之后，测试和被测在同一个模块里，这八个应当当场改回 `internal`。**
+这是 D1 的验收项之一，不是「有空再说」——D1 的 PR 里如果没有这一步，债就永久了。
+
+顺带：`SiteBootstrap`、`PostSourceParser` 两个 `internal object` 变 public 是同一类事（B2 记的），
+它们的调用方在 `:app`，同样跟着 D1 回收。
+
+#### 二、`:designsys → :shared` 现在拖着整个数据层，还款点是 D1 的一个二选一
+
+`:designsys` 需要 `:shared` 的只有 RichNode 那棵树和几个 parser。它拿到的是今天的 `:shared`：
+网络层、Room、Paging、DataStore、站点业务，全部。`:gallery` 也跟着解析一整套数据库依赖——一个
+组件画廊为了画一段富文本，classpath 上有 SQLite。锁文件的膨胀已经把这件事写在纸面上了。
+
+**这是 A7 的直接后果，不是 B2 的**：B2 把 `core/image` 拆三份的时候 `:shared` 里还没有 Room。
+真正的修法是从 `:shared` 里再切出一层「只有 model + richtext + parser」的模块，`:designsys` 和
+`:gallery` 依赖那一层。
+
+**没有现在做，理由是排序**：这一刀切在哪里取决于 D1 之后 `ui/` 需要什么，现在切等于猜。
+
+但「D1 时重新评估」不是还款点——**重新评估最容易的结果就是无限期展期**。所以钉成一个二选一，
+列为 D1 的验收项：
+
+> D1 收尾时，要么把 model + richtext + parser 切成独立模块、`:designsys` 与 `:gallery` 改依赖
+> 那一层，**要么在本文档里写下不拆的具体依据**——`ui/` 实际用到了 `:shared` 的哪些部分、因此
+> 这一刀切不出来。两者必居其一，D1 的 PR 里两样都没有就是没做完。
+
+---
+
 ### ✅ 步骤 2 实测：构建基础设施
 
 `:shared` 是 KMP 模块，target 三个：android、`iosArm64`、`macosArm64`。**`appleMain` 不需要自己搭**
@@ -826,7 +1126,7 @@ Apple 两个照锁不误，虽然 CI 永远不解析它们——锁文件的意�
 `:core` 对 `:shared` 是 `api`，所以 `:designsys` 和 `:app` 里那些 `io.github.plaza.core.*` 的 import
 一行没改。代价是 `io.github.plaza.core.net` 这个包**同时存在于两个模块**里——`SiteConfig` 在
 `:shared`，`SiteHtmlClient` 还在 `:core`。这是过渡态而不是终局：**A5** 之后 `:core` 的网络壳也进
-`:shared/androidMain`，包就合回去了。
+`:shared/androidMain`，包就合回去了。**——A5 已做，`:core` 整个不存在了，见上。**
 
 jsoup → Ksoup 确实是纯机械替换，只改 import，加上 spike 记过的 `TextNode.wholeText` 在 Ksoup 是函数
 `getWholeText()`。**jsoup 没能从 `:app` 完全删掉**：`UserSpaceRepository` 还有一行
@@ -945,6 +1245,13 @@ Room 2.8.4、Paging 3.5.0、DataStore 1.2.1（项目用的是 Preferences，正�
 ```
 
 lockfile 是 STRICT 模式，不更新就直接失败。
+
+**一个例外，`:gallery`。**`compose.desktop.currentOs` 按宿主机挑 Skiko 和 Compose desktop 的原生
+件，是仓库里唯一「由机器而不是由 build 决定」的依赖——而锁文件的目的恰恰是消灭这件事。锁住的结果
+是：Mac 上 `--write-locks` 写进 `macos-arm64`，CI 在 Ubuntu 上解析出 `linux-x64`，STRICT 同时报两
+条（「解析出了不在锁里的」和「锁里的没解析出来」），构建在跑单元测试之前就挂。B4 合进 `main` 之后
+CI 一直是红的就是这个原因，#101 只是继承了它。修法是把这两组坐标按通配符加进
+`gallery/build.gradle.kts` 的 `dependencyLocking.ignoredDependencies`；该模块其余部分照锁。
 
 ### 第二阶段的测试迁移坑
 

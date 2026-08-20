@@ -2,8 +2,6 @@ plugins {
     id("plaza.android.application")
     id("plaza.android.compose")
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.room)
 }
 
 /*
@@ -61,8 +59,12 @@ android {
         }
     }
 
-    // Robolectric's MigrationTestHelper reads schemas through the debug AssetManager.
-    sourceSets["debug"].assets.directories.add("$projectDir/schemas")
+    // Room's schema JSON moved to `:shared` with the `@Database` class in step A6, and
+    // `NodeSeekDatabaseMigrationTest` stayed here — it is a test about the file on an installed
+    // Android device, and Robolectric plus Room's Android `MigrationTestHelper` are what read it.
+    // The helper looks the schemas up through the debug `AssetManager`, so this points at the
+    // directory rather than keeping a second copy of it, for the same reason as the line below.
+    sourceSets["debug"].assets.directories.add(project(":shared").projectDir.resolve("schemas").path)
 
     // The captured pages moved to `:shared` with the parsers that read them, and a handful of tests
     // left here — the challenge detector, two repositories, the reply composer — still read the same
@@ -71,26 +73,17 @@ android {
     sourceSets["test"].resources.directories.add(project(":shared").projectDir.resolve("src/commonTest/resources").path)
 }
 
-// Schemas are checked in: a diff here is the review signal that a migration is needed.
-room {
-    schemaDirectory("$projectDir/schemas")
-}
-
 dependencies {
     // The Compose theme and the components that carry no NodeSeek knowledge. The dependency only
     // goes this way: `:designsys` cannot see this module, which is what keeps site-specific types out
     // of it by compilation rather than by review.
     implementation(project(":designsys"))
 
-    // The same rule for the non-visual half: HTTP, the WebView cookie bridge, the update check. What
-    // `:core` needs to know about nodeseek.com reaches it as `NodeSeekSite.CONFIG`, never as an
-    // import.
-    implementation(project(":core"))
-
-    // The domain model and the parsers, which no longer know they are running on Android. Named
-    // explicitly even though `:core` already exposes it transitively: this module imports
-    // `io.github.nodyssey.model` and `io.github.nodyssey.core.html` directly, and a dependency you
-    // import from is one you declare.
+    // The business core: the domain model, the parsers, and — since step A5 — the network layer
+    // this app talks to nodeseek.com through. `HtmlSource`, `JsonApi` and `HttpTransport` are
+    // `commonMain`; the `OkHttpClient` assembled below and the `OkHttpTransport` it is wrapped in are
+    // that module's `androidMain`. What it needs to know about nodeseek.com reaches it as
+    // `NodeSeekSite.CONFIG`, never as an import.
     implementation(project(":shared"))
 
     // The androidx Compose BOM, and it no longer governs what ships: everything below that used to
@@ -167,10 +160,6 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
 
-    // NodeSeek has no public API for lists/details, so pages are scraped. The parsers themselves have
-    // moved to `:shared` and are written against Ksoup; jsoup stays here because this module is still
-    // what turns a response body into the `Document` it hands them.
-    implementation(libs.jsoup)
     implementation(libs.kotlinx.serialization.json)
 
     // Settings SSOT
@@ -179,13 +168,9 @@ dependencies {
     // Background notification polling: the site has no push, so a periodic worker checks unread.
     implementation(libs.androidx.work.runtime)
 
-    // Offline-first SSOT: Room owns posts/comments/boards, the network only writes into it.
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.room.paging)
-    ksp(libs.androidx.room.compiler)
-
-    // Paging drives the list straight off the database via a RemoteMediator.
+    // Paging drives the list straight off the database via a RemoteMediator. Room, the entities and
+    // the DAOs are `:shared` since step A6, and `paging-common` arrives with them; these two are the
+    // Android half — the `PagingDataAdapter` machinery and the Compose collector.
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.compose)
 

@@ -11,9 +11,9 @@ import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.session.FakeSessionCookieStore
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.plaza.core.AppClock
+import io.github.plaza.core.net.SessionCookies
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
-import io.github.plaza.core.net.WebViewCookieJar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -205,7 +205,7 @@ class MessageThreadViewModelTest {
     ) = MessageThreadViewModel(
         repository = repository,
         notifications = notifications,
-        session = SessionRepository(WebViewCookieJar(NodeSeekSite.CONFIG, cookies)),
+        session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
         clock = AppClock { NOW },
         uploader = ImageUploader { _, _ -> "https://cdn.nodeimage.com/i/x.webp" },
         uid = 4471,

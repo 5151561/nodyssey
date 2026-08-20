@@ -13,7 +13,7 @@ import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
-import io.github.nodyssey.data.offline.OfflineFileStore
+import io.github.nodyssey.data.offline.AndroidOfflineFileStore
 import io.github.nodyssey.data.offline.OfflineImageInterceptor
 import io.github.nodyssey.data.offline.OfflineWork
 import io.github.nodyssey.di.AppContainer
@@ -108,7 +108,7 @@ open class NodysseyApp :
             .components {
                 // Ahead of the data-usage policy on purpose: a downloaded picture is already on
                 // this device, so 仅 Wi-Fi 加载图片 has nothing to defer about it.
-                add(OfflineImageInterceptor(OfflineFileStore.of(filesDir)))
+                add(OfflineImageInterceptor(AndroidOfflineFileStore.of(filesDir)))
                 add(
                     ImageNetworkPolicyInterceptor(
                         // The interceptor is handed both rather than asking: which key means

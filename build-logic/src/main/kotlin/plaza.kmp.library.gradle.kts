@@ -11,8 +11,8 @@
 // left Android. What every KMP module in this repository shares is the Android target below and the
 // gates around it.
 //
-// The Android side here is a *consumer*, not a platform this code is written against: `:app` and
-// `:core` are Android modules and resolve this module through its Android variant. That is why the
+// The Android side here is a *consumer*, not a platform this code is written against: `:app` is an
+// Android module and resolves these modules through their Android variant. That is why the
 // target arrives via `com.android.kotlin.multiplatform.library` — the Android target inside a KMP
 // module — rather than by applying `com.android.library` next to it, which AGP 9 no longer supports
 // in combination with the multiplatform plugin.
