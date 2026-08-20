@@ -1,9 +1,9 @@
 package io.github.nodyssey.ui.history
 
 import io.github.nodyssey.data.ReadHistoryEntry
+import kotlinx.datetime.TimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.ZoneId
 
 /**
  * The day headings, which are calendar arithmetic and therefore where the off-by-one lives.
@@ -12,7 +12,7 @@ import java.time.ZoneId
  * asked it in whatever zone the machine happened to be in would pass or fail by geography.
  */
 class HistorySectionsTest {
-    private val zone = ZoneId.of("Asia/Shanghai")
+    private val zone = TimeZone.of("Asia/Shanghai")
 
     /** 2026-08-06 09:00 local. */
     private val now = 1_785_978_000_000L

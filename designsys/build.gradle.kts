@@ -17,6 +17,13 @@ kotlin {
     // enough to find out whether that is still true. See `docs/kmp-migration-plan.md` §5, step B3.
     jvm()
 
+    // The Apple target, and the reason there is exactly one: macOS is already answered by the JVM
+    // above — that is the target `:gallery` runs — while iOS has no substitute at all. Device arch
+    // rather than the simulator because nothing here is launched yet; what this target buys today is
+    // a compiler that refuses `java.text.BreakIterator` in a source set claiming to be neutral. Step
+    // D3 of `docs/kmp-migration-plan.md`.
+    iosArm64()
+
     // `java.net.SocketTimeoutException` and `java.text.BreakIterator` are not the Android part of
     // Android — they are the JVM part, and both targets answer for them identically. Without a
     // source set between `commonMain` and the two of them, the two `actual`s below would be the same

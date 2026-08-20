@@ -16,9 +16,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 
 /**
  * What the form shows that is not the text in its own fields.
@@ -110,11 +114,10 @@ class LuckyViewModel(
 }
 
 /** Tomorrow, on the hour. A draw closing in the past is the one default that is always wrong. */
-private fun defaultDrawTime(nowMillis: Long): Long =
-    Instant
-        .ofEpochMilli(nowMillis)
-        .plus(1, ChronoUnit.DAYS)
-        .atZone(ZoneId.systemDefault())
-        .truncatedTo(ChronoUnit.HOURS)
-        .toInstant()
-        .toEpochMilli()
+private fun defaultDrawTime(nowMillis: Long): Long {
+    val zone = TimeZone.currentSystemDefault()
+    val tomorrow = Instant.fromEpochMilliseconds(nowMillis).plus(1.days).toLocalDateTime(zone)
+    return LocalDateTime(tomorrow.date, LocalTime(tomorrow.hour, 0))
+        .toInstant(zone)
+        .toEpochMilliseconds()
+}

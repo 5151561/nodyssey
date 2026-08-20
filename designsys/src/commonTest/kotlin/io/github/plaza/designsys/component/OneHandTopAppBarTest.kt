@@ -1,11 +1,9 @@
 package io.github.plaza.designsys.component
 
+import androidx.compose.runtime.MonotonicFrameClock
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.TestMonotonicFrameClock
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlin.test.Test
@@ -28,7 +26,7 @@ class OneHandExpandedBlankTest {
     }
 
     @Test
-    fun `a short phone can still be pulled, just less far`() {
+    fun `a short phone can still be pulled but not as far`() {
         assertEquals(600f * 0.4f - 64f, oneHandExpandedBlank(windowHeight = 600.dp).value, 0.01f)
     }
 
@@ -245,12 +243,11 @@ class OneHandAppBarScrollTest {
      * dispatches no nested scroll whatsoever, so the bar heard nothing, stayed at full height, and
      * the page the reader had just asked for turned up in the bottom half of the screen.
      */
-    @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTestApi::class)
     @Test
     fun `folding on the screen's own initiative leaves nothing standing`() = runTest {
         val state = state()
 
-        withContext(TestMonotonicFrameClock(this)) { state.fold() }
+        withContext(SteppedFrameClock()) { state.fold() }
 
         assertEquals(0f, state.heightPx, 0f)
         assertEquals(0f, state.fraction, 0f)
@@ -303,5 +300,28 @@ class OneHandAppBarScrollTest {
 
         assertEquals(80f, state.heightPx, 0f)
         assertEquals(1f, state.fraction, 0f)
+    }
+}
+
+/**
+ * A frame clock that hands out one frame per ask, so a spring in a test runs to its end.
+ *
+ * `TestMonotonicFrameClock` would be the obvious thing and it is a JVM artifact: Compose publishes it
+ * for android and desktop only, and this file compiles for `iosArm64` as well. Nothing here needs
+ * what that one adds — coordinating frames with the virtual clock matters when a test asserts
+ * *mid*-animation, and this one asserts where the animation stopped. The bar
+ * settles on a spring with a duration, so the loop ends on its own.
+ */
+private class SteppedFrameClock : MonotonicFrameClock {
+    private var nanos = 0L
+
+    override suspend fun <R> withFrameNanos(onFrame: (Long) -> R): R {
+        nanos += FRAME_NANOS
+        return onFrame(nanos)
+    }
+
+    private companion object {
+        /** 60fps, which is what the spring is tuned against. */
+        const val FRAME_NANOS = 16_666_667L
     }
 }

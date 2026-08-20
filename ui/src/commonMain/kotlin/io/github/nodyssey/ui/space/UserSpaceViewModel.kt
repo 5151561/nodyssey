@@ -31,11 +31,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeParseException
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 enum class SpaceTab {
     GENERAL,
@@ -297,9 +297,12 @@ internal fun joinedDays(createdAt: String?, nowMillis: Long): Int? {
     val joined =
         try {
             LocalDate.parse(datePart)
-        } catch (_: DateTimeParseException) {
+        } catch (_: IllegalArgumentException) {
+            // kotlinx-datetime's own parse failure, which is what `DateTimeParseException` was here
+            // before this file left the JVM behind.
             return null
         }
-    val today = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalDate()
-    return ChronoUnit.DAYS.between(joined, today).toInt().coerceAtLeast(0)
+    val today =
+        Instant.fromEpochMilliseconds(nowMillis).toLocalDateTime(TimeZone.currentSystemDefault()).date
+    return joined.daysUntil(today).coerceAtLeast(0)
 }

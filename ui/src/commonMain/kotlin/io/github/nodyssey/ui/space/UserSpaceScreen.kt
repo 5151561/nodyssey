@@ -479,7 +479,10 @@ private fun RowScope.SpaceStat(
 
 private const val UNKNOWN_VALUE = "—"
 
-private fun Int.formatted(): String = if (this >= 1_000) "%,d".format(this) else toString()
+// Grouped by hand rather than through `"%,d".format`, which is a JVM extension. Only ever asked
+// about a count, so the negative case the grouping would get wrong cannot arrive.
+private fun Int.formatted(): String =
+    if (this >= 1_000) toString().reversed().chunked(3).joinToString(",").reversed() else toString()
 
 @Composable
 private fun SpaceTabContent(

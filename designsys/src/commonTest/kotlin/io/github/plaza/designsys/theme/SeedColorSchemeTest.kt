@@ -143,7 +143,10 @@ class SeedColorSchemeTest {
                 Color(0xFF00FF00),
             )
 
-        fun hex(color: Color) = String.format("#%08X", color.toArgb())
+        // Written out rather than `String.format`, which is a JVM extension: this file compiles
+        // for `iosArm64` too, and a failure message is not worth a source set of its own.
+        fun hex(color: Color) =
+            "#" + color.toArgb().toUInt().toString(16).uppercase().padStart(8, '0')
 
         /** WCAG, on the relative luminance Compose already computes. */
         fun contrastRatio(a: Color, b: Color): Double {

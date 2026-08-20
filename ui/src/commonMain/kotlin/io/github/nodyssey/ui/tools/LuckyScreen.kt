@@ -90,12 +90,13 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.ZoneId
+import kotlin.time.Instant
 
 @Composable
 fun LuckyRoute(
@@ -392,7 +393,7 @@ private fun DrawTimePicker(
     onDismiss: () -> Unit,
     onPicked: (Long) -> Unit,
 ) {
-    val current = remember(millis) { millis.toLocalDateTime() }
+    val current = remember(millis) { millis.toDeviceDateTime() }
     val pickerState =
         rememberTimePickerState(
             initialHour = current.hour,
@@ -505,8 +506,8 @@ private fun GeneratedLinkCard(
     }
 }
 
-private fun Long.toLocalDateTime(): LocalDateTime =
-    LocalDateTime.ofInstant(Instant.ofEpochMilli(this), ZoneId.systemDefault())
+private fun Long.toDeviceDateTime(): LocalDateTime =
+    Instant.fromEpochMilliseconds(this).toLocalDateTime(TimeZone.currentSystemDefault())
 
 /**
  * The picker reports a UTC midnight; the closing time has to stay the one already chosen.
@@ -515,19 +516,17 @@ private fun Long.toLocalDateTime(): LocalDateTime =
  * 26th for anyone west of Greenwich — Material's date picker is documented to return midnight UTC.
  */
 private fun combineDate(pickedUtcMillis: Long, currentMillis: Long): Long {
-    val date: LocalDate = Instant.ofEpochMilli(pickedUtcMillis).atZone(ZoneId.of("UTC")).toLocalDate()
-    val time: LocalTime = currentMillis.toLocalDateTime().toLocalTime()
-    return date.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    val date = Instant.fromEpochMilliseconds(pickedUtcMillis).toLocalDateTime(TimeZone.UTC).date
+    val time = currentMillis.toDeviceDateTime().time
+    return LocalDateTime(date, time)
+        .toInstant(TimeZone.currentSystemDefault())
+        .toEpochMilliseconds()
 }
 
 private fun combineTime(currentMillis: Long, hour: Int, minute: Int): Long =
-    currentMillis
-        .toLocalDateTime()
-        .toLocalDate()
-        .atTime(hour, minute)
-        .atZone(ZoneId.systemDefault())
-        .toInstant()
-        .toEpochMilli()
+    LocalDateTime(currentMillis.toDeviceDateTime().date, LocalTime(hour, minute))
+        .toInstant(TimeZone.currentSystemDefault())
+        .toEpochMilliseconds()
 
 // -------------------------------------------------------------------------------------------------
 

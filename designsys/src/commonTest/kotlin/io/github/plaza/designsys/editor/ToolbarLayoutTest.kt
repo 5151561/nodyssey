@@ -25,7 +25,7 @@ class ToolbarLayoutTest {
     }
 
     @Test
-    fun `a name this version no longer has is dropped, not fatal`() {
+    fun `a name this version no longer has is dropped rather than fatal`() {
         // What an action removed in a later release leaves behind in everyone's stored strip.
         val layout = toolbarLayout(listOf("BOLD", "BLINK", "CODE"), PostKeys)
 
@@ -38,7 +38,7 @@ class ToolbarLayoutTest {
     }
 
     @Test
-    fun `a key this version has just added is offered, never silently enabled`() {
+    fun `a key this version has just added is offered rather than silently enabled`() {
         // Standing in for the next release's new action: a key the stored arrangement predates.
         val layout = toolbarLayout(listOf("BOLD", "CODE"), PostKeys)
 
@@ -47,7 +47,7 @@ class ToolbarLayoutTest {
     }
 
     @Test
-    fun `the pool is the catalogue order, not the order things left the strip`() {
+    fun `the pool is the catalogue order rather than the order things left the strip`() {
         val layout = toolbarLayout(listOf("EMOJI"), PostKeys)
 
         assertEquals(EditorAction.entries.filterNot { it == EditorAction.EMOJI }, layout.available)
