@@ -14,16 +14,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.pager_total_approx
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The site's numeric pager, for the lists that have one instead of infinite scroll.
@@ -69,7 +70,7 @@ fun NumericPager(
         }
         if (approximateTotal) {
             Text(
-                text = stringResource(R.string.pager_total_approx, totalPages),
+                text = stringResource(Res.string.pager_total_approx, totalPages),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

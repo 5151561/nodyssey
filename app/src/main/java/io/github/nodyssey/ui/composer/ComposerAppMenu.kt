@@ -13,11 +13,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.composer_app_menu
+import io.github.nodyssey.ui.resources.composer_insert_stardust
+import io.github.nodyssey.ui.resources.composer_insert_vote
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.editor.EditorToolbarDefaults
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The editors' APP menu: the things NodeSeek lets a post embed rather than merely say.
@@ -42,13 +45,13 @@ fun ComposerAppMenu(
         IconButton(onClick = { open = true }, modifier = Modifier.size(keySize)) {
             Icon(
                 PlazaIcons.Apps,
-                contentDescription = stringResource(R.string.composer_app_menu),
+                contentDescription = stringResource(Res.string.composer_app_menu),
                 modifier = Modifier.size(keySize / 2),
             )
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.composer_insert_vote)) },
+                text = { Text(stringResource(Res.string.composer_insert_vote)) },
                 leadingIcon = { Icon(PlazaIcons.Poll, contentDescription = null) },
                 onClick = {
                     open = false
@@ -56,7 +59,7 @@ fun ComposerAppMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.composer_insert_stardust)) },
+                text = { Text(stringResource(Res.string.composer_insert_stardust)) },
                 leadingIcon = { Icon(PlazaIcons.QrCode, contentDescription = null) },
                 onClick = {
                     open = false

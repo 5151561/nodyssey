@@ -5,11 +5,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.R
 import io.github.nodyssey.data.account.AccountSettingsRepository
 import io.github.nodyssey.data.account.BlockedUser
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.account_block_added
 import io.github.plaza.core.net.SiteException
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -91,7 +92,7 @@ class BlockListViewModel(
                         it.copy(
                             isBlocking = false,
                             nameInput = "",
-                            message = AccountMessage.Info(R.string.account_block_added),
+                            message = AccountMessage.Info(Res.string.account_block_added),
                         )
                     }
                 }.onFailure { throwable ->

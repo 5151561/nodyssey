@@ -50,7 +50,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,7 +59,6 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
@@ -68,6 +66,42 @@ import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_more
+import io.github.nodyssey.ui.resources.action_open_in_browser
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.action_sign_in
+import io.github.nodyssey.ui.resources.assets_level
+import io.github.nodyssey.ui.resources.post_reply_count
+import io.github.nodyssey.ui.resources.post_view_count
+import io.github.nodyssey.ui.resources.profile_edit
+import io.github.nodyssey.ui.resources.space_bio
+import io.github.nodyssey.ui.resources.space_comment_in
+import io.github.nodyssey.ui.resources.space_empty_collections
+import io.github.nodyssey.ui.resources.space_empty_comments
+import io.github.nodyssey.ui.resources.space_empty_topics
+import io.github.nodyssey.ui.resources.space_end_collections
+import io.github.nodyssey.ui.resources.space_end_comments
+import io.github.nodyssey.ui.resources.space_end_topics
+import io.github.nodyssey.ui.resources.space_follow
+import io.github.nodyssey.ui.resources.space_following
+import io.github.nodyssey.ui.resources.space_message
+import io.github.nodyssey.ui.resources.space_readme
+import io.github.nodyssey.ui.resources.space_readme_collapse
+import io.github.nodyssey.ui.resources.space_readme_empty
+import io.github.nodyssey.ui.resources.space_readme_expand
+import io.github.nodyssey.ui.resources.space_stat_chicken
+import io.github.nodyssey.ui.resources.space_stat_comments
+import io.github.nodyssey.ui.resources.space_stat_joined_days
+import io.github.nodyssey.ui.resources.space_stat_level
+import io.github.nodyssey.ui.resources.space_stat_topics
+import io.github.nodyssey.ui.resources.space_tab_collections
+import io.github.nodyssey.ui.resources.space_tab_comments
+import io.github.nodyssey.ui.resources.space_tab_general
+import io.github.nodyssey.ui.resources.space_tab_topics
+import io.github.nodyssey.ui.resources.space_uid
+import io.github.nodyssey.ui.resources.space_uid_bio
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.richtext.collapseMarkdown
@@ -81,6 +115,8 @@ import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.flowOf
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun UserSpaceRoute(
@@ -164,7 +200,7 @@ fun UserSpaceScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -173,7 +209,7 @@ fun UserSpaceScreen(
                         IconButton(onClick = onEditProfile) {
                             Icon(
                                 Icons.Filled.Edit,
-                                contentDescription = stringResource(R.string.profile_edit),
+                                contentDescription = stringResource(Res.string.profile_edit),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -238,14 +274,14 @@ private fun SpaceOverflowMenu(onOpenBrowser: () -> Unit) {
         IconButton(onClick = { open = true }) {
             Icon(
                 PlazaIcons.OpenInNew,
-                contentDescription = stringResource(R.string.action_more),
+                contentDescription = stringResource(Res.string.action_more),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_open_in_browser)) },
+                text = { Text(stringResource(Res.string.action_open_in_browser)) },
                 onClick = {
                     open = false
                     onOpenBrowser()
@@ -270,7 +306,7 @@ private fun FollowFailureEffect(
     onShown: () -> Unit,
 ) {
     val fallback = failure?.error?.shortMessage()
-    val signInLabel = stringResource(R.string.action_sign_in)
+    val signInLabel = stringResource(Res.string.action_sign_in)
     LaunchedEffect(failure) {
         if (failure == null) return@LaunchedEffect
         val needsSignIn = failure.error == SiteError.LoginRequired
@@ -316,7 +352,7 @@ private fun SpaceHeader(
                             modifier = Modifier.padding(start = 6.dp),
                         ) {
                             Text(
-                                text = stringResource(R.string.assets_level, level),
+                                text = stringResource(Res.string.assets_level, level),
                                 style =
                                 MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp),
@@ -327,8 +363,8 @@ private fun SpaceHeader(
                 Text(
                     text =
                     state.bio
-                        ?.let { stringResource(R.string.space_uid_bio, state.uid, it) }
-                        ?: stringResource(R.string.space_uid, state.uid),
+                        ?.let { stringResource(Res.string.space_uid_bio, state.uid, it) }
+                        ?: stringResource(Res.string.space_uid, state.uid),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -354,7 +390,7 @@ private fun SpaceHeader(
                 ) {
                     Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(19.dp))
                     Text(
-                        stringResource(R.string.space_message),
+                        stringResource(Res.string.space_message),
                         modifier = Modifier.padding(start = 6.dp),
                     )
                 }
@@ -378,7 +414,7 @@ private fun FollowButton(
     modifier: Modifier = Modifier,
 ) {
     val icon = if (followed) Icons.Default.Check else Icons.Default.Add
-    val label = stringResource(if (followed) R.string.space_following else R.string.space_follow)
+    val label = stringResource(if (followed) Res.string.space_following else Res.string.space_follow)
     val content: @Composable RowScope.() -> Unit = {
         Icon(icon, contentDescription = null, modifier = Modifier.size(19.dp))
         Text(label, modifier = Modifier.padding(start = 6.dp))
@@ -402,14 +438,14 @@ private fun FollowButton(
 @Composable
 private fun SpaceStatsRow(state: UserSpaceUiState) {
     Row(Modifier.padding(horizontal = 10.dp)) {
-        SpaceStat(state.joinedDays?.toString(), stringResource(R.string.space_stat_joined_days))
+        SpaceStat(state.joinedDays?.toString(), stringResource(Res.string.space_stat_joined_days))
         SpaceStat(
-            state.level?.let { stringResource(R.string.assets_level, it) },
-            stringResource(R.string.space_stat_level),
+            state.level?.let { stringResource(Res.string.assets_level, it) },
+            stringResource(Res.string.space_stat_level),
         )
-        SpaceStat(state.chickenCount?.formatted(), stringResource(R.string.space_stat_chicken))
-        SpaceStat(state.topicCount?.formatted(), stringResource(R.string.space_stat_topics))
-        SpaceStat(state.commentCount?.formatted(), stringResource(R.string.space_stat_comments))
+        SpaceStat(state.chickenCount?.formatted(), stringResource(Res.string.space_stat_chicken))
+        SpaceStat(state.topicCount?.formatted(), stringResource(Res.string.space_stat_topics))
+        SpaceStat(state.commentCount?.formatted(), stringResource(Res.string.space_stat_comments))
     }
 }
 
@@ -463,8 +499,8 @@ private fun SpaceTabContent(
         SpaceTab.TOPICS ->
             SpaceListTab(
                 list = topics,
-                emptyText = stringResource(R.string.space_empty_topics),
-                endTextRes = R.string.space_end_topics,
+                emptyText = stringResource(Res.string.space_empty_topics),
+                endTextRes = Res.string.space_end_topics,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
                 key = { _, post -> post.postId },
@@ -476,8 +512,8 @@ private fun SpaceTabContent(
         SpaceTab.COMMENTS ->
             SpaceListTab(
                 list = comments,
-                emptyText = stringResource(R.string.space_empty_comments),
-                endTextRes = R.string.space_end_comments,
+                emptyText = stringResource(Res.string.space_empty_comments),
+                endTextRes = Res.string.space_end_comments,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
                 // The payload's own id when it has one; the position only for the rare row without.
@@ -494,8 +530,8 @@ private fun SpaceTabContent(
         SpaceTab.COLLECTIONS ->
             SpaceListTab(
                 list = collections,
-                emptyText = stringResource(R.string.space_empty_collections),
-                endTextRes = R.string.space_end_collections,
+                emptyText = stringResource(Res.string.space_empty_collections),
+                endTextRes = Res.string.space_end_collections,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
                 key = { _, post -> post.postId },
@@ -522,17 +558,17 @@ private fun GeneralTab(
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         state.bio?.let { bio ->
-            SpaceCard(title = stringResource(R.string.space_bio)) {
+            SpaceCard(title = stringResource(Res.string.space_bio)) {
                 Text(bio, style = MaterialTheme.typography.bodyMedium)
             }
         }
-        SpaceCard(title = stringResource(R.string.space_readme)) {
+        SpaceCard(title = stringResource(Res.string.space_readme)) {
             val readme = state.readme?.takeIf { it.isNotBlank() }
             if (readme == null) {
                 // The site's own empty state, emoji included. Writing our own would have been a
                 // worse sentence and a less familiar one.
                 Text(
-                    stringResource(R.string.space_readme_empty),
+                    stringResource(Res.string.space_readme_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -553,9 +589,9 @@ private fun GeneralTab(
                         Text(
                             stringResource(
                                 if (readmeExpanded) {
-                                    R.string.space_readme_collapse
+                                    Res.string.space_readme_collapse
                                 } else {
-                                    R.string.space_readme_expand
+                                    Res.string.space_readme_expand
                                 },
                             ),
                         )
@@ -601,7 +637,7 @@ private fun SpaceCard(
 private fun <T : Any> SpaceListTab(
     list: LazyPagingItems<T>?,
     emptyText: String,
-    endTextRes: Int,
+    endTextRes: StringResource,
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     /** Stable row identity, so a page-1 replace recomposes only the rows that actually changed. */
@@ -661,7 +697,7 @@ private fun <T : Any> SpaceListTab(
 
                     is LoadState.Error ->
                         TextButton(onClick = list::retry) {
-                            Text(stringResource(R.string.action_retry))
+                            Text(stringResource(Res.string.action_retry))
                         }
 
                     is LoadState.NotLoading ->
@@ -708,14 +744,14 @@ private fun SpacePostRow(
                 MetaStat(
                     icon = PlazaIcons.ModeComment,
                     value = it.toString(),
-                    contentDescription = stringResource(R.string.post_reply_count, it),
+                    contentDescription = stringResource(Res.string.post_reply_count, it),
                 )
             }
             post.viewCount?.let {
                 MetaStat(
                     icon = PlazaIcons.Visibility,
                     value = it.toString(),
-                    contentDescription = stringResource(R.string.post_view_count, it),
+                    contentDescription = stringResource(Res.string.post_view_count, it),
                 )
             }
             post.createdAtText?.let { RowMeta(it) }
@@ -743,7 +779,7 @@ private fun SpaceCommentRow(
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             comment.postTitle?.let {
-                RowMeta(stringResource(R.string.space_comment_in, it), weighted = true)
+                RowMeta(stringResource(Res.string.space_comment_in, it), weighted = true)
             }
             comment.createdAtText?.let { RowMeta(it) }
         }
@@ -765,12 +801,12 @@ private fun RowMeta(
     )
 }
 
-private fun SpaceTab.labelRes(): Int =
+private fun SpaceTab.labelRes(): StringResource =
     when (this) {
-        SpaceTab.GENERAL -> R.string.space_tab_general
-        SpaceTab.TOPICS -> R.string.space_tab_topics
-        SpaceTab.COMMENTS -> R.string.space_tab_comments
-        SpaceTab.COLLECTIONS -> R.string.space_tab_collections
+        SpaceTab.GENERAL -> Res.string.space_tab_general
+        SpaceTab.TOPICS -> Res.string.space_tab_topics
+        SpaceTab.COMMENTS -> Res.string.space_tab_comments
+        SpaceTab.COLLECTIONS -> Res.string.space_tab_collections
     }
 
 // -------------------------------------------------------------------------------------------------

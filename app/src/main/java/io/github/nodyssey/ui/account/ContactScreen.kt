@@ -37,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,14 +44,45 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.data.account.TelegramBinding
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.account_contact_title
+import io.github.nodyssey.ui.resources.account_email_change
+import io.github.nodyssey.ui.resources.account_email_change_on_site
+import io.github.nodyssey.ui.resources.account_email_current
+import io.github.nodyssey.ui.resources.account_email_section
+import io.github.nodyssey.ui.resources.account_email_verified
+import io.github.nodyssey.ui.resources.account_phone_add
+import io.github.nodyssey.ui.resources.account_phone_disabled_reason
+import io.github.nodyssey.ui.resources.account_phone_section
+import io.github.nodyssey.ui.resources.account_phone_unavailable
+import io.github.nodyssey.ui.resources.account_telegram_bind
+import io.github.nodyssey.ui.resources.account_telegram_bind_hint
+import io.github.nodyssey.ui.resources.account_telegram_bound
+import io.github.nodyssey.ui.resources.account_telegram_bound_hint
+import io.github.nodyssey.ui.resources.account_telegram_dialog_body
+import io.github.nodyssey.ui.resources.account_telegram_dialog_note
+import io.github.nodyssey.ui.resources.account_telegram_dialog_title
+import io.github.nodyssey.ui.resources.account_telegram_done_question
+import io.github.nodyssey.ui.resources.account_telegram_open
+import io.github.nodyssey.ui.resources.account_telegram_refresh
+import io.github.nodyssey.ui.resources.account_telegram_section
+import io.github.nodyssey.ui.resources.account_telegram_title
+import io.github.nodyssey.ui.resources.account_telegram_unbind
+import io.github.nodyssey.ui.resources.account_telegram_unbind_body
+import io.github.nodyssey.ui.resources.account_telegram_unbind_confirm
+import io.github.nodyssey.ui.resources.account_telegram_unbind_title
+import io.github.nodyssey.ui.resources.account_telegram_unbound
+import io.github.nodyssey.ui.resources.account_value_unknown
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_cancel
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ContactRoute(
@@ -145,13 +175,13 @@ fun ContactScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.account_contact_title),
+                title = stringResource(Res.string.account_contact_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -168,22 +198,22 @@ fun ContactScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            AccountSectionLabel(stringResource(R.string.account_email_section))
+            AccountSectionLabel(stringResource(Res.string.account_email_section))
             CurrentEmailRow(
                 email = state.email,
                 verified = state.emailVerified,
                 onChange = onChangeEmail,
             )
-            AccountFieldHelper(stringResource(R.string.account_email_change_on_site))
+            AccountFieldHelper(stringResource(Res.string.account_email_change_on_site))
 
             AccountSectionLabel(
-                stringResource(R.string.account_phone_section),
+                stringResource(Res.string.account_phone_section),
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             DisabledPhoneCard()
 
             AccountSectionLabel(
-                stringResource(R.string.account_telegram_section),
+                stringResource(Res.string.account_telegram_section),
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             TelegramCard(
@@ -206,13 +236,13 @@ fun ContactScreen(
     if (state.showUnbindDialog) {
         HighRiskDialog(
             icon = PlazaIcons.LinkOff,
-            title = stringResource(R.string.account_telegram_unbind_title),
+            title = stringResource(Res.string.account_telegram_unbind_title),
             body =
             stringResource(
-                R.string.account_telegram_unbind_body,
-                state.telegram?.displayName ?: stringResource(R.string.account_value_unknown),
+                Res.string.account_telegram_unbind_body,
+                state.telegram?.displayName ?: stringResource(Res.string.account_value_unknown),
             ),
-            confirmLabel = stringResource(R.string.account_telegram_unbind_confirm),
+            confirmLabel = stringResource(Res.string.account_telegram_unbind_confirm),
             onConfirm = onConfirmUnbind,
             onDismiss = onDismissUnbind,
             destructive = true,
@@ -227,18 +257,18 @@ private fun CurrentEmailRow(
     onChange: () -> Unit,
 ) {
     OutlinedTextField(
-        value = email.ifEmpty { stringResource(R.string.account_value_unknown) },
+        value = email.ifEmpty { stringResource(Res.string.account_value_unknown) },
         onValueChange = {},
         readOnly = true,
         singleLine = true,
-        label = { Text(stringResource(R.string.account_email_current)) },
+        label = { Text(stringResource(Res.string.account_email_current)) },
         shape = AccountFieldShape,
         trailingIcon = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (email.isNotEmpty() && verified) {
                     Icon(
                         Icons.Default.Check,
-                        contentDescription = stringResource(R.string.account_email_verified),
+                        contentDescription = stringResource(Res.string.account_email_verified),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp),
                     )
@@ -250,7 +280,7 @@ private fun CurrentEmailRow(
                         modifier = Modifier.size(16.dp),
                     )
                     Text(
-                        stringResource(R.string.account_email_change),
+                        stringResource(Res.string.account_email_change),
                         modifier = Modifier.padding(start = Spacing.xs),
                     )
                 }
@@ -281,11 +311,11 @@ private fun DisabledPhoneCard() {
             )
             Column(Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.account_phone_add),
+                    stringResource(Res.string.account_phone_add),
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 )
                 Text(
-                    stringResource(R.string.account_phone_disabled_reason),
+                    stringResource(Res.string.account_phone_disabled_reason),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -296,7 +326,7 @@ private fun DisabledPhoneCard() {
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Text(
-                    stringResource(R.string.account_phone_unavailable),
+                    stringResource(Res.string.account_phone_unavailable),
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 3.dp),
@@ -338,7 +368,7 @@ private fun TelegramCard(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Text(
-                            stringResource(R.string.account_telegram_title),
+                            stringResource(Res.string.account_telegram_title),
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                         )
                         if (binding?.bound == true) BoundChip()
@@ -346,15 +376,15 @@ private fun TelegramCard(
                     Text(
                         text =
                         when {
-                            binding == null -> stringResource(R.string.account_value_unknown)
+                            binding == null -> stringResource(Res.string.account_value_unknown)
 
                             // A binding whose detail call did not answer is still a binding; saying
                             // 未绑定 because a name is missing would be the wrong half to guess.
                             binding.bound ->
                                 binding.displayName
-                                    ?: stringResource(R.string.account_telegram_bound)
+                                    ?: stringResource(Res.string.account_telegram_bound)
 
-                            else -> stringResource(R.string.account_telegram_unbound)
+                            else -> stringResource(Res.string.account_telegram_unbound)
                         },
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -366,9 +396,9 @@ private fun TelegramCard(
             Text(
                 stringResource(
                     if (binding?.bound == true) {
-                        R.string.account_telegram_bound_hint
+                        Res.string.account_telegram_bound_hint
                     } else {
-                        R.string.account_telegram_bind_hint
+                        Res.string.account_telegram_bind_hint
                     },
                 ),
                 style = MaterialTheme.typography.bodySmall,
@@ -377,7 +407,7 @@ private fun TelegramCard(
             if (binding?.bound == true) {
                 TextButton(onClick = onRequestUnbind) {
                     Text(
-                        stringResource(R.string.account_telegram_unbind),
+                        stringResource(Res.string.account_telegram_unbind),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -385,7 +415,7 @@ private fun TelegramCard(
                 Button(onClick = onRequestBind, enabled = binding != null) {
                     Icon(PlazaIcons.Link, contentDescription = null, modifier = Modifier.size(17.dp))
                     Text(
-                        stringResource(R.string.account_telegram_bind),
+                        stringResource(Res.string.account_telegram_bind),
                         modifier = Modifier.padding(start = Spacing.xs),
                     )
                 }
@@ -408,7 +438,7 @@ private fun BoundChip() {
         ) {
             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(13.dp))
             Text(
-                stringResource(R.string.account_telegram_bound),
+                stringResource(Res.string.account_telegram_bound),
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
             )
         }
@@ -432,11 +462,11 @@ private fun TelegramBindDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(PlazaIcons.OpenInNew, contentDescription = null) },
-        title = { Text(stringResource(R.string.account_telegram_dialog_title)) },
+        title = { Text(stringResource(Res.string.account_telegram_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 Text(
-                    stringResource(R.string.account_telegram_dialog_body),
+                    stringResource(Res.string.account_telegram_dialog_body),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Surface(
@@ -455,7 +485,7 @@ private fun TelegramBindDialog(
                             modifier = Modifier.size(16.dp),
                         )
                         Text(
-                            stringResource(R.string.account_telegram_dialog_note),
+                            stringResource(Res.string.account_telegram_dialog_note),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -468,7 +498,7 @@ private fun TelegramBindDialog(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        stringResource(R.string.account_telegram_done_question),
+                        stringResource(Res.string.account_telegram_done_question),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -477,7 +507,7 @@ private fun TelegramBindDialog(
                             CircularProgressIndicator(Modifier.size(14.dp))
                         } else {
                             Text(
-                                stringResource(R.string.account_telegram_refresh),
+                                stringResource(Res.string.account_telegram_refresh),
                                 style = MaterialTheme.typography.labelMedium,
                             )
                         }
@@ -487,11 +517,11 @@ private fun TelegramBindDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.account_telegram_open))
+                Text(stringResource(Res.string.account_telegram_open))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
         shape = MaterialTheme.shapes.extraLarge,
     )

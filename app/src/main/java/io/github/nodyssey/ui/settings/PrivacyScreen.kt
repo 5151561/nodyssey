@@ -39,22 +39,32 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.model.TermsBlock
 import io.github.nodyssey.model.TermsDocument
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.privacy_effective_date
+import io.github.nodyssey.ui.resources.privacy_keep_scrolling
+import io.github.nodyssey.ui.resources.privacy_load_failed
+import io.github.nodyssey.ui.resources.privacy_load_failed_hint
+import io.github.nodyssey.ui.resources.privacy_open_original
+import io.github.nodyssey.ui.resources.privacy_open_web_fallback
+import io.github.nodyssey.ui.resources.privacy_source
+import io.github.nodyssey.ui.resources.privacy_title
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PrivacyRoute(
@@ -91,13 +101,13 @@ fun PrivacyScreen(
         topBar = {
             Column {
                 OneHandTopAppBar(
-                    title = stringResource(R.string.privacy_title),
+                    title = stringResource(Res.string.privacy_title),
                     state = appBarState,
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.action_back),
+                                contentDescription = stringResource(Res.string.action_back),
                             )
                         }
                     },
@@ -105,7 +115,7 @@ fun PrivacyScreen(
                         IconButton(onClick = onOpenOriginal) {
                             Icon(
                                 PlazaIcons.OpenInNew,
-                                contentDescription = stringResource(R.string.privacy_open_original),
+                                contentDescription = stringResource(Res.string.privacy_open_original),
                             )
                         }
                     },
@@ -186,7 +196,7 @@ private fun TermsContent(document: TermsDocument, modifier: Modifier = Modifier)
                     modifier = Modifier.padding(bottom = Spacing.sm),
                 ) {
                     Text(
-                        stringResource(R.string.privacy_keep_scrolling),
+                        stringResource(Res.string.privacy_keep_scrolling),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
@@ -210,7 +220,7 @@ private fun TermsMetadata(effectiveDate: String?) {
                 shape = RoundedCornerShape(50),
             ) {
                 Text(
-                    stringResource(R.string.privacy_effective_date, it),
+                    stringResource(Res.string.privacy_effective_date, it),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
@@ -218,7 +228,7 @@ private fun TermsMetadata(effectiveDate: String?) {
             }
         }
         Text(
-            stringResource(R.string.privacy_source),
+            stringResource(Res.string.privacy_source),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -283,15 +293,15 @@ private fun PrivacyError(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.privacy_load_failed), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(Res.string.privacy_load_failed), style = MaterialTheme.typography.titleMedium)
         Text(
-            stringResource(R.string.privacy_load_failed_hint),
+            stringResource(Res.string.privacy_load_failed_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(vertical = Spacing.md),
         )
-        Button(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
-        TextButton(onClick = onOpenWebFallback) { Text(stringResource(R.string.privacy_open_web_fallback)) }
+        Button(onClick = onRetry) { Text(stringResource(Res.string.action_retry)) }
+        TextButton(onClick = onOpenWebFallback) { Text(stringResource(Res.string.privacy_open_web_fallback)) }
     }
 }
 

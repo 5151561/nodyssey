@@ -26,17 +26,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.FollowUser
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.follow_empty_followers_body
+import io.github.nodyssey.ui.resources.follow_empty_followers_title
+import io.github.nodyssey.ui.resources.follow_empty_following_body
+import io.github.nodyssey.ui.resources.follow_empty_following_title
+import io.github.nodyssey.ui.resources.follow_end_followers
+import io.github.nodyssey.ui.resources.follow_end_following
+import io.github.nodyssey.ui.resources.follow_tab_followers
+import io.github.nodyssey.ui.resources.follow_tab_following
+import io.github.nodyssey.ui.resources.follow_title
+import io.github.nodyssey.ui.resources.space_uid
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
@@ -49,6 +59,7 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun FollowRoute(
@@ -92,13 +103,13 @@ fun FollowScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.follow_title),
+                title = stringResource(Res.string.follow_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -115,8 +126,8 @@ fun FollowScreen(
                             Text(
                                 stringResource(
                                     when (tab) {
-                                        FollowTab.FOLLOWING -> R.string.follow_tab_following
-                                        FollowTab.FOLLOWERS -> R.string.follow_tab_followers
+                                        FollowTab.FOLLOWING -> Res.string.follow_tab_following
+                                        FollowTab.FOLLOWERS -> Res.string.follow_tab_followers
                                     },
                                 ),
                             )
@@ -154,8 +165,8 @@ fun FollowScreen(
                                 text =
                                 stringResource(
                                     when (state.selectedTab) {
-                                        FollowTab.FOLLOWING -> R.string.follow_end_following
-                                        FollowTab.FOLLOWERS -> R.string.follow_end_followers
+                                        FollowTab.FOLLOWING -> Res.string.follow_end_following
+                                        FollowTab.FOLLOWERS -> Res.string.follow_end_followers
                                     },
                                     list.items.size,
                                 ),
@@ -189,15 +200,15 @@ private fun FollowEmptyState(tab: FollowTab) {
         title =
         stringResource(
             when (tab) {
-                FollowTab.FOLLOWING -> R.string.follow_empty_following_title
-                FollowTab.FOLLOWERS -> R.string.follow_empty_followers_title
+                FollowTab.FOLLOWING -> Res.string.follow_empty_following_title
+                FollowTab.FOLLOWERS -> Res.string.follow_empty_followers_title
             },
         ),
         description =
         stringResource(
             when (tab) {
-                FollowTab.FOLLOWING -> R.string.follow_empty_following_body
-                FollowTab.FOLLOWERS -> R.string.follow_empty_followers_body
+                FollowTab.FOLLOWING -> Res.string.follow_empty_following_body
+                FollowTab.FOLLOWERS -> Res.string.follow_empty_followers_body
             },
         ),
     )
@@ -225,7 +236,7 @@ private fun FollowRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = stringResource(R.string.space_uid, user.uid),
+                text = stringResource(Res.string.space_uid, user.uid),
                 style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

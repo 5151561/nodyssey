@@ -44,19 +44,48 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.VoteItem
 import io.github.nodyssey.model.totalCount
 import io.github.nodyssey.ui.common.shortMessage
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.vote_anonymous
+import io.github.nodyssey.ui.resources.vote_confirm_body
+import io.github.nodyssey.ui.resources.vote_confirm_ok
+import io.github.nodyssey.ui.resources.vote_confirm_title
+import io.github.nodyssey.ui.resources.vote_count
+import io.github.nodyssey.ui.resources.vote_delete
+import io.github.nodyssey.ui.resources.vote_delete_confirm_body
+import io.github.nodyssey.ui.resources.vote_delete_confirm_title
+import io.github.nodyssey.ui.resources.vote_deleted
+import io.github.nodyssey.ui.resources.vote_load_failed
+import io.github.nodyssey.ui.resources.vote_lock
+import io.github.nodyssey.ui.resources.vote_lock_confirm_body
+import io.github.nodyssey.ui.resources.vote_lock_confirm_title
+import io.github.nodyssey.ui.resources.vote_locked
+import io.github.nodyssey.ui.resources.vote_manage
+import io.github.nodyssey.ui.resources.vote_multiple_choice
+import io.github.nodyssey.ui.resources.vote_percent
+import io.github.nodyssey.ui.resources.vote_placeholder_title
+import io.github.nodyssey.ui.resources.vote_results_hidden
+import io.github.nodyssey.ui.resources.vote_retry
+import io.github.nodyssey.ui.resources.vote_sign_in_first
+import io.github.nodyssey.ui.resources.vote_single_choice
+import io.github.nodyssey.ui.resources.vote_submit
+import io.github.nodyssey.ui.resources.vote_total
+import io.github.nodyssey.ui.resources.vote_unlock
+import io.github.nodyssey.ui.resources.vote_voter_uid
+import io.github.nodyssey.ui.resources.vote_voters_collapse
+import io.github.nodyssey.ui.resources.vote_voters_expand
+import io.github.nodyssey.ui.resources.vote_voters_more
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.UserAvatar
@@ -65,6 +94,8 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun VoteCard(
@@ -121,7 +152,7 @@ fun VoteCard(
 
     VoteCardSurface(modifier = modifier) {
         when {
-            state.deleted -> Text(stringResource(R.string.vote_deleted), style = MaterialTheme.typography.bodyMedium)
+            state.deleted -> Text(stringResource(Res.string.vote_deleted), style = MaterialTheme.typography.bodyMedium)
 
             vote == null && state.isLoading -> VoteLoading()
 
@@ -210,7 +241,7 @@ private fun VoteBody(
     // button in a card that is otherwise finished reads as something the reader failed to do.
     if (!state.hasVoted && !vote.locked) {
         Text(
-            stringResource(R.string.vote_results_hidden),
+            stringResource(Res.string.vote_results_hidden),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = Spacing.sm, start = Spacing.xs),
@@ -225,7 +256,7 @@ private fun VoteBody(
             } else {
                 Text(
                     stringResource(
-                        if (state.isSignedIn) R.string.vote_submit else R.string.vote_sign_in_first,
+                        if (state.isSignedIn) Res.string.vote_submit else Res.string.vote_sign_in_first,
                     ),
                 )
             }
@@ -234,9 +265,9 @@ private fun VoteBody(
 
     if (confirmSubmit) {
         VoteConfirmDialog(
-            title = R.string.vote_confirm_title,
-            body = R.string.vote_confirm_body,
-            confirm = R.string.vote_confirm_ok,
+            title = Res.string.vote_confirm_title,
+            body = Res.string.vote_confirm_body,
+            confirm = Res.string.vote_confirm_ok,
             onDismiss = { confirmSubmit = false },
             onConfirm = {
                 confirmSubmit = false
@@ -246,9 +277,9 @@ private fun VoteBody(
     }
     if (confirmLock) {
         VoteConfirmDialog(
-            title = R.string.vote_lock_confirm_title,
-            body = R.string.vote_lock_confirm_body,
-            confirm = R.string.vote_lock,
+            title = Res.string.vote_lock_confirm_title,
+            body = Res.string.vote_lock_confirm_body,
+            confirm = Res.string.vote_lock,
             onDismiss = { confirmLock = false },
             onConfirm = {
                 confirmLock = false
@@ -258,9 +289,9 @@ private fun VoteBody(
     }
     if (confirmDelete) {
         VoteConfirmDialog(
-            title = R.string.vote_delete_confirm_title,
-            body = R.string.vote_delete_confirm_body,
-            confirm = R.string.vote_delete,
+            title = Res.string.vote_delete_confirm_title,
+            body = Res.string.vote_delete_confirm_body,
+            confirm = Res.string.vote_delete,
             onDismiss = { confirmDelete = false },
             onConfirm = {
                 confirmDelete = false
@@ -307,11 +338,11 @@ private fun VoteHeader(
             VoteMetaLine(
                 listOfNotNull(
                     stringResource(
-                        if (vote.multiple) R.string.vote_multiple_choice else R.string.vote_single_choice,
+                        if (vote.multiple) Res.string.vote_multiple_choice else Res.string.vote_single_choice,
                     ),
-                    stringResource(R.string.vote_anonymous).takeIf { !vote.isPublic },
-                    stringResource(R.string.vote_locked).takeIf { vote.locked },
-                    total?.let { stringResource(R.string.vote_total, it) }.takeIf { state.showsResults },
+                    stringResource(Res.string.vote_anonymous).takeIf { !vote.isPublic },
+                    stringResource(Res.string.vote_locked).takeIf { vote.locked },
+                    total?.let { stringResource(Res.string.vote_total, it) }.takeIf { state.showsResults },
                 ),
             )
         }
@@ -338,12 +369,12 @@ private fun VoteManageMenu(
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }, enabled = !state.manageInFlight) {
-            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.vote_manage))
+            Icon(Icons.Default.MoreVert, contentDescription = stringResource(Res.string.vote_manage))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             if (state.canLock) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.vote_lock)) },
+                    text = { Text(stringResource(Res.string.vote_lock)) },
                     onClick = {
                         open = false
                         onLock()
@@ -352,7 +383,7 @@ private fun VoteManageMenu(
             }
             if (state.canUnlock) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.vote_unlock)) },
+                    text = { Text(stringResource(Res.string.vote_unlock)) },
                     onClick = {
                         open = false
                         onUnlock()
@@ -361,7 +392,7 @@ private fun VoteManageMenu(
             }
             if (state.canDelete) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.vote_delete)) },
+                    text = { Text(stringResource(Res.string.vote_delete)) },
                     onClick = {
                         open = false
                         onDelete()
@@ -532,9 +563,9 @@ private fun VoteResultRow(
                     Modifier.clickable(
                         onClickLabel =
                         if (open) {
-                            stringResource(R.string.vote_voters_collapse)
+                            stringResource(Res.string.vote_voters_collapse)
                         } else {
-                            stringResource(R.string.vote_voters_expand, item.count ?: 0)
+                            stringResource(Res.string.vote_voters_expand, item.count ?: 0)
                         },
                         onClick = { onToggleVoters?.invoke() },
                     )
@@ -577,13 +608,13 @@ private fun VoteResultRow(
             }
             if (count != null) {
                 Text(
-                    stringResource(R.string.vote_count, count),
+                    stringResource(Res.string.vote_count, count),
                     style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (total != null && total > 0) {
                     Text(
-                        stringResource(R.string.vote_percent, (fraction * 100).toInt()),
+                        stringResource(Res.string.vote_percent, (fraction * 100).toInt()),
                         style =
                         MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
                         color =
@@ -651,7 +682,7 @@ private fun VoterStrip(
                 modifier =
                 Modifier
                     .clickable(
-                        onClickLabel = stringResource(R.string.vote_voter_uid, uid),
+                        onClickLabel = stringResource(Res.string.vote_voter_uid, uid),
                     ) { onUserClick(uid) }
                     .padding(Spacing.xs),
             )
@@ -659,7 +690,7 @@ private fun VoterStrip(
         if (list.isLoading) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
         } else if (list.hasMore) {
-            TextButton(onClick = onLoadMore) { Text(stringResource(R.string.vote_voters_more)) }
+            TextButton(onClick = onLoadMore) { Text(stringResource(Res.string.vote_voters_more)) }
         }
     }
 }
@@ -680,7 +711,7 @@ private fun VoteLoading() {
             modifier = Modifier.size(16.dp),
         )
         Text(
-            stringResource(R.string.vote_placeholder_title),
+            stringResource(Res.string.vote_placeholder_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = Spacing.xs),
@@ -713,20 +744,20 @@ private fun VoteLoadFailed(
             modifier = Modifier.size(18.dp),
         )
         Text(
-            message ?: stringResource(R.string.vote_load_failed),
+            message ?: stringResource(Res.string.vote_load_failed),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f).padding(start = Spacing.sm),
         )
-        TextButton(onClick = onRetry) { Text(stringResource(R.string.vote_retry)) }
+        TextButton(onClick = onRetry) { Text(stringResource(Res.string.vote_retry)) }
     }
 }
 
 @Composable
 private fun VoteConfirmDialog(
-    title: Int,
-    body: Int,
-    confirm: Int,
+    title: StringResource,
+    body: StringResource,
+    confirm: StringResource,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -735,7 +766,7 @@ private fun VoteConfirmDialog(
         title = { Text(stringResource(title)) },
         text = { Text(stringResource(body)) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(confirm)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) } },
     )
 }
 

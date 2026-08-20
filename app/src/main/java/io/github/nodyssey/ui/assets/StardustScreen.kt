@@ -45,7 +45,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,7 +55,6 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
-import io.github.nodyssey.R
 import io.github.nodyssey.data.StardustEntry
 import io.github.nodyssey.data.StardustType
 import io.github.nodyssey.ui.common.NoLedgerEntriesState
@@ -64,6 +62,46 @@ import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
 import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.spend_current_balance
+import io.github.nodyssey.ui.resources.stardust_balance
+import io.github.nodyssey.ui.resources.stardust_balance_hint
+import io.github.nodyssey.ui.resources.stardust_entry_balance
+import io.github.nodyssey.ui.resources.stardust_entry_comment
+import io.github.nodyssey.ui.resources.stardust_entry_peer
+import io.github.nodyssey.ui.resources.stardust_entry_ref
+import io.github.nodyssey.ui.resources.stardust_title
+import io.github.nodyssey.ui.resources.stardust_type_admin
+import io.github.nodyssey.ui.resources.stardust_type_buy_code
+import io.github.nodyssey.ui.resources.stardust_type_system
+import io.github.nodyssey.ui.resources.stardust_type_transfer
+import io.github.nodyssey.ui.resources.stardust_type_unknown
+import io.github.nodyssey.ui.resources.stardust_type_upvote
+import io.github.nodyssey.ui.resources.status_challenge_title
+import io.github.nodyssey.ui.resources.status_network_title
+import io.github.nodyssey.ui.resources.status_rate_limited_title
+import io.github.nodyssey.ui.resources.status_sign_in_title
+import io.github.nodyssey.ui.resources.transfer_action
+import io.github.nodyssey.ui.resources.transfer_amount
+import io.github.nodyssey.ui.resources.transfer_amount_value
+import io.github.nodyssey.ui.resources.transfer_balance_after
+import io.github.nodyssey.ui.resources.transfer_balance_change
+import io.github.nodyssey.ui.resources.transfer_caution
+import io.github.nodyssey.ui.resources.transfer_checking_name
+import io.github.nodyssey.ui.resources.transfer_confirm
+import io.github.nodyssey.ui.resources.transfer_confirm_title
+import io.github.nodyssey.ui.resources.transfer_failed
+import io.github.nodyssey.ui.resources.transfer_hint
+import io.github.nodyssey.ui.resources.transfer_name_unknown
+import io.github.nodyssey.ui.resources.transfer_next
+import io.github.nodyssey.ui.resources.transfer_recipient
+import io.github.nodyssey.ui.resources.transfer_ref
+import io.github.nodyssey.ui.resources.transfer_sending
+import io.github.nodyssey.ui.resources.transfer_sent
+import io.github.nodyssey.ui.resources.transfer_shortfall
+import io.github.nodyssey.ui.resources.transfer_title
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.LoadingState
@@ -77,6 +115,7 @@ import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun StardustRoute(
@@ -125,16 +164,16 @@ fun StardustRoute(
 @Composable
 private fun stardustMessageText(message: StardustMessage): String =
     when (message) {
-        is StardustMessage.Sent -> stringResource(R.string.transfer_sent, message.amount)
+        is StardustMessage.Sent -> stringResource(Res.string.transfer_sent, message.amount)
 
         is StardustMessage.Failed ->
             message.detail ?: stringResource(
                 when (message.error) {
-                    SiteError.Cloudflare -> R.string.status_challenge_title
-                    SiteError.LoginRequired -> R.string.status_sign_in_title
-                    SiteError.Network -> R.string.status_network_title
-                    SiteError.RateLimited -> R.string.status_rate_limited_title
-                    else -> R.string.transfer_failed
+                    SiteError.Cloudflare -> Res.string.status_challenge_title
+                    SiteError.LoginRequired -> Res.string.status_sign_in_title
+                    SiteError.Network -> Res.string.status_network_title
+                    SiteError.RateLimited -> Res.string.status_rate_limited_title
+                    else -> Res.string.transfer_failed
                 },
             )
     }
@@ -165,13 +204,13 @@ fun StardustScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.stardust_title),
+                title = stringResource(Res.string.stardust_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -185,7 +224,7 @@ fun StardustScreen(
                 ExtendedFloatingActionButton(
                     onClick = onOpenTransfer,
                     icon = { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null) },
-                    text = { Text(stringResource(R.string.transfer_action)) },
+                    text = { Text(stringResource(Res.string.transfer_action)) },
                 )
             }
         },
@@ -243,7 +282,7 @@ private fun BalanceHeader(balance: Int?) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = stringResource(R.string.stardust_balance),
+                text = stringResource(Res.string.stardust_balance),
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
             )
             Text(
@@ -255,7 +294,7 @@ private fun BalanceHeader(balance: Int?) {
                 ),
             )
             Text(
-                text = stringResource(R.string.stardust_balance_hint),
+                text = stringResource(Res.string.stardust_balance_hint),
                 style = MaterialTheme.typography.labelMedium,
             )
         }
@@ -388,18 +427,18 @@ private fun StardustRow(entry: StardustEntry) {
 @Composable
 private fun StardustEntry.typeLabel(): String =
     when (type) {
-        StardustType.UPVOTE -> stringResource(R.string.stardust_type_upvote)
+        StardustType.UPVOTE -> stringResource(Res.string.stardust_type_upvote)
 
-        StardustType.TRANSFER -> stringResource(R.string.stardust_type_transfer)
+        StardustType.TRANSFER -> stringResource(Res.string.stardust_type_transfer)
 
-        StardustType.BUY_CODE -> stringResource(R.string.stardust_type_buy_code)
+        StardustType.BUY_CODE -> stringResource(Res.string.stardust_type_buy_code)
 
-        StardustType.SYSTEM -> stringResource(R.string.stardust_type_system)
+        StardustType.SYSTEM -> stringResource(Res.string.stardust_type_system)
 
-        StardustType.ADMIN -> stringResource(R.string.stardust_type_admin)
+        StardustType.ADMIN -> stringResource(Res.string.stardust_type_admin)
 
         // The site's own word beats a label we invented for a kind we have never seen.
-        StardustType.UNKNOWN -> rawType ?: stringResource(R.string.stardust_type_unknown)
+        StardustType.UNKNOWN -> rawType ?: stringResource(Res.string.stardust_type_unknown)
     }
 
 private fun StardustType.icon(): ImageVector =
@@ -422,12 +461,12 @@ private fun StardustType.icon(): ImageVector =
 @Composable
 private fun StardustEntry.metaLine(): String =
     listOfNotNull(
-        balanceAfter?.let { stringResource(R.string.stardust_entry_balance, it) },
+        balanceAfter?.let { stringResource(Res.string.stardust_entry_balance, it) },
         commentId?.takeIf { type == StardustType.UPVOTE }
-            ?.let { stringResource(R.string.stardust_entry_comment, it) },
-        peerUid?.let { stringResource(R.string.stardust_entry_peer, it) },
+            ?.let { stringResource(Res.string.stardust_entry_comment, it) },
+        peerUid?.let { stringResource(Res.string.stardust_entry_peer, it) },
         refId?.takeIf { type == StardustType.TRANSFER || type == StardustType.BUY_CODE }
-            ?.let { stringResource(R.string.stardust_entry_ref, it) },
+            ?.let { stringResource(Res.string.stardust_entry_ref, it) },
     ).joinToString(" · ")
 
 /**
@@ -452,17 +491,17 @@ private fun TransferDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.transfer_title)) },
+        title = { Text(stringResource(Res.string.transfer_title)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                NumberField(amountState, stringResource(R.string.transfer_amount))
-                NumberField(recipientState, stringResource(R.string.transfer_recipient))
-                NumberField(refState, stringResource(R.string.transfer_ref))
+                NumberField(amountState, stringResource(Res.string.transfer_amount))
+                NumberField(recipientState, stringResource(Res.string.transfer_recipient))
+                NumberField(refState, stringResource(Res.string.transfer_ref))
                 Text(
-                    text = stringResource(R.string.transfer_hint),
+                    text = stringResource(Res.string.transfer_hint),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -470,11 +509,11 @@ private fun TransferDialog(
         },
         confirmButton = {
             TextButton(onClick = onRequestConfirm, enabled = state.form.isComplete) {
-                Text(stringResource(R.string.transfer_next))
+                Text(stringResource(Res.string.transfer_next))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
     )
 }
@@ -509,26 +548,26 @@ private fun TransferConfirmDialog(
 ) {
     val amount = state.form.amountValue ?: return
     SpendConfirmDialog(
-        title = stringResource(R.string.transfer_confirm_title, amount),
+        title = stringResource(Res.string.transfer_confirm_title, amount),
         details =
         buildList {
             add(
                 SpendDetail(
-                    stringResource(R.string.transfer_amount),
-                    stringResource(R.string.transfer_amount_value, amount),
+                    stringResource(Res.string.transfer_amount),
+                    stringResource(Res.string.transfer_amount_value, amount),
                 ),
             )
             state.form.recipientValue?.let {
                 add(
                     SpendDetail(
-                        stringResource(R.string.transfer_recipient),
+                        stringResource(Res.string.transfer_recipient),
                         it.toString(),
                         note = state.recipient?.note(),
                     ),
                 )
             }
             state.form.refValue?.let {
-                add(SpendDetail(stringResource(R.string.transfer_ref), it.toString()))
+                add(SpendDetail(stringResource(Res.string.transfer_ref), it.toString()))
             }
             state.balance?.let { balance ->
                 // With enough balance the row answers "what will be left"; short of it there is no
@@ -536,11 +575,11 @@ private fun TransferConfirmDialog(
                 add(
                     if (state.shortfall == null) {
                         SpendDetail(
-                            stringResource(R.string.transfer_balance_after),
-                            stringResource(R.string.transfer_balance_change, balance, balance - amount),
+                            stringResource(Res.string.transfer_balance_after),
+                            stringResource(Res.string.transfer_balance_change, balance, balance - amount),
                         )
                     } else {
-                        SpendDetail(stringResource(R.string.spend_current_balance), balance.toString())
+                        SpendDetail(stringResource(Res.string.spend_current_balance), balance.toString())
                     },
                 )
             }
@@ -549,16 +588,16 @@ private fun TransferConfirmDialog(
         // the uid on the row above went unverified, which is the one thing left for the user to check.
         caution =
         listOfNotNull(
-            stringResource(R.string.transfer_caution),
+            stringResource(Res.string.transfer_caution),
             (state.recipient as? RecipientCheck.Unnamed)
-                ?.let { it.reason ?: stringResource(R.string.transfer_name_unknown) },
+                ?.let { it.reason ?: stringResource(Res.string.transfer_name_unknown) },
         ).joinToString("\n"),
         confirmLabel =
-        stringResource(if (state.isSending) R.string.transfer_sending else R.string.transfer_confirm),
+        stringResource(if (state.isSending) Res.string.transfer_sending else Res.string.transfer_confirm),
         onConfirm = onConfirm,
         onDismiss = onDismiss,
         icon = PlazaIcons.Wallet,
-        shortfall = state.shortfall?.let { stringResource(R.string.transfer_shortfall, it) },
+        shortfall = state.shortfall?.let { stringResource(Res.string.transfer_shortfall, it) },
         isSending = state.isSending,
     )
 }
@@ -567,7 +606,7 @@ private fun TransferConfirmDialog(
 @Composable
 private fun RecipientCheck.note(): String? =
     when (this) {
-        RecipientCheck.Checking -> stringResource(R.string.transfer_checking_name)
+        RecipientCheck.Checking -> stringResource(Res.string.transfer_checking_name)
 
         is RecipientCheck.Named -> name
 

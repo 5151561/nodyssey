@@ -1,6 +1,5 @@
 package io.github.nodyssey
 
-import androidx.annotation.StringRes
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsSelected
@@ -14,6 +13,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.waitUntilExactlyOneExists
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.tab_home
+import io.github.nodyssey.ui.resources.tab_search
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,25 +31,25 @@ class TopLevelNavigationJourneyTest {
 
     @Test
     fun topLevelSelectionSurvivesRecreationAndBackReturnsHome() {
-        navigationItem(R.string.tab_home).assertIsSelected()
+        navigationItem(Res.string.tab_home).assertIsSelected()
 
-        navigationItem(R.string.tab_search).performClick().assertIsSelected()
+        navigationItem(Res.string.tab_search).performClick().assertIsSelected()
         composeRule.activityRule.scenario.recreate()
-        navigationItem(R.string.tab_search).assertIsSelected()
+        navigationItem(Res.string.tab_search).assertIsSelected()
 
         composeRule.runOnUiThread {
             composeRule.activity.onBackPressedDispatcher.onBackPressed()
         }
-        navigationItem(R.string.tab_home).assertIsSelected()
+        navigationItem(Res.string.tab_home).assertIsSelected()
     }
 
     @Test
     fun searchStateSurvivesSwitchingTopLevelDestinations() {
-        navigationItem(R.string.tab_search).performClick()
+        navigationItem(Res.string.tab_search).performClick()
         searchInputField().performTextInput("保留搜索内容")
 
-        navigationItem(R.string.tab_home).performClick()
-        navigationItem(R.string.tab_search).performClick()
+        navigationItem(Res.string.tab_home).performClick()
+        navigationItem(Res.string.tab_search).performClick()
 
         searchInputField().assertTextContains("保留搜索内容")
     }
@@ -61,8 +66,11 @@ class TopLevelNavigationJourneyTest {
         return composeRule.onNode(hasSetTextAction() and isFocused())
     }
 
-    private fun navigationItem(@StringRes label: Int): SemanticsNodeInteraction =
+    // `runBlocking` around a `suspend` accessor, which is the only way to read a Compose Resource
+    // outside a composition. The label is the tab's text, so the alternative is hard-coding it here
+    // and finding out from a failed match rather than a failed compile when it changes.
+    private fun navigationItem(label: StringResource): SemanticsNodeInteraction =
         composeRule.onNode(
-            hasText(composeRule.activity.getString(label)) and hasClickAction(),
+            hasText(runBlocking { getString(label) }) and hasClickAction(),
         )
 }

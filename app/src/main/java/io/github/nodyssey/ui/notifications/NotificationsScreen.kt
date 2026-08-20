@@ -41,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -52,7 +51,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
@@ -60,6 +58,18 @@ import io.github.nodyssey.data.NotificationCounts
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.SignedOutState
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.notification_sentence_mention
+import io.github.nodyssey.ui.resources.notification_sentence_reply
+import io.github.nodyssey.ui.resources.notification_time_pair
+import io.github.nodyssey.ui.resources.notification_unknown_thread
+import io.github.nodyssey.ui.resources.notifications_empty
+import io.github.nodyssey.ui.resources.notifications_mark_all_read
+import io.github.nodyssey.ui.resources.notifications_mentions
+import io.github.nodyssey.ui.resources.notifications_messages
+import io.github.nodyssey.ui.resources.notifications_replies
+import io.github.nodyssey.ui.resources.tab_notifications
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AvatarCapOffset
@@ -73,6 +83,7 @@ import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NotificationsRoute(
@@ -177,12 +188,12 @@ fun NotificationsScreen(
             // never done.
             OneHandTopAppBar(
                 modifier = Modifier.readableWidth(),
-                title = stringResource(R.string.tab_notifications),
+                title = stringResource(Res.string.tab_notifications),
                 state = appBarState,
                 actions = {
                     TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
                         Icon(Icons.Default.Check, contentDescription = null)
-                        Text(stringResource(R.string.notifications_mark_all_read))
+                        Text(stringResource(Res.string.notifications_mark_all_read))
                     }
                 },
             )
@@ -377,11 +388,11 @@ private fun notificationSentence(item: ForumNotification): AnnotatedString {
     val template =
         stringResource(
             when (item.category) {
-                NotificationCategory.REPLIES -> R.string.notification_sentence_reply
-                else -> R.string.notification_sentence_mention
+                NotificationCategory.REPLIES -> Res.string.notification_sentence_reply
+                else -> Res.string.notification_sentence_mention
             },
         )
-    val title = item.threadTitle ?: stringResource(R.string.notification_unknown_thread)
+    val title = item.threadTitle ?: stringResource(Res.string.notification_unknown_thread)
     val actorStyle = SpanStyle(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
     val titleStyle = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
     return buildAnnotatedString {
@@ -410,7 +421,7 @@ internal fun timestampLabel(
 
         else ->
             stringResource(
-                R.string.notification_time_pair,
+                Res.string.notification_time_pair,
                 TimeFormat.relative(millis, nowMillis),
                 TimeFormat.absolute(millis),
             )
@@ -432,8 +443,8 @@ private fun EmptyNotifications(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(48.dp),
         )
-        Text(stringResource(R.string.notifications_empty), style = MaterialTheme.typography.titleSmall)
-        Button(onClick = onRefresh) { Text(stringResource(R.string.action_retry)) }
+        Text(stringResource(Res.string.notifications_empty), style = MaterialTheme.typography.titleSmall)
+        Button(onClick = onRefresh) { Text(stringResource(Res.string.action_retry)) }
     }
 }
 
@@ -441,9 +452,9 @@ private fun EmptyNotifications(
 private fun NotificationCategory.label(): String =
     stringResource(
         when (this) {
-            NotificationCategory.MENTIONS -> R.string.notifications_mentions
-            NotificationCategory.REPLIES -> R.string.notifications_replies
-            NotificationCategory.MESSAGES -> R.string.notifications_messages
+            NotificationCategory.MENTIONS -> Res.string.notifications_mentions
+            NotificationCategory.REPLIES -> Res.string.notifications_replies
+            NotificationCategory.MESSAGES -> Res.string.notifications_messages
         },
     )
 

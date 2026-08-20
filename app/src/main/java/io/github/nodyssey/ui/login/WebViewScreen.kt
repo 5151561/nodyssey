@@ -33,15 +33,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.session.SessionRepository
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_close
+import io.github.nodyssey.ui.resources.action_open_in_external_browser
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.core.net.resolveUserAgent
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
 
 /** Why the WebView was opened, which is also the condition for closing it again. */
 enum class WebViewGoal {
@@ -257,7 +259,7 @@ private fun WebViewScreen(
                     IconButton(onClick = onClose) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = stringResource(R.string.action_close),
+                            contentDescription = stringResource(Res.string.action_close),
                         )
                     }
                 },
@@ -267,7 +269,7 @@ private fun WebViewScreen(
                             Icon(
                                 Icons.AutoMirrored.Filled.ExitToApp,
                                 contentDescription =
-                                stringResource(R.string.action_open_in_external_browser),
+                                stringResource(Res.string.action_open_in_external_browser),
                             )
                         }
                     }

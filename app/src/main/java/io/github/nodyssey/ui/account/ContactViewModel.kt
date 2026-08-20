@@ -5,11 +5,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.account.AccountSettingsRepository
 import io.github.nodyssey.data.account.TelegramBinding
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.account_telegram_bound_toast
+import io.github.nodyssey.ui.resources.account_telegram_still_unbound
+import io.github.nodyssey.ui.resources.account_telegram_unbound_toast
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -98,7 +101,7 @@ class ContactViewModel(
                             _uiState.update {
                                 it.copy(
                                     awaitingBinding = false,
-                                    message = AccountMessage.Info(R.string.account_telegram_bound_toast),
+                                    message = AccountMessage.Info(Res.string.account_telegram_bound_toast),
                                 )
                             }
                             return@launch
@@ -122,9 +125,9 @@ class ContactViewModel(
                             awaitingBinding = state.awaitingBinding && !binding.bound,
                             message =
                             if (binding.bound) {
-                                AccountMessage.Info(R.string.account_telegram_bound_toast)
+                                AccountMessage.Info(Res.string.account_telegram_bound_toast)
                             } else {
-                                AccountMessage.Info(R.string.account_telegram_still_unbound)
+                                AccountMessage.Info(Res.string.account_telegram_still_unbound)
                             },
                         )
                     }
@@ -151,7 +154,7 @@ class ContactViewModel(
                     _uiState.update {
                         it.copy(
                             telegram = TelegramBinding(bound = false),
-                            message = AccountMessage.Info(R.string.account_telegram_unbound_toast),
+                            message = AccountMessage.Info(Res.string.account_telegram_unbound_toast),
                         )
                     }
                 }.onFailure { throwable ->

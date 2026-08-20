@@ -43,13 +43,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.DailyQuota
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
@@ -57,6 +55,45 @@ import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.assets_board
+import io.github.nodyssey.ui.resources.assets_board_subtitle
+import io.github.nodyssey.ui.resources.assets_chicken
+import io.github.nodyssey.ui.resources.assets_chicken_count
+import io.github.nodyssey.ui.resources.assets_daily_title
+import io.github.nodyssey.ui.resources.assets_ledger
+import io.github.nodyssey.ui.resources.assets_ledger_transfer
+import io.github.nodyssey.ui.resources.assets_level
+import io.github.nodyssey.ui.resources.assets_level_no_threshold
+import io.github.nodyssey.ui.resources.assets_level_progress
+import io.github.nodyssey.ui.resources.assets_level_remaining
+import io.github.nodyssey.ui.resources.assets_quota_attendance
+import io.github.nodyssey.ui.resources.assets_quota_comment
+import io.github.nodyssey.ui.resources.assets_quota_feeding
+import io.github.nodyssey.ui.resources.assets_quota_hint
+import io.github.nodyssey.ui.resources.assets_quota_post
+import io.github.nodyssey.ui.resources.assets_quota_value
+import io.github.nodyssey.ui.resources.assets_quota_value_unknown
+import io.github.nodyssey.ui.resources.assets_sign_in
+import io.github.nodyssey.ui.resources.assets_sign_in_choice_hint
+import io.github.nodyssey.ui.resources.assets_sign_in_choice_title
+import io.github.nodyssey.ui.resources.assets_sign_in_fixed
+import io.github.nodyssey.ui.resources.assets_sign_in_random
+import io.github.nodyssey.ui.resources.assets_signed_in
+import io.github.nodyssey.ui.resources.assets_signing_in
+import io.github.nodyssey.ui.resources.assets_stars
+import io.github.nodyssey.ui.resources.assets_title
+import io.github.nodyssey.ui.resources.invite_balance_after
+import io.github.nodyssey.ui.resources.invite_caution
+import io.github.nodyssey.ui.resources.invite_confirm
+import io.github.nodyssey.ui.resources.invite_confirm_title
+import io.github.nodyssey.ui.resources.invite_cost
+import io.github.nodyssey.ui.resources.invite_cost_value
+import io.github.nodyssey.ui.resources.invite_opened_web
+import io.github.nodyssey.ui.resources.invite_shortfall
+import io.github.nodyssey.ui.resources.spend_current_balance
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LoadingState
@@ -67,6 +104,7 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 /** What buying an invite code costs, and the reason the confirm dialog exists at all. */
 const val INVITE_CODE_CHICKEN_COST = 1_000
@@ -127,13 +165,13 @@ fun AssetsScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.assets_title),
+                title = stringResource(Res.string.assets_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -168,17 +206,17 @@ fun AssetsScreen(
             DailyQuotaCard(state)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 BalanceCard(
-                    label = stringResource(R.string.assets_chicken),
+                    label = stringResource(Res.string.assets_chicken),
                     value = state.chickenCount,
-                    action = stringResource(R.string.assets_ledger),
+                    action = stringResource(Res.string.assets_ledger),
                     container = MaterialTheme.colorScheme.primaryContainer,
                     content = MaterialTheme.colorScheme.onPrimaryContainer,
                     onClick = onChickenLedger,
                 )
                 BalanceCard(
-                    label = stringResource(R.string.assets_stars),
+                    label = stringResource(Res.string.assets_stars),
                     value = state.starCount,
-                    action = stringResource(R.string.assets_ledger_transfer),
+                    action = stringResource(Res.string.assets_ledger_transfer),
                     container = MaterialTheme.colorScheme.secondaryContainer,
                     content = MaterialTheme.colorScheme.onSecondaryContainer,
                     onClick = onStardust,
@@ -191,8 +229,8 @@ fun AssetsScreen(
             )
             // 邀请购码住在社区工具里，和站点的入口位置一致；这里不再重复一份。
             GroupedRow(
-                title = stringResource(R.string.assets_board),
-                subtitle = stringResource(R.string.assets_board_subtitle),
+                title = stringResource(Res.string.assets_board),
+                subtitle = stringResource(Res.string.assets_board_subtitle),
                 icon = PlazaIcons.Group,
                 first = true,
                 last = true,
@@ -233,7 +271,7 @@ private fun AttendanceModeDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(NodeSeekIcons.ChickenLeg, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = { Text(stringResource(R.string.assets_sign_in_choice_title)) },
+        title = { Text(stringResource(Res.string.assets_sign_in_choice_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 Button(
@@ -243,7 +281,7 @@ private fun AttendanceModeDialog(
                         .height(48.dp),
                     shape = RoundedCornerShape(24.dp),
                 ) {
-                    Text(stringResource(R.string.assets_sign_in_random))
+                    Text(stringResource(Res.string.assets_sign_in_random))
                 }
                 FilledTonalButton(
                     onClick = { onPick(AttendanceMode.FIXED_FIVE) },
@@ -252,10 +290,10 @@ private fun AttendanceModeDialog(
                         .height(48.dp),
                     shape = RoundedCornerShape(24.dp),
                 ) {
-                    Text(stringResource(R.string.assets_sign_in_fixed))
+                    Text(stringResource(Res.string.assets_sign_in_fixed))
                 }
                 Text(
-                    text = stringResource(R.string.assets_sign_in_choice_hint),
+                    text = stringResource(Res.string.assets_sign_in_choice_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -263,7 +301,7 @@ private fun AttendanceModeDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
     )
 }
@@ -282,16 +320,16 @@ fun InviteConfirmDialog(
 ) {
     val shortfall = chickenCount?.let { (INVITE_CODE_CHICKEN_COST - it).takeIf { gap -> gap > 0 } }
     SpendConfirmDialog(
-        title = stringResource(R.string.invite_confirm_title),
+        title = stringResource(Res.string.invite_confirm_title),
         details =
         buildList {
-            add(SpendDetail(stringResource(R.string.invite_cost), stringResource(R.string.invite_cost_value)))
+            add(SpendDetail(stringResource(Res.string.invite_cost), stringResource(Res.string.invite_cost_value)))
             chickenCount?.let { balance ->
-                add(SpendDetail(stringResource(R.string.spend_current_balance), balance.toString()))
+                add(SpendDetail(stringResource(Res.string.spend_current_balance), balance.toString()))
                 if (shortfall == null) {
                     add(
                         SpendDetail(
-                            stringResource(R.string.invite_balance_after),
+                            stringResource(Res.string.invite_balance_after),
                             (balance - INVITE_CODE_CHICKEN_COST).toString(),
                         ),
                     )
@@ -299,12 +337,12 @@ fun InviteConfirmDialog(
             }
         },
         caution =
-        stringResource(R.string.invite_caution) + "\n" + stringResource(R.string.invite_opened_web),
-        confirmLabel = stringResource(R.string.invite_confirm),
+        stringResource(Res.string.invite_caution) + "\n" + stringResource(Res.string.invite_opened_web),
+        confirmLabel = stringResource(Res.string.invite_confirm),
         onConfirm = onConfirm,
         onDismiss = onDismiss,
         icon = PlazaIcons.ConfirmationNumber,
-        shortfall = shortfall?.let { stringResource(R.string.invite_shortfall, it) },
+        shortfall = shortfall?.let { stringResource(Res.string.invite_shortfall, it) },
     )
 }
 
@@ -319,7 +357,7 @@ private fun LevelCard(state: AssetsUiState) {
     AssetsCard(radius = 22.dp) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
-                text = state.level?.let { stringResource(R.string.assets_level, it) } ?: UNKNOWN,
+                text = state.level?.let { stringResource(Res.string.assets_level, it) } ?: UNKNOWN,
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.weight(1f),
             )
@@ -328,9 +366,9 @@ private fun LevelCard(state: AssetsUiState) {
             Text(
                 text =
                 if (target != null && chicken != null) {
-                    stringResource(R.string.assets_level_progress, chicken, target)
+                    stringResource(Res.string.assets_level_progress, chicken, target)
                 } else {
-                    chicken?.let { stringResource(R.string.assets_chicken_count, it) } ?: UNKNOWN
+                    chicken?.let { stringResource(Res.string.assets_chicken_count, it) } ?: UNKNOWN
                 },
                 style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -341,11 +379,11 @@ private fun LevelCard(state: AssetsUiState) {
             text =
             state.chickenToNextLevel?.let { remaining ->
                 stringResource(
-                    R.string.assets_level_remaining,
+                    Res.string.assets_level_remaining,
                     remaining,
                     (state.levelBarRank ?: state.level ?: 1) + 1,
                 )
-            } ?: stringResource(R.string.assets_level_no_threshold),
+            } ?: stringResource(Res.string.assets_level_no_threshold),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -356,20 +394,20 @@ private fun LevelCard(state: AssetsUiState) {
 private fun DailyQuotaCard(state: AssetsUiState) {
     AssetsCard(radius = 22.dp) {
         Text(
-            text = stringResource(R.string.assets_daily_title),
+            text = stringResource(Res.string.assets_daily_title),
             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
         )
-        QuotaRow(stringResource(R.string.assets_quota_post), state.postQuota)
-        QuotaRow(stringResource(R.string.assets_quota_comment), state.commentQuota)
+        QuotaRow(stringResource(Res.string.assets_quota_post), state.postQuota)
+        QuotaRow(stringResource(Res.string.assets_quota_comment), state.commentQuota)
         QuotaRow(
-            label = stringResource(R.string.assets_quota_attendance),
+            label = stringResource(Res.string.assets_quota_attendance),
             quota = state.attendanceQuota,
-            badge = state.attendanceGain?.let { stringResource(R.string.assets_signed_in, it) },
+            badge = state.attendanceGain?.let { stringResource(Res.string.assets_signed_in, it) },
         )
-        QuotaRow(stringResource(R.string.assets_quota_feeding), state.feedingQuota)
+        QuotaRow(stringResource(Res.string.assets_quota_feeding), state.feedingQuota)
         if (!state.postQuota.isKnown) {
             Text(
-                text = stringResource(R.string.assets_quota_hint),
+                text = stringResource(Res.string.assets_quota_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -417,8 +455,8 @@ private fun DailyQuota.label(): String {
     val used = used
     val total = total
     return when {
-        used != null && total != null -> stringResource(R.string.assets_quota_value, used, total)
-        total != null -> stringResource(R.string.assets_quota_value_unknown, total)
+        used != null && total != null -> stringResource(Res.string.assets_quota_value, used, total)
+        total != null -> stringResource(Res.string.assets_quota_value_unknown, total)
         else -> UNKNOWN
     }
 }
@@ -528,7 +566,7 @@ private fun AttendanceButton(
             state.isSigningIn -> {
                 CircularProgressIndicator(Modifier.size(18.dp))
                 Text(
-                    stringResource(R.string.assets_signing_in),
+                    stringResource(Res.string.assets_signing_in),
                     modifier = Modifier.padding(start = Spacing.sm),
                 )
             }
@@ -537,9 +575,9 @@ private fun AttendanceButton(
                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
                     text =
-                    state.attendanceGain?.let { stringResource(R.string.assets_signed_in, it) }
+                    state.attendanceGain?.let { stringResource(Res.string.assets_signed_in, it) }
                         ?: state.attendanceMessage
-                        ?: stringResource(R.string.assets_sign_in),
+                        ?: stringResource(Res.string.assets_sign_in),
                     modifier = Modifier.padding(start = Spacing.sm),
                 )
             }
@@ -547,7 +585,7 @@ private fun AttendanceButton(
             else -> {
                 Icon(NodeSeekIcons.ChickenLeg, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
-                    stringResource(R.string.assets_sign_in),
+                    stringResource(Res.string.assets_sign_in),
                     modifier = Modifier.padding(start = Spacing.sm),
                 )
             }

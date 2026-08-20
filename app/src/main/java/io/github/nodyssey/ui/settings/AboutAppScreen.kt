@@ -39,14 +39,57 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.about_app_channel
+import io.github.nodyssey.ui.resources.about_app_channel_hint
+import io.github.nodyssey.ui.resources.about_app_group
+import io.github.nodyssey.ui.resources.about_app_group_hint
+import io.github.nodyssey.ui.resources.about_app_name
+import io.github.nodyssey.ui.resources.about_changelog
+import io.github.nodyssey.ui.resources.about_check_updates
+import io.github.nodyssey.ui.resources.about_feedback
+import io.github.nodyssey.ui.resources.about_feedback_hint
+import io.github.nodyssey.ui.resources.about_install_failed_blocked
+import io.github.nodyssey.ui.resources.about_install_failed_conflict
+import io.github.nodyssey.ui.resources.about_install_failed_incompatible
+import io.github.nodyssey.ui.resources.about_install_failed_invalid
+import io.github.nodyssey.ui.resources.about_install_failed_storage
+import io.github.nodyssey.ui.resources.about_install_failed_unknown
+import io.github.nodyssey.ui.resources.about_licenses_hint
+import io.github.nodyssey.ui.resources.about_project_home
+import io.github.nodyssey.ui.resources.about_theme_signature
+import io.github.nodyssey.ui.resources.about_title
+import io.github.nodyssey.ui.resources.about_unofficial_notice
+import io.github.nodyssey.ui.resources.about_update_available
+import io.github.nodyssey.ui.resources.about_update_cancel
+import io.github.nodyssey.ui.resources.about_update_checking
+import io.github.nodyssey.ui.resources.about_update_download
+import io.github.nodyssey.ui.resources.about_update_downloading
+import io.github.nodyssey.ui.resources.about_update_downloading_unknown
+import io.github.nodyssey.ui.resources.about_update_failed_checksum
+import io.github.nodyssey.ui.resources.about_update_failed_network
+import io.github.nodyssey.ui.resources.about_update_failed_server
+import io.github.nodyssey.ui.resources.about_update_failed_storage
+import io.github.nodyssey.ui.resources.about_update_failed_unreadable
+import io.github.nodyssey.ui.resources.about_update_install
+import io.github.nodyssey.ui.resources.about_update_latest
+import io.github.nodyssey.ui.resources.about_update_new_version
+import io.github.nodyssey.ui.resources.about_update_open_release
+import io.github.nodyssey.ui.resources.about_update_permission_action
+import io.github.nodyssey.ui.resources.about_update_permission_hint
+import io.github.nodyssey.ui.resources.about_update_prerelease
+import io.github.nodyssey.ui.resources.about_update_prerelease_hint
+import io.github.nodyssey.ui.resources.about_update_retry
+import io.github.nodyssey.ui.resources.about_update_unknown
+import io.github.nodyssey.ui.resources.about_version
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.settings_licenses
 import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.AppUpdateState
 import io.github.plaza.core.update.InstallFailure
@@ -61,6 +104,7 @@ import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 @Composable
@@ -119,13 +163,13 @@ fun AboutAppScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.about_title),
+                title = stringResource(Res.string.about_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -161,15 +205,15 @@ fun AboutAppScreen(
             }
             UnofficialNotice()
             AboutActionRow(
-                title = stringResource(R.string.about_project_home),
+                title = stringResource(Res.string.about_project_home),
                 subtitle = "github.com/5151561/nodyssey",
                 icon = PlazaIcons.Code,
                 external = true,
                 onClick = { onOpenUri(AppLinks.PROJECT_HOME) },
             )
             AboutActionRow(
-                title = stringResource(R.string.about_feedback),
-                subtitle = stringResource(R.string.about_feedback_hint),
+                title = stringResource(Res.string.about_feedback),
+                subtitle = stringResource(Res.string.about_feedback_hint),
                 icon = PlazaIcons.Campaign,
                 external = true,
                 onClick = { onOpenUri(AppLinks.ISSUES) },
@@ -177,32 +221,32 @@ fun AboutAppScreen(
             // Sms rather than the Campaign a broadcast channel would ordinarily take: 问题反馈 two rows
             // up already has that icon, and two identical megaphones on one screen tell nobody apart.
             AboutActionRow(
-                title = stringResource(R.string.about_app_channel),
-                subtitle = stringResource(R.string.about_app_channel_hint),
+                title = stringResource(Res.string.about_app_channel),
+                subtitle = stringResource(Res.string.about_app_channel_hint),
                 icon = PlazaIcons.Sms,
                 external = true,
                 onClick = { onOpenUri(AppLinks.TELEGRAM_CHANNEL) },
             )
             AboutActionRow(
-                title = stringResource(R.string.about_app_group),
-                subtitle = stringResource(R.string.about_app_group_hint),
+                title = stringResource(Res.string.about_app_group),
+                subtitle = stringResource(Res.string.about_app_group_hint),
                 icon = PlazaIcons.Group,
                 external = true,
                 onClick = { onOpenUri(AppLinks.TELEGRAM_GROUP) },
             )
             AboutActionRow(
-                title = stringResource(R.string.about_changelog),
+                title = stringResource(Res.string.about_changelog),
                 icon = PlazaIcons.History,
                 onClick = onOpenChangelog,
             )
             AboutActionRow(
-                title = stringResource(R.string.settings_licenses),
-                subtitle = stringResource(R.string.about_licenses_hint),
+                title = stringResource(Res.string.settings_licenses),
+                subtitle = stringResource(Res.string.about_licenses_hint),
                 icon = PlazaIcons.Code,
                 onClick = onOpenLicenses,
             )
             Text(
-                stringResource(R.string.about_theme_signature),
+                stringResource(Res.string.about_theme_signature),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xl),
@@ -236,9 +280,9 @@ private fun AppIdentity(
             }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(stringResource(R.string.about_app_name), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(Res.string.about_app_name), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
-                stringResource(R.string.about_version, versionName, versionCode),
+                stringResource(Res.string.about_version, versionName, versionCode),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -259,7 +303,7 @@ private fun AppIdentity(
                     Icon(PlazaIcons.History, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
                 Spacer(Modifier.width(Spacing.sm))
-                Text(stringResource(R.string.about_check_updates))
+                Text(stringResource(Res.string.about_check_updates))
             }
             val highlighted = check is UpdateCheck.Available
             Text(
@@ -276,10 +320,10 @@ private fun AppIdentity(
 @Composable
 private fun checkSummary(check: UpdateCheck): String =
     when (check) {
-        UpdateCheck.Idle -> stringResource(R.string.about_update_unknown)
-        UpdateCheck.Checking -> stringResource(R.string.about_update_checking)
-        UpdateCheck.UpToDate -> stringResource(R.string.about_update_latest)
-        is UpdateCheck.Available -> stringResource(R.string.about_update_available, check.release.versionName)
+        UpdateCheck.Idle -> stringResource(Res.string.about_update_unknown)
+        UpdateCheck.Checking -> stringResource(Res.string.about_update_checking)
+        UpdateCheck.UpToDate -> stringResource(Res.string.about_update_latest)
+        is UpdateCheck.Available -> stringResource(Res.string.about_update_available, check.release.versionName)
         is UpdateCheck.Failed -> failureText(check.failure)
     }
 
@@ -287,22 +331,22 @@ private fun checkSummary(check: UpdateCheck): String =
 @Composable
 internal fun failureText(failure: UpdateFailure): String =
     when (failure) {
-        UpdateFailure.Network -> stringResource(R.string.about_update_failed_network)
-        is UpdateFailure.Server -> stringResource(R.string.about_update_failed_server, failure.statusCode)
-        UpdateFailure.Checksum -> stringResource(R.string.about_update_failed_checksum)
-        UpdateFailure.Unreadable -> stringResource(R.string.about_update_failed_unreadable)
-        UpdateFailure.Storage -> stringResource(R.string.about_update_failed_storage)
+        UpdateFailure.Network -> stringResource(Res.string.about_update_failed_network)
+        is UpdateFailure.Server -> stringResource(Res.string.about_update_failed_server, failure.statusCode)
+        UpdateFailure.Checksum -> stringResource(Res.string.about_update_failed_checksum)
+        UpdateFailure.Unreadable -> stringResource(Res.string.about_update_failed_unreadable)
+        UpdateFailure.Storage -> stringResource(Res.string.about_update_failed_storage)
     }
 
 @Composable
 private fun installFailureText(failure: InstallFailure): String =
     when (failure) {
-        InstallFailure.BLOCKED -> stringResource(R.string.about_install_failed_blocked)
-        InstallFailure.CONFLICT -> stringResource(R.string.about_install_failed_conflict)
-        InstallFailure.INCOMPATIBLE -> stringResource(R.string.about_install_failed_incompatible)
-        InstallFailure.STORAGE -> stringResource(R.string.about_install_failed_storage)
-        InstallFailure.INVALID -> stringResource(R.string.about_install_failed_invalid)
-        InstallFailure.UNKNOWN -> stringResource(R.string.about_install_failed_unknown)
+        InstallFailure.BLOCKED -> stringResource(Res.string.about_install_failed_blocked)
+        InstallFailure.CONFLICT -> stringResource(Res.string.about_install_failed_conflict)
+        InstallFailure.INCOMPATIBLE -> stringResource(Res.string.about_install_failed_incompatible)
+        InstallFailure.STORAGE -> stringResource(Res.string.about_install_failed_storage)
+        InstallFailure.INVALID -> stringResource(Res.string.about_install_failed_invalid)
+        InstallFailure.UNKNOWN -> stringResource(Res.string.about_install_failed_unknown)
     }
 
 /**
@@ -338,7 +382,7 @@ private fun UpdateCard(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 Text(
-                    stringResource(R.string.about_update_new_version, release.versionName),
+                    stringResource(Res.string.about_update_new_version, release.versionName),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
@@ -347,7 +391,7 @@ private fun UpdateCard(
                 // looks exactly like the one offering a release that was actually tested.
                 if (release.preRelease) {
                     TonalTag(
-                        text = stringResource(R.string.about_update_prerelease),
+                        text = stringResource(Res.string.about_update_prerelease),
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                         contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                     )
@@ -361,7 +405,7 @@ private fun UpdateCard(
             }
             if (release.preRelease) {
                 Text(
-                    stringResource(R.string.about_update_prerelease_hint),
+                    stringResource(Res.string.about_update_prerelease_hint),
                     style = MaterialTheme.typography.labelMedium,
                 )
             }
@@ -380,7 +424,7 @@ private fun UpdateCard(
 
                 is UpdateDownload.Ready ->
                     Button(onClick = onInstall, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.about_update_install))
+                        Text(stringResource(Res.string.about_update_install))
                     }
 
                 else -> {
@@ -401,9 +445,9 @@ private fun UpdateCard(
                         Text(
                             stringResource(
                                 if (download is UpdateDownload.Failed) {
-                                    R.string.about_update_retry
+                                    Res.string.about_update_retry
                                 } else {
-                                    R.string.about_update_download
+                                    Res.string.about_update_download
                                 },
                             ),
                         )
@@ -423,7 +467,7 @@ private fun UpdateCard(
             }
 
             TextButton(onClick = onOpenRelease, modifier = Modifier.align(Alignment.End)) {
-                Text(stringResource(R.string.about_update_open_release))
+                Text(stringResource(Res.string.about_update_open_release))
             }
         }
     }
@@ -444,15 +488,15 @@ private fun DownloadProgress(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 if (fraction == null) {
-                    stringResource(R.string.about_update_downloading_unknown)
+                    stringResource(Res.string.about_update_downloading_unknown)
                 } else {
-                    stringResource(R.string.about_update_downloading, (fraction * 100).roundToInt())
+                    stringResource(Res.string.about_update_downloading, (fraction * 100).roundToInt())
                 },
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f),
             )
             TextButton(onClick = onCancel) {
-                Text(stringResource(R.string.about_update_cancel))
+                Text(stringResource(Res.string.about_update_cancel))
             }
         }
     }
@@ -468,11 +512,11 @@ private fun DownloadProgress(
 private fun InstallPermissionNotice(onGrant: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(
-            stringResource(R.string.about_update_permission_hint),
+            stringResource(Res.string.about_update_permission_hint),
             style = MaterialTheme.typography.labelMedium,
         )
         TextButton(onClick = onGrant) {
-            Text(stringResource(R.string.about_update_permission_action))
+            Text(stringResource(Res.string.about_update_permission_action))
         }
     }
 }
@@ -491,7 +535,7 @@ private fun UnofficialNotice() {
         ) {
             Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                stringResource(R.string.about_unofficial_notice),
+                stringResource(Res.string.about_unofficial_notice),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),

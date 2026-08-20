@@ -74,6 +74,11 @@ android {
 }
 
 dependencies {
+    // The screens. Everything under `io.github.nodyssey.ui` lives here since step D1, and so do the
+    // 1,056 strings and the five preset avatars they draw — as Compose Resources rather than
+    // `app/src/main/res`, which is why this module's `R` now holds only what the *platform* reads.
+    implementation(project(":ui"))
+
     // The Compose theme and the components that carry no NodeSeek knowledge. The dependency only
     // goes this way: `:designsys` cannot see this module, which is what keeps site-specific types out
     // of it by compilation rather than by review.

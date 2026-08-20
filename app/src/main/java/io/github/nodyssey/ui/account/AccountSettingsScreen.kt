@@ -27,11 +27,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.account_block_title
+import io.github.nodyssey.ui.resources.account_blocked_count
+import io.github.nodyssey.ui.resources.account_contact_summary
+import io.github.nodyssey.ui.resources.account_contact_title
+import io.github.nodyssey.ui.resources.account_preferences_summary
+import io.github.nodyssey.ui.resources.account_preferences_title
+import io.github.nodyssey.ui.resources.account_profile_summary
+import io.github.nodyssey.ui.resources.account_profile_title
+import io.github.nodyssey.ui.resources.account_security_summary
+import io.github.nodyssey.ui.resources.account_security_title
+import io.github.nodyssey.ui.resources.account_title
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_sign_out
 import io.github.nodyssey.ui.settings.SettingsGroup
 import io.github.nodyssey.ui.settings.SettingsRow
 import io.github.plaza.designsys.component.OneHandTopAppBar
@@ -40,6 +52,7 @@ import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AccountSettingsRoute(
@@ -97,13 +110,13 @@ fun AccountSettingsScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.account_title),
+                title = stringResource(Res.string.account_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -122,38 +135,38 @@ fun AccountSettingsScreen(
         ) {
             SettingsGroup {
                 SettingsRow(
-                    title = stringResource(R.string.account_profile_title),
-                    subtitle = stringResource(R.string.account_profile_summary),
+                    title = stringResource(Res.string.account_profile_title),
+                    subtitle = stringResource(Res.string.account_profile_summary),
                     top = true,
                     onClick = onOpenProfileFields,
                     leading = { RowIcon(Icons.Default.AccountCircle) },
                     trailing = { Chevron() },
                 )
                 SettingsRow(
-                    title = stringResource(R.string.account_security_title),
-                    subtitle = stringResource(R.string.account_security_summary),
+                    title = stringResource(Res.string.account_security_title),
+                    subtitle = stringResource(Res.string.account_security_summary),
                     onClick = onOpenSecurity,
                     leading = { RowIcon(Icons.Default.Lock) },
                     trailing = { Chevron() },
                 )
                 SettingsRow(
-                    title = stringResource(R.string.account_contact_title),
-                    subtitle = stringResource(R.string.account_contact_summary),
+                    title = stringResource(Res.string.account_contact_title),
+                    subtitle = stringResource(Res.string.account_contact_summary),
                     onClick = onOpenContact,
                     leading = { RowIcon(Icons.Default.Email) },
                     trailing = { Chevron() },
                 )
                 SettingsRow(
-                    title = stringResource(R.string.account_block_title),
+                    title = stringResource(Res.string.account_block_title),
                     subtitle =
-                    state.blockedCount?.let { stringResource(R.string.account_blocked_count, it) },
+                    state.blockedCount?.let { stringResource(Res.string.account_blocked_count, it) },
                     onClick = onOpenBlockList,
                     leading = { RowIcon(PlazaIcons.Block) },
                     trailing = { Chevron() },
                 )
                 SettingsRow(
-                    title = stringResource(R.string.account_preferences_title),
-                    subtitle = stringResource(R.string.account_preferences_summary),
+                    title = stringResource(Res.string.account_preferences_title),
+                    subtitle = stringResource(Res.string.account_preferences_summary),
                     bottom = true,
                     onClick = onOpenPreferences,
                     leading = { RowIcon(Icons.Default.Settings) },
@@ -163,7 +176,7 @@ fun AccountSettingsScreen(
 
             SettingsGroup {
                 SettingsRow(
-                    title = stringResource(R.string.action_sign_out),
+                    title = stringResource(Res.string.action_sign_out),
                     top = true,
                     bottom = true,
                     onClick = onSignOut,

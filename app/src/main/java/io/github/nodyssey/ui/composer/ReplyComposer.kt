@@ -56,15 +56,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.nodyssey.R
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_close
+import io.github.nodyssey.ui.resources.action_preview
+import io.github.nodyssey.ui.resources.action_publish
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.composer_image_default_name
+import io.github.nodyssey.ui.resources.composer_publish_challenge
+import io.github.nodyssey.ui.resources.composer_publish_http
+import io.github.nodyssey.ui.resources.composer_publish_login_required
+import io.github.nodyssey.ui.resources.composer_publish_network_failed
+import io.github.nodyssey.ui.resources.composer_publishing
+import io.github.nodyssey.ui.resources.post_quote_prefix
+import io.github.nodyssey.ui.resources.post_quote_reply
+import io.github.nodyssey.ui.resources.post_reply_draft_saved
+import io.github.nodyssey.ui.resources.post_reply_editor_hint
+import io.github.nodyssey.ui.resources.post_reply_editor_title
+import io.github.nodyssey.ui.resources.post_reply_editor_title_floor
+import io.github.nodyssey.ui.resources.post_reply_preview_title
+import io.github.nodyssey.ui.resources.post_reply_preview_title_floor
+import io.github.nodyssey.ui.resources.post_reply_publish_failed
+import io.github.nodyssey.ui.resources.post_reply_publish_unavailable
+import io.github.nodyssey.ui.resources.post_reply_quote_remove
 import io.github.nodyssey.ui.stardust.StardustReceiveComposeDialog
 import io.github.nodyssey.ui.vote.VoteComposeDialog
 import io.github.plaza.core.net.SiteError
@@ -79,6 +100,7 @@ import io.github.plaza.designsys.editor.rememberMarkdownEditorState
 import io.github.plaza.designsys.theme.CommentBody
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 import java.text.DateFormat
 import java.util.Date
 
@@ -128,9 +150,10 @@ fun ReplyComposerHost(
     var composingVote by rememberSaveable { mutableStateOf(false) }
     var composingReceiveCode by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
+    val fallbackImageName = stringResource(Res.string.composer_image_default_name)
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(MAX_IMAGES_PER_PICK),
-    ) { uris -> onPickImages(uris.toPickedImages(context)) }
+    ) { uris -> onPickImages(uris.toPickedImages(context, fallbackImageName)) }
     val launchPicker = {
         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
@@ -247,8 +270,8 @@ private fun ReplyEditorSheet(
             ) {
                 Text(
                     text = state.replyTo?.let {
-                        stringResource(R.string.post_reply_editor_title_floor, it.floor, it.author)
-                    } ?: stringResource(R.string.post_reply_editor_title),
+                        stringResource(Res.string.post_reply_editor_title_floor, it.floor, it.author)
+                    } ?: stringResource(Res.string.post_reply_editor_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
@@ -258,7 +281,7 @@ private fun ReplyEditorSheet(
                 )
                 state.savedAtMillis?.let {
                     Text(
-                        text = stringResource(R.string.post_reply_draft_saved, formatTime(it)),
+                        text = stringResource(Res.string.post_reply_draft_saved, formatTime(it)),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -276,14 +299,14 @@ private fun ReplyEditorSheet(
                 ) {
                     Icon(
                         imageVector = PlazaIcons.Visibility,
-                        contentDescription = stringResource(R.string.action_preview),
+                        contentDescription = stringResource(Res.string.action_preview),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 IconButton(onClick = onDismiss, enabled = !state.isPublishing) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.action_close),
+                        contentDescription = stringResource(Res.string.action_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -300,7 +323,7 @@ private fun ReplyEditorSheet(
             // would centre a half-typed reply.
             EditorTextField(
                 state = bodyState,
-                hint = stringResource(R.string.post_reply_editor_hint),
+                hint = stringResource(Res.string.post_reply_editor_hint),
                 textStyle = CommentBody.copy(
                     fontSize = 16.sp,
                     lineHeight = 26.sp,
@@ -381,8 +404,8 @@ private fun ReplyPreviewScreen(
                 title = {
                     Text(
                         text = state.replyTo?.let {
-                            stringResource(R.string.post_reply_preview_title_floor, it.floor)
-                        } ?: stringResource(R.string.post_reply_preview_title),
+                            stringResource(Res.string.post_reply_preview_title_floor, it.floor)
+                        } ?: stringResource(Res.string.post_reply_preview_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontSize = 16.sp,
                     )
@@ -391,7 +414,7 @@ private fun ReplyPreviewScreen(
                     IconButton(onClick = onBack, enabled = !state.isPublishing) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -462,7 +485,7 @@ private fun ReplyTargetChip(
             Icon(PlazaIcons.Reply, contentDescription = null, modifier = Modifier.size(15.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = stringResource(R.string.post_quote_reply, replyTo.author, "#${replyTo.floor}"),
+                    text = stringResource(Res.string.post_quote_reply, replyTo.author, "#${replyTo.floor}"),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -480,7 +503,7 @@ private fun ReplyTargetChip(
             IconButton(onClick = onClear, modifier = Modifier.size(24.dp)) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = stringResource(R.string.post_reply_quote_remove),
+                    contentDescription = stringResource(Res.string.post_reply_quote_remove),
                     modifier = Modifier.size(15.dp),
                 )
             }
@@ -500,7 +523,7 @@ private fun ReplyReference(
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     ) {
         Text(
-            text = "@$author ${stringResource(R.string.post_quote_prefix, floor)}",
+            text = "@$author ${stringResource(Res.string.post_quote_prefix, floor)}",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
@@ -528,7 +551,7 @@ private fun ComposerErrorStrip(
     modifier: Modifier = Modifier,
 ) {
     val message = when {
-        error != null -> stringResource(R.string.post_reply_publish_failed, replyErrorReason(error, detail))
+        error != null -> stringResource(Res.string.post_reply_publish_failed, replyErrorReason(error, detail))
         failedUploads > 0 -> uploadFailureText(failedUploads, uploadFailure, uploadErrorDetail)
         else -> return
     }
@@ -554,7 +577,7 @@ private fun ComposerErrorStrip(
                 },
                 contentPadding = PaddingValues(horizontal = Spacing.md),
             ) {
-                Text(stringResource(R.string.action_retry), color = MaterialTheme.colorScheme.onErrorContainer)
+                Text(stringResource(Res.string.action_retry), color = MaterialTheme.colorScheme.onErrorContainer)
             }
         }
     }
@@ -583,7 +606,7 @@ private fun PublishReplyButton(
             Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(18.dp))
         }
         Text(
-            text = stringResource(if (isPublishing) R.string.composer_publishing else R.string.action_publish),
+            text = stringResource(if (isPublishing) Res.string.composer_publishing else Res.string.action_publish),
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(start = Spacing.xs + 2.dp),
         )
@@ -592,20 +615,20 @@ private fun PublishReplyButton(
 
 @Composable
 private fun replyErrorReason(error: SiteError, detail: String?): String = when (error) {
-    SiteError.Network -> stringResource(R.string.composer_publish_network_failed)
+    SiteError.Network -> stringResource(Res.string.composer_publish_network_failed)
 
-    SiteError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
+    SiteError.LoginRequired -> stringResource(Res.string.composer_publish_login_required)
 
-    SiteError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
+    SiteError.Cloudflare -> stringResource(Res.string.composer_publish_challenge)
 
     // The site's own sentence beats a status code whenever it sent one: a rejected reply comes back
     // as a 400 carrying "内容不能为空" or the duplicate-post refusal, and "服务器返回 HTTP 400"
     // would tell the user nothing they can act on.
     is SiteError.Http ->
         detail?.takeIf { it.isNotBlank() }
-            ?: stringResource(R.string.composer_publish_http, error.statusCode)
+            ?: stringResource(Res.string.composer_publish_http, error.statusCode)
 
-    else -> detail?.takeIf { it.isNotBlank() } ?: stringResource(R.string.post_reply_publish_unavailable)
+    else -> detail?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.post_reply_publish_unavailable)
 }
 
 private fun formatTime(timestamp: Long): String =

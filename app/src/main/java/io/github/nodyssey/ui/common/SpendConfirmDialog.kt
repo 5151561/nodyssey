@@ -17,14 +17,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_cancel
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.stringResource
 
 /** One line of the "what exactly is being spent" block. */
 data class SpendDetail(
@@ -126,7 +127,7 @@ fun SpendConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isSending) {
-                Text(stringResource(R.string.action_cancel))
+                Text(stringResource(Res.string.action_cancel))
             }
         },
     )

@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -40,13 +39,27 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import io.github.nodyssey.R
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.data.composer.UploadStatus
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.composer_image_failed
+import io.github.nodyssey.ui.resources.composer_image_failed_count
+import io.github.nodyssey.ui.resources.composer_image_failed_reason
+import io.github.nodyssey.ui.resources.composer_image_remove
+import io.github.nodyssey.ui.resources.composer_image_retry_one
+import io.github.nodyssey.ui.resources.composer_image_uploaded
+import io.github.nodyssey.ui.resources.composer_image_uploading
+import io.github.nodyssey.ui.resources.composer_image_waiting
+import io.github.nodyssey.ui.resources.composer_upload_challenge
+import io.github.nodyssey.ui.resources.composer_upload_invalid_key
+import io.github.nodyssey.ui.resources.composer_upload_network
+import io.github.nodyssey.ui.resources.composer_upload_not_configured
+import io.github.nodyssey.ui.resources.composer_upload_rejected
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 /**
@@ -63,16 +76,16 @@ internal fun uploadFailureText(
     failure: UploadFailure?,
     detail: String?,
 ): String {
-    val count = stringResource(R.string.composer_image_failed_count, failedCount)
+    val count = stringResource(Res.string.composer_image_failed_count, failedCount)
     val reason = detail?.takeIf(String::isNotBlank) ?: when (failure) {
-        UploadFailure.NOT_CONFIGURED -> stringResource(R.string.composer_upload_not_configured)
-        UploadFailure.INVALID_KEY -> stringResource(R.string.composer_upload_invalid_key)
-        UploadFailure.REJECTED -> stringResource(R.string.composer_upload_rejected)
-        UploadFailure.CHALLENGE -> stringResource(R.string.composer_upload_challenge)
-        UploadFailure.NETWORK -> stringResource(R.string.composer_upload_network)
+        UploadFailure.NOT_CONFIGURED -> stringResource(Res.string.composer_upload_not_configured)
+        UploadFailure.INVALID_KEY -> stringResource(Res.string.composer_upload_invalid_key)
+        UploadFailure.REJECTED -> stringResource(Res.string.composer_upload_rejected)
+        UploadFailure.CHALLENGE -> stringResource(Res.string.composer_upload_challenge)
+        UploadFailure.NETWORK -> stringResource(Res.string.composer_upload_network)
         UploadFailure.UNKNOWN, null -> return count
     }
-    return stringResource(R.string.composer_image_failed_reason, count, reason)
+    return stringResource(Res.string.composer_image_failed_reason, count, reason)
 }
 
 /**
@@ -114,7 +127,7 @@ private fun AttachmentCell(
     onRetry: () -> Unit,
 ) {
     val failed = attachment.status == UploadStatus.FAILED
-    val retryDescription = stringResource(R.string.composer_image_retry_one, attachment.name)
+    val retryDescription = stringResource(Res.string.composer_image_retry_one, attachment.name)
     // The dismiss badge hangs off the thumbnail's corner, so the cell reserves the overhang rather
     // than letting the Row clip it.
     Box(modifier = Modifier.padding(top = BADGE_OVERHANG, end = BADGE_OVERHANG)) {
@@ -233,7 +246,7 @@ private fun RemoveBadge(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val description = stringResource(R.string.composer_image_remove, name)
+    val description = stringResource(Res.string.composer_image_remove, name)
     Box(
         modifier = modifier
             .size(20.dp)
@@ -254,10 +267,10 @@ private fun RemoveBadge(
 
 @Composable
 private fun ImageAttachment.statusLabel(): String = when (status) {
-    UploadStatus.UPLOADING -> stringResource(R.string.composer_image_uploading, (progress * 100).roundToInt())
-    UploadStatus.UPLOADED -> stringResource(R.string.composer_image_uploaded)
-    UploadStatus.FAILED -> stringResource(R.string.composer_image_failed)
-    UploadStatus.WAITING -> stringResource(R.string.composer_image_waiting)
+    UploadStatus.UPLOADING -> stringResource(Res.string.composer_image_uploading, (progress * 100).roundToInt())
+    UploadStatus.UPLOADED -> stringResource(Res.string.composer_image_uploaded)
+    UploadStatus.FAILED -> stringResource(Res.string.composer_image_failed)
+    UploadStatus.WAITING -> stringResource(Res.string.composer_image_waiting)
 }
 
 private val THUMBNAIL = 68.dp

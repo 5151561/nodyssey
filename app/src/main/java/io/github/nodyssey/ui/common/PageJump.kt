@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.common
 
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -58,7 +57,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -70,12 +68,24 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite.COMMENTS_PER_PAGE
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.page_jump_by_floor
+import io.github.nodyssey.ui.resources.page_jump_by_page
+import io.github.nodyssey.ui.resources.page_jump_floor_input
+import io.github.nodyssey.ui.resources.page_jump_input
+import io.github.nodyssey.ui.resources.page_jump_next
+import io.github.nodyssey.ui.resources.page_jump_of_total
+import io.github.nodyssey.ui.resources.page_jump_page_of
+import io.github.nodyssey.ui.resources.page_jump_previous
+import io.github.nodyssey.ui.resources.page_jump_title
+import io.github.nodyssey.ui.resources.page_jump_total_pages
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /*
  * The page control for the screens that read a paged site list as one continuous scroll.
@@ -125,7 +135,7 @@ fun PageJumpRail(
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         PageKey(
             onClick = onPageClick,
-            contentDescription = stringResource(R.string.page_jump_page_of, page, totalPages),
+            contentDescription = stringResource(Res.string.page_jump_page_of, page, totalPages),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -135,7 +145,7 @@ fun PageJumpRail(
                     maxLines = 1,
                 )
                 Text(
-                    text = stringResource(R.string.page_jump_of_total, totalPages),
+                    text = stringResource(Res.string.page_jump_of_total, totalPages),
                     style = PageTotalStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -155,14 +165,14 @@ fun PageJumpRail(
                 PageKey(
                     onClick = onPrevious,
                     enabled = page > 1,
-                    contentDescription = stringResource(R.string.page_jump_previous),
+                    contentDescription = stringResource(Res.string.page_jump_previous),
                 ) {
                     Icon(Icons.Default.KeyboardArrowUp, contentDescription = null)
                 }
                 PageKey(
                     onClick = onNext,
                     enabled = page < totalPages,
-                    contentDescription = stringResource(R.string.page_jump_next),
+                    contentDescription = stringResource(Res.string.page_jump_next),
                 ) {
                     Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
                 }
@@ -322,7 +332,7 @@ fun PageJumpSheet(
                 verticalAlignment = Alignment.Bottom,
             ) {
                 Text(
-                    stringResource(R.string.page_jump_title),
+                    stringResource(Res.string.page_jump_title),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.alignByBaseline(),
                 )
@@ -379,10 +389,10 @@ fun PageJumpSheet(
 
 /** What the sheet's number field takes, which is not the same unit on every list. */
 enum class NumberEntry(
-    @get:StringRes val label: Int,
+    val label: StringResource,
 ) {
-    Page(R.string.page_jump_by_page),
-    Floor(R.string.page_jump_by_floor),
+    Page(Res.string.page_jump_by_page),
+    Floor(Res.string.page_jump_by_floor),
 }
 
 /**
@@ -480,7 +490,7 @@ private fun PageProgress(
             )
         }
         Text(
-            stringResource(R.string.page_jump_total_pages, lastPage),
+            stringResource(Res.string.page_jump_total_pages, lastPage),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -518,8 +528,8 @@ private fun PageNumberField(
         label = {
             Text(
                 when (numberEntry) {
-                    NumberEntry.Floor -> stringResource(R.string.page_jump_floor_input, lastPage * COMMENTS_PER_PAGE)
-                    NumberEntry.Page -> stringResource(R.string.page_jump_input, lastPage)
+                    NumberEntry.Floor -> stringResource(Res.string.page_jump_floor_input, lastPage * COMMENTS_PER_PAGE)
+                    NumberEntry.Page -> stringResource(Res.string.page_jump_input, lastPage)
                 },
             )
         },

@@ -37,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.AnnotatedString
@@ -46,12 +45,35 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.nodyssey.R
 import io.github.nodyssey.data.OfflineFailure
 import io.github.nodyssey.data.OfflineState
 import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.bookmarks_download
+import io.github.nodyssey.ui.resources.bookmarks_filter_all
+import io.github.nodyssey.ui.resources.bookmarks_filter_downloaded
+import io.github.nodyssey.ui.resources.bookmarks_filter_new_replies
+import io.github.nodyssey.ui.resources.bookmarks_remove
+import io.github.nodyssey.ui.resources.bookmarks_select_action
+import io.github.nodyssey.ui.resources.bookmarks_selection_all_new
+import io.github.nodyssey.ui.resources.bookmarks_selection_partial
+import io.github.nodyssey.ui.resources.bookmarks_selection_size
+import io.github.nodyssey.ui.resources.offline_behind_replies
+import io.github.nodyssey.ui.resources.offline_failed_network
+import io.github.nodyssey.ui.resources.offline_failed_space
+import io.github.nodyssey.ui.resources.offline_failed_unavailable
+import io.github.nodyssey.ui.resources.offline_state_downloaded
+import io.github.nodyssey.ui.resources.offline_state_downloading
+import io.github.nodyssey.ui.resources.offline_state_not_downloaded
+import io.github.nodyssey.ui.resources.offline_state_percent
+import io.github.nodyssey.ui.resources.offline_state_queued
+import io.github.nodyssey.ui.resources.offline_state_retry
+import io.github.nodyssey.ui.resources.offline_state_sync
+import io.github.nodyssey.ui.resources.offline_stop_download
+import io.github.nodyssey.ui.resources.offline_stop_download_progress
+import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
@@ -64,6 +86,8 @@ import io.github.plaza.designsys.component.textScaledSize
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * One collected thread, drawn as the feed draws it plus whatever this device has of it.
@@ -88,7 +112,7 @@ internal fun BookmarkRow(
         modifier = modifier,
         onClick = onClick,
         onLongClick = onLongClick,
-        onLongClickLabel = stringResource(R.string.bookmarks_select_action),
+        onLongClickLabel = stringResource(Res.string.bookmarks_select_action),
         containerColor =
         if (selected == true) {
             MaterialTheme.colorScheme.surfaceContainerLow
@@ -147,7 +171,7 @@ internal fun BookmarkRow(
                 MetaStat(
                     icon = PlazaIcons.ModeComment,
                     value = it.toString(),
-                    contentDescription = stringResource(R.string.post_reply_count, it),
+                    contentDescription = stringResource(Res.string.post_reply_count, it),
                 )
             }
             entry.createdAtText?.takeIf { it.isNotBlank() }?.let { MetaText(it, singleLine = true) }
@@ -161,7 +185,7 @@ private fun OfflineSupportingLine(state: OfflineState) {
     val (text, color) =
         when (state) {
             is OfflineState.Stale ->
-                stringResource(R.string.offline_behind_replies, state.behindReplies) to
+                stringResource(Res.string.offline_behind_replies, state.behindReplies) to
                     MaterialTheme.colorScheme.primary
 
             is OfflineState.Failed ->
@@ -213,30 +237,30 @@ private fun OfflineStateAction(
 
     when (state) {
         is OfflineState.Downloaded -> {
-            label = stringResource(R.string.offline_state_downloaded)
+            label = stringResource(Res.string.offline_state_downloaded)
             labelColor = scheme.onSurfaceVariant
         }
 
         is OfflineState.Downloading -> {
             label =
                 state.progress
-                    ?.let { stringResource(R.string.offline_state_percent, (it * 100).toInt()) }
-                    ?: stringResource(R.string.offline_state_queued)
+                    ?.let { stringResource(Res.string.offline_state_percent, (it * 100).toInt()) }
+                    ?: stringResource(Res.string.offline_state_queued)
             labelColor = scheme.onSurfaceVariant
         }
 
         is OfflineState.NotDownloaded -> {
-            label = stringResource(R.string.offline_state_not_downloaded)
+            label = stringResource(Res.string.offline_state_not_downloaded)
             labelColor = scheme.onSurfaceVariant
         }
 
         is OfflineState.Stale -> {
-            label = stringResource(R.string.offline_state_sync)
+            label = stringResource(Res.string.offline_state_sync)
             labelColor = scheme.onSurfaceVariant
         }
 
         is OfflineState.Failed -> {
-            label = stringResource(R.string.offline_state_retry)
+            label = stringResource(Res.string.offline_state_retry)
             labelColor = scheme.error
         }
     }
@@ -344,7 +368,7 @@ internal fun BookmarkFilterRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             BookmarkChip(
-                label = stringResource(R.string.bookmarks_filter_all, state.entries.size),
+                label = stringResource(Res.string.bookmarks_filter_all, state.entries.size),
                 selected = state.filter == BookmarkFilter.ALL,
                 onClick = { onFilter(BookmarkFilter.ALL) },
             )
@@ -352,12 +376,12 @@ internal fun BookmarkFilterRow(
             // about — and 「已下载 0」 next to 「全部 12」 reads as a broken feature rather than an absent one.
             if (state.offlineAvailable) {
                 BookmarkChip(
-                    label = stringResource(R.string.bookmarks_filter_downloaded, state.downloadedCount),
+                    label = stringResource(Res.string.bookmarks_filter_downloaded, state.downloadedCount),
                     selected = state.filter == BookmarkFilter.DOWNLOADED,
                     onClick = { onFilter(BookmarkFilter.DOWNLOADED) },
                 )
                 BookmarkChip(
-                    label = stringResource(R.string.bookmarks_filter_new_replies, state.newReplyCount),
+                    label = stringResource(Res.string.bookmarks_filter_new_replies, state.newReplyCount),
                     selected = state.filter == BookmarkFilter.NEW_REPLIES,
                     onClick = { onFilter(BookmarkFilter.NEW_REPLIES) },
                 )
@@ -443,7 +467,7 @@ internal fun SelectionToolbar(
                     Text(
                         text =
                         stringResource(
-                            R.string.bookmarks_selection_size,
+                            Res.string.bookmarks_selection_size,
                             selectedCount,
                             formatBytes(estimateBytes),
                         ),
@@ -459,9 +483,9 @@ internal fun SelectionToolbar(
                     Text(
                         text =
                         if (alreadyOfflineCount > 0) {
-                            stringResource(R.string.bookmarks_selection_partial, alreadyOfflineCount)
+                            stringResource(Res.string.bookmarks_selection_partial, alreadyOfflineCount)
                         } else {
-                            stringResource(R.string.bookmarks_selection_all_new)
+                            stringResource(Res.string.bookmarks_selection_all_new)
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -481,7 +505,7 @@ internal fun SelectionToolbar(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = stringResource(R.string.bookmarks_download),
+                        text = stringResource(Res.string.bookmarks_download),
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 }
@@ -489,7 +513,7 @@ internal fun SelectionToolbar(
             IconButton(onClick = onRemove, enabled = selectedCount > 0) {
                 Icon(
                     imageVector = PlazaIcons.BookmarkRemove,
-                    contentDescription = stringResource(R.string.bookmarks_remove),
+                    contentDescription = stringResource(Res.string.bookmarks_remove),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -502,21 +526,21 @@ internal fun SelectionToolbar(
 private fun offlineSummary(state: OfflineState): String =
     when (state) {
         is OfflineState.Downloaded ->
-            stringResource(R.string.offline_state_downloaded) + " " + formatBytes(state.bytes)
+            stringResource(Res.string.offline_state_downloaded) + " " + formatBytes(state.bytes)
 
         is OfflineState.Downloading ->
             state.progress
                 ?.let {
-                    stringResource(R.string.offline_state_downloading) + " " +
-                        stringResource(R.string.offline_state_percent, (it * 100).toInt())
+                    stringResource(Res.string.offline_state_downloading) + " " +
+                        stringResource(Res.string.offline_state_percent, (it * 100).toInt())
                 }
-                ?: stringResource(R.string.offline_state_queued)
+                ?: stringResource(Res.string.offline_state_queued)
 
-        is OfflineState.Stale -> stringResource(R.string.offline_behind_replies, state.behindReplies)
+        is OfflineState.Stale -> stringResource(Res.string.offline_behind_replies, state.behindReplies)
 
         is OfflineState.Failed -> stringResource(state.reason.messageRes)
 
-        is OfflineState.NotDownloaded -> stringResource(R.string.offline_state_not_downloaded)
+        is OfflineState.NotDownloaded -> stringResource(Res.string.offline_state_not_downloaded)
     }
 
 /**
@@ -528,24 +552,24 @@ private fun offlineSummary(state: OfflineState): String =
 @Composable
 private fun offlineActionDescription(state: OfflineState): String =
     when (state) {
-        is OfflineState.Downloaded -> stringResource(R.string.offline_state_downloaded)
+        is OfflineState.Downloaded -> stringResource(Res.string.offline_state_downloaded)
 
         is OfflineState.Downloading ->
             state.progress
-                ?.let { stringResource(R.string.offline_stop_download_progress, (it * 100).toInt()) }
-                ?: stringResource(R.string.offline_stop_download)
+                ?.let { stringResource(Res.string.offline_stop_download_progress, (it * 100).toInt()) }
+                ?: stringResource(Res.string.offline_stop_download)
 
-        is OfflineState.NotDownloaded -> stringResource(R.string.offline_state_not_downloaded)
+        is OfflineState.NotDownloaded -> stringResource(Res.string.offline_state_not_downloaded)
 
-        is OfflineState.Stale -> stringResource(R.string.offline_state_sync)
+        is OfflineState.Stale -> stringResource(Res.string.offline_state_sync)
 
-        is OfflineState.Failed -> stringResource(R.string.offline_state_retry)
+        is OfflineState.Failed -> stringResource(Res.string.offline_state_retry)
     }
 
-internal val OfflineFailure.messageRes: Int
+internal val OfflineFailure.messageRes: StringResource
     get() =
         when (this) {
-            OfflineFailure.OutOfSpace -> R.string.offline_failed_space
-            OfflineFailure.Network -> R.string.offline_failed_network
-            OfflineFailure.Unavailable -> R.string.offline_failed_unavailable
+            OfflineFailure.OutOfSpace -> Res.string.offline_failed_space
+            OfflineFailure.Network -> Res.string.offline_failed_network
+            OfflineFailure.Unavailable -> Res.string.offline_failed_unavailable
         }

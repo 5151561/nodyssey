@@ -41,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -52,10 +51,41 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_sign_out
+import io.github.nodyssey.ui.resources.assets_signed_in
+import io.github.nodyssey.ui.resources.profile_account_settings
+import io.github.nodyssey.ui.resources.profile_assets
+import io.github.nodyssey.ui.resources.profile_attendance
+import io.github.nodyssey.ui.resources.profile_attendance_checking
+import io.github.nodyssey.ui.resources.profile_attendance_done
+import io.github.nodyssey.ui.resources.profile_chicken
+import io.github.nodyssey.ui.resources.profile_collections
+import io.github.nodyssey.ui.resources.profile_follow
+import io.github.nodyssey.ui.resources.profile_guest_benefit_attendance
+import io.github.nodyssey.ui.resources.profile_guest_benefit_attendance_hint
+import io.github.nodyssey.ui.resources.profile_guest_benefit_messages
+import io.github.nodyssey.ui.resources.profile_guest_benefit_messages_hint
+import io.github.nodyssey.ui.resources.profile_guest_benefit_post
+import io.github.nodyssey.ui.resources.profile_guest_benefit_post_hint
+import io.github.nodyssey.ui.resources.profile_guest_section
+import io.github.nodyssey.ui.resources.profile_guest_settings_hint
+import io.github.nodyssey.ui.resources.profile_guest_tools_hint
+import io.github.nodyssey.ui.resources.profile_history
+import io.github.nodyssey.ui.resources.profile_level
+import io.github.nodyssey.ui.resources.profile_level_unknown
+import io.github.nodyssey.ui.resources.profile_session_active
+import io.github.nodyssey.ui.resources.profile_sign_in
+import io.github.nodyssey.ui.resources.profile_sign_in_hint
+import io.github.nodyssey.ui.resources.profile_signed_out_body
+import io.github.nodyssey.ui.resources.profile_signed_out_title
+import io.github.nodyssey.ui.resources.profile_space
+import io.github.nodyssey.ui.resources.profile_stars
+import io.github.nodyssey.ui.resources.profile_tools
+import io.github.nodyssey.ui.resources.settings_title
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.GroupedColumn
 import io.github.plaza.designsys.component.GroupedRow
@@ -68,6 +98,8 @@ import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProfileRoute(
@@ -226,7 +258,7 @@ fun ProfileScreen(
                         state.isAttendanceUnknown -> {
                             CircularProgressIndicator(Modifier.size(18.dp))
                             Text(
-                                stringResource(R.string.profile_attendance_checking),
+                                stringResource(Res.string.profile_attendance_checking),
                                 modifier = Modifier.padding(start = Spacing.sm),
                             )
                         }
@@ -236,8 +268,8 @@ fun ProfileScreen(
                             Text(
                                 text =
                                 state.attendanceGain?.let {
-                                    stringResource(R.string.assets_signed_in, it)
-                                } ?: stringResource(R.string.profile_attendance_done),
+                                    stringResource(Res.string.assets_signed_in, it)
+                                } ?: stringResource(Res.string.profile_attendance_done),
                                 modifier = Modifier.padding(start = Spacing.sm),
                             )
                         }
@@ -245,7 +277,7 @@ fun ProfileScreen(
                         else -> {
                             Icon(Icons.Default.Check, contentDescription = null)
                             Text(
-                                stringResource(R.string.profile_attendance),
+                                stringResource(Res.string.profile_attendance),
                                 modifier = Modifier.padding(start = Spacing.sm),
                             )
                         }
@@ -258,12 +290,12 @@ fun ProfileScreen(
                 ProfileMenuGroup(
                     items =
                     listOf(
-                        ProfileMenuItem(R.string.profile_space, Icons.Default.Person, onOpenSpace),
-                        ProfileMenuItem(R.string.profile_collections, Icons.Default.Star, onCollections),
-                        ProfileMenuItem(R.string.profile_history, PlazaIcons.History, onHistory),
-                        ProfileMenuItem(R.string.profile_follow, PlazaIcons.Group, onFollow),
-                        ProfileMenuItem(R.string.profile_assets, PlazaIcons.Wallet, onAssets),
-                        ProfileMenuItem(R.string.profile_tools, PlazaIcons.MenuBook, onTools),
+                        ProfileMenuItem(Res.string.profile_space, Icons.Default.Person, onOpenSpace),
+                        ProfileMenuItem(Res.string.profile_collections, Icons.Default.Star, onCollections),
+                        ProfileMenuItem(Res.string.profile_history, PlazaIcons.History, onHistory),
+                        ProfileMenuItem(Res.string.profile_follow, PlazaIcons.Group, onFollow),
+                        ProfileMenuItem(Res.string.profile_assets, PlazaIcons.Wallet, onAssets),
+                        ProfileMenuItem(Res.string.profile_tools, PlazaIcons.MenuBook, onTools),
                     ),
                 )
             }
@@ -275,12 +307,12 @@ fun ProfileScreen(
                     items =
                     listOf(
                         ProfileMenuItem(
-                            R.string.profile_account_settings,
+                            Res.string.profile_account_settings,
                             PlazaIcons.Badge,
                             onAccountSettings,
                         ),
                         ProfileMenuItem(
-                            R.string.settings_title,
+                            Res.string.settings_title,
                             Icons.Default.Settings,
                             onSettings,
                             badge = hasAppUpdate,
@@ -290,7 +322,7 @@ fun ProfileScreen(
             }
             item(key = "sign-out") {
                 TextButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.action_sign_out))
+                    Text(stringResource(Res.string.action_sign_out))
                 }
             }
         }
@@ -332,13 +364,13 @@ private fun SignedOutProfile(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Text(
-                    text = stringResource(R.string.profile_signed_out_title),
+                    text = stringResource(Res.string.profile_signed_out_title),
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.semantics { heading() },
                 )
                 Text(
-                    text = stringResource(R.string.profile_signed_out_body),
+                    text = stringResource(Res.string.profile_signed_out_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -352,8 +384,8 @@ private fun SignedOutProfile(
             ) {
                 SignedOutBenefit(
                     icon = Icons.Default.Create,
-                    title = stringResource(R.string.profile_guest_benefit_post),
-                    subtitle = stringResource(R.string.profile_guest_benefit_post_hint),
+                    title = stringResource(Res.string.profile_guest_benefit_post),
+                    subtitle = stringResource(Res.string.profile_guest_benefit_post_hint),
                     shape = RoundedCornerShape(18.dp, 5.dp, 5.dp, 18.dp),
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                     contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -361,8 +393,8 @@ private fun SignedOutProfile(
                 )
                 SignedOutBenefit(
                     icon = PlazaIcons.ChatBubble,
-                    title = stringResource(R.string.profile_guest_benefit_messages),
-                    subtitle = stringResource(R.string.profile_guest_benefit_messages_hint),
+                    title = stringResource(Res.string.profile_guest_benefit_messages),
+                    subtitle = stringResource(Res.string.profile_guest_benefit_messages_hint),
                     shape = RoundedCornerShape(5.dp),
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -370,8 +402,8 @@ private fun SignedOutProfile(
                 )
                 SignedOutBenefit(
                     icon = PlazaIcons.EventAvailable,
-                    title = stringResource(R.string.profile_guest_benefit_attendance),
-                    subtitle = stringResource(R.string.profile_guest_benefit_attendance_hint),
+                    title = stringResource(Res.string.profile_guest_benefit_attendance),
+                    subtitle = stringResource(Res.string.profile_guest_benefit_attendance_hint),
                     shape = RoundedCornerShape(5.dp, 18.dp, 18.dp, 5.dp),
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -387,12 +419,12 @@ private fun SignedOutProfile(
             ) {
                 Icon(PlazaIcons.Login, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
-                    text = stringResource(R.string.profile_sign_in),
+                    text = stringResource(Res.string.profile_sign_in),
                     modifier = Modifier.padding(start = Spacing.sm),
                 )
             }
             Text(
-                text = stringResource(R.string.profile_sign_in_hint),
+                text = stringResource(Res.string.profile_sign_in_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -401,11 +433,11 @@ private fun SignedOutProfile(
         }
         item(key = "guest-menu") {
             Column(modifier = Modifier.padding(top = 18.dp)) {
-                SectionLabel(stringResource(R.string.profile_guest_section))
+                SectionLabel(stringResource(Res.string.profile_guest_section))
                 GroupedColumn {
                     GroupedRow(
-                        title = stringResource(R.string.settings_title),
-                        subtitle = stringResource(R.string.profile_guest_settings_hint),
+                        title = stringResource(Res.string.settings_title),
+                        subtitle = stringResource(Res.string.profile_guest_settings_hint),
                         first = true,
                         icon = Icons.Default.Settings,
                         onClick = onSettings,
@@ -418,8 +450,8 @@ private fun SignedOutProfile(
                         },
                     )
                     GroupedRow(
-                        title = stringResource(R.string.profile_tools),
-                        subtitle = stringResource(R.string.profile_guest_tools_hint),
+                        title = stringResource(Res.string.profile_tools),
+                        subtitle = stringResource(Res.string.profile_guest_tools_hint),
                         last = true,
                         icon = PlazaIcons.DashboardCustomize,
                         onClick = onTools,
@@ -510,7 +542,7 @@ private fun ProfileHeader(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(28.dp))
-            .clickable(onClickLabel = stringResource(R.string.profile_space), onClick = onOpenSpace)
+            .clickable(onClickLabel = stringResource(Res.string.profile_space), onClick = onOpenSpace)
             .padding(vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
@@ -529,7 +561,7 @@ private fun ProfileHeader(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = state.memberSince ?: stringResource(R.string.profile_session_active),
+                text = state.memberSince ?: stringResource(Res.string.profile_session_active),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -545,7 +577,7 @@ private fun ResourceCards(
     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         ResourceCard(
             value = state.chickenCount?.toString() ?: "—",
-            label = stringResource(R.string.profile_chicken),
+            label = stringResource(Res.string.profile_chicken),
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(18.dp, 5.dp, 5.dp, 18.dp),
             color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -554,7 +586,7 @@ private fun ResourceCards(
         )
         ResourceCard(
             value = state.starCount?.toString() ?: "—",
-            label = stringResource(R.string.profile_stars),
+            label = stringResource(Res.string.profile_stars),
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(5.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
@@ -562,8 +594,8 @@ private fun ResourceCards(
             onClick = onAssets,
         )
         ResourceCard(
-            value = state.level ?: stringResource(R.string.profile_level_unknown),
-            label = stringResource(R.string.profile_level),
+            value = state.level ?: stringResource(Res.string.profile_level_unknown),
+            label = stringResource(Res.string.profile_level),
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(5.dp, 18.dp, 18.dp, 5.dp),
             color = MaterialTheme.colorScheme.secondaryContainer,
@@ -597,7 +629,7 @@ private fun ResourceCard(
 }
 
 private data class ProfileMenuItem(
-    val title: Int,
+    val title: StringResource,
     val icon: ImageVector,
     val onClick: () -> Unit,
     val badge: Boolean = false,

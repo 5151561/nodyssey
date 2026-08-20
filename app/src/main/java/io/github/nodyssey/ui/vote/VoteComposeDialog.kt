@@ -35,16 +35,29 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.vote_compose_add_option
+import io.github.nodyssey.ui.resources.vote_compose_confirm_body
+import io.github.nodyssey.ui.resources.vote_compose_confirm_title
+import io.github.nodyssey.ui.resources.vote_compose_create
+import io.github.nodyssey.ui.resources.vote_compose_failed
+import io.github.nodyssey.ui.resources.vote_compose_multiple
+import io.github.nodyssey.ui.resources.vote_compose_option
+import io.github.nodyssey.ui.resources.vote_compose_public
+import io.github.nodyssey.ui.resources.vote_compose_public_body
+import io.github.nodyssey.ui.resources.vote_compose_question
+import io.github.nodyssey.ui.resources.vote_compose_remove_option
+import io.github.nodyssey.ui.resources.vote_compose_title
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.stringResource
 
 /** How a vote creation is going, so the dialog can wait and report without owning the request. */
 sealed interface VoteCreationState {
@@ -86,7 +99,7 @@ fun VoteComposeDialog(
     AlertDialog(
         onDismissRequest = { if (state !is VoteCreationState.InFlight) onDismiss() },
         icon = { Icon(PlazaIcons.Poll, contentDescription = null) },
-        title = { Text(stringResource(R.string.vote_compose_title)) },
+        title = { Text(stringResource(Res.string.vote_compose_title)) },
         text = {
             Column(
                 Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
@@ -95,7 +108,7 @@ fun VoteComposeDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.vote_compose_question)) },
+                    label = { Text(stringResource(Res.string.vote_compose_question)) },
                     singleLine = true,
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth(),
@@ -106,7 +119,7 @@ fun VoteComposeDialog(
                         OutlinedTextField(
                             value = option,
                             onValueChange = { options[index] = it },
-                            label = { Text(stringResource(R.string.vote_compose_option, index + 1)) },
+                            label = { Text(stringResource(Res.string.vote_compose_option, index + 1)) },
                             singleLine = true,
                             shape = MaterialTheme.shapes.small,
                             modifier = Modifier.weight(1f),
@@ -119,7 +132,7 @@ fun VoteComposeDialog(
                                 Icon(
                                     Icons.Default.Close,
                                     contentDescription =
-                                    stringResource(R.string.vote_compose_remove_option, index + 1),
+                                    stringResource(Res.string.vote_compose_remove_option, index + 1),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
@@ -131,7 +144,7 @@ fun VoteComposeDialog(
                     TextButton(onClick = { options.add("") }, enabled = options.size < MAX_OPTIONS) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text(
-                            stringResource(R.string.vote_compose_add_option),
+                            stringResource(Res.string.vote_compose_add_option),
                             modifier = Modifier.padding(start = Spacing.xs),
                         )
                     }
@@ -152,14 +165,14 @@ fun VoteComposeDialog(
                         .background(MaterialTheme.colorScheme.surfaceContainerLow),
                 ) {
                     VoteToggleRow(
-                        label = stringResource(R.string.vote_compose_multiple),
+                        label = stringResource(Res.string.vote_compose_multiple),
                         checked = multiple,
                         onChange = { multiple = it },
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     VoteToggleRow(
-                        label = stringResource(R.string.vote_compose_public),
-                        description = stringResource(R.string.vote_compose_public_body),
+                        label = stringResource(Res.string.vote_compose_public),
+                        description = stringResource(Res.string.vote_compose_public_body),
                         checked = isPublic,
                         onChange = { isPublic = it },
                     )
@@ -183,7 +196,7 @@ fun VoteComposeDialog(
                         )
                         Text(
                             failure.detail?.takeIf { it.isNotBlank() }
-                                ?: stringResource(R.string.vote_compose_failed),
+                                ?: stringResource(Res.string.vote_compose_failed),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.padding(start = Spacing.sm),
@@ -197,13 +210,13 @@ fun VoteComposeDialog(
                 if (state is VoteCreationState.InFlight) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
-                    Text(stringResource(R.string.vote_compose_create))
+                    Text(stringResource(Res.string.vote_compose_create))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = state !is VoteCreationState.InFlight) {
-                Text(stringResource(R.string.action_cancel))
+                Text(stringResource(Res.string.action_cancel))
             }
         },
     )
@@ -211,18 +224,18 @@ fun VoteComposeDialog(
     if (confirming) {
         AlertDialog(
             onDismissRequest = { confirming = false },
-            title = { Text(stringResource(R.string.vote_compose_confirm_title)) },
-            text = { Text(stringResource(R.string.vote_compose_confirm_body)) },
+            title = { Text(stringResource(Res.string.vote_compose_confirm_title)) },
+            text = { Text(stringResource(Res.string.vote_compose_confirm_body)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         confirming = false
                         onCreate(title.trim(), multiple, isPublic, filled)
                     },
-                ) { Text(stringResource(R.string.vote_compose_create)) }
+                ) { Text(stringResource(Res.string.vote_compose_create)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.action_cancel)) }
+                TextButton(onClick = { confirming = false }) { Text(stringResource(Res.string.action_cancel)) }
             },
         )
     }

@@ -16,16 +16,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.composer_just_now
+import io.github.nodyssey.ui.resources.composer_preview_empty
+import io.github.nodyssey.ui.resources.composer_rule_body
+import io.github.nodyssey.ui.resources.composer_rule_title
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The site's right-hand rules card, moved to the top of the publish preview.
@@ -48,11 +52,11 @@ fun RuleReminderCard(modifier: Modifier = Modifier) {
             Icon(PlazaIcons.Campaign, contentDescription = null, modifier = Modifier.size(20.dp))
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    text = stringResource(R.string.composer_rule_title),
+                    text = stringResource(Res.string.composer_rule_title),
                     style = MaterialTheme.typography.labelMedium,
                 )
                 Text(
-                    text = stringResource(R.string.composer_rule_body),
+                    text = stringResource(Res.string.composer_rule_body),
                     style = MaterialTheme.typography.labelSmall,
                 )
             }
@@ -77,7 +81,7 @@ fun MarkdownPreviewBody(
     val nodes = remember(markdown) { parseMarkdown(markdown) }
     if (nodes.isEmpty()) {
         Text(
-            text = stringResource(R.string.composer_preview_empty),
+            text = stringResource(Res.string.composer_preview_empty),
             style = textStyle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = modifier,
@@ -125,7 +129,7 @@ fun PreviewByline(
             Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(
-            text = stringResource(R.string.composer_just_now),
+            text = stringResource(Res.string.composer_just_now),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

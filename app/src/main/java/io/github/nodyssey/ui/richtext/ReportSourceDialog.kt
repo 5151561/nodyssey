@@ -33,14 +33,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_close
+import io.github.nodyssey.ui.resources.action_copy
+import io.github.nodyssey.ui.resources.post_code_copied
+import io.github.nodyssey.ui.resources.report_open_fullscreen
 import io.github.plaza.core.ansi.AnsiSpan
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.TerminalGround
@@ -49,6 +52,7 @@ import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberTerminalText
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The report exactly as it was posted, on a terminal ground, pinchable.
@@ -78,7 +82,7 @@ fun ReportSourceDialog(
     ) {
         var zoom by remember(source) { mutableFloatStateOf(1f) }
         val copy = rememberClipboardCopy()
-        val confirmation = stringResource(R.string.post_code_copied)
+        val confirmation = stringResource(Res.string.post_code_copied)
         val coloured = rememberTerminalText(source, spans)
 
         // The dialog is its own window, and so its own layout root, but it is composed from inside the
@@ -111,7 +115,7 @@ fun ReportSourceDialog(
                         IconButton(onClick = { copy("report", source, confirmation) }) {
                             Icon(
                                 imageVector = PlazaIcons.ContentCopy,
-                                contentDescription = stringResource(R.string.action_copy),
+                                contentDescription = stringResource(Res.string.action_copy),
                                 tint = TerminalInk,
                                 modifier = Modifier.size(18.dp),
                             )
@@ -119,7 +123,7 @@ fun ReportSourceDialog(
                         IconButton(onClick = onDismiss) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.action_close),
+                                contentDescription = stringResource(Res.string.action_close),
                                 tint = TerminalInk,
                             )
                         }
@@ -168,7 +172,7 @@ fun ReportSourceBlock(
         zoom = (zoom * zoomChange).coerceIn(MIN_ZOOM, MAX_ZOOM)
     }
     val copy = rememberClipboardCopy()
-    val confirmation = stringResource(R.string.post_code_copied)
+    val confirmation = stringResource(Res.string.post_code_copied)
     val coloured = rememberTerminalText(source, spans)
 
     Column(
@@ -194,7 +198,7 @@ fun ReportSourceBlock(
             IconButton(onClick = { copy("report", source, confirmation) }) {
                 Icon(
                     imageVector = PlazaIcons.ContentCopy,
-                    contentDescription = stringResource(R.string.action_copy),
+                    contentDescription = stringResource(Res.string.action_copy),
                     tint = TerminalInk,
                     modifier = Modifier.size(18.dp),
                 )
@@ -232,7 +236,7 @@ fun ReportSourceBlock(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(R.string.report_open_fullscreen),
+                text = stringResource(Res.string.report_open_fullscreen),
                 style = MaterialTheme.typography.labelLarge,
                 color = TerminalInk,
             )

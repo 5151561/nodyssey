@@ -42,14 +42,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.account_change_password
+import io.github.nodyssey.ui.resources.account_confirm_2fa_action
+import io.github.nodyssey.ui.resources.account_confirm_2fa_body
+import io.github.nodyssey.ui.resources.account_confirm_2fa_title
+import io.github.nodyssey.ui.resources.account_confirm_password_action
+import io.github.nodyssey.ui.resources.account_confirm_password_body
+import io.github.nodyssey.ui.resources.account_confirm_password_title
+import io.github.nodyssey.ui.resources.account_password_confirm
+import io.github.nodyssey.ui.resources.account_password_confirm_hint
+import io.github.nodyssey.ui.resources.account_password_current
+import io.github.nodyssey.ui.resources.account_password_mismatch
+import io.github.nodyssey.ui.resources.account_password_new
+import io.github.nodyssey.ui.resources.account_password_strength
+import io.github.nodyssey.ui.resources.account_password_too_short
+import io.github.nodyssey.ui.resources.account_password_update
+import io.github.nodyssey.ui.resources.account_security_title
+import io.github.nodyssey.ui.resources.account_two_factor_bind
+import io.github.nodyssey.ui.resources.account_two_factor_body
+import io.github.nodyssey.ui.resources.account_two_factor_off_hint
+import io.github.nodyssey.ui.resources.account_two_factor_on_hint
+import io.github.nodyssey.ui.resources.account_two_factor_rebind
+import io.github.nodyssey.ui.resources.account_two_factor_section
+import io.github.nodyssey.ui.resources.account_two_factor_totp
+import io.github.nodyssey.ui.resources.account_value_unknown
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_cancel
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -57,6 +82,7 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SecurityRoute(
@@ -131,13 +157,13 @@ fun SecurityScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.account_security_title),
+                title = stringResource(Res.string.account_security_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -156,23 +182,23 @@ fun SecurityScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            AccountSectionLabel(stringResource(R.string.account_change_password))
+            AccountSectionLabel(stringResource(Res.string.account_change_password))
 
             PasswordField(
                 fieldState = currentPasswordState,
-                label = stringResource(R.string.account_password_current),
+                label = stringResource(Res.string.account_password_current),
                 contentType = ContentType.Password,
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 PasswordField(
                     fieldState = newPasswordState,
-                    label = stringResource(R.string.account_password_new),
+                    label = stringResource(Res.string.account_password_new),
                     contentType = ContentType.NewPassword,
                     isError = state.isTooShort,
                     supportingText =
                     if (state.isTooShort) {
-                        stringResource(R.string.account_password_too_short, MIN_PASSWORD_LENGTH)
+                        stringResource(Res.string.account_password_too_short, MIN_PASSWORD_LENGTH)
                     } else {
                         null
                     },
@@ -182,12 +208,12 @@ fun SecurityScreen(
 
             PasswordField(
                 fieldState = confirmPasswordState,
-                label = stringResource(R.string.account_password_confirm),
-                placeholder = stringResource(R.string.account_password_confirm_hint),
+                label = stringResource(Res.string.account_password_confirm),
+                placeholder = stringResource(Res.string.account_password_confirm_hint),
                 contentType = ContentType.NewPassword,
                 isError = state.isMismatched,
                 supportingText =
-                if (state.isMismatched) stringResource(R.string.account_password_mismatch) else null,
+                if (state.isMismatched) stringResource(Res.string.account_password_mismatch) else null,
             )
 
             Button(
@@ -196,11 +222,11 @@ fun SecurityScreen(
                 shape = RoundedCornerShape(23.dp),
                 modifier = Modifier.fillMaxWidth().height(46.dp),
             ) {
-                Text(stringResource(R.string.account_password_update))
+                Text(stringResource(Res.string.account_password_update))
             }
 
             AccountSectionLabel(
-                text = stringResource(R.string.account_two_factor_section),
+                text = stringResource(Res.string.account_two_factor_section),
                 modifier = Modifier.padding(top = Spacing.sm),
             )
             TwoFactorCard(
@@ -215,9 +241,9 @@ fun SecurityScreen(
         SecurityConfirmation.Password ->
             HighRiskDialog(
                 icon = Icons.Default.Lock,
-                title = stringResource(R.string.account_confirm_password_title),
-                body = stringResource(R.string.account_confirm_password_body),
-                confirmLabel = stringResource(R.string.account_confirm_password_action),
+                title = stringResource(Res.string.account_confirm_password_title),
+                body = stringResource(Res.string.account_confirm_password_body),
+                confirmLabel = stringResource(Res.string.account_confirm_password_action),
                 onConfirm = onConfirmPasswordChange,
                 onDismiss = onDismissConfirmation,
             )
@@ -255,16 +281,16 @@ private fun TwoFactorDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(PlazaIcons.Shield, contentDescription = null) },
-        title = { Text(stringResource(R.string.account_confirm_2fa_title)) },
+        title = { Text(stringResource(Res.string.account_confirm_2fa_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 Text(
-                    stringResource(R.string.account_confirm_2fa_body),
+                    stringResource(Res.string.account_confirm_2fa_body),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 SecureTextField(
                     state = passwordState,
-                    label = { Text(stringResource(R.string.account_password_current)) },
+                    label = { Text(stringResource(Res.string.account_password_current)) },
                     textObfuscationMode = TextObfuscationMode.RevealLastTyped,
                     shape = AccountFieldShape,
                     modifier =
@@ -276,11 +302,11 @@ private fun TwoFactorDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm, enabled = canConfirm) {
-                Text(stringResource(R.string.account_confirm_2fa_action))
+                Text(stringResource(Res.string.account_confirm_2fa_action))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
         shape = MaterialTheme.shapes.extraLarge,
     )
@@ -349,7 +375,7 @@ private fun StrengthMeter(strength: PasswordStrength) {
         }
         Text(
             text =
-            stringResource(R.string.account_password_strength, stringResource(strength.labelRes)) +
+            stringResource(Res.string.account_password_strength, stringResource(strength.labelRes)) +
                 " · " + stringResource(strength.hintRes),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -385,16 +411,16 @@ private fun TwoFactorCard(
                 )
                 Column(Modifier.weight(1f)) {
                     Text(
-                        stringResource(R.string.account_two_factor_totp),
+                        stringResource(Res.string.account_two_factor_totp),
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                     )
                     Text(
                         text =
                         stringResource(
                             when (enabled) {
-                                true -> R.string.account_two_factor_on_hint
-                                false -> R.string.account_two_factor_off_hint
-                                null -> R.string.account_value_unknown
+                                true -> Res.string.account_two_factor_on_hint
+                                false -> Res.string.account_two_factor_off_hint
+                                null -> Res.string.account_value_unknown
                             },
                         ),
                         style = MaterialTheme.typography.labelSmall,
@@ -403,7 +429,7 @@ private fun TwoFactorCard(
                 }
             }
             Text(
-                stringResource(R.string.account_two_factor_body),
+                stringResource(Res.string.account_two_factor_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -417,9 +443,9 @@ private fun TwoFactorCard(
                     text =
                     stringResource(
                         if (enabled == true) {
-                            R.string.account_two_factor_rebind
+                            Res.string.account_two_factor_rebind
                         } else {
-                            R.string.account_two_factor_bind
+                            Res.string.account_two_factor_bind
                         },
                     ),
                     modifier = Modifier.padding(start = Spacing.sm),

@@ -36,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -44,8 +43,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.data.account.BlockedUser
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.account_block_add_action
+import io.github.nodyssey.ui.resources.account_block_add_label
+import io.github.nodyssey.ui.resources.account_block_add_placeholder
+import io.github.nodyssey.ui.resources.account_block_empty
+import io.github.nodyssey.ui.resources.account_block_footer
+import io.github.nodyssey.ui.resources.account_block_row_hint
+import io.github.nodyssey.ui.resources.account_block_section
+import io.github.nodyssey.ui.resources.account_block_show_temporarily
+import io.github.nodyssey.ui.resources.account_block_show_temporarily_hint
+import io.github.nodyssey.ui.resources.account_block_title
+import io.github.nodyssey.ui.resources.account_block_unblock
+import io.github.nodyssey.ui.resources.account_blocked_count
+import io.github.nodyssey.ui.resources.account_confirm_unblock_action
+import io.github.nodyssey.ui.resources.account_confirm_unblock_body
+import io.github.nodyssey.ui.resources.account_confirm_unblock_title
+import io.github.nodyssey.ui.resources.action_back
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
@@ -54,6 +69,7 @@ import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun BlockListRoute(
@@ -114,13 +130,13 @@ fun BlockListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.account_block_title),
+                title = stringResource(Res.string.account_block_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -147,12 +163,12 @@ fun BlockListScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                AccountSectionLabel(text = stringResource(R.string.account_block_section))
+                AccountSectionLabel(text = stringResource(Res.string.account_block_section))
                 StorageBadge(local = false)
                 Spacer(Modifier.weight(1f))
                 if (state.blocked.isNotEmpty()) {
                     Text(
-                        stringResource(R.string.account_blocked_count, state.blocked.size),
+                        stringResource(Res.string.account_blocked_count, state.blocked.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -178,7 +194,7 @@ fun BlockListScreen(
                     }
                 }
                 Text(
-                    stringResource(R.string.account_block_footer),
+                    stringResource(Res.string.account_block_footer),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = Spacing.xs),
@@ -190,9 +206,9 @@ fun BlockListScreen(
     state.unblocking?.let { target ->
         HighRiskDialog(
             icon = PlazaIcons.Block,
-            title = stringResource(R.string.account_confirm_unblock_title, target.name),
-            body = stringResource(R.string.account_confirm_unblock_body),
-            confirmLabel = stringResource(R.string.account_confirm_unblock_action),
+            title = stringResource(Res.string.account_confirm_unblock_title, target.name),
+            body = stringResource(Res.string.account_confirm_unblock_body),
+            confirmLabel = stringResource(Res.string.account_confirm_unblock_action),
             onConfirm = onConfirmUnblock,
             onDismiss = onDismissUnblock,
         )
@@ -227,13 +243,13 @@ private fun ShowBlockedSwitchCard(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Text(
-                        stringResource(R.string.account_block_show_temporarily),
+                        stringResource(Res.string.account_block_show_temporarily),
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                     )
                     StorageBadge(local = true)
                 }
                 Text(
-                    stringResource(R.string.account_block_show_temporarily_hint),
+                    stringResource(Res.string.account_block_show_temporarily_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -270,8 +286,8 @@ private fun AddBlockField(
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         enabled = !isBlocking,
-        label = { Text(stringResource(R.string.account_block_add_label)) },
-        placeholder = { Text(stringResource(R.string.account_block_add_placeholder)) },
+        label = { Text(stringResource(Res.string.account_block_add_label)) },
+        placeholder = { Text(stringResource(Res.string.account_block_add_placeholder)) },
         shape = AccountFieldShape,
         keyboardOptions =
         KeyboardOptions(
@@ -281,7 +297,7 @@ private fun AddBlockField(
         keyboardActions = KeyboardActions(onDone = { submit() }),
         trailingIcon = {
             TextButton(onClick = submit, enabled = name.isNotBlank() && !isBlocking) {
-                Text(stringResource(R.string.account_block_add_action))
+                Text(stringResource(Res.string.account_block_add_action))
             }
         },
     )
@@ -306,13 +322,13 @@ private fun BlockedRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                stringResource(R.string.account_block_row_hint),
+                stringResource(Res.string.account_block_row_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         TextButton(onClick = onUnblock) {
-            Text(stringResource(R.string.account_block_unblock))
+            Text(stringResource(Res.string.account_block_unblock))
         }
     }
 }
@@ -336,7 +352,7 @@ private fun BlockedEmptyState() {
                 modifier = Modifier.size(18.dp),
             )
             Text(
-                stringResource(R.string.account_block_empty),
+                stringResource(Res.string.account_block_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.R
 import io.github.nodyssey.data.imagehost.ConfigProblem
 import io.github.nodyssey.data.imagehost.CustomHostFields
 import io.github.nodyssey.data.imagehost.HostedImage
@@ -15,6 +14,10 @@ import io.github.nodyssey.data.imagehost.ImageHostException
 import io.github.nodyssey.data.imagehost.ImageHostProvider
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.imagehost_deleted
+import io.github.nodyssey.ui.resources.imagehost_key_cleared
+import io.github.nodyssey.ui.resources.imagehost_key_saved
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -130,7 +133,7 @@ class ImageHostViewModel(
                     images = emptyList(),
                     isLoadingImages = false,
                     imagesError = ImageHostError.NotConfigured,
-                    message = AccountMessage.Info(R.string.imagehost_key_cleared),
+                    message = AccountMessage.Info(Res.string.imagehost_key_cleared),
                 )
             }
         }
@@ -153,7 +156,7 @@ class ImageHostViewModel(
                         images = emptyList(),
                         imagesError = blocker,
                         message = if (announceOnSuccess) {
-                            AccountMessage.Info(R.string.imagehost_key_saved)
+                            AccountMessage.Info(Res.string.imagehost_key_saved)
                         } else {
                             it.message
                         },
@@ -170,7 +173,7 @@ class ImageHostViewModel(
                             images = images,
                             imagesError = null,
                             message = if (announceOnSuccess) {
-                                AccountMessage.Info(R.string.imagehost_key_saved)
+                                AccountMessage.Info(Res.string.imagehost_key_saved)
                             } else {
                                 it.message
                             },
@@ -185,7 +188,7 @@ class ImageHostViewModel(
                             // hosts authenticate the two calls differently, and silence here would
                             // read as "the token was rejected".
                             message = if (announceOnSuccess) {
-                                AccountMessage.Info(R.string.imagehost_key_saved)
+                                AccountMessage.Info(Res.string.imagehost_key_saved)
                             } else {
                                 it.message
                             },
@@ -208,7 +211,7 @@ class ImageHostViewModel(
                     _uiState.update { state ->
                         state.copy(
                             images = state.images.filterNot { it.id == target.id },
-                            message = AccountMessage.Info(R.string.imagehost_deleted),
+                            message = AccountMessage.Info(Res.string.imagehost_deleted),
                         )
                     }
                 }.onFailure { throwable ->

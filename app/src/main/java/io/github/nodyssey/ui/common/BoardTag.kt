@@ -1,14 +1,18 @@
 package io.github.nodyssey.ui.common
 
-import androidx.annotation.StringRes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.board_family_everyday
+import io.github.nodyssey.ui.resources.board_family_flagged
+import io.github.nodyssey.ui.resources.board_family_technical
+import io.github.nodyssey.ui.resources.board_family_trade
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.theme.LocalPlazaExtraColors
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The board tag that appears on every list row and at the top of every thread.
@@ -28,19 +32,19 @@ internal data class BoardFamilyColors(val container: Color, val content: Color)
  * [BoardFamily.entries] to do it, so reordering this enum reorders that screen.
  */
 internal enum class BoardFamily(
-    @StringRes val labelRes: Int,
+    val labelRes: StringResource,
 ) {
     /** 日常 / 生活 / 贴图 / 无意义 / 沙盒 — everything else. */
-    Everyday(R.string.board_family_everyday),
+    Everyday(Res.string.board_family_everyday),
 
     /** 技术 / Dev / 测评 / 情报 — the reason most people are here. */
-    Technical(R.string.board_family_technical),
+    Technical(Res.string.board_family_technical),
 
     /** 交易 / 拼车 / 推广 — money is changing hands. */
-    Trade(R.string.board_family_trade),
+    Trade(Res.string.board_family_trade),
 
     /** 曝光 / 内版 — read these with more care than the rest. */
-    Flagged(R.string.board_family_flagged),
+    Flagged(Res.string.board_family_flagged),
 }
 
 private val FAMILY_BY_SLUG =

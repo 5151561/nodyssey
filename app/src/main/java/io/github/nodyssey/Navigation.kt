@@ -2,7 +2,6 @@ package io.github.nodyssey
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import androidx.annotation.StringRes
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -35,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -95,6 +93,15 @@ import io.github.nodyssey.ui.postlist.PostListRoute
 import io.github.nodyssey.ui.postlist.PostListViewModel
 import io.github.nodyssey.ui.profile.ProfileRoute
 import io.github.nodyssey.ui.profile.ProfileViewModel
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.about_privacy
+import io.github.nodyssey.ui.resources.about_rss
+import io.github.nodyssey.ui.resources.about_site
+import io.github.nodyssey.ui.resources.app_name
+import io.github.nodyssey.ui.resources.home_pane_empty
+import io.github.nodyssey.ui.resources.notifications_pane_empty
+import io.github.nodyssey.ui.resources.search_pane_empty
+import io.github.nodyssey.ui.resources.space_pane_empty
 import io.github.nodyssey.ui.search.SearchRoute
 import io.github.nodyssey.ui.search.SearchViewModel
 import io.github.nodyssey.ui.settings.AboutAppRoute
@@ -138,6 +145,8 @@ import io.github.nodyssey.ui.vote.VoteCard
 import io.github.nodyssey.ui.vote.VoteViewModel
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -151,10 +160,10 @@ fun MainNavigation(
     val signInUrl = NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH
 
     // Hoisted out of the navigation lambdas below, which are not composable.
-    val siteTitle = stringResource(R.string.app_name)
-    val aboutSiteTitle = stringResource(R.string.about_site)
-    val privacyTitle = stringResource(R.string.about_privacy)
-    val rssLabel = stringResource(R.string.about_rss)
+    val siteTitle = stringResource(Res.string.app_name)
+    val aboutSiteTitle = stringResource(Res.string.about_site)
+    val privacyTitle = stringResource(Res.string.about_privacy)
+    val rssLabel = stringResource(Res.string.about_rss)
     val uriHandler = LocalUriHandler.current
     /*
      * Hands a link to the browser — a Custom Tab or the system one, per the user's setting.
@@ -1353,7 +1362,7 @@ internal suspend fun resolveMemberLink(
 }
 
 @Composable
-private fun EmptyDetailPane(@StringRes text: Int) {
+private fun EmptyDetailPane(text: StringResource) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             text = stringResource(text),
@@ -1434,13 +1443,12 @@ private fun paneMetadataOf(key: NavKey, destination: TopLevelDestination): Map<S
     }
 
 /** What the detail half says on a wide window before anything has been opened in it. */
-@StringRes
-internal fun emptyDetailTextOf(key: NavKey): Int =
+internal fun emptyDetailTextOf(key: NavKey): StringResource =
     when (key) {
-        PostListKey -> R.string.home_pane_empty
-        SearchKey -> R.string.search_pane_empty
-        NotificationsKey -> R.string.notifications_pane_empty
-        is UserSpaceKey -> R.string.space_pane_empty
+        PostListKey -> Res.string.home_pane_empty
+        SearchKey -> Res.string.search_pane_empty
+        NotificationsKey -> Res.string.notifications_pane_empty
+        is UserSpaceKey -> Res.string.space_pane_empty
         else -> error("$key is a list pane with nothing to say when its detail is empty")
     }
 

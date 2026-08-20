@@ -30,18 +30,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.ui.assets.InviteConfirmDialog
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.invite_body
+import io.github.nodyssey.ui.resources.invite_buy
+import io.github.nodyssey.ui.resources.invite_chicken_balance
+import io.github.nodyssey.ui.resources.invite_title
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun InviteRoute(
@@ -83,13 +88,13 @@ fun InviteScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.invite_title),
+                title = stringResource(Res.string.invite_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -127,7 +132,7 @@ fun InviteScreen(
                             modifier = Modifier.size(26.dp),
                         )
                         Text(
-                            text = stringResource(R.string.invite_body),
+                            text = stringResource(Res.string.invite_body),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -145,13 +150,13 @@ fun InviteScreen(
                             modifier = Modifier.size(20.dp),
                         )
                         Text(
-                            stringResource(R.string.invite_buy),
+                            stringResource(Res.string.invite_buy),
                             modifier = Modifier.padding(start = Spacing.sm),
                         )
                     }
                     chickenCount?.let {
                         Text(
-                            text = stringResource(R.string.invite_chicken_balance, it),
+                            text = stringResource(Res.string.invite_chicken_balance, it),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.R
 import io.github.nodyssey.data.proxy.ProxyConfig
 import io.github.nodyssey.data.proxy.ProxyConfigProblem
 import io.github.nodyssey.data.proxy.ProxyConnectionFailure
@@ -18,6 +17,9 @@ import io.github.nodyssey.data.proxy.toProxyConnectionFailure
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.account.AccountMessage
 import io.github.nodyssey.ui.account.toAccountMessage
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.proxy_saved
+import io.github.nodyssey.ui.resources.proxy_test_success
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -107,7 +109,7 @@ class ProxySettingsViewModel(
         val config = validated() ?: return
         viewModelScope.launch {
             settings.save(config)
-            _uiState.update { it.copy(message = AccountMessage.Info(R.string.proxy_saved)) }
+            _uiState.update { it.copy(message = AccountMessage.Info(Res.string.proxy_saved)) }
         }
     }
 
@@ -122,7 +124,7 @@ class ProxySettingsViewModel(
                         it.copy(
                             testing = false,
                             testFailure = null,
-                            message = AccountMessage.Info(R.string.proxy_test_success),
+                            message = AccountMessage.Info(Res.string.proxy_test_success),
                         )
                     }
                 }.onFailure { throwable ->

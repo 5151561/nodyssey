@@ -33,14 +33,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
 import io.github.nodyssey.data.OfflineSettings
 import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.ui.account.formatBytes
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.offline_auto_sync
+import io.github.nodyssey.ui.resources.offline_auto_sync_body
+import io.github.nodyssey.ui.resources.offline_clear
+import io.github.nodyssey.ui.resources.offline_clear_body
+import io.github.nodyssey.ui.resources.offline_clear_confirm
+import io.github.nodyssey.ui.resources.offline_clear_title
+import io.github.nodyssey.ui.resources.offline_done
+import io.github.nodyssey.ui.resources.offline_images
+import io.github.nodyssey.ui.resources.offline_images_body
+import io.github.nodyssey.ui.resources.offline_retention
+import io.github.nodyssey.ui.resources.offline_retention_body
+import io.github.nodyssey.ui.resources.offline_retention_days
+import io.github.nodyssey.ui.resources.offline_retention_forever
+import io.github.nodyssey.ui.resources.offline_sheet_body
+import io.github.nodyssey.ui.resources.offline_sheet_title
+import io.github.nodyssey.ui.resources.offline_usage_images
+import io.github.nodyssey.ui.resources.offline_usage_summary
+import io.github.nodyssey.ui.resources.offline_usage_summary_unknown
+import io.github.nodyssey.ui.resources.offline_usage_text
+import io.github.nodyssey.ui.resources.offline_wifi_only
+import io.github.nodyssey.ui.resources.offline_wifi_only_body
 import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.GroupedColumn
 import io.github.plaza.designsys.component.GroupedRow
@@ -48,6 +69,7 @@ import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 离线管理 — how much is stored, under what conditions more gets stored, and the way out.
@@ -97,10 +119,10 @@ internal fun OfflineManageSheet(
     if (confirmingClear) {
         AlertDialog(
             onDismissRequest = { confirmingClear = false },
-            title = { Text(stringResource(R.string.offline_clear_title)) },
+            title = { Text(stringResource(Res.string.offline_clear_title)) },
             // Spelled out because the word 清空 sits on a screen called 收藏, and the one thing a reader
             // will fear is that it clears the collection. It does not, and that is worth a sentence.
-            text = { Text(stringResource(R.string.offline_clear_body)) },
+            text = { Text(stringResource(Res.string.offline_clear_body)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -109,14 +131,14 @@ internal fun OfflineManageSheet(
                     },
                 ) {
                     Text(
-                        text = stringResource(R.string.offline_clear_confirm),
+                        text = stringResource(Res.string.offline_clear_confirm),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmingClear = false }) {
-                    Text(stringResource(R.string.action_cancel))
+                    Text(stringResource(Res.string.action_cancel))
                 }
             },
         )
@@ -152,12 +174,12 @@ private fun OfflineManagePanel(
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Text(
-                text = stringResource(R.string.offline_sheet_title),
+                text = stringResource(Res.string.offline_sheet_title),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = stringResource(R.string.offline_sheet_body),
+                text = stringResource(Res.string.offline_sheet_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -167,8 +189,8 @@ private fun OfflineManagePanel(
 
         GroupedColumn(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.lg)) {
             GroupedRow(
-                title = stringResource(R.string.offline_wifi_only),
-                subtitle = stringResource(R.string.offline_wifi_only_body),
+                title = stringResource(Res.string.offline_wifi_only),
+                subtitle = stringResource(Res.string.offline_wifi_only_body),
                 icon = PlazaIcons.Wifi,
                 first = true,
                 showChevron = false,
@@ -180,24 +202,24 @@ private fun OfflineManagePanel(
                 },
             )
             GroupedRow(
-                title = stringResource(R.string.offline_images),
-                subtitle = stringResource(R.string.offline_images_body),
+                title = stringResource(Res.string.offline_images),
+                subtitle = stringResource(Res.string.offline_images_body),
                 icon = PlazaIcons.Image,
                 showChevron = false,
                 onClick = { onSettingsChange(settings.copy(includeImages = !settings.includeImages)) },
                 trailing = { Switch(checked = settings.includeImages, onCheckedChange = null) },
             )
             GroupedRow(
-                title = stringResource(R.string.offline_auto_sync),
-                subtitle = stringResource(R.string.offline_auto_sync_body),
+                title = stringResource(Res.string.offline_auto_sync),
+                subtitle = stringResource(Res.string.offline_auto_sync_body),
                 icon = PlazaIcons.Sync,
                 showChevron = false,
                 onClick = { onSettingsChange(settings.copy(autoSyncReplies = !settings.autoSyncReplies)) },
                 trailing = { Switch(checked = settings.autoSyncReplies, onCheckedChange = null) },
             )
             GroupedRow(
-                title = stringResource(R.string.offline_retention),
-                subtitle = stringResource(R.string.offline_retention_body),
+                title = stringResource(Res.string.offline_retention),
+                subtitle = stringResource(Res.string.offline_retention_body),
                 icon = PlazaIcons.Schedule,
                 last = true,
                 value = retentionLabel(settings.retentionDays),
@@ -212,14 +234,14 @@ private fun OfflineManagePanel(
         ) {
             TextButton(onClick = onClear, enabled = usage.totalBytes > 0) {
                 Text(
-                    text = stringResource(R.string.offline_clear),
+                    text = stringResource(Res.string.offline_clear),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.error,
                 )
             }
             Button(onClick = onDone) {
                 Text(
-                    text = stringResource(R.string.offline_done),
+                    text = stringResource(Res.string.offline_done),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                 )
             }
@@ -258,8 +280,8 @@ private fun UsageBreakdown(
             Text(
                 text =
                 usage.freeBytes
-                    ?.let { stringResource(R.string.offline_usage_summary, usage.posts, formatBytes(it)) }
-                    ?: stringResource(R.string.offline_usage_summary_unknown, usage.posts),
+                    ?.let { stringResource(Res.string.offline_usage_summary, usage.posts, formatBytes(it)) }
+                    ?: stringResource(Res.string.offline_usage_summary_unknown, usage.posts),
                 style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
                 color = scheme.onSurfaceVariant,
             )
@@ -294,10 +316,10 @@ private fun UsageBreakdown(
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
-            UsageLegend(scheme.primary, stringResource(R.string.offline_usage_text, formatBytes(usage.textBytes)))
+            UsageLegend(scheme.primary, stringResource(Res.string.offline_usage_text, formatBytes(usage.textBytes)))
             UsageLegend(
                 scheme.primaryContainer,
-                stringResource(R.string.offline_usage_images, formatBytes(usage.imageBytes)),
+                stringResource(Res.string.offline_usage_images, formatBytes(usage.imageBytes)),
             )
         }
     }
@@ -329,11 +351,11 @@ private fun RetentionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.offline_retention)) },
+        title = { Text(stringResource(Res.string.offline_retention)) },
         text = {
             Column {
                 Text(
-                    text = stringResource(R.string.offline_retention_body),
+                    text = stringResource(Res.string.offline_retention_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = Spacing.sm),
@@ -352,7 +374,7 @@ private fun RetentionDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
     )
 }
@@ -360,9 +382,9 @@ private fun RetentionDialog(
 @Composable
 private fun retentionLabel(days: Int): String =
     if (days == OfflineSettings.KEEP_FOREVER) {
-        stringResource(R.string.offline_retention_forever)
+        stringResource(Res.string.offline_retention_forever)
     } else {
-        stringResource(R.string.offline_retention_days, days)
+        stringResource(Res.string.offline_retention_days, days)
     }
 
 /**

@@ -18,19 +18,37 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
 import io.github.nodyssey.ui.common.shortMessage
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.stardust_receive_confirm_amount
+import io.github.nodyssey.ui.resources.stardust_receive_confirm_amount_label
+import io.github.nodyssey.ui.resources.stardust_receive_confirm_caution
+import io.github.nodyssey.ui.resources.stardust_receive_confirm_caution_onetime
+import io.github.nodyssey.ui.resources.stardust_receive_confirm_note_label
+import io.github.nodyssey.ui.resources.stardust_receive_confirm_ok
+import io.github.nodyssey.ui.resources.stardust_receive_confirm_payee_label
+import io.github.nodyssey.ui.resources.stardust_receive_confirm_ref_label
+import io.github.nodyssey.ui.resources.stardust_receive_confirm_title
+import io.github.nodyssey.ui.resources.stardust_receive_load_failed
+import io.github.nodyssey.ui.resources.stardust_receive_loading
+import io.github.nodyssey.ui.resources.stardust_receive_paid
+import io.github.nodyssey.ui.resources.stardust_receive_pay
+import io.github.nodyssey.ui.resources.stardust_receive_payers
+import io.github.nodyssey.ui.resources.stardust_receive_retry
+import io.github.nodyssey.ui.resources.stardust_receive_sign_in_first
+import io.github.nodyssey.ui.resources.stardust_receive_total
+import io.github.nodyssey.ui.resources.stardust_receive_unpaid
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.richtext.StardustReceiveCard
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun StardustReceiveCard(
@@ -99,7 +117,7 @@ fun StardustReceiveCard(
                 // A tally that will not load says so and offers the retry; the 付款 button stays
                 // away, because paying without knowing whether you already have is the one thing a
                 // one-off code makes expensive.
-                state.error != null -> TextButton(onClick = onRetry) { Text(stringResource(R.string.stardust_receive_retry)) }
+                state.error != null -> TextButton(onClick = onRetry) { Text(stringResource(Res.string.stardust_receive_retry)) }
 
                 state.isSelf(node.memberId) -> Unit
 
@@ -114,9 +132,9 @@ fun StardustReceiveCard(
                             Text(
                                 stringResource(
                                     if (state.isSignedIn) {
-                                        R.string.stardust_receive_pay
+                                        Res.string.stardust_receive_pay
                                     } else {
-                                        R.string.stardust_receive_sign_in_first
+                                        Res.string.stardust_receive_sign_in_first
                                     },
                                 ),
                             )
@@ -139,24 +157,24 @@ fun StardustReceiveCard(
 
     if (confirming) {
         SpendConfirmDialog(
-            title = stringResource(R.string.stardust_receive_confirm_title, node.amount),
+            title = stringResource(Res.string.stardust_receive_confirm_title, node.amount),
             details =
             listOfNotNull(
                 SpendDetail(
-                    label = stringResource(R.string.stardust_receive_confirm_amount_label),
-                    value = stringResource(R.string.stardust_receive_confirm_amount, node.amount),
+                    label = stringResource(Res.string.stardust_receive_confirm_amount_label),
+                    value = stringResource(Res.string.stardust_receive_confirm_amount, node.amount),
                 ),
                 SpendDetail(
-                    label = stringResource(R.string.stardust_receive_confirm_payee_label),
+                    label = stringResource(Res.string.stardust_receive_confirm_payee_label),
                     value = "UID ${node.memberId}",
                 ),
                 SpendDetail(
-                    label = stringResource(R.string.stardust_receive_confirm_ref_label),
+                    label = stringResource(Res.string.stardust_receive_confirm_ref_label),
                     value = node.refId.toString(),
                 ),
                 node.description.takeIf { it.isNotBlank() }?.let {
                     SpendDetail(
-                        label = stringResource(R.string.stardust_receive_confirm_note_label),
+                        label = stringResource(Res.string.stardust_receive_confirm_note_label),
                         value = it,
                     )
                 },
@@ -164,12 +182,12 @@ fun StardustReceiveCard(
             caution =
             stringResource(
                 if (node.onetime) {
-                    R.string.stardust_receive_confirm_caution_onetime
+                    Res.string.stardust_receive_confirm_caution_onetime
                 } else {
-                    R.string.stardust_receive_confirm_caution
+                    Res.string.stardust_receive_confirm_caution
                 },
             ),
-            confirmLabel = stringResource(R.string.stardust_receive_confirm_ok),
+            confirmLabel = stringResource(Res.string.stardust_receive_confirm_ok),
             isSending = state.isPaying,
             onConfirm = {
                 confirming = false
@@ -189,16 +207,16 @@ fun StardustReceiveCard(
  */
 @Composable
 private fun tallyText(state: StardustReceiveUiState): String {
-    if (state.error != null) return stringResource(R.string.stardust_receive_load_failed)
+    if (state.error != null) return stringResource(Res.string.stardust_receive_load_failed)
     val parts =
         listOfNotNull(
             state.paidByMe?.let {
-                stringResource(if (it) R.string.stardust_receive_paid else R.string.stardust_receive_unpaid)
+                stringResource(if (it) Res.string.stardust_receive_paid else Res.string.stardust_receive_unpaid)
             },
-            state.payerCount?.let { stringResource(R.string.stardust_receive_payers, it) },
-            state.received?.let { stringResource(R.string.stardust_receive_total, it) },
+            state.payerCount?.let { stringResource(Res.string.stardust_receive_payers, it) },
+            state.received?.let { stringResource(Res.string.stardust_receive_total, it) },
         )
-    return parts.joinToString(" · ").ifEmpty { stringResource(R.string.stardust_receive_loading) }
+    return parts.joinToString(" · ").ifEmpty { stringResource(Res.string.stardust_receive_loading) }
 }
 
 @Preview(showBackground = true, widthDp = 360, name = "收款码 · 未付款")

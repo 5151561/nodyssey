@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.search
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,7 +68,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -81,7 +79,6 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
-import io.github.nodyssey.R
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.data.UserSearchResult
@@ -96,6 +93,35 @@ import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.postlist.FeedRowPlaceholder
 import io.github.nodyssey.ui.postlist.PostRow
 import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.action_sort
+import io.github.nodyssey.ui.resources.search_all_boards
+import io.github.nodyssey.ui.resources.search_apply_board
+import io.github.nodyssey.ui.resources.search_board_all_boards_heading
+import io.github.nodyssey.ui.resources.search_board_chip_all
+import io.github.nodyssey.ui.resources.search_board_range
+import io.github.nodyssey.ui.resources.search_board_range_hint
+import io.github.nodyssey.ui.resources.search_board_section
+import io.github.nodyssey.ui.resources.search_board_single_hint
+import io.github.nodyssey.ui.resources.search_clear_all
+import io.github.nodyssey.ui.resources.search_clear_query
+import io.github.nodyssey.ui.resources.search_hint
+import io.github.nodyssey.ui.resources.search_hint_board
+import io.github.nodyssey.ui.resources.search_history_board_scope
+import io.github.nodyssey.ui.resources.search_history_empty
+import io.github.nodyssey.ui.resources.search_history_scope
+import io.github.nodyssey.ui.resources.search_load_more_failed
+import io.github.nodyssey.ui.resources.search_posts_tab
+import io.github.nodyssey.ui.resources.search_recent
+import io.github.nodyssey.ui.resources.search_recent_boards
+import io.github.nodyssey.ui.resources.search_remove_recent
+import io.github.nodyssey.ui.resources.search_submit
+import io.github.nodyssey.ui.resources.search_user_hint
+import io.github.nodyssey.ui.resources.search_user_history_scope
+import io.github.nodyssey.ui.resources.search_users_tab
+import io.github.nodyssey.ui.resources.sort_by_post_time
+import io.github.nodyssey.ui.resources.sort_by_reply_time
 import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
@@ -104,6 +130,8 @@ import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SearchRoute(
@@ -226,7 +254,7 @@ fun SearchScreen(
                 PrimaryTabRow(selectedTabIndex = state.target.ordinal) {
                     SearchTab(
                         selected = state.target == SearchTarget.POSTS,
-                        title = stringResource(R.string.search_posts_tab),
+                        title = stringResource(Res.string.search_posts_tab),
                         // No count: `/search` never returns a total, and the number of rows loaded so
                         // far is not one — it grows as you scroll, which reads as the site changing.
                         count = null,
@@ -234,7 +262,7 @@ fun SearchScreen(
                     )
                     SearchTab(
                         selected = state.target == SearchTarget.USERS,
-                        title = stringResource(R.string.search_users_tab),
+                        title = stringResource(Res.string.search_users_tab),
                         count = state.userResults.size.takeIf { state.userLoadState == SearchLoadState.Success },
                         onClick = { onTargetChange(SearchTarget.USERS) },
                     )
@@ -351,11 +379,11 @@ private fun SearchInputField(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (queryState.text.isNotEmpty()) {
                     IconButton(onClick = { queryState.clearText() }) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.search_clear_query))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.search_clear_query))
                     }
                 }
                 FilledIconButton(onClick = submit) {
-                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_submit))
+                    Icon(Icons.Default.Search, contentDescription = stringResource(Res.string.search_submit))
                 }
             }
         },
@@ -369,9 +397,9 @@ private fun SearchInputField(
 /** Placeholder as the third step of the sentence the two pickers above it have already started. */
 @Composable
 private fun searchPlaceholder(state: SearchUiState): String {
-    if (state.target == SearchTarget.USERS) return stringResource(R.string.search_user_hint)
-    val board = state.selectedBoard ?: return stringResource(R.string.search_hint)
-    return stringResource(R.string.search_hint_board, state.boards.title(board))
+    if (state.target == SearchTarget.USERS) return stringResource(Res.string.search_user_hint)
+    val board = state.selectedBoard ?: return stringResource(Res.string.search_hint)
+    return stringResource(Res.string.search_hint_board, state.boards.title(board))
 }
 
 private fun List<Board>.title(slug: String): String = firstOrNull { it.slug == slug }?.title ?: slug
@@ -442,12 +470,12 @@ private fun BoardChips(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            stringResource(R.string.search_board_section),
+            stringResource(Res.string.search_board_section),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.weight(1f),
         )
         Text(
-            stringResource(R.string.search_board_single_hint),
+            stringResource(Res.string.search_board_single_hint),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -458,7 +486,7 @@ private fun BoardChips(
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         BoardChip(
-            title = stringResource(R.string.search_board_chip_all),
+            title = stringResource(Res.string.search_board_chip_all),
             selected = selected == null,
             onSelect = { onSelect(null) },
         )
@@ -522,7 +550,7 @@ private fun ResultScopeRow(
                 Text(
                     state.selectedBoard
                         ?.let { slug -> state.boards.title(slug) }
-                        ?: stringResource(R.string.search_all_boards),
+                        ?: stringResource(Res.string.search_all_boards),
                 )
             },
             leadingIcon =
@@ -543,7 +571,7 @@ private fun ResultScopeRow(
             TextButton(onClick = { showSortMenu = true }) {
                 Icon(
                     PlazaIcons.SwapVert,
-                    contentDescription = stringResource(R.string.action_sort),
+                    contentDescription = stringResource(Res.string.action_sort),
                     modifier = Modifier.size(FilterChipDefaults.IconSize),
                 )
                 Spacer(Modifier.size(Spacing.xs))
@@ -557,10 +585,8 @@ private fun ResultScopeRow(
         }
     }
 }
-
-@StringRes
-private fun FeedSort.labelRes(): Int =
-    if (this == FeedSort.POST_TIME) R.string.sort_by_post_time else R.string.sort_by_reply_time
+private fun FeedSort.labelRes(): StringResource =
+    if (this == FeedSort.POST_TIME) Res.string.sort_by_post_time else Res.string.sort_by_reply_time
 
 @Composable
 private fun SearchResults(
@@ -679,10 +705,10 @@ private fun LazyListScope.appendRow(posts: LazyPagingItems<FeedPost>) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        stringResource(R.string.search_load_more_failed),
+                        stringResource(Res.string.search_load_more_failed),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    TextButton(onClick = posts::retry) { Text(stringResource(R.string.action_retry)) }
+                    TextButton(onClick = posts::retry) { Text(stringResource(Res.string.action_retry)) }
                 }
             }
 
@@ -732,15 +758,15 @@ private fun SearchHistory(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            stringResource(R.string.search_recent),
+            stringResource(Res.string.search_recent),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onClearHistory) { Text(stringResource(R.string.search_clear_all)) }
+        TextButton(onClick = onClearHistory) { Text(stringResource(Res.string.search_clear_all)) }
     }
     if (searches.isEmpty()) {
         Text(
-            stringResource(R.string.search_history_empty),
+            stringResource(Res.string.search_history_empty),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(Spacing.lg),
         )
@@ -765,7 +791,7 @@ private fun SearchHistory(
                         IconButton(onClick = { onRemoveHistory(recent) }) {
                             Icon(
                                 Icons.Default.Close,
-                                contentDescription = stringResource(R.string.search_remove_recent, recent.query),
+                                contentDescription = stringResource(Res.string.search_remove_recent, recent.query),
                             )
                         }
                     },
@@ -781,9 +807,9 @@ private fun historyScope(
     entry: SearchHistoryEntry,
     boards: List<Board>,
 ): String {
-    if (entry.target == SearchTarget.USERS) return stringResource(R.string.search_user_history_scope)
-    val slug = entry.categorySlug ?: return stringResource(R.string.search_history_scope)
-    return stringResource(R.string.search_history_board_scope, boards.title(slug))
+    if (entry.target == SearchTarget.USERS) return stringResource(Res.string.search_user_history_scope)
+    val slug = entry.categorySlug ?: return stringResource(Res.string.search_history_scope)
+    return stringResource(Res.string.search_history_board_scope, boards.title(slug))
 }
 
 @Composable
@@ -863,9 +889,9 @@ private fun BoardRangeSheet(
             Modifier.fillMaxWidth().padding(horizontal = Spacing.xl, vertical = Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Text(stringResource(R.string.search_board_range), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(Res.string.search_board_range), style = MaterialTheme.typography.titleLarge)
             Text(
-                stringResource(R.string.search_board_range_hint),
+                stringResource(Res.string.search_board_range_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -879,27 +905,27 @@ private fun BoardRangeSheet(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 ChoiceRow(
-                    label = stringResource(R.string.search_all_boards),
+                    label = stringResource(Res.string.search_all_boards),
                     selected = picked == null,
                     onSelect = { picked = null },
                 )
                 if (recent.isNotEmpty()) {
                     Text(
-                        stringResource(R.string.search_recent_boards),
+                        stringResource(Res.string.search_recent_boards),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     BoardRadioGrid(recent, picked) { picked = it }
                 }
                 Text(
-                    stringResource(R.string.search_board_all_boards_heading),
+                    stringResource(Res.string.search_board_all_boards_heading),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 BoardRadioGrid(remaining, picked) { picked = it }
             }
             Button(onClick = { onApply(picked) }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.search_apply_board))
+                Text(stringResource(Res.string.search_apply_board))
             }
         }
     }

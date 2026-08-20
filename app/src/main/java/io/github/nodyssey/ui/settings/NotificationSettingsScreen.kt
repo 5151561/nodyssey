@@ -25,18 +25,38 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.UserSettings
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.notifications_mentions
+import io.github.nodyssey.ui.resources.notifications_messages
+import io.github.nodyssey.ui.resources.notifications_replies
+import io.github.nodyssey.ui.resources.notify_channels_section
+import io.github.nodyssey.ui.resources.notify_frequency
+import io.github.nodyssey.ui.resources.notify_frequency_15
+import io.github.nodyssey.ui.resources.notify_frequency_30
+import io.github.nodyssey.ui.resources.notify_frequency_60
+import io.github.nodyssey.ui.resources.notify_frequency_hint
+import io.github.nodyssey.ui.resources.notify_master_hint
+import io.github.nodyssey.ui.resources.notify_master_title
+import io.github.nodyssey.ui.resources.notify_quiet_hours
+import io.github.nodyssey.ui.resources.notify_quiet_hours_hint
+import io.github.nodyssey.ui.resources.notify_settings_title
+import io.github.nodyssey.ui.resources.notify_telegram_action
+import io.github.nodyssey.ui.resources.notify_telegram_body
+import io.github.nodyssey.ui.resources.notify_telegram_title
+import io.github.nodyssey.ui.resources.notify_wifi_only
+import io.github.nodyssey.ui.resources.notify_wifi_only_hint
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NotificationSettingsRoute(
@@ -92,13 +112,13 @@ fun NotificationSettingsScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.notify_settings_title),
+                title = stringResource(Res.string.notify_settings_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -117,8 +137,8 @@ fun NotificationSettingsScreen(
         ) {
             SettingsGroup {
                 SettingsRow(
-                    title = stringResource(R.string.notify_master_title),
-                    subtitle = stringResource(R.string.notify_master_hint),
+                    title = stringResource(Res.string.notify_master_title),
+                    subtitle = stringResource(Res.string.notify_master_hint),
                     top = true,
                     bottom = true,
                     checked = enabled,
@@ -135,7 +155,7 @@ fun NotificationSettingsScreen(
             ) {
                 SettingsGroup {
                     SettingsBlock(
-                        title = stringResource(R.string.notify_frequency),
+                        title = stringResource(Res.string.notify_frequency),
                         top = true,
                         bottom = true,
                     ) {
@@ -143,16 +163,16 @@ fun NotificationSettingsScreen(
                         ConnectedChoiceButtons(
                             labels =
                             listOf(
-                                stringResource(R.string.notify_frequency_15),
-                                stringResource(R.string.notify_frequency_30),
-                                stringResource(R.string.notify_frequency_60),
+                                stringResource(Res.string.notify_frequency_15),
+                                stringResource(Res.string.notify_frequency_30),
+                                stringResource(Res.string.notify_frequency_60),
                             ),
                             selectedIndex = choices.indexOf(settings.notificationPollMinutes),
                             onSelect = { onPollMinutesChange(choices[it]) },
                             enabled = enabled,
                         )
                         Text(
-                            stringResource(R.string.notify_frequency_hint),
+                            stringResource(Res.string.notify_frequency_hint),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -161,8 +181,8 @@ fun NotificationSettingsScreen(
 
                 SettingsGroup {
                     SettingsRow(
-                        title = stringResource(R.string.notify_wifi_only),
-                        subtitle = stringResource(R.string.notify_wifi_only_hint),
+                        title = stringResource(Res.string.notify_wifi_only),
+                        subtitle = stringResource(Res.string.notify_wifi_only_hint),
                         top = true,
                         checked = settings.notificationsWifiOnly,
                         onCheckedChange = onWifiOnlyChange,
@@ -176,8 +196,8 @@ fun NotificationSettingsScreen(
                         },
                     )
                     SettingsRow(
-                        title = stringResource(R.string.notify_quiet_hours),
-                        subtitle = stringResource(R.string.notify_quiet_hours_hint),
+                        title = stringResource(Res.string.notify_quiet_hours),
+                        subtitle = stringResource(Res.string.notify_quiet_hours_hint),
                         bottom = true,
                         checked = settings.notificationQuietHours,
                         onCheckedChange = onQuietHoursChange,
@@ -192,10 +212,10 @@ fun NotificationSettingsScreen(
                     )
                 }
 
-                SettingsSectionTitle(stringResource(R.string.notify_channels_section))
+                SettingsSectionTitle(stringResource(Res.string.notify_channels_section))
                 SettingsGroup {
                     SettingsRow(
-                        title = stringResource(R.string.notifications_mentions),
+                        title = stringResource(Res.string.notifications_mentions),
                         top = true,
                         leading = { Icon(PlazaIcons.AlternateEmail, contentDescription = null) },
                         checked = settings.notifyMentions,
@@ -210,7 +230,7 @@ fun NotificationSettingsScreen(
                         },
                     )
                     SettingsRow(
-                        title = stringResource(R.string.notifications_replies),
+                        title = stringResource(Res.string.notifications_replies),
                         leading = { Icon(PlazaIcons.ChatBubble, contentDescription = null) },
                         checked = settings.notifyReplies,
                         onCheckedChange = onNotifyRepliesChange,
@@ -224,7 +244,7 @@ fun NotificationSettingsScreen(
                         },
                     )
                     SettingsRow(
-                        title = stringResource(R.string.notifications_messages),
+                        title = stringResource(Res.string.notifications_messages),
                         bottom = true,
                         leading = { Icon(Icons.Default.Email, contentDescription = null) },
                         checked = settings.notifyMessages,
@@ -245,15 +265,15 @@ fun NotificationSettingsScreen(
             // channel is the alternative to polling, not part of it.
             SettingsGroup {
                 SettingsRow(
-                    title = stringResource(R.string.notify_telegram_title),
-                    subtitle = stringResource(R.string.notify_telegram_body),
+                    title = stringResource(Res.string.notify_telegram_title),
+                    subtitle = stringResource(Res.string.notify_telegram_body),
                     top = true,
                     bottom = true,
                     onClick = onOpenTelegram,
                     leading = { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null) },
                     trailing = {
                         Text(
-                            stringResource(R.string.notify_telegram_action),
+                            stringResource(Res.string.notify_telegram_action),
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.labelLarge,
                         )

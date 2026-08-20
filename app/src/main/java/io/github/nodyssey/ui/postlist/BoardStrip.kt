@@ -70,17 +70,25 @@ import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import io.github.nodyssey.R
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.ui.common.longPressToEdit
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_finish_editing_boards
+import io.github.nodyssey.ui.resources.action_hide_all_boards
+import io.github.nodyssey.ui.resources.action_show_all_boards
+import io.github.nodyssey.ui.resources.board_admin_only
+import io.github.nodyssey.ui.resources.board_edit_hint
+import io.github.nodyssey.ui.resources.board_park
+import io.github.nodyssey.ui.resources.board_parked
+import io.github.nodyssey.ui.resources.board_restore
 import io.github.plaza.designsys.theme.Spacing
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Fifteen boards do not fit on a 360dp strip, and a bottom sheet was the other candidate.
@@ -311,9 +319,9 @@ internal fun BoardStrip(
                             contentDescription =
                             stringResource(
                                 when {
-                                    isEditing -> R.string.action_finish_editing_boards
-                                    isExpanded -> R.string.action_hide_all_boards
-                                    else -> R.string.action_show_all_boards
+                                    isEditing -> Res.string.action_finish_editing_boards
+                                    isExpanded -> Res.string.action_hide_all_boards
+                                    else -> Res.string.action_show_all_boards
                                 },
                             ),
                         )
@@ -323,7 +331,7 @@ internal fun BoardStrip(
         }
         AnimatedVisibility(visible = editing) {
             Text(
-                text = stringResource(R.string.board_edit_hint),
+                text = stringResource(Res.string.board_edit_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = Spacing.lg, bottom = Spacing.sm),
@@ -589,7 +597,7 @@ private fun ParkBadge(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val description = stringResource(if (parked) R.string.board_restore else R.string.board_park)
+    val description = stringResource(if (parked) Res.string.board_restore else Res.string.board_park)
     val container by animateColorAsState(
         targetValue = if (parked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
@@ -637,7 +645,7 @@ private fun BoardPill(
     onClick: () -> Unit,
     parked: Boolean = false,
 ) {
-    val parkedLabel = stringResource(R.string.board_parked)
+    val parkedLabel = stringResource(Res.string.board_parked)
     val colorSpec = MaterialTheme.motionScheme.defaultEffectsSpec<androidx.compose.ui.graphics.Color>()
     // Parking a board is a move *and* a fade, and the two read as one gesture only if the colour
     // takes as long as the flight to the tail does.
@@ -683,7 +691,7 @@ private fun BoardPill(
             {
                 Icon(
                     Icons.Default.Lock,
-                    contentDescription = stringResource(R.string.board_admin_only),
+                    contentDescription = stringResource(Res.string.board_admin_only),
                     modifier = Modifier.size(14.dp),
                 )
             }

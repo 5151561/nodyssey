@@ -36,12 +36,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.data.settings.UserSettings
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.settings_dynamic_color
+import io.github.nodyssey.ui.resources.settings_wallpaper_auto_update
+import io.github.nodyssey.ui.resources.settings_wallpaper_auto_update_hint
+import io.github.nodyssey.ui.resources.settings_wallpaper_candidate_label
+import io.github.nodyssey.ui.resources.settings_wallpaper_candidates
+import io.github.nodyssey.ui.resources.settings_wallpaper_candidates_hint
+import io.github.nodyssey.ui.resources.settings_wallpaper_palette
+import io.github.nodyssey.ui.resources.settings_wallpaper_system_palette
+import io.github.nodyssey.ui.resources.settings_wallpaper_system_palette_hint
+import io.github.nodyssey.ui.resources.settings_wallpaper_system_palette_unavailable
+import io.github.nodyssey.ui.resources.settings_wallpaper_unreadable
+import io.github.nodyssey.ui.resources.settings_wallpaper_unreadable_hint
 import io.github.nodyssey.ui.settings.SettingsGroup
 import io.github.nodyssey.ui.settings.SettingsRow
 import io.github.nodyssey.ui.settings.SettingsSectionTitle
@@ -50,6 +63,7 @@ import io.github.plaza.designsys.theme.LocalPlazaDarkTheme
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DynamicColorRoute(
@@ -96,13 +110,13 @@ fun DynamicColorScreen(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             MediumTopAppBar(
-                title = { Text(stringResource(R.string.settings_dynamic_color)) },
+                title = { Text(stringResource(Res.string.settings_dynamic_color)) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -127,7 +141,7 @@ fun DynamicColorScreen(
                 )
             } else {
                 SettingsSectionTitle(
-                    stringResource(R.string.settings_wallpaper_candidates, palette.candidates.size),
+                    stringResource(Res.string.settings_wallpaper_candidates, palette.candidates.size),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     palette.candidates.forEachIndexed { index, candidate ->
@@ -135,19 +149,19 @@ fun DynamicColorScreen(
                             color = candidate,
                             selected = candidate.toArgb() == selected,
                             label =
-                            stringResource(R.string.settings_wallpaper_candidate_label, index + 1),
+                            stringResource(Res.string.settings_wallpaper_candidate_label, index + 1),
                             onClick = { onSeedSelected(candidate.toArgb()) },
                         )
                     }
                 }
                 Text(
-                    stringResource(R.string.settings_wallpaper_candidates_hint),
+                    stringResource(Res.string.settings_wallpaper_candidates_hint),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 2.dp),
                 )
 
-                SettingsSectionTitle(stringResource(R.string.settings_wallpaper_palette))
+                SettingsSectionTitle(stringResource(Res.string.settings_wallpaper_palette))
                 SchemeStrip(
                     seed = Color(selected ?: settings.seedColor),
                     paletteStyle = settings.paletteStyle.toPlaza(),
@@ -161,13 +175,13 @@ fun DynamicColorScreen(
             SettingsGroup {
                 SettingsRow(
                     leading = { Icon(PlazaIcons.Android, contentDescription = null) },
-                    title = stringResource(R.string.settings_wallpaper_system_palette),
+                    title = stringResource(Res.string.settings_wallpaper_system_palette),
                     subtitle =
                     stringResource(
                         if (palette.systemPaletteAvailable) {
-                            R.string.settings_wallpaper_system_palette_hint
+                            Res.string.settings_wallpaper_system_palette_hint
                         } else {
-                            R.string.settings_wallpaper_system_palette_unavailable
+                            Res.string.settings_wallpaper_system_palette_unavailable
                         },
                         Build.VERSION.RELEASE,
                     ),
@@ -185,8 +199,8 @@ fun DynamicColorScreen(
                 )
                 SettingsRow(
                     leading = { Icon(Icons.Default.Refresh, contentDescription = null) },
-                    title = stringResource(R.string.settings_wallpaper_auto_update),
-                    subtitle = stringResource(R.string.settings_wallpaper_auto_update_hint),
+                    title = stringResource(Res.string.settings_wallpaper_auto_update),
+                    subtitle = stringResource(Res.string.settings_wallpaper_auto_update_hint),
                     checked = settings.wallpaperAutoUpdate,
                     onCheckedChange = onAutoUpdateChange,
                     bottom = true,
@@ -229,19 +243,19 @@ private fun WallpaperUnavailable(
             )
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    stringResource(R.string.settings_wallpaper_unreadable),
+                    stringResource(Res.string.settings_wallpaper_unreadable),
                     style = MaterialTheme.typography.labelLarge,
                 )
                 Text(
                     stringResource(
-                        R.string.settings_wallpaper_unreadable_hint,
+                        Res.string.settings_wallpaper_unreadable_hint,
                         fallback.toHexString(),
                     ),
                     style = MaterialTheme.typography.labelMedium,
                 )
             }
             TextButton(onClick = onRetry) {
-                Text(stringResource(R.string.action_retry))
+                Text(stringResource(Res.string.action_retry))
             }
         }
     }

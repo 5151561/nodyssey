@@ -69,7 +69,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -86,7 +85,6 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
-import io.github.nodyssey.R
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.data.OfflineFirstPostRepository
@@ -106,6 +104,22 @@ import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
 import io.github.nodyssey.ui.common.sharedThreadBoard
 import io.github.nodyssey.ui.common.sharedThreadTitle
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_create_post
+import io.github.nodyssey.ui.resources.action_scroll_to_top
+import io.github.nodyssey.ui.resources.action_sort
+import io.github.nodyssey.ui.resources.app_name
+import io.github.nodyssey.ui.resources.feed_page_size_note
+import io.github.nodyssey.ui.resources.page_jump_newest
+import io.github.nodyssey.ui.resources.post_badge_awarded
+import io.github.nodyssey.ui.resources.post_badge_locked
+import io.github.nodyssey.ui.resources.post_badge_locked_level
+import io.github.nodyssey.ui.resources.post_badge_pinned
+import io.github.nodyssey.ui.resources.post_new_reply_count
+import io.github.nodyssey.ui.resources.post_reply_count
+import io.github.nodyssey.ui.resources.post_view_count
+import io.github.nodyssey.ui.resources.sort_by_post_time
+import io.github.nodyssey.ui.resources.sort_by_reply_time
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.AvatarShape
@@ -129,6 +143,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Stateful entry point. It only wires the ViewModel to the stateless [PostListScreen] below, which is
@@ -409,7 +425,7 @@ fun PostListScreen(
                     icon = {
                         Icon(Icons.Default.Add, contentDescription = null)
                     },
-                    text = { Text(stringResource(R.string.action_create_post)) },
+                    text = { Text(stringResource(Res.string.action_create_post)) },
                 )
             }
         },
@@ -521,13 +537,13 @@ fun PostListScreen(
             // The site's own page size rather than a count of what is loaded: on a feed the reader
             // scrolls through, "已载入 N 个帖子" is a number that only ever goes up and says nothing
             // about where any page is.
-            note = stringResource(R.string.feed_page_size_note, OfflineFirstPostRepository.NETWORK_PAGE_SIZE),
+            note = stringResource(Res.string.feed_page_size_note, OfflineFirstPostRepository.NETWORK_PAGE_SIZE),
             // No 上次浏览 here, unlike the thread: the feed keeps no place across visits, and this
             // session's furthest page is not one — nothing records it, and inventing one from the
             // scroll would offer the page the reader is already on.
             newest =
             JumpDestination(
-                label = stringResource(R.string.page_jump_newest),
+                label = stringResource(Res.string.page_jump_newest),
                 icon = PlazaIcons.VerticalAlignTop,
                 onGo = {
                     showPageSheet = false
@@ -579,7 +595,7 @@ private fun FeedPageBar(
             onPageClick = onPageClick,
         )
         ExtendedFloatingActionButton(
-            text = { Text(stringResource(R.string.action_create_post)) },
+            text = { Text(stringResource(Res.string.action_create_post)) },
             icon = { Icon(Icons.Default.Add, contentDescription = null) },
             onClick = onCreatePost,
             expanded = expanded,
@@ -641,7 +657,7 @@ private fun HomeTopBar(
     TopAppBar(
         title = {
             Text(
-                text = stringResource(R.string.app_name),
+                text = stringResource(Res.string.app_name),
                 style = MaterialTheme.typography.titleLarge,
                 // The wordmark doubles as the second way back to the top, and the only one that
                 // works while the navigation bar is hidden — which is exactly when a reader deep in
@@ -650,7 +666,7 @@ private fun HomeTopBar(
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.small)
                     .clickable(
-                        onClickLabel = stringResource(R.string.action_scroll_to_top),
+                        onClickLabel = stringResource(Res.string.action_scroll_to_top),
                         onClick = onTitleClick,
                     ).heightIn(min = Sizes.minTouchTarget)
                     .wrapContentHeight(Alignment.CenterVertically),
@@ -661,16 +677,16 @@ private fun HomeTopBar(
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
                         imageVector = PlazaIcons.SwapVert,
-                        contentDescription = stringResource(R.string.action_sort),
+                        contentDescription = stringResource(Res.string.action_sort),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    SortMenuItem(R.string.sort_by_reply_time, FeedSort.LAST_REPLY, sort) {
+                    SortMenuItem(Res.string.sort_by_reply_time, FeedSort.LAST_REPLY, sort) {
                         onSortChange(it)
                         menuOpen = false
                     }
-                    SortMenuItem(R.string.sort_by_post_time, FeedSort.POST_TIME, sort) {
+                    SortMenuItem(Res.string.sort_by_post_time, FeedSort.POST_TIME, sort) {
                         onSortChange(it)
                         menuOpen = false
                     }
@@ -691,7 +707,7 @@ private fun HomeTopBar(
 
 @Composable
 private fun SortMenuItem(
-    labelRes: Int,
+    labelRes: StringResource,
     value: FeedSort,
     current: FeedSort,
     onClick: (FeedSort) -> Unit,
@@ -767,7 +783,7 @@ internal fun PostRow(
                 ) {
                     Icon(
                         imageVector = PlazaIcons.PushPin,
-                        contentDescription = stringResource(R.string.post_badge_pinned),
+                        contentDescription = stringResource(Res.string.post_badge_pinned),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(18.dp),
                     )
@@ -811,8 +827,8 @@ internal fun PostRow(
                     Icons.Default.Lock,
                     contentDescription =
                     summary.lockLevel
-                        ?.let { stringResource(R.string.post_badge_locked_level, it) }
-                        ?: stringResource(R.string.post_badge_locked),
+                        ?.let { stringResource(Res.string.post_badge_locked_level, it) }
+                        ?: stringResource(Res.string.post_badge_locked),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     // 16dp per the b1 §8 只读→锁定 mapping spec, in sp so it tracks the title
                     // it stands beside rather than shrinking against a raised reading size.
@@ -831,7 +847,7 @@ internal fun PostRow(
             if (showAwardBadge && summary.isAwarded) {
                 Icon(
                     NodeSeekIcons.Award,
-                    contentDescription = stringResource(R.string.post_badge_awarded),
+                    contentDescription = stringResource(Res.string.post_badge_awarded),
                     // The warm role rather than primary: 加精 is a mark the site puts on a thread, not
                     // an action this app offers, and the site draws it orange. Same 16dp as the lock,
                     // and after it — the order the site's own title strip uses.
@@ -920,7 +936,7 @@ private fun FlowRowScope.PostMetaItems(
             .weight(1f, fill = false)
             .thenIf(sharedWithThread) { Modifier.sharedThreadAuthor(summary.postId) },
     )
-    if (summary.isPinned) MetaText(stringResource(R.string.post_badge_pinned), singleLine = true)
+    if (summary.isPinned) MetaText(stringResource(Res.string.post_badge_pinned), singleLine = true)
     if (post.newCommentCount > 0) {
         NewReplyBadge(post.newCommentCount)
     } else {
@@ -928,7 +944,7 @@ private fun FlowRowScope.PostMetaItems(
             MetaStat(
                 icon = PlazaIcons.ModeComment,
                 value = it.toString(),
-                contentDescription = stringResource(R.string.post_reply_count, it),
+                contentDescription = stringResource(Res.string.post_reply_count, it),
             )
         }
     }
@@ -936,7 +952,7 @@ private fun FlowRowScope.PostMetaItems(
         MetaStat(
             icon = PlazaIcons.Visibility,
             value = it.toString(),
-            contentDescription = stringResource(R.string.post_view_count, it),
+            contentDescription = stringResource(Res.string.post_view_count, it),
         )
     }
     summary.lastActiveText?.let { MetaText(it, singleLine = true) }
@@ -946,7 +962,7 @@ private fun FlowRowScope.PostMetaItems(
 @Composable
 private fun NewReplyBadge(count: Int) {
     Text(
-        text = stringResource(R.string.post_new_reply_count, count),
+        text = stringResource(Res.string.post_new_reply_count, count),
         style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
         color = MaterialTheme.colorScheme.onPrimaryContainer,
         modifier =

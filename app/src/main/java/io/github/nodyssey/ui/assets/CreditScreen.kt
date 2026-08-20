@@ -22,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,11 +31,17 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
-import io.github.nodyssey.R
 import io.github.nodyssey.data.CreditEntry
 import io.github.nodyssey.ui.common.NoLedgerEntriesState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.credit_balance
+import io.github.nodyssey.ui.resources.credit_entry_total
+import io.github.nodyssey.ui.resources.credit_level
+import io.github.nodyssey.ui.resources.credit_level_progress
+import io.github.nodyssey.ui.resources.credit_title
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
@@ -49,6 +54,7 @@ import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun CreditRoute(
@@ -98,13 +104,13 @@ fun CreditScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.credit_title),
+                title = stringResource(Res.string.credit_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -154,7 +160,7 @@ private fun ChickenBalanceHeader(state: CreditUiState) {
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = stringResource(R.string.credit_balance),
+                    text = stringResource(Res.string.credit_balance),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                 )
                 Text(
@@ -182,9 +188,9 @@ private fun levelProgressText(state: CreditUiState): String? {
     val chicken = state.chickenCount
     val next = state.nextLevelChicken
     return if (chicken != null && next != null) {
-        stringResource(R.string.credit_level_progress, level, chicken, next)
+        stringResource(Res.string.credit_level_progress, level, chicken, next)
     } else {
-        stringResource(R.string.credit_level, level)
+        stringResource(Res.string.credit_level, level)
     }
 }
 
@@ -272,7 +278,7 @@ private fun CreditRow(entry: CreditEntry) {
         Text(
             text =
             listOfNotNull(
-                entry.balanceAfter?.let { stringResource(R.string.credit_entry_total, it) },
+                entry.balanceAfter?.let { stringResource(Res.string.credit_entry_total, it) },
                 entry.createdAtMillis?.let(TimeFormat::absolute),
             ).joinToString(" · "),
             style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),

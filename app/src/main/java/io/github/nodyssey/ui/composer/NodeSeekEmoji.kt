@@ -7,16 +7,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.composer_emoji_group_acn
+import io.github.nodyssey.ui.resources.composer_emoji_group_chick
+import io.github.nodyssey.ui.resources.composer_emoji_group_fluent
+import io.github.nodyssey.ui.resources.composer_emoji_group_onion
+import io.github.nodyssey.ui.resources.composer_emoji_stickers_pending
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.editor.EmojiEntry
 import io.github.plaza.designsys.editor.EmojiGroup
 import io.github.plaza.designsys.editor.EmojiPanel
 import io.github.plaza.designsys.image.allowMeteredImage
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The four groups NodeSeek's own editor offers, and how their previews are fetched.
@@ -40,11 +45,11 @@ import io.github.plaza.designsys.image.allowMeteredImage
  * knows none of it.
  */
 val NodeSeekEmojiGroups = listOf(
-    EmojiGroup({ stringResource(R.string.composer_emoji_group_acn) }, acStickers()),
-    EmojiGroup({ stringResource(R.string.composer_emoji_group_onion) }, yctStickers()),
-    EmojiGroup({ stringResource(R.string.composer_emoji_group_chick) }, xhjStickers()),
+    EmojiGroup({ stringResource(Res.string.composer_emoji_group_acn) }, acStickers()),
+    EmojiGroup({ stringResource(Res.string.composer_emoji_group_onion) }, yctStickers()),
+    EmojiGroup({ stringResource(Res.string.composer_emoji_group_chick) }, xhjStickers()),
     EmojiGroup(
-        { stringResource(R.string.composer_emoji_group_fluent) },
+        { stringResource(Res.string.composer_emoji_group_fluent) },
         listOf(
             "😀", "😄", "😅", "🤣", "🙂", "😉",
             "😍", "😘", "🤔", "😐", "😴", "😭",
@@ -144,7 +149,7 @@ fun NodeSeekEmojiPanel(
         onBackspace = onBackspace,
         recent = recent,
         onRecentChange = onRecentChange,
-        emptyGroupText = stringResource(R.string.composer_emoji_stickers_pending),
+        emptyGroupText = stringResource(Res.string.composer_emoji_stickers_pending),
         stickerImage = { sticker, description, imageModifier ->
             NodeSeekStickerImage(sticker, description, imageModifier)
         },

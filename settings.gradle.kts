@@ -65,3 +65,11 @@ include(":shared")
 // library's multiplatform variants are for, and this one resolves them exactly the way a future
 // Apple app would.
 include(":gallery")
+
+// The screens: everything that used to be `app/src/main/.../ui`, plus the strings and drawables they
+// draw. A module of its own rather than a source set inside `:shared` because `:designsys` sits
+// *below* `:shared` — a screen depends on both, so the two cannot be the same module without a cycle.
+//
+// Step D1 of `docs/kmp-migration-plan.md`. What stays in `:app` is the Android shell: the activity,
+// the notification worker, the image pickers — the parts that name a platform rather than a screen.
+include(":ui")

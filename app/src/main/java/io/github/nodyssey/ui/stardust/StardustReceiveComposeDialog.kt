@@ -28,17 +28,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
 import io.github.nodyssey.core.StardustReceiveMarkup
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.stardust_compose_amount
+import io.github.nodyssey.ui.resources.stardust_compose_amount_hint
+import io.github.nodyssey.ui.resources.stardust_compose_insert
+import io.github.nodyssey.ui.resources.stardust_compose_needs_sign_in
+import io.github.nodyssey.ui.resources.stardust_compose_note
+import io.github.nodyssey.ui.resources.stardust_compose_note_hint
+import io.github.nodyssey.ui.resources.stardust_compose_onetime
+import io.github.nodyssey.ui.resources.stardust_compose_onetime_body
+import io.github.nodyssey.ui.resources.stardust_compose_ref
+import io.github.nodyssey.ui.resources.stardust_compose_ref_hint
+import io.github.nodyssey.ui.resources.stardust_compose_ref_support
+import io.github.nodyssey.ui.resources.stardust_compose_title
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 插入星辰收款码 — the composer's side of a receive code.
@@ -76,7 +89,7 @@ fun StardustReceiveComposeDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(PlazaIcons.QrCode, contentDescription = null) },
-        title = { Text(stringResource(R.string.stardust_compose_title)) },
+        title = { Text(stringResource(Res.string.stardust_compose_title)) },
         text = {
             Column(
                 Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
@@ -85,8 +98,8 @@ fun StardustReceiveComposeDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it.filter(Char::isDigit) },
-                    label = { Text(stringResource(R.string.stardust_compose_amount)) },
-                    placeholder = { Text(stringResource(R.string.stardust_compose_amount_hint)) },
+                    label = { Text(stringResource(Res.string.stardust_compose_amount)) },
+                    placeholder = { Text(stringResource(Res.string.stardust_compose_amount_hint)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     shape = MaterialTheme.shapes.small,
@@ -95,9 +108,9 @@ fun StardustReceiveComposeDialog(
                 OutlinedTextField(
                     value = refId,
                     onValueChange = { refId = it.filter(Char::isDigit) },
-                    label = { Text(stringResource(R.string.stardust_compose_ref)) },
-                    placeholder = { Text(stringResource(R.string.stardust_compose_ref_hint)) },
-                    supportingText = { Text(stringResource(R.string.stardust_compose_ref_support)) },
+                    label = { Text(stringResource(Res.string.stardust_compose_ref)) },
+                    placeholder = { Text(stringResource(Res.string.stardust_compose_ref_hint)) },
+                    supportingText = { Text(stringResource(Res.string.stardust_compose_ref_support)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     shape = MaterialTheme.shapes.small,
@@ -106,8 +119,8 @@ fun StardustReceiveComposeDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text(stringResource(R.string.stardust_compose_note)) },
-                    placeholder = { Text(stringResource(R.string.stardust_compose_note_hint)) },
+                    label = { Text(stringResource(Res.string.stardust_compose_note)) },
+                    placeholder = { Text(stringResource(Res.string.stardust_compose_note_hint)) },
                     singleLine = true,
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth(),
@@ -123,7 +136,7 @@ fun StardustReceiveComposeDialog(
 
                 if (needsSignIn) {
                     Text(
-                        stringResource(R.string.stardust_compose_needs_sign_in),
+                        stringResource(Res.string.stardust_compose_needs_sign_in),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -141,11 +154,11 @@ fun StardustReceiveComposeDialog(
                 },
                 enabled = canInsert,
             ) {
-                Text(stringResource(R.string.stardust_compose_insert))
+                Text(stringResource(Res.string.stardust_compose_insert))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
     )
 }
@@ -165,9 +178,9 @@ private fun OnetimeRow(
             .padding(horizontal = Spacing.md, vertical = Spacing.sm),
     ) {
         Column(Modifier.weight(1f).padding(end = Spacing.sm)) {
-            Text(stringResource(R.string.stardust_compose_onetime), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(Res.string.stardust_compose_onetime), style = MaterialTheme.typography.bodyMedium)
             Text(
-                stringResource(R.string.stardust_compose_onetime_body),
+                stringResource(Res.string.stardust_compose_onetime_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

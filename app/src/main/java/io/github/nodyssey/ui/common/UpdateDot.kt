@@ -3,10 +3,11 @@ package io.github.nodyssey.ui.common
 import androidx.compose.material3.Badge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.update_dot_description
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The 有新版本 dot, on whatever row leads to 关于 Nodyssey.
@@ -17,6 +18,6 @@ import io.github.nodyssey.R
  */
 @Composable
 fun UpdateDot(modifier: Modifier = Modifier) {
-    val description = stringResource(R.string.update_dot_description)
+    val description = stringResource(Res.string.update_dot_description)
     Badge(modifier = modifier.semantics { contentDescription = description })
 }

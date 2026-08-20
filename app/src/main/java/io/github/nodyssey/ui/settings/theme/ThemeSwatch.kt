@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.settings.theme
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,12 +22,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import io.github.plaza.designsys.theme.PlazaDefaultSeed
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 /**
  * One colour dot, in the two places a seed is picked as a colour: the wallpaper candidates and the
@@ -128,7 +128,7 @@ internal fun contentColorOn(color: Color): Color =
  */
 @Composable
 internal fun PresetDot(
-    @DrawableRes avatar: Int?,
+    avatar: DrawableResource?,
     selected: Boolean,
     modifier: Modifier = Modifier,
     /** What the ring's gap is painted with: whatever the dot is sitting on. */

@@ -16,15 +16,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.app_name
+import io.github.nodyssey.ui.resources.licenses_app_section
+import io.github.nodyssey.ui.resources.licenses_dependencies_section
+import io.github.nodyssey.ui.resources.licenses_lockfile_note
+import io.github.nodyssey.ui.resources.licenses_summary
+import io.github.nodyssey.ui.resources.settings_licenses
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun OpenSourceLicensesScreen(
@@ -37,13 +44,13 @@ fun OpenSourceLicensesScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.settings_licenses),
+                title = stringResource(Res.string.settings_licenses),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -61,14 +68,14 @@ fun OpenSourceLicensesScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Text(
-                text = stringResource(R.string.licenses_summary),
+                text = stringResource(Res.string.licenses_summary),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            SettingsSectionTitle(stringResource(R.string.licenses_app_section))
+            SettingsSectionTitle(stringResource(Res.string.licenses_app_section))
             SettingsGroup {
                 SettingsRow(
-                    title = stringResource(R.string.app_name),
+                    title = stringResource(Res.string.app_name),
                     subtitle = "GNU General Public License v3.0",
                     top = true,
                     bottom = true,
@@ -76,7 +83,7 @@ fun OpenSourceLicensesScreen(
                     trailing = { LicenseLinkIcon() },
                 )
             }
-            SettingsSectionTitle(stringResource(R.string.licenses_dependencies_section))
+            SettingsSectionTitle(stringResource(Res.string.licenses_dependencies_section))
             SettingsGroup {
                 SHIPPED_LIBRARIES.forEachIndexed { index, library ->
                     SettingsRow(
@@ -90,7 +97,7 @@ fun OpenSourceLicensesScreen(
                 }
             }
             Text(
-                text = stringResource(R.string.licenses_lockfile_note),
+                text = stringResource(Res.string.licenses_lockfile_note),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.sm),

@@ -5,11 +5,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.R
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.account.AccountProfileFields
 import io.github.nodyssey.data.account.AccountSettingsRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.account_action_saved
+import io.github.nodyssey.ui.resources.account_avatar_failed
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,7 +77,7 @@ class ProfileFieldsViewModel(
         _uiState.update { it.copy(pendingAvatar = avatar, message = null) }
 
     fun reportAvatarFailure() =
-        _uiState.update { it.copy(message = AccountMessage.Info(R.string.account_avatar_failed)) }
+        _uiState.update { it.copy(message = AccountMessage.Info(Res.string.account_avatar_failed)) }
 
     fun save() {
         if (saveJob?.isActive == true) return
@@ -115,7 +117,7 @@ class ProfileFieldsViewModel(
                                 isSaving = false,
                                 saved = fields,
                                 pendingAvatar = null,
-                                message = AccountMessage.Info(R.string.account_action_saved),
+                                message = AccountMessage.Info(Res.string.account_action_saved),
                             )
                         }
                     }.onFailure { throwable ->

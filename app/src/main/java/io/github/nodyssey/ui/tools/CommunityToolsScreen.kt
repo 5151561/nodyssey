@@ -18,10 +18,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.about_community_hint
+import io.github.nodyssey.ui.resources.about_community_title
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.tools_award
+import io.github.nodyssey.ui.resources.tools_award_subtitle
+import io.github.nodyssey.ui.resources.tools_friends
+import io.github.nodyssey.ui.resources.tools_friends_subtitle
+import io.github.nodyssey.ui.resources.tools_group_browse
+import io.github.nodyssey.ui.resources.tools_group_play
+import io.github.nodyssey.ui.resources.tools_group_watch
+import io.github.nodyssey.ui.resources.tools_invite
+import io.github.nodyssey.ui.resources.tools_invite_subtitle
+import io.github.nodyssey.ui.resources.tools_lucky
+import io.github.nodyssey.ui.resources.tools_lucky_subtitle
+import io.github.nodyssey.ui.resources.tools_providers
+import io.github.nodyssey.ui.resources.tools_providers_subtitle
+import io.github.nodyssey.ui.resources.tools_ruling
+import io.github.nodyssey.ui.resources.tools_ruling_subtitle
+import io.github.nodyssey.ui.resources.tools_title
 import io.github.plaza.designsys.component.GroupedColumn
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.OneHandTopAppBar
@@ -31,6 +49,7 @@ import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 社区工具 — the six links NodeSeek keeps in its quick-access strip, grouped by what they are for.
@@ -59,13 +78,13 @@ fun CommunityToolsScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.tools_title),
+                title = stringResource(Res.string.tools_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -82,24 +101,24 @@ fun CommunityToolsScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Column {
-                SectionLabel(stringResource(R.string.tools_group_browse))
+                SectionLabel(stringResource(Res.string.tools_group_browse))
                 GroupedColumn {
                     GroupedRow(
-                        title = stringResource(R.string.tools_award),
-                        subtitle = stringResource(R.string.tools_award_subtitle),
+                        title = stringResource(Res.string.tools_award),
+                        subtitle = stringResource(Res.string.tools_award_subtitle),
                         icon = PlazaIcons.MenuBook,
                         first = true,
                         onClick = onAward,
                     )
                     GroupedRow(
-                        title = stringResource(R.string.tools_providers),
-                        subtitle = stringResource(R.string.tools_providers_subtitle),
+                        title = stringResource(Res.string.tools_providers),
+                        subtitle = stringResource(Res.string.tools_providers_subtitle),
                         icon = Icons.Default.ShoppingCart,
                         onClick = onProviders,
                     )
                     GroupedRow(
-                        title = stringResource(R.string.tools_friends),
-                        subtitle = stringResource(R.string.tools_friends_subtitle),
+                        title = stringResource(Res.string.tools_friends),
+                        subtitle = stringResource(Res.string.tools_friends_subtitle),
                         icon = PlazaIcons.Link,
                         last = true,
                         onClick = onFriends,
@@ -108,18 +127,18 @@ fun CommunityToolsScreen(
             }
 
             Column {
-                SectionLabel(stringResource(R.string.tools_group_play))
+                SectionLabel(stringResource(Res.string.tools_group_play))
                 GroupedColumn {
                     GroupedRow(
-                        title = stringResource(R.string.tools_lucky),
-                        subtitle = stringResource(R.string.tools_lucky_subtitle),
+                        title = stringResource(Res.string.tools_lucky),
+                        subtitle = stringResource(Res.string.tools_lucky_subtitle),
                         icon = PlazaIcons.Casino,
                         first = true,
                         onClick = onLucky,
                     )
                     GroupedRow(
-                        title = stringResource(R.string.tools_invite),
-                        subtitle = stringResource(R.string.tools_invite_subtitle),
+                        title = stringResource(Res.string.tools_invite),
+                        subtitle = stringResource(Res.string.tools_invite_subtitle),
                         icon = PlazaIcons.ConfirmationNumber,
                         last = true,
                         onClick = onInvite,
@@ -128,10 +147,10 @@ fun CommunityToolsScreen(
             }
 
             Column {
-                SectionLabel(stringResource(R.string.tools_group_watch))
+                SectionLabel(stringResource(Res.string.tools_group_watch))
                 GroupedRow(
-                    title = stringResource(R.string.tools_ruling),
-                    subtitle = stringResource(R.string.tools_ruling_subtitle),
+                    title = stringResource(Res.string.tools_ruling),
+                    subtitle = stringResource(Res.string.tools_ruling_subtitle),
                     icon = PlazaIcons.Gavel,
                     first = true,
                     last = true,
@@ -140,8 +159,8 @@ fun CommunityToolsScreen(
             }
 
             GroupedRow(
-                title = stringResource(R.string.about_community_title),
-                subtitle = stringResource(R.string.about_community_hint),
+                title = stringResource(Res.string.about_community_title),
+                subtitle = stringResource(Res.string.about_community_hint),
                 icon = Icons.Default.Info,
                 first = true,
                 last = true,

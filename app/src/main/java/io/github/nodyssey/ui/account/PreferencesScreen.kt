@@ -28,21 +28,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.data.settings.OPTIONAL_HOME_BOARD_SLUGS
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.account_board_life
+import io.github.nodyssey.ui.resources.account_board_photo
+import io.github.nodyssey.ui.resources.account_board_trade
+import io.github.nodyssey.ui.resources.account_group_homepage
+import io.github.nodyssey.ui.resources.account_group_preference
+import io.github.nodyssey.ui.resources.account_holiday_theme
+import io.github.nodyssey.ui.resources.account_holiday_theme_hint
+import io.github.nodyssey.ui.resources.account_home_boards_hint
+import io.github.nodyssey.ui.resources.account_preferences_omitted_note
+import io.github.nodyssey.ui.resources.account_preferences_title
+import io.github.nodyssey.ui.resources.account_storage_legend
+import io.github.nodyssey.ui.resources.action_back
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PreferencesRoute(
@@ -96,13 +108,13 @@ fun PreferencesScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.account_preferences_title),
+                title = stringResource(Res.string.account_preferences_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -119,11 +131,11 @@ fun PreferencesScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            AccountSectionLabel(stringResource(R.string.account_group_preference))
+            AccountSectionLabel(stringResource(Res.string.account_group_preference))
 
             PreferenceSwitchRow(
-                title = stringResource(R.string.account_holiday_theme),
-                subtitle = stringResource(R.string.account_holiday_theme_hint),
+                title = stringResource(Res.string.account_holiday_theme),
+                subtitle = stringResource(Res.string.account_holiday_theme_hint),
                 local = false,
                 checked = state.holidayTheme,
                 onCheckedChange = onHolidayThemeChange,
@@ -131,7 +143,7 @@ fun PreferencesScreen(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             Text(
-                stringResource(R.string.account_preferences_omitted_note),
+                stringResource(Res.string.account_preferences_omitted_note),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xs),
@@ -142,13 +154,13 @@ fun PreferencesScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 AccountSectionLabel(
-                    text = stringResource(R.string.account_group_homepage),
+                    text = stringResource(Res.string.account_group_homepage),
                     modifier = Modifier.weight(1f),
                 )
                 StorageBadge(local = false)
             }
             Text(
-                stringResource(R.string.account_home_boards_hint),
+                stringResource(Res.string.account_home_boards_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.xs),
@@ -166,7 +178,7 @@ fun PreferencesScreen(
             }
 
             Text(
-                stringResource(R.string.account_storage_legend),
+                stringResource(Res.string.account_storage_legend),
                 style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.sm),
@@ -249,9 +261,9 @@ private fun HomeBoardSwitchRow(
 @Composable
 private fun optionalBoardTitle(slug: String): String =
     when (slug) {
-        "trade" -> stringResource(R.string.account_board_trade)
-        "life" -> stringResource(R.string.account_board_life)
-        "photo-share" -> stringResource(R.string.account_board_photo)
+        "trade" -> stringResource(Res.string.account_board_trade)
+        "life" -> stringResource(Res.string.account_board_life)
+        "photo-share" -> stringResource(Res.string.account_board_photo)
         else -> slug
     }
 

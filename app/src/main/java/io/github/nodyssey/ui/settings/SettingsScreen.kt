@@ -36,18 +36,69 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.ui.common.UpdateDot
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.imagehost_connected
+import io.github.nodyssey.ui.resources.imagehost_not_connected
+import io.github.nodyssey.ui.resources.imagehost_title
+import io.github.nodyssey.ui.resources.notify_master_title
+import io.github.nodyssey.ui.resources.notify_settings_entry_hint
+import io.github.nodyssey.ui.resources.notify_settings_title
+import io.github.nodyssey.ui.resources.settings_about
+import io.github.nodyssey.ui.resources.settings_about_app
+import io.github.nodyssey.ui.resources.settings_about_app_update
+import io.github.nodyssey.ui.resources.settings_app_links
+import io.github.nodyssey.ui.resources.settings_app_links_hint_off
+import io.github.nodyssey.ui.resources.settings_app_links_hint_on
+import io.github.nodyssey.ui.resources.settings_appearance
+import io.github.nodyssey.ui.resources.settings_body_size
+import io.github.nodyssey.ui.resources.settings_body_size_value
+import io.github.nodyssey.ui.resources.settings_clear_cache
+import io.github.nodyssey.ui.resources.settings_clear_cache_size
+import io.github.nodyssey.ui.resources.settings_content
+import io.github.nodyssey.ui.resources.settings_external_link
+import io.github.nodyssey.ui.resources.settings_external_link_browser
+import io.github.nodyssey.ui.resources.settings_external_link_custom_tab
+import io.github.nodyssey.ui.resources.settings_external_link_hint
+import io.github.nodyssey.ui.resources.settings_home_page_bar
+import io.github.nodyssey.ui.resources.settings_home_page_bar_hint
+import io.github.nodyssey.ui.resources.settings_licenses
+import io.github.nodyssey.ui.resources.settings_network
+import io.github.nodyssey.ui.resources.settings_proxy_entry
+import io.github.nodyssey.ui.resources.settings_proxy_entry_hint
+import io.github.nodyssey.ui.resources.settings_report_format
+import io.github.nodyssey.ui.resources.settings_report_format_adapted
+import io.github.nodyssey.ui.resources.settings_report_format_hint
+import io.github.nodyssey.ui.resources.settings_report_format_source
+import io.github.nodyssey.ui.resources.settings_sticker_size
+import io.github.nodyssey.ui.resources.settings_sticker_size_value
+import io.github.nodyssey.ui.resources.settings_sticker_uniform
+import io.github.nodyssey.ui.resources.settings_sticker_uniform_hint
+import io.github.nodyssey.ui.resources.settings_text_preview
+import io.github.nodyssey.ui.resources.settings_theme
+import io.github.nodyssey.ui.resources.settings_theme_dark
+import io.github.nodyssey.ui.resources.settings_theme_entry_hint
+import io.github.nodyssey.ui.resources.settings_theme_light
+import io.github.nodyssey.ui.resources.settings_theme_mode
+import io.github.nodyssey.ui.resources.settings_theme_system
+import io.github.nodyssey.ui.resources.settings_title
+import io.github.nodyssey.ui.resources.settings_update_dev_channel
+import io.github.nodyssey.ui.resources.settings_update_dev_channel_hint
+import io.github.nodyssey.ui.resources.settings_update_on_launch
+import io.github.nodyssey.ui.resources.settings_update_on_launch_hint
+import io.github.nodyssey.ui.resources.settings_version
+import io.github.nodyssey.ui.resources.settings_wifi_images
+import io.github.nodyssey.ui.resources.settings_wifi_images_hint
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
@@ -59,6 +110,7 @@ import io.github.plaza.designsys.richtext.StickerSizing
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 @Composable
@@ -149,13 +201,13 @@ fun SettingsScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.settings_title),
+                title = stringResource(Res.string.settings_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -172,7 +224,7 @@ fun SettingsScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            SettingsSectionTitle(stringResource(R.string.settings_appearance))
+            SettingsSectionTitle(stringResource(Res.string.settings_appearance))
             SettingsGroup {
                 // 明暗 stays here, one tap from 设置, while everything else about colour moved onto
                 // 主题's own screen. It is not that it fits the group better — it is that it is
@@ -180,7 +232,7 @@ fun SettingsScreen(
                 // people use daily does not belong two screens deep behind one they set once.
                 SettingsBlock(
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    title = stringResource(R.string.settings_theme_mode),
+                    title = stringResource(Res.string.settings_theme_mode),
                     top = true,
                 ) {
                     ConnectedThemeButtons(
@@ -193,14 +245,14 @@ fun SettingsScreen(
                 // them changes the screen it is read on.
                 SettingsRow(
                     leading = { Icon(PlazaIcons.Palette, contentDescription = null) },
-                    title = stringResource(R.string.settings_theme),
-                    subtitle = stringResource(R.string.settings_theme_entry_hint),
+                    title = stringResource(Res.string.settings_theme),
+                    subtitle = stringResource(Res.string.settings_theme_entry_hint),
                     onClick = onOpenTheme,
                 )
                 SettingsBlock(
-                    title = stringResource(R.string.settings_body_size),
+                    title = stringResource(Res.string.settings_body_size),
                     subtitle = stringResource(
-                        R.string.settings_body_size_value,
+                        Res.string.settings_body_size_value,
                         bodyFontSize.roundToInt(),
                     ),
                 ) {
@@ -221,15 +273,15 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Text(
-                            stringResource(R.string.settings_text_preview),
+                            stringResource(Res.string.settings_text_preview),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(Spacing.md),
                         )
                     }
                 }
                 SettingsRow(
-                    title = stringResource(R.string.settings_sticker_uniform),
-                    subtitle = stringResource(R.string.settings_sticker_uniform_hint),
+                    title = stringResource(Res.string.settings_sticker_uniform),
+                    subtitle = stringResource(Res.string.settings_sticker_uniform_hint),
                     checked = state.settings.stickerUniformSize,
                     onCheckedChange = onStickerUniformSizeChange,
                     // The slider below only exists while the switch is on, so which of the two
@@ -244,9 +296,9 @@ fun SettingsScreen(
                 )
                 if (state.settings.stickerUniformSize) {
                     SettingsBlock(
-                        title = stringResource(R.string.settings_sticker_size),
+                        title = stringResource(Res.string.settings_sticker_size),
                         subtitle = stringResource(
-                            R.string.settings_sticker_size_value,
+                            Res.string.settings_sticker_size_value,
                             stickerSize.roundToInt(),
                         ),
                         bottom = true,
@@ -267,12 +319,12 @@ fun SettingsScreen(
                 }
             }
 
-            SettingsSectionTitle(stringResource(R.string.settings_content))
+            SettingsSectionTitle(stringResource(Res.string.settings_content))
             SettingsGroup {
                 SettingsBlock(
                     icon = { Icon(PlazaIcons.OpenInNew, contentDescription = null) },
-                    title = stringResource(R.string.settings_external_link),
-                    subtitle = stringResource(R.string.settings_external_link_hint),
+                    title = stringResource(Res.string.settings_external_link),
+                    subtitle = stringResource(Res.string.settings_external_link_hint),
                     top = true,
                 ) {
                     ConnectedExternalLinkButtons(
@@ -283,13 +335,13 @@ fun SettingsScreen(
                 appLinkHandlingEnabled?.let { enabled ->
                     SettingsRow(
                         leading = { Icon(PlazaIcons.Link, contentDescription = null) },
-                        title = stringResource(R.string.settings_app_links),
+                        title = stringResource(Res.string.settings_app_links),
                         subtitle =
                         stringResource(
                             if (enabled) {
-                                R.string.settings_app_links_hint_on
+                                Res.string.settings_app_links_hint_on
                             } else {
-                                R.string.settings_app_links_hint_off
+                                Res.string.settings_app_links_hint_off
                             },
                         ),
                         onClick = onOpenAppLinkSettings,
@@ -297,8 +349,8 @@ fun SettingsScreen(
                 }
                 SettingsBlock(
                     icon = { Icon(PlazaIcons.Code, contentDescription = null) },
-                    title = stringResource(R.string.settings_report_format),
-                    subtitle = stringResource(R.string.settings_report_format_hint),
+                    title = stringResource(Res.string.settings_report_format),
+                    subtitle = stringResource(Res.string.settings_report_format_hint),
                 ) {
                     ConnectedReportFormatButtons(
                         selected = state.settings.reportFormat,
@@ -306,8 +358,8 @@ fun SettingsScreen(
                     )
                 }
                 SettingsRow(
-                    title = stringResource(R.string.settings_home_page_bar),
-                    subtitle = stringResource(R.string.settings_home_page_bar_hint),
+                    title = stringResource(Res.string.settings_home_page_bar),
+                    subtitle = stringResource(Res.string.settings_home_page_bar_hint),
                     checked = state.settings.homePageBar,
                     onCheckedChange = onHomePageBarChange,
                     trailing = {
@@ -318,8 +370,8 @@ fun SettingsScreen(
                     },
                 )
                 SettingsRow(
-                    title = stringResource(R.string.settings_wifi_images),
-                    subtitle = stringResource(R.string.settings_wifi_images_hint),
+                    title = stringResource(Res.string.settings_wifi_images),
+                    subtitle = stringResource(Res.string.settings_wifi_images_hint),
                     checked = state.settings.imagesOnWifiOnly,
                     onCheckedChange = onImagesOnWifiOnlyChange,
                     trailing = {
@@ -330,14 +382,14 @@ fun SettingsScreen(
                     },
                 )
                 SettingsRow(
-                    title = stringResource(R.string.imagehost_title),
+                    title = stringResource(Res.string.imagehost_title),
                     // 已连接 / 未连接 rather than the host's name: what the row is asked on the way
                     // to writing a post is whether inserting a picture will work at all.
                     subtitle = stringResource(
                         if (state.imageHostConnected) {
-                            R.string.imagehost_connected
+                            Res.string.imagehost_connected
                         } else {
-                            R.string.imagehost_not_connected
+                            Res.string.imagehost_not_connected
                         },
                     ),
                     onClick = onOpenImageHost,
@@ -345,12 +397,12 @@ fun SettingsScreen(
                 )
                 val context = LocalContext.current
                 SettingsRow(
-                    title = stringResource(R.string.settings_clear_cache),
+                    title = stringResource(Res.string.settings_clear_cache),
                     // The figure is the one system settings shows under 缓存, in the units it uses.
                     // Absent until the walk finishes, rather than a 0 that would read as an answer.
                     subtitle = state.cacheSizeBytes?.let { bytes ->
                         stringResource(
-                            R.string.settings_clear_cache_size,
+                            Res.string.settings_clear_cache_size,
                             Formatter.formatShortFileSize(context, bytes),
                         )
                     },
@@ -365,11 +417,11 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsSectionTitle(stringResource(R.string.notify_settings_title))
+            SettingsSectionTitle(stringResource(Res.string.notify_settings_title))
             SettingsGroup {
                 SettingsRow(
-                    title = stringResource(R.string.notify_master_title),
-                    subtitle = stringResource(R.string.notify_settings_entry_hint),
+                    title = stringResource(Res.string.notify_master_title),
+                    subtitle = stringResource(Res.string.notify_settings_entry_hint),
                     top = true,
                     bottom = true,
                     onClick = onOpenNotifications,
@@ -377,32 +429,32 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsSectionTitle(stringResource(R.string.settings_network))
+            SettingsSectionTitle(stringResource(Res.string.settings_network))
             SettingsGroup {
                 SettingsRow(
-                    title = stringResource(R.string.settings_proxy_entry),
-                    subtitle = stringResource(R.string.settings_proxy_entry_hint),
+                    title = stringResource(Res.string.settings_proxy_entry),
+                    subtitle = stringResource(Res.string.settings_proxy_entry_hint),
                     top = true,
                     bottom = true,
                     onClick = onOpenProxy,
                 )
             }
 
-            SettingsSectionTitle(stringResource(R.string.settings_about))
+            SettingsSectionTitle(stringResource(Res.string.settings_about))
             SettingsGroup {
                 SettingsRow(
-                    title = stringResource(R.string.settings_about_app),
+                    title = stringResource(Res.string.settings_about_app),
                     subtitle = state.updateVersionName
-                        ?.let { stringResource(R.string.settings_about_app_update, it) }
-                        ?: stringResource(R.string.settings_version, state.versionName),
+                        ?.let { stringResource(Res.string.settings_about_app_update, it) }
+                        ?: stringResource(Res.string.settings_version, state.versionName),
                     top = true,
                     onClick = onOpenAbout,
                     leading = { Icon(Icons.Default.Info, contentDescription = null) },
                     trailing = { if (state.updateVersionName != null) UpdateDot() },
                 )
                 SettingsRow(
-                    title = stringResource(R.string.settings_update_on_launch),
-                    subtitle = stringResource(R.string.settings_update_on_launch_hint),
+                    title = stringResource(Res.string.settings_update_on_launch),
+                    subtitle = stringResource(Res.string.settings_update_on_launch_hint),
                     checked = state.settings.updateCheckOnLaunch,
                     onCheckedChange = onUpdateCheckOnLaunchChange,
                     trailing = {
@@ -413,8 +465,8 @@ fun SettingsScreen(
                     },
                 )
                 SettingsRow(
-                    title = stringResource(R.string.settings_update_dev_channel),
-                    subtitle = stringResource(R.string.settings_update_dev_channel_hint),
+                    title = stringResource(Res.string.settings_update_dev_channel),
+                    subtitle = stringResource(Res.string.settings_update_dev_channel_hint),
                     checked = state.settings.updateDevChannel,
                     onCheckedChange = onUpdateDevChannelChange,
                     trailing = {
@@ -425,7 +477,7 @@ fun SettingsScreen(
                     },
                 )
                 SettingsRow(
-                    title = stringResource(R.string.settings_licenses),
+                    title = stringResource(Res.string.settings_licenses),
                     bottom = true,
                     onClick = onOpenLicenses,
                 )
@@ -442,8 +494,8 @@ private fun ConnectedExternalLinkButtons(
     val choices =
         listOf(
             ExternalLinkTarget.CUSTOM_TAB to
-                stringResource(R.string.settings_external_link_custom_tab),
-            ExternalLinkTarget.BROWSER to stringResource(R.string.settings_external_link_browser),
+                stringResource(Res.string.settings_external_link_custom_tab),
+            ExternalLinkTarget.BROWSER to stringResource(Res.string.settings_external_link_browser),
         )
     ConnectedChoiceButtons(
         labels = choices.map { it.second },
@@ -464,9 +516,9 @@ private fun ConnectedThemeButtons(
 ) {
     val choices =
         listOf(
-            ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
-            ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
-            ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
+            ThemeMode.SYSTEM to stringResource(Res.string.settings_theme_system),
+            ThemeMode.LIGHT to stringResource(Res.string.settings_theme_light),
+            ThemeMode.DARK to stringResource(Res.string.settings_theme_dark),
         )
     ConnectedChoiceButtons(
         labels = choices.map { it.second },
@@ -482,8 +534,8 @@ private fun ConnectedReportFormatButtons(
 ) {
     val choices =
         listOf(
-            ReportFormat.ADAPTED to stringResource(R.string.settings_report_format_adapted),
-            ReportFormat.SOURCE to stringResource(R.string.settings_report_format_source),
+            ReportFormat.ADAPTED to stringResource(Res.string.settings_report_format_adapted),
+            ReportFormat.SOURCE to stringResource(Res.string.settings_report_format_source),
         )
     ConnectedChoiceButtons(
         labels = choices.map { it.second },

@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -32,9 +31,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.app_name
+import io.github.nodyssey.ui.resources.settings_theme_preview_accent
+import io.github.nodyssey.ui.resources.settings_theme_preview_board
+import io.github.nodyssey.ui.resources.settings_theme_preview_meta
+import io.github.nodyssey.ui.resources.settings_theme_preview_primary
+import io.github.nodyssey.ui.resources.settings_theme_preview_secondary
+import io.github.nodyssey.ui.resources.settings_theme_preview_title
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A miniature of the app, drawn in the scheme the settings above it produce.
@@ -78,7 +85,7 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    stringResource(R.string.app_name),
+                    stringResource(Res.string.app_name),
                     style =
                     TextStyle(
                         fontSize = 15.sp,
@@ -104,7 +111,7 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        stringResource(R.string.settings_theme_preview_board),
+                        stringResource(Res.string.settings_theme_preview_board),
                         style = TextStyle(fontSize = 10.5.sp),
                         color = scheme.onSecondaryContainer,
                         modifier =
@@ -114,13 +121,13 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
                             .padding(horizontal = 7.dp, vertical = 2.dp),
                     )
                     Text(
-                        stringResource(R.string.settings_theme_preview_meta),
+                        stringResource(Res.string.settings_theme_preview_meta),
                         style = TextStyle(fontSize = 10.5.sp),
                         color = scheme.onSurfaceVariant,
                     )
                 }
                 Text(
-                    stringResource(R.string.settings_theme_preview_title),
+                    stringResource(Res.string.settings_theme_preview_title),
                     style = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
                     color = scheme.onSurface,
                     maxLines = 1,
@@ -138,19 +145,19 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PreviewPill(
-                    stringResource(R.string.settings_theme_preview_primary),
+                    stringResource(Res.string.settings_theme_preview_primary),
                     scheme.primary,
                     scheme.onPrimary,
                     FontWeight.SemiBold,
                 )
                 PreviewPill(
-                    stringResource(R.string.settings_theme_preview_secondary),
+                    stringResource(Res.string.settings_theme_preview_secondary),
                     scheme.secondaryContainer,
                     scheme.onSecondaryContainer,
                     FontWeight.Medium,
                 )
                 PreviewPill(
-                    stringResource(R.string.settings_theme_preview_accent),
+                    stringResource(Res.string.settings_theme_preview_accent),
                     scheme.tertiaryContainer,
                     scheme.onTertiaryContainer,
                     FontWeight.Medium,

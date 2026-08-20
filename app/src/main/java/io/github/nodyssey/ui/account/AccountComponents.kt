@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.account
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -12,12 +11,22 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
 import io.github.nodyssey.ui.postlist.toSiteError
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.status_challenge_title
+import io.github.nodyssey.ui.resources.status_level_required_title
+import io.github.nodyssey.ui.resources.status_network_title
+import io.github.nodyssey.ui.resources.status_not_wired_title
+import io.github.nodyssey.ui.resources.status_rate_limited_title
+import io.github.nodyssey.ui.resources.status_sign_in_title
+import io.github.nodyssey.ui.resources.status_unknown_title
+import io.github.nodyssey.ui.resources.status_unparsable_title
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.Spacing
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /** The radius every field, card and sheet on these screens rounds to. */
 internal val AccountFieldShape = RoundedCornerShape(14.dp)
@@ -26,7 +35,7 @@ internal val AccountFieldShape = RoundedCornerShape(14.dp)
  * Something a sub-page needs to tell the user once, in a snackbar.
  */
 sealed interface AccountMessage {
-    data class Info(@StringRes val textRes: Int) : AccountMessage
+    data class Info(val textRes: StringResource) : AccountMessage
 
     data class Failure(val error: SiteError) : AccountMessage
 
@@ -51,25 +60,25 @@ internal fun accountMessageText(message: AccountMessage): String =
     }
 
 @Composable
-private fun SiteError.messageRes(): Int =
+private fun SiteError.messageRes(): StringResource =
     when (this) {
-        SiteError.Cloudflare -> R.string.status_challenge_title
+        SiteError.Cloudflare -> Res.string.status_challenge_title
 
-        SiteError.LoginRequired -> R.string.status_sign_in_title
+        SiteError.LoginRequired -> Res.string.status_sign_in_title
 
         // The level, where the page named one, is lost on purpose: this is a snackbar line, and no
         // account setting is behind a reader level anyway.
-        is SiteError.LevelRequired -> R.string.status_level_required_title
+        is SiteError.LevelRequired -> Res.string.status_level_required_title
 
-        SiteError.Network -> R.string.status_network_title
+        SiteError.Network -> Res.string.status_network_title
 
-        SiteError.Unparsable -> R.string.status_unparsable_title
+        SiteError.Unparsable -> Res.string.status_unparsable_title
 
-        SiteError.NotWired -> R.string.status_not_wired_title
+        SiteError.NotWired -> Res.string.status_not_wired_title
 
-        SiteError.RateLimited -> R.string.status_rate_limited_title
+        SiteError.RateLimited -> Res.string.status_rate_limited_title
 
-        is SiteError.Http, SiteError.Unknown -> R.string.status_unknown_title
+        is SiteError.Http, SiteError.Unknown -> Res.string.status_unknown_title
     }
 
 /**
@@ -184,7 +193,7 @@ internal fun HighRiskDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
         shape = MaterialTheme.shapes.extraLarge,
     )

@@ -48,14 +48,26 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.ui.composer.EditorActions
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.account_action_save
+import io.github.nodyssey.ui.resources.account_avatar_change
+import io.github.nodyssey.ui.resources.account_avatar_pending
+import io.github.nodyssey.ui.resources.account_avatar_pick
+import io.github.nodyssey.ui.resources.account_avatar_take_photo
+import io.github.nodyssey.ui.resources.account_bio
+import io.github.nodyssey.ui.resources.account_bio_hint
+import io.github.nodyssey.ui.resources.account_profile_title
+import io.github.nodyssey.ui.resources.account_readme
+import io.github.nodyssey.ui.resources.account_readme_helper
+import io.github.nodyssey.ui.resources.account_signature
+import io.github.nodyssey.ui.resources.account_signature_helper
+import io.github.nodyssey.ui.resources.action_back
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
@@ -67,6 +79,7 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProfileFieldsRoute(
@@ -140,19 +153,19 @@ fun ProfileFieldsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.account_profile_title),
+                title = stringResource(Res.string.account_profile_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
                 actions = {
                     TextButton(onClick = onSave, enabled = state.canSave) {
-                        Text(stringResource(R.string.account_action_save))
+                        Text(stringResource(Res.string.account_action_save))
                     }
                 },
             )
@@ -191,8 +204,8 @@ fun ProfileFieldsScreen(
                 OutlinedTextField(
                     value = state.bio,
                     onValueChange = onBioChange,
-                    label = { Text(stringResource(R.string.account_bio)) },
-                    placeholder = { Text(stringResource(R.string.account_bio_hint)) },
+                    label = { Text(stringResource(Res.string.account_bio)) },
+                    placeholder = { Text(stringResource(Res.string.account_bio_hint)) },
                     singleLine = true,
                     shape = AccountFieldShape,
                     modifier =
@@ -204,23 +217,23 @@ fun ProfileFieldsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     MarkdownField(
                         fieldState = signatureState,
-                        label = stringResource(R.string.account_signature),
+                        label = stringResource(Res.string.account_signature),
                         minLines = SIGNATURE_MIN_LINES,
                         focusRequester = signatureFocus,
                         onFocused = { target = MarkdownTarget.SIGNATURE },
                     )
-                    AccountFieldHelper(stringResource(R.string.account_signature_helper))
+                    AccountFieldHelper(stringResource(Res.string.account_signature_helper))
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     MarkdownField(
                         fieldState = readmeState,
-                        label = stringResource(R.string.account_readme),
+                        label = stringResource(Res.string.account_readme),
                         minLines = README_MIN_LINES,
                         focusRequester = readmeFocus,
                         onFocused = { target = MarkdownTarget.README },
                     )
-                    AccountFieldHelper(stringResource(R.string.account_readme_helper))
+                    AccountFieldHelper(stringResource(Res.string.account_readme_helper))
                 }
             }
 
@@ -299,14 +312,14 @@ private fun AvatarEditor(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             PlazaIcons.PhotoCamera,
-                            contentDescription = stringResource(R.string.account_avatar_change),
+                            contentDescription = stringResource(Res.string.account_avatar_change),
                             modifier = Modifier.size(15.dp),
                         )
                     }
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.account_avatar_take_photo)) },
+                        text = { Text(stringResource(Res.string.account_avatar_take_photo)) },
                         leadingIcon = { Icon(PlazaIcons.PhotoCamera, contentDescription = null) },
                         onClick = {
                             menuOpen = false
@@ -314,7 +327,7 @@ private fun AvatarEditor(
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.account_avatar_pick)) },
+                        text = { Text(stringResource(Res.string.account_avatar_pick)) },
                         leadingIcon = { Icon(PlazaIcons.Image, contentDescription = null) },
                         onClick = {
                             menuOpen = false
@@ -327,7 +340,7 @@ private fun AvatarEditor(
 
         if (state.pendingAvatar != null) {
             Text(
-                stringResource(R.string.account_avatar_pending),
+                stringResource(Res.string.account_avatar_pending),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
             )

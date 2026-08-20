@@ -59,18 +59,49 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.action_publish
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.action_save
+import io.github.nodyssey.ui.resources.action_sign_in
+import io.github.nodyssey.ui.resources.action_verify
+import io.github.nodyssey.ui.resources.composer_body_hint
+import io.github.nodyssey.ui.resources.composer_draft_saved
+import io.github.nodyssey.ui.resources.composer_draft_saving
+import io.github.nodyssey.ui.resources.composer_image_default_name
+import io.github.nodyssey.ui.resources.composer_permission_level
+import io.github.nodyssey.ui.resources.composer_permission_private
+import io.github.nodyssey.ui.resources.composer_permission_public
+import io.github.nodyssey.ui.resources.composer_publish_challenge
+import io.github.nodyssey.ui.resources.composer_publish_failed
+import io.github.nodyssey.ui.resources.composer_publish_http
+import io.github.nodyssey.ui.resources.composer_publish_login_required
+import io.github.nodyssey.ui.resources.composer_publish_network_failed
+import io.github.nodyssey.ui.resources.composer_publish_unknown
+import io.github.nodyssey.ui.resources.composer_publishing
+import io.github.nodyssey.ui.resources.composer_restore_body
+import io.github.nodyssey.ui.resources.composer_restore_body_images
+import io.github.nodyssey.ui.resources.composer_restore_continue
+import io.github.nodyssey.ui.resources.composer_restore_discard
+import io.github.nodyssey.ui.resources.composer_restore_title
+import io.github.nodyssey.ui.resources.composer_saving
+import io.github.nodyssey.ui.resources.composer_select_board
+import io.github.nodyssey.ui.resources.composer_title_count
+import io.github.nodyssey.ui.resources.composer_title_hint
+import io.github.nodyssey.ui.resources.composer_view_compare
+import io.github.nodyssey.ui.resources.composer_view_content
+import io.github.nodyssey.ui.resources.composer_view_preview
 import io.github.nodyssey.ui.stardust.StardustReceiveComposeDialog
 import io.github.nodyssey.ui.vote.VoteComposeDialog
 import io.github.plaza.core.net.SiteError
@@ -85,6 +116,8 @@ import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import java.text.DateFormat
 import java.util.Date
 
@@ -119,9 +152,10 @@ fun PostComposerRoute(
         onRetry = viewModel::retryFailedUploads,
     )
 
+    val fallbackImageName = stringResource(Res.string.composer_image_default_name)
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(MAX_IMAGES_PER_PICK),
-    ) { uris -> viewModel.addImages(uris.toPickedImages(context)) }
+    ) { uris -> viewModel.addImages(uris.toPickedImages(context, fallbackImageName)) }
 
     PostComposerScreen(
         state = state,
@@ -167,9 +201,9 @@ private fun PublishErrorSnackbar(
     val actionLabel = state.publishError?.let { error ->
         stringResource(
             when (error) {
-                SiteError.LoginRequired -> R.string.action_sign_in
-                SiteError.Cloudflare -> R.string.action_verify
-                else -> R.string.action_retry
+                SiteError.LoginRequired -> Res.string.action_sign_in
+                SiteError.Cloudflare -> Res.string.action_verify
+                else -> Res.string.action_retry
             },
         )
     }
@@ -200,7 +234,7 @@ private fun UploadErrorSnackbar(
     onRetry: () -> Unit,
 ) {
     val message = uploadFailureText(failedCount, failure, detail)
-    val retry = stringResource(R.string.action_retry)
+    val retry = stringResource(Res.string.action_retry)
     LaunchedEffect(failedCount, message) {
         if (failedCount == 0) return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
@@ -352,7 +386,7 @@ private fun ComposerTopBar(
             IconButton(onClick = onClose, enabled = !isPublishing) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.action_cancel),
+                    contentDescription = stringResource(Res.string.action_cancel),
                 )
             }
         },
@@ -403,13 +437,13 @@ private fun PublishButton(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = stringResource(if (isEditing) R.string.composer_saving else R.string.composer_publishing),
+                text = stringResource(if (isEditing) Res.string.composer_saving else Res.string.composer_publishing),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(start = Spacing.sm),
             )
         } else {
             Text(
-                text = stringResource(if (isEditing) R.string.action_save else R.string.action_publish),
+                text = stringResource(if (isEditing) Res.string.action_save else Res.string.action_publish),
                 style = MaterialTheme.typography.labelLarge,
             )
         }
@@ -556,7 +590,7 @@ private fun BodyField(
 ) {
     EditorTextField(
         state = bodyState,
-        hint = stringResource(R.string.composer_body_hint),
+        hint = stringResource(Res.string.composer_body_hint),
         textStyle = PostBody.copy(color = MaterialTheme.colorScheme.onSurface),
         hintStyle = PostBody,
         modifier = modifier
@@ -576,7 +610,7 @@ private fun TitleField(
 ) {
     EditorTextField(
         state = titleState,
-        hint = stringResource(R.string.composer_title_hint),
+        hint = stringResource(Res.string.composer_title_hint),
         textStyle = MaterialTheme.typography.titleMedium.copy(
             fontSize = 19.sp,
             lineHeight = 26.sp,
@@ -596,7 +630,7 @@ private fun TitleField(
                     Box(Modifier.weight(1f).padding(bottom = Spacing.sm)) { content() }
                     Text(
                         text = stringResource(
-                            R.string.composer_title_count,
+                            Res.string.composer_title_count,
                             length,
                             PostComposerViewModel.MAX_TITLE_LENGTH,
                         ),
@@ -639,7 +673,7 @@ private fun ComposerOptions(
         if (!state.isEditing) {
             Box {
                 ComposerChip(
-                    label = state.boardTitle ?: stringResource(R.string.composer_select_board),
+                    label = state.boardTitle ?: stringResource(Res.string.composer_select_board),
                     filled = state.boardTitle != null,
                     error = boardMissing,
                     onClick = { boardMenuOpen = true },
@@ -682,8 +716,8 @@ private fun ComposerOptions(
         // already published would claim the opposite of what is true.
         if (!state.isEditing) {
             Text(
-                text = state.savedAtMillis?.let { stringResource(R.string.composer_draft_saved, formatTime(it)) }
-                    ?: stringResource(R.string.composer_draft_saving),
+                text = state.savedAtMillis?.let { stringResource(Res.string.composer_draft_saved, formatTime(it)) }
+                    ?: stringResource(Res.string.composer_draft_saving),
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -775,67 +809,67 @@ private fun DraftRecoveryDialog(
     onDiscard: () -> Unit,
 ) {
     val imageCount = remember(draft.body) { countImages(draft.body) }
-    val board = draft.boardTitle ?: stringResource(R.string.composer_select_board)
-    val title = draft.title.ifBlank { stringResource(R.string.composer_title_hint) }
+    val board = draft.boardTitle ?: stringResource(Res.string.composer_select_board)
+    val title = draft.title.ifBlank { stringResource(Res.string.composer_title_hint) }
     AlertDialog(
         onDismissRequest = {},
         icon = { Icon(PlazaIcons.Drafts, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = { Text(stringResource(R.string.composer_restore_title)) },
+        title = { Text(stringResource(Res.string.composer_restore_title)) },
         text = {
             Text(
                 text = if (imageCount > 0) {
                     stringResource(
-                        R.string.composer_restore_body_images,
+                        Res.string.composer_restore_body_images,
                         formatTime(draft.savedAtMillis),
                         board,
                         title,
                         imageCount,
                     )
                 } else {
-                    stringResource(R.string.composer_restore_body, formatTime(draft.savedAtMillis), board, title)
+                    stringResource(Res.string.composer_restore_body, formatTime(draft.savedAtMillis), board, title)
                 },
             )
         },
-        confirmButton = { Button(onClick = onContinue) { Text(stringResource(R.string.composer_restore_continue)) } },
-        dismissButton = { TextButton(onClick = onDiscard) { Text(stringResource(R.string.composer_restore_discard)) } },
+        confirmButton = { Button(onClick = onContinue) { Text(stringResource(Res.string.composer_restore_continue)) } },
+        dismissButton = { TextButton(onClick = onDiscard) { Text(stringResource(Res.string.composer_restore_discard)) } },
     )
 }
 
 @Composable
 private fun publishErrorMessage(error: SiteError, detail: String?): String {
     val reason = when (error) {
-        SiteError.Network -> stringResource(R.string.composer_publish_network_failed)
+        SiteError.Network -> stringResource(Res.string.composer_publish_network_failed)
 
-        SiteError.LoginRequired -> stringResource(R.string.composer_publish_login_required)
+        SiteError.LoginRequired -> stringResource(Res.string.composer_publish_login_required)
 
-        SiteError.Cloudflare -> stringResource(R.string.composer_publish_challenge)
+        SiteError.Cloudflare -> stringResource(Res.string.composer_publish_challenge)
 
         is SiteError.Http -> {
-            val status = stringResource(R.string.composer_publish_http, error.statusCode)
+            val status = stringResource(Res.string.composer_publish_http, error.statusCode)
             detail?.takeIf { it.isNotBlank() && it != error.toString() }?.let { "$status：$it" } ?: status
         }
 
-        else -> detail?.takeIf { it.isNotBlank() } ?: stringResource(R.string.composer_publish_unknown)
+        else -> detail?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.composer_publish_unknown)
     }
-    return stringResource(R.string.composer_publish_failed, reason)
+    return stringResource(Res.string.composer_publish_failed, reason)
 }
 
 @Composable
 private fun permissionLabel(permission: PostPermission): String =
-    permission.requiredLevel?.let { level -> stringResource(R.string.composer_permission_level, level) }
+    permission.requiredLevel?.let { level -> stringResource(Res.string.composer_permission_level, level) }
         ?: stringResource(
             if (permission == PostPermission.PUBLIC) {
-                R.string.composer_permission_public
+                Res.string.composer_permission_public
             } else {
-                R.string.composer_permission_private
+                Res.string.composer_permission_private
             },
         )
 
-private val ComposerViewMode.labelRes: Int
+private val ComposerViewMode.labelRes: StringResource
     get() = when (this) {
-        ComposerViewMode.CONTENT -> R.string.composer_view_content
-        ComposerViewMode.PREVIEW -> R.string.composer_view_preview
-        ComposerViewMode.COMPARE -> R.string.composer_view_compare
+        ComposerViewMode.CONTENT -> Res.string.composer_view_content
+        ComposerViewMode.PREVIEW -> Res.string.composer_view_preview
+        ComposerViewMode.COMPARE -> Res.string.composer_view_compare
     }
 
 private fun countImages(markdown: String): Int = IMAGE_MARKDOWN.findAll(markdown).count()

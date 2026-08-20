@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.history
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
@@ -53,11 +51,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.ReadHistoryEntry
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.action_more
+import io.github.nodyssey.ui.resources.history_clear_all
+import io.github.nodyssey.ui.resources.history_clear_body
+import io.github.nodyssey.ui.resources.history_clear_confirm
+import io.github.nodyssey.ui.resources.history_clear_title
+import io.github.nodyssey.ui.resources.history_empty_body
+import io.github.nodyssey.ui.resources.history_empty_title
+import io.github.nodyssey.ui.resources.history_limit_body
+import io.github.nodyssey.ui.resources.history_limit_count
+import io.github.nodyssey.ui.resources.history_limit_default
+import io.github.nodyssey.ui.resources.history_limit_title
+import io.github.nodyssey.ui.resources.history_limit_unlimited
+import io.github.nodyssey.ui.resources.history_remove
+import io.github.nodyssey.ui.resources.history_removed
+import io.github.nodyssey.ui.resources.history_section_earlier
+import io.github.nodyssey.ui.resources.history_section_today
+import io.github.nodyssey.ui.resources.history_section_week
+import io.github.nodyssey.ui.resources.history_section_yesterday
+import io.github.nodyssey.ui.resources.history_subtitle
+import io.github.nodyssey.ui.resources.history_title
+import io.github.nodyssey.ui.resources.history_undo
+import io.github.nodyssey.ui.resources.history_untitled
+import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.ChoiceRow
@@ -77,6 +100,8 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -119,8 +144,8 @@ fun ReadHistoryScreen(
     var pickingLimit by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val removedMessage = stringResource(R.string.history_removed)
-    val undoLabel = stringResource(R.string.history_undo)
+    val removedMessage = stringResource(Res.string.history_removed)
+    val undoLabel = stringResource(Res.string.history_undo)
 
     // Removing one row also drops that thread's unread baseline, so a swipe the reader did not mean
     // costs them the 「N 条新回复」 on it. Cheap to offer the way back; the row carries everything
@@ -144,7 +169,7 @@ fun ReadHistoryScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.history_title),
+                title = stringResource(Res.string.history_title),
                 state = appBarState,
                 // The one place the retention setting is visible without opening a menu: "how much
                 // does this thing keep" is the question the screen itself raises. Absent rather than
@@ -154,7 +179,7 @@ fun ReadHistoryScreen(
                     null
                 } else {
                     stringResource(
-                        R.string.history_subtitle,
+                        Res.string.history_subtitle,
                         state.entries.size,
                         limitLabel(state.limit),
                     )
@@ -163,7 +188,7 @@ fun ReadHistoryScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -188,8 +213,8 @@ fun ReadHistoryScreen(
                         shape = StatusShapes.Empty,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        title = stringResource(R.string.history_empty_title),
-                        description = stringResource(R.string.history_empty_body),
+                        title = stringResource(Res.string.history_empty_title),
+                        description = stringResource(Res.string.history_empty_body),
                     )
 
                 else -> {
@@ -218,22 +243,22 @@ fun ReadHistoryScreen(
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
-            title = { Text(stringResource(R.string.history_clear_title)) },
+            title = { Text(stringResource(Res.string.history_clear_title)) },
             // Spelled out rather than a bare "确定吗": these rows are also the unread baselines, so
             // clearing them un-reads every thread in the feed. That is not something to discover
             // afterwards by noticing the list has changed colour.
-            text = { Text(stringResource(R.string.history_clear_body)) },
+            text = { Text(stringResource(Res.string.history_clear_body)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         confirmClear = false
                         onClearAll()
                     },
-                ) { Text(stringResource(R.string.history_clear_confirm)) }
+                ) { Text(stringResource(Res.string.history_clear_confirm)) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmClear = false }) {
-                    Text(stringResource(R.string.action_cancel))
+                    Text(stringResource(Res.string.action_cancel))
                 }
             },
         )
@@ -264,11 +289,11 @@ private fun HistoryMenu(
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more))
+            Icon(Icons.Default.MoreVert, contentDescription = stringResource(Res.string.action_more))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.history_limit_title)) },
+                text = { Text(stringResource(Res.string.history_limit_title)) },
                 leadingIcon = { Icon(PlazaIcons.History, contentDescription = null) },
                 trailingIcon = {
                     Text(
@@ -286,7 +311,7 @@ private fun HistoryMenu(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            stringResource(R.string.history_clear_all),
+                            stringResource(Res.string.history_clear_all),
                             color = MaterialTheme.colorScheme.error,
                         )
                     },
@@ -325,8 +350,8 @@ private fun HistoryRow(
 ) {
     // A thread read before the snapshot columns existed, or one whose page never carried a title.
     // The id is not much, but it is true, and it still opens the thread.
-    val title = entry.title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.history_untitled, entry.postId)
-    val removeLabel = stringResource(R.string.history_remove, title)
+    val title = entry.title?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.history_untitled, entry.postId)
+    val removeLabel = stringResource(Res.string.history_remove, title)
     // Deliberately `remember` and not `rememberSwipeToDismissBoxState`, which is a `rememberSaveable`.
     // A LazyColumn saves each item's state under its key and hands it back when an item with that key
     // returns — so a row put back by 撤销 came back still holding "dismissed", and SwipeToDismissBox
@@ -385,7 +410,7 @@ private fun HistoryRow(
                 MetaStat(
                     icon = PlazaIcons.ModeComment,
                     value = it.toString(),
-                    contentDescription = stringResource(R.string.post_reply_count, it),
+                    contentDescription = stringResource(Res.string.post_reply_count, it),
                 )
             }
             MetaText(stamp, singleLine = true)
@@ -436,13 +461,13 @@ private fun HistoryLimitDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.history_limit_title)) },
+        title = { Text(stringResource(Res.string.history_limit_title)) },
         text = {
             Column {
                 // The cost of a small number is not obvious from the number, so it is stated here
                 // rather than left for the reader to work out from their feed going un-greyed.
                 Text(
-                    text = stringResource(R.string.history_limit_body),
+                    text = stringResource(Res.string.history_limit_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = Spacing.sm),
@@ -461,7 +486,7 @@ private fun HistoryLimitDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
     )
 }
@@ -470,16 +495,16 @@ private fun HistoryLimitDialog(
 @Composable
 private fun limitLabel(limit: Int): String =
     if (limit == SettingsRepository.READ_HISTORY_UNLIMITED) {
-        stringResource(R.string.history_limit_unlimited)
+        stringResource(Res.string.history_limit_unlimited)
     } else {
-        stringResource(R.string.history_limit_count, limit)
+        stringResource(Res.string.history_limit_count, limit)
     }
 
 /** The same, plus which one is the default — worth knowing while choosing, and noise everywhere else. */
 @Composable
 private fun limitChoiceLabel(limit: Int): String =
     if (limit == SettingsRepository.DEFAULT_READ_HISTORY_LIMIT) {
-        stringResource(R.string.history_limit_default, limit)
+        stringResource(Res.string.history_limit_default, limit)
     } else {
         limitLabel(limit)
     }
@@ -503,12 +528,12 @@ private fun historyStamp(
 
 /** The day headings, newest first. */
 internal enum class HistoryBucket(
-    @StringRes val labelRes: Int,
+    val labelRes: StringResource,
 ) {
-    Today(R.string.history_section_today),
-    Yesterday(R.string.history_section_yesterday),
-    Week(R.string.history_section_week),
-    Earlier(R.string.history_section_earlier),
+    Today(Res.string.history_section_today),
+    Yesterday(Res.string.history_section_yesterday),
+    Week(Res.string.history_section_week),
+    Earlier(Res.string.history_section_earlier),
 }
 
 internal data class HistorySection(

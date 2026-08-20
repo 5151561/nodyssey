@@ -55,13 +55,11 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.OfflineFailure
 import io.github.nodyssey.data.OfflineSettings
@@ -70,6 +68,34 @@ import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_close
+import io.github.nodyssey.ui.resources.action_sort
+import io.github.nodyssey.ui.resources.bookmarks_download_all
+import io.github.nodyssey.ui.resources.bookmarks_empty_body
+import io.github.nodyssey.ui.resources.bookmarks_empty_filter_body
+import io.github.nodyssey.ui.resources.bookmarks_empty_filter_title
+import io.github.nodyssey.ui.resources.bookmarks_empty_search_body
+import io.github.nodyssey.ui.resources.bookmarks_empty_search_title
+import io.github.nodyssey.ui.resources.bookmarks_empty_title
+import io.github.nodyssey.ui.resources.bookmarks_exit_selection
+import io.github.nodyssey.ui.resources.bookmarks_remove_failed
+import io.github.nodyssey.ui.resources.bookmarks_removed
+import io.github.nodyssey.ui.resources.bookmarks_search
+import io.github.nodyssey.ui.resources.bookmarks_search_clear
+import io.github.nodyssey.ui.resources.bookmarks_search_hint
+import io.github.nodyssey.ui.resources.bookmarks_select_all
+import io.github.nodyssey.ui.resources.bookmarks_select_none
+import io.github.nodyssey.ui.resources.bookmarks_selected
+import io.github.nodyssey.ui.resources.bookmarks_sort_pending
+import io.github.nodyssey.ui.resources.bookmarks_sort_replies
+import io.github.nodyssey.ui.resources.bookmarks_sort_site
+import io.github.nodyssey.ui.resources.bookmarks_title
+import io.github.nodyssey.ui.resources.bookmarks_truncated
+import io.github.nodyssey.ui.resources.history_undo
+import io.github.nodyssey.ui.resources.offline_manage
+import io.github.nodyssey.ui.resources.offline_status
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandAppBarState
@@ -82,6 +108,8 @@ import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun BookmarksRoute(
@@ -162,7 +190,7 @@ fun BookmarksScreen(
     var managing by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val haptics = LocalHapticFeedback.current
-    val undoLabel = stringResource(R.string.history_undo)
+    val undoLabel = stringResource(Res.string.history_undo)
 
     // 移出收藏 goes through without a confirmation, per the board, so the way back is a Snackbar — and
     // a refusal has to reach the reader too, since the rows disappeared optimistically. Both land in
@@ -177,7 +205,7 @@ fun BookmarksScreen(
     }
 
     removed?.let { entries ->
-        val message = stringResource(R.string.bookmarks_removed, entries.size)
+        val message = stringResource(Res.string.bookmarks_removed, entries.size)
         LaunchedEffect(entries) {
             val outcome =
                 snackbarHostState.showSnackbar(
@@ -191,7 +219,7 @@ fun BookmarksScreen(
     }
 
     removeFailure?.let { error ->
-        val message = stringResource(R.string.bookmarks_remove_failed, error.shortMessage())
+        val message = stringResource(Res.string.bookmarks_remove_failed, error.shortMessage())
         LaunchedEffect(error) {
             snackbarHostState.showSnackbar(message)
             removeFailure = null
@@ -247,7 +275,7 @@ fun BookmarksScreen(
                     Icon(PlazaIcons.CloudDownload, contentDescription = null)
                     Spacer(Modifier.width(9.dp))
                     Text(
-                        text = stringResource(R.string.bookmarks_download_all, state.pendingDownloadCount),
+                        text = stringResource(Res.string.bookmarks_download_all, state.pendingDownloadCount),
                         style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
@@ -355,7 +383,7 @@ private fun BookmarkList(
                     item(key = "truncated") {
                         Text(
                             text =
-                            stringResource(R.string.bookmarks_truncated, BookmarksViewModel.MAX_PAGES),
+                            stringResource(Res.string.bookmarks_truncated, BookmarksViewModel.MAX_PAGES),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
@@ -401,7 +429,7 @@ private fun BookmarksTopBar(
                     imageVector =
                     if (state.isSearching) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription =
-                    stringResource(if (state.isSearching) R.string.action_close else R.string.action_back),
+                    stringResource(if (state.isSearching) Res.string.action_close else Res.string.action_back),
                 )
             }
         }
@@ -415,7 +443,7 @@ private fun BookmarksTopBar(
         return
     }
     OneHandTopAppBar(
-        title = stringResource(R.string.bookmarks_title),
+        title = stringResource(Res.string.bookmarks_title),
         state = appBarState,
         // 已离线 N 篇 · 占用 X. It used to be a strip of its own between the chips and the list;
         // as a subtitle it costs no row at all, and this is a standing fact about the screen rather
@@ -423,7 +451,7 @@ private fun BookmarksTopBar(
         // downloaded: 「已离线 0 篇 · 占用 0 B」 is a line that says nothing and still takes a line.
         subtitle =
         if (state.offlineAvailable && state.usage.posts > 0) {
-            stringResource(R.string.offline_status, state.usage.posts, formatBytes(state.usage.totalBytes))
+            stringResource(Res.string.offline_status, state.usage.posts, formatBytes(state.usage.totalBytes))
         } else {
             null
         },
@@ -432,7 +460,7 @@ private fun BookmarksTopBar(
             IconButton(onClick = { onSearching(true) }) {
                 Icon(
                     Icons.Default.Search,
-                    contentDescription = stringResource(R.string.bookmarks_search),
+                    contentDescription = stringResource(Res.string.bookmarks_search),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -443,7 +471,7 @@ private fun BookmarksTopBar(
                 IconButton(onClick = onManage) {
                     Icon(
                         imageVector = PlazaIcons.CloudDone,
-                        contentDescription = stringResource(R.string.offline_manage),
+                        contentDescription = stringResource(Res.string.offline_manage),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -472,13 +500,13 @@ private fun BookmarkSearchField(
         onValueChange = onQuery,
         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         singleLine = true,
-        placeholder = { Text(stringResource(R.string.bookmarks_search_hint)) },
+        placeholder = { Text(stringResource(Res.string.bookmarks_search_hint)) },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQuery("") }) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = stringResource(R.string.bookmarks_search_clear),
+                        contentDescription = stringResource(Res.string.bookmarks_search_clear),
                     )
                 }
             }
@@ -506,7 +534,7 @@ private fun SortMenu(
         IconButton(onClick = { expanded = true }, modifier = Modifier.size(Sizes.minTouchTarget)) {
             Icon(
                 imageVector = PlazaIcons.SwapVert,
-                contentDescription = stringResource(R.string.action_sort),
+                contentDescription = stringResource(Res.string.action_sort),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -536,7 +564,7 @@ private fun SelectionTopBar(
     TopAppBar(
         title = {
             Text(
-                text = stringResource(R.string.bookmarks_selected, count),
+                text = stringResource(Res.string.bookmarks_selected, count),
                 style =
                 MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.ExtraBold,
@@ -548,7 +576,7 @@ private fun SelectionTopBar(
             IconButton(onClick = onClose) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = stringResource(R.string.bookmarks_exit_selection),
+                    contentDescription = stringResource(Res.string.bookmarks_exit_selection),
                 )
             }
         },
@@ -560,7 +588,7 @@ private fun SelectionTopBar(
                     // visible effect.
                     text =
                     stringResource(
-                        if (allSelected) R.string.bookmarks_select_none else R.string.bookmarks_select_all,
+                        if (allSelected) Res.string.bookmarks_select_none else Res.string.bookmarks_select_all,
                     ),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                 )
@@ -575,28 +603,28 @@ private fun SelectionTopBar(
     )
 }
 
-private val BookmarkSort.labelRes: Int
+private val BookmarkSort.labelRes: StringResource
     get() =
         when (this) {
-            BookmarkSort.SITE -> R.string.bookmarks_sort_site
-            BookmarkSort.REPLIES -> R.string.bookmarks_sort_replies
-            BookmarkSort.PENDING_FIRST -> R.string.bookmarks_sort_pending
+            BookmarkSort.SITE -> Res.string.bookmarks_sort_site
+            BookmarkSort.REPLIES -> Res.string.bookmarks_sort_replies
+            BookmarkSort.PENDING_FIRST -> Res.string.bookmarks_sort_pending
         }
 
-private val BookmarksUiState.emptyTitleRes: Int
+private val BookmarksUiState.emptyTitleRes: StringResource
     get() =
         when {
-            isSearching -> R.string.bookmarks_empty_search_title
-            filter != BookmarkFilter.ALL -> R.string.bookmarks_empty_filter_title
-            else -> R.string.bookmarks_empty_title
+            isSearching -> Res.string.bookmarks_empty_search_title
+            filter != BookmarkFilter.ALL -> Res.string.bookmarks_empty_filter_title
+            else -> Res.string.bookmarks_empty_title
         }
 
-private val BookmarksUiState.emptyBodyRes: Int
+private val BookmarksUiState.emptyBodyRes: StringResource
     get() =
         when {
-            isSearching -> R.string.bookmarks_empty_search_body
-            filter != BookmarkFilter.ALL -> R.string.bookmarks_empty_filter_body
-            else -> R.string.bookmarks_empty_body
+            isSearching -> Res.string.bookmarks_empty_search_body
+            filter != BookmarkFilter.ALL -> Res.string.bookmarks_empty_filter_body
+            else -> Res.string.bookmarks_empty_body
         }
 
 // -------------------------------------------------------------------------------------------------

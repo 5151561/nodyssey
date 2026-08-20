@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.account
 
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -55,13 +53,90 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeImageSite
 import io.github.nodyssey.data.imagehost.ConfigProblem
 import io.github.nodyssey.data.imagehost.CustomHostFields
 import io.github.nodyssey.data.imagehost.HostedImage
 import io.github.nodyssey.data.imagehost.ImageHostError
 import io.github.nodyssey.data.imagehost.ImageHostProvider
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_refresh
+import io.github.nodyssey.ui.resources.imagehost_api_token_label
+import io.github.nodyssey.ui.resources.imagehost_clear_key
+import io.github.nodyssey.ui.resources.imagehost_clear_key_action
+import io.github.nodyssey.ui.resources.imagehost_clear_key_body
+import io.github.nodyssey.ui.resources.imagehost_clear_key_title
+import io.github.nodyssey.ui.resources.imagehost_connected
+import io.github.nodyssey.ui.resources.imagehost_custom_fields
+import io.github.nodyssey.ui.resources.imagehost_custom_file_field
+import io.github.nodyssey.ui.resources.imagehost_custom_file_field_helper
+import io.github.nodyssey.ui.resources.imagehost_custom_file_field_placeholder
+import io.github.nodyssey.ui.resources.imagehost_custom_file_field_required
+import io.github.nodyssey.ui.resources.imagehost_custom_form_fields
+import io.github.nodyssey.ui.resources.imagehost_custom_form_fields_helper
+import io.github.nodyssey.ui.resources.imagehost_custom_form_fields_placeholder
+import io.github.nodyssey.ui.resources.imagehost_custom_header_helper
+import io.github.nodyssey.ui.resources.imagehost_custom_header_name
+import io.github.nodyssey.ui.resources.imagehost_custom_header_name_placeholder
+import io.github.nodyssey.ui.resources.imagehost_custom_header_value
+import io.github.nodyssey.ui.resources.imagehost_custom_header_value_helper
+import io.github.nodyssey.ui.resources.imagehost_custom_header_value_placeholder
+import io.github.nodyssey.ui.resources.imagehost_custom_url_path
+import io.github.nodyssey.ui.resources.imagehost_custom_url_path_helper
+import io.github.nodyssey.ui.resources.imagehost_custom_url_path_placeholder
+import io.github.nodyssey.ui.resources.imagehost_custom_url_path_required
+import io.github.nodyssey.ui.resources.imagehost_custom_url_prefix
+import io.github.nodyssey.ui.resources.imagehost_custom_url_prefix_helper
+import io.github.nodyssey.ui.resources.imagehost_custom_url_prefix_placeholder
+import io.github.nodyssey.ui.resources.imagehost_delete_action
+import io.github.nodyssey.ui.resources.imagehost_delete_body
+import io.github.nodyssey.ui.resources.imagehost_delete_title
+import io.github.nodyssey.ui.resources.imagehost_empty
+import io.github.nodyssey.ui.resources.imagehost_error_cloudflare
+import io.github.nodyssey.ui.resources.imagehost_error_http
+import io.github.nodyssey.ui.resources.imagehost_error_invalid_key
+import io.github.nodyssey.ui.resources.imagehost_error_not_configured
+import io.github.nodyssey.ui.resources.imagehost_error_rejected
+import io.github.nodyssey.ui.resources.imagehost_error_session_required
+import io.github.nodyssey.ui.resources.imagehost_error_unparsable
+import io.github.nodyssey.ui.resources.imagehost_error_unsupported
+import io.github.nodyssey.ui.resources.imagehost_hint_custom
+import io.github.nodyssey.ui.resources.imagehost_hint_easyimage
+import io.github.nodyssey.ui.resources.imagehost_hint_imgbb
+import io.github.nodyssey.ui.resources.imagehost_hint_lsky
+import io.github.nodyssey.ui.resources.imagehost_hint_nodeimage
+import io.github.nodyssey.ui.resources.imagehost_hint_smms
+import io.github.nodyssey.ui.resources.imagehost_key_invalid
+import io.github.nodyssey.ui.resources.imagehost_key_label
+import io.github.nodyssey.ui.resources.imagehost_key_replace
+import io.github.nodyssey.ui.resources.imagehost_key_save
+import io.github.nodyssey.ui.resources.imagehost_not_connected
+import io.github.nodyssey.ui.resources.imagehost_not_connected_hint
+import io.github.nodyssey.ui.resources.imagehost_open_site
+import io.github.nodyssey.ui.resources.imagehost_provider_custom
+import io.github.nodyssey.ui.resources.imagehost_provider_easyimage
+import io.github.nodyssey.ui.resources.imagehost_provider_imgbb
+import io.github.nodyssey.ui.resources.imagehost_provider_lsky
+import io.github.nodyssey.ui.resources.imagehost_provider_nodeimage
+import io.github.nodyssey.ui.resources.imagehost_provider_smms
+import io.github.nodyssey.ui.resources.imagehost_section_connection
+import io.github.nodyssey.ui.resources.imagehost_section_images
+import io.github.nodyssey.ui.resources.imagehost_section_provider
+import io.github.nodyssey.ui.resources.imagehost_site_helper
+import io.github.nodyssey.ui.resources.imagehost_site_invalid
+import io.github.nodyssey.ui.resources.imagehost_site_label
+import io.github.nodyssey.ui.resources.imagehost_site_placeholder
+import io.github.nodyssey.ui.resources.imagehost_summary
+import io.github.nodyssey.ui.resources.imagehost_title
+import io.github.nodyssey.ui.resources.imagehost_token_helper
+import io.github.nodyssey.ui.resources.imagehost_token_label
+import io.github.nodyssey.ui.resources.imagehost_token_placeholder
+import io.github.nodyssey.ui.resources.imagehost_token_placeholder_saved
+import io.github.nodyssey.ui.resources.imagehost_token_required
+import io.github.nodyssey.ui.resources.imagehost_upload_url_label
+import io.github.nodyssey.ui.resources.imagehost_upload_url_placeholder
+import io.github.nodyssey.ui.resources.status_network_title
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
@@ -69,6 +144,8 @@ import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import java.util.Locale
 
 @Composable
@@ -156,13 +233,13 @@ fun ImageHostScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.imagehost_title),
+                title = stringResource(Res.string.imagehost_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -171,7 +248,7 @@ fun ImageHostScreen(
                         IconButton(onClick = onRefresh) {
                             Icon(
                                 Icons.Default.Refresh,
-                                contentDescription = stringResource(R.string.action_refresh),
+                                contentDescription = stringResource(Res.string.action_refresh),
                             )
                         }
                     }
@@ -191,7 +268,7 @@ fun ImageHostScreen(
             ProviderPicker(selected = state.provider, onSelect = onSelectProvider)
 
             AccountSectionLabel(
-                text = stringResource(R.string.imagehost_section_connection),
+                text = stringResource(Res.string.imagehost_section_connection),
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             ConnectionCard(state = state, onDisconnect = onRequestDisconnect)
@@ -208,7 +285,7 @@ fun ImageHostScreen(
                 Button(onClick = onSave) {
                     Text(
                         stringResource(
-                            if (state.connected) R.string.imagehost_key_replace else R.string.imagehost_key_save,
+                            if (state.connected) Res.string.imagehost_key_replace else Res.string.imagehost_key_save,
                         ),
                     )
                 }
@@ -216,13 +293,13 @@ fun ImageHostScreen(
                 // opens whatever address was typed, which is also the quickest check that it is right.
                 if (state.provider.siteUrlFor(state.siteUrlInput).isNotBlank()) {
                     TextButton(onClick = onOpenSite) {
-                        Text(stringResource(R.string.imagehost_open_site))
+                        Text(stringResource(Res.string.imagehost_open_site))
                     }
                 }
             }
 
             AccountSectionLabel(
-                text = stringResource(R.string.imagehost_section_images),
+                text = stringResource(Res.string.imagehost_section_images),
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             ImagesSection(
@@ -237,9 +314,9 @@ fun ImageHostScreen(
     if (state.confirmingDisconnect) {
         HighRiskDialog(
             icon = PlazaIcons.Shield,
-            title = stringResource(R.string.imagehost_clear_key_title, stringResource(state.provider.nameRes())),
-            body = stringResource(R.string.imagehost_clear_key_body),
-            confirmLabel = stringResource(R.string.imagehost_clear_key_action),
+            title = stringResource(Res.string.imagehost_clear_key_title, stringResource(state.provider.nameRes())),
+            body = stringResource(Res.string.imagehost_clear_key_body),
+            confirmLabel = stringResource(Res.string.imagehost_clear_key_action),
             onConfirm = onConfirmDisconnect,
             onDismiss = onDismissDisconnect,
             destructive = true,
@@ -249,11 +326,11 @@ fun ImageHostScreen(
     state.deleting?.let { target ->
         HighRiskDialog(
             icon = Icons.Default.Delete,
-            title = stringResource(R.string.imagehost_delete_title),
+            title = stringResource(Res.string.imagehost_delete_title),
             // Named in the dialog because thumbnails of the same screenshot are indistinguishable,
             // and this delete cannot be undone from anywhere in the app.
-            body = stringResource(R.string.imagehost_delete_body, target.fileName),
-            confirmLabel = stringResource(R.string.imagehost_delete_action),
+            body = stringResource(Res.string.imagehost_delete_body, target.fileName),
+            confirmLabel = stringResource(Res.string.imagehost_delete_action),
             onConfirm = onConfirmDelete,
             onDismiss = onDismissDelete,
             destructive = true,
@@ -288,7 +365,7 @@ private fun ProviderPicker(
                 onValueChange = {},
                 readOnly = true,
                 singleLine = true,
-                label = { Text(stringResource(R.string.imagehost_section_provider)) },
+                label = { Text(stringResource(Res.string.imagehost_section_provider)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 shape = AccountFieldShape,
                 modifier = Modifier
@@ -346,9 +423,9 @@ private fun ConnectionCard(
                     Text(
                         stringResource(
                             if (state.connected) {
-                                R.string.imagehost_connected
+                                Res.string.imagehost_connected
                             } else {
-                                R.string.imagehost_not_connected
+                                Res.string.imagehost_not_connected
                             },
                         ),
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
@@ -360,7 +437,7 @@ private fun ConnectionCard(
                     // no fingerprint says where it points instead of showing an empty line.
                     text = state.credentialMask
                         ?: state.siteUrlInput.takeIf { state.connected && it.isNotBlank() }
-                        ?: stringResource(R.string.imagehost_not_connected_hint),
+                        ?: stringResource(Res.string.imagehost_not_connected_hint),
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontFamily = if (state.connected) FontFamily.Monospace else FontFamily.Default,
                     ),
@@ -370,7 +447,7 @@ private fun ConnectionCard(
             if (state.connected) {
                 TextButton(onClick = onDisconnect) {
                     Text(
-                        stringResource(R.string.imagehost_clear_key),
+                        stringResource(Res.string.imagehost_clear_key),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -395,17 +472,17 @@ private fun CredentialFields(
                 value = state.siteUrlInput,
                 onValueChange = onSiteUrlChange,
                 labelRes = if (provider == ImageHostProvider.CUSTOM) {
-                    R.string.imagehost_upload_url_label
+                    Res.string.imagehost_upload_url_label
                 } else {
-                    R.string.imagehost_site_label
+                    Res.string.imagehost_site_label
                 },
                 placeholderRes = if (provider == ImageHostProvider.CUSTOM) {
-                    R.string.imagehost_upload_url_placeholder
+                    Res.string.imagehost_upload_url_placeholder
                 } else {
-                    R.string.imagehost_site_placeholder
+                    Res.string.imagehost_site_placeholder
                 },
-                helperRes = R.string.imagehost_site_helper,
-                errorRes = R.string.imagehost_site_invalid,
+                helperRes = Res.string.imagehost_site_helper,
+                errorRes = Res.string.imagehost_site_invalid,
                 isError = state.problem == ConfigProblem.BAD_SITE_URL,
                 keyboardType = KeyboardType.Uri,
             )
@@ -420,15 +497,15 @@ private fun CredentialFields(
                 onValueChange = onTokenChange,
                 labelRes = provider.tokenLabelRes(),
                 placeholderRes = if (state.connected) {
-                    R.string.imagehost_token_placeholder_saved
+                    Res.string.imagehost_token_placeholder_saved
                 } else {
-                    R.string.imagehost_token_placeholder
+                    Res.string.imagehost_token_placeholder
                 },
-                helperRes = R.string.imagehost_token_helper,
+                helperRes = Res.string.imagehost_token_helper,
                 errorRes = if (state.problem == ConfigProblem.IMPLAUSIBLE_TOKEN) {
-                    R.string.imagehost_key_invalid
+                    Res.string.imagehost_key_invalid
                 } else {
-                    R.string.imagehost_token_required
+                    Res.string.imagehost_token_required
                 },
                 isError = state.problem == ConfigProblem.MISSING_TOKEN ||
                     state.problem == ConfigProblem.IMPLAUSIBLE_TOKEN,
@@ -440,7 +517,7 @@ private fun CredentialFields(
 
         if (provider == ImageHostProvider.CUSTOM) {
             TextButton(onClick = onToggleCustomFields) {
-                Text(stringResource(R.string.imagehost_custom_fields))
+                Text(stringResource(Res.string.imagehost_custom_fields))
                 Icon(
                     imageVector = if (state.customFieldsExpanded) {
                         Icons.Default.KeyboardArrowUp
@@ -477,49 +554,49 @@ private fun CustomFields(
         HostField(
             value = state.custom.fileField,
             onValueChange = { value -> onCustomChange { it.copy(fileField = value) } },
-            labelRes = R.string.imagehost_custom_file_field,
-            placeholderRes = R.string.imagehost_custom_file_field_placeholder,
-            helperRes = R.string.imagehost_custom_file_field_helper,
-            errorRes = R.string.imagehost_custom_file_field_required,
+            labelRes = Res.string.imagehost_custom_file_field,
+            placeholderRes = Res.string.imagehost_custom_file_field_placeholder,
+            helperRes = Res.string.imagehost_custom_file_field_helper,
+            errorRes = Res.string.imagehost_custom_file_field_required,
             isError = state.problem == ConfigProblem.MISSING_FILE_FIELD,
         )
         HostField(
             value = state.custom.headerName,
             onValueChange = { value -> onCustomChange { it.copy(headerName = value) } },
-            labelRes = R.string.imagehost_custom_header_name,
-            placeholderRes = R.string.imagehost_custom_header_name_placeholder,
-            helperRes = R.string.imagehost_custom_header_helper,
+            labelRes = Res.string.imagehost_custom_header_name,
+            placeholderRes = Res.string.imagehost_custom_header_name_placeholder,
+            helperRes = Res.string.imagehost_custom_header_helper,
         )
         HostField(
             value = state.custom.headerValue,
             onValueChange = { value -> onCustomChange { it.copy(headerValue = value) } },
-            labelRes = R.string.imagehost_custom_header_value,
-            placeholderRes = R.string.imagehost_custom_header_value_placeholder,
-            helperRes = R.string.imagehost_custom_header_value_helper,
+            labelRes = Res.string.imagehost_custom_header_value,
+            placeholderRes = Res.string.imagehost_custom_header_value_placeholder,
+            helperRes = Res.string.imagehost_custom_header_value_helper,
         )
         HostField(
             value = state.custom.formFields,
             onValueChange = { value -> onCustomChange { it.copy(formFields = value) } },
-            labelRes = R.string.imagehost_custom_form_fields,
-            placeholderRes = R.string.imagehost_custom_form_fields_placeholder,
-            helperRes = R.string.imagehost_custom_form_fields_helper,
+            labelRes = Res.string.imagehost_custom_form_fields,
+            placeholderRes = Res.string.imagehost_custom_form_fields_placeholder,
+            helperRes = Res.string.imagehost_custom_form_fields_helper,
             singleLine = false,
         )
         HostField(
             value = state.custom.urlPath,
             onValueChange = { value -> onCustomChange { it.copy(urlPath = value) } },
-            labelRes = R.string.imagehost_custom_url_path,
-            placeholderRes = R.string.imagehost_custom_url_path_placeholder,
-            helperRes = R.string.imagehost_custom_url_path_helper,
-            errorRes = R.string.imagehost_custom_url_path_required,
+            labelRes = Res.string.imagehost_custom_url_path,
+            placeholderRes = Res.string.imagehost_custom_url_path_placeholder,
+            helperRes = Res.string.imagehost_custom_url_path_helper,
+            errorRes = Res.string.imagehost_custom_url_path_required,
             isError = state.problem == ConfigProblem.MISSING_URL_PATH,
         )
         HostField(
             value = state.custom.urlPrefix,
             onValueChange = { value -> onCustomChange { it.copy(urlPrefix = value) } },
-            labelRes = R.string.imagehost_custom_url_prefix,
-            placeholderRes = R.string.imagehost_custom_url_prefix_placeholder,
-            helperRes = R.string.imagehost_custom_url_prefix_helper,
+            labelRes = Res.string.imagehost_custom_url_prefix,
+            placeholderRes = Res.string.imagehost_custom_url_prefix_placeholder,
+            helperRes = Res.string.imagehost_custom_url_prefix_helper,
             keyboardType = KeyboardType.Uri,
         )
     }
@@ -529,10 +606,10 @@ private fun CustomFields(
 private fun HostField(
     value: String,
     onValueChange: (String) -> Unit,
-    @StringRes labelRes: Int,
-    @StringRes placeholderRes: Int,
-    @StringRes helperRes: Int,
-    @StringRes errorRes: Int? = null,
+    labelRes: StringResource,
+    placeholderRes: StringResource,
+    helperRes: StringResource,
+    errorRes: StringResource? = null,
     isError: Boolean = false,
     singleLine: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
@@ -576,7 +653,7 @@ private fun ImagesSection(
          * nothing like the recovery for "this host has no list, use its own page".
          */
         state.imagesError == ImageHostError.Unsupported -> InfoCard(
-            text = stringResource(R.string.imagehost_error_unsupported),
+            text = stringResource(Res.string.imagehost_error_unsupported),
         )
 
         /*
@@ -585,18 +662,18 @@ private fun ImagesSection(
          * says so and hands over to the website rather than showing an empty gallery.
          */
         state.imagesError == ImageHostError.SessionRequired -> InfoCard(
-            text = stringResource(R.string.imagehost_error_session_required),
-            action = stringResource(R.string.imagehost_open_site) to onOpenSite,
+            text = stringResource(Res.string.imagehost_error_session_required),
+            action = stringResource(Res.string.imagehost_open_site) to onOpenSite,
         )
 
         state.imagesError != null -> InfoCard(stringResource(state.imagesError.messageRes()))
 
-        state.images.isEmpty() -> InfoCard(stringResource(R.string.imagehost_empty))
+        state.images.isEmpty() -> InfoCard(stringResource(Res.string.imagehost_empty))
 
         else -> {
             Text(
                 stringResource(
-                    R.string.imagehost_summary,
+                    Res.string.imagehost_summary,
                     state.images.size,
                     formatBytes(state.totalBytes),
                 ),
@@ -671,7 +748,7 @@ private fun ImageRow(
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Default.Delete,
-                contentDescription = stringResource(R.string.imagehost_delete_action),
+                contentDescription = stringResource(Res.string.imagehost_delete_action),
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(20.dp),
             )
@@ -711,33 +788,28 @@ private fun InfoCard(
         }
     }
 }
-
-@StringRes
-internal fun ImageHostProvider.nameRes(): Int = when (this) {
-    ImageHostProvider.NODE_IMAGE -> R.string.imagehost_provider_nodeimage
-    ImageHostProvider.LSKY_PRO -> R.string.imagehost_provider_lsky
-    ImageHostProvider.EASY_IMAGE -> R.string.imagehost_provider_easyimage
-    ImageHostProvider.SMMS -> R.string.imagehost_provider_smms
-    ImageHostProvider.IMGBB -> R.string.imagehost_provider_imgbb
-    ImageHostProvider.CUSTOM -> R.string.imagehost_provider_custom
+internal fun ImageHostProvider.nameRes(): StringResource = when (this) {
+    ImageHostProvider.NODE_IMAGE -> Res.string.imagehost_provider_nodeimage
+    ImageHostProvider.LSKY_PRO -> Res.string.imagehost_provider_lsky
+    ImageHostProvider.EASY_IMAGE -> Res.string.imagehost_provider_easyimage
+    ImageHostProvider.SMMS -> Res.string.imagehost_provider_smms
+    ImageHostProvider.IMGBB -> Res.string.imagehost_provider_imgbb
+    ImageHostProvider.CUSTOM -> Res.string.imagehost_provider_custom
 }
-
-@StringRes
-private fun ImageHostProvider.hintRes(): Int = when (this) {
-    ImageHostProvider.NODE_IMAGE -> R.string.imagehost_hint_nodeimage
-    ImageHostProvider.LSKY_PRO -> R.string.imagehost_hint_lsky
-    ImageHostProvider.EASY_IMAGE -> R.string.imagehost_hint_easyimage
-    ImageHostProvider.SMMS -> R.string.imagehost_hint_smms
-    ImageHostProvider.IMGBB -> R.string.imagehost_hint_imgbb
-    ImageHostProvider.CUSTOM -> R.string.imagehost_hint_custom
+private fun ImageHostProvider.hintRes(): StringResource = when (this) {
+    ImageHostProvider.NODE_IMAGE -> Res.string.imagehost_hint_nodeimage
+    ImageHostProvider.LSKY_PRO -> Res.string.imagehost_hint_lsky
+    ImageHostProvider.EASY_IMAGE -> Res.string.imagehost_hint_easyimage
+    ImageHostProvider.SMMS -> Res.string.imagehost_hint_smms
+    ImageHostProvider.IMGBB -> Res.string.imagehost_hint_imgbb
+    ImageHostProvider.CUSTOM -> Res.string.imagehost_hint_custom
 }
 
 /** Every host calls its credential something; the label matches so a pasted value looks right. */
-@StringRes
-private fun ImageHostProvider.tokenLabelRes(): Int = when (this) {
-    ImageHostProvider.NODE_IMAGE, ImageHostProvider.IMGBB -> R.string.imagehost_key_label
-    ImageHostProvider.SMMS -> R.string.imagehost_api_token_label
-    else -> R.string.imagehost_token_label
+private fun ImageHostProvider.tokenLabelRes(): StringResource = when (this) {
+    ImageHostProvider.NODE_IMAGE, ImageHostProvider.IMGBB -> Res.string.imagehost_key_label
+    ImageHostProvider.SMMS -> Res.string.imagehost_api_token_label
+    else -> Res.string.imagehost_token_label
 }
 
 /**
@@ -752,18 +824,16 @@ internal fun ImageHostProvider.siteUrlFor(typed: String): String = when (this) {
     ImageHostProvider.IMGBB -> "https://imgbb.com"
     else -> typed.trim()
 }
-
-@StringRes
-internal fun ImageHostError.messageRes(): Int = when (this) {
-    ImageHostError.NotConfigured -> R.string.imagehost_error_not_configured
-    ImageHostError.InvalidKey -> R.string.imagehost_error_invalid_key
-    ImageHostError.SessionRequired -> R.string.imagehost_error_session_required
-    is ImageHostError.Rejected -> R.string.imagehost_error_rejected
-    ImageHostError.Cloudflare -> R.string.imagehost_error_cloudflare
-    is ImageHostError.Http -> R.string.imagehost_error_http
-    ImageHostError.Unsupported -> R.string.imagehost_error_unsupported
-    ImageHostError.Network -> R.string.status_network_title
-    ImageHostError.Unparsable -> R.string.imagehost_error_unparsable
+internal fun ImageHostError.messageRes(): StringResource = when (this) {
+    ImageHostError.NotConfigured -> Res.string.imagehost_error_not_configured
+    ImageHostError.InvalidKey -> Res.string.imagehost_error_invalid_key
+    ImageHostError.SessionRequired -> Res.string.imagehost_error_session_required
+    is ImageHostError.Rejected -> Res.string.imagehost_error_rejected
+    ImageHostError.Cloudflare -> Res.string.imagehost_error_cloudflare
+    is ImageHostError.Http -> Res.string.imagehost_error_http
+    ImageHostError.Unsupported -> Res.string.imagehost_error_unsupported
+    ImageHostError.Network -> Res.string.status_network_title
+    ImageHostError.Unparsable -> Res.string.imagehost_error_unparsable
 }
 
 /** `1536` → `1.5 KB`. Binary units, because that is what these hosts report their own sizes in. */

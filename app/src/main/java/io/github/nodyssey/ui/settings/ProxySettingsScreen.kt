@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.settings
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -42,17 +40,48 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.data.proxy.ProxyConfigProblem
 import io.github.nodyssey.data.proxy.ProxyConnectionFailure
 import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.ProxyType
 import io.github.nodyssey.ui.account.accountMessageText
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.proxy_advanced_hint
+import io.github.nodyssey.ui.resources.proxy_advanced_title
+import io.github.nodyssey.ui.resources.proxy_credential_hint
+import io.github.nodyssey.ui.resources.proxy_host_label
+import io.github.nodyssey.ui.resources.proxy_host_placeholder
+import io.github.nodyssey.ui.resources.proxy_host_required
+import io.github.nodyssey.ui.resources.proxy_master_hint
+import io.github.nodyssey.ui.resources.proxy_master_title
+import io.github.nodyssey.ui.resources.proxy_password_label
+import io.github.nodyssey.ui.resources.proxy_port_invalid
+import io.github.nodyssey.ui.resources.proxy_port_label
+import io.github.nodyssey.ui.resources.proxy_port_placeholder
+import io.github.nodyssey.ui.resources.proxy_save
+import io.github.nodyssey.ui.resources.proxy_scope_hint
+import io.github.nodyssey.ui.resources.proxy_scope_title
+import io.github.nodyssey.ui.resources.proxy_test
+import io.github.nodyssey.ui.resources.proxy_test_failure_connection
+import io.github.nodyssey.ui.resources.proxy_test_failure_dns
+import io.github.nodyssey.ui.resources.proxy_test_failure_other
+import io.github.nodyssey.ui.resources.proxy_test_failure_socks_auth
+import io.github.nodyssey.ui.resources.proxy_test_failure_timeout
+import io.github.nodyssey.ui.resources.proxy_test_failure_tls
+import io.github.nodyssey.ui.resources.proxy_title
+import io.github.nodyssey.ui.resources.proxy_type_http
+import io.github.nodyssey.ui.resources.proxy_type_socks
+import io.github.nodyssey.ui.resources.proxy_type_title
+import io.github.nodyssey.ui.resources.proxy_username_label
+import io.github.nodyssey.ui.resources.proxy_webview_hint
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProxySettingsRoute(
@@ -116,13 +145,13 @@ fun ProxySettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.proxy_title),
+                title = stringResource(Res.string.proxy_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -140,8 +169,8 @@ fun ProxySettingsScreen(
         ) {
             SettingsGroup {
                 SettingsRow(
-                    title = stringResource(R.string.proxy_master_title),
-                    subtitle = stringResource(R.string.proxy_master_hint),
+                    title = stringResource(Res.string.proxy_master_title),
+                    subtitle = stringResource(Res.string.proxy_master_hint),
                     top = true,
                     bottom = true,
                     checked = state.enabled,
@@ -156,13 +185,13 @@ fun ProxySettingsScreen(
             ) {
                 SettingsGroup {
                     SettingsBlock(
-                        title = stringResource(R.string.proxy_type_title),
+                        title = stringResource(Res.string.proxy_type_title),
                         top = true,
                         bottom = true,
                     ) {
                         val choices = listOf(
-                            ProxyType.HTTP to stringResource(R.string.proxy_type_http),
-                            ProxyType.SOCKS to stringResource(R.string.proxy_type_socks),
+                            ProxyType.HTTP to stringResource(Res.string.proxy_type_http),
+                            ProxyType.SOCKS to stringResource(Res.string.proxy_type_socks),
                         )
                         ConnectedChoiceButtons(
                             labels = choices.map { it.second },
@@ -178,9 +207,9 @@ fun ProxySettingsScreen(
                         ProxyField(
                             value = state.hostInput,
                             onValueChange = onHostChange,
-                            labelRes = R.string.proxy_host_label,
-                            placeholderRes = R.string.proxy_host_placeholder,
-                            errorRes = R.string.proxy_host_required,
+                            labelRes = Res.string.proxy_host_label,
+                            placeholderRes = Res.string.proxy_host_placeholder,
+                            errorRes = Res.string.proxy_host_required,
                             isError = state.problem == ProxyConfigProblem.MISSING_HOST,
                             enabled = state.enabled,
                             keyboardType = KeyboardType.Uri,
@@ -189,9 +218,9 @@ fun ProxySettingsScreen(
                         ProxyField(
                             value = state.portInput,
                             onValueChange = onPortChange,
-                            labelRes = R.string.proxy_port_label,
-                            placeholderRes = R.string.proxy_port_placeholder,
-                            errorRes = R.string.proxy_port_invalid,
+                            labelRes = Res.string.proxy_port_label,
+                            placeholderRes = Res.string.proxy_port_placeholder,
+                            errorRes = Res.string.proxy_port_invalid,
                             isError = state.problem == ProxyConfigProblem.INVALID_PORT,
                             enabled = state.enabled,
                             keyboardType = KeyboardType.Number,
@@ -201,16 +230,16 @@ fun ProxySettingsScreen(
                     ProxyField(
                         value = state.usernameInput,
                         onValueChange = onUsernameChange,
-                        labelRes = R.string.proxy_username_label,
-                        placeholderRes = R.string.proxy_credential_hint,
+                        labelRes = Res.string.proxy_username_label,
+                        placeholderRes = Res.string.proxy_credential_hint,
                         enabled = state.enabled,
                         keyboardType = KeyboardType.Ascii,
                     )
                     ProxyField(
                         value = state.passwordInput,
                         onValueChange = onPasswordChange,
-                        labelRes = R.string.proxy_password_label,
-                        placeholderRes = R.string.proxy_credential_hint,
+                        labelRes = Res.string.proxy_password_label,
+                        placeholderRes = Res.string.proxy_credential_hint,
                         enabled = state.enabled,
                         keyboardType = KeyboardType.Password,
                         obscure = true,
@@ -219,8 +248,8 @@ fun ProxySettingsScreen(
 
                 SettingsGroup {
                     SettingsRow(
-                        title = stringResource(R.string.proxy_scope_title),
-                        subtitle = stringResource(R.string.proxy_scope_hint),
+                        title = stringResource(Res.string.proxy_scope_title),
+                        subtitle = stringResource(Res.string.proxy_scope_hint),
                         top = true,
                         bottom = true,
                         enabled = state.enabled,
@@ -238,13 +267,13 @@ fun ProxySettingsScreen(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Button(onClick = onSave, enabled = state.enabled) {
-                        Text(stringResource(R.string.proxy_save))
+                        Text(stringResource(Res.string.proxy_save))
                     }
                     TextButton(onClick = onTest, enabled = state.enabled && !state.testing) {
                         if (state.testing) {
                             CircularProgressIndicator(Modifier.size(18.dp))
                         } else {
-                            Text(stringResource(R.string.proxy_test))
+                            Text(stringResource(Res.string.proxy_test))
                         }
                     }
                 }
@@ -263,12 +292,12 @@ fun ProxySettingsScreen(
             // WebView's network stack.
             SettingsGroup {
                 SettingsBlock(
-                    title = stringResource(R.string.proxy_advanced_title),
+                    title = stringResource(Res.string.proxy_advanced_title),
                     top = true,
                     bottom = true,
                 ) {
-                    ProxyNote(stringResource(R.string.proxy_advanced_hint))
-                    ProxyNote(stringResource(R.string.proxy_webview_hint))
+                    ProxyNote(stringResource(Res.string.proxy_advanced_hint))
+                    ProxyNote(stringResource(Res.string.proxy_webview_hint))
                 }
             }
         }
@@ -279,12 +308,12 @@ fun ProxySettingsScreen(
 private fun proxyTestFailureText(failure: ProxyConnectionFailure): String {
     val messageRes =
         when (failure.kind) {
-            ProxyConnectionFailure.Kind.DNS -> R.string.proxy_test_failure_dns
-            ProxyConnectionFailure.Kind.TIMEOUT -> R.string.proxy_test_failure_timeout
-            ProxyConnectionFailure.Kind.CONNECTION -> R.string.proxy_test_failure_connection
-            ProxyConnectionFailure.Kind.SOCKS_AUTHENTICATION -> R.string.proxy_test_failure_socks_auth
-            ProxyConnectionFailure.Kind.TLS -> R.string.proxy_test_failure_tls
-            ProxyConnectionFailure.Kind.OTHER -> R.string.proxy_test_failure_other
+            ProxyConnectionFailure.Kind.DNS -> Res.string.proxy_test_failure_dns
+            ProxyConnectionFailure.Kind.TIMEOUT -> Res.string.proxy_test_failure_timeout
+            ProxyConnectionFailure.Kind.CONNECTION -> Res.string.proxy_test_failure_connection
+            ProxyConnectionFailure.Kind.SOCKS_AUTHENTICATION -> Res.string.proxy_test_failure_socks_auth
+            ProxyConnectionFailure.Kind.TLS -> Res.string.proxy_test_failure_tls
+            ProxyConnectionFailure.Kind.OTHER -> Res.string.proxy_test_failure_other
         }
     return stringResource(messageRes, failure.exceptionName)
 }
@@ -302,10 +331,10 @@ private fun ProxyNote(text: String) {
 private fun ProxyField(
     value: String,
     onValueChange: (String) -> Unit,
-    @StringRes labelRes: Int,
-    @StringRes placeholderRes: Int,
+    labelRes: StringResource,
+    placeholderRes: StringResource,
     modifier: Modifier = Modifier,
-    @StringRes errorRes: Int? = null,
+    errorRes: StringResource? = null,
     isError: Boolean = false,
     enabled: Boolean = true,
     obscure: Boolean = false,

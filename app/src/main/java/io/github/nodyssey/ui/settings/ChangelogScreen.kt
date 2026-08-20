@@ -29,11 +29,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.about_changelog
+import io.github.nodyssey.ui.resources.about_update_open_release
+import io.github.nodyssey.ui.resources.about_update_prerelease
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.changelog_all_releases
+import io.github.nodyssey.ui.resources.changelog_current_version
+import io.github.nodyssey.ui.resources.changelog_empty
+import io.github.nodyssey.ui.resources.changelog_failed_hint
+import io.github.nodyssey.ui.resources.changelog_installed
+import io.github.nodyssey.ui.resources.changelog_no_notes
+import io.github.nodyssey.ui.resources.changelog_refresh
 import io.github.plaza.core.update.ReleaseNote
 import io.github.plaza.core.update.UpdateFailure
 import io.github.plaza.core.update.releaseNotesText
@@ -43,6 +54,7 @@ import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ChangelogRoute(
@@ -88,16 +100,16 @@ fun ChangelogScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.about_changelog),
+                title = stringResource(Res.string.about_changelog),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = onRefresh, enabled = !state.loading) {
-                        Icon(Icons.Default.Refresh, stringResource(R.string.changelog_refresh))
+                        Icon(Icons.Default.Refresh, stringResource(Res.string.changelog_refresh))
                     }
                 },
             )
@@ -126,7 +138,7 @@ fun ChangelogScreen(
                         item {
                             Text(
                                 stringResource(
-                                    R.string.changelog_current_version,
+                                    Res.string.changelog_current_version,
                                     state.currentVersionName.ifBlank { "—" },
                                 ),
                                 style = MaterialTheme.typography.titleLarge,
@@ -135,7 +147,7 @@ fun ChangelogScreen(
                         if (state.releases.isEmpty()) {
                             item {
                                 Text(
-                                    stringResource(R.string.changelog_empty),
+                                    stringResource(Res.string.changelog_empty),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -150,7 +162,7 @@ fun ChangelogScreen(
                         }
                         item {
                             TextButton(onClick = onOpenReleases) {
-                                Text(stringResource(R.string.changelog_all_releases))
+                                Text(stringResource(Res.string.changelog_all_releases))
                             }
                         }
                     }
@@ -177,14 +189,14 @@ private fun ReleaseEntry(
             )
             if (installed) {
                 TonalTag(
-                    text = stringResource(R.string.changelog_installed),
+                    text = stringResource(Res.string.changelog_installed),
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
             if (release.preRelease) {
                 TonalTag(
-                    text = stringResource(R.string.about_update_prerelease),
+                    text = stringResource(Res.string.about_update_prerelease),
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                     contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
@@ -198,11 +210,11 @@ private fun ReleaseEntry(
         }
         val notes = remember(release.notes) { releaseNotesText(release.notes) }
         Text(
-            notes.ifBlank { stringResource(R.string.changelog_no_notes) },
+            notes.ifBlank { stringResource(Res.string.changelog_no_notes) },
             style = MaterialTheme.typography.bodyMedium,
         )
         TextButton(onClick = onOpen) {
-            Text(stringResource(R.string.about_update_open_release))
+            Text(stringResource(Res.string.about_update_open_release))
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
@@ -221,15 +233,15 @@ private fun ChangelogError(
     ) {
         Text(failureText(failure), style = MaterialTheme.typography.titleMedium)
         Text(
-            stringResource(R.string.changelog_failed_hint),
+            stringResource(Res.string.changelog_failed_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.action_retry))
+            Text(stringResource(Res.string.action_retry))
         }
         TextButton(onClick = onOpenReleases) {
-            Text(stringResource(R.string.changelog_all_releases))
+            Text(stringResource(Res.string.changelog_all_releases))
         }
     }
 }

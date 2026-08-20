@@ -68,7 +68,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -86,7 +85,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
@@ -94,6 +92,30 @@ import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.composer.AttachmentTray
 import io.github.nodyssey.ui.composer.NodeSeekEmojiPanel
 import io.github.nodyssey.ui.composer.toPickedImages
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_copy
+import io.github.nodyssey.ui.resources.action_more
+import io.github.nodyssey.ui.resources.action_open_in_browser
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.composer_image_default_name
+import io.github.nodyssey.ui.resources.message_bubble_actions
+import io.github.nodyssey.ui.resources.message_copied
+import io.github.nodyssey.ui.resources.message_input_hint_markdown
+import io.github.nodyssey.ui.resources.message_input_hint_plain
+import io.github.nodyssey.ui.resources.message_markdown_label
+import io.github.nodyssey.ui.resources.message_markdown_toggle
+import io.github.nodyssey.ui.resources.message_quote_action
+import io.github.nodyssey.ui.resources.message_send
+import io.github.nodyssey.ui.resources.message_status_failed
+import io.github.nodyssey.ui.resources.message_status_sending
+import io.github.nodyssey.ui.resources.message_status_sent
+import io.github.nodyssey.ui.resources.message_thread_empty
+import io.github.nodyssey.ui.resources.message_thread_open_space
+import io.github.nodyssey.ui.resources.message_thread_subtitle
+import io.github.nodyssey.ui.resources.message_thread_subtitle_level
+import io.github.nodyssey.ui.resources.message_thread_title
+import io.github.nodyssey.ui.resources.message_thread_title_unknown
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
@@ -112,6 +134,7 @@ import io.github.plaza.designsys.editor.rememberMarkdownEditorState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MessageThreadRoute(
@@ -205,7 +228,7 @@ fun MessageThreadScreen(
                         IconButton(onClick = onBack) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.action_back),
+                                contentDescription = stringResource(Res.string.action_back),
                             )
                         }
                     }
@@ -222,7 +245,7 @@ fun MessageThreadScreen(
                         Modifier
                             .clip(RoundedCornerShape(Spacing.md))
                             .clickable(
-                                onClickLabel = stringResource(R.string.message_thread_open_space),
+                                onClickLabel = stringResource(Res.string.message_thread_open_space),
                             ) { onOpenSpace() }
                             .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
                     ) {
@@ -232,9 +255,9 @@ fun MessageThreadScreen(
                                 // Blank until the thread loads when it was opened by a link, which
                                 // names a uid and nothing else; every other way in knows the name.
                                 if (state.userName.isBlank()) {
-                                    stringResource(R.string.message_thread_title_unknown)
+                                    stringResource(Res.string.message_thread_title_unknown)
                                 } else {
-                                    stringResource(R.string.message_thread_title, state.userName)
+                                    stringResource(Res.string.message_thread_title, state.userName)
                                 },
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
@@ -243,8 +266,8 @@ fun MessageThreadScreen(
                             Text(
                                 text =
                                 state.level?.let {
-                                    stringResource(R.string.message_thread_subtitle_level, state.uid, it)
-                                } ?: stringResource(R.string.message_thread_subtitle, state.uid),
+                                    stringResource(Res.string.message_thread_subtitle_level, state.uid, it)
+                                } ?: stringResource(Res.string.message_thread_subtitle, state.uid),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -274,7 +297,7 @@ fun MessageThreadScreen(
 
                     state.messages.isEmpty() ->
                         Text(
-                            stringResource(R.string.message_thread_empty),
+                            stringResource(Res.string.message_thread_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -448,7 +471,7 @@ private fun MessageBubbleRow(
                     // perform, which a hand-rolled detector gives a screen reader no way to reach.
                     onClick = {},
                     onLongClick = { menuOpen = true },
-                    onLongClickLabel = stringResource(R.string.message_bubble_actions),
+                    onLongClickLabel = stringResource(Res.string.message_bubble_actions),
                 ).padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
             val textStyle =
@@ -517,7 +540,7 @@ private fun BubbleMenu(
     if (!visibility.currentState && !visibility.targetState) return
 
     val copy = rememberClipboardCopy()
-    val copied = stringResource(R.string.message_copied)
+    val copied = stringResource(Res.string.message_copied)
     val motionScheme = MaterialTheme.motionScheme
     val density = LocalDensity.current
     val position =
@@ -549,7 +572,7 @@ private fun BubbleMenu(
                 ) {
                     BubbleAction(
                         icon = PlazaIcons.ContentCopy,
-                        label = stringResource(R.string.action_copy),
+                        label = stringResource(Res.string.action_copy),
                         onClick = {
                             copy("message", content, copied)
                             onDismiss()
@@ -557,7 +580,7 @@ private fun BubbleMenu(
                     )
                     BubbleAction(
                         icon = PlazaIcons.FormatQuote,
-                        label = stringResource(R.string.message_quote_action),
+                        label = stringResource(Res.string.message_quote_action),
                         onClick = {
                             onDismiss()
                             onQuote()
@@ -638,7 +661,7 @@ private fun MessageStatusLine(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    stringResource(R.string.message_status_sending),
+                    stringResource(Res.string.message_status_sending),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -653,12 +676,12 @@ private fun MessageStatusLine(
                 )
                 Text(
                     // The server's reason when it gave one — retrying a block never succeeds.
-                    text = message.failureReason ?: stringResource(R.string.message_status_failed),
+                    text = message.failureReason ?: stringResource(Res.string.message_status_failed),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                 )
                 Text(
-                    text = stringResource(R.string.action_retry),
+                    text = stringResource(Res.string.action_retry),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
@@ -681,7 +704,7 @@ private fun MessageStatusLine(
                             modifier = Modifier.size(13.dp),
                         )
                         Text(
-                            stringResource(R.string.message_status_sent, clock),
+                            stringResource(Res.string.message_status_sent, clock),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -741,7 +764,7 @@ private fun MessageInputBar(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
-                    contentDescription = stringResource(R.string.message_send),
+                    contentDescription = stringResource(Res.string.message_send),
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -759,7 +782,7 @@ private fun MessageDraftField(
         state = draftState,
         hint =
         stringResource(
-            if (isMarkdown) R.string.message_input_hint_markdown else R.string.message_input_hint_plain,
+            if (isMarkdown) Res.string.message_input_hint_markdown else Res.string.message_input_hint_plain,
         ),
         textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
         // One line of placeholder, elided: the pill is 44dp tall when empty and a wrapping hint
@@ -810,9 +833,10 @@ private fun MessageComposer(
     onCustomize: () -> Unit,
 ) {
     val context = LocalContext.current
+    val fallbackImageName = stringResource(Res.string.composer_image_default_name)
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(MAX_IMAGES_PER_PICK),
-    ) { uris -> onPickImages(uris.toPickedImages(context)) }
+    ) { uris -> onPickImages(uris.toPickedImages(context, fallbackImageName)) }
 
     val inputBar: @Composable () -> Unit = {
         MessageInputBar(
@@ -870,7 +894,7 @@ private fun MarkdownToggle(
     isMarkdown: Boolean,
     onToggle: () -> Unit,
 ) {
-    val label = stringResource(R.string.message_markdown_toggle)
+    val label = stringResource(Res.string.message_markdown_toggle)
     ToggleButton(
         checked = isMarkdown,
         onCheckedChange = { onToggle() },
@@ -882,7 +906,7 @@ private fun MarkdownToggle(
             .semantics { contentDescription = label },
     ) {
         Text(
-            text = stringResource(R.string.message_markdown_label),
+            text = stringResource(Res.string.message_markdown_label),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
         )
@@ -893,11 +917,11 @@ private fun MarkdownToggle(
 private fun ThreadMenu(onOpenBrowser: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     IconButton(onClick = { expanded = true }) {
-        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more))
+        Icon(Icons.Default.MoreVert, contentDescription = stringResource(Res.string.action_more))
     }
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.action_open_in_browser)) },
+            text = { Text(stringResource(Res.string.action_open_in_browser)) },
             onClick = {
                 expanded = false
                 onOpenBrowser()

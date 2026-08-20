@@ -5,11 +5,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.post_badge_more
 import io.github.plaza.designsys.component.BadgeChip
 import io.github.plaza.designsys.component.BadgeTone
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The role badge family on a floor header — b1 §8.
@@ -75,7 +76,7 @@ fun RoleBadgeRow(
         shown.forEach { label -> RoleBadge(label) }
         if (folded > 0) {
             BadgeChip(
-                text = stringResource(R.string.post_badge_more, folded),
+                text = stringResource(Res.string.post_badge_more, folded),
                 tone = RoleBadgeStyle.RETIRED.tone,
             )
         }

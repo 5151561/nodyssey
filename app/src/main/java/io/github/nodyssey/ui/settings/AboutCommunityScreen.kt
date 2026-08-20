@@ -35,14 +35,34 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.about_community
+import io.github.nodyssey.ui.resources.about_community_title
+import io.github.nodyssey.ui.resources.about_contact
+import io.github.nodyssey.ui.resources.about_copy_rss
+import io.github.nodyssey.ui.resources.about_deepflood
+import io.github.nodyssey.ui.resources.about_deepflood_hint
+import io.github.nodyssey.ui.resources.about_email
+import io.github.nodyssey.ui.resources.about_forum_stats_error
+import io.github.nodyssey.ui.resources.about_forum_stats_loading
+import io.github.nodyssey.ui.resources.about_forum_stats_snapshot
+import io.github.nodyssey.ui.resources.about_forum_stats_value
+import io.github.nodyssey.ui.resources.about_privacy
+import io.github.nodyssey.ui.resources.about_privacy_hint
+import io.github.nodyssey.ui.resources.about_rss
+import io.github.nodyssey.ui.resources.about_rss_copied
+import io.github.nodyssey.ui.resources.about_site
+import io.github.nodyssey.ui.resources.about_site_hint
+import io.github.nodyssey.ui.resources.about_telegram_channel
+import io.github.nodyssey.ui.resources.about_telegram_group
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_retry
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
@@ -51,6 +71,7 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AboutCommunityRoute(
@@ -90,20 +111,20 @@ fun AboutCommunityScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val copiedMessage = stringResource(R.string.about_rss_copied)
+    val copiedMessage = stringResource(Res.string.about_rss_copied)
     val appBarState = rememberOneHandAppBarState()
     Scaffold(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.about_community_title),
+                title = stringResource(Res.string.about_community_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -118,7 +139,7 @@ fun AboutCommunityScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.lg),
         ) {
-            SectionLabel(stringResource(R.string.about_community))
+            SectionLabel(stringResource(Res.string.about_community))
             statsState?.let { state ->
                 CommunityStats(
                     state = state,
@@ -126,25 +147,25 @@ fun AboutCommunityScreen(
                 )
             }
             AboutActionRow(
-                title = stringResource(R.string.about_site),
-                subtitle = stringResource(R.string.about_site_hint),
+                title = stringResource(Res.string.about_site),
+                subtitle = stringResource(Res.string.about_site_hint),
                 icon = PlazaIcons.Article,
                 onClick = onOpenAboutSite,
             )
             AboutActionRow(
-                title = stringResource(R.string.about_privacy),
-                subtitle = stringResource(R.string.about_privacy_hint),
+                title = stringResource(Res.string.about_privacy),
+                subtitle = stringResource(Res.string.about_privacy_hint),
                 icon = Icons.Default.Info,
                 onClick = onOpenPrivacy,
             )
             AboutActionRow(
-                title = stringResource(R.string.about_rss),
+                title = stringResource(Res.string.about_rss),
                 subtitle = CommunityLinks.RSS_DISPLAY,
                 icon = PlazaIcons.Article,
                 trailing = {
                     Icon(
                         PlazaIcons.ContentCopy,
-                        contentDescription = stringResource(R.string.about_copy_rss),
+                        contentDescription = stringResource(Res.string.about_copy_rss),
                     )
                 },
                 onClick = {
@@ -153,29 +174,29 @@ fun AboutCommunityScreen(
                 },
             )
 
-            SectionLabel(stringResource(R.string.about_contact))
+            SectionLabel(stringResource(Res.string.about_contact))
             AboutActionRow(
-                title = stringResource(R.string.about_telegram_channel),
+                title = stringResource(Res.string.about_telegram_channel),
                 icon = PlazaIcons.Campaign,
                 external = true,
                 onClick = { onOpenUri(CommunityLinks.TELEGRAM_CHANNEL) },
             )
             AboutActionRow(
-                title = stringResource(R.string.about_telegram_group),
+                title = stringResource(Res.string.about_telegram_group),
                 icon = PlazaIcons.Group,
                 external = true,
                 onClick = { onOpenUri(CommunityLinks.TELEGRAM_GROUP) },
             )
             AboutActionRow(
-                title = stringResource(R.string.about_email),
+                title = stringResource(Res.string.about_email),
                 subtitle = CommunityLinks.EMAIL.removePrefix("mailto:"),
                 icon = PlazaIcons.Campaign,
                 external = true,
                 onClick = { onOpenUri(CommunityLinks.EMAIL) },
             )
             AboutActionRow(
-                title = stringResource(R.string.about_deepflood),
-                subtitle = stringResource(R.string.about_deepflood_hint),
+                title = stringResource(Res.string.about_deepflood),
+                subtitle = stringResource(Res.string.about_deepflood_hint),
                 icon = PlazaIcons.Group,
                 external = true,
                 onClick = { onOpenUri(CommunityLinks.DEEPFLOOD) },
@@ -217,16 +238,19 @@ private fun CommunityStats(
                 Text(
                     text =
                     when (state) {
-                        CommunityStatsUiState.Loading -> stringResource(R.string.about_forum_stats_loading)
-                        is CommunityStatsUiState.Content -> stringResource(R.string.about_forum_stats_value, state.memberCount)
-                        CommunityStatsUiState.Error -> stringResource(R.string.about_forum_stats_error)
+                        CommunityStatsUiState.Loading -> stringResource(Res.string.about_forum_stats_loading)
+
+                        is CommunityStatsUiState.Content ->
+                            stringResource(Res.string.about_forum_stats_value, state.memberCount.grouped())
+
+                        CommunityStatsUiState.Error -> stringResource(Res.string.about_forum_stats_error)
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
                 if (state is CommunityStatsUiState.Content) {
                     Text(
-                        stringResource(R.string.about_forum_stats_snapshot),
+                        stringResource(Res.string.about_forum_stats_snapshot),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -241,7 +265,7 @@ private fun CommunityStats(
 
                 CommunityStatsUiState.Error ->
                     TextButton(onClick = onRetry) {
-                        Text(stringResource(R.string.action_retry))
+                        Text(stringResource(Res.string.action_retry))
                     }
 
                 is CommunityStatsUiState.Content -> Unit
@@ -310,3 +334,14 @@ private fun AboutCommunityPreview() {
         )
     }
 }
+
+/**
+ * A thousands separator every three digits.
+ *
+ * The string used to be `%1$,d` and Android's formatter did this. Compose Resources implements its
+ * own `%n$type` substitution and knows no flags, so the grouping has to happen before the value
+ * reaches it. Written out rather than delegated to a platform formatter because the only number this
+ * screen prints is a member count, and comma-every-three is what every locale this forum is read in
+ * does with one.
+ */
+private fun Long.grouped(): String = toString().reversed().chunked(3).joinToString(",").reversed()

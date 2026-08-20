@@ -40,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -49,7 +48,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.RulingAction
 import io.github.nodyssey.data.RulingKind
@@ -60,6 +58,41 @@ import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_open_in_browser
+import io.github.nodyssey.ui.resources.page_jump_latest_read
+import io.github.nodyssey.ui.resources.page_jump_newest
+import io.github.nodyssey.ui.resources.ruling_action_award
+import io.github.nodyssey.ui.resources.ruling_action_award_cancel
+import io.github.nodyssey.ui.resources.ruling_action_coin_add
+import io.github.nodyssey.ui.resources.ruling_action_coin_deduct
+import io.github.nodyssey.ui.resources.ruling_action_hide
+import io.github.nodyssey.ui.resources.ruling_action_hide_all
+import io.github.nodyssey.ui.resources.ruling_action_lock
+import io.github.nodyssey.ui.resources.ruling_action_move
+import io.github.nodyssey.ui.resources.ruling_action_none
+import io.github.nodyssey.ui.resources.ruling_action_pin
+import io.github.nodyssey.ui.resources.ruling_action_rank
+import io.github.nodyssey.ui.resources.ruling_action_stardust_add
+import io.github.nodyssey.ui.resources.ruling_action_stardust_deduct
+import io.github.nodyssey.ui.resources.ruling_action_suspend
+import io.github.nodyssey.ui.resources.ruling_action_title
+import io.github.nodyssey.ui.resources.ruling_action_unhide
+import io.github.nodyssey.ui.resources.ruling_action_unhide_all
+import io.github.nodyssey.ui.resources.ruling_action_unlock
+import io.github.nodyssey.ui.resources.ruling_action_unpin
+import io.github.nodyssey.ui.resources.ruling_action_unsuspend
+import io.github.nodyssey.ui.resources.ruling_meta
+import io.github.nodyssey.ui.resources.ruling_meta_no_moderator
+import io.github.nodyssey.ui.resources.ruling_page_cap
+import io.github.nodyssey.ui.resources.ruling_page_progress
+import io.github.nodyssey.ui.resources.ruling_reason
+import io.github.nodyssey.ui.resources.ruling_subtitle
+import io.github.nodyssey.ui.resources.ruling_target_comment
+import io.github.nodyssey.ui.resources.ruling_target_kind
+import io.github.nodyssey.ui.resources.ruling_target_post
+import io.github.nodyssey.ui.resources.ruling_title
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AppendSpinner
@@ -72,6 +105,7 @@ import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RulingRoute(
@@ -198,18 +232,18 @@ fun RulingScreen(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.ruling_title),
+                title = stringResource(Res.string.ruling_title),
                 state = appBarState,
                 // A parameter rather than a hand-stacked Column: the subtitle then takes its type
                 // and colour from the bar — labelMedium in the toolbar, bodyMedium under the big
                 // centred title — instead of two values chosen here, and it follows the title
                 // through the fold without this screen knowing how far along that fold is.
-                subtitle = stringResource(R.string.ruling_subtitle),
+                subtitle = stringResource(Res.string.ruling_subtitle),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -217,7 +251,7 @@ fun RulingScreen(
                     IconButton(onClick = { onOpenBrowser(visiblePage) }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = stringResource(R.string.action_open_in_browser),
+                            contentDescription = stringResource(Res.string.action_open_in_browser),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -270,7 +304,7 @@ fun RulingScreen(
                         if (!state.hasNextPage && state.totalPages >= RulingViewModel.MAX_PAGES) {
                             item("cap") {
                                 Text(
-                                    text = stringResource(R.string.ruling_page_cap, RulingViewModel.MAX_PAGES),
+                                    text = stringResource(Res.string.ruling_page_cap, RulingViewModel.MAX_PAGES),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -316,13 +350,13 @@ fun RulingScreen(
         PageJumpSheet(
             page = visiblePage,
             totalPages = state.totalPages,
-            note = stringResource(R.string.ruling_page_progress, state.records.size),
+            note = stringResource(Res.string.ruling_page_progress, state.records.size),
             // The log keeps no place across visits, so "上次阅读" is this session's own furthest
             // point — offered while the reader has scrolled back from it, and gone once they have not.
             resume =
             state.lastLoadedPage.takeIf { it != visiblePage }?.let { target ->
                 JumpDestination(
-                    label = stringResource(R.string.page_jump_latest_read, target),
+                    label = stringResource(Res.string.page_jump_latest_read, target),
                     icon = PlazaIcons.Bookmark,
                     onGo = {
                         showPageSheet = false
@@ -333,7 +367,7 @@ fun RulingScreen(
             // Newest first, like the feed: the log's own newest entry is on page 1.
             newest =
             JumpDestination(
-                label = stringResource(R.string.page_jump_newest),
+                label = stringResource(Res.string.page_jump_newest),
                 icon = PlazaIcons.VerticalAlignTop,
                 onGo = {
                     showPageSheet = false
@@ -392,8 +426,8 @@ private fun RulingRow(
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             // Built as an annotated string rather than one format string so the user name can carry the
             // weight — it is what the eye scans for in a log of other people's punishments.
-            val targetKind = record.target.label()?.let { stringResource(R.string.ruling_target_kind, it) }
-            val reason = record.reason?.let { stringResource(R.string.ruling_reason, it) }
+            val targetKind = record.target.label()?.let { stringResource(Res.string.ruling_target_kind, it) }
+            val reason = record.reason?.let { stringResource(Res.string.ruling_reason, it) }
             Text(
                 text =
                 buildAnnotatedString {
@@ -418,19 +452,19 @@ private fun RulingRecord.metaLine(boardTitles: Map<String, String>): String {
         actions
             .map { it.label(boardTitles) }
             .joinToString(" + ")
-            .ifBlank { stringResource(R.string.ruling_action_none) }
+            .ifBlank { stringResource(Res.string.ruling_action_none) }
     val time = createdAtMillis?.let(TimeFormat::absolute).orEmpty()
     return moderatorName
-        ?.let { stringResource(R.string.ruling_meta, actions, it, time) }
-        ?: stringResource(R.string.ruling_meta_no_moderator, actions, time)
+        ?.let { stringResource(Res.string.ruling_meta, actions, it, time) }
+        ?: stringResource(Res.string.ruling_meta_no_moderator, actions, time)
 }
 
 /** `null` for an account-level decision: the site writes the bare name, with no "的…" after it. */
 @Composable
 private fun RulingTarget.label(): String? =
     when (this) {
-        RulingTarget.POST -> stringResource(R.string.ruling_target_post)
-        RulingTarget.COMMENT -> stringResource(R.string.ruling_target_comment)
+        RulingTarget.POST -> stringResource(Res.string.ruling_target_post)
+        RulingTarget.COMMENT -> stringResource(Res.string.ruling_target_comment)
         RulingTarget.USER -> null
     }
 
@@ -448,47 +482,47 @@ private fun RulingAction.label(boardTitles: Map<String, String>): String =
     when (this) {
         is RulingAction.Coin ->
             if (diff >= 0) {
-                stringResource(R.string.ruling_action_coin_add, diff)
+                stringResource(Res.string.ruling_action_coin_add, diff)
             } else {
-                stringResource(R.string.ruling_action_coin_deduct, -diff)
+                stringResource(Res.string.ruling_action_coin_deduct, -diff)
             }
 
         is RulingAction.Stardust ->
             if (diff >= 0) {
-                stringResource(R.string.ruling_action_stardust_add, diff)
+                stringResource(Res.string.ruling_action_stardust_add, diff)
             } else {
-                stringResource(R.string.ruling_action_stardust_deduct, -diff)
+                stringResource(Res.string.ruling_action_stardust_deduct, -diff)
             }
 
-        is RulingAction.Title -> stringResource(R.string.ruling_action_title, title)
+        is RulingAction.Title -> stringResource(Res.string.ruling_action_title, title)
 
-        is RulingAction.Move -> stringResource(R.string.ruling_action_move, boardTitles[boardSlug] ?: boardSlug)
+        is RulingAction.Move -> stringResource(Res.string.ruling_action_move, boardTitles[boardSlug] ?: boardSlug)
 
-        is RulingAction.ReadRank -> stringResource(R.string.ruling_action_rank, rank)
+        is RulingAction.ReadRank -> stringResource(Res.string.ruling_action_rank, rank)
 
         is RulingAction.Lock ->
-            stringResource(if (locked) R.string.ruling_action_lock else R.string.ruling_action_unlock)
+            stringResource(if (locked) Res.string.ruling_action_lock else Res.string.ruling_action_unlock)
 
         is RulingAction.Award ->
-            stringResource(if (award) R.string.ruling_action_award else R.string.ruling_action_award_cancel)
+            stringResource(if (award) Res.string.ruling_action_award else Res.string.ruling_action_award_cancel)
 
         is RulingAction.Hide ->
             stringResource(
                 when {
-                    hidden && wholeUser -> R.string.ruling_action_hide_all
-                    hidden -> R.string.ruling_action_hide
-                    wholeUser -> R.string.ruling_action_unhide_all
-                    else -> R.string.ruling_action_unhide
+                    hidden && wholeUser -> Res.string.ruling_action_hide_all
+                    hidden -> Res.string.ruling_action_hide
+                    wholeUser -> Res.string.ruling_action_unhide_all
+                    else -> Res.string.ruling_action_unhide
                 },
             )
 
         is RulingAction.Pin ->
-            stringResource(if (pinned) R.string.ruling_action_pin else R.string.ruling_action_unpin)
+            stringResource(if (pinned) Res.string.ruling_action_pin else Res.string.ruling_action_unpin)
 
         is RulingAction.Suspend ->
             days
-                ?.let { stringResource(R.string.ruling_action_suspend, it) }
-                ?: stringResource(R.string.ruling_action_unsuspend)
+                ?.let { stringResource(Res.string.ruling_action_suspend, it) }
+                ?: stringResource(Res.string.ruling_action_unsuspend)
     }
 
 private fun RulingKind.icon(): ImageVector =

@@ -14,9 +14,51 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_open_in_browser
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.action_sign_in
+import io.github.nodyssey.ui.resources.action_sign_out
+import io.github.nodyssey.ui.resources.action_verify
+import io.github.nodyssey.ui.resources.status_challenge_body
+import io.github.nodyssey.ui.resources.status_challenge_footnote
+import io.github.nodyssey.ui.resources.status_challenge_title
+import io.github.nodyssey.ui.resources.status_deleted_action
+import io.github.nodyssey.ui.resources.status_deleted_body
+import io.github.nodyssey.ui.resources.status_deleted_title
+import io.github.nodyssey.ui.resources.status_empty_feed_action
+import io.github.nodyssey.ui.resources.status_empty_feed_body
+import io.github.nodyssey.ui.resources.status_empty_feed_title
+import io.github.nodyssey.ui.resources.status_empty_ledger_body
+import io.github.nodyssey.ui.resources.status_empty_ledger_title
+import io.github.nodyssey.ui.resources.status_generic_body
+import io.github.nodyssey.ui.resources.status_http_title
+import io.github.nodyssey.ui.resources.status_level_required_action
+import io.github.nodyssey.ui.resources.status_level_required_body
+import io.github.nodyssey.ui.resources.status_level_required_body_unknown
+import io.github.nodyssey.ui.resources.status_level_required_title
+import io.github.nodyssey.ui.resources.status_level_required_title_level
+import io.github.nodyssey.ui.resources.status_network_body
+import io.github.nodyssey.ui.resources.status_network_title
+import io.github.nodyssey.ui.resources.status_no_results_action
+import io.github.nodyssey.ui.resources.status_no_results_body
+import io.github.nodyssey.ui.resources.status_no_results_title
+import io.github.nodyssey.ui.resources.status_not_wired_body
+import io.github.nodyssey.ui.resources.status_not_wired_title
+import io.github.nodyssey.ui.resources.status_rate_limited_body
+import io.github.nodyssey.ui.resources.status_rate_limited_title
+import io.github.nodyssey.ui.resources.status_sign_in_body
+import io.github.nodyssey.ui.resources.status_sign_in_secondary
+import io.github.nodyssey.ui.resources.status_sign_in_title
+import io.github.nodyssey.ui.resources.status_sign_in_title_board
+import io.github.nodyssey.ui.resources.status_signed_in_body
+import io.github.nodyssey.ui.resources.status_signed_in_title
+import io.github.nodyssey.ui.resources.status_signed_out_body
+import io.github.nodyssey.ui.resources.status_signed_out_title
+import io.github.nodyssey.ui.resources.status_unknown_title
+import io.github.nodyssey.ui.resources.status_unparsable_body
+import io.github.nodyssey.ui.resources.status_unparsable_title
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
@@ -25,6 +67,7 @@ import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.theme.LocalPlazaExtraColors
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.StatusShapes
+import org.jetbrains.compose.resources.stringResource
 
 /*
  * The states, wired to real copy.
@@ -44,25 +87,25 @@ import io.github.plaza.designsys.theme.StatusShapes
 @Composable
 fun SiteError.shortMessage(): String =
     when (this) {
-        SiteError.Cloudflare -> stringResource(R.string.status_challenge_title)
+        SiteError.Cloudflare -> stringResource(Res.string.status_challenge_title)
 
-        SiteError.LoginRequired -> stringResource(R.string.status_sign_in_title)
+        SiteError.LoginRequired -> stringResource(Res.string.status_sign_in_title)
 
         is SiteError.LevelRequired ->
-            requiredLevel?.let { stringResource(R.string.status_level_required_title_level, it) }
-                ?: stringResource(R.string.status_level_required_title)
+            requiredLevel?.let { stringResource(Res.string.status_level_required_title_level, it) }
+                ?: stringResource(Res.string.status_level_required_title)
 
-        SiteError.Network -> stringResource(R.string.status_network_title)
+        SiteError.Network -> stringResource(Res.string.status_network_title)
 
-        SiteError.Unparsable -> stringResource(R.string.status_unparsable_title)
+        SiteError.Unparsable -> stringResource(Res.string.status_unparsable_title)
 
-        SiteError.RateLimited -> stringResource(R.string.status_rate_limited_title)
+        SiteError.RateLimited -> stringResource(Res.string.status_rate_limited_title)
 
-        is SiteError.Http -> stringResource(R.string.status_http_title, statusCode)
+        is SiteError.Http -> stringResource(Res.string.status_http_title, statusCode)
 
-        SiteError.NotWired -> stringResource(R.string.status_not_wired_title)
+        SiteError.NotWired -> stringResource(Res.string.status_not_wired_title)
 
-        SiteError.Unknown -> stringResource(R.string.status_unknown_title)
+        SiteError.Unknown -> stringResource(Res.string.status_unknown_title)
     }
 
 /**
@@ -95,7 +138,7 @@ fun SiteErrorState(
 ) {
     val scheme = MaterialTheme.colorScheme
     val extra = LocalPlazaExtraColors.current
-    val retry = StatusAction(stringResource(R.string.action_retry), onRetry)
+    val retry = StatusAction(stringResource(Res.string.action_retry), onRetry)
 
     when (error) {
         SiteError.Cloudflare ->
@@ -104,10 +147,10 @@ fun SiteErrorState(
                 shape = StatusShapes.Challenge,
                 containerColor = scheme.tertiaryContainer,
                 iconColor = scheme.onTertiaryContainer,
-                title = stringResource(R.string.status_challenge_title),
-                description = stringResource(R.string.status_challenge_body),
-                footnote = stringResource(R.string.status_challenge_footnote),
-                primaryAction = StatusAction(stringResource(R.string.action_verify), onVerify ?: onOpenBrowser),
+                title = stringResource(Res.string.status_challenge_title),
+                description = stringResource(Res.string.status_challenge_body),
+                footnote = stringResource(Res.string.status_challenge_footnote),
+                primaryAction = StatusAction(stringResource(Res.string.action_verify), onVerify ?: onOpenBrowser),
                 secondaryAction = retry,
                 modifier = modifier,
             )
@@ -120,15 +163,15 @@ fun SiteErrorState(
                 iconColor = scheme.onPrimaryContainer,
                 title =
                 if (boardTitle.isNullOrBlank()) {
-                    stringResource(R.string.status_sign_in_title)
+                    stringResource(Res.string.status_sign_in_title)
                 } else {
-                    stringResource(R.string.status_sign_in_title_board, boardTitle)
+                    stringResource(Res.string.status_sign_in_title_board, boardTitle)
                 },
-                description = stringResource(R.string.status_sign_in_body),
-                primaryAction = StatusAction(stringResource(R.string.action_sign_in), onSignIn ?: onOpenBrowser),
+                description = stringResource(Res.string.status_sign_in_body),
+                primaryAction = StatusAction(stringResource(Res.string.action_sign_in), onSignIn ?: onOpenBrowser),
                 secondaryAction =
                 onBrowseElsewhere?.let {
-                    StatusAction(stringResource(R.string.status_sign_in_secondary), it)
+                    StatusAction(stringResource(Res.string.status_sign_in_secondary), it)
                 } ?: retry,
                 modifier = modifier,
             )
@@ -144,14 +187,14 @@ fun SiteErrorState(
                 iconColor = extra.onWarningContainer,
                 title =
                 error.requiredLevel?.let {
-                    stringResource(R.string.status_level_required_title_level, it)
-                } ?: stringResource(R.string.status_level_required_title),
+                    stringResource(Res.string.status_level_required_title_level, it)
+                } ?: stringResource(Res.string.status_level_required_title),
                 description =
                 error.requiredLevel?.let {
-                    stringResource(R.string.status_level_required_body, it)
-                } ?: stringResource(R.string.status_level_required_body_unknown),
+                    stringResource(Res.string.status_level_required_body, it)
+                } ?: stringResource(Res.string.status_level_required_body_unknown),
                 primaryAction =
-                onBack?.let { StatusAction(stringResource(R.string.status_level_required_action), it) },
+                onBack?.let { StatusAction(stringResource(Res.string.status_level_required_action), it) },
                 modifier = modifier,
             )
 
@@ -161,8 +204,8 @@ fun SiteErrorState(
                 shape = StatusShapes.NetworkError,
                 containerColor = scheme.errorContainer,
                 iconColor = scheme.onErrorContainer,
-                title = stringResource(R.string.status_network_title),
-                description = stringResource(R.string.status_network_body),
+                title = stringResource(Res.string.status_network_title),
+                description = stringResource(Res.string.status_network_body),
                 primaryAction = retry,
                 modifier = modifier,
             )
@@ -175,10 +218,10 @@ fun SiteErrorState(
                 shape = StatusShapes.Deleted,
                 containerColor = scheme.secondaryContainer,
                 iconColor = scheme.onSecondaryContainer,
-                title = stringResource(R.string.status_unparsable_title),
-                description = stringResource(R.string.status_unparsable_body),
+                title = stringResource(Res.string.status_unparsable_title),
+                description = stringResource(Res.string.status_unparsable_body),
                 primaryAction =
-                StatusAction(stringResource(R.string.action_open_in_browser), onOpenBrowser),
+                StatusAction(stringResource(Res.string.action_open_in_browser), onOpenBrowser),
                 secondaryAction = retry,
                 modifier = modifier,
             )
@@ -191,8 +234,8 @@ fun SiteErrorState(
                 shape = StatusShapes.NetworkError,
                 containerColor = extra.warningContainer,
                 iconColor = extra.onWarningContainer,
-                title = stringResource(R.string.status_rate_limited_title),
-                description = stringResource(R.string.status_rate_limited_body),
+                title = stringResource(Res.string.status_rate_limited_title),
+                description = stringResource(Res.string.status_rate_limited_body),
                 primaryAction = retry,
                 modifier = modifier,
             )
@@ -203,11 +246,11 @@ fun SiteErrorState(
                 shape = StatusShapes.NetworkError,
                 containerColor = extra.warningContainer,
                 iconColor = extra.onWarningContainer,
-                title = stringResource(R.string.status_http_title, error.statusCode),
-                description = stringResource(R.string.status_generic_body),
+                title = stringResource(Res.string.status_http_title, error.statusCode),
+                description = stringResource(Res.string.status_generic_body),
                 primaryAction = retry,
                 secondaryAction =
-                StatusAction(stringResource(R.string.action_open_in_browser), onOpenBrowser),
+                StatusAction(stringResource(Res.string.action_open_in_browser), onOpenBrowser),
                 modifier = modifier,
             )
 
@@ -220,8 +263,8 @@ fun SiteErrorState(
                 shape = StatusShapes.NetworkError,
                 containerColor = scheme.errorContainer,
                 iconColor = scheme.onErrorContainer,
-                title = stringResource(R.string.status_unknown_title),
-                description = stringResource(R.string.status_generic_body),
+                title = stringResource(Res.string.status_unknown_title),
+                description = stringResource(Res.string.status_generic_body),
                 primaryAction = retry,
                 modifier = modifier,
             )
@@ -238,11 +281,11 @@ fun EmptyFeedState(
         shape = StatusShapes.Empty,
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        title = stringResource(R.string.status_empty_feed_title),
-        description = stringResource(R.string.status_empty_feed_body),
+        title = stringResource(Res.string.status_empty_feed_title),
+        description = stringResource(Res.string.status_empty_feed_body),
         secondaryAction =
         onBrowseElsewhere?.let {
-            StatusAction(stringResource(R.string.status_empty_feed_action), it)
+            StatusAction(stringResource(Res.string.status_empty_feed_action), it)
         },
         modifier = modifier,
     )
@@ -262,8 +305,8 @@ fun NoLedgerEntriesState(modifier: Modifier = Modifier) {
         shape = StatusShapes.Empty,
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        title = stringResource(R.string.status_empty_ledger_title),
-        description = stringResource(R.string.status_empty_ledger_body),
+        title = stringResource(Res.string.status_empty_ledger_title),
+        description = stringResource(Res.string.status_empty_ledger_body),
         modifier = modifier,
     )
 }
@@ -278,9 +321,9 @@ fun DeletedContentState(
         shape = StatusShapes.Deleted,
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        title = stringResource(R.string.status_deleted_title),
-        description = stringResource(R.string.status_deleted_body),
-        secondaryAction = StatusAction(stringResource(R.string.status_deleted_action), onBack),
+        title = stringResource(Res.string.status_deleted_title),
+        description = stringResource(Res.string.status_deleted_body),
+        secondaryAction = StatusAction(stringResource(Res.string.status_deleted_action), onBack),
         modifier = modifier,
     )
 }
@@ -296,9 +339,9 @@ fun NoSearchResultsState(
         shape = StatusShapes.NoResults,
         containerColor = extra.warningContainer,
         iconColor = extra.onWarningContainer,
-        title = stringResource(R.string.status_no_results_title),
-        description = stringResource(R.string.status_no_results_body),
-        secondaryAction = StatusAction(stringResource(R.string.status_no_results_action), onClearQuery),
+        title = stringResource(Res.string.status_no_results_title),
+        description = stringResource(Res.string.status_no_results_body),
+        secondaryAction = StatusAction(stringResource(Res.string.status_no_results_action), onClearQuery),
         modifier = modifier,
     )
 }
@@ -313,9 +356,9 @@ fun SignedOutState(
         shape = StatusShapes.Welcome,
         containerColor = MaterialTheme.colorScheme.primaryContainer,
         iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        title = stringResource(R.string.status_signed_out_title),
-        description = stringResource(R.string.status_signed_out_body),
-        primaryAction = StatusAction(stringResource(R.string.action_sign_in), onSignIn),
+        title = stringResource(Res.string.status_signed_out_title),
+        description = stringResource(Res.string.status_signed_out_body),
+        primaryAction = StatusAction(stringResource(Res.string.action_sign_in), onSignIn),
         modifier = modifier,
     )
 }
@@ -336,9 +379,9 @@ fun SignedInState(
         shape = StatusShapes.Welcome,
         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
         iconColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        title = stringResource(R.string.status_signed_in_title),
-        description = stringResource(R.string.status_signed_in_body),
-        secondaryAction = StatusAction(stringResource(R.string.action_sign_out), onSignOut),
+        title = stringResource(Res.string.status_signed_in_title),
+        description = stringResource(Res.string.status_signed_in_body),
+        secondaryAction = StatusAction(stringResource(Res.string.action_sign_out), onSignOut),
         modifier = modifier,
     )
 }
@@ -361,10 +404,10 @@ fun NotWiredState(
         shape = StatusShapes.Empty,
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        title = stringResource(R.string.status_not_wired_title),
-        description = description ?: stringResource(R.string.status_not_wired_body),
+        title = stringResource(Res.string.status_not_wired_title),
+        description = description ?: stringResource(Res.string.status_not_wired_body),
         primaryAction =
-        StatusAction(stringResource(R.string.action_open_in_browser), onOpenBrowser),
+        StatusAction(stringResource(Res.string.action_open_in_browser), onOpenBrowser),
         modifier = modifier,
     )
 }

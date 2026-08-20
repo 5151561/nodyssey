@@ -16,14 +16,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.ledger_amount_gain
+import io.github.nodyssey.ui.resources.ledger_amount_spend
+import io.github.nodyssey.ui.resources.ledger_end
+import io.github.nodyssey.ui.resources.ledger_load_more_failed
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The bottom of a ledger, whichever ledger it is.
@@ -62,11 +67,11 @@ internal fun <T : Any> LazyListScope.ledgerFooter(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        stringResource(R.string.ledger_load_more_failed),
+                        stringResource(Res.string.ledger_load_more_failed),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    TextButton(onClick = items::retry) { Text(stringResource(R.string.action_retry)) }
+                    TextButton(onClick = items::retry) { Text(stringResource(Res.string.action_retry)) }
                 }
             }
 
@@ -84,7 +89,7 @@ internal fun <T : Any> LazyListScope.ledgerFooter(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(
-                            text = stringResource(R.string.ledger_end),
+                            text = stringResource(Res.string.ledger_end),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -124,7 +129,7 @@ internal fun LedgerRowDivider() {
 @Composable
 internal fun signedAmount(change: Int): String =
     if (change < 0) {
-        stringResource(R.string.ledger_amount_spend, -change)
+        stringResource(Res.string.ledger_amount_spend, -change)
     } else {
-        stringResource(R.string.ledger_amount_gain, change)
+        stringResource(Res.string.ledger_amount_gain, change)
     }

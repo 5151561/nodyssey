@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.navigation
 
-import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
@@ -16,13 +15,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.NotificationsKey
 import io.github.nodyssey.PostListKey
 import io.github.nodyssey.ProfileKey
-import io.github.nodyssey.R
 import io.github.nodyssey.SearchKey
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.tab_home
+import io.github.nodyssey.ui.resources.tab_notifications
+import io.github.nodyssey.ui.resources.tab_profile
+import io.github.nodyssey.ui.resources.tab_search
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The four places the app can be.
@@ -32,19 +36,19 @@ import io.github.nodyssey.SearchKey
  */
 enum class TopLevelDestination(
     val key: NavKey,
-    @param:StringRes val label: Int,
+    val label: StringResource,
     val selectedIcon: ImageVector,
     val icon: ImageVector,
 ) {
-    HOME(PostListKey, R.string.tab_home, Icons.Filled.Home, Icons.Outlined.Home),
-    SEARCH(SearchKey, R.string.tab_search, Icons.Filled.Search, Icons.Outlined.Search),
+    HOME(PostListKey, Res.string.tab_home, Icons.Filled.Home, Icons.Outlined.Home),
+    SEARCH(SearchKey, Res.string.tab_search, Icons.Filled.Search, Icons.Outlined.Search),
     NOTIFICATIONS(
         NotificationsKey,
-        R.string.tab_notifications,
+        Res.string.tab_notifications,
         Icons.Filled.Notifications,
         Icons.Outlined.Notifications,
     ),
-    PROFILE(ProfileKey, R.string.tab_profile, Icons.Filled.Person, Icons.Outlined.Person),
+    PROFILE(ProfileKey, Res.string.tab_profile, Icons.Filled.Person, Icons.Outlined.Person),
     ;
 
     companion object {

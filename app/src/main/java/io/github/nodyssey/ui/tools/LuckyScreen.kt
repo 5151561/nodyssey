@@ -50,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,9 +57,30 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.core.LuckyDraw
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.action_copy_link
+import io.github.nodyssey.ui.resources.action_done
+import io.github.nodyssey.ui.resources.lucky_dedupe
+import io.github.nodyssey.ui.resources.lucky_dedupe_hint
+import io.github.nodyssey.ui.resources.lucky_draw_time
+import io.github.nodyssey.ui.resources.lucky_generate
+import io.github.nodyssey.ui.resources.lucky_intro
+import io.github.nodyssey.ui.resources.lucky_link_copied
+import io.github.nodyssey.ui.resources.lucky_needs_post_id
+import io.github.nodyssey.ui.resources.lucky_open_web
+import io.github.nodyssey.ui.resources.lucky_pick_date
+import io.github.nodyssey.ui.resources.lucky_pick_time
+import io.github.nodyssey.ui.resources.lucky_post_id
+import io.github.nodyssey.ui.resources.lucky_principle
+import io.github.nodyssey.ui.resources.lucky_prize_count
+import io.github.nodyssey.ui.resources.lucky_result
+import io.github.nodyssey.ui.resources.lucky_result_hint
+import io.github.nodyssey.ui.resources.lucky_start_floor
+import io.github.nodyssey.ui.resources.lucky_title
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.digitsOnly
@@ -70,6 +90,7 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -123,21 +144,21 @@ fun LuckyScreen(
     var pickingDate by rememberSaveable { mutableStateOf(false) }
     var pickingTime by rememberSaveable { mutableStateOf(false) }
     val copy = rememberClipboardCopy()
-    val copyLabel = stringResource(R.string.lucky_title)
-    val copiedText = stringResource(R.string.lucky_link_copied)
+    val copyLabel = stringResource(Res.string.lucky_title)
+    val copiedText = stringResource(Res.string.lucky_link_copied)
 
     val appBarState = rememberOneHandAppBarState()
     Scaffold(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(R.string.lucky_title),
+                title = stringResource(Res.string.lucky_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -158,7 +179,7 @@ fun LuckyScreen(
                 shape = RoundedCornerShape(14.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.lucky_intro),
+                    text = stringResource(Res.string.lucky_intro),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.md),
@@ -167,7 +188,7 @@ fun LuckyScreen(
 
             OutlinedTextField(
                 state = postIdState,
-                label = { Text(stringResource(R.string.lucky_post_id)) },
+                label = { Text(stringResource(Res.string.lucky_post_id)) },
                 lineLimits = TextFieldLineLimits.SingleLine,
                 inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -183,7 +204,7 @@ fun LuckyScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     state = prizeCountState,
-                    label = { Text(stringResource(R.string.lucky_prize_count)) },
+                    label = { Text(stringResource(Res.string.lucky_prize_count)) },
                     lineLimits = TextFieldLineLimits.SingleLine,
                     inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -191,7 +212,7 @@ fun LuckyScreen(
                 )
                 OutlinedTextField(
                     state = startFloorState,
-                    label = { Text(stringResource(R.string.lucky_start_floor)) },
+                    label = { Text(stringResource(Res.string.lucky_start_floor)) },
                     lineLimits = TextFieldLineLimits.SingleLine,
                     inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -211,11 +232,11 @@ fun LuckyScreen(
                 ) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            stringResource(R.string.lucky_dedupe),
+                            stringResource(Res.string.lucky_dedupe),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
-                            stringResource(R.string.lucky_dedupe_hint),
+                            stringResource(Res.string.lucky_dedupe_hint),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -234,13 +255,13 @@ fun LuckyScreen(
             ) {
                 Icon(PlazaIcons.Link, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
-                    stringResource(R.string.lucky_generate),
+                    stringResource(Res.string.lucky_generate),
                     modifier = Modifier.padding(start = Spacing.sm),
                 )
             }
             if (!state.canGenerate) {
                 Text(
-                    text = stringResource(R.string.lucky_needs_post_id),
+                    text = stringResource(Res.string.lucky_needs_post_id),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth(),
@@ -251,7 +272,7 @@ fun LuckyScreen(
                 onClick = { onOpenBrowser(NodeSeekSite.BASE_URL + NodeSeekSite.LUCKY_PATH) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.lucky_principle))
+                Text(stringResource(Res.string.lucky_principle))
             }
 
             state.generatedLink?.let { link ->
@@ -304,7 +325,7 @@ private fun DrawTimeRow(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             Text(
-                stringResource(R.string.lucky_draw_time),
+                stringResource(Res.string.lucky_draw_time),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -321,13 +342,13 @@ private fun DrawTimeRow(
                 IconButton(onClick = onPickDate) {
                     Icon(
                         Icons.Default.DateRange,
-                        contentDescription = stringResource(R.string.lucky_pick_date),
+                        contentDescription = stringResource(Res.string.lucky_pick_date),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(19.dp),
                     )
                 }
                 TextButton(onClick = onPickTime) {
-                    Text(stringResource(R.string.lucky_pick_time))
+                    Text(stringResource(Res.string.lucky_pick_time))
                 }
             }
         }
@@ -353,11 +374,11 @@ private fun DrawDatePicker(
                     onPicked(selected?.let { combineDate(it, millis) } ?: millis)
                 },
             ) {
-                Text(stringResource(R.string.action_done))
+                Text(stringResource(Res.string.action_done))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
     ) {
         DatePicker(state = pickerState)
@@ -385,7 +406,7 @@ private fun DrawTimePicker(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = stringResource(R.string.lucky_pick_time),
+                text = stringResource(Res.string.lucky_pick_time),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.padding(bottom = 20.dp),
             )
@@ -405,11 +426,11 @@ private fun DrawTimePicker(
         },
         confirmButton = {
             TextButton(onClick = { onPicked(combineTime(millis, pickerState.hour, pickerState.minute)) }) {
-                Text(stringResource(R.string.action_done))
+                Text(stringResource(Res.string.action_done))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
     ) {
         if (displayMode == TimePickerDisplayMode.Input) {
@@ -428,7 +449,7 @@ private fun GeneratedLinkCard(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            text = stringResource(R.string.lucky_result),
+            text = stringResource(Res.string.lucky_result),
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -453,7 +474,7 @@ private fun GeneratedLinkCard(
                     IconButton(onClick = onCopy) {
                         Icon(
                             PlazaIcons.ContentCopy,
-                            contentDescription = stringResource(R.string.action_copy_link),
+                            contentDescription = stringResource(Res.string.action_copy_link),
                             modifier = Modifier.size(19.dp),
                         )
                     }
@@ -470,12 +491,12 @@ private fun GeneratedLinkCard(
                         modifier = Modifier.size(19.dp),
                     )
                     Text(
-                        stringResource(R.string.lucky_open_web),
+                        stringResource(Res.string.lucky_open_web),
                         modifier = Modifier.padding(start = 7.dp),
                     )
                 }
                 Text(
-                    text = stringResource(R.string.lucky_result_hint),
+                    text = stringResource(Res.string.lucky_result_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

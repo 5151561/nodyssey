@@ -1,7 +1,14 @@
 package io.github.nodyssey.ui.account
 
-import androidx.annotation.StringRes
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.account_password_strength_best
+import io.github.nodyssey.ui.resources.account_password_strength_fair
+import io.github.nodyssey.ui.resources.account_password_strength_hint_done
+import io.github.nodyssey.ui.resources.account_password_strength_hint_length
+import io.github.nodyssey.ui.resources.account_password_strength_hint_variety
+import io.github.nodyssey.ui.resources.account_password_strength_strong
+import io.github.nodyssey.ui.resources.account_password_strength_weak
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * How strong a candidate password looks, on the four-step meter d6 draws.
@@ -12,22 +19,21 @@ import io.github.nodyssey.R
  */
 enum class PasswordStrength(
     val filledBars: Int,
-    @StringRes val labelRes: Int,
+    val labelRes: StringResource,
 ) {
-    Weak(1, R.string.account_password_strength_weak),
-    Fair(2, R.string.account_password_strength_fair),
-    Strong(3, R.string.account_password_strength_strong),
-    Best(4, R.string.account_password_strength_best),
+    Weak(1, Res.string.account_password_strength_weak),
+    Fair(2, Res.string.account_password_strength_fair),
+    Strong(3, Res.string.account_password_strength_strong),
+    Best(4, Res.string.account_password_strength_best),
     ;
 
     /** What would move the meter up, or that nothing needs to. */
-    @get:StringRes
-    val hintRes: Int
+    val hintRes: StringResource
         get() =
             when (this) {
-                Weak -> R.string.account_password_strength_hint_length
-                Fair, Strong -> R.string.account_password_strength_hint_variety
-                Best -> R.string.account_password_strength_hint_done
+                Weak -> Res.string.account_password_strength_hint_length
+                Fair, Strong -> Res.string.account_password_strength_hint_variety
+                Best -> Res.string.account_password_strength_hint_done
             }
 
     companion object {

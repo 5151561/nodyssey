@@ -34,7 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -44,10 +43,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.shortMessage
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.messages_empty
+import io.github.nodyssey.ui.resources.messages_new_conversation
+import io.github.nodyssey.ui.resources.messages_new_conversation_empty
+import io.github.nodyssey.ui.resources.messages_new_conversation_hint
+import io.github.nodyssey.ui.resources.messages_new_conversation_intro
+import io.github.nodyssey.ui.resources.messages_pinned
+import io.github.nodyssey.ui.resources.messages_snippet_mine_prefix
+import io.github.nodyssey.ui.resources.unread_count_capped
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
@@ -59,6 +66,7 @@ import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Board 7e — the 私信 group of the notification tab.
@@ -82,7 +90,7 @@ internal fun ConversationList(
     Box(modifier.fillMaxSize()) {
         if (state.conversations.isEmpty()) {
             Text(
-                text = stringResource(R.string.messages_empty),
+                text = stringResource(Res.string.messages_empty),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.Center),
@@ -110,7 +118,7 @@ internal fun ConversationList(
         ) {
             Icon(
                 PlazaIcons.AddComment,
-                contentDescription = stringResource(R.string.messages_new_conversation),
+                contentDescription = stringResource(Res.string.messages_new_conversation),
             )
         }
     }
@@ -199,7 +207,7 @@ private fun ConversationRow(
                     if (conversation.isSystem) {
                         Icon(
                             PlazaIcons.PushPin,
-                            contentDescription = stringResource(R.string.messages_pinned),
+                            contentDescription = stringResource(Res.string.messages_pinned),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp),
                         )
@@ -280,7 +288,7 @@ private fun conversationSnippet(conversation: MessageConversation): AnnotatedStr
             AnnotatedString(conversation.snippet)
         }
     if (!conversation.isSnippetMine) return body
-    val prefix = stringResource(R.string.messages_snippet_mine_prefix)
+    val prefix = stringResource(Res.string.messages_snippet_mine_prefix)
     return buildAnnotatedString {
         append(prefix)
         append(body)
@@ -305,11 +313,11 @@ private fun NewConversationSheet(
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Text(
-                stringResource(R.string.messages_new_conversation),
+                stringResource(Res.string.messages_new_conversation),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                stringResource(R.string.messages_new_conversation_intro),
+                stringResource(Res.string.messages_new_conversation_intro),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -317,7 +325,7 @@ private fun NewConversationSheet(
                 value = state.query,
                 onValueChange = onQueryChange,
                 singleLine = true,
-                label = { Text(stringResource(R.string.messages_new_conversation_hint)) },
+                label = { Text(stringResource(Res.string.messages_new_conversation_hint)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
                 modifier = Modifier.fillMaxWidth(),
@@ -336,7 +344,7 @@ private fun NewConversationSheet(
 
                 state.results.isEmpty() && state.query.isNotBlank() ->
                     Text(
-                        stringResource(R.string.messages_new_conversation_empty),
+                        stringResource(Res.string.messages_new_conversation_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -375,7 +383,7 @@ private const val MAX_UNREAD = 99
  */
 @Composable
 internal fun unreadLabel(count: Int, cap: Int): String =
-    if (count > cap) stringResource(R.string.unread_count_capped, cap) else count.toString()
+    if (count > cap) stringResource(Res.string.unread_count_capped, cap) else count.toString()
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable

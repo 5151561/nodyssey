@@ -52,25 +52,50 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.data.settings.ColorSource
 import io.github.nodyssey.data.settings.PaletteStyle
 import io.github.nodyssey.data.settings.SavedTheme
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.ui.common.longPressToEdit
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.action_delete
+import io.github.nodyssey.ui.resources.action_done
+import io.github.nodyssey.ui.resources.action_new
+import io.github.nodyssey.ui.resources.action_rename
+import io.github.nodyssey.ui.resources.settings_color_source
+import io.github.nodyssey.ui.resources.settings_color_source_custom
+import io.github.nodyssey.ui.resources.settings_color_source_memory_hint
+import io.github.nodyssey.ui.resources.settings_color_source_preset
+import io.github.nodyssey.ui.resources.settings_color_source_wallpaper
+import io.github.nodyssey.ui.resources.settings_color_source_wallpaper_value
+import io.github.nodyssey.ui.resources.settings_my_themes
+import io.github.nodyssey.ui.resources.settings_my_themes_hint
+import io.github.nodyssey.ui.resources.settings_palette_style
+import io.github.nodyssey.ui.resources.settings_palette_style_expressive
+import io.github.nodyssey.ui.resources.settings_palette_style_monochrome
+import io.github.nodyssey.ui.resources.settings_palette_style_neutral
+import io.github.nodyssey.ui.resources.settings_palette_style_soft
+import io.github.nodyssey.ui.resources.settings_palette_style_vibrant
+import io.github.nodyssey.ui.resources.settings_presets
+import io.github.nodyssey.ui.resources.settings_presets_hint
+import io.github.nodyssey.ui.resources.settings_seed_name
+import io.github.nodyssey.ui.resources.settings_theme
+import io.github.nodyssey.ui.resources.settings_theme_preview
 import io.github.nodyssey.ui.settings.SettingsSectionTitle
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ThemeSettingsRoute(
@@ -130,13 +155,13 @@ fun ThemeSettingsScreen(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             MediumTopAppBar(
-                title = { Text(stringResource(R.string.settings_theme)) },
+                title = { Text(stringResource(Res.string.settings_theme)) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
+                            contentDescription = stringResource(Res.string.action_back),
                         )
                     }
                 },
@@ -154,7 +179,7 @@ fun ThemeSettingsScreen(
                 .padding(bottom = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            SettingsSectionTitle(stringResource(R.string.settings_color_source))
+            SettingsSectionTitle(stringResource(Res.string.settings_color_source))
             ColorSourceTiles(
                 settings = settings,
                 onSelect = onColorSourceChange,
@@ -163,7 +188,7 @@ fun ThemeSettingsScreen(
             )
             InfoLine(
                 stringResource(
-                    R.string.settings_color_source_memory_hint,
+                    Res.string.settings_color_source_memory_hint,
                     Color(settings.seedColor).toHexString(),
                 ),
             )
@@ -175,13 +200,13 @@ fun ThemeSettingsScreen(
             // six-way control for a choice that is not in force.
             AnimatedVisibility(visible = settings.colorSource == ColorSource.PRESET) {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    SettingsSectionTitle(stringResource(R.string.settings_presets))
+                    SettingsSectionTitle(stringResource(Res.string.settings_presets))
                     PresetGrid(selected = settings.presetId, onSelect = onPresetSelected)
-                    InfoLine(stringResource(R.string.settings_presets_hint))
+                    InfoLine(stringResource(Res.string.settings_presets_hint))
                 }
             }
 
-            SettingsSectionTitle(stringResource(R.string.settings_my_themes))
+            SettingsSectionTitle(stringResource(Res.string.settings_my_themes))
             SavedThemeChips(
                 themes = settings.savedThemes,
                 selected = settings.seedColor.takeIf { settings.colorSource == ColorSource.CUSTOM },
@@ -191,13 +216,13 @@ fun ThemeSettingsScreen(
                 onCreate = { sheetOpen = true },
             )
             Text(
-                stringResource(R.string.settings_my_themes_hint),
+                stringResource(Res.string.settings_my_themes_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.xs),
             )
 
-            SettingsSectionTitle(stringResource(R.string.settings_palette_style))
+            SettingsSectionTitle(stringResource(Res.string.settings_palette_style))
             // 色彩风格 steers the generator, and a 角色预设 never reaches it. Greyed rather than
             // hidden: the chips are still the answer for the other five ways of getting a colour,
             // and a section that vanished would read as one the app had lost.
@@ -207,7 +232,7 @@ fun ThemeSettingsScreen(
                 enabled = activeCharacterPalette(settings) == null,
             )
 
-            SettingsSectionTitle(stringResource(R.string.settings_theme_preview))
+            SettingsSectionTitle(stringResource(Res.string.settings_theme_preview))
             ThemePreviewCard()
         }
     }
@@ -262,7 +287,7 @@ private fun ColorSourceTiles(
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         ColorSourceTile(
             icon = PlazaIcons.Palette,
-            title = stringResource(R.string.settings_color_source_preset),
+            title = stringResource(Res.string.settings_color_source_preset),
             value = presetName,
             selected = settings.colorSource == ColorSource.PRESET,
             onClick = { onSelect(ColorSource.PRESET) },
@@ -271,8 +296,8 @@ private fun ColorSourceTiles(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ColorSourceTile(
                 icon = PlazaIcons.Wallpaper,
-                title = stringResource(R.string.settings_color_source_wallpaper),
-                value = stringResource(R.string.settings_color_source_wallpaper_value),
+                title = stringResource(Res.string.settings_color_source_wallpaper),
+                value = stringResource(Res.string.settings_color_source_wallpaper_value),
                 selected = settings.colorSource == ColorSource.WALLPAPER,
                 onClick = {
                     if (settings.colorSource == ColorSource.WALLPAPER) {
@@ -286,7 +311,7 @@ private fun ColorSourceTiles(
         }
         ColorSourceTile(
             swatch = Color(settings.seedColor),
-            title = stringResource(R.string.settings_color_source_custom),
+            title = stringResource(Res.string.settings_color_source_custom),
             value = Color(settings.seedColor).toHexString(),
             selected = settings.colorSource == ColorSource.CUSTOM,
             onClick = {
@@ -512,14 +537,14 @@ private fun SavedThemeChips(
                     onDismissRequest = { menuFor = null },
                 ) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_rename)) },
+                        text = { Text(stringResource(Res.string.action_rename)) },
                         onClick = {
                             menuFor = null
                             onRename(theme)
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_delete)) },
+                        text = { Text(stringResource(Res.string.action_delete)) },
                         onClick = {
                             menuFor = null
                             onDelete(theme.color)
@@ -530,7 +555,7 @@ private fun SavedThemeChips(
         }
         AssistChip(
             onClick = onCreate,
-            label = { Text(stringResource(R.string.action_new)) },
+            label = { Text(stringResource(Res.string.action_new)) },
             leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
             colors =
             AssistChipDefaults.assistChipColors(
@@ -552,11 +577,11 @@ private fun PaletteStyleChips(
 ) {
     val labels =
         listOf(
-            PaletteStyle.SOFT to R.string.settings_palette_style_soft,
-            PaletteStyle.VIBRANT to R.string.settings_palette_style_vibrant,
-            PaletteStyle.EXPRESSIVE to R.string.settings_palette_style_expressive,
-            PaletteStyle.NEUTRAL to R.string.settings_palette_style_neutral,
-            PaletteStyle.MONOCHROME to R.string.settings_palette_style_monochrome,
+            PaletteStyle.SOFT to Res.string.settings_palette_style_soft,
+            PaletteStyle.VIBRANT to Res.string.settings_palette_style_vibrant,
+            PaletteStyle.EXPRESSIVE to Res.string.settings_palette_style_expressive,
+            PaletteStyle.NEUTRAL to Res.string.settings_palette_style_neutral,
+            PaletteStyle.MONOCHROME to Res.string.settings_palette_style_monochrome,
         )
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
@@ -583,24 +608,24 @@ private fun RenameThemeDialog(
     var name by remember(theme) { mutableStateOf(theme.name) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.action_rename)) },
+        title = { Text(stringResource(Res.string.action_rename)) },
         text = {
             TextField(
                 value = name,
                 onValueChange = { name = it.take(SAVED_THEME_NAME_LIMIT) },
                 singleLine = true,
-                label = { Text(stringResource(R.string.settings_seed_name)) },
+                label = { Text(stringResource(Res.string.settings_seed_name)) },
             )
         },
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(name.ifBlank { Color(theme.color).toHexString() }) },
             ) {
-                Text(stringResource(R.string.action_done))
+                Text(stringResource(Res.string.action_done))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
     )
 }

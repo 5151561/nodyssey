@@ -15,15 +15,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.about_update_download
+import io.github.nodyssey.ui.resources.about_update_prerelease_hint
+import io.github.nodyssey.ui.resources.update_reminder_later
+import io.github.nodyssey.ui.resources.update_reminder_size
+import io.github.nodyssey.ui.resources.update_reminder_title
 import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.releaseNotesText
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 启动提醒 — the one thing that actually tells the owner of a sideloaded APK that a fix shipped.
@@ -56,7 +61,7 @@ fun UpdateReminderDialog(
         },
         title = {
             Text(
-                stringResource(R.string.update_reminder_title, release.versionName),
+                stringResource(Res.string.update_reminder_title, release.versionName),
                 style = MaterialTheme.typography.headlineSmall,
             )
         },
@@ -67,7 +72,7 @@ fun UpdateReminderDialog(
                 // have — `release.yml` gives it a placeholder line instead of a CHANGELOG section.
                 if (release.preRelease) {
                     Text(
-                        stringResource(R.string.about_update_prerelease_hint),
+                        stringResource(Res.string.about_update_prerelease_hint),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.tertiary,
                     )
@@ -75,7 +80,7 @@ fun UpdateReminderDialog(
                 if (release.sizeBytes > 0L) {
                     Text(
                         stringResource(
-                            R.string.update_reminder_size,
+                            Res.string.update_reminder_size,
                             Formatter.formatShortFileSize(context, release.sizeBytes),
                         ),
                         style = MaterialTheme.typography.labelMedium,
@@ -98,12 +103,12 @@ fun UpdateReminderDialog(
         },
         confirmButton = {
             TextButton(onClick = onDownload) {
-                Text(stringResource(R.string.about_update_download))
+                Text(stringResource(Res.string.about_update_download))
             }
         },
         dismissButton = {
             TextButton(onClick = onPostpone) {
-                Text(stringResource(R.string.update_reminder_later))
+                Text(stringResource(Res.string.update_reminder_later))
             }
         },
     )

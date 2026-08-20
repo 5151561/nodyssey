@@ -63,7 +63,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
@@ -72,7 +71,15 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.get
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.settings_seed_apply_once
+import io.github.nodyssey.ui.resources.settings_seed_hex
+import io.github.nodyssey.ui.resources.settings_seed_name
+import io.github.nodyssey.ui.resources.settings_seed_pick_from_image
+import io.github.nodyssey.ui.resources.settings_seed_pick_hint
+import io.github.nodyssey.ui.resources.settings_seed_pick_loading
+import io.github.nodyssey.ui.resources.settings_seed_save
+import io.github.nodyssey.ui.resources.settings_seed_sheet_title
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.LocalPlazaDarkTheme
 import io.github.plaza.designsys.theme.PlazaPaletteStyle
@@ -82,6 +89,7 @@ import io.github.plaza.designsys.theme.plazaSeedColorScheme
 import io.github.plaza.designsys.theme.toPlazaSeedHct
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 /**
@@ -141,7 +149,7 @@ internal fun SeedColorSheet(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stringResource(R.string.settings_seed_sheet_title),
+                    stringResource(Res.string.settings_seed_sheet_title),
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.weight(1f),
                 )
@@ -154,7 +162,7 @@ internal fun SeedColorSheet(
                 ) {
                     Icon(
                         PlazaIcons.Colorize,
-                        contentDescription = stringResource(R.string.settings_seed_pick_from_image),
+                        contentDescription = stringResource(Res.string.settings_seed_pick_from_image),
                     )
                 }
             }
@@ -199,7 +207,7 @@ internal fun SeedColorSheet(
                         parseHexColor(typed)?.let { hct = it.toPlazaSeedHct() }
                     },
                     singleLine = true,
-                    label = { Text(stringResource(R.string.settings_seed_hex)) },
+                    label = { Text(stringResource(Res.string.settings_seed_hex)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
                     isError = parseHexColor(hex) == null,
                     modifier = Modifier.weight(1f),
@@ -225,7 +233,7 @@ internal fun SeedColorSheet(
                 value = name,
                 onValueChange = { name = it.take(MAX_NAME_LENGTH) },
                 singleLine = true,
-                label = { Text(stringResource(R.string.settings_seed_name)) },
+                label = { Text(stringResource(Res.string.settings_seed_name)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -235,7 +243,7 @@ internal fun SeedColorSheet(
                     onClick = { onApply(color, null) },
                     modifier = Modifier.weight(1f).height(48.dp),
                 ) {
-                    Text(stringResource(R.string.settings_seed_apply_once))
+                    Text(stringResource(Res.string.settings_seed_apply_once))
                 }
                 Button(
                     onClick = { onApply(color, name.ifBlank { color.toHexString() }) },
@@ -247,7 +255,7 @@ internal fun SeedColorSheet(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.size(6.dp))
-                    Text(stringResource(R.string.settings_seed_save))
+                    Text(stringResource(Res.string.settings_seed_save))
                 }
             }
         }
@@ -473,14 +481,14 @@ private fun ImageSampler(
     Box(modifier.clip(RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
         if (image == null) {
             Text(
-                stringResource(R.string.settings_seed_pick_loading),
+                stringResource(Res.string.settings_seed_pick_loading),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
             Image(
                 bitmap = image.asImageBitmap(),
-                contentDescription = stringResource(R.string.settings_seed_pick_hint),
+                contentDescription = stringResource(Res.string.settings_seed_pick_hint),
                 contentScale = ContentScale.Crop,
                 modifier =
                 Modifier
@@ -506,7 +514,7 @@ private fun ImageSampler(
                     },
             )
             Text(
-                stringResource(R.string.settings_seed_pick_hint),
+                stringResource(Res.string.settings_seed_pick_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier =

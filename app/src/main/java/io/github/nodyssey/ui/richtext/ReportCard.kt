@@ -36,15 +36,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.nodyssey.R
 import io.github.nodyssey.core.report.QualityReport
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_collapse
+import io.github.nodyssey.ui.resources.action_expand
+import io.github.nodyssey.ui.resources.report_show_source
 import io.github.plaza.designsys.component.SpecRow
 import io.github.plaza.designsys.component.SpecTable
 import io.github.plaza.designsys.theme.CodeStyle
@@ -54,6 +56,7 @@ import io.github.plaza.designsys.theme.ReportLabel
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A NodeQuality benchmark report, rebuilt out of ordinary rows instead of the terminal art it
@@ -174,7 +177,7 @@ private fun ReportHeader(
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
                 contentDescription =
-                stringResource(if (expanded) R.string.action_collapse else R.string.action_expand),
+                stringResource(if (expanded) Res.string.action_collapse else Res.string.action_expand),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .size(20.dp)
@@ -372,7 +375,7 @@ private fun SourceAction(onShowSource: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
-            text = stringResource(R.string.report_show_source),
+            text = stringResource(Res.string.report_show_source),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )

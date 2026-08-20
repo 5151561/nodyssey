@@ -54,14 +54,25 @@ import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
-import io.github.nodyssey.R
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_close
+import io.github.nodyssey.ui.resources.action_load_anyway
+import io.github.nodyssey.ui.resources.action_open_in_browser
+import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.action_share
+import io.github.nodyssey.ui.resources.viewer_deferred_wifi_only
+import io.github.nodyssey.ui.resources.viewer_load_failed
+import io.github.nodyssey.ui.resources.viewer_page
+import io.github.nodyssey.ui.resources.viewer_save
+import io.github.nodyssey.ui.resources.viewer_save_failed
+import io.github.nodyssey.ui.resources.viewer_save_unsupported
+import io.github.nodyssey.ui.resources.viewer_saved
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.imageLoadFailureText
 import io.github.plaza.designsys.image.ImageLoadFailure
@@ -70,6 +81,7 @@ import io.github.plaza.designsys.image.allowMeteredImage
 import io.github.plaza.designsys.image.diagnoseImageFailure
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
 
 /**
@@ -105,9 +117,9 @@ fun ImageViewerScreen(
     val notice =
         when (saveOutcome) {
             null -> null
-            SaveOutcome.SAVED -> stringResource(R.string.viewer_saved)
-            SaveOutcome.UNSUPPORTED_OS -> stringResource(R.string.viewer_save_unsupported)
-            SaveOutcome.FAILED -> stringResource(R.string.viewer_save_failed)
+            SaveOutcome.SAVED -> stringResource(Res.string.viewer_saved)
+            SaveOutcome.UNSUPPORTED_OS -> stringResource(Res.string.viewer_save_unsupported)
+            SaveOutcome.FAILED -> stringResource(Res.string.viewer_save_failed)
         }
 
     Box(
@@ -165,14 +177,14 @@ fun ImageViewerScreen(
             ) {
                 ViewerAction(
                     icon = PlazaIcons.Download,
-                    label = stringResource(R.string.viewer_save),
+                    label = stringResource(Res.string.viewer_save),
                     modifier = Modifier.weight(1f),
                 ) {
                     onSave(urls[pagerState.currentPage])
                 }
                 ViewerAction(
                     icon = Icons.Default.Share,
-                    label = stringResource(R.string.action_share),
+                    label = stringResource(Res.string.action_share),
                     modifier = Modifier.weight(1f),
                 ) {
                     // Shares the address rather than the bytes: NodeSeek attachments are hosted URLs,
@@ -206,12 +218,12 @@ private fun ViewerTopBar(
         IconButton(onClick = onClose) {
             Icon(
                 Icons.Default.Close,
-                contentDescription = stringResource(R.string.action_close),
+                contentDescription = stringResource(Res.string.action_close),
                 tint = VIEWER_CONTENT,
             )
         }
         Text(
-            text = stringResource(R.string.viewer_page, page, total),
+            text = stringResource(Res.string.viewer_page, page, total),
             style =
             MaterialTheme.typography.labelLarge.copy(
                 fontWeight = FontWeight.SemiBold,
@@ -223,7 +235,7 @@ private fun ViewerTopBar(
         IconButton(onClick = onOpenBrowser) {
             Icon(
                 PlazaIcons.OpenInNew,
-                contentDescription = stringResource(R.string.action_open_in_browser),
+                contentDescription = stringResource(Res.string.action_open_in_browser),
                 tint = VIEWER_CONTENT,
                 modifier = Modifier.size(20.dp),
             )
@@ -420,7 +432,7 @@ private fun ImageFailure(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     stringResource(
-                        if (deferred) R.string.viewer_deferred_wifi_only else R.string.viewer_load_failed,
+                        if (deferred) Res.string.viewer_deferred_wifi_only else Res.string.viewer_load_failed,
                     ),
                     style = MaterialTheme.typography.labelLarge,
                 )
@@ -448,7 +460,7 @@ private fun ImageFailure(
             ) {
                 Text(
                     stringResource(
-                        if (deferred) R.string.action_load_anyway else R.string.action_retry,
+                        if (deferred) Res.string.action_load_anyway else Res.string.action_retry,
                     ),
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),

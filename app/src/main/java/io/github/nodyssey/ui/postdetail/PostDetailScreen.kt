@@ -79,7 +79,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -91,7 +90,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.R
 import io.github.nodyssey.ThreadPreview
 import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.composer.PostEditTarget
@@ -117,6 +115,45 @@ import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.FloorReference
 import io.github.nodyssey.ui.composer.ReplyComposerHost
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.action_copy_link
+import io.github.nodyssey.ui.resources.action_more
+import io.github.nodyssey.ui.resources.action_open_in_browser
+import io.github.nodyssey.ui.resources.action_refresh
+import io.github.nodyssey.ui.resources.action_share
+import io.github.nodyssey.ui.resources.chicken_dialog_body
+import io.github.nodyssey.ui.resources.chicken_dialog_body_free
+import io.github.nodyssey.ui.resources.chicken_dialog_confirm
+import io.github.nodyssey.ui.resources.chicken_dialog_title
+import io.github.nodyssey.ui.resources.dislike_dialog_body
+import io.github.nodyssey.ui.resources.dislike_dialog_confirm
+import io.github.nodyssey.ui.resources.dislike_dialog_title
+import io.github.nodyssey.ui.resources.page_jump_latest
+import io.github.nodyssey.ui.resources.page_jump_latest_read
+import io.github.nodyssey.ui.resources.page_jump_latest_read_floor
+import io.github.nodyssey.ui.resources.post_auto_paging
+import io.github.nodyssey.ui.resources.post_badge_awarded
+import io.github.nodyssey.ui.resources.post_badge_original_poster
+import io.github.nodyssey.ui.resources.post_body_empty
+import io.github.nodyssey.ui.resources.post_collect_action
+import io.github.nodyssey.ui.resources.post_collected_action
+import io.github.nodyssey.ui.resources.post_comment_blocked
+import io.github.nodyssey.ui.resources.post_comment_blocked_show
+import io.github.nodyssey.ui.resources.post_comments_empty
+import io.github.nodyssey.ui.resources.post_comments_empty_hint
+import io.github.nodyssey.ui.resources.post_comments_header
+import io.github.nodyssey.ui.resources.post_edit_action
+import io.github.nodyssey.ui.resources.post_edited
+import io.github.nodyssey.ui.resources.post_link_copied
+import io.github.nodyssey.ui.resources.post_open_original
+import io.github.nodyssey.ui.resources.post_page_progress
+import io.github.nodyssey.ui.resources.post_quote_action
+import io.github.nodyssey.ui.resources.post_reaction_chicken
+import io.github.nodyssey.ui.resources.post_reaction_dislike
+import io.github.nodyssey.ui.resources.post_reaction_like
+import io.github.nodyssey.ui.resources.post_reply_action
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.richtext.InlineNode
@@ -141,6 +178,8 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PostDetailRoute(
@@ -688,7 +727,7 @@ fun PostDetailScreen(
         PageJumpSheet(
             page = visiblePage,
             totalPages = state.totalPages,
-            note = stringResource(R.string.post_page_progress, loadedFloors),
+            note = stringResource(Res.string.post_page_progress, loadedFloors),
             onDismiss = { showPageSheet = false },
             onGo = { target ->
                 showPageSheet = false
@@ -703,8 +742,8 @@ fun PostDetailScreen(
                 ?.let { target ->
                     JumpDestination(
                         label =
-                        resume?.floor?.let { stringResource(R.string.page_jump_latest_read_floor, it) }
-                            ?: stringResource(R.string.page_jump_latest_read, target),
+                        resume?.floor?.let { stringResource(Res.string.page_jump_latest_read_floor, it) }
+                            ?: stringResource(Res.string.page_jump_latest_read, target),
                         icon = PlazaIcons.Bookmark,
                         onGo = {
                             showPageSheet = false
@@ -715,7 +754,7 @@ fun PostDetailScreen(
             // The thread's newest is the foot of its last page, which is not where 最后一页 lands.
             newest =
             JumpDestination(
-                label = stringResource(R.string.page_jump_latest),
+                label = stringResource(Res.string.page_jump_latest),
                 icon = PlazaIcons.VerticalAlignBottom,
                 onGo = {
                     showPageSheet = false
@@ -764,7 +803,7 @@ private fun DetailBottomActions(
         // where the thumb last left it, and Material's toolbar rounds its FAB up to 80dp the moment
         // the bar collapses. Shrinking to an icon is the whole of the change it makes now.
         ExtendedFloatingActionButton(
-            text = { Text(stringResource(R.string.post_reply_action)) },
+            text = { Text(stringResource(Res.string.post_reply_action)) },
             icon = {
                 Icon(
                     PlazaIcons.Reply,
@@ -796,9 +835,9 @@ private fun DetailTopBar(
     var menuOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val copy = rememberClipboardCopy()
-    val openOriginalPostLabel = stringResource(R.string.post_open_original)
-    val linkCopied = stringResource(R.string.post_link_copied)
-    val shareLabel = stringResource(R.string.action_share)
+    val openOriginalPostLabel = stringResource(Res.string.post_open_original)
+    val linkCopied = stringResource(Res.string.post_link_copied)
+    val shareLabel = stringResource(Res.string.action_share)
 
     TopAppBar(
         title = {
@@ -825,7 +864,7 @@ private fun DetailTopBar(
                 IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.action_back),
+                        contentDescription = stringResource(Res.string.action_back),
                     )
                 }
             }
@@ -834,7 +873,7 @@ private fun DetailTopBar(
             IconButton(onClick = onOpenInBrowser) {
                 Icon(
                     Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = stringResource(R.string.action_open_in_browser),
+                    contentDescription = stringResource(Res.string.action_open_in_browser),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -842,7 +881,7 @@ private fun DetailTopBar(
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
                         Icons.Default.MoreVert,
-                        contentDescription = stringResource(R.string.action_more),
+                        contentDescription = stringResource(Res.string.action_more),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -850,14 +889,14 @@ private fun DetailTopBar(
                     // The menu twin of pull-to-refresh, for the reader who is thirty floors down and
                     // not about to scroll back up to pull.
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_refresh)) },
+                        text = { Text(stringResource(Res.string.action_refresh)) },
                         onClick = {
                             menuOpen = false
                             onRefresh()
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_copy_link)) },
+                        text = { Text(stringResource(Res.string.action_copy_link)) },
                         onClick = {
                             copy("post", postUrl, linkCopied)
                             menuOpen = false
@@ -1077,13 +1116,13 @@ private fun BlockedFloorRow(
             modifier = Modifier.size(16.dp),
         )
         Text(
-            text = floor?.let { "$it · " }.orEmpty() + stringResource(R.string.post_comment_blocked),
+            text = floor?.let { "$it · " }.orEmpty() + stringResource(Res.string.post_comment_blocked),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
         )
         TextButton(onClick = onShow) {
-            Text(stringResource(R.string.post_comment_blocked_show))
+            Text(stringResource(Res.string.post_comment_blocked_show))
         }
     }
 }
@@ -1160,7 +1199,7 @@ private fun ThreadHeader(
             // has no place in a layout whose left edge every floor shares.
             if (isAwarded) {
                 TonalTag(
-                    text = stringResource(R.string.post_badge_awarded),
+                    text = stringResource(Res.string.post_badge_awarded),
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                     contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
@@ -1182,7 +1221,7 @@ private fun ThreadHeader(
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = stringResource(R.string.post_open_original),
+                    text = stringResource(Res.string.post_open_original),
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.padding(start = Spacing.xs),
                 )
@@ -1323,7 +1362,7 @@ private fun ThreadOpeningPost(
 
         if (body.nodes.isEmpty()) {
             Text(
-                text = stringResource(R.string.post_body_empty),
+                text = stringResource(Res.string.post_body_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = Spacing.md),
@@ -1374,7 +1413,7 @@ private fun CommentsHeader(count: Int) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(R.string.post_comments_header, count),
+            text = stringResource(Res.string.post_comments_header, count),
             style = MaterialTheme.typography.titleSmall.copy(
                 fontWeight = FontWeight.Bold,
                 fontFeatureSettings = TABULAR_FIGURES,
@@ -1382,7 +1421,7 @@ private fun CommentsHeader(count: Int) {
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = stringResource(R.string.post_auto_paging),
+            text = stringResource(Res.string.post_auto_paging),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1396,12 +1435,12 @@ private fun CommentsHeader(count: Int) {
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             Text(
-                text = stringResource(R.string.post_comments_empty),
+                text = stringResource(Res.string.post_comments_empty),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = stringResource(R.string.post_comments_empty_hint),
+                text = stringResource(Res.string.post_comments_empty_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1583,7 +1622,7 @@ private fun ReactionRow(
         if (collected != null && onCollect != null) {
             QuietReaction(
                 icon = if (collected) Icons.Default.Star else PlazaIcons.StarBorder,
-                label = if (collected) R.string.post_collected_action else R.string.post_collect_action,
+                label = if (collected) Res.string.post_collected_action else Res.string.post_collect_action,
                 count = collectionCount?.toString().orEmpty(),
                 selected = collected,
                 pending = collectPending,
@@ -1611,7 +1650,7 @@ private fun ReactionRow(
         onQuote?.let {
             QuietReaction(
                 icon = PlazaIcons.FormatQuote,
-                label = R.string.post_quote_action,
+                label = Res.string.post_quote_action,
                 count = "",
                 onClick = it,
             )
@@ -1619,7 +1658,7 @@ private fun ReactionRow(
         onReply?.let {
             QuietReaction(
                 icon = PlazaIcons.Reply,
-                label = R.string.post_reply_action,
+                label = Res.string.post_reply_action,
                 count = "",
                 onClick = it,
             )
@@ -1627,7 +1666,7 @@ private fun ReactionRow(
         onEdit?.let {
             QuietReaction(
                 icon = Icons.Default.Edit,
-                label = R.string.post_edit_action,
+                label = Res.string.post_edit_action,
                 count = "",
                 onClick = it,
             )
@@ -1643,17 +1682,17 @@ private val REACTION_ORDER =
         ReactionAction.Dislike to PlazaIcons.ThumbDown,
     )
 
-private fun ReactionAction.labelRes(): Int =
+private fun ReactionAction.labelRes(): StringResource =
     when (this) {
-        ReactionAction.Upvote -> R.string.post_reaction_like
-        ReactionAction.ChickenLeg -> R.string.post_reaction_chicken
-        ReactionAction.Dislike -> R.string.post_reaction_dislike
+        ReactionAction.Upvote -> Res.string.post_reaction_like
+        ReactionAction.ChickenLeg -> Res.string.post_reaction_chicken
+        ReactionAction.Dislike -> Res.string.post_reaction_dislike
     }
 
 @Composable
 private fun QuietReaction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: Int,
+    label: StringResource,
     count: String,
     onClick: (() -> Unit)? = null,
     spent: Boolean = false,
@@ -1738,7 +1777,7 @@ private fun ReactionConfirmDialog(
         title = {
             Text(
                 stringResource(
-                    if (isChicken) R.string.chicken_dialog_title else R.string.dislike_dialog_title,
+                    if (isChicken) Res.string.chicken_dialog_title else Res.string.dislike_dialog_title,
                 ),
             )
         },
@@ -1747,14 +1786,14 @@ private fun ReactionConfirmDialog(
                 when {
                     free ->
                         stringResource(
-                            R.string.chicken_dialog_body_free,
+                            Res.string.chicken_dialog_body_free,
                             target.content.authorName,
                             freeChickenLegs.remaining,
                         )
 
-                    isChicken -> stringResource(R.string.chicken_dialog_body, target.content.authorName)
+                    isChicken -> stringResource(Res.string.chicken_dialog_body, target.content.authorName)
 
-                    else -> stringResource(R.string.dislike_dialog_body)
+                    else -> stringResource(Res.string.dislike_dialog_body)
                 },
             )
         },
@@ -1762,13 +1801,13 @@ private fun ReactionConfirmDialog(
             TextButton(onClick = onConfirm) {
                 Text(
                     stringResource(
-                        if (isChicken) R.string.chicken_dialog_confirm else R.string.dislike_dialog_confirm,
+                        if (isChicken) Res.string.chicken_dialog_confirm else Res.string.dislike_dialog_confirm,
                     ),
                 )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
     )
 }
@@ -1780,7 +1819,7 @@ private fun ReactionConfirmDialog(
  */
 @Composable
 private fun FloorBadges(content: PostContent) {
-    val opLabel = stringResource(R.string.post_badge_original_poster)
+    val opLabel = stringResource(Res.string.post_badge_original_poster)
     val labels =
         if (content.isOriginalPoster && content.badges.none { it == opLabel }) {
             listOf(opLabel) + content.badges
@@ -1812,7 +1851,7 @@ private fun FloorTimeLine(
 
 @Composable
 private fun EditedMarker(fullText: String?) {
-    val label = stringResource(R.string.post_edited)
+    val label = stringResource(Res.string.post_edited)
     val underline = MaterialTheme.colorScheme.outlineVariant
     Text(
         text = label,
