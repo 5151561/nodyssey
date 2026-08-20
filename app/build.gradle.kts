@@ -2,8 +2,6 @@ plugins {
     id("plaza.android.application")
     id("plaza.android.compose")
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.room)
 }
 
 /*
@@ -61,19 +59,18 @@ android {
         }
     }
 
-    // Robolectric's MigrationTestHelper reads schemas through the debug AssetManager.
-    sourceSets["debug"].assets.directories.add("$projectDir/schemas")
+    // Room's schema JSON moved to `:shared` with the `@Database` class in step A6, and
+    // `NodeSeekDatabaseMigrationTest` stayed here — it is a test about the file on an installed
+    // Android device, and Robolectric plus Room's Android `MigrationTestHelper` are what read it.
+    // The helper looks the schemas up through the debug `AssetManager`, so this points at the
+    // directory rather than keeping a second copy of it, for the same reason as the line below.
+    sourceSets["debug"].assets.directories.add(project(":shared").projectDir.resolve("schemas").path)
 
     // The captured pages moved to `:shared` with the parsers that read them, and a handful of tests
     // left here — the challenge detector, two repositories, the reply composer — still read the same
     // captures. Pointed at rather than copied: two copies of a 100KB capture drift, and the one that
     // drifts is whichever the failing test is not reading.
     sourceSets["test"].resources.directories.add(project(":shared").projectDir.resolve("src/commonTest/resources").path)
-}
-
-// Schemas are checked in: a diff here is the review signal that a migration is needed.
-room {
-    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
@@ -175,13 +172,9 @@ dependencies {
     // Background notification polling: the site has no push, so a periodic worker checks unread.
     implementation(libs.androidx.work.runtime)
 
-    // Offline-first SSOT: Room owns posts/comments/boards, the network only writes into it.
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.room.paging)
-    ksp(libs.androidx.room.compiler)
-
-    // Paging drives the list straight off the database via a RemoteMediator.
+    // Paging drives the list straight off the database via a RemoteMediator. Room, the entities and
+    // the DAOs are `:shared` since step A6, and `paging-common` arrives with them; these two are the
+    // Android half — the `PagingDataAdapter` machinery and the Compose collector.
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.compose)
 

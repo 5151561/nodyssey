@@ -1,10 +1,13 @@
 package io.github.nodyssey.data.local
 
+import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
 
 /**
  * The offline-first single source of truth.
@@ -34,6 +37,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
+@ConstructedBy(NodeSeekDatabaseConstructor::class)
 abstract class NodeSeekDatabase : RoomDatabase() {
     abstract fun boardDao(): BoardDao
 
@@ -54,11 +58,25 @@ abstract class NodeSeekDatabase : RoomDatabase() {
     abstract fun collectedPostMetaDao(): CollectedPostMetaDao
 }
 
+/**
+ * How a target reaches the implementation Room generates for [NodeSeekDatabase].
+ *
+ * Required because the `@Database` class is in `commonMain` and the generated implementation is per
+ * target: an `expect object` is the only thing `commonMain` can name. **The `actual`s are generated
+ * by Room's own KSP processor** — writing one by hand is the mistake this KDoc exists to prevent,
+ * and the "expected object has no actual declaration" error means the processor did not run for that
+ * target rather than that a file is missing.
+ */
+@Suppress("KotlinNoActualForExpect")
+expect object NodeSeekDatabaseConstructor : RoomDatabaseConstructor<NodeSeekDatabase> {
+    override fun initialize(): NodeSeekDatabase
+}
+
 /** Adds the signed-in profile cache without disturbing existing posts or read marks. */
-internal val MIGRATION_3_4 =
+val MIGRATION_3_4 =
     object : Migration(3, 4) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `self_profile` (
                     `sessionFingerprint` INTEGER NOT NULL,
@@ -89,10 +107,10 @@ internal val MIGRATION_3_4 =
  * counted that prefix — the same number as the window's last page. So the whole upgrade is one
  * column, and no stored thread has to be re-fetched to be readable.
  */
-internal val MIGRATION_4_5 =
+val MIGRATION_4_5 =
     object : Migration(4, 5) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
                 "ALTER TABLE `post_details` ADD COLUMN `firstLoadedPage` INTEGER NOT NULL DEFAULT 1",
             )
         }
@@ -106,10 +124,10 @@ internal val MIGRATION_4_5 =
  * refresh writes the truth. Comments need no migration — their column is a serialized `PostContent`
  * and the new field has a default.
  */
-internal val MIGRATION_5_6 =
+val MIGRATION_5_6 =
     object : Migration(5, 6) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE `posts` ADD COLUMN `isBlocked` INTEGER NOT NULL DEFAULT 0")
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `posts` ADD COLUMN `isBlocked` INTEGER NOT NULL DEFAULT 0")
         }
     }
 
@@ -123,16 +141,16 @@ internal val MIGRATION_5_6 =
  * `''` or `0` would dress that ignorance up as an answer. The screens read null as "ask the server"
  * rather than as "no".
  */
-internal val MIGRATION_6_7 =
+val MIGRATION_6_7 =
     object : Migration(6, 7) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `title` TEXT")
-            db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `authorName` TEXT")
-            db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `authorUid` INTEGER")
-            db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `categoryTitle` TEXT")
-            db.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `commentCount` INTEGER")
-            db.execSQL("ALTER TABLE `post_details` ADD COLUMN `collected` INTEGER")
-            db.execSQL("ALTER TABLE `post_details` ADD COLUMN `collectionCount` INTEGER")
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `title` TEXT")
+            connection.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `authorName` TEXT")
+            connection.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `authorUid` INTEGER")
+            connection.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `categoryTitle` TEXT")
+            connection.execSQL("ALTER TABLE `post_read_marks` ADD COLUMN `commentCount` INTEGER")
+            connection.execSQL("ALTER TABLE `post_details` ADD COLUMN `collected` INTEGER")
+            connection.execSQL("ALTER TABLE `post_details` ADD COLUMN `collectionCount` INTEGER")
         }
     }
 
@@ -143,10 +161,10 @@ internal val MIGRATION_6_7 =
  * upgrading with places to carry over either — the bookmark shipped in this same release, so the
  * only stores that ever held one are the debug builds this branch was tested on.
  */
-internal val MIGRATION_7_8 =
+val MIGRATION_7_8 =
     object : Migration(7, 8) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `post_reading_positions` (
                     `postId` INTEGER NOT NULL,
@@ -169,11 +187,11 @@ internal val MIGRATION_7_8 =
  * `totalPages = 1` is the same claim the pager makes when it offers no other page, so 首页翻页栏
  * stays hidden on an unrefreshed store instead of drawing "第 1 / 1 页" over a list of hundreds.
  */
-internal val MIGRATION_8_9 =
+val MIGRATION_8_9 =
     object : Migration(8, 9) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE `feed_positions` ADD COLUMN `page` INTEGER NOT NULL DEFAULT 1")
-            db.execSQL("ALTER TABLE `feed_remote_keys` ADD COLUMN `totalPages` INTEGER NOT NULL DEFAULT 1")
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `feed_positions` ADD COLUMN `page` INTEGER NOT NULL DEFAULT 1")
+            connection.execSQL("ALTER TABLE `feed_remote_keys` ADD COLUMN `totalPages` INTEGER NOT NULL DEFAULT 1")
         }
     }
 
@@ -185,11 +203,11 @@ internal val MIGRATION_8_9 =
  * thread may never be re-fetched from page 1, so its column stays nullable and starts null: "no page
  * has said" rather than "not 加精", which is the same rule `collected` already follows.
  */
-internal val MIGRATION_9_10 =
+val MIGRATION_9_10 =
     object : Migration(9, 10) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE `posts` ADD COLUMN `isAwarded` INTEGER NOT NULL DEFAULT 0")
-            db.execSQL("ALTER TABLE `post_details` ADD COLUMN `isAwarded` INTEGER DEFAULT NULL")
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `posts` ADD COLUMN `isAwarded` INTEGER NOT NULL DEFAULT 0")
+            connection.execSQL("ALTER TABLE `post_details` ADD COLUMN `isAwarded` INTEGER DEFAULT NULL")
         }
     }
 
@@ -201,10 +219,10 @@ internal val MIGRATION_9_10 =
  * pin bit on `post_details` could not have held. Nothing to back-fill either; a device upgrading
  * has downloaded nothing, and that is exactly what an empty table says.
  */
-internal val MIGRATION_10_11 =
+val MIGRATION_10_11 =
     object : Migration(10, 11) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `offline_threads` (
                     `postId` INTEGER NOT NULL,
@@ -226,7 +244,7 @@ internal val MIGRATION_10_11 =
                 )
                 """.trimIndent(),
             )
-            db.execSQL(
+            connection.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `offline_comments` (
                     `postId` INTEGER NOT NULL,
@@ -239,7 +257,7 @@ internal val MIGRATION_10_11 =
                 )
                 """.trimIndent(),
             )
-            db.execSQL(
+            connection.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `offline_images` (
                     `postId` INTEGER NOT NULL,
@@ -252,7 +270,7 @@ internal val MIGRATION_10_11 =
                 )
                 """.trimIndent(),
             )
-            db.execSQL("CREATE INDEX IF NOT EXISTS `index_offline_images_fileName` ON `offline_images` (`fileName`)")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_offline_images_fileName` ON `offline_images` (`fileName`)")
         }
     }
 
@@ -265,10 +283,10 @@ internal val MIGRATION_10_11 =
  * reader opens or downloads is immediately, and for one they never touch again is never — the same
  * bare row the list already draws today.
  */
-internal val MIGRATION_11_12 =
+val MIGRATION_11_12 =
     object : Migration(11, 12) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `collected_post_meta` (
                     `postId` INTEGER NOT NULL,
@@ -298,11 +316,11 @@ internal val MIGRATION_11_12 =
  * `fallbackToDestructiveMigration` catches — it throws, and every device carrying a test build of
  * v12 would crash on launch rather than upgrade.
  */
-internal val MIGRATION_12_13 =
+val MIGRATION_12_13 =
     object : Migration(12, 13) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE `collected_post_meta` ADD COLUMN `avatarUrl` TEXT")
-            db.execSQL("ALTER TABLE `collected_post_meta` ADD COLUMN `authorUid` INTEGER")
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `collected_post_meta` ADD COLUMN `avatarUrl` TEXT")
+            connection.execSQL("ALTER TABLE `collected_post_meta` ADD COLUMN `authorUid` INTEGER")
         }
     }
 
@@ -312,8 +330,13 @@ internal val MIGRATION_12_13 =
  * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
  * is a fact about the schema, and leaving one out is how a device with real content in it takes the
  * destructive fallback instead.
+ *
+ * This and each `MIGRATION_*` beside it are public rather than `internal`, which they were while the
+ * schema lived in `:app`. Two consumers outside this module need them by name: the migration test,
+ * which runs where Room's Android `MigrationTestHelper` and Robolectric already work, and any
+ * platform shell that assembles a builder of its own.
  */
-internal val NODESEEK_MIGRATIONS = arrayOf(
+val NODESEEK_MIGRATIONS = arrayOf(
     MIGRATION_3_4,
     MIGRATION_4_5,
     MIGRATION_5_6,

@@ -22,8 +22,13 @@ import io.github.nodyssey.model.PostContent
  * does not read as a page fetched a moment ago.
  */
 
-/** The four states a row in the queue can be in; [OfflineThreadEntity.status] holds one. */
-internal object OfflineStatus {
+/**
+ * The four states a row in the queue can be in; [OfflineThreadEntity.status] holds one.
+ *
+ * Public rather than `internal` because the column is written and read by a repository, and since
+ * step A6 that repository is in another module.
+ */
+object OfflineStatus {
     const val QUEUED = 0
     const val DOWNLOADING = 1
     const val DOWNLOADED = 2

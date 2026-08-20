@@ -378,7 +378,7 @@ Compose
 | ✅ **B3** | B | `:designsys` 转 KMP 模块 + desktop target，单独跑起来。顺带把 B4 的一半做掉了——见下 | B2 |
 | ✅ **A5** | A | 网络契约 + Apple transport。`:core` 就此不存在——见下 | B3 |
 | ✅ **B4** | B | `:app` 的 `androidx.compose` → `org.jetbrains.compose`，adaptive 换 group。`:designsys` 那半已在 B3 完成。不是纯改名——见下 | B3 |
-| **A6** | A | Room + DataStore（7 个手写 migration 要重写） | A5 |
+| ✅ **A6** | A | Room + DataStore。手写 migration 是 **10 个**不是 7 个——见下 | A5 |
 | **A7** | A | Repository 由简到繁：Terms/Search → Profile/Community → Post/Vote → Feed/Paging。**这一步就是「拆 `:app` 的 `data/`」** | A6 |
 | **D1** | D | `ui/` + ViewModel 进 `commonMain`（= 「拆 `:app` 的 `ui/`」） | A7 + B4 |
 | **D2** | D | 1,059 条 strings + 16 个 res xml + 9 个 drawable → Compose Resources | D1 |
@@ -818,6 +818,78 @@ Apple 侧今天调 `/api/vote/*` 会拿到 403，这是 D3 的活。
 `assembleDebug` / `testDebugUnitTest testAndroidHostTest jvmTest` / `:app:lintDebug` /
 `spotlessCheck` / `:shared:macosArm64Test` / `:gallery:jvmTest` 全绿。锁文件重生成：`:core` 的删掉，
 `:shared` 多了 coroutines 的四个平台变体和 okhttp 的 Android 那份。
+
+---
+
+### ✅ A6 实测：Room 整个进 commonMain，schema 一个字节没变
+
+计划写的是「7 个手写 migration 要重写」。实际是 **10 个**（3→4 一直到 12→13），而重写的内容比
+「重写」这个词轻：`migrate(db: SupportSQLiteDatabase)` 变 `migrate(connection: SQLiteConnection)`，
+`db.execSQL` 变 `connection.execSQL`，**SQL 字符串一个字都没动**。
+
+`data/local/` 的 13 个文件整体进 `commonMain`，一个都不用留在 Android 侧——因为 DAO 的每个函数本来
+就是 `suspend`、`Flow` 或 `PagingSource`，没有一个是阻塞查询。这不是运气，是第一阶段那条
+「不要在 data 层写阻塞调用」的规矩顺手买到的。
+
+| 去处 | 内容 |
+|---|---|
+| `commonMain` | `NodeSeekDatabase` + 10 个 migration、9 个 DAO、两组 entity、`RichContentConverters`；从 `CategoryRepository.kt` 里拆出来的 `Board` |
+| `androidMain` | `createNodeSeekDatabase(context)`——原 `platform/NodeSeekDatabaseFactory.kt` |
+| `appleMain` | `createNodeSeekDatabase()`（Application Support 目录 + `BundledSQLiteDriver`）、`createPreferenceDataStore(name)` |
+| `shared/schemas/` | 13 个 schema JSON，从 `app/schemas/` 整体搬来 |
+
+**验证「Android 行为不变」的那一条是 schema JSON**：处理器在新模块里重新生成之后，
+`13.json`、`12.json`、`11.json` 与搬家前逐字节相同——identityHash 没变，所以装机的库不会被当成
+另一个 schema。10 个 migration 测试也全绿。
+
+#### 五处必须知道的
+
+**一、`@ConstructedBy` + `expect object`。**`@Database` 类在 `commonMain`，实现是每个 target 一份，
+`commonMain` 只能指着一个 `expect object`。**四个 `actual` 全部由 Room 的 KSP 生成**，手写一个是
+这里最容易犯的错；「expected object has no actual declaration」的真实含义是「那个 target 没跑
+处理器」。
+
+**二、`dependencies { add("kspAndroid", …) }` 必须写在 `kotlin { }` 之后。**这些配置名是声明 target
+时创建的，写在前面直接报 `Configuration with name 'kspJvm' not found`——报的是配置名，不提 KMP，
+也不提顺序。
+
+**三、Android 侧故意不指定 driver。**`Room.databaseBuilder(context, …)` 默认走 Android 自带的
+SQLite，也就是每台装机设备现在正在跑的那个。在这里写上 `BundledSQLiteDriver`（Apple 侧别无选择的
+那个）等于把一个活着的数据库文件底下的 SQLite 实现换掉——那是行为变更，不是构建细节。
+
+**四、`room-ktx` 没有跟着来。**它是 Android 专有的协程适配层，多平台 runtime 自带同样的 `suspend`
+支持。**但 `androidx.room.withTransaction` 就在里面**，而 `PostRepository` 和 `FeedRemoteMediator`
+还在用它——这两个文件因此还在 `:app`，归 A7。
+
+**五、迁移测试留在 `:app`。**Room 的 Android `MigrationTestHelper` 通过 `AssetManager` 读 schema，
+而 KMP 模块的 host test 没有配 assets 目录的地方。`:app` 的 debug assets 改成**指向**
+`shared/schemas`（和 fixture 那处同样的理由：两份 100KB 的拷贝会 drift，而 drift 的总是失败的测试
+没在读的那一份）。代价是 `MIGRATION_*` 与 `NODESEEK_MIGRATIONS` 从 `internal` 变 public——顺带也是
+`appleMain` 那个 factory 需要的。
+
+#### DataStore 这半
+
+`androidx.datastore:datastore-preferences` 本来就是多平台的，`DataStore<Preferences>` 里没有一个
+Android 类型，所以这一半不需要改写任何东西：加依赖，加一个 `appleMain` 的
+`createPreferenceDataStore(name)`。Android 那半（`di/PreferenceStores.kt` 的 `Context` 扩展）留在
+`:app`——`preferencesDataStore` 就是个 `Context` 扩展，「文件放哪」正是平台唯一贡献的东西。
+两边用同一批文件名（`settings`、`proxy`、`offline`…），Android 那侧这些名字是装机文件名，改不得。
+
+#### 一个 lint 门禁的松动
+
+`:app:lintDebug` 开始报 `RestrictedApi`，位置在 `shared/build/generated/ksp/.../BoardDao_Impl.kt`：
+Room 生成的代码调用 `@RestrictTo(LIBRARY_GROUP)` 类型，这是 Room 的设计。以前不报，是因为 AGP 会把
+**被 lint 的那个工程自己**的 KSP 产物标成 generated 并跳过；KMP 模块通过 `checkDependencies` 贡献
+的 lint model 不标，同样的生成代码就被当成普通源码读了。`lint { checkGeneratedSources = false }`
+不管用（默认本来就是 false，问题在于 lint 不知道那是生成的）。处置是 `lint.xml` 里按**路径**豁免
+`build/generated/ksp/`——人写的代码里出现 `@RestrictTo` 违规照样挂。
+
+#### 测试与门禁
+
+测试总数不变：`:app` 1,095（含 10 个迁移测试）+ `:designsys` 108 + `:shared` 224 = **1,427**。
+`assembleDebug` / `testDebugUnitTest testAndroidHostTest jvmTest` / `:app:lintDebug` /
+`spotlessCheck` / `:shared:macosArm64Test` / `:gallery:jvmTest` 全绿，Room 与 DataStore 在
+`iosArm64`、`macosArm64` 上都编译通过。
 
 ---
 

@@ -31,9 +31,9 @@ Three Gradle modules:
 
 ```text
 :app        NodeSeek itself — repositories, Room persistence, Compose screens
-:shared     the domain model, the parsers and the network layer, as Kotlin Multiplatform:
-            Android, the desktop JVM, iOS and macOS. What a site knows about itself arrives
-            as `SiteConfig`, not as a constant in here
+:shared     the domain model, the parsers, the network layer and the Room schema, as Kotlin
+            Multiplatform: Android, the desktop JVM, iOS and macOS. What a site knows about
+            itself arrives as `SiteConfig`, not as a constant in here
 :designsys  theme, components and the rich-text renderer, with no knowledge of any forum
 ```
 
@@ -69,7 +69,8 @@ shared/src/commonMain/kotlin/          the half that does not know what it is ru
 │   │   │   └── TermsParser.kt       terms article → native reading blocks
 │   │   └── report/                  NodeQuality report parsing
 │   ├── model/                       the domain types
-│   └── core/net/                    the JSON client, written against `HttpTransport`
+│   ├── core/net/                    the JSON client, written against `HttpTransport`
+│   └── data/local/                  Room: the schema, the DAOs and every migration
 └── io/github/plaza/core/
     ├── net/                         `SiteConfig`, `SiteError`, `WebUrl`, `HttpTransport`,
     │                                `SiteHtmlClient`, the Cloudflare challenge detector and
@@ -79,8 +80,10 @@ shared/src/commonMain/kotlin/          the half that does not know what it is ru
     ├── ansi/                        ANSI colour decoding for pasted terminal output
     └── TerminalColumns.kt           column widths for monospaced report tables
 
-shared/src/androidMain/kotlin/         OkHttp, `CookieManager`, `WebSettings`, `PackageManager`
-shared/src/appleMain/kotlin/           `NSURLSession` and `NSHTTPCookieStorage`
+shared/src/androidMain/kotlin/         OkHttp, `CookieManager`, `WebSettings`, `PackageManager`,
+                                       and where the database file is opened
+shared/src/appleMain/kotlin/           `NSURLSession`, `NSHTTPCookieStorage`, and the same two
+                                       files opened under Application Support
 shared/src/jvmCommonMain/kotlin/       what Android and the desktop JVM answer identically
 
 app/src/main/java/io/github/nodyssey/
@@ -88,8 +91,7 @@ app/src/main/java/io/github/nodyssey/
 │   ├── NodeImageSite.kt         nodeimage.com's own vocabulary (off-site, user API key)
 │   ├── LuckyDraw.kt             the 抽奖 vocabulary, still on `java.time`
 │   └── net/                     vote request signing and the proxy routing OkHttp is given
-├── data/                        repositories, Room, DataStore and composers
-│   ├── local/                   Room: feed cache, read marks, browse history, reading positions
+├── data/                        repositories, DataStore and composers
 │   └── update/                  GitHub release lookup, APK download and install
 ├── platform/                    the Android shells behind `data`'s interfaces
 ├── di/                          `AppContainer`: constructor injection, no global singletons

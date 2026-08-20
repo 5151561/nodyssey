@@ -96,14 +96,6 @@ class CategoryRepository(
     }
 }
 
-/** A board tab. `slug == null` is the mixed front page. */
-data class Board(
-    val slug: String?,
-    val title: String,
-    val description: String?,
-    val adminOnly: Boolean = false,
-)
-
 @Serializable
 private data class CategoriesResponse(
     val success: Boolean = false,

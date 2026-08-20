@@ -51,6 +51,10 @@ androidxWork = "2.11.2"
 # so keep it on its own release line instead of coupling the two version numbers.
 ksp = "2.3.10"
 room = "2.8.4"
+# androidx.sqlite, which Room 2.8.4 resolves anyway. Named on its own line because the
+# multiplatform half of Room reaches it directly: a `Migration` in `commonMain` is written against
+# `SQLiteConnection`, and the Apple targets need the bundled driver to have a SQLite at all.
+sqlite = "2.6.2"
 paging = "3.5.0"
 robolectric = "4.16.1"
 spotless = "8.9.0"
@@ -114,6 +118,13 @@ androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
+# `SQLiteConnection` and `execSQL`, which the hand-written migrations are written against now that
+# they live in `commonMain` — `SupportSQLiteDatabase` is the Android-only predecessor.
+androidx-sqlite = { module = "androidx.sqlite:sqlite", version.ref = "sqlite" }
+# SQLite compiled into the binary, for the targets that ship no system copy of it. Android has one
+# and keeps using it — see `NodeSeekDatabaseFactory` in `androidMain` for why swapping that would
+# be a behaviour change rather than a build-file change.
+androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 androidx-paging-runtime = { module = "androidx.paging:paging-runtime", version.ref = "paging" }
 androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
 androidx-paging-common = { module = "androidx.paging:paging-common", version.ref = "paging" }

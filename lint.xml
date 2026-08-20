@@ -8,4 +8,19 @@
     <issue id="IconDuplicates">
         <ignore regexp="mipmap-.*/ic_launcher_round\.webp" />
     </issue>
+
+    <!--
+      Room's generated `_Impl` classes call `@RestrictTo(LIBRARY_GROUP)` types — `EntityUpsertAdapter`
+      and friends — which is how Room is built: the generated code is meant to be part of the library
+      group and the check has no way to know that. Nobody here can change a line of it.
+
+      It only became visible in step A6, when the `@Database` class moved to `:shared`. AGP marks the
+      KSP output of the project being linted as generated and skips it; the lint model a Kotlin
+      Multiplatform module contributes to `checkDependencies` does not, so the same generated code
+      that was invisible in `:app` is read as ordinary source in `:shared`. Scoped by path so that a
+      `@RestrictTo` violation in code somebody actually wrote still fails the build.
+    -->
+    <issue id="RestrictedApi">
+        <ignore regexp="build/generated/ksp/" />
+    </issue>
 </lint>

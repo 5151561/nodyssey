@@ -11,7 +11,9 @@ import kotlinx.serialization.json.Json
  * downgraded, or a node type added and then removed, must not crash the reader. A cache is allowed
  * to lose fidelity; it is not allowed to take the app down.
  */
-internal object RichContentJson {
+// Public rather than `internal`: a repository that writes a cached body the same way the converter
+// would has to be able to name the format, and since step A6 that repository is in another module.
+object RichContentJson {
     val format =
         Json {
             ignoreUnknownKeys = true

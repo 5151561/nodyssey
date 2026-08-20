@@ -68,6 +68,7 @@ import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
 import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
+import io.github.nodyssey.data.local.createNodeSeekDatabase
 import io.github.nodyssey.data.offline.OfflineFileStore
 import io.github.nodyssey.data.offline.OfflineSettingsStore
 import io.github.nodyssey.data.offline.OkHttpOfflineImageSource
@@ -84,7 +85,6 @@ import io.github.nodyssey.data.update.DefaultAppUpdateRepository
 import io.github.nodyssey.platform.ApkInstaller
 import io.github.nodyssey.platform.DefaultImagePreparer
 import io.github.nodyssey.platform.KeystoreSecretCipher
-import io.github.nodyssey.platform.createNodeSeekDatabase
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
