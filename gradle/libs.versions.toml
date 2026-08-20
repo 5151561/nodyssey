@@ -28,6 +28,9 @@ composeMultiplatformAdaptive = "1.3.0-beta02"
 # 1.7.3. The five icons this repository takes from it are Material's oldest and have not changed; the
 # pin is only stated here because the version cannot come from the Compose Multiplatform line.
 composeMultiplatformIcons = "1.7.3"
+# The `org.jetbrains.androidx.navigation3` mirror, which is a fourth version line — see
+# `compose-navigation3-ui` below for why only one of navigation3's two artifacts needs one.
+composeMultiplatformNav3 = "1.1.0"
 androidxTest = "1.7.0"
 androidxTestExt = "1.3.0"
 androidxTestRunner = "1.7.0"
@@ -156,6 +159,11 @@ compose-material3-adaptive-navigation-suite = { module = "org.jetbrains.compose.
 # …and this one on the adaptive line, which is a third.
 compose-material3-adaptive-navigation3 = { module = "org.jetbrains.compose.material3.adaptive:adaptive-navigation3", version.ref = "composeMultiplatformAdaptive" }
 compose-material-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "composeMultiplatformIcons" }
+# `NavDisplay`, and the one navigation3 half that needs a mirror: `androidx.navigation3:navigation3-ui`
+# publishes android plus a jvm *stub*, while `navigation3-runtime` beside it is genuinely
+# multiplatform. Found in step D1 by looking at what `:ui`'s desktop compilation resolved. Its own
+# version line, one behind the androidx one it points at — see the constraint in `ui/build.gradle.kts`.
+compose-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "composeMultiplatformNav3" }
 # `Res` and the string accessors generated from `composeResources/`. The Compose Multiplatform plugin
 # generates the code; this is the runtime that reads the packaged resource.
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }

@@ -45,6 +45,16 @@ include(":app")
 // thing with edges.
 include(":designsys")
 
+// Rich text, and nothing else: the `RichNode` tree a post body is parsed into, the Markdown reader
+// that produces one, and the ANSI decoder the terminal blocks use.
+//
+// Its own module because `:designsys` needs exactly this and nothing else from below it. Until step
+// D1 it took the whole of `:shared` to get it, which meant a component gallery resolving SQLite,
+// Paging and a network layer to draw a paragraph — see `docs/kmp-migration-plan.md`, the second of
+// the two debts A5–A7 left. Four files and 993 lines, with no dependency of their own beyond
+// kotlinx-serialization, which is what made the cut worth making rather than arguing about.
+include(":richtext")
+
 // The platform-neutral business core: the domain model and the parsers that encode what this
 // particular forum's HTML means. Kotlin Multiplatform rather than an Android library because nothing
 // in here is allowed to know it is running on Android — see `docs/kmp-migration-plan.md`.
@@ -65,3 +75,11 @@ include(":shared")
 // library's multiplatform variants are for, and this one resolves them exactly the way a future
 // Apple app would.
 include(":gallery")
+
+// The screens: everything that used to be `app/src/main/.../ui`, plus the strings and drawables they
+// draw. A module of its own rather than a source set inside `:shared` because `:designsys` sits
+// *below* `:shared` — a screen depends on both, so the two cannot be the same module without a cycle.
+//
+// Step D1 of `docs/kmp-migration-plan.md`. What stays in `:app` is the Android shell: the activity,
+// the notification worker, the image pickers — the parts that name a platform rather than a screen.
+include(":ui")

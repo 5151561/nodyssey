@@ -68,7 +68,7 @@ class CustomTabUriHandler(
  * supposed to hide.
  */
 @Composable
-fun rememberExternalUriHandler(shouldUseCustomTab: (String) -> Boolean): UriHandler {
+actual fun rememberExternalUriHandler(shouldUseCustomTab: (String) -> Boolean): UriHandler {
     val context = LocalContext.current
     val fallback = LocalUriHandler.current
     val darkTheme = LocalPlazaDarkTheme.current

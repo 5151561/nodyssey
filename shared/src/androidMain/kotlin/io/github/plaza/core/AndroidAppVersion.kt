@@ -13,6 +13,7 @@ import android.os.Build
 fun readAppVersion(context: Context): AppVersion {
     val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
     return AppVersion(
+        label = context.applicationInfo.loadLabel(context.packageManager).toString(),
         name = packageInfo.versionName.orEmpty(),
         code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             packageInfo.longVersionCode

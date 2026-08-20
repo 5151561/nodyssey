@@ -92,7 +92,7 @@ CMP 1.12.0-alpha03 里有 `ScrollField.kt` 和 `SegmentedListItem`（androidx ma
 | Room | 2.8.4 | ✅ 5 个 Apple 变体 |
 | DataStore | 1.3.0-alpha10 | ✅ |
 | lifecycle-viewmodel-compose | 2.12.0-alpha01 | ✅（35 个 ViewModel 的 import 不用动） |
-| **navigation3** | 1.2.0-alpha07 | ✅ **androidx 官方已全平台 KMP**，无需换 group |
+| **navigation3** | 1.2.0-alpha07 | ⚠️ 只对一半。**2026-08-20（D1）更正**：`navigation3-runtime` 是真多平台，`navigation3-ui`（`NavDisplay` 在里面）是 android 加一个 `jvmstubs`，要换 `org.jetbrains.androidx.navigation3` 的镜像。另外 `rememberNavBackStack(vararg)` 那个不用传 `SavedStateConfiguration` 的重载只有 `androidMain` 有 |
 | material3-adaptive / navigation-suite / navigation3 集成 | — | ⚠️ androidx 侧**只有 android + stub**；换到 `org.jetbrains.compose.material3.adaptive` 1.3.0-beta02 与 `org.jetbrains.compose.material3:material3-adaptive-navigation-suite` 1.12.0-alpha03，均有 `iosArm64` |
 | **WorkManager** | 2.12.0-rc01 | ❌ **纯 Android，零 Apple 变体** |
 | material-icons-core | 1.7.3 | ⚠️ 上下游都冻结了：androidx 停在 1.7.8（2025-02），多平台镜像停在 1.7.3。本仓库只用五个最老的图标，B3 直接换了坐标 |
@@ -135,7 +135,10 @@ Apple 端时按当时情况决定，不必现在定。§2 那段「为什么不�
 
 按风险从高到低。**注意其中两条已被昨天的实测降级**，不要按旧印象排期。
 
-1. **`:app` 尚未拆分。** `ui/` 40,047 行、`data/` 12,117 行仍在 Android-only 的 `:app` 里，而
+1. ~~**`:app` 尚未拆分。**~~ → **2026-08-20 拆完了**：`data/` 在 A7 下沉，`ui/` 在 D1 进新模块 `:ui`
+   的 `commonMain`，`:app` 从 160 个 Kotlin 文件剩 33 个。下面这段是当时的原文。
+
+   `ui/` 40,047 行、`data/` 12,117 行仍在 Android-only 的 `:app` 里，而
    `:core` 1,842 行、`:shared` 4,618 行（2026-08-19 `wc -l` 快照，口径为各模块 `src/main` +
    `src/commonMain`，与 `kmp-migration-decision.md` §1 的基线口径不同）。这是工作量主体，**但它与
    第一阶段的方向完全一致，不是 CMP 带来的新成本。**
@@ -143,8 +146,11 @@ Apple 端时按当时情况决定，不必现在定。§2 那段「为什么不�
    `WebViewUserAgent` 在 `:core`，`SiteHtmlClient` 依赖它们，且是 Cloudflare 过检的关键路径。
    **门槛 A 已在 macOS 上全链路通过**（WKWebView → `WKHTTPCookieStore` → `URLSession`，HTTP 200），
    iOS 需按 [`kmp-migration-plan.md`](kmp-migration-plan.md) §5 的 **D3** 复验。风险因此低于初判。
-3. **1,059 条 strings + 16 个 res xml + 9 个 drawable** 要搬到 Compose Resources。机械活，量大，
-   可脚本化。
+3. ~~**1,059 条 strings + 16 个 res xml + 9 个 drawable** 要搬到 Compose Resources。机械活，量大，
+   可脚本化。~~ → **2026-08-20 已做（在 D1 里）**，1,056 条 + 5 个 drawable。确实可脚本化，但有三处
+   不是机械替换（`%%`、`%1$,d`、组合外的 suspend 访问器），外加一个 debug 构建的坑：Compose
+   Resources 没有 build type，`src/debug/res` 的改名覆盖会失效。全部记在
+   [`kmp-migration-plan.md`](kmp-migration-plan.md) 的「D1 实测」。
 4. **动态取色**一层 expect/actual（§2.2）。
 5. **WorkManager** 无 Apple 变体（§2.4）。
 
@@ -157,6 +163,10 @@ Apple 端时按当时情况决定，不必现在定。§2 那段「为什么不�
 > `ExternalUriHandler.kt` 的 Custom Tabs（来自 `androidx.browser`，与 4 个之一重合）。
 > `:designsys` 的实际耦合面是 **5 个文件**。`material-color-utilities` 不在此列：坐标是
 > `com.materialkolor:material-color-utilities`，本来就是多平台 Kotlin 移植。
+>
+> **2026-08-20 复核（D1）**：`app/src/main/.../ui` 那个数字实际是 **23 个**，同样是因为漏了
+> Android-only 的依赖（`androidx.activity` 的相册选择器占 8 个）。结论不变——收成九个 `expect` 之后
+> `androidMain` 只剩 6 个文件，清单在 [`kmp-migration-plan.md`](kmp-migration-plan.md) 的「D1 实测」。
 
 ---
 
@@ -204,7 +214,8 @@ grep -rlE "^import android\." --include="*.kt" app/src/main/java/io/github/nodys
 
 - CMP 基线随版本前移，§2.3 的「落后一个 alpha」是 2026-08-19 快照，动手前重测。
 - iOS 的 WKWebView 会话链路（门槛 A 只覆盖 macOS）。
-- Compose Resources 对 1,059 条 strings 的迁移是否有可用的自动化路径，未调研。
+- ~~Compose Resources 对 1,059 条 strings 的迁移是否有可用的自动化路径，未调研。~~ → 2026-08-20 做完，
+  见 §4 第 3 条。
 - CMP 在 iOS 上的中文 IME 组合输入、文本选择、滚动手感，未实测。
 - ~~CMP 侧有没有 common 的 `BackHandler`，Custom Tabs 在非 Android 平台该换成什么~~ →
   **2026-08-19 已查**，结论记在 [`kmp-migration-plan.md`](kmp-migration-plan.md) §5 的 B1 实测：

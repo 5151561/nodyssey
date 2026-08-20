@@ -820,7 +820,7 @@ class OfflineFirstPostRepository(
          * price is a placeholder row for anything outside the window, which at this prefetch distance
          * is rarely on screen.
          */
-        val FEED_PAGING_CONFIG =
+        internal val FEED_PAGING_CONFIG =
             PagingConfig(
                 pageSize = NETWORK_PAGE_SIZE,
                 // Matches the old hand-rolled "load when eight rows from the end" heuristic.

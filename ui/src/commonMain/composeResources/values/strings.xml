@@ -1,0 +1,1240 @@
+<resources>
+    <string name="app_name">Nodyssey</string>
+
+    <!-- Actions -->
+    <string name="action_back">返回</string>
+    <string name="action_close">关闭</string>
+    <string name="action_expand">展开</string>
+    <string name="action_collapse">收起</string>
+    <string name="report_show_source">查看原始报告</string>
+    <string name="report_open_fullscreen">全屏查看</string>
+    <string name="action_retry">重试</string>
+    <string name="action_refresh">刷新</string>
+    <string name="search_load_more_failed">加载更多失败</string>
+    <string name="action_sign_in">登录</string>
+    <string name="action_sign_out">退出登录</string>
+    <string name="action_verify">去验证</string>
+    <string name="action_open_in_browser">在网页中打开</string>
+    <!-- 站内页现在都在 App 内的网页视图里打开，这是从那里跳到真浏览器的出口 -->
+    <string name="action_open_in_external_browser">用浏览器打开</string>
+    <string name="action_copy">复制</string>
+    <string name="action_copy_link">复制链接</string>
+    <string name="action_share">分享</string>
+    <string name="action_more">更多</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_done">确定</string>
+    <string name="action_sort">排序方式</string>
+    <string name="action_scroll_to_top">回到顶部</string>
+    <string name="action_show_all_boards">全部版块</string>
+    <string name="action_hide_all_boards">收起版块</string>
+    <string name="action_create_post">发帖</string>
+    <string name="action_publish">发布</string>
+    <!-- 编辑 mode's version of 发布: the post already exists, so this writes over it. -->
+    <string name="action_save">保存</string>
+    <string name="action_preview">预览</string>
+
+    <!-- Sort order: the site offers both, and heavy users switch between them -->
+    <string name="sort_by_reply_time">按回复时间</string>
+    <string name="sort_by_post_time">按发帖时间</string>
+
+    <!-- Screen-reader description for the lock on a board only admins can open -->
+    <string name="board_admin_only">仅管理员可见</string>
+
+    <!-- Rearranging the home strip: long-press it open, drag to reorder, park what you never read -->
+    <string name="action_finish_editing_boards">完成排序</string>
+    <string name="board_edit_hint">拖动排序，点角标移出或加回</string>
+    <string name="board_park">移出首页</string>
+    <string name="board_restore">加回首页</string>
+    <string name="board_parked">已移出首页</string>
+
+    <!-- The four kinds every board falls into; the tag colour and the picker's headings share them -->
+    <string name="board_family_everyday">日常类</string>
+    <string name="board_family_technical">技术类</string>
+    <string name="board_family_trade">交易类</string>
+    <string name="board_family_flagged">警示类</string>
+
+    <!-- Post list -->
+    <string name="post_reply_count">%1$d 回复</string>
+    <string name="post_new_reply_count">%1$d 条新回复</string>
+    <string name="post_view_count">%1$d 浏览</string>
+    <string name="post_badge_pinned">置顶</string>
+    <!-- 加精: the site labels its own marker 推荐阅读, so the a11y label says the same thing -->
+    <string name="post_badge_awarded">推荐阅读</string>
+    <string name="post_badge_locked">已锁帖</string>
+    <string name="post_badge_locked_level">%1$d 级可见</string>
+    <string name="post_badge_original_poster">楼主</string>
+    <!-- Badge stack overflow chip (b1 §8: at most three chips, the rest fold into +N) -->
+    <string name="post_badge_more">+%1$d</string>
+    <!-- The header's edited marker; the site's own text ("edited 36min ago") becomes the a11y label -->
+    <string name="post_edited">已编辑</string>
+
+    <!-- Post composer -->
+    <string name="composer_title_hint">一句话说清主题</string>
+    <string name="composer_body_hint">写下正文，支持 Markdown…</string>
+    <string name="composer_title_count">%1$d/%2$d</string>
+    <string name="composer_select_board">选择版块</string>
+    <string name="composer_permission_public">公开</string>
+    <string name="composer_permission_level">Lv%1$d</string>
+    <string name="composer_permission_private">私有</string>
+    <string name="composer_draft_saved">草稿 %1$s</string>
+    <string name="composer_draft_saving">草稿自动保存</string>
+    <string name="composer_publishing">发布中</string>
+    <string name="composer_saving">保存中</string>
+    <!-- The site's own right-hand rules card, verbatim in substance; shown on every board -->
+    <string name="composer_rule_title">重要提醒</string>
+    <string name="composer_rule_body">敏感话题请发内版 · 发卡站 / 大量出售必须发推广 · 禁止人身攻击 · 违规将受惩罚</string>
+    <string name="composer_restore_title">继续上次的草稿？</string>
+    <string name="composer_restore_body">保存于 %1$s · %2$s · 「%3$s」</string>
+    <string name="composer_restore_body_images">保存于 %1$s · %2$s · 「%3$s」，含 %4$d 张图片。</string>
+    <string name="composer_restore_continue">继续编辑</string>
+    <string name="composer_restore_discard">放弃草稿</string>
+    <string name="composer_publish_failed">发布失败：%1$s，草稿已保留</string>
+    <string name="composer_publish_network_failed">网络超时</string>
+    <string name="composer_publish_login_required">登录状态已失效</string>
+    <string name="composer_publish_challenge">需要完成人机验证</string>
+    <string name="composer_publish_http">服务器返回 HTTP %1$d</string>
+    <string name="composer_publish_unknown">请稍后重试</string>
+    <string name="composer_preview_empty">正文预览会显示在这里</string>
+    <string name="composer_just_now">刚刚</string>
+    <string name="composer_view_content">内容</string>
+    <string name="composer_view_preview">预览</string>
+    <string name="composer_view_compare">对照</string>
+
+    <!-- Image attachments: the forum has no host of its own, see 图床 below -->
+    <string name="composer_image_uploading">上传中 %1$d%</string>
+    <string name="composer_image_uploaded">已上传</string>
+    <string name="composer_image_failed">失败 · 重试</string>
+    <string name="composer_image_waiting">等待中</string>
+    <string name="composer_image_remove">移除 %1$s</string>
+    <string name="composer_image_retry_one">重试上传 %1$s</string>
+    <string name="composer_image_failed_count">%1$d 张图片上传失败</string>
+    <string name="composer_image_default_name">图片</string>
+
+    <!-- Emoji panel: five groups, matching the site's own editor -->
+    <string name="composer_emoji_group_acn">AC娘</string>
+    <string name="composer_emoji_group_onion">洋葱头</string>
+    <string name="composer_emoji_group_chick">小黄鸡</string>
+    <string name="composer_emoji_group_fluent">Fluent</string>
+    <!-- 最近使用 and 删除 belong to the panel itself and live in `:designsys`. Declaring them here too
+         would not add a second string: resource merging lets this module silently override a
+         library's string of the same name, so the copy in `:designsys` would go dead while still
+         looking like the one in use. -->
+    <string name="composer_emoji_stickers_pending">站内贴图素材尚未接入，先用下面两组 emoji</string>
+
+    <!-- Post detail -->
+    <string name="post_comments_header">评论 · %1$d</string>
+    <string name="post_body_empty">这个帖子没有正文</string>
+    <string name="post_open_original">查看正文</string>
+    <string name="post_comments_empty">还没有人回复</string>
+    <string name="post_comments_empty_hint">来做第一个吧——不过 v1 还是只读的</string>
+    <string name="post_link_copied">链接已复制</string>
+    <string name="post_code_copied">代码已复制</string>
+    <string name="post_quote_reply">@%1$s %2$s</string>
+    <string name="post_auto_paging">自动续页</string>
+    <string name="post_reply_action">回复</string>
+    <!-- Own floors only. Takes 回复's place on them, as it does on the site — there is no replying
+         to yourself there either. -->
+    <string name="post_edit_action">编辑</string>
+    <string name="post_quote_action">引用</string>
+    <!-- Shared by the paged-and-appending lists: the comment thread and 管理记录 -->
+    <string name="page_jump_previous">上一页</string>
+    <string name="page_jump_next">下一页</string>
+    <string name="page_jump_page_of">第 %1$d / %2$d 页</string>
+    <!-- Second line of the rail's page key, under the page it is on -->
+    <string name="page_jump_of_total">/%1$d</string>
+    <string name="page_jump_title">跳转到页</string>
+    <string name="page_jump_input">页码（1–%1$d）</string>
+    <string name="page_jump_total_pages">共 %1$d 页</string>
+    <!-- The chip that swaps the page scroller for a number to type -->
+    <string name="page_jump_by_page">页码</string>
+    <string name="page_jump_by_floor">楼层</string>
+    <string name="page_jump_floor_input">楼层（#0–#%1$d）</string>
+    <!-- Carries its own page number: it is the one destination here whose page the reader cannot guess -->
+    <string name="page_jump_latest_read">上次阅读 第 %1$d 页</string>
+    <!-- The thread knows the floor as well as the page, and it is both shorter and more exact -->
+    <string name="page_jump_latest_read_floor">上次阅读 %1$s</string>
+    <!-- Thread only: its newest is the foot of the last page, which is not where a page number lands -->
+    <string name="page_jump_latest">到最新</string>
+    <!-- The feed newest is page 1: its page numbers drift as posts arrive, so there is no last page to go to -->
+    <string name="page_jump_newest">最新</string>
+    <string name="feed_page_size_note">%1$d 条 / 页</string>
+    <!-- The "what is loaded" line each list words in its own noun -->
+    <string name="post_page_progress">已载入 %1$d 楼</string>
+    <string name="post_reply_editor_title">回复</string>
+    <string name="post_reply_editor_title_floor">回复 #%1$d · %2$s</string>
+    <string name="post_reply_editor_hint">写下你的回复…</string>
+    <string name="post_reply_preview_title">预览 · 回复</string>
+    <string name="post_reply_preview_title_floor">预览 · 回复 #%1$d</string>
+    <string name="post_reply_draft_saved">草稿已保存 %1$s</string>
+    <string name="post_reply_quote_remove">移除回复对象</string>
+    <string name="post_reply_publish_failed">发布失败：%1$s，草稿已保留</string>
+    <string name="post_reply_publish_unavailable">评论发布接口尚未接入</string>
+    <string name="post_quote_prefix">#%1$d</string>
+    <string name="post_reaction_like">点赞</string>
+    <string name="post_reaction_chicken">投喂鸡腿</string>
+    <string name="post_reaction_dislike">点踩</string>
+    <!-- Whole-thread, so only the opening post shows these -->
+    <string name="post_collect_action">收藏</string>
+    <string name="post_collected_action">已收藏</string>
+    <string name="chicken_dialog_title">投喂鸡腿？</string>
+    <string name="chicken_dialog_body">是否向 %1$s 投喂鸡腿？这将消耗你一个鸡腿。</string>
+    <!-- Only shown when the site confirmed today's allowance still covers it -->
+    <string name="chicken_dialog_body_free">是否向 %1$s 投喂鸡腿？今日还有 %2$d 次免费投喂，本次不消耗鸡腿。</string>
+    <string name="chicken_dialog_confirm">投喂</string>
+    <string name="dislike_dialog_title">点踩？</string>
+    <!-- The price is the point: 反对 is the only two-chicken-leg action in the app -->
+    <string name="dislike_dialog_body">是否反对该楼层？这将消耗你两个鸡腿，且不能撤销。</string>
+    <string name="dislike_dialog_confirm">点踩</string>
+
+    <!-- Top-level navigation: a bar on a phone, a rail once the window is wide enough -->
+    <string name="tab_home">首页</string>
+    <string name="tab_search">搜索</string>
+    <string name="tab_notifications">通知</string>
+    <string name="tab_profile">我的</string>
+
+    <!-- Search: authenticated remote results and condition-aware local history -->
+    <string name="search_hint">搜索帖子</string>
+    <string name="search_hint_board">在 %1$s 版块搜帖子</string>
+    <string name="search_user_hint">搜索用户名</string>
+    <string name="search_submit">搜索</string>
+    <string name="search_posts_tab">帖子</string>
+    <string name="search_users_tab">用户</string>
+    <string name="search_all_boards">全部版块</string>
+    <string name="search_board_section">版块</string>
+    <string name="search_board_single_hint">单选 · 只能指定一个</string>
+    <string name="search_board_chip_all">全部</string>
+    <string name="search_history_empty">还没有搜索记录</string>
+    <string name="search_history_scope">帖子 · 全部版块</string>
+    <string name="search_user_history_scope">用户</string>
+    <string name="search_history_board_scope">帖子 · %1$s</string>
+    <string name="search_board_range">版块范围</string>
+    <string name="search_board_range_hint">只能选一个版块，站点搜索接口本身只支持单版块；最近使用会置顶</string>
+    <string name="search_recent_boards">最近使用</string>
+    <string name="search_apply_board">应用</string>
+    <string name="search_board_all_boards_heading">全部</string>
+    <string name="search_clear_query">清空关键词</string>
+    <string name="search_recent">搜索历史</string>
+    <string name="search_clear_all">清除</string>
+    <string name="search_remove_recent">删除搜索历史：%1$s</string>
+
+    <!-- Notifications: the site has three groups, and 私信 is a conversation list rather than rows -->
+    <!-- Unread counts past the cap. Without the +, a capped 150 reads as an exact 99. -->
+    <string name="unread_count_capped">%1$d+</string>
+    <string name="notifications_mark_all_read">全部已读</string>
+    <string name="notifications_mentions">@我</string>
+    <string name="notifications_replies">回复主题</string>
+    <string name="notifications_messages">私信</string>
+    <string name="notifications_empty">这里暂时没有通知</string>
+    <string name="notification_sentence_mention">%1$s 在帖子 %2$s 中@了我</string>
+    <string name="notification_sentence_reply">%1$s 回复了帖子 %2$s</string>
+    <string name="notification_unknown_thread">某个帖子</string>
+    <string name="notification_time_pair">%1$s · %2$s</string>
+
+    <!-- Direct messages -->
+    <string name="messages_empty">还没有私信</string>
+    <string name="messages_pinned">置顶会话</string>
+    <string name="messages_snippet_mine_prefix">你：</string>
+    <string name="messages_new_conversation">新建私信</string>
+    <string name="messages_new_conversation_hint">搜索用户名</string>
+    <string name="messages_new_conversation_empty">没有找到这个用户</string>
+    <string name="messages_new_conversation_intro">站点没有「新建会话」入口，这里用用户搜索选收件人。</string>
+    <string name="message_thread_title">与 %1$s 的对话</string>
+    <string name="message_thread_title_unknown">私信</string>
+    <string name="message_thread_subtitle">UID %1$d</string>
+    <string name="message_thread_subtitle_level">UID %1$d · Lv %2$d</string>
+    <string name="message_thread_empty">还没有消息，说点什么吧</string>
+    <string name="message_thread_open_space">查看主页</string>
+    <string name="message_input_hint_markdown">发消息（Markdown 已开）</string>
+    <string name="message_input_hint_plain">发消息</string>
+    <string name="message_markdown_toggle">Markdown 开关</string>
+    <string name="message_markdown_label">MD</string>
+    <string name="message_send">发送</string>
+    <string name="message_status_sending">发送中</string>
+    <string name="message_status_failed">发送失败</string>
+    <string name="message_status_sent">已送达 %1$s</string>
+    <string name="message_bubble_actions">消息操作</string>
+    <string name="message_quote_action">引用</string>
+    <string name="message_copied">消息已复制</string>
+
+    <!-- Profile -->
+    <string name="profile_session_active">NodeSeek 登录会话有效</string>
+    <string name="profile_level_unknown">Lv —</string>
+    <string name="profile_edit">编辑个人主页</string>
+    <string name="profile_chicken">鸡腿</string>
+    <string name="profile_stars">星辰</string>
+    <string name="profile_level">等级</string>
+    <string name="profile_attendance">今日签到 · 领鸡腿</string>
+    <string name="profile_attendance_checking">正在检查今日签到…</string>
+    <string name="profile_attendance_done">今日已签到 · 查看签到榜</string>
+    <string name="profile_account_settings">账号设置</string>
+
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+    <string name="settings_appearance">外观</string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_theme_entry_hint">配色来源、预设与色彩风格</string>
+    <string name="settings_theme_mode">明暗</string>
+
+    <!-- 主题 · 配色来源 -->
+    <string name="settings_color_source">配色来源</string>
+    <string name="settings_color_source_preset">预设</string>
+    <string name="settings_color_source_wallpaper">动态取色</string>
+    <string name="settings_color_source_wallpaper_value">跟随壁纸</string>
+    <string name="settings_color_source_custom">自定义</string>
+    <string name="settings_color_source_memory_hint">三个来源各自记住上次的值：切回「自定义」直接沿用 %1$s，不用重新调色。</string>
+
+    <!-- 主题 · 预设与我的主题 -->
+    <string name="settings_presets">预设</string>
+    <string name="settings_preset_graphite">石墨青</string>
+    <string name="settings_preset_graphite_desc">默认</string>
+    <string name="settings_preset_miku">初音未来</string>
+    <string name="settings_preset_miku_desc">青×灰×粉</string>
+    <string name="settings_preset_twins">镜音双子</string>
+    <string name="settings_preset_twins_desc">黄×橙×黑灰</string>
+    <string name="settings_preset_tianyi">洛天依</string>
+    <string name="settings_preset_tianyi_desc">蓝×白×粉</string>
+    <string name="settings_preset_reimu">博丽灵梦</string>
+    <string name="settings_preset_reimu_desc">红×白×金</string>
+    <string name="settings_preset_marisa">雾雨魔理沙</string>
+    <string name="settings_preset_marisa_desc">黑×金×紫</string>
+    <string name="settings_presets_hint">角色预设是整套手工配色，主色、次色、强调色和中性面都按角色定，不经种子色生成，和「自定义」不是一路；头像是内置的极简画像。选中角色预设时「色彩风格」不起作用。</string>
+    <string name="settings_my_themes">我的主题</string>
+    <string name="settings_my_themes_hint">长按已保存主题可重命名或删除</string>
+    <string name="action_new">新建</string>
+    <string name="action_rename">重命名</string>
+    <string name="action_delete">删除</string>
+
+    <!-- 主题 · 色彩风格 -->
+    <string name="settings_palette_style">色彩风格</string>
+    <string name="settings_palette_style_soft">柔和</string>
+    <string name="settings_palette_style_vibrant">鲜艳</string>
+    <string name="settings_palette_style_expressive">表现力</string>
+    <string name="settings_palette_style_neutral">中性</string>
+    <string name="settings_palette_style_monochrome">单色</string>
+
+    <!-- 主题 · 预览卡 -->
+    <string name="settings_theme_preview">预览</string>
+    <string name="settings_theme_preview_board">日常</string>
+    <string name="settings_theme_preview_meta">nssk · 3 小时前</string>
+    <string name="settings_theme_preview_title">终于把签到脚本改成协程版了</string>
+    <string name="settings_theme_preview_primary">主按钮</string>
+    <string name="settings_theme_preview_secondary">次按钮</string>
+    <string name="settings_theme_preview_accent">强调</string>
+
+    <!-- 主题 · 自定义种子色 -->
+    <string name="settings_seed_sheet_title">自定义种子色</string>
+    <string name="settings_seed_hex">十六进制</string>
+    <string name="settings_seed_name">名称（可选）</string>
+    <string name="settings_seed_apply_once">仅本次应用</string>
+    <string name="settings_seed_save">保存为我的主题</string>
+    <string name="settings_seed_pick_from_image">从图片取色</string>
+    <string name="settings_seed_pick_hint">点图片上任意位置取色</string>
+    <string name="settings_seed_pick_loading">正在读取图片…</string>
+
+    <!-- 主题 · 动态取色 -->
+    <string name="settings_dynamic_color">动态取色</string>
+    <string name="settings_wallpaper_candidates">从壁纸提取到 %1$d 个候选色</string>
+    <string name="settings_wallpaper_candidate_label">候选色 %1$d</string>
+    <string name="settings_wallpaper_candidates_hint">按占比排序，默认取第一个。点任意色即时预览，不用退出页面。</string>
+    <string name="settings_wallpaper_palette">生成的调色板</string>
+    <string name="settings_wallpaper_system_palette">使用系统调色板</string>
+    <string name="settings_wallpaper_system_palette_hint">本机 Android %1$s · 直接用系统 Monet 色板；关掉则由 App 从上面的候选色生成</string>
+    <string name="settings_wallpaper_system_palette_unavailable">本机 Android %1$s 没有系统调色板，配色由 App 从候选色生成</string>
+    <string name="settings_wallpaper_auto_update">壁纸变化时自动更新</string>
+    <string name="settings_wallpaper_auto_update_hint">换壁纸后下次启动重新取色</string>
+    <string name="settings_wallpaper_unreadable">读不到壁纸</string>
+    <string name="settings_wallpaper_unreadable_hint">系统没有交出壁纸配色，已沿用上次的种子色 %1$s。</string>
+    <string name="settings_body_size">字号</string>
+    <string name="settings_body_size_value">%1$dsp</string>
+    <string name="settings_sticker_uniform">表情统一缩限</string>
+    <string name="settings_sticker_uniform_hint">开启后所有表情一样大，可调；关闭则各按表情原本的大小显示</string>
+    <string name="settings_sticker_size">表情大小</string>
+    <string name="settings_sticker_size_value">%1$dsp</string>
+    <string name="settings_text_preview">预览：中文长文的阅读体验。</string>
+    <string name="settings_content">内容</string>
+    <string name="settings_external_link">站外链接</string>
+    <string name="settings_app_links">站内链接</string>
+    <string name="settings_app_links_hint_on">已开启：在别的 App 里点 NodeSeek 的帖子、用户、通知链接会直接进来</string>
+    <string name="settings_app_links_hint_off">未开启：站内链接仍由浏览器打开。点这里去系统设置里打开「打开支持的链接」</string>
+    <string name="settings_external_link_hint">帖子里指向别的网站的链接怎么打开</string>
+    <string name="settings_external_link_custom_tab">应用内浏览</string>
+    <string name="settings_external_link_browser">系统浏览器</string>
+    <string name="settings_report_format">测评报告</string>
+    <string name="settings_report_format_hint">帖子里的跑分报告是重排成卡片还是照原样显示</string>
+    <string name="settings_report_format_adapted">适配格式</string>
+    <string name="settings_report_format_source">显示原文</string>
+    <string name="settings_home_page_bar">首页翻页栏</string>
+    <string name="settings_home_page_bar_hint">在首页底部显示页码和跳页按钮；列表照样滚动加载</string>
+    <string name="settings_wifi_images">仅 Wi-Fi 下加载图片</string>
+    <string name="settings_wifi_images_hint">移动网络显示占位图</string>
+    <string name="settings_clear_cache">清除缓存</string>
+    <string name="settings_clear_cache_size">已占用 %1$s</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_about_app">关于 Nodyssey</string>
+    <string name="settings_version">v%1$s</string>
+    <string name="settings_update_on_launch">启动时检查更新</string>
+    <string name="settings_update_on_launch_hint">有新版就在启动后提醒一次；关掉后只在关于页手动查</string>
+    <string name="settings_update_dev_channel">接收 dev 版更新</string>
+    <string name="settings_update_dev_channel_hint">dev 版是没正式发版的测试包，可能不稳定；关掉后只推正式版。装的就是 dev 版时默认开着</string>
+    <string name="settings_licenses">开源许可</string>
+
+    <!-- 代理设置 — a child of Settings' 网络 group. Routes only forum requests, see ProxyConfig doc. -->
+    <string name="settings_network">网络</string>
+    <string name="settings_proxy_entry">代理</string>
+    <string name="settings_proxy_entry_hint">HTTP / SOCKS5，代理 App 自己的请求；手机上其它 App 不受影响</string>
+    <string name="proxy_title">代理</string>
+    <string name="proxy_master_title">启用代理</string>
+    <string name="proxy_master_hint">代理 App 内的网络请求；手机上的其它 App 照常直连</string>
+    <string name="proxy_type_title">代理类型</string>
+    <string name="proxy_type_http">HTTP</string>
+    <string name="proxy_type_socks">SOCKS5</string>
+    <string name="proxy_host_label">地址</string>
+    <string name="proxy_host_placeholder">IP 或域名</string>
+    <string name="proxy_host_required">请填写代理地址</string>
+    <string name="proxy_port_label">端口</string>
+    <string name="proxy_port_placeholder">1–65535</string>
+    <string name="proxy_port_invalid">端口需要在 1–65535 之间</string>
+    <string name="proxy_username_label">用户名（可选）</string>
+    <string name="proxy_password_label">密码（可选）</string>
+    <string name="proxy_credential_hint">留空表示这个代理不需要认证</string>
+    <string name="proxy_save">保存</string>
+    <string name="proxy_saved">已保存</string>
+    <string name="proxy_test">测试连接</string>
+    <string name="proxy_test_success">连接成功</string>
+    <string name="proxy_test_failure_dns">DNS 解析失败（%1$s）</string>
+    <string name="proxy_test_failure_timeout">连接超时（%1$s）</string>
+    <string name="proxy_test_failure_connection">无法连接代理或目标服务器（%1$s）</string>
+    <string name="proxy_test_failure_socks_auth">SOCKS5 认证失败，请检查用户名和密码（%1$s）</string>
+    <string name="proxy_test_failure_tls">TLS 握手失败（%1$s）</string>
+    <string name="proxy_test_failure_other">连接失败（%1$s）</string>
+    <string name="proxy_scope_title">只代理论坛</string>
+    <string name="proxy_scope_hint">开启后，图床上传和检查更新走直连；关掉则 App 内的请求都走代理</string>
+    <string name="proxy_advanced_title">VLESS、VMess 这类节点</string>
+    <string name="proxy_advanced_hint">App 自己只会说 HTTP 和 SOCKS5。手机上装了 Clash、mihomo 一类客户端的话，在那边开混合端口，这里填 127.0.0.1 和那个端口，节点协议交给它处理。</string>
+    <string name="proxy_webview_hint">登录用的是系统 WebView，它走自己的网络，不受这里的设置影响。</string>
+
+    <!-- About & community (board f1). -->
+    <string name="about_title">关于 Nodyssey</string>
+    <string name="about_community_title">关于 · 社区</string>
+    <string name="about_community_hint">论坛信息、联络方式与友站</string>
+    <string name="about_version">版本 %1$s (%2$d)</string>
+    <string name="about_check_updates">检查更新</string>
+    <string name="about_update_unknown">尚未检查</string>
+    <string name="about_update_checking">正在检查…</string>
+    <string name="about_update_latest">已是最新</string>
+    <string name="about_update_available">发现 %1$s</string>
+    <string name="about_update_failed_network">连不上 GitHub</string>
+    <string name="about_update_failed_server">GitHub 返回 %1$d</string>
+    <string name="about_update_failed_checksum">下载的安装包校验不通过，请重试</string>
+    <string name="about_update_failed_unreadable">读不懂 GitHub 的回答</string>
+    <string name="about_update_failed_storage">写不进本机缓存</string>
+    <string name="about_update_new_version">新版本 %1$s</string>
+    <string name="about_update_prerelease">dev 测试版</string>
+    <string name="about_update_prerelease_hint">这是没正式发版的测试包，可能不稳定。</string>
+    <string name="about_update_download">下载并安装</string>
+    <string name="about_update_retry">重试下载</string>
+    <string name="about_update_downloading">正在下载 %1$d%</string>
+    <string name="about_update_downloading_unknown">正在下载…</string>
+    <string name="about_update_cancel">取消</string>
+    <string name="about_update_install">立即安装</string>
+    <string name="about_update_open_release">在 GitHub 查看 ↗</string>
+    <string name="about_update_permission_hint">系统要求你先允许 Nodyssey 安装应用，开一次就行。</string>
+    <string name="about_update_permission_action">去开启</string>
+    <string name="about_install_failed_blocked">系统拦下了这次安装，可能是应用商店的安全检查或设备策略。</string>
+    <string name="about_install_failed_conflict">和已装的版本冲突，签名不同或版本更旧。可先卸载再装。</string>
+    <string name="about_install_failed_incompatible">这个安装包不适用于本机。</string>
+    <string name="about_install_failed_storage">存储空间不足。</string>
+    <string name="about_install_failed_invalid">安装包损坏，请重新下载。</string>
+    <string name="about_install_failed_unknown">安装没有完成。</string>
+    <string name="settings_about_app_update">发现新版本 %1$s</string>
+    <string name="update_dot_description">有新版本</string>
+    <string name="update_reminder_title">发现新版本 %1$s</string>
+    <string name="update_reminder_size">安装包 %1$s</string>
+    <string name="update_reminder_later">稍后</string>
+    <string name="about_project_home">项目主页</string>
+    <string name="about_feedback">问题反馈</string>
+    <string name="about_feedback_hint">提 GitHub Issue 或站内私信开发者</string>
+    <string name="about_app_channel">Telegram 官方频道</string>
+    <string name="about_app_channel_hint">新版本发布和更新说明</string>
+    <string name="about_app_group">Telegram 官方群组</string>
+    <string name="about_app_group_hint">聊 Nodyssey、报 bug、看 dev 版动静</string>
+    <string name="about_changelog">更新日志</string>
+    <string name="about_theme_signature">Material 3 Expressive · 主题色「石墨青」</string>
+    <string name="about_community">社区</string>
+    <string name="about_forum_stats_value">%1$s 位 seeker</string>
+    <string name="about_forum_stats_snapshot">论坛注册用户总数 · 来自 NodeSeek</string>
+    <string name="about_forum_stats_loading">正在读取论坛人数…</string>
+    <string name="about_forum_stats_error">论坛人数加载失败</string>
+    <string name="about_site">关于本站</string>
+    <string name="about_site_hint">站长置顶帖 · 在 App 内打开</string>
+    <string name="about_privacy">隐私协议和服务条款</string>
+    <!--suppress TypographyDashes: ISO 8601 dates use hyphens, matching the source document. -->
+    <string name="about_privacy_hint">生效日期 2022-11-24</string>
+    <string name="about_rss">RSS 订阅</string>
+    <string name="about_copy_rss">复制 RSS 地址</string>
+    <string name="about_rss_copied">RSS 地址已复制</string>
+    <string name="about_contact">联络与友站</string>
+    <string name="about_telegram_channel">电报频道</string>
+    <string name="about_telegram_group">电报群组</string>
+    <string name="about_email">联系我们</string>
+    <string name="about_deepflood">DeepFlood</string>
+    <string name="about_deepflood_hint">姊妹站 · deepflood.com</string>
+    <string name="about_licenses_hint">本应用许可证与第三方库清单</string>
+    <string name="about_unofficial_notice">本应用是 NodeSeek 论坛的非官方开源客户端，与站点运营方无隶属关系；帖子与评论内容的版权归论坛及原作者所有。</string>
+
+    <!-- Privacy terms (board f2); WebView is only the load/parse fallback. -->
+    <string name="privacy_title">隐私协议</string>
+    <string name="privacy_open_original">在浏览器中打开原文</string>
+    <string name="privacy_effective_date">最新版本生效日期 %1$s</string>
+    <string name="privacy_source">来自 nodeseek.com/termsofservice</string>
+    <string name="privacy_keep_scrolling">继续滚动阅读</string>
+    <string name="privacy_load_failed">暂时无法载入协议</string>
+    <string name="privacy_load_failed_hint">原生正文加载或解析失败，可以重试，或使用站内网页阅读。</string>
+    <string name="privacy_open_web_fallback">使用网页版阅读</string>
+    <string name="changelog_current_version">当前版本 %1$s</string>
+    <string name="changelog_installed">当前版本</string>
+    <string name="changelog_refresh">刷新</string>
+    <string name="changelog_no_notes">这个版本没有写更新说明。</string>
+    <string name="changelog_empty">暂时没有可显示的版本记录。</string>
+    <string name="changelog_failed_hint">更新日志读自项目发布的版本清单，可稍后重试。</string>
+    <string name="changelog_all_releases">查看全部 Releases ↗</string>
+
+    <string name="licenses_summary">Nodyssey 是 GPL-3.0 开源软件，并使用下列主要开源组件。点击条目可查看对应源码与许可信息。</string>
+    <string name="licenses_app_section">本应用</string>
+    <string name="licenses_dependencies_section">主要运行时依赖</string>
+    <string name="licenses_lockfile_note">完整且精确的传递依赖版本以源码仓库中的 app/gradle.lockfile 为准。</string>
+
+    <!-- App notification polling (board f4): the site has no push, a periodic worker checks unread -->
+    <string name="notify_settings_title">通知</string>
+    <string name="notify_master_title">新消息通知</string>
+    <string name="notify_settings_entry_hint">后台定期检查未读并发系统通知</string>
+    <string name="notify_master_hint">后台定期检查未读并发系统通知；站点无推送服务，无法做到即时</string>
+    <string name="notify_frequency">检查频率</string>
+    <string name="notify_frequency_15">15 分钟</string>
+    <string name="notify_frequency_30">30 分钟</string>
+    <string name="notify_frequency_60">1 小时</string>
+    <string name="notify_frequency_hint">受系统省电策略影响，实际间隔可能更长（WorkManager 下限 15 分钟）</string>
+    <string name="notify_wifi_only">仅 Wi-Fi 下检查</string>
+    <string name="notify_wifi_only_hint">移动网络时暂停轮询，省电省流量</string>
+    <string name="notify_quiet_hours">免打扰时段</string>
+    <string name="notify_quiet_hours_hint">23:00 – 07:00 · 时段内静默收取，不发通知</string>
+    <string name="notify_channels_section">通知类别 · 映射 Android 通知渠道</string>
+    <string name="notify_telegram_title">想要即时提醒？</string>
+    <string name="notify_telegram_body">绑定 Telegram 后由站点即时转发未读消息</string>
+    <string name="notify_telegram_action">去绑定</string>
+
+    <!-- Account settings (8g): the seven groups NodeSeek's own /setting page is split into -->
+    <string name="account_title">账号设置</string>
+    <string name="account_group_preference">常用偏好</string>
+    <string name="account_group_homepage">首页版块</string>
+
+    <string name="account_bio">Bio</string>
+    <string name="account_signature">签名</string>
+    <string name="account_readme">Readme</string>
+    <string name="account_change_password">修改密码</string>
+    <string name="account_blocked_count">%1$d 人</string>
+
+    <!-- Current-value subtitles. App additions: the site's own page is a plain list of group links. -->
+    <string name="account_value_unknown">—</string>
+
+    <!-- 个人信息 (d6 1/4) -->
+    <string name="account_profile_title">个人信息</string>
+    <string name="account_profile_summary">头像、Bio、签名与 Readme</string>
+    <string name="account_action_save">保存</string>
+    <string name="account_action_saved">已保存</string>
+    <string name="account_avatar_change">更换头像</string>
+    <string name="account_avatar_take_photo">拍照</string>
+    <string name="account_avatar_pick">从相册选择</string>
+    <string name="account_avatar_pending">新头像待保存</string>
+    <string name="account_avatar_failed">读取图片失败，换一张试试</string>
+    <string name="account_bio_hint">请用一句话介绍自己</string>
+    <string name="account_signature_helper">帖子内容下显示 · 支持 Markdown · 不支持图片和引用</string>
+    <string name="account_readme_helper">用户主页中显示 · 支持 Markdown</string>
+
+    <!-- 安全 (d6 2/4) -->
+    <string name="account_security_title">安全</string>
+    <string name="account_security_summary">修改密码与两步验证</string>
+    <string name="account_password_current">当前密码</string>
+    <string name="account_password_new">新密码</string>
+    <string name="account_password_confirm">确认新密码</string>
+    <string name="account_password_confirm_hint">再输入一次新密码</string>
+    <string name="account_password_update">更新密码</string>
+    <string name="account_password_mismatch">两次输入的新密码不一致</string>
+    <string name="account_password_too_short">新密码至少 %1$d 位</string>
+    <!-- App addition: the site gives no live strength feedback -->
+    <string name="account_password_strength">强度：%1$s</string>
+    <string name="account_password_strength_weak">较弱</string>
+    <string name="account_password_strength_fair">一般</string>
+    <string name="account_password_strength_strong">较强</string>
+    <string name="account_password_strength_best">很强</string>
+    <string name="account_password_strength_hint_length">再长一些会明显更安全</string>
+    <string name="account_password_strength_hint_variety">混入大小写、数字与符号可达到最高强度</string>
+    <string name="account_password_strength_hint_done">已经足够强了</string>
+    <string name="account_two_factor_section">两步验证</string>
+    <string name="account_two_factor_totp">验证器动态码（TOTP）</string>
+    <string name="account_two_factor_off_hint">未开启 · 建议开启以保护账号</string>
+    <string name="account_two_factor_on_hint">已开启 · 登录时需要输入动态码</string>
+    <string name="account_two_factor_body">绑定后，登录与修改密码等高风险操作需输入验证器生成的 6 位动态码。</string>
+    <string name="account_two_factor_bind">绑定验证器</string>
+    <string name="account_two_factor_rebind">重新绑定</string>
+    <string name="account_two_factor_no_app">没找到验证器应用，先装一个（如 Google Authenticator / Aegis）再绑定</string>
+
+    <!-- High-risk confirmations: the design gives these their own dialog rather than a switch -->
+    <string name="account_confirm_password_title">确认修改密码？</string>
+    <string name="account_confirm_password_body">修改后除当前设备外，其他已登录设备将全部退出，需要用新密码重新登录。</string>
+    <string name="account_confirm_password_action">确认修改</string>
+    <string name="account_confirm_2fa_title">确认绑定验证器？</string>
+    <string name="account_confirm_2fa_body">绑定后每次登录都需要验证器动态码。请先确保验证器 App 已装好，并妥善保存恢复码。</string>
+    <string name="account_confirm_2fa_action">开始绑定</string>
+    <string name="account_confirm_unblock_title">解除对 %1$s 的屏蔽？</string>
+    <string name="account_confirm_unblock_body">解除后你会重新看到 TA 的帖子与评论。</string>
+    <string name="account_confirm_unblock_action">解除屏蔽</string>
+
+    <!-- 联系方式 (d6 3/5)，站点文案照抄 -->
+    <string name="account_contact_title">联系方式</string>
+    <string name="account_contact_summary">邮箱、手机与 Telegram</string>
+    <string name="account_email_section">邮箱</string>
+    <string name="account_email_current">当前邮箱</string>
+    <string name="account_email_change">在网页中修改</string>
+    <string name="account_email_verified">已验证</string>
+    <string name="account_email_change_on_site">修改邮箱需要通过站点的人机验证后才能收到验证码，因此这一步在 NodeSeek 网页上完成。</string>
+    <string name="account_phone_section">手机</string>
+    <string name="account_phone_add">添加手机</string>
+    <string name="account_phone_disabled_reason">手机短信验证API暂不可用</string>
+    <string name="account_phone_unavailable">暂不可用</string>
+
+    <!-- Telegram 绑定 (f3)。未绑定文案为站点原文；绑定本身只能在网页完成 -->
+    <string name="account_telegram_section">Telegram</string>
+    <string name="account_telegram_title">Telegram 提醒</string>
+    <string name="account_telegram_unbound">暂未绑定 telegram</string>
+    <string name="account_telegram_bound">已绑定</string>
+    <string name="account_telegram_bind">立即绑定</string>
+    <string name="account_telegram_bind_hint">绑定 telegram 后可以及时提醒未读消息，@我、回复与私信都会转发到你的 Telegram。</string>
+    <string name="account_telegram_bound_hint">未读的 @我、回复与私信会转发到你的 Telegram；已读消息不重复提醒。</string>
+    <string name="account_telegram_unbind">解绑</string>
+    <string name="account_telegram_dialog_title">在网页中完成绑定</string>
+    <string name="account_telegram_dialog_body">即将打开 NodeSeek 的联系方式设置页。绑定要用 Telegram 官方的登录挂件完成，只能在网页里进行；确认后 @我、回复与私信的未读提醒将转发到你的 Telegram。</string>
+    <string name="account_telegram_dialog_note">网页会跳转到 Telegram 授权，返回本页后绑定状态会自动刷新。</string>
+    <string name="account_telegram_open">打开网页</string>
+    <string name="account_telegram_done_question">已在网页完成绑定？</string>
+    <string name="account_telegram_refresh">刷新绑定状态</string>
+    <string name="account_telegram_still_unbound">还未检测到绑定，在网页完成后再刷新试试</string>
+    <string name="account_telegram_bound_toast">已绑定 Telegram，未读提醒将同步过去</string>
+    <string name="account_telegram_unbound_toast">已解除 Telegram 绑定</string>
+    <string name="account_telegram_unbind_title">解除 Telegram 绑定？</string>
+    <string name="account_telegram_unbind_body">解绑后将立即停止向 %1$s 转发未读提醒；可随时重新绑定。</string>
+    <string name="account_telegram_unbind_confirm">确认解绑</string>
+
+    <!-- 屏蔽用户 (d6 4/5) -->
+    <string name="account_block_title">屏蔽用户</string>
+    <string name="account_block_section">屏蔽用户</string>
+    <string name="account_block_show_temporarily">临时显示被屏蔽内容</string>
+    <string name="account_block_show_temporarily_hint">开启后被屏蔽用户的帖子与评论临时可见，重启 App 后恢复屏蔽</string>
+    <string name="account_block_row_hint">已屏蔽 · 不再显示其帖子与评论</string>
+    <string name="account_block_unblock">解除屏蔽</string>
+    <string name="account_block_empty">你还没有屏蔽任何用户</string>
+    <string name="account_block_footer">被屏蔽用户的帖子在列表中隐藏，评论显示为「已屏蔽用户的评论」折叠行；解除立即生效。</string>
+    <string name="account_block_add_label">添加屏蔽</string>
+    <string name="account_block_add_placeholder">对方用户名</string>
+    <string name="account_block_add_action">添加</string>
+    <string name="account_block_added">已加入屏蔽列表</string>
+    <!-- 帖子详情里被屏蔽楼层折叠成的一行 -->
+    <string name="post_comment_blocked">已屏蔽用户的评论</string>
+    <string name="post_comment_blocked_show">显示</string>
+
+    <!-- 偏好与首页版块 (d6 5/5)。Local=本机 DataStore，Remote=账号（服务端），归属徽标随行展示 -->
+    <string name="account_preferences_title">偏好与首页版块</string>
+    <string name="account_preferences_summary">节日主题与首页版块</string>
+    <string name="account_holiday_theme">启用节日主题</string>
+    <string name="account_holiday_theme_hint">节日期间使用节日配色，跟随账号同步</string>
+    <string name="account_preferences_omitted_note">站点另有「新标签页打开主题帖」（浏览器概念，App 不适用）与「自动夜间模式／依据」（改用 设置 · 主题），均刻意省略。</string>
+    <string name="account_home_boards_hint">关闭后首页信息流不再显示该版块；其余版块不可关闭（站点仅开放这三项）。</string>
+    <string name="account_board_trade">交易</string>
+    <string name="account_board_life">生活</string>
+    <string name="account_board_photo">贴图</string>
+    <string name="account_storage_legend">Local = 仅本机生效 · Remote = 跟随账号同步（服务端存储）</string>
+
+    <!-- Status and empty states: say what happened, then offer something to press -->
+    <string name="status_empty_feed_title">这里还没有帖子</string>
+    <string name="status_empty_feed_body">这个版块暂时是空的，去别的版块看看</string>
+    <string name="status_empty_feed_action">换个版块</string>
+    <string name="status_empty_ledger_title">还没有流水</string>
+    <string name="status_empty_ledger_body">等有了收支，这里就会按时间列出来</string>
+
+    <string name="status_network_title">网络开小差了</string>
+    <string name="status_network_body">连不上 NodeSeek，检查一下网络后再试一次。</string>
+
+    <string name="status_challenge_title">需要确认一下你不是机器人</string>
+    <string name="status_challenge_body">NodeSeek 开启了访问保护。在浏览器里点一下验证，马上就能回来继续刷。</string>
+    <string name="status_challenge_footnote">验证在应用内置浏览器中完成，通过后自动返回列表</string>
+
+    <string name="status_sign_in_title">需要登录后查看</string>
+    <string name="status_sign_in_title_board">「%1$s」需要登录后查看</string>
+    <string name="status_sign_in_body">登录 NodeSeek 账号后即可浏览本版块的内容。登录成功会自动返回并重新加载。</string>
+    <string name="status_sign_in_secondary">先逛逛别的版块</string>
+
+    <string name="status_level_required_title">等级不够，看不了这帖</string>
+    <string name="status_level_required_title_level">这帖要 Lv%1$d 才能看</string>
+    <string name="status_level_required_body">作者把本帖的阅读权限设成了 Lv%1$d，你的等级还差一截。NodeSeek 靠鸡腿升级，攒够了再回来。</string>
+    <string name="status_level_required_body_unknown">本帖设了阅读等级门槛，你的等级还没到。NodeSeek 靠鸡腿升级，攒够了再回来。</string>
+    <string name="status_level_required_action">返回</string>
+
+    <string name="status_deleted_title">内容已被删除</string>
+    <string name="status_deleted_body">这个帖子被作者或管理员删除了。</string>
+    <string name="status_deleted_action">返回列表</string>
+
+    <string name="status_no_results_title">没搜到相关帖子</string>
+    <string name="status_no_results_body">换个关键词，或者去版块里翻翻。</string>
+    <string name="status_no_results_action">清空关键词</string>
+
+    <string name="status_signed_out_title">登录后解锁完整体验</string>
+    <string name="status_signed_out_body">收藏、通知、签到都在登录之后。</string>
+
+    <!-- Profile signed-out state (c7) -->
+    <string name="profile_signed_out_title">登录 NodeSeek，解锁完整体验</string>
+    <string name="profile_signed_out_body">游客只能看帖，登录后才能参与社区。</string>
+    <string name="profile_guest_benefit_post">发帖回复</string>
+    <string name="profile_guest_benefit_post_hint">参与讨论</string>
+    <string name="profile_guest_benefit_messages">通知私信</string>
+    <string name="profile_guest_benefit_messages_hint">@我即时达</string>
+    <string name="profile_guest_benefit_attendance">签到鸡腿</string>
+    <string name="profile_guest_benefit_attendance_hint">每日 6–7 个</string>
+    <string name="profile_sign_in">登录 NodeSeek</string>
+    <string name="profile_sign_in_hint">在内置浏览器中完成，应用不保存你的密码</string>
+    <string name="profile_guest_section">游客也可以用</string>
+    <string name="profile_guest_settings_hint">主题模式、字号、浏览偏好</string>
+    <string name="profile_guest_tools_hint">推荐阅读、合作商家、友站</string>
+
+    <string name="status_signed_in_title">已登录 NodeSeek</string>
+    <string name="status_signed_in_body">应用现在会带着你的登录状态请求内容，内版这类版块可以直接看了。收藏、通知和签到都能用了。</string>
+
+    <string name="status_unparsable_title">这个页面读不出来</string>
+    <string name="status_unparsable_body">页面结构和预期不一致，多半是站点改版了。先去网页里看看。</string>
+
+    <string name="status_rate_limited_title">请求太频繁了</string>
+    <string name="status_rate_limited_body">NodeSeek 的搜索每 2 秒只接受一次请求。等一下再试就好，不用去网页验证。</string>
+
+    <string name="status_http_title">服务器返回了 HTTP %1$d</string>
+    <string name="status_unknown_title">加载失败</string>
+    <string name="status_generic_body">再试一次，或者到网页里看看。</string>
+
+    <string name="status_not_wired_title">这一页还没接进 App</string>
+    <string name="status_not_wired_body">NodeSeek 这一页是网页端渲染的，没有可读的接口，App 不会拿猜出来的数据糊弄你。先到网页里看，接口对上就会补进来。</string>
+
+
+    <!-- Two-pane list-detail on tablets and unfolded foldables: what the empty detail pane says -->
+    <string name="home_pane_empty">选一个帖子，正文会显示在这里</string>
+    <string name="search_pane_empty">选一条结果，正文会显示在这里</string>
+    <string name="notifications_pane_empty">选一条消息，内容会显示在这里</string>
+    <string name="space_pane_empty">选一个帖子，正文会显示在这里</string>
+
+    <!-- Pagination for the lists the site indexes by page number -->
+    <string name="pager_total_approx">共 %1$d+ 页</string>
+
+    <!-- User space (8a 我的主页 / 8b 公开用户页) -->
+    <string name="space_tab_general">概况</string>
+    <string name="space_tab_topics">主题帖</string>
+    <string name="space_tab_comments">评论</string>
+    <string name="space_tab_collections">收藏</string>
+    <string name="space_stat_joined_days">加入天数</string>
+    <string name="space_stat_level">等级</string>
+    <string name="space_stat_chicken">鸡腿</string>
+    <string name="space_stat_topics">主题帖</string>
+    <string name="space_stat_comments">评论</string>
+    <string name="space_message">私信</string>
+    <string name="space_follow">关注</string>
+    <string name="space_following">已关注</string>
+    <string name="space_uid">UID %1$d</string>
+    <string name="space_uid_bio">UID %1$d · %2$s</string>
+    <string name="space_bio">Bio</string>
+    <string name="space_readme">Readme</string>
+    <string name="space_readme_empty">没有找到readme 🙄</string>
+    <string name="space_readme_expand">展开全部</string>
+    <string name="space_readme_collapse">收起</string>
+    <string name="space_end_topics">已经到底了 · 共 %1$d 篇主题帖</string>
+    <string name="space_end_comments">已经到底了 · 共 %1$d 条评论</string>
+    <string name="space_end_collections">已经到底了 · 共 %1$d 条收藏</string>
+    <string name="space_empty_topics">还没有发过主题帖</string>
+    <string name="space_empty_comments">还没有发过评论</string>
+    <string name="space_empty_collections">收藏夹是空的</string>
+    <string name="space_comment_in">回复于 %1$s</string>
+
+    <!-- Assets and growth (8d) -->
+    <string name="assets_title">账户与成长</string>
+    <string name="assets_level">Lv %1$d</string>
+    <string name="assets_level_progress">鸡腿 %1$d / %2$d</string>
+    <string name="assets_level_remaining">还差 %1$d 鸡腿到 Lv %2$d</string>
+    <string name="assets_level_no_threshold">等级进度即鸡腿总数</string>
+    <string name="assets_daily_title">今日额度</string>
+    <string name="assets_quota_post">今日发帖可得鸡腿</string>
+    <string name="assets_quota_comment">今日评论可得鸡腿</string>
+    <string name="assets_quota_attendance">今日签到获得鸡腿</string>
+    <string name="assets_quota_feeding">今日免费投喂额度</string>
+    <string name="assets_quota_value">%1$d / %2$d</string>
+    <string name="assets_quota_value_unknown">— / %1$d</string>
+    <string name="assets_chicken_count">鸡腿 %1$d</string>
+    <string name="assets_quota_hint">今日额度这次没读到，只剩上限是准的。</string>
+    <string name="assets_chicken">鸡腿</string>
+    <string name="assets_stars">星辰</string>
+    <string name="assets_ledger">流水</string>
+    <string name="assets_ledger_transfer">流水 / 转账</string>
+    <string name="assets_sign_in">今日签到 · 领鸡腿</string>
+    <string name="assets_sign_in_choice_title">今日签到</string>
+    <string name="assets_sign_in_random">随机数量 · 拼手气</string>
+    <string name="assets_sign_in_fixed">固定 5 个鸡腿</string>
+    <string name="assets_sign_in_choice_hint">与网页端一致：随机模式可能高于也可能低于 5 个。</string>
+    <string name="assets_board">今日签到榜</string>
+    <string name="assets_board_subtitle">看看今天谁的手气最好</string>
+    <string name="assets_board_gain">+%1$d</string>
+    <string name="assets_board_failed">签到榜加载失败</string>
+    <string name="assets_signed_in">今日已签 +%1$d 鸡腿</string>
+    <string name="assets_signing_in">签到中…</string>
+
+    <!-- Shared by both ledgers (d3 / 8e) -->
+    <string name="ledger_amount_gain">+%1$d</string>
+    <!-- U+2212 MINUS SIGN, not a hyphen: a hyphen reads as a dash between the two numbers. -->
+    <string name="ledger_amount_spend">−%1$d</string>
+    <string name="ledger_end">没有更多记录了</string>
+    <string name="ledger_load_more_failed">加载更多失败</string>
+
+    <!-- Chicken ledger (d3) -->
+    <string name="credit_title">鸡腿流水</string>
+    <string name="credit_balance">当前鸡腿</string>
+    <string name="credit_level">Lv%1$d</string>
+    <string name="credit_level_progress">Lv%1$d 进度 %2$d / %3$d</string>
+    <string name="credit_entry_total">总计 %1$d</string>
+
+    <!-- Stardust ledger and transfer (8e / 8f) -->
+    <string name="stardust_title">星辰</string>
+    <string name="stardust_balance">当前余额</string>
+    <string name="stardust_balance_hint">来源：点赞 / 转账 / 系统 / 管理 · 用途：转账 / 购码</string>
+    <string name="stardust_type_upvote">点赞</string>
+    <string name="stardust_type_transfer">转账</string>
+    <string name="stardust_type_buy_code">购买邀请码</string>
+    <string name="stardust_type_system">系统</string>
+    <string name="stardust_type_admin">管理</string>
+    <string name="stardust_type_unknown">其他</string>
+    <string name="stardust_entry_balance">余额 %1$d</string>
+    <string name="stardust_entry_comment">评论 %1$d</string>
+    <string name="stardust_entry_peer">uid %1$d</string>
+    <string name="stardust_entry_ref">Ref %1$d</string>
+    <string name="transfer_action">转账</string>
+    <string name="transfer_title">转账星辰</string>
+    <string name="transfer_amount">数额</string>
+    <string name="transfer_recipient">收款人 UID</string>
+    <string name="transfer_ref">Ref ID</string>
+    <string name="transfer_hint">下一步会向站点查询收款人昵称，请核对后再提交。</string>
+    <string name="transfer_next">下一步</string>
+    <string name="transfer_confirm_title">确认转账 %1$d 星辰？</string>
+    <string name="transfer_amount_value">%1$d 星辰</string>
+    <string name="transfer_balance_after">转账后余额</string>
+    <string name="transfer_balance_change">%1$d → %2$d</string>
+    <string name="transfer_caution">星辰转账一旦提交无法撤销，请确认收款人 UID 与 Ref ID 无误。</string>
+    <string name="transfer_confirm">确认转账</string>
+    <string name="transfer_shortfall">还差 %1$d 星辰</string>
+    <string name="transfer_checking_name">查询中…</string>
+    <string name="transfer_name_unknown">没能查到该 UID 的昵称，请再核对一次收款人。</string>
+    <string name="transfer_sending">转账中…</string>
+    <string name="transfer_sent">已转出 %1$d 星辰</string>
+    <string name="transfer_failed">转账没有成功，请稍后再试。</string>
+    <string name="spend_current_balance">当前余额</string>
+
+    <!-- Follows and followers (8c) -->
+    <string name="follow_title">关注与粉丝</string>
+    <string name="follow_tab_following">我的关注</string>
+    <string name="follow_tab_followers">我的粉丝</string>
+    <string name="follow_end_following">已经到底了 · 共 %1$d 位关注</string>
+    <string name="follow_end_followers">已经到底了 · 共 %1$d 位粉丝</string>
+    <string name="follow_empty_following_title">还没有关注任何人</string>
+    <string name="follow_empty_following_body">关注过的用户会出现在这里</string>
+    <string name="follow_empty_followers_title">暂时没有用户关注您</string>
+    <string name="follow_empty_followers_body">关注你的用户会出现在这里</string>
+
+    <!-- Image viewer (8h) -->
+    <string name="viewer_page">%1$d / %2$d</string>
+    <string name="viewer_save">保存</string>
+    <string name="viewer_saved">已保存到相册</string>
+    <string name="viewer_save_failed">保存失败，稍后再试</string>
+    <string name="viewer_save_unsupported">Android 10 以下不能免权限写相册，可用「分享」发到其他应用</string>
+    <string name="viewer_load_failed">图片加载失败</string>
+    <string name="viewer_deferred_wifi_only">已开启「仅 Wi-Fi 加载图片」，当前不是 Wi-Fi</string>
+    <string name="action_load_anyway">仍要加载</string>
+
+    <!-- Community tools (9a) -->
+    <string name="tools_title">社区工具</string>
+    <string name="tools_group_browse">逛</string>
+    <string name="tools_group_play">玩</string>
+    <string name="tools_group_watch">看</string>
+    <string name="tools_award">推荐阅读</string>
+    <string name="tools_award_subtitle">加精帖列表 · 与首页同款</string>
+    <string name="tools_providers">合作商家</string>
+    <string name="tools_providers_subtitle">商家列表 · 官网外链跳转</string>
+    <string name="tools_friends">友站</string>
+    <string name="tools_friends_subtitle">友情站点列表 · 网页打开</string>
+    <string name="tools_lucky">幸运抽奖</string>
+    <string name="tools_lucky_subtitle">T 楼抽奖公证工具 · 生成开奖链接</string>
+    <string name="tools_invite">邀请好友</string>
+    <string name="tools_invite_subtitle">花费 1000 鸡腿购买一个邀请码</string>
+    <string name="tools_ruling">管理记录</string>
+    <string name="tools_ruling_subtitle">处罚与奖励公示表格</string>
+
+    <!-- Curated reading (9b) -->
+    <string name="award_title">推荐阅读</string>
+    <string name="award_empty">还没有加精的帖子</string>
+
+    <!-- Lucky draw (9c) -->
+    <string name="lucky_title">幸运抽奖</string>
+    <string name="lucky_intro">T 楼抽奖公证工具：填入帖子参数生成公开链接，任何人都能打开验证开奖结果。不消耗鸡腿或星辰。</string>
+    <string name="lucky_post_id">主题帖 ID</string>
+    <string name="lucky_draw_time">开奖时间</string>
+    <string name="lucky_prize_count">奖品数目</string>
+    <string name="lucky_start_floor">起始楼层</string>
+    <string name="lucky_dedupe">楼层去重</string>
+    <string name="lucky_dedupe_hint">同一用户多个楼层只算一次</string>
+    <string name="lucky_generate">生成抽奖链接</string>
+    <string name="lucky_principle">抽奖如何保证公平？查看原理</string>
+    <string name="lucky_result">生成结果</string>
+    <string name="lucky_open_web">打开网页查看开奖</string>
+    <string name="lucky_result_hint">把链接贴进帖子正文即可公示；到开奖时间后同一链接展示中奖楼层。</string>
+    <string name="lucky_link_copied">链接已复制</string>
+    <string name="lucky_pick_date">选择开奖日期</string>
+    <string name="lucky_pick_time">选择开奖时间</string>
+    <string name="lucky_needs_post_id">先填帖子 ID 才能生成链接</string>
+
+    <!-- Invite (9d) -->
+    <string name="invite_title">邀请好友</string>
+    <string name="invite_body">NodeSeek 注册需要邀请码。购买后会生成一个邀请码，发给朋友即可注册。</string>
+    <string name="invite_buy">花费 1000 鸡腿购买一个邀请码</string>
+    <string name="invite_confirm_title">确认花费 1000 鸡腿？</string>
+    <string name="invite_cost">花费</string>
+    <string name="invite_cost_value">1000 鸡腿</string>
+    <string name="invite_balance_after">购买后余额</string>
+    <string name="invite_caution">邀请码一经生成即扣除鸡腿，无法退还；一个邀请码只能注册一个账号。</string>
+    <string name="invite_confirm">确认购买</string>
+    <string name="invite_shortfall">还差 %1$d 鸡腿</string>
+    <string name="invite_opened_web">App 还没有对接购码接口，已在网页中打开邀请页。</string>
+    <string name="invite_chicken_balance">当前鸡腿 %1$d</string>
+
+    <!-- Moderation log (9d) -->
+    <string name="ruling_title">管理记录</string>
+    <string name="ruling_subtitle">处罚与奖励公示</string>
+    <string name="ruling_target_kind"> 的%1$s</string>
+    <string name="ruling_target_post">帖子</string>
+    <string name="ruling_target_comment">评论</string>
+    <string name="ruling_reason"> · 因「%1$s」</string>
+    <string name="ruling_meta">%1$s · 管理员 %2$s · %3$s</string>
+    <string name="ruling_meta_no_moderator">%1$s · %2$s</string>
+    <string name="ruling_action_none">—</string>
+    <string name="ruling_action_coin_add">加 %1$d 鸡腿</string>
+    <string name="ruling_action_coin_deduct">扣 %1$d 鸡腿</string>
+    <string name="ruling_action_stardust_add">加 %1$d 星辰</string>
+    <string name="ruling_action_stardust_deduct">扣 %1$d 星辰</string>
+    <string name="ruling_action_title">标题改为「%1$s」</string>
+    <string name="ruling_action_move">移动版块至 %1$s</string>
+    <string name="ruling_action_rank">阅读权限改为 %1$d</string>
+    <string name="ruling_action_lock">锁定修改</string>
+    <string name="ruling_action_unlock">解锁修改</string>
+    <string name="ruling_action_award">设为推荐阅读</string>
+    <string name="ruling_action_award_cancel">取消推荐阅读</string>
+    <string name="ruling_action_hide">隐藏内容</string>
+    <string name="ruling_action_hide_all">隐藏全部内容</string>
+    <string name="ruling_action_unhide">取消隐藏内容</string>
+    <string name="ruling_action_unhide_all">取消隐藏全部内容</string>
+    <string name="ruling_action_pin">置顶评论</string>
+    <string name="ruling_action_unpin">取消置顶评论</string>
+    <string name="ruling_action_suspend">禁言 %1$d 天</string>
+    <string name="ruling_action_unsuspend">解除禁言</string>
+    <string name="ruling_page_progress">已载入 %1$d 条</string>
+    <string name="ruling_page_cap">站点只公开前 %1$d 页，更早的记录要到网页上查</string>
+
+    <!-- Profile menu entries added by the 8/9 batch -->
+    <string name="profile_space">我的主页</string>
+    <string name="profile_collections">我的收藏</string>
+    <string name="profile_history">浏览历史</string>
+    <string name="profile_assets">账户与成长</string>
+    <string name="profile_follow">关注与粉丝</string>
+    <string name="profile_tools">社区工具</string>
+
+    <!-- 投票帖 — a vote lives in the body as an `nsapp://vote?id=N` marker and is fetched separately -->
+    <string name="vote_placeholder_title">投票</string>
+    <string name="vote_single_choice">单选</string>
+    <string name="vote_multiple_choice">多选</string>
+    <string name="vote_locked">已锁定</string>
+    <string name="vote_anonymous">匿名投票</string>
+    <string name="vote_submit">提交投票</string>
+    <!-- The site's own wording for a signed-out reader -->
+    <string name="vote_sign_in_first">登陆后再投票</string>
+    <string name="vote_confirm_title">确认投票？</string>
+    <string name="vote_confirm_body">提交后不可修改。</string>
+    <string name="vote_confirm_ok">提交</string>
+    <string name="vote_load_failed">投票读取失败</string>
+    <string name="vote_retry">重试</string>
+    <!-- Results stay hidden until this account votes; the site does the same -->
+    <string name="vote_results_hidden">投票后可以看到结果</string>
+    <string name="vote_count">%1$d 票</string>
+    <string name="vote_percent">%1$d%</string>
+    <string name="vote_total">共 %1$d 票</string>
+    <string name="vote_voters_expand">查看投票的 %1$d 人</string>
+    <string name="vote_voters_collapse">收起投票人</string>
+    <string name="vote_voters_more">加载更多</string>
+    <string name="vote_voter_uid">用户 %1$d</string>
+    <string name="vote_manage">管理投票</string>
+    <string name="vote_lock">锁定投票</string>
+    <string name="vote_unlock">解锁投票</string>
+    <string name="vote_delete">删除投票</string>
+    <string name="vote_lock_confirm_title">锁定这个投票？</string>
+    <!-- Owners can lock but not unlock; that asymmetry is the site's, and worth saying out loud -->
+    <string name="vote_lock_confirm_body">锁定后没有人能再投票，而且只有管理员能解锁。</string>
+    <string name="vote_delete_confirm_title">删除这个投票？</string>
+    <string name="vote_delete_confirm_body">删除后不可恢复，帖子里的投票会消失。</string>
+    <string name="vote_deleted">投票已删除</string>
+    <!-- 插入投票, in the post editor. The vote is created server-side, then its id goes into the body -->
+    <string name="composer_insert_vote">插入投票</string>
+    <string name="vote_compose_title">插入投票</string>
+    <string name="vote_compose_question">投票标题</string>
+    <string name="vote_compose_option">选项 %1$d</string>
+    <string name="vote_compose_remove_option">删除选项 %1$d</string>
+    <string name="vote_compose_add_option">添加选项</string>
+    <string name="vote_compose_multiple">允许多选</string>
+    <string name="vote_compose_public">公开投票人</string>
+    <string name="vote_compose_public_body">关闭后是匿名投票，谁投了什么不会公开。</string>
+    <string name="vote_compose_create">创建</string>
+    <string name="vote_compose_confirm_title">确认创建投票？</string>
+    <string name="vote_compose_confirm_body">创建后标题和选项都不能修改。</string>
+    <string name="vote_compose_failed">创建投票失败</string>
+
+    <!-- 星辰收款码 — a payment request embedded in a post. Reading it needs nothing; paying it spends
+         stardust and cannot be undone, so every string below has to be unambiguous about direction:
+         what leaves this account, and whose it goes to. -->
+    <string name="stardust_receive_pay">付款</string>
+    <string name="stardust_receive_sign_in_first">登录后付款</string>
+    <string name="stardust_receive_retry">重试</string>
+    <string name="stardust_receive_loading">正在读取收款情况…</string>
+    <string name="stardust_receive_load_failed">收款情况读取失败</string>
+    <string name="stardust_receive_paid">你已付款</string>
+    <string name="stardust_receive_unpaid">你未付款</string>
+    <string name="stardust_receive_payers">共 %1$d 人付款</string>
+    <string name="stardust_receive_total">收到 %1$d 🌌</string>
+    <string name="stardust_receive_confirm_title">确认付款 %1$d 星辰？</string>
+    <string name="stardust_receive_confirm_amount_label">数额</string>
+    <string name="stardust_receive_confirm_amount">%1$d 星辰</string>
+    <string name="stardust_receive_confirm_payee_label">收款人</string>
+    <string name="stardust_receive_confirm_ref_label">Ref ID</string>
+    <string name="stardust_receive_confirm_note_label">备注</string>
+    <string name="stardust_receive_confirm_caution">星辰转出后无法撤回，也无法由对方退还。</string>
+    <!-- A one-off code is the case where paying twice is impossible to fix by paying again -->
+    <string name="stardust_receive_confirm_caution_onetime">这是一次性收款码，同一账号只能付一次。星辰转出后无法撤回。</string>
+    <string name="stardust_receive_confirm_ok">确认付款</string>
+
+    <!-- 插入星辰收款码, in the editors' APP menu -->
+    <string name="composer_app_menu">APP</string>
+    <string name="composer_insert_stardust">插入星辰收款码</string>
+    <string name="stardust_compose_title">插入星辰收款码</string>
+    <string name="stardust_compose_amount">数额</string>
+    <string name="stardust_compose_amount_hint">要收多少星辰</string>
+    <string name="stardust_compose_ref">Ref ID</string>
+    <!-- Only ever seen if the payee clears the seeded number; the site's own field is a positive integer -->
+    <string name="stardust_compose_ref_hint">你自己的编号，正整数</string>
+    <!-- Says what the number is for, because it is pre-filled and most people should leave it alone -->
+    <string name="stardust_compose_ref_support">已自动生成，收款情况按它统计；同一个编号会共用一份收款记录</string>
+    <string name="stardust_compose_note">备注</string>
+    <string name="stardust_compose_note_hint">收这笔钱是为了什么</string>
+    <string name="stardust_compose_onetime">一次性付款</string>
+    <string name="stardust_compose_onetime_body">开启后同一个账号只能付一次。</string>
+    <string name="stardust_compose_insert">插入</string>
+    <string name="stardust_compose_needs_sign_in">还不知道你的 UID，登录后再插入收款码。</string>
+
+    <!-- 浏览历史 — device-local; the site has no such list -->
+    <string name="history_title">浏览历史</string>
+    <string name="history_empty_title">还没有看过帖子</string>
+    <string name="history_empty_body">读过的帖子会按时间倒序留在这里，只存在这台设备上。</string>
+    <!-- A thread read before the snapshot existed, or one whose page carried no title -->
+    <string name="history_untitled">帖子 #%1$d</string>
+    <string name="history_remove">从历史中移除 %1$s</string>
+    <string name="history_clear_all">全部清除</string>
+    <string name="history_clear_title">清除浏览历史？</string>
+    <!-- These rows double as the unread baseline, and the reader has to know that before agreeing -->
+    <string name="history_clear_body">这些记录同时也是「几条新回复」的已读基准。清除之后，列表里已读变灰的帖子会重新显示为未读，帖子里记下的「上次阅读」位置也会一并清掉。</string>
+    <string name="history_clear_confirm">清除</string>
+    <!-- Top bar second line: how much is kept, and how much of that is used -->
+    <string name="history_subtitle">共 %1$d 条 · 保留 %2$s</string>
+    <string name="history_section_today">今天</string>
+    <string name="history_section_yesterday">昨天</string>
+    <string name="history_section_week">最近七天</string>
+    <string name="history_section_earlier">更早</string>
+    <string name="history_removed">已移除一条记录</string>
+    <string name="history_undo">撤销</string>
+    <!-- 保留条数 — the same rows are the unread baseline, so the picker has to say what a small number costs -->
+    <string name="history_limit_title">保留条数</string>
+    <string name="history_limit_body">浏览记录同时是「已读」「N 条新回复」和帖子里「上次阅读」的判断依据。留得越少，读过的旧帖越早重新显示为未读，App 也越早忘掉你在那些帖子里读到了哪一楼。一条记录只是几个字段，一千条也远不到 1 MB。</string>
+    <string name="history_limit_count">%1$d 条</string>
+    <string name="history_limit_unlimited">无上限</string>
+    <string name="history_limit_default">%1$d 条（默认）</string>
+
+    <!-- 图床 — one of six separate services; see data/imagehost/ for each one's vocabulary. -->
+    <string name="imagehost_title">图床</string>
+    <string name="imagehost_section_provider">图床服务</string>
+    <string name="imagehost_section_connection">连接</string>
+    <string name="imagehost_section_images">已上传</string>
+
+    <string name="imagehost_provider_nodeimage">NodeImage · 论坛常用</string>
+    <string name="imagehost_provider_lsky">兰空图床 Lsky Pro · 自建</string>
+    <string name="imagehost_provider_easyimage">简单图床 EasyImage · 自建</string>
+    <string name="imagehost_provider_smms">SM.MS · 公共</string>
+    <string name="imagehost_provider_imgbb">imgbb · 公共</string>
+    <string name="imagehost_provider_custom">自定义图床 · 手动配置</string>
+
+    <string name="imagehost_hint_nodeimage">网页版编辑器用的那家。密钥在 nodeimage.com 右上角「API」页面复制</string>
+    <string name="imagehost_hint_lsky">填自己搭的站点地址，令牌在兰空后台「设置 › 接口」生成</string>
+    <string name="imagehost_hint_easyimage">填自己搭的站点地址，并在后台「图床安全 › 高级设置」里打开 API 上传。这家只有上传接口，看不了已上传列表</string>
+    <string name="imagehost_hint_smms">在 sm.ms 登录后于「Dashboard › API Token」生成</string>
+    <string name="imagehost_hint_imgbb">在 imgbb 的 API 页面获取 key。这家只有上传接口，看不了已上传列表</string>
+    <string name="imagehost_hint_custom">照图床自己的文档填：上传地址、鉴权方式、文件字段名和取值路径</string>
+
+    <string name="imagehost_connected">已连接</string>
+    <string name="imagehost_not_connected">未连接</string>
+    <string name="imagehost_not_connected_hint">论坛不自带图床，发图前需要先连接一个</string>
+
+    <string name="imagehost_site_label">站点地址</string>
+    <string name="imagehost_site_placeholder">https://img.example.com</string>
+    <string name="imagehost_site_helper">图床首页的地址，不带后面的路径</string>
+    <string name="imagehost_site_invalid">要以 http:// 或 https:// 开头的完整地址</string>
+    <string name="imagehost_upload_url_label">上传地址</string>
+    <string name="imagehost_upload_url_placeholder">https://img.example.com/api/upload</string>
+
+    <string name="imagehost_key_label">API Key</string>
+    <string name="imagehost_api_token_label">API Token</string>
+    <string name="imagehost_token_label">令牌</string>
+    <string name="imagehost_token_placeholder">粘贴图床给的密钥</string>
+    <string name="imagehost_token_placeholder_saved">留空则沿用已保存的</string>
+    <string name="imagehost_token_helper">只保存在本机，不会同步到任何地方</string>
+    <string name="imagehost_token_required">这一栏不能为空</string>
+    <string name="imagehost_key_invalid">这不像一个 API Key，请检查是否复制完整</string>
+
+    <string name="imagehost_custom_fields">高级字段</string>
+    <string name="imagehost_custom_file_field">文件字段名</string>
+    <string name="imagehost_custom_file_field_placeholder">file</string>
+    <string name="imagehost_custom_file_field_helper">图片放在哪个表单字段里，常见的是 file 或 image</string>
+    <string name="imagehost_custom_file_field_required">文件字段名不能为空</string>
+    <string name="imagehost_custom_header_name">鉴权请求头</string>
+    <string name="imagehost_custom_header_name_placeholder">Authorization</string>
+    <string name="imagehost_custom_header_helper">图床用请求头鉴权时填，否则留空</string>
+    <string name="imagehost_custom_header_value">请求头的值</string>
+    <string name="imagehost_custom_header_value_placeholder">Bearer xxxxxx</string>
+    <string name="imagehost_custom_header_value_helper">为了排查 401，这一栏会明文显示</string>
+    <string name="imagehost_custom_form_fields">附加表单字段</string>
+    <string name="imagehost_custom_form_fields_placeholder">token=xxxxxx</string>
+    <string name="imagehost_custom_form_fields_helper">每行一条 名称=值，用请求体传 token 的图床填这里</string>
+    <string name="imagehost_custom_url_path">取值路径</string>
+    <string name="imagehost_custom_url_path_placeholder">data.links.url</string>
+    <string name="imagehost_custom_url_path_helper">从返回的 JSON 里取图片地址的路径，用点分隔，数字表示数组下标</string>
+    <string name="imagehost_custom_url_path_required">取值路径不能为空</string>
+    <string name="imagehost_custom_url_prefix">地址前缀</string>
+    <string name="imagehost_custom_url_prefix_placeholder">https://img.example.com</string>
+    <string name="imagehost_custom_url_prefix_helper">图床只返回相对路径时，用它补成完整地址</string>
+
+    <string name="imagehost_key_save">保存并连接</string>
+    <string name="imagehost_key_replace">保存</string>
+    <string name="imagehost_key_saved">已保存</string>
+    <string name="imagehost_key_cleared">已断开连接</string>
+    <string name="imagehost_clear_key">断开</string>
+    <string name="imagehost_clear_key_title">断开%1$s？</string>
+    <string name="imagehost_clear_key_body">本机保存的密钥会被删除，之后发帖和回复将无法插入图片。已上传的图片不受影响。</string>
+    <string name="imagehost_clear_key_action">断开</string>
+    <string name="imagehost_open_site">打开图床网站</string>
+
+    <string name="imagehost_summary">共 %1$d 张 · %2$s</string>
+    <string name="imagehost_empty">图床里还没有图片</string>
+    <string name="imagehost_deleted">已删除</string>
+    <string name="imagehost_delete_title">删除这张图片？</string>
+    <string name="imagehost_delete_body">「%1$s」将从图床永久删除，已经发布的帖子里这张图会变成空链接。此操作无法撤销。</string>
+    <string name="imagehost_delete_action">删除</string>
+
+    <string name="imagehost_error_not_configured">还没连接图床，先在上面选一个并填好密钥</string>
+    <string name="imagehost_error_invalid_key">密钥无效或已重新生成，请重新填写</string>
+    <string name="imagehost_error_rejected">图床拒绝了这个文件</string>
+    <string name="imagehost_error_session_required">NodeImage 只允许用 API Key 上传，查看和删除要在 nodeimage.com 网页上用 NodeSeek 账号登录后进行</string>
+    <string name="imagehost_error_cloudflare">图床被人机验证拦下了，稍后重试或先在浏览器打开它的网站</string>
+    <string name="imagehost_error_http">图床暂时无法访问，请稍后重试</string>
+    <string name="imagehost_error_unsupported">这个图床只提供上传接口，图片列表和删除要到它自己的网页上操作</string>
+    <string name="imagehost_error_unparsable">看不懂图床的返回内容，自定义图床请检查「取值路径」是否填对</string>
+
+    <string name="composer_image_failed_reason">%1$s · %2$s</string>
+    <string name="composer_upload_not_configured">尚未连接图床，请到 我的 › 账号设置 › 图床 选一个并填好密钥</string>
+    <string name="composer_upload_invalid_key">图床密钥无效，请到 账号设置 › 图床 重新填写</string>
+    <string name="composer_upload_rejected">图床拒绝了这个文件</string>
+    <string name="composer_upload_challenge">图床被人机验证拦下了，稍后重试</string>
+    <string name="composer_upload_network">网络异常</string>
+    <!-- 收藏 · 独立页与离线下载（画板 i1） -->
+    <string name="bookmarks_title">收藏</string>
+    <string name="bookmarks_search">搜索收藏</string>
+    <string name="bookmarks_search_hint">搜标题或作者</string>
+    <string name="bookmarks_search_clear">清空搜索</string>
+    <string name="bookmarks_filter_all">全部 %1$d</string>
+    <string name="bookmarks_filter_downloaded">已下载 %1$d</string>
+    <string name="bookmarks_filter_new_replies">有新回复 %1$d</string>
+    <string name="bookmarks_sort_site">收藏顺序</string>
+    <string name="bookmarks_sort_replies">回复最多</string>
+    <string name="bookmarks_sort_pending">未下载优先</string>
+    <string name="bookmarks_truncated">收藏太多，只读到前 %1$d 页，下面的计数按已读到的算</string>
+    <string name="bookmarks_empty_title">还没有收藏</string>
+    <string name="bookmarks_empty_body">帖子右上角的星标会把它收进这里，收藏是帖子级的，站点不提供分组和备注。</string>
+    <string name="bookmarks_empty_filter_title">这个筛选下没有帖子</string>
+    <string name="bookmarks_empty_filter_body">换一个筛选，或者先下载几篇。</string>
+    <string name="bookmarks_empty_search_title">没有匹配的收藏</string>
+    <string name="bookmarks_empty_search_body">换个词试试，搜索只看标题和作者。</string>
+    <string name="bookmarks_selected">已选 %1$d 项</string>
+    <string name="bookmarks_select_all">全选</string>
+    <string name="bookmarks_select_none">取消全选</string>
+    <string name="bookmarks_exit_selection">退出多选</string>
+    <string name="bookmarks_select_action">多选</string>
+    <string name="bookmarks_remove">移出收藏</string>
+    <string name="bookmarks_removed">已移出 %1$d 篇收藏</string>
+    <string name="bookmarks_remove_failed">移出收藏失败：%1$s</string>
+    <string name="bookmarks_download_all">全部下载 · %1$d 篇</string>
+    <string name="bookmarks_selection_size">%1$d 项 · 约 %2$s</string>
+    <string name="bookmarks_selection_partial">其中 %1$d 项已离线，将只补新回复</string>
+    <string name="bookmarks_selection_all_new">都还没有离线内容</string>
+    <string name="bookmarks_download">下载</string>
+
+    <string name="offline_manage">管理</string>
+    <string name="offline_status">已离线 %1$d 篇 · 占用 %2$s</string>
+    <string name="offline_state_downloaded">已离线</string>
+    <string name="offline_state_downloading">下载中</string>
+    <string name="offline_state_queued">排队中</string>
+    <string name="offline_state_not_downloaded">下载</string>
+    <string name="offline_state_sync">同步</string>
+    <string name="offline_state_retry">重试</string>
+    <string name="offline_state_percent">%1$d%</string>
+    <string name="offline_stop_download">停止下载</string>
+    <string name="offline_stop_download_progress">下载中 %1$d%，点按停止</string>
+    <string name="offline_behind_replies">离线版落后 %1$d 条回复</string>
+    <string name="offline_failed_space">下载失败 · 图片超出剩余空间</string>
+    <string name="offline_failed_network">下载失败 · 网络中断</string>
+    <string name="offline_failed_unavailable">下载失败 · 帖子已不可见</string>
+
+    <string name="offline_sheet_title">离线阅读</string>
+    <string name="offline_sheet_body">下载收藏帖的正文与回复，断网时照常看</string>
+    <string name="offline_usage_summary">%1$d 篇 · 可用 %2$s</string>
+    <string name="offline_usage_summary_unknown">%1$d 篇</string>
+    <string name="offline_usage_text">正文与回复 %1$s</string>
+    <string name="offline_usage_images">图片 %1$s</string>
+    <string name="offline_wifi_only">仅 Wi-Fi 下载</string>
+    <string name="offline_wifi_only_body">移动网络下排队等待</string>
+    <string name="offline_images">同时下载图片</string>
+    <string name="offline_images_body">关闭后离线只留文字，占用小很多</string>
+    <string name="offline_auto_sync">自动补新回复</string>
+    <string name="offline_auto_sync_body">每天一次，只拉增量</string>
+    <string name="offline_retention">离线内容保留</string>
+    <string name="offline_retention_body">超期自动清理，收藏本身不动</string>
+    <string name="offline_retention_days">%1$d 天</string>
+    <string name="offline_retention_forever">不清理</string>
+    <string name="offline_clear">清空离线内容</string>
+    <string name="offline_clear_title">清空离线内容？</string>
+    <string name="offline_clear_body">已下载的正文、回复和图片都会删掉。收藏本身不动，随时可以重新下载。</string>
+    <string name="offline_clear_confirm">清空</string>
+    <string name="offline_done">完成</string>
+</resources>

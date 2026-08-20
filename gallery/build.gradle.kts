@@ -20,9 +20,12 @@ kotlin {
         jvmMain.dependencies {
             implementation(project(":designsys"))
 
-            // The parsers, so the renderer below is fed the same way the app feeds it rather than
-            // from a hand-built node tree that only proves the renderer draws what it is given.
-            implementation(project(":shared"))
+            // The Markdown reader, so the renderer below is fed the same way the app feeds it rather
+            // than from a hand-built node tree that only proves the renderer draws what it is given.
+            //
+            // `:richtext` and not `:shared` since step D1: a component gallery used to resolve SQLite,
+            // Paging and a network layer to draw a paragraph, which is what that lockfile said.
+            implementation(project(":richtext"))
 
             // Skiko and the AWT window for whichever machine this is running on. The only dependency
             // in the repository that is chosen by the host rather than by the build.
