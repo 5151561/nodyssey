@@ -4,9 +4,10 @@ package io.github.nodyssey.data.offline
  * The half of the offline library its background workers drive.
  *
  * Apart from `OfflineLibrary` because the two have different callers: that one is what 收藏 manages
- * downloads through, this is what WorkManager calls and nothing on any screen ever does. A worker
- * looks for it with a cast — the library that ships when offline reading is unavailable does not
- * implement it, and a worker that finds nothing to drive simply finishes.
+ * downloads through, this is what the background scheduler calls — WorkManager on Android,
+ * `BGTaskScheduler` on iOS — and nothing on any screen ever does. A worker looks for it with a cast:
+ * the library that ships when offline reading is unavailable does not implement it, and a worker that
+ * finds nothing to drive simply finishes.
  */
 interface OfflineDownloads {
     /** True when something is queued — what tells a woken worker whether it has a job at all. */
@@ -35,11 +36,26 @@ enum class DrainOutcome {
 }
 
 /**
- * When downloads run. Implemented over WorkManager; an interface so the engine stays testable.
+ * Whether the daily sweep should be tried again — [runOfflineMaintenance]'s answer.
+ *
+ * The same distinction [DrainOutcome] draws, for the same reason: a run the site could not be reached
+ * for is a retry, everything else is done. Each platform maps this to its own scheduler's vocabulary
+ * — `Result.retry()` on Android, `setTaskCompleted(success: false)` on iOS.
+ */
+enum class MaintenanceOutcome {
+    COMPLETED,
+    NETWORK_FAILED,
+}
+
+/**
+ * When downloads run. Implemented over WorkManager on Android and `BGTaskScheduler` on iOS; an
+ * interface so the engine stays testable and platform-blind.
  *
  * The engine says *that* there is work, never *when* to do it: 仅 Wi-Fi 下载 is a constraint the
  * platform enforces, and a queue that waited on its own timer would be a second, worse scheduler
- * running beside the one the system already has.
+ * running beside the one the system already has. (Where the platform has no unmetered constraint —
+ * iOS — the implementation enforces the Wi-Fi rule itself; that stays the scheduler's problem, not
+ * the engine's.)
  */
 interface OfflineWorkScheduler {
     /**

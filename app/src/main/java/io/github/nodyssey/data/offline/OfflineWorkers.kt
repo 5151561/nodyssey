@@ -4,9 +4,6 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import io.github.nodyssey.NodysseyApp
-import io.github.plaza.core.net.SiteError
-import io.github.plaza.core.net.SiteException
-import kotlinx.coroutines.flow.first
 
 /**
  * Works the download queue until it is empty.
@@ -35,14 +32,9 @@ class OfflineDownloadWorker(
 /**
  * The daily housekeeping: 离线内容保留, and 自动补新回复 when it is switched on.
  *
- * Both live in one worker because both are the same errand — a look over what is stored, once a
- * day, on a device nobody may have opened 收藏 on — and because the sweep must run whether or not
- * the sync does.
- *
- * The sync is deliberately not a re-download of everything. It asks the collection list what the
- * site says each thread's reply count is now, hands those numbers to the library, and queues only
- * the threads that have actually moved; the download engine then re-fetches from each one's last
- * stored page rather than from the top.
+ * The errand itself is [runOfflineMaintenance] in `commonMain`, because it is the same on iOS, where
+ * `BGTaskScheduler` runs it. All this worker adds is WorkManager's vocabulary: an emptied sweep is a
+ * success, a sync the site could not be reached for is a retry.
  */
 class OfflineMaintenanceWorker(
     context: Context,
@@ -53,37 +45,11 @@ class OfflineMaintenanceWorker(
         val library = container.offlineLibrary
         val downloads = library as? OfflineDownloads ?: return Result.success()
 
-        downloads.sweepExpired()
-
-        if (!library.settings.first().autoSyncReplies) return Result.success()
-        // Collections are the signed-in account's own list; asking for them signed out is a request
-        // that can only be refused, and a periodic one at that.
-        if (!container.sessionRepository.peek().isSignedIn) return Result.success()
-
-        val counts = mutableMapOf<Long, Int>()
-        var page = 1
-        while (page <= MAX_COLLECTION_PAGES) {
-            val result =
-                try {
-                    container.userSpaceRepository.collections(page)
-                } catch (e: SiteException) {
-                    // Same rule as 通知轮询: only a transport failure is worth retrying. A challenge
-                    // page answered with more background requests is what the challenge is for.
-                    return if (e.error is SiteError.Network) Result.retry() else Result.success()
-                }
-            result.items.forEach { post -> post.commentCount?.let { counts[post.postId] = it } }
-            if (!result.hasNextPage || result.items.isEmpty()) break
-            page++
+        return when (
+            runOfflineMaintenance(library, downloads, container.sessionRepository, container.userSpaceRepository)
+        ) {
+            MaintenanceOutcome.COMPLETED -> Result.success()
+            MaintenanceOutcome.NETWORK_FAILED -> Result.retry()
         }
-        library.noteReplyCounts(counts)
-
-        val stale = downloads.staleIds()
-        if (stale.isNotEmpty()) library.download(stale)
-        return Result.success()
-    }
-
-    private companion object {
-        /** The same bound 收藏 walks the list under, and for the same reason: it exists. */
-        const val MAX_COLLECTION_PAGES = 20
     }
 }
