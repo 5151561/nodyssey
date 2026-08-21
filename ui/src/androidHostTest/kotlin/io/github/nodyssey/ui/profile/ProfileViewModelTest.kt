@@ -250,14 +250,52 @@ class ProfileViewModelTest {
             assertEquals(entries, viewModel.uiState.value.board)
             assertFalse(viewModel.uiState.value.isLoadingBoard)
         }
+
+    @Test
+    fun `signs in for the day from the profile state without navigation`() =
+        runTest(dispatcher) {
+            val assets =
+                FakeAssetsRepository(signInResult = AttendanceResult(gain = 6, message = "签到成功"))
+            val viewModel =
+                ProfileViewModel(
+                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
+                    postRepository = NoOpPostRepository(),
+                    profileRepository =
+                    FakeProfileRepository(
+                        UserProfile(
+                            uid = 31037,
+                            name = "缭雾",
+                            avatarUrl = "https://www.nodeseek.com/avatar/31037.png",
+                        ),
+                    ),
+                    assetsRepository = assets,
+                )
+            advanceUntilIdle()
+
+            viewModel.requestAttendance()
+            assertEquals(true, viewModel.uiState.value.choosingAttendanceMode)
+
+            viewModel.signInForToday(AttendanceMode.FIXED_FIVE)
+            advanceUntilIdle()
+
+            assertEquals(AttendanceMode.FIXED_FIVE, assets.signedInMode)
+            assertFalse(viewModel.uiState.value.choosingAttendanceMode)
+            assertFalse(viewModel.uiState.value.isSigningIn)
+            assertEquals(true, viewModel.uiState.value.hasSignedInToday)
+            assertEquals(6, viewModel.uiState.value.attendanceGain)
+            assertEquals("签到成功", viewModel.uiState.value.attendanceMessage)
+        }
 }
 
 private class FakeAssetsRepository(
     private val gain: Int? = null,
     private val board: List<AttendanceBoardEntry> = emptyList(),
+    private val signInResult: AttendanceResult? = null,
 ) : AssetsRepository {
     private val status = MutableStateFlow<AttendanceStatus?>(null)
     var refreshCount = 0
+        private set
+    var signedInMode: AttendanceMode? = null
         private set
 
     override fun observeAttendanceStatus(): StateFlow<AttendanceStatus?> = status
@@ -274,7 +312,14 @@ private class FakeAssetsRepository(
         ).also { status.value = it }
     }
 
-    override suspend fun signInForToday(mode: AttendanceMode): AttendanceResult = error("Not used")
+    override suspend fun signInForToday(mode: AttendanceMode): AttendanceResult {
+        signedInMode = mode
+        val result = requireNotNull(signInResult) { "Not used" }
+        // The real repository publishes today's receipt as part of signing in, and 账户与成长 reads
+        // the same flow — so does the screen under test.
+        status.value = AttendanceStatus(uid = 31037, date = TODAY, hasSignedIn = true, gain = result.gain)
+        return result
+    }
 
     override suspend fun attendanceBoard(page: Int): List<AttendanceBoardEntry> = board
 

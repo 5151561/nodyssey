@@ -20,12 +20,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -33,9 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,13 +47,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.DailyQuota
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
+import io.github.nodyssey.ui.common.AttendanceModeDialog
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
-import io.github.nodyssey.ui.resources.action_cancel
 import io.github.nodyssey.ui.resources.assets_board
 import io.github.nodyssey.ui.resources.assets_board_subtitle
 import io.github.nodyssey.ui.resources.assets_chicken
@@ -77,10 +73,6 @@ import io.github.nodyssey.ui.resources.assets_quota_post
 import io.github.nodyssey.ui.resources.assets_quota_value
 import io.github.nodyssey.ui.resources.assets_quota_value_unknown
 import io.github.nodyssey.ui.resources.assets_sign_in
-import io.github.nodyssey.ui.resources.assets_sign_in_choice_hint
-import io.github.nodyssey.ui.resources.assets_sign_in_choice_title
-import io.github.nodyssey.ui.resources.assets_sign_in_fixed
-import io.github.nodyssey.ui.resources.assets_sign_in_random
 import io.github.nodyssey.ui.resources.assets_signed_in
 import io.github.nodyssey.ui.resources.assets_signing_in
 import io.github.nodyssey.ui.resources.assets_stars
@@ -112,7 +104,6 @@ const val INVITE_CODE_CHICKEN_COST = 1_000
 @Composable
 fun AssetsRoute(
     viewModel: AssetsViewModel,
-    openAttendanceChooser: Boolean,
     onBack: () -> Unit,
     onChickenLedger: () -> Unit,
     onStardust: () -> Unit,
@@ -121,9 +112,6 @@ fun AssetsRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(openAttendanceChooser) {
-        if (openAttendanceChooser) viewModel.requestAttendance()
-    }
     AssetsScreen(
         state = state,
         onBack = onBack,
@@ -255,55 +243,6 @@ fun AssetsScreen(
             onDismiss = onDismissBoard,
         )
     }
-}
-
-/**
- * The site's sign-in is a choice, not a button: gamble on a random count or take a flat five.
- *
- * Presented at tap time rather than as a setting, because it is a daily decision and the site's own
- * page asks it the same way.
- */
-@Composable
-private fun AttendanceModeDialog(
-    onPick: (AttendanceMode) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(NodeSeekIcons.ChickenLeg, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = { Text(stringResource(Res.string.assets_sign_in_choice_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Button(
-                    onClick = { onPick(AttendanceMode.RANDOM) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(24.dp),
-                ) {
-                    Text(stringResource(Res.string.assets_sign_in_random))
-                }
-                FilledTonalButton(
-                    onClick = { onPick(AttendanceMode.FIXED_FIVE) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(24.dp),
-                ) {
-                    Text(stringResource(Res.string.assets_sign_in_fixed))
-                }
-                Text(
-                    text = stringResource(Res.string.assets_sign_in_choice_hint),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
-        },
-    )
 }
 
 /**

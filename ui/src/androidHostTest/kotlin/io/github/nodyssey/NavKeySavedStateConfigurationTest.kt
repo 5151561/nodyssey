@@ -176,7 +176,7 @@ private val EVERY_KEY: List<NavKey> =
             ),
         ),
         UserSpaceKey(uid = 42, isSelf = true, openCollections = true),
-        AssetsKey(openAttendanceChooser = true),
+        AssetsKey,
         ImageViewerKey(urls = listOf("https://example.invalid/a.png", "https://example.invalid/b.png"), index = 1),
         WebKey(url = "https://www.nodeseek.com/signIn.html", title = "Nodyssey", goal = WebViewGoal.SIGN_IN),
     )

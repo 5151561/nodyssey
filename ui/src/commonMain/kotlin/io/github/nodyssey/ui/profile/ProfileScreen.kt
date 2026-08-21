@@ -29,12 +29,16 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,12 +54,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
+import io.github.nodyssey.ui.common.AttendanceModeDialog
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot
+import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_sign_out
 import io.github.nodyssey.ui.resources.assets_signed_in
+import io.github.nodyssey.ui.resources.assets_signing_in
 import io.github.nodyssey.ui.resources.profile_account_settings
 import io.github.nodyssey.ui.resources.profile_assets
 import io.github.nodyssey.ui.resources.profile_attendance
@@ -118,7 +126,6 @@ fun ProfileRoute(
     onCollections: () -> Unit,
     onHistory: () -> Unit,
     onAssets: () -> Unit,
-    onAttendance: () -> Unit,
     onFollow: () -> Unit,
     onTools: () -> Unit,
     modifier: Modifier = Modifier,
@@ -138,7 +145,10 @@ fun ProfileRoute(
         onCollections = onCollections,
         onHistory = onHistory,
         onAssets = onAssets,
-        onAttendance = onAttendance,
+        onAttendance = viewModel::requestAttendance,
+        onSignInForToday = viewModel::signInForToday,
+        onDismissAttendanceChooser = viewModel::dismissAttendanceChooser,
+        onAttendanceFailureShown = viewModel::attendanceFailureShown,
         onAttendanceBoard = viewModel::openAttendanceBoard,
         onDismissAttendanceBoard = viewModel::dismissAttendanceBoard,
         onRetryAttendanceBoard = viewModel::loadAttendanceBoard,
@@ -194,10 +204,22 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     /** 应用内更新 found something; the 设置 row carries the dot that leads to it. */
     hasAppUpdate: Boolean = false,
+    onSignInForToday: (AttendanceMode) -> Unit = {},
+    onDismissAttendanceChooser: () -> Unit = {},
+    onAttendanceFailureShown: () -> Unit = {},
     onDismissAttendanceBoard: () -> Unit = {},
     onRetryAttendanceBoard: () -> Unit = {},
 ) {
-    Scaffold(modifier = modifier) { padding ->
+    val snackbarHostState = remember { SnackbarHostState() }
+    // The sign-in request now runs on this screen, so its refusals have to land here too.
+    val failure = state.attendanceFailure
+    val failureMessage = failure?.shortMessage()
+    LaunchedEffect(failure) {
+        if (failure == null) return@LaunchedEffect
+        snackbarHostState.showSnackbar(failureMessage.orEmpty())
+        onAttendanceFailureShown()
+    }
+    Scaffold(modifier = modifier, snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         if (!state.isSignedIn) {
             SignedOutProfile(
                 onSignIn = onSignIn,
@@ -243,7 +265,7 @@ fun ProfileScreen(
             item(key = "attendance") {
                 Button(
                     onClick = if (state.hasSignedInToday) onAttendanceBoard else onAttendance,
-                    enabled = !state.isAttendanceUnknown,
+                    enabled = !state.isAttendanceUnknown && !state.isSigningIn,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
                     colors =
@@ -254,6 +276,14 @@ fun ProfileScreen(
                     },
                 ) {
                     when {
+                        state.isSigningIn -> {
+                            CircularProgressIndicator(Modifier.size(18.dp))
+                            Text(
+                                stringResource(Res.string.assets_signing_in),
+                                modifier = Modifier.padding(start = Spacing.sm),
+                            )
+                        }
+
                         state.isAttendanceUnknown -> {
                             CircularProgressIndicator(Modifier.size(18.dp))
                             Text(
@@ -268,7 +298,8 @@ fun ProfileScreen(
                                 text =
                                 state.attendanceGain?.let {
                                     stringResource(Res.string.assets_signed_in, it)
-                                } ?: stringResource(Res.string.profile_attendance_done),
+                                } ?: state.attendanceMessage
+                                    ?: stringResource(Res.string.profile_attendance_done),
                                 modifier = Modifier.padding(start = Spacing.sm),
                             )
                         }
@@ -325,6 +356,13 @@ fun ProfileScreen(
                 }
             }
         }
+    }
+
+    if (state.choosingAttendanceMode) {
+        AttendanceModeDialog(
+            onPick = onSignInForToday,
+            onDismiss = onDismissAttendanceChooser,
+        )
     }
 
     if (state.boardOpen) {

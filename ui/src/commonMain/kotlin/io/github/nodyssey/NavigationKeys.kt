@@ -226,10 +226,15 @@ data object BookmarksKey : NavKey
 @Serializable
 data object ReadHistoryKey : NavKey
 
+/**
+ * 账户与成长.
+ *
+ * No arguments: it used to carry an `openAttendanceChooser` flag so 我的 could reach the sign-in
+ * chooser by pushing this screen. 我的 signs in where it stands now, and a key whose only field
+ * re-opened a dialog on every re-entry was the reason backing out of it looped.
+ */
 @Serializable
-data class AssetsKey(
-    val openAttendanceChooser: Boolean = false,
-) : NavKey
+data object AssetsKey : NavKey
 
 /** 鸡腿流水. Session-scoped like [StardustKey]: the site publishes no one else's ledger. */
 @Serializable
