@@ -319,6 +319,33 @@ class NodeSeekDatabaseMigrationTest {
         migrated.close()
     }
 
+    /**
+     * Null on every existing row, and null is the honest value: v13 had no way to record which
+     * threads were on the list, so there is nothing in the file to back-fill from and the first
+     * successful walk writes one.
+     */
+    @Test
+    fun `migration 13 to 14 gives remembered threads a place on the list`() {
+        helper.createDatabase(DATABASE_NAME, 13).apply {
+            execSQL(
+                """
+                INSERT INTO collected_post_meta(postId, title, authorName, updatedAtMillis)
+                VALUES(42, '一篇收藏', '原作者', 1000)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 14, true, MIGRATION_13_14)
+
+        migrated.query("SELECT title, listedOrder FROM collected_post_meta WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("一篇收藏", it.getString(0))
+            assertTrue(it.isNull(1))
+        }
+        migrated.close()
+    }
+
     private companion object {
         const val DATABASE_NAME = "profile-migration-test"
     }

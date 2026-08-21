@@ -1174,6 +1174,7 @@
     <string name="bookmarks_sort_site">收藏顺序</string>
     <string name="bookmarks_sort_replies">回复最多</string>
     <string name="bookmarks_sort_pending">未下载优先</string>
+    <string name="bookmarks_stale">%1$s，这是上次同步的列表</string>
     <string name="bookmarks_truncated">收藏太多，只读到前 %1$d 页，下面的计数按已读到的算</string>
     <string name="bookmarks_empty_title">还没有收藏</string>
     <string name="bookmarks_empty_body">帖子右上角的星标会把它收进这里，收藏是帖子级的，站点不提供分组和备注。</string>
