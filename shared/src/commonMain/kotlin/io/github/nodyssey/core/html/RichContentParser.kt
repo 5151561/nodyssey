@@ -78,13 +78,7 @@ object RichContentParser {
     private fun parseBlockElement(element: Element): List<RichNode>? = when (element.tagName()) {
         "p" -> paragraphBlocks(element)
 
-        "h1", "h2", "h3", "h4", "h5", "h6" ->
-            listOf(
-                RichNode.Heading(
-                    level = element.tagName().substring(1).toIntOrNull() ?: 3,
-                    inlines = finishInlines(parseInlines(element.childNodes())),
-                ),
-            )
+        "h1", "h2", "h3", "h4", "h5", "h6" -> headingBlocks(element)
 
         "pre" -> listOf(codeBlock(element))
 
@@ -123,13 +117,34 @@ object RichContentParser {
      * Splitting here also preserves text on both sides of an image instead of forcing every image
      * through [InlineNode.Sticker]'s 20sp placeholder.
      */
-    private fun paragraphBlocks(element: Element): List<RichNode> {
+    private fun paragraphBlocks(element: Element): List<RichNode> =
+        inlineRuns(element, RichNode::Paragraph)
+
+    /**
+     * A heading splits the same way a paragraph does.
+     *
+     * Posts written with raw HTML hang a screenshot off the heading it belongs to —
+     * `<h3><strong>标题</strong><br><img></h3>` in post-348342, twice — and a heading that kept its
+     * image inline drew it as a blue `image` link instead of the picture, which is the one thing the
+     * line was there to show.
+     */
+    private fun headingBlocks(element: Element): List<RichNode> {
+        val level = element.tagName().substring(1).toIntOrNull() ?: 3
+        return inlineRuns(element) { RichNode.Heading(level = level, inlines = it) }
+    }
+
+    /**
+     * The element's children as alternating runs of inline content and the blocks — images, app
+     * markers — that have to stand on their own. [run] wraps each inline run in the block the
+     * element itself is.
+     */
+    private fun inlineRuns(element: Element, run: (List<InlineNode>) -> RichNode): List<RichNode> {
         val blocks = mutableListOf<RichNode>()
         val inlineNodes = mutableListOf<Node>()
 
         fun flushInlineNodes() {
             val inlines = finishInlines(parseInlines(inlineNodes))
-            if (inlines.isNotEmpty()) blocks += RichNode.Paragraph(inlines)
+            if (inlines.isNotEmpty()) blocks += run(inlines)
             inlineNodes.clear()
         }
 

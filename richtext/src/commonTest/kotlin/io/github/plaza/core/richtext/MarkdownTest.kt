@@ -38,15 +38,32 @@ class MarkdownTest {
         assertEquals("https://example.com/a.png", image.url)
     }
 
-    /** An image inside a sentence survives as an image node; the renderer decides how to draw it. */
+    /**
+     * An image beside text is still drawn at block width, which is what the HTML parser does with
+     * the same Markdown once the site has rendered it. Left inline it came out as a labelled link —
+     * a picture the reader could tap but never see.
+     */
     @Test
-    fun `keeps an image inside a sentence as an inline image`() {
-        val paragraph =
-            parseMarkdown("徽章 ![runs](https://example.com/b.svg) 在行内").single() as RichNode.Paragraph
+    fun `lifts an image out of the sentence around it`() {
+        val nodes = parseMarkdown("徽章 ![runs](https://example.com/b.svg) 在行内")
 
-        val image = paragraph.inlines.filterIsInstance<InlineNode.Image>().single()
+        assertEquals("徽章 ", ((nodes[0] as RichNode.Paragraph).inlines.single() as InlineNode.Text).text)
+        val image = nodes[1] as RichNode.BlockImage
         assertEquals("https://example.com/b.svg", image.url)
         assertEquals("runs", image.alt)
+        assertEquals(" 在行内", ((nodes[2] as RichNode.Paragraph).inlines.single() as InlineNode.Text).text)
+    }
+
+    /** A heading illustrated by a screenshot keeps the heading and draws the picture under it. */
+    @Test
+    fun `lifts an image out of a heading`() {
+        val nodes =
+            parseMarkdown("### **把你的TG绑上** ![image](https://example.com/tg.png)")
+
+        val heading = nodes[0] as RichNode.Heading
+        assertEquals(3, heading.level)
+        assertEquals("把你的TG绑上", (heading.inlines.single() as InlineNode.Text).text)
+        assertEquals("https://example.com/tg.png", (nodes[1] as RichNode.BlockImage).url)
     }
 
     /** A table cell has no block position, so its images must survive in the inline flow. */

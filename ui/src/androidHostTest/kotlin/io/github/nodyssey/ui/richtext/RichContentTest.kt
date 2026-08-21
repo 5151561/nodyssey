@@ -5,7 +5,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -175,18 +177,37 @@ class RichContentTest {
     }
 
     /**
-     * A hand-rolled `Row` around a 15dp glyph came to 23dp, which is half of Material's minimum and
-     * of the number `Sizes.minTouchTarget` calls the brief's hard requirement. Nothing enforces that
-     * for a control the app lays out itself, so this test does.
+     * A hand-rolled control gets none of the padding a Material component applies for it: the glyph
+     * inside this one is 16dp, and half of `Sizes.minTouchTarget` is what the brief calls a hard
+     * requirement. Floating the button over the block made the ink smaller still, so the target is
+     * worth holding onto — nothing but this test enforces it.
      */
     @Test
     fun `the code block copy control clears the minimum touch target`() {
         setContent(listOf(RichNode.CodeBlock(code = "val x = 1", language = "kotlin")))
 
         composeRule
-            .onNodeWithText("复制")
+            .onNodeWithContentDescription("复制")
             .assertIsDisplayed()
             .assertHeightIsAtLeast(Sizes.minTouchTarget)
+            .assertWidthIsAtLeast(Sizes.minTouchTarget)
+    }
+
+    /**
+     * The button floats in the corner rather than standing on a strip of its own: a 48dp target
+     * stacked above the code was 48dp of empty ground on every block, and on this forum a block is
+     * usually three lines of Markdown someone is meant to copy.
+     */
+    @Test
+    fun `the copy button costs the code block no height`() {
+        val code = RichNode.CodeBlock(code = "val x = 1", language = null)
+        setContent(listOf(code))
+
+        val block = composeRule.onNodeWithText("val x = 1").getUnclippedBoundsInRoot()
+        val button = composeRule.onNodeWithContentDescription("复制").getUnclippedBoundsInRoot()
+
+        // The code starts above the button's own bottom edge — it cannot have been pushed below it.
+        assert(block.top < button.bottom) { "code at ${block.top}, button ends at ${button.bottom}" }
     }
 
     @Test
