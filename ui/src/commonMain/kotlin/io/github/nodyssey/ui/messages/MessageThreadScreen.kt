@@ -286,9 +286,11 @@ fun MessageThreadScreen(
                         SiteErrorState(
                             error = state.error,
                             onRetry = onRetryLoad,
-                            onOpenBrowser = {
-                                if (state.error == SiteError.LoginRequired) onSignIn() else onVerify()
-                            },
+                            // The hand-written `if (LoginRequired)` is gone: SiteErrorState picks the
+                            // recovery per error now, which is the whole reason it takes all three.
+                            onOpenBrowser = onVerify,
+                            onVerify = onVerify,
+                            onSignIn = onSignIn,
                         )
 
                     state.messages.isEmpty() ->

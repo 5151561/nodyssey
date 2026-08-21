@@ -44,7 +44,7 @@ import io.github.nodyssey.data.proxy.ProxyConfigProblem
 import io.github.nodyssey.data.proxy.ProxyConnectionFailure
 import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.ProxyType
-import io.github.nodyssey.ui.account.accountMessageText
+import io.github.nodyssey.ui.account.AccountMessageSnackbar
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.proxy_advanced_hint
@@ -91,13 +91,11 @@ fun ProxySettingsRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val messageText = state.message?.let { accountMessageText(it) }
-
-    LaunchedEffect(state.message, messageText) {
-        if (messageText == null) return@LaunchedEffect
-        snackbarHostState.showSnackbar(messageText)
-        viewModel.consumeMessage()
-    }
+    AccountMessageSnackbar(
+        message = state.message,
+        snackbarHostState = snackbarHostState,
+        onShown = viewModel::consumeMessage,
+    )
 
     ProxySettingsScreen(
         state = state,

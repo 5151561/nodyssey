@@ -265,7 +265,7 @@ fun PostComposerScreen(
     onRetryLoad: () -> Unit = {},
     onOpenBrowser: () -> Unit = {},
     onSignIn: () -> Unit = {},
-    onVerify: () -> Unit = {},
+    onVerify: () -> Unit,
     /**
      * Creates a vote and, on success only, runs the callback so the dialog can close.
      *

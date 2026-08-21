@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
+import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_close
@@ -88,6 +89,7 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.EditorToolbarDefaults
 import io.github.plaza.designsys.editor.MarkdownEditorBar
@@ -120,6 +122,16 @@ fun ReplyComposerHost(
     onRetryFailedUploads: () -> Unit,
     onPublish: () -> Unit,
     onClearError: () -> Unit,
+    /**
+     * Opens the sign-in page; a reply refused for being signed out is not a retry.
+     *
+     * Nullable rather than defaulted to `{}`, and the same for [onVerify]: a button wired to nothing
+     * is the failure this whole seam exists to remove. A host that cannot reach either page passes
+     * null and the strip shows no button at all.
+     */
+    onSignIn: (() -> Unit)?,
+    /** Clears a Cloudflare challenge on the thread being replied to. */
+    onVerify: (() -> Unit)?,
     onToolbarChange: (List<EditorAction>) -> Unit,
     onToolbarReset: () -> Unit,
     onCreateVote: (String, Boolean, Boolean, List<String>, () -> Unit) -> Unit,
@@ -167,6 +179,8 @@ fun ReplyComposerHost(
                 onBack = { onPreviewChange(false) },
                 onPublish = onPublish,
                 onClearError = onClearError,
+                onSignIn = onSignIn,
+                onVerify = onVerify,
             )
         }
     }
@@ -184,6 +198,8 @@ fun ReplyComposerHost(
             onRetryFailedUploads = onRetryFailedUploads,
             onPublish = onPublish,
             onClearError = onClearError,
+            onSignIn = onSignIn,
+            onVerify = onVerify,
             editorState = editorState,
             onCustomize = { customizing = true },
             onInsertVote = { composingVote = true },
@@ -239,6 +255,8 @@ private fun ReplyEditorSheet(
     onRetryFailedUploads: () -> Unit,
     onPublish: () -> Unit,
     onClearError: () -> Unit,
+    onSignIn: (() -> Unit)?,
+    onVerify: (() -> Unit)?,
     editorState: MarkdownEditorState,
     onCustomize: () -> Unit,
     onInsertVote: () -> Unit,
@@ -342,6 +360,8 @@ private fun ReplyEditorSheet(
                 onRetryPublish = onPublish,
                 onRetryUploads = onRetryFailedUploads,
                 onDismiss = onClearError,
+                onSignIn = onSignIn,
+                onVerify = onVerify,
                 modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             )
             MarkdownEditorBar(
@@ -389,6 +409,8 @@ private fun ReplyPreviewScreen(
     onBack: () -> Unit,
     onPublish: () -> Unit,
     onClearError: () -> Unit,
+    onSignIn: (() -> Unit)?,
+    onVerify: (() -> Unit)?,
 ) {
     PlazaBackHandler(enabled = !state.isPublishing, onBack = onBack)
     Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
@@ -430,6 +452,8 @@ private fun ReplyPreviewScreen(
                 onRetryPublish = onPublish,
                 onRetryUploads = {},
                 onDismiss = onClearError,
+                onSignIn = onSignIn,
+                onVerify = onVerify,
                 modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             )
             Column(
@@ -541,6 +565,8 @@ private fun ComposerErrorStrip(
     onRetryPublish: () -> Unit,
     onRetryUploads: () -> Unit,
     onDismiss: () -> Unit,
+    onSignIn: (() -> Unit)?,
+    onVerify: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val message = when {
@@ -559,18 +585,40 @@ private fun ComposerErrorStrip(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(text = message, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-            TextButton(
-                onClick = {
-                    if (error != null) {
-                        onDismiss()
-                        onRetryPublish()
-                    } else {
-                        onRetryUploads()
-                    }
-                },
-                contentPadding = PaddingValues(horizontal = Spacing.md),
-            ) {
-                Text(stringResource(Res.string.action_retry), color = MaterialTheme.colorScheme.onErrorContainer)
+            // A refused publish keeps whatever the reader typed, so the button has to be the one
+            // that makes sending possible again — 重试 on a Cloudflare wall re-sent the same reply
+            // into the same wall, with the draft still sitting there and no way forward.
+            val action =
+                if (error != null) {
+                    siteErrorRecovery(
+                        error = error,
+                        onVerify = onVerify?.let { verify ->
+                            {
+                                onDismiss()
+                                verify()
+                            }
+                        },
+                        onSignIn = onSignIn?.let { signIn ->
+                            {
+                                onDismiss()
+                                signIn()
+                            }
+                        },
+                        onRetry = {
+                            onDismiss()
+                            onRetryPublish()
+                        },
+                    )
+                } else {
+                    StatusAction(stringResource(Res.string.action_retry), onRetryUploads)
+                }
+            action?.let {
+                TextButton(
+                    onClick = it.onClick,
+                    contentPadding = PaddingValues(horizontal = Spacing.md),
+                ) {
+                    Text(it.label, color = MaterialTheme.colorScheme.onErrorContainer)
+                }
             }
         }
     }

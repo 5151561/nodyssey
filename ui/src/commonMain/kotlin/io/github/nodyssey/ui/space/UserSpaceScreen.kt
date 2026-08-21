@@ -35,14 +35,12 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,15 +61,14 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
-import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_more
 import io.github.nodyssey.ui.resources.action_open_in_browser
 import io.github.nodyssey.ui.resources.action_retry
-import io.github.nodyssey.ui.resources.action_sign_in
 import io.github.nodyssey.ui.resources.assets_level
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.post_view_count
@@ -103,7 +100,6 @@ import io.github.nodyssey.ui.resources.space_tab_topics
 import io.github.nodyssey.ui.resources.space_uid
 import io.github.nodyssey.ui.resources.space_uid_bio
 import io.github.nodyssey.ui.richtext.PostRichContent
-import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.richtext.collapseMarkdown
 import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.LoadingState
@@ -129,6 +125,8 @@ fun UserSpaceRoute(
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Clears a Cloudflare challenge on the page being read, and comes back on its own. */
+    onVerify: (String) -> Unit,
     /** Readme/bio links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
     onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
@@ -155,6 +153,7 @@ fun UserSpaceRoute(
         onOpenBrowser = onOpenBrowser,
         onLinkClick = onLinkClick,
         onSignIn = onSignIn,
+        onVerify = onVerify,
         modifier = modifier,
     )
 }
@@ -172,6 +171,8 @@ fun UserSpaceScreen(
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Clears a Cloudflare challenge on this space's own URL. */
+    onVerify: (String) -> Unit,
     onToggleFollow: () -> Unit = {},
     onFollowFailureShown: () -> Unit = {},
     topics: LazyPagingItems<SpacePost>? = null,
@@ -187,6 +188,8 @@ fun UserSpaceScreen(
         failure = state.followFailure,
         snackbarHostState = snackbarHostState,
         onSignIn = onSignIn,
+        onVerify = { onVerify(spaceUrl) },
+        onRetry = onToggleFollow,
         onShown = onFollowFailureShown,
     )
 
@@ -230,6 +233,7 @@ fun UserSpaceScreen(
                 onRetry = onRetryProfile,
                 onOpenBrowser = { onOpenBrowser(spaceUrl) },
                 onSignIn = onSignIn,
+                onVerify = { onVerify(spaceUrl) },
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -261,6 +265,7 @@ fun UserSpaceScreen(
                 onOpenBrowser = onOpenBrowser,
                 onLinkClick = onLinkClick,
                 onSignIn = onSignIn,
+                onVerify = onVerify,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -295,29 +300,29 @@ private fun SpaceOverflowMenu(onOpenBrowser: () -> Unit) {
  * A refused follow, said once.
  *
  * The site's own sentence wins when there is one — "对方已屏蔽你" explains itself — and our wording only
- * stands in for the failures that never reached the site. Being signed out is the exception that gets an
- * action instead of a sentence, because it is the one failure the reader can clear from here.
+ * stands in for the failures that never reached the site. The walls are the exception that gets an
+ * action instead of a sentence, because they are the failures the reader can clear from here: this
+ * used to offer 登录 and nothing else, so a follow refused by Cloudflare read as a flat statement
+ * with no way to act on it.
  */
 @Composable
 private fun FollowFailureEffect(
     failure: FollowFailure?,
     snackbarHostState: SnackbarHostState,
     onSignIn: () -> Unit,
+    onVerify: () -> Unit,
+    onRetry: () -> Unit,
     onShown: () -> Unit,
 ) {
-    val fallback = failure?.error?.shortMessage()
-    val signInLabel = stringResource(Res.string.action_sign_in)
-    LaunchedEffect(failure) {
-        if (failure == null) return@LaunchedEffect
-        val needsSignIn = failure.error == SiteError.LoginRequired
-        val result =
-            snackbarHostState.showSnackbar(
-                message = failure.detail?.takeIf { it.isNotBlank() } ?: fallback.orEmpty(),
-                actionLabel = signInLabel.takeIf { needsSignIn },
-            )
-        if (result == SnackbarResult.ActionPerformed) onSignIn()
-        onShown()
-    }
+    SiteErrorSnackbar(
+        error = failure?.error,
+        snackbarHostState = snackbarHostState,
+        onShown = onShown,
+        detail = failure?.detail,
+        onVerify = onVerify,
+        onSignIn = onSignIn,
+        onRetry = onRetry,
+    )
 }
 
 @Composable
@@ -494,6 +499,7 @@ private fun SpaceTabContent(
     onOpenBrowser: (String) -> Unit,
     onLinkClick: (String) -> Unit,
     onSignIn: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state.selectedTab) {
@@ -506,6 +512,7 @@ private fun SpaceTabContent(
                 endTextRes = Res.string.space_end_topics,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
+                onVerify = onVerify,
                 key = { _, post -> post.postId },
                 modifier = modifier,
             ) { post ->
@@ -519,6 +526,7 @@ private fun SpaceTabContent(
                 endTextRes = Res.string.space_end_comments,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
+                onVerify = onVerify,
                 // The payload's own id when it has one; the position only for the rare row without.
                 key = { index, comment -> comment.commentId ?: "comment-$index" },
                 modifier = modifier,
@@ -537,6 +545,7 @@ private fun SpaceTabContent(
                 endTextRes = Res.string.space_end_collections,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
+                onVerify = onVerify,
                 key = { _, post -> post.postId },
                 modifier = modifier,
             ) { post ->
@@ -643,6 +652,7 @@ private fun <T : Any> SpaceListTab(
     endTextRes: StringResource,
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
+    onVerify: (String) -> Unit,
     /** Stable row identity, so a page-1 replace recomposes only the rows that actually changed. */
     key: (index: Int, item: T) -> Any,
     modifier: Modifier = Modifier,
@@ -662,6 +672,7 @@ private fun <T : Any> SpaceListTab(
                     onRetry = list::retry,
                     onOpenBrowser = { onOpenBrowser(NodeSeekSite.BASE_URL) },
                     onSignIn = onSignIn,
+                    onVerify = { onVerify(NodeSeekSite.BASE_URL) },
                     modifier = modifier,
                 )
 
@@ -895,5 +906,6 @@ private fun PreviewScreen(state: UserSpaceUiState) {
         onEditProfile = {},
         onOpenBrowser = {},
         onSignIn = {},
+        onVerify = {},
     )
 }

@@ -143,7 +143,16 @@ fun FollowScreen(
                     SiteErrorState(
                         error = list.error,
                         onRetry = { onRetry(state.selectedTab) },
+                        // Named rather than reached by [SiteErrorState]'s fallback: the two are the
+                        // same closure here, and a challenge arriving at a web view by fallback is how
+                        // this stopped being a challenge web view on other screens.
                         onOpenBrowser = {
+                            onOpenBrowser(
+                                NodeSeekSite.BASE_URL +
+                                    NodeSeekSite.fansPath(state.selectedTab == FollowTab.FOLLOWERS),
+                            )
+                        },
+                        onVerify = {
                             onOpenBrowser(
                                 NodeSeekSite.BASE_URL +
                                     NodeSeekSite.fansPath(state.selectedTab == FollowTab.FOLLOWERS),

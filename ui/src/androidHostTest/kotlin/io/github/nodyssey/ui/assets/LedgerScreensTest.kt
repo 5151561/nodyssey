@@ -154,6 +154,7 @@ class LedgerScreensTest {
                     onRetry = {},
                     onOpenBrowser = {},
                     onSignIn = {},
+                    onVerify = {},
                     onOpenTransfer = {},
                     onDismissTransfer = {},
                     onRequestConfirm = {},

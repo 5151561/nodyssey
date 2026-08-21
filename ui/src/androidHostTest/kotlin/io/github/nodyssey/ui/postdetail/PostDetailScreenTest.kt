@@ -89,6 +89,7 @@ class PostDetailScreenTest {
                     onLoadMore = {},
                     onLoadPage = onLoadPage,
                     onSignIn = onSignIn,
+                    onVerify = {},
                     onReact = onReact,
                     onCollect = onCollect,
                 )
@@ -167,6 +168,7 @@ class PostDetailScreenTest {
                     onImageClick = {},
                     onRetry = {},
                     onLoadMore = {},
+                    onVerify = {},
                 )
             }
         }
@@ -689,6 +691,7 @@ class PostDetailScreenTest {
                     onImageClick = {},
                     onRetry = {},
                     onLoadMore = {},
+                    onVerify = {},
                 )
             }
         }
@@ -735,6 +738,7 @@ class PostDetailScreenTest {
                     // What the ViewModel does with it, and what makes consuming the request against
                     // an empty list unrecoverable rather than merely early.
                     onScrollHandled = { state = state.copy(pendingScroll = null) },
+                    onVerify = {},
                 )
             }
         }

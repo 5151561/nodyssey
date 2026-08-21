@@ -104,13 +104,13 @@ import io.github.nodyssey.ui.common.NumberEntry
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.RoleBadgeRow
+import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.rememberShareText
 import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
 import io.github.nodyssey.ui.common.sharedThreadBoard
 import io.github.nodyssey.ui.common.sharedThreadTitle
-import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.composer.FloorReference
 import io.github.nodyssey.ui.composer.ReplyComposerHost
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
@@ -259,6 +259,8 @@ fun PostDetailRoute(
         onRetryFailedUploads = replyViewModel::retryFailedUploads,
         onPublish = { replyViewModel.publish { viewModel.refresh() } },
         onClearError = replyViewModel::clearPublishError,
+        onSignIn = onSignIn,
+        onVerify = { onVerify(postUrl) },
         onToolbarChange = replyViewModel::setToolbar,
         onToolbarReset = replyViewModel::resetToolbar,
         onCreateVote = replyViewModel::createVote,
@@ -302,7 +304,7 @@ fun PostDetailScreen(
     /** Opens the sign-in page. Separate from [onOpenBrowser] because "登录" is not "看看网页版". */
     onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
     /** Clears a Cloudflare challenge on this thread's own URL. */
-    onVerify: () -> Unit = { onOpenBrowser(postUrl) },
+    onVerify: () -> Unit,
     /** `null` opens an empty reply; a floor addresses one (6d). The editor itself is hosted by the route. */
     onReply: (FloorReference?) -> Unit = {},
     /** Appends one more 引用 block to whatever the editor already holds. */
@@ -558,13 +560,13 @@ fun PostDetailScreen(
                         error = error,
                         onRetry = onRetry,
                         // A locked thread is fixed by signing in, not by loading it again in a
-                        // browser; a challenge is fixed on this thread's own URL.
-                        onOpenBrowser =
-                        when (error) {
-                            SiteError.LoginRequired -> onSignIn
-                            SiteError.Cloudflare -> onVerify
-                            else -> ({ onOpenBrowser(postUrl) })
-                        },
+                        // browser; a challenge is fixed on this thread's own URL. Both are named
+                        // rather than folded into [onOpenBrowser] by a `when` here — picking the
+                        // recovery per error is SiteErrorState's job, and the copy of that decision
+                        // this used to hold is exactly the copy that goes stale.
+                        onOpenBrowser = { onOpenBrowser(postUrl) },
+                        onVerify = onVerify,
+                        onSignIn = onSignIn,
                         // 等级不足 has no action that clears it, so the way out is the only button —
                         // and this screen, unlike a tab root, always has somewhere to go back to.
                         onBack = onBack.takeIf { showBackButton },
@@ -685,25 +687,33 @@ fun PostDetailScreen(
 
     // The site's own sentence is the whole value here — "鸡腿不足", "已经进行过加鸡腿操作" — so it is
     // shown verbatim, and our wording only stands in for the failures that never reached the site.
+    //
+    // A wall is the exception, and the reason this goes through [SiteErrorSnackbar]: Cloudflare and
+    // a signed-out account send no sentence and are not cleared by pressing again, so they get the
+    // control that does clear them. No 重试 — a mark is spent on one floor, and this far from the
+    // tap there is nothing left to name.
     val failure = state.reactionFailure
-    val fallback = failure?.error?.shortMessage()
-    LaunchedEffect(failure) {
-        if (failure == null) return@LaunchedEffect
-        snackbarHostState.showSnackbar(failure.detail?.takeIf { it.isNotBlank() } ?: fallback.orEmpty())
-        onReactionFailureShown()
-    }
+    SiteErrorSnackbar(
+        error = failure?.error,
+        snackbarHostState = snackbarHostState,
+        onShown = onReactionFailureShown,
+        detail = failure?.detail,
+        onVerify = onVerify,
+        onSignIn = onSignIn,
+    )
 
     // Same treatment for the star, kept separate so a refused collection and a refused mark cannot
     // clear each other's message.
     val collectFailure = state.collectFailure
-    val collectFallback = collectFailure?.error?.shortMessage()
-    LaunchedEffect(collectFailure) {
-        if (collectFailure == null) return@LaunchedEffect
-        snackbarHostState.showSnackbar(
-            collectFailure.detail?.takeIf { it.isNotBlank() } ?: collectFallback.orEmpty(),
-        )
-        onCollectFailureShown()
-    }
+    SiteErrorSnackbar(
+        error = collectFailure?.error,
+        snackbarHostState = snackbarHostState,
+        onShown = onCollectFailureShown,
+        detail = collectFailure?.detail,
+        onVerify = onVerify,
+        onSignIn = onSignIn,
+        onRetry = onCollect,
+    )
 
     if (showPageSheet) {
         val loadedFloors = state.comments.size + if (state.body != null) 1 else 0
@@ -2123,6 +2133,7 @@ private fun PostDetailPreview() {
             postUrl = "https://www.nodeseek.com/post-1-1",
             onBack = {},
             onOpenBrowser = {},
+            onVerify = {},
             onImageClick = {},
             onRetry = {},
             onLoadMore = {},
@@ -2139,6 +2150,7 @@ private fun PostDetailDarkPreview() {
             postUrl = "https://www.nodeseek.com/post-1-1",
             onBack = {},
             onOpenBrowser = {},
+            onVerify = {},
             onImageClick = {},
             onRetry = {},
             onLoadMore = {},

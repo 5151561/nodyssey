@@ -68,6 +68,8 @@ import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.shortMessage
+import io.github.nodyssey.ui.common.siteErrorRecovery
+import io.github.nodyssey.ui.common.snackbarDuration
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_close
@@ -118,6 +120,9 @@ fun BookmarksRoute(
     onBack: () -> Unit,
     onPostClick: (Long) -> Unit,
     onOpenBrowser: (String) -> Unit,
+    onSignIn: () -> Unit,
+    /** Clears a Cloudflare challenge and returns; 收藏 hits one like any other authenticated list. */
+    onVerify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -126,6 +131,8 @@ fun BookmarksRoute(
         onBack = onBack,
         onPostClick = onPostClick,
         onOpenBrowser = onOpenBrowser,
+        onSignIn = onSignIn,
+        onVerify = onVerify,
         onRetry = viewModel::retry,
         onFilter = viewModel::setFilter,
         onSort = viewModel::setSort,
@@ -171,6 +178,9 @@ fun BookmarksScreen(
     onPostClick: (Long) -> Unit,
     onOpenBrowser: (String) -> Unit,
     onRetry: () -> Unit,
+    onSignIn: () -> Unit,
+    /** Clears a Cloudflare challenge on the site's own page, then comes back here. */
+    onVerify: () -> Unit,
     onFilter: (BookmarkFilter) -> Unit,
     onSort: (BookmarkSort) -> Unit,
     onSearching: (Boolean) -> Unit,
@@ -219,11 +229,27 @@ fun BookmarksScreen(
         }
     }
 
+    // A refused 移出收藏 carries the button that unblocks it, not just the reason: the rows already
+    // disappeared optimistically, so a reader told 需要确认一下你不是机器人 and given nothing to press
+    // is looking at a list that is wrong with no way to make it right.
     removeFailure?.let { error ->
         val message = stringResource(Res.string.bookmarks_remove_failed, error.shortMessage())
+        val recovery =
+            siteErrorRecovery(
+                error = error,
+                onVerify = onVerify,
+                onSignIn = onSignIn,
+                onRetry = removeSelected,
+            )
         LaunchedEffect(error) {
-            snackbarHostState.showSnackbar(message)
+            val result =
+                snackbarHostState.showSnackbar(
+                    message = message,
+                    actionLabel = recovery?.label,
+                    duration = snackbarDuration(error),
+                )
             removeFailure = null
+            if (result == SnackbarResult.ActionPerformed) recovery?.onClick?.invoke()
         }
     }
 
@@ -299,7 +325,12 @@ fun BookmarksScreen(
                     // Not while a selection is up: that mode has its own toolbar and its own bar, and
                     // the strip is about a list the reader is reading rather than one they are acting on.
                     state.error?.takeIf { state.isStale }?.let { error ->
-                        BookmarkStaleBanner(error = error, onRetry = onRetry)
+                        BookmarkStaleBanner(
+                            error = error,
+                            onRetry = onRetry,
+                            onSignIn = onSignIn,
+                            onVerify = onVerify,
+                        )
                     }
                 }
                 Box(Modifier.weight(1f)) {
@@ -314,6 +345,8 @@ fun BookmarksScreen(
                         },
                         onToggleSelection = onToggleSelection,
                         onRowOfflineAction = onRowOfflineAction,
+                        onSignIn = onSignIn,
+                        onVerify = onVerify,
                         modifier = Modifier.fillMaxSize(),
                     )
                     // The whole point of reading the list off disk is that the walk behind it is no
@@ -358,6 +391,8 @@ private fun BookmarkList(
     state: BookmarksUiState,
     onPostClick: (Long) -> Unit,
     onOpenBrowser: (String) -> Unit,
+    onSignIn: () -> Unit,
+    onVerify: () -> Unit,
     onRetry: () -> Unit,
     onStartSelection: (Long) -> Unit,
     onToggleSelection: (Long) -> Unit,
@@ -373,6 +408,8 @@ private fun BookmarkList(
                 error = state.error,
                 onRetry = onRetry,
                 onOpenBrowser = { onOpenBrowser(NodeSeekSite.BASE_URL) },
+                onSignIn = onSignIn,
+                onVerify = onVerify,
                 modifier = modifier,
             )
 
@@ -742,6 +779,8 @@ private fun BookmarksPreviewHost(
             onPostClick = {},
             onOpenBrowser = {},
             onRetry = {},
+            onSignIn = {},
+            onVerify = {},
             onFilter = {},
             onSort = {},
             onSearching = {},

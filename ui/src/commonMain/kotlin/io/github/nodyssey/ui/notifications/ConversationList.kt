@@ -29,6 +29,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.shortMessage
+import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.messages_empty
 import io.github.nodyssey.ui.resources.messages_new_conversation
@@ -84,6 +86,9 @@ internal fun ConversationList(
     onSearch: () -> Unit,
     onDismiss: () -> Unit,
     onRecipientClick: (UserSearchResult) -> Unit,
+    onSignIn: () -> Unit,
+    /** Clears a Cloudflare challenge; the sheet's search is the one thing here that can hit one. */
+    onVerify: () -> Unit,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -130,6 +135,8 @@ internal fun ConversationList(
             onSearch = onSearch,
             onDismiss = onDismiss,
             onRecipientClick = onRecipientClick,
+            onSignIn = onSignIn,
+            onVerify = onVerify,
         )
     }
 }
@@ -303,6 +310,8 @@ private fun NewConversationSheet(
     onSearch: () -> Unit,
     onDismiss: () -> Unit,
     onRecipientClick: (UserSearchResult) -> Unit,
+    onSignIn: () -> Unit,
+    onVerify: () -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -335,12 +344,32 @@ private fun NewConversationSheet(
 
                 // Before the empty case: a search that never reached the server has not found
                 // "no such user", and telling the user it did sends them off renaming their query.
-                state.error != null ->
-                    Text(
-                        state.error.shortMessage(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                //
+                // The sentence carries its own way out. 用户搜索 goes through the site like anything
+                // else, so it meets the same Cloudflare wall — and a bare red line left the reader
+                // retyping a name that was never the problem.
+                state.error != null -> {
+                    val recovery =
+                        siteErrorRecovery(
+                            error = state.error,
+                            onVerify = onVerify,
+                            onSignIn = onSignIn,
+                            onRetry = onSearch,
+                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            state.error.shortMessage(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.weight(1f),
+                        )
+                        recovery?.let {
+                            TextButton(onClick = it.onClick) {
+                                Text(it.label, style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                    }
+                }
 
                 state.results.isEmpty() && state.query.isNotBlank() ->
                     Text(
@@ -437,6 +466,8 @@ private fun ConversationListPreview() {
             onSearch = {},
             onDismiss = {},
             onRecipientClick = {},
+            onSignIn = {},
+            onVerify = {},
         )
     }
 }

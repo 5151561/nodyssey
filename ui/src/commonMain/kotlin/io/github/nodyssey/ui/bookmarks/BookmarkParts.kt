@@ -52,8 +52,8 @@ import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.shortMessage
+import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.resources.Res
-import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.bookmarks_download
 import io.github.nodyssey.ui.resources.bookmarks_filter_all
 import io.github.nodyssey.ui.resources.bookmarks_filter_downloaded
@@ -408,13 +408,20 @@ internal fun BookmarkFilterRow(
  * The reason comes from the error rather than being assumed to be the network: 需要登录后查看 and
  * 需要确认一下你不是机器人 are the two failures a retry alone cannot fix, and a strip that called
  * either of them 「离线」 would send the reader to look for their signal.
+ *
+ * Which is also why the button is [siteErrorRecovery]'s. Naming those two failures correctly and
+ * then offering 重试 anyway only moved the dead end: the strip said the wall was the reason and the
+ * one control on it was the press that cannot clear a wall.
  */
 @Composable
 internal fun BookmarkStaleBanner(
     error: SiteError,
     onRetry: () -> Unit,
+    onSignIn: () -> Unit,
+    onVerify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val recovery = siteErrorRecovery(error, onVerify = onVerify, onSignIn = onSignIn, onRetry = onRetry)
     Surface(
         modifier = modifier.fillMaxWidth().padding(start = Spacing.lg, end = Spacing.lg, bottom = 10.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -437,8 +444,10 @@ internal fun BookmarkStaleBanner(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onRetry) {
-                Text(stringResource(Res.string.action_retry), style = MaterialTheme.typography.labelLarge)
+            recovery?.let {
+                TextButton(onClick = it.onClick) {
+                    Text(it.label, style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }

@@ -123,12 +123,23 @@ fun SiteError.shortMessage(): String =
 fun SiteErrorState(
     error: SiteError,
     onRetry: () -> Unit,
+    /** The site's own page, for a failure the app cannot read but a browser can render. */
     onOpenBrowser: () -> Unit,
+    /**
+     * Clears a Cloudflare challenge and returns — [io.github.nodyssey.ui.login.WebViewGoal.CHALLENGE],
+     * never a page to browse.
+     *
+     * Required, and deliberately so. It used to default to null and fall back to [onOpenBrowser],
+     * which quietly gave 去验证 whatever web view that screen happened to open — on most screens a
+     * MANAGE one, which waits for no cookie, so it sat there after the wall came down and offered a
+     * way out to a real browser, where a pass earned lands in a jar this app cannot read. Nine
+     * screens were doing that, and nothing in the code said so. Now forgetting it does not compile.
+     */
+    onVerify: () -> Unit,
     modifier: Modifier = Modifier,
     boardTitle: String? = null,
     onBrowseElsewhere: (() -> Unit)? = null,
     onSignIn: (() -> Unit)? = null,
-    onVerify: (() -> Unit)? = null,
     /**
      * Leaves the screen. Only [SiteError.LevelRequired] uses it, and only when a caller passes one:
      * a level wall has no action that clears it, so the honest button is the way out, and a screen
@@ -150,7 +161,7 @@ fun SiteErrorState(
                 title = stringResource(Res.string.status_challenge_title),
                 description = stringResource(Res.string.status_challenge_body),
                 footnote = stringResource(Res.string.status_challenge_footnote),
-                primaryAction = StatusAction(stringResource(Res.string.action_verify), onVerify ?: onOpenBrowser),
+                primaryAction = StatusAction(stringResource(Res.string.action_verify), onVerify),
                 secondaryAction = retry,
                 modifier = modifier,
             )
@@ -418,7 +429,7 @@ fun NotWiredState(
 @Composable
 private fun ChallengeStatePreview() {
     PlazaTheme {
-        SiteErrorState(error = SiteError.Cloudflare, onRetry = {}, onOpenBrowser = {})
+        SiteErrorState(error = SiteError.Cloudflare, onRetry = {}, onOpenBrowser = {}, onVerify = {})
     }
 }
 
@@ -430,6 +441,7 @@ private fun SignInStatePreview() {
             error = SiteError.LoginRequired,
             onRetry = {},
             onOpenBrowser = {},
+            onVerify = {},
             boardTitle = "内版",
             onBrowseElsewhere = {},
         )
@@ -444,6 +456,7 @@ private fun LevelRequiredStatePreview() {
             error = SiteError.LevelRequired(requiredLevel = 5),
             onRetry = {},
             onOpenBrowser = {},
+            onVerify = {},
             onBack = {},
         )
     }
@@ -453,7 +466,7 @@ private fun LevelRequiredStatePreview() {
 @Composable
 private fun NetworkStatePreview() {
     PlazaTheme {
-        SiteErrorState(error = SiteError.Network, onRetry = {}, onOpenBrowser = {})
+        SiteErrorState(error = SiteError.Network, onRetry = {}, onOpenBrowser = {}, onVerify = {})
     }
 }
 
