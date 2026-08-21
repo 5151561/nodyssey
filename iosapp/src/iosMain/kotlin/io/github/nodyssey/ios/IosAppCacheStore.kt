@@ -2,6 +2,7 @@ package io.github.nodyssey.ios
 
 import io.github.nodyssey.data.AppCacheStore
 import io.github.plaza.core.AppDispatchers
+import io.github.plaza.designsys.image.evictImage
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.withContext
 import okio.FileSystem
@@ -48,6 +49,12 @@ class IosAppCacheStore(
         }
     }
 
+    override suspend fun evictImage(url: String) {
+        // Off the caller's thread like the rest of this: dropping a disk entry writes the cache's
+        // journal, however little it looks like work from here.
+        withContext(dispatchers.io) { imageCaches().evict(url) }
+    }
+
     private fun Path.totalFileSize(): Long =
         fileSystem.listOrNull(this).orEmpty().sumOf { entry ->
             val metadata = fileSystem.metadataOrNull(entry)
@@ -73,6 +80,9 @@ class IosImageCaches(
     fun clearMemory() {
         loader().memoryCache?.clear()
     }
+
+    /** See [AppCacheStore.evictImage] — one address, out of both caches. */
+    fun evict(url: String) = loader().evictImage(url)
 
     /**
      * Empties the disk cache through its own API and returns the directory it kept.

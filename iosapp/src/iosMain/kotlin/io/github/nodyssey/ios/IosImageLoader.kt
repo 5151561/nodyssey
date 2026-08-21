@@ -11,8 +11,10 @@ import coil3.network.NetworkResponse
 import coil3.network.NetworkResponseBody
 import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.svg.SvgDecoder
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.plaza.core.net.getBytes
 import io.github.plaza.core.toByteArray
+import io.github.plaza.designsys.image.LongLivedImageCacheStrategy
 import okio.Buffer
 import okio.Path.Companion.toPath
 import platform.Foundation.NSURLSession
@@ -46,8 +48,15 @@ internal fun nodysseyImageLoader(
                     // is one and never asks the server about it. That is invisible for an attachment
                     // — its URL changes when its bytes do — and wrong for an avatar, which the site
                     // serves from `/avatar/<uid>.png` for the life of the account, so changing your
-                    // picture would change nothing in the app forever.
-                    cacheStrategy = { CacheControlCacheStrategy() },
+                    // picture would change nothing in the app forever. The wrapper is the other half
+                    // of that argument — see [LongLivedImageCacheStrategy], which is where the cost
+                    // of honouring the site's own four hours to the letter is written down.
+                    cacheStrategy = {
+                        LongLivedImageCacheStrategy(
+                            delegate = CacheControlCacheStrategy(),
+                            isLongLived = NodeSeekSite::isAvatarUrl,
+                        )
+                    },
                 ),
             )
             // An account that never uploaded a picture is served a generated cartoon *SVG* from

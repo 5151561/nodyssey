@@ -190,6 +190,20 @@ object NodeSeekSite {
     fun avatarUrl(uid: Long): String? = absoluteUrl("/avatar/$uid.png")
 
     /**
+     * Whether [url] names an account's picture rather than a piece of content.
+     *
+     * The distinction the image cache is built on: an attachment's address changes when its bytes
+     * do, and one of these does not — the account keeps it for as long as the account exists, and
+     * uploading a new picture changes nothing about it.
+     *
+     * Matched against this site's own base URL rather than by path alone, so an address that merely
+     * happens to have `/avatar/` in it somewhere else is not one of ours. Both producers of these
+     * pass through [absoluteUrl] first — [avatarUrl] and the `src` the list and thread parsers read
+     * — so by the time anything asks, a site-relative address already carries the base.
+     */
+    fun isAvatarUrl(url: String): Boolean = url.startsWith("$BASE_URL/avatar/")
+
+    /**
      * Where the site keeps its own stickers, e.g. `ac/01.png`.
      *
      * Post bodies already point here — the parser recognises an inline sticker by this very path

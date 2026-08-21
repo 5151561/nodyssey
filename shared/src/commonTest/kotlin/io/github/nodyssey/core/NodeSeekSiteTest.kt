@@ -73,6 +73,21 @@ class NodeSeekSiteTest {
         assertNull(NodeSeekSite.parseFloorNumber("楼主"))
     }
 
+    /**
+     * What the image cache holds for a week rather than a few hours, so a wrong answer either leaves
+     * every face in a feed revalidating or freezes a picture that was supposed to change.
+     */
+    @Test
+    fun `an avatar address is told apart from any other picture`() {
+        assertTrue(NodeSeekSite.isAvatarUrl(NodeSeekSite.avatarUrl(52425)!!))
+        assertTrue(NodeSeekSite.isAvatarUrl("https://www.nodeseek.com/avatar/1.png"))
+
+        assertFalse(NodeSeekSite.isAvatarUrl("https://www.nodeseek.com/static/image/ac/01.png"))
+        // Another host's, whatever its path says.
+        assertFalse(NodeSeekSite.isAvatarUrl("https://img.example.test/avatar/1.png"))
+        assertFalse(NodeSeekSite.isAvatarUrl(""))
+    }
+
     /** The site clamps its bar at Lv5 (`Math.min(user.rank, 5)`); nothing beyond it is published. */
     @Test
     fun `level spans stop advancing past Lv5`() {

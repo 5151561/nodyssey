@@ -111,10 +111,11 @@ kotlin {
             // accident rather than the reason.
             api(libs.coil.core)
 
-            // `implementation`: reading why a fetch failed means naming Coil's `HttpException`, but
-            // that type stops here — [ImageLoadFailure] is what leaves, and a consumer matches on
-            // that.
-            implementation(libs.coil.network.core)
+            // `api` since [LongLivedImageCacheStrategy]: it is a `CacheStrategy` wrapping another
+            // one, so both halves of that type are on this module's surface and the two app shells
+            // that install it name them. Coil's `HttpException` still stops here — [ImageLoadFailure]
+            // is what leaves, and a consumer matches on that.
+            api(libs.coil.network.core)
         }
 
         androidMain.dependencies {
@@ -149,6 +150,11 @@ kotlin {
             // The fake Coil engine: image-size-dependent layout — a badge kept at natural size, two
             // badges sharing a row — cannot be asserted against an image that never arrives.
             implementation(libs.coil.test)
+
+            // The real strategy [LongLivedImageCacheStrategy] wraps, so its test asks the same
+            // freshness arithmetic the app runs instead of a stand-in that agrees with it by
+            // construction. Test-only: the app shells own the decision to install it.
+            implementation(libs.coil.network.cache.control)
         }
 
         commonTest.dependencies {

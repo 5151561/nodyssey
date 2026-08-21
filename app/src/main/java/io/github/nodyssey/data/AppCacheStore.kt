@@ -19,6 +19,9 @@ import java.io.File
 interface ImageCaches {
     fun clearMemory()
 
+    /** See [AppCacheStore.evictImage] — one address, out of both caches. */
+    fun evict(url: String)
+
     /**
      * Empties the disk cache through its own API and returns the directory it kept.
      *
@@ -59,5 +62,11 @@ class DefaultAppCacheStore(
                 ?.filter { it != imageCacheDirectory }
                 ?.forEach { it.deleteRecursively() }
         }
+    }
+
+    override suspend fun evictImage(url: String) {
+        // Off the caller's thread like the rest of this: dropping a disk entry writes the cache's
+        // journal, however little it looks like work from here.
+        withContext(dispatchers.io) { imageCaches().evict(url) }
     }
 }

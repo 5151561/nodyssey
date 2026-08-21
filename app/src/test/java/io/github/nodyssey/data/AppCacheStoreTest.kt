@@ -42,6 +42,10 @@ class AppCacheStoreTest {
                 // Nothing here writes to a memory cache, and nothing asserts on one.
                 override fun clearMemory() = Unit
 
+                override fun evict(url: String) {
+                    diskCache.remove(url)
+                }
+
                 override fun clearDisk(): File {
                     diskCache.clear()
                     return File(diskCache.directory.toString())
