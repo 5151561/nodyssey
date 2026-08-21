@@ -31,7 +31,8 @@ fun parseMarkdown(markdown: String): List<RichNode> {
 
             HEADING.matches(line) -> {
                 val match = requireNotNull(HEADING.matchEntire(line))
-                result += RichNode.Heading(match.groupValues[1].length, parseInlines(match.groupValues[2]))
+                val level = match.groupValues[1].length
+                result += splitImages(parseInlines(match.groupValues[2])) { RichNode.Heading(level, it) }
                 index++
             }
 
@@ -90,11 +91,64 @@ fun parseMarkdown(markdown: String): List<RichNode> {
                     if (lineIndex > 0) inlines += InlineNode.LineBreak
                     inlines += parseInlines(value)
                 }
-                result += RichNode.Paragraph(inlines)
+                result += splitImages(inlines, RichNode::Paragraph)
             }
         }
     }
     return result
+}
+
+/**
+ * An inline run split around the images in it, each of which becomes a block of its own.
+ *
+ * A paragraph or a heading is a place an image can be drawn at full width, and the renderer draws an
+ * image left in the inline flow as a labelled link instead of a picture — so a screenshot written
+ * beside a few words of text was one the reader could tap but never see. Only a table cell keeps its
+ * images inline, because a cell has no block position to promote them into.
+ *
+ * This is the rule the HTML parser applies to the same Markdown once the site has rendered it, which
+ * is what keeps an editor preview showing what the post will look like.
+ */
+private fun splitImages(
+    inlines: List<InlineNode>,
+    run: (List<InlineNode>) -> RichNode,
+): List<RichNode> {
+    if (inlines.none { it is InlineNode.Image }) return listOf(run(inlines))
+
+    val blocks = mutableListOf<RichNode>()
+    val pending = mutableListOf<InlineNode>()
+
+    fun flush() {
+        val trimmed = pending.trimEdges()
+        if (trimmed.isNotEmpty()) blocks += run(trimmed)
+        pending.clear()
+    }
+
+    for (node in inlines) {
+        if (node is InlineNode.Image) {
+            flush()
+            blocks += RichNode.BlockImage(url = node.url, alt = node.alt)
+        } else {
+            pending += node
+        }
+    }
+    flush()
+    return blocks
+}
+
+/**
+ * Drops the breaks and blank text an image leaves at the edges of the run beside it — without them
+ * the text under a lifted image would start on a blank line the source never wrote.
+ */
+private fun List<InlineNode>.trimEdges(): List<InlineNode> {
+    fun blank(node: InlineNode) =
+        node is InlineNode.LineBreak || (node is InlineNode.Text && node.text.isBlank())
+
+    var start = 0
+    var end = size
+    while (start < end && blank(this[start])) start++
+    while (end > start && blank(this[end - 1])) end--
+    return subList(start, end).toList()
 }
 
 /**
@@ -252,8 +306,8 @@ private fun parseInlines(
                     index++
                 } else {
                     flush()
-                    // Kept as an image node; the renderer decides per surface whether that means a
-                    // thumbnail (a table cell) or a labelled link (running text).
+                    // Kept as an image node. In a table cell that is where it stays, because a cell
+                    // has no block position; everywhere else [splitImages] lifts it out into one.
                     result += InlineNode.Image(span.url, span.label.ifBlank { null })
                     index = span.end
                 }

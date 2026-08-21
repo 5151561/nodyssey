@@ -142,6 +142,35 @@ class RichContentParserTest {
         assertTrue(image.url.endsWith("/attachments/badge.svg"))
     }
 
+    /**
+     * post-348342 writes its 设置 walkthrough as raw HTML, so each screenshot hangs off the heading
+     * it illustrates rather than sitting in a paragraph of its own. Left inline, the picture came
+     * out as a blue `image` link — the section named 联系方式 showed no screenshot at all.
+     */
+    @Test
+    fun `lifts an image out of a heading into its own block`() {
+        val nodes =
+            parse(
+                "<h3><strong>\u628a\u4f60\u7684TG\u7ed1\u4e0a</strong><br>\n" +
+                    "<img src=\"/attachments/tg.png\" alt=\"image\"></h3>",
+            )
+
+        val heading = nodes.first() as RichNode.Heading
+        assertEquals(3, heading.level)
+        assertEquals("\u628a\u4f60\u7684TG\u7ed1\u4e0a", (heading.inlines.single() as InlineNode.Text).text)
+        val image = nodes[1] as RichNode.BlockImage
+        assertTrue(image.url.endsWith("/attachments/tg.png"))
+    }
+
+    /** A heading that is nothing but a screenshot leaves no empty heading behind. */
+    @Test
+    fun `keeps a heading of only an image as just the image`() {
+        val nodes = parse("""<h3><img src="/attachments/block.png" alt="image"></h3>""")
+
+        val image = nodes.single() as RichNode.BlockImage
+        assertTrue(image.url.endsWith("/attachments/block.png"))
+    }
+
     @Test
     fun `renders every bare ordinary image as its own block`() {
         val nodes =

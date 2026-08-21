@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
@@ -935,62 +936,79 @@ fun CodeBlockView(node: RichNode.CodeBlock) {
     val ink = if (terminal) TerminalInk else MaterialTheme.colorScheme.onSurface
     val chrome = if (terminal) TerminalInk.copy(alpha = TERMINAL_CHROME_ALPHA) else MaterialTheme.colorScheme.onSurfaceVariant
 
-    Column(
+    val language = node.language?.takeIf { it.isNotBlank() }
+
+    Box(
         modifier =
         Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
             .background(ground),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = Spacing.md, end = Spacing.sm, top = Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = node.language.orEmpty(),
-                style = CodeStyle.copy(fontSize = 11.sp),
-                color = chrome,
-                modifier = Modifier.weight(1f),
-            )
-            Row(
-                modifier =
-                Modifier
-                    .clip(MaterialTheme.shapes.small)
-                    .clickable { copy("code", node.code, confirmation) }
-                    // A hand-rolled Row gets none of the padding a Material component applies for
-                    // it, and a 15dp glyph with 4dp above and below is a 23dp target — half of
-                    // what `Sizes.minTouchTarget` calls the brief's hard requirement.
-                    .defaultMinSize(minHeight = Sizes.minTouchTarget)
-                    .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                Icon(
-                    imageVector = PlazaIcons.ContentCopy,
-                    contentDescription = null,
-                    tint = chrome,
-                    modifier = Modifier.size(15.dp),
-                )
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Only when there is one. An empty tag still drew a line of type, which on this forum —
+            // where almost nothing carries a language — was a blank line above every block.
+            if (language != null) {
                 Text(
-                    text = copyLabel,
-                    style = MaterialTheme.typography.labelSmall,
+                    text = language,
+                    style = CodeStyle.copy(fontSize = 11.sp),
                     color = chrome,
+                    // Clear of the button, which floats over this corner rather than sitting beside it.
+                    modifier = Modifier.padding(start = Spacing.md, top = Spacing.sm, end = Sizes.minTouchTarget),
                 )
             }
+            // Code must never reflow, so it scrolls sideways instead of wrapping.
+            Text(
+                text = code,
+                style = CodeStyle,
+                color = ink,
+                softWrap = false,
+                modifier =
+                Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(
+                        start = Spacing.md,
+                        end = Spacing.md,
+                        top = if (language != null) Spacing.sm else Spacing.md,
+                        bottom = Spacing.md,
+                    ),
+            )
         }
-        // Code must never reflow, so it scrolls sideways instead of wrapping.
-        Text(
-            text = code,
-            style = CodeStyle,
-            color = ink,
-            softWrap = false,
+
+        /*
+         * The copy button floats in the corner instead of standing on a strip of its own.
+         *
+         * A 48dp target stacked above the code is 48dp of empty ground on every block, and on this
+         * forum a block is usually three lines of Markdown someone is meant to copy — the chrome was
+         * taller than the content it introduced. Floating it costs the block no height at all, which
+         * is also where the site's own web renderer puts it.
+         *
+         * Its ground stays transparent, which is not a styling choice: the first line scrolls
+         * sideways under it, and at the right end of that scroll there is nowhere further to push
+         * the characters the button stands on. A plate behind the glyph would hide them for good.
+         *
+         * The target stays the full 48dp; only the ink inside it is small. A hand-rolled control gets
+         * none of the padding a Material component applies for it, and `Sizes.minTouchTarget` is what
+         * the brief calls a hard requirement — see `RichContentTest`.
+         */
+        Box(
             modifier =
             Modifier
-                .horizontalScroll(rememberScrollState())
-                .padding(start = Spacing.md, end = Spacing.md, top = Spacing.sm, bottom = Spacing.md),
-        )
+                .align(Alignment.TopEnd)
+                .size(Sizes.minTouchTarget)
+                .clip(CircleShape)
+                .clickable(onClickLabel = copyLabel) { copy("code", node.code, confirmation) },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = PlazaIcons.ContentCopy,
+                contentDescription = copyLabel,
+                // Full strength rather than the [chrome] the language tag uses: with no plate behind
+                // it, the glyph has code text to stand out from rather than empty ground.
+                tint = ink,
+                modifier = Modifier.size(18.dp),
+            )
+        }
     }
 }
 
