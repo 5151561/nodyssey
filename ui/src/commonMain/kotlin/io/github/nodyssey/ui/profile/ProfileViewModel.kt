@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AttendanceBoardEntry
+import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.AttendanceStatus
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
@@ -45,6 +46,7 @@ class ProfileViewModel(
     private var profileJob: Job? = null
     private var attendanceJob: Job? = null
     private var attendanceBoardJob: Job? = null
+    private var signInJob: Job? = null
     private var attendanceCheckedUid: Long? = null
     private val _uiState =
         MutableStateFlow(
@@ -71,6 +73,7 @@ class ProfileViewModel(
                     profileJob?.cancel()
                     attendanceJob?.cancel()
                     attendanceBoardJob?.cancel()
+                    signInJob?.cancel()
                     attendanceCheckedUid = null
                     _uiState.value = ProfileUiState()
                 }
@@ -92,6 +95,7 @@ class ProfileViewModel(
         profileJob?.cancel()
         attendanceJob?.cancel()
         attendanceBoardJob?.cancel()
+        signInJob?.cancel()
         attendanceCheckedUid = null
         _uiState.value = ProfileUiState(isSignedIn = true, isLoading = true)
         profileJob =
@@ -111,6 +115,13 @@ class ProfileViewModel(
                             current.hasSignedInToday.takeIf { current.uid == profile.uid } ?: false,
                             attendanceGain =
                             current.attendanceGain.takeIf { current.uid == profile.uid },
+                            attendanceMessage =
+                            current.attendanceMessage.takeIf { current.uid == profile.uid },
+                            choosingAttendanceMode =
+                            current.choosingAttendanceMode.takeIf { current.uid == profile.uid } ?: false,
+                            isSigningIn = current.isSigningIn.takeIf { current.uid == profile.uid } ?: false,
+                            attendanceFailure =
+                            current.attendanceFailure.takeIf { current.uid == profile.uid },
                             boardOpen = current.boardOpen.takeIf { current.uid == profile.uid } ?: false,
                             isLoadingBoard =
                             current.isLoadingBoard.takeIf { current.uid == profile.uid } ?: false,
@@ -140,6 +151,10 @@ class ProfileViewModel(
                             attendanceKnown = current.attendanceKnown,
                             hasSignedInToday = current.hasSignedInToday,
                             attendanceGain = current.attendanceGain,
+                            attendanceMessage = current.attendanceMessage,
+                            choosingAttendanceMode = current.choosingAttendanceMode,
+                            isSigningIn = current.isSigningIn,
+                            attendanceFailure = current.attendanceFailure,
                             boardOpen = current.boardOpen,
                             isLoadingBoard = current.isLoadingBoard,
                             board = current.board,
@@ -186,6 +201,55 @@ class ProfileViewModel(
                 )
             }
         }
+    }
+
+    fun requestAttendance() {
+        _uiState.update { it.copy(choosingAttendanceMode = true) }
+    }
+
+    fun dismissAttendanceChooser() {
+        _uiState.update { it.copy(choosingAttendanceMode = false) }
+    }
+
+    /**
+     * Signs in for the day without leaving 我的.
+     *
+     * The button used to push 账户与成长 with the chooser pre-opened, which turned one tap into a
+     * screen the user then had to back out of — and, because the pushed key still asked for the
+     * chooser, backing out reopened it. The sign-in itself is one request against a repository this
+     * screen already holds, so it happens here and the shared [AttendanceStatus] keeps 账户与成长 in
+     * agreement.
+     */
+    fun signInForToday(mode: AttendanceMode) {
+        if (signInJob?.isActive == true) return
+        signInJob =
+            viewModelScope.launch {
+                _uiState.update { it.copy(isSigningIn = true, choosingAttendanceMode = false) }
+                runCatchingExceptCancellation { assetsRepository.signInForToday(mode) }
+                    .onSuccess { result ->
+                        _uiState.update {
+                            it.copy(
+                                isSigningIn = false,
+                                attendanceKnown = true,
+                                hasSignedInToday = true,
+                                attendanceGain = result.gain ?: it.attendanceGain,
+                                attendanceMessage = result.message,
+                            )
+                        }
+                        // Chicken earned is chicken the header is showing, so the profile is re-read
+                        // rather than patched locally.
+                        refresh()
+                    }.onFailure { throwable ->
+                        _uiState.update {
+                            it.copy(isSigningIn = false, attendanceFailure = throwable.toSiteError())
+                        }
+                    }
+            }
+    }
+
+    /** Clears the sign-in failure once its snackbar has been shown. */
+    fun attendanceFailureShown() {
+        _uiState.update { it.copy(attendanceFailure = null) }
     }
 
     fun openAttendanceBoard() {
@@ -288,6 +352,12 @@ data class ProfileUiState(
     val attendanceKnown: Boolean = false,
     val hasSignedInToday: Boolean = false,
     val attendanceGain: Int? = null,
+    /** The site's own sentence about today's sign-in, shown when it did not answer with a count. */
+    val attendanceMessage: String? = null,
+    /** True while the 随机 / 固定 5 个 chooser is on screen. */
+    val choosingAttendanceMode: Boolean = false,
+    val isSigningIn: Boolean = false,
+    val attendanceFailure: SiteError? = null,
     val boardOpen: Boolean = false,
     val isLoadingBoard: Boolean = false,
     val board: List<AttendanceBoardEntry> = emptyList(),

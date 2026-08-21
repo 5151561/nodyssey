@@ -15,6 +15,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.nodyssey.data.AttendanceBoardEntry
+import io.github.nodyssey.data.AttendanceMode
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -259,6 +260,42 @@ class ProfileScreenTest {
         composeRule.onNodeWithText("今日签到 · 领鸡腿").performClick()
 
         check(attendanceOpened)
+    }
+
+    @Test
+    fun `the sign in chooser is answered on the profile screen itself`() {
+        var picked: AttendanceMode? = null
+        composeRule.setContent {
+            PlazaTheme {
+                ProfileScreen(
+                    state =
+                    ProfileUiState(
+                        isSignedIn = true,
+                        displayName = "nodyssey_dev",
+                        choosingAttendanceMode = true,
+                    ),
+                    onSignIn = {},
+                    onSignOut = {},
+                    onRetry = {},
+                    onSettings = {},
+                    onAccountSettings = {},
+                    onOpenWebsite = {},
+                    onOpenSpace = {},
+                    onCollections = {},
+                    onHistory = {},
+                    onAssets = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
+                    onFollow = {},
+                    onTools = {},
+                    onSignInForToday = { picked = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("固定 5 个鸡腿").performClick()
+
+        assertEquals(AttendanceMode.FIXED_FIVE, picked)
     }
 
     @Test

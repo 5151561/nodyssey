@@ -496,8 +496,7 @@ fun MainNavigation(
                     // about the collection rather than about a profile. The space page keeps its tab.
                     onCollections = { backStack.add(BookmarksKey) },
                     onHistory = { backStack.add(ReadHistoryKey) },
-                    onAssets = { backStack.add(AssetsKey()) },
-                    onAttendance = { backStack.add(AssetsKey(openAttendanceChooser = true)) },
+                    onAssets = { backStack.add(AssetsKey) },
                     onFollow = { backStack.add(FollowKey) },
                     onTools = { backStack.add(CommunityToolsKey) },
                 )
@@ -704,12 +703,11 @@ fun MainNavigation(
                 )
             }
 
-            entry<AssetsKey> { key ->
+            entry<AssetsKey> {
                 val viewModel: AssetsViewModel =
                     viewModel(factory = AssetsViewModel.factory(container))
                 AssetsRoute(
                     viewModel = viewModel,
-                    openAttendanceChooser = key.openAttendanceChooser,
                     onBack = { backStack.removeLastOrNull() },
                     onChickenLedger = { backStack.add(CreditKey) },
                     onStardust = { backStack.add(StardustKey) },
