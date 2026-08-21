@@ -33,7 +33,7 @@ import androidx.sqlite.execSQL
         OfflineImageEntity::class,
         CollectedPostMetaEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -325,6 +325,21 @@ val MIGRATION_12_13 =
     }
 
 /**
+ * Gives the remembered threads a *list* as well as details.
+ *
+ * v13 could say what it knew about a collected thread and not which threads were collected, so 收藏
+ * had to ask the site before it could draw anything — and an aeroplane turned a screen built around
+ * downloaded reading into an error page. The column is null on every existing row, which is the
+ * honest value: no walk has recorded a list yet, and the first successful load writes one.
+ */
+val MIGRATION_13_14 =
+    object : Migration(13, 14) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `collected_post_meta` ADD COLUMN `listedOrder` INTEGER")
+        }
+    }
+
+/**
  * Every migration this schema has, in order — the list `createNodeSeekDatabase` opens the file with.
  *
  * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
@@ -347,4 +362,5 @@ val NODESEEK_MIGRATIONS = arrayOf(
     MIGRATION_10_11,
     MIGRATION_11_12,
     MIGRATION_12_13,
+    MIGRATION_13_14,
 )

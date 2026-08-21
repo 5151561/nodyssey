@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performTouchInput
 import io.github.nodyssey.data.OfflineFailure
 import io.github.nodyssey.data.OfflineState
 import io.github.nodyssey.data.OfflineUsage
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -69,7 +70,7 @@ class BookmarksScreenTest {
             OfflineUsage(posts = 2, textBytes = 1_000_000, imageBytes = 12_000_000, freeBytes = 3_435_973_836),
     ) = BookmarksUiState(
         entries = entries,
-        isLoading = false,
+        isSyncing = false,
         selection = selection,
         offlineAvailable = offlineAvailable,
         usage = usage,
@@ -153,6 +154,30 @@ class BookmarksScreenTest {
         setScreen(state(usage = OfflineUsage()))
 
         composeRule.onNodeWithText("已离线 0 篇 · 占用 0 B").assertDoesNotExist()
+    }
+
+    /**
+     * The whole point of the stored list: a failed refresh must not take the rows away.
+     *
+     * The strip says so instead — with the site's own reason, since 需要登录后查看 and 网络开小差了
+     * send the reader to do quite different things.
+     */
+    @Test
+    fun `a failed refresh keeps the rows and admits the list is a snapshot`() {
+        setScreen(state().copy(error = SiteError.Network))
+
+        composeRule.onNodeWithText("网络开小差了，这是上次同步的列表").assertIsDisplayed()
+        composeRule.onNodeWithText("已经离线的帖子").assertIsDisplayed()
+        composeRule.onNodeWithText("重试").assertIsDisplayed()
+    }
+
+    /** With nothing stored there is nothing to keep, and the error page is the honest screen. */
+    @Test
+    fun `a failed load with nothing stored is still the error page`() {
+        setScreen(state().copy(entries = emptyList(), error = SiteError.Network))
+
+        composeRule.onNodeWithText("网络开小差了，这是上次同步的列表").assertDoesNotExist()
+        composeRule.onAllNodesWithText("网络开小差了").onFirst().assertIsDisplayed()
     }
 
     /**

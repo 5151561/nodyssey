@@ -30,6 +30,7 @@ import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -50,7 +51,9 @@ import io.github.nodyssey.data.OfflineState
 import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.bookmarks_download
 import io.github.nodyssey.ui.resources.bookmarks_filter_all
 import io.github.nodyssey.ui.resources.bookmarks_filter_downloaded
@@ -60,6 +63,7 @@ import io.github.nodyssey.ui.resources.bookmarks_select_action
 import io.github.nodyssey.ui.resources.bookmarks_selection_all_new
 import io.github.nodyssey.ui.resources.bookmarks_selection_partial
 import io.github.nodyssey.ui.resources.bookmarks_selection_size
+import io.github.nodyssey.ui.resources.bookmarks_stale
 import io.github.nodyssey.ui.resources.offline_behind_replies
 import io.github.nodyssey.ui.resources.offline_failed_network
 import io.github.nodyssey.ui.resources.offline_failed_space
@@ -74,6 +78,7 @@ import io.github.nodyssey.ui.resources.offline_state_sync
 import io.github.nodyssey.ui.resources.offline_stop_download
 import io.github.nodyssey.ui.resources.offline_stop_download_progress
 import io.github.nodyssey.ui.resources.post_reply_count
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
@@ -388,6 +393,54 @@ internal fun BookmarkFilterRow(
             }
         }
         sortMenu()
+    }
+}
+
+/**
+ * The line that admits the list on screen came off disk.
+ *
+ * A standing condition rather than an event, which is why it is a strip in the layout and not the
+ * Snackbar the feed uses for the same failure. On the feed a refusal to refresh means "no newer
+ * posts" and the content below it is untouched; here it means the reader is looking at a snapshot —
+ * a thread un-collected on the web is still on it, a thread collected on the web is not, and the
+ * rows without a stored copy will not open. That is worth saying for as long as it is true.
+ *
+ * The reason comes from the error rather than being assumed to be the network: 需要登录后查看 and
+ * 需要确认一下你不是机器人 are the two failures a retry alone cannot fix, and a strip that called
+ * either of them 「离线」 would send the reader to look for their signal.
+ */
+@Composable
+internal fun BookmarkStaleBanner(
+    error: SiteError,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth().padding(start = Spacing.lg, end = Spacing.lg, bottom = 10.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.heightIn(min = 40.dp).padding(start = 10.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = PlazaIcons.LinkOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(Spacing.sm))
+            Text(
+                text = stringResource(Res.string.bookmarks_stale, error.shortMessage()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onRetry) {
+                Text(stringResource(Res.string.action_retry), style = MaterialTheme.typography.labelLarge)
+            }
+        }
     }
 }
 

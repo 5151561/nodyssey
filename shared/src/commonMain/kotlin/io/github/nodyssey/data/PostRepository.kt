@@ -518,6 +518,11 @@ class OfflineFirstPostRepository(
         database.postDetailDao().clearAllThreads()
         database.readMarkDao().clearAll()
         database.readingPositionDao().clearAll()
+        // The collection is one account's, and this runs when the account changes or goes away. It
+        // was harmless to keep while 收藏 asked the site for its list every time; now that the list
+        // is read off disk, keeping it would show the previous account's collection to whoever signs
+        // in next.
+        database.collectedPostMetaDao().clearAll()
     }
 
     override fun thread(postId: Long): Flow<ThreadSnapshot?> = database.postDetailDao().observeThread(postId).map { it?.toSnapshot() }
@@ -753,7 +758,14 @@ class OfflineFirstPostRepository(
         val outcome = writer.setCollected(postId = postId, collected = collected)
         // The site's echo, not the request: see [CollectionOutcome.collected].
         database.postDetailDao().updateCollection(postId, outcome.collected, outcome.postCollectionCount)
-        if (outcome.collected) rememberCollectedThread(postId)
+        if (outcome.collected) {
+            rememberCollectedThread(postId)
+        } else {
+            // The list 收藏 draws lives on this device now, so a star pressed off here has to reach
+            // it — otherwise the thread is gone from the site's collection and still on the screen
+            // until the next successful walk, which on a train is never.
+            collectedMeta?.forget(listOf(postId))
+        }
     }
 
     /**

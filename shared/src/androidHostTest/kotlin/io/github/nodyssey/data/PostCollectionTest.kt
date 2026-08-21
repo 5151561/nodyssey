@@ -299,6 +299,81 @@ class PostCollectionTest {
             assertEquals("thread 42", store().observe().first()[42L]?.title)
         }
 
+    /**
+     * The list 收藏 draws lives on this device now, so a star pressed off has to reach it.
+     *
+     * Without this the thread is out of the site's collection and still on the screen until the next
+     * successful walk — which, on the aeroplane the stored list exists for, is never.
+     */
+    @Test
+    fun `un-collecting takes the thread off the stored list`() =
+        runTest {
+            val store = store()
+            store.rememberCollection(listOf(CollectedPostMeta(postId = 42, title = "一篇收藏")))
+            assertEquals(listOf(42L), store.observeCollection().first().map { it.postId })
+
+            repository(api("""{"success":true,"collected":false}""")).setCollected(postId = 42, collected = false)
+
+            assertTrue(store.observeCollection().first().isEmpty())
+            // Off the list, not forgotten: re-collecting it should not cost the row what it knew.
+            assertEquals("一篇收藏", store.observe().first()[42L]?.title)
+        }
+
+    /**
+     * A walk is a statement about the whole collection, including what is no longer in it.
+     *
+     * A thread un-collected on the web announces itself by being absent, and nothing else — so the
+     * list has to be replaced rather than added to, or it only ever grows.
+     */
+    @Test
+    fun `a walk replaces the list rather than adding to it`() =
+        runTest {
+            val store = store()
+            store.rememberCollection(
+                listOf(CollectedPostMeta(postId = 1, title = "一"), CollectedPostMeta(postId = 2, title = "二")),
+            )
+
+            store.rememberCollection(listOf(CollectedPostMeta(postId = 2, title = "二")))
+
+            assertEquals(listOf(2L), store.observeCollection().first().map { it.postId })
+            assertEquals("一", store.observe().first()[1L]?.title)
+        }
+
+    /** Collection order is the site's own, and the only thing 「收藏顺序」 can mean off disk. */
+    @Test
+    fun `the stored list comes back in the order the walk saw it`() =
+        runTest {
+            val store = store()
+            store.rememberCollection(
+                listOf(
+                    CollectedPostMeta(postId = 7, title = "七"),
+                    CollectedPostMeta(postId = 3, title = "三"),
+                    CollectedPostMeta(postId = 5, title = "五"),
+                ),
+            )
+
+            assertEquals(listOf(7L, 3L, 5L), store.observeCollection().first().map { it.postId })
+        }
+
+    /**
+     * The bound is for threads collected and un-collected over the years, not for the list itself.
+     *
+     * Evicting a listed row would take a thread out of the collection on this device alone — which
+     * would look exactly like the site having dropped it.
+     */
+    @Test
+    fun `the trim never evicts a thread that is on the list`() =
+        runTest {
+            val store = store()
+            store.remember(CollectedPostMeta(postId = 9, title = "路过看过的"))
+            store.rememberCollection(listOf(CollectedPostMeta(postId = 1, title = "一"), CollectedPostMeta(postId = 2, title = "二")))
+
+            database.collectedPostMetaDao().trimTo(0)
+
+            assertEquals(listOf(1L, 2L), store.observeCollection().first().map { it.postId })
+            assertEquals(setOf(1L, 2L), store.observe().first().keys)
+        }
+
     private fun store() = RoomCollectedPostMetaStore(database.collectedPostMetaDao(), clock)
 
     private fun api(answer: String) = FakeCollectionJsonApi(answer)

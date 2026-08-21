@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -218,6 +219,74 @@ class BookmarksViewModelTest {
             assertEquals(false, viewModel.uiState.value.isLoading)
         }
 
+    /**
+     * The reason this screen reads from disk at all.
+     *
+     * 收藏 is the only way into a downloaded thread, so a version of it that could only be drawn
+     * from a fresh response made the download feature useless in the one situation it exists for.
+     */
+    @Test
+    fun `a failed load keeps the stored list on screen and says it is stale`() =
+        runTest(dispatcher) {
+            known.rememberCollection(
+                listOf(
+                    CollectedPostMeta(postId = 1, title = "上次同步到的一篇"),
+                    CollectedPostMeta(postId = 2, title = "还有一篇"),
+                ),
+            )
+            space.failure = SiteException(SiteError.Network)
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(listOf(1L, 2L), state.entries.map { it.postId })
+            assertEquals(SiteError.Network, state.error)
+            assertTrue(state.isStale)
+            // The full-screen error is for a device that has nothing, and this one has two.
+            assertEquals(false, state.isLoading)
+        }
+
+    /** With nothing stored there is nothing honest to draw, and the error page is the right answer. */
+    @Test
+    fun `a failed load with nothing stored is still an error page`() =
+        runTest(dispatcher) {
+            space.failure = SiteException(SiteError.Network)
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertTrue(state.entries.isEmpty())
+            assertEquals(false, state.isStale)
+            assertEquals(SiteError.Network, state.error)
+        }
+
+    /** A thread un-collected on another device announces itself by being absent from the walk. */
+    @Test
+    fun `a successful walk replaces the stored list rather than adding to it`() =
+        runTest(dispatcher) {
+            known.rememberCollection(listOf(CollectedPostMeta(postId = 99, title = "去年收的")))
+            space.pages = listOf(page(1, 1..2, hasNext = false))
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(listOf(1L, 2L), viewModel.uiState.value.entries.map { it.postId })
+        }
+
+    /** Removing rows has to reach the store, because the store is what the list is drawn from. */
+    @Test
+    fun `a removal takes the rows out of the stored list too`() =
+        runTest(dispatcher) {
+            space.pages = listOf(page(1, 1..3, hasNext = false))
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            viewModel.startSelection(2L)
+            viewModel.removeSelected { _, _ -> }
+            advanceUntilIdle()
+
+            assertEquals(listOf(1L, 3L), known.observeCollection().first().map { it.postId })
+        }
+
     @Test
     fun `filters and counts run over the whole collection`() =
         runTest(dispatcher) {
@@ -343,6 +412,30 @@ class BookmarksViewModelTest {
             assertEquals(listOf(1L, 2L, 3L), viewModel.uiState.value.entries.map { it.postId })
         }
 
+    /**
+     * The removal is written to disk now, so the reload that used to undo a refusal is not enough.
+     *
+     * With no network there is nothing to reload *from*, and a row left off the stored list would
+     * be gone from 收藏 on this device while the site still has it — until some later day when the
+     * network came back, which is exactly when nobody would connect the two.
+     */
+    @Test
+    fun `a removal refused with no network is undone on this device too`() =
+        runTest(dispatcher) {
+            space.pages = listOf(page(1, 1..3, hasNext = false))
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            posts.collectionFailure = SiteException(SiteError.Network)
+            space.failure = SiteException(SiteError.Network)
+            viewModel.startSelection(2L)
+            viewModel.removeSelected { _, _ -> }
+            advanceUntilIdle()
+
+            assertEquals(listOf(1L, 2L, 3L), known.observeCollection().first().map { it.postId })
+            assertEquals(listOf(1L, 2L, 3L), viewModel.uiState.value.entries.map { it.postId })
+        }
+
     @Test
     fun `download-all queues everything with nothing stored, and only that`() =
         runTest(dispatcher) {
@@ -437,11 +530,30 @@ class BookmarksViewModelTest {
         }
     }
 
-    /** In-memory, with the same fill-the-gaps rule the Room store applies. */
+    /** In-memory, with the same fill-the-gaps rule and the same list marks the Room store applies. */
     private class FakeCollectedPostMetaStore : CollectedPostMetaStore {
         private val rows = MutableStateFlow(emptyMap<Long, CollectedPostMeta>())
 
+        /** The membership mark, kept beside the rows exactly as `listedOrder` is beside them. */
+        private val listed = MutableStateFlow(emptyList<Long>())
+
         override fun observe(): Flow<Map<Long, CollectedPostMeta>> = rows
+
+        override fun observeCollection(): Flow<List<CollectedPostMeta>> =
+            combine(rows, listed) { stored, order -> order.mapNotNull(stored::get) }
+
+        override suspend fun rememberCollection(metas: List<CollectedPostMeta>) {
+            remember(metas)
+            listed.value = metas.map { it.postId }
+        }
+
+        override suspend fun forget(postIds: Collection<Long>) {
+            listed.update { order -> order.filterNot { it in postIds } }
+        }
+
+        override suspend fun relist(postIds: List<Long>) {
+            listed.value = postIds
+        }
 
         override suspend fun remember(metas: List<CollectedPostMeta>) {
             rows.update { stored ->

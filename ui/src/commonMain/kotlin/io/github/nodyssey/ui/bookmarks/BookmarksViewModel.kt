@@ -15,7 +15,6 @@ import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.data.UserSpaceRepository
-import io.github.nodyssey.data.isEmpty
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.plaza.core.net.SiteError
@@ -69,10 +68,17 @@ enum class BookmarkSort {
 @Immutable
 data class BookmarksUiState(
     val entries: List<BookmarkEntry> = emptyList(),
-    val isLoading: Boolean = true,
-    val isRefreshing: Boolean = false,
+    /** True while a walk of the endpoint is in flight, whatever is already on screen. */
+    val isSyncing: Boolean = true,
+    /** Why the last walk failed, or null. Non-null *with* [entries] is the offline case, not a dead end. */
     val error: SiteError? = null,
-    /** True when the collection ran past [BookmarksViewModel.MAX_PAGES] and the counts are a floor. */
+    /**
+     * True when the collection ran past [BookmarksViewModel.MAX_PAGES] and the counts are a floor.
+     *
+     * A fact about the walk rather than about the list, so it is not stored with it: a session that
+     * opens onto the stored list has not walked anything yet and says nothing until it has. At 20
+     * pages of an endpoint that answers in dozens, that is a claim about accounts that do not exist.
+     */
     val truncated: Boolean = false,
     val filter: BookmarkFilter = BookmarkFilter.ALL,
     val sort: BookmarkSort = BookmarkSort.SITE,
@@ -89,6 +95,21 @@ data class BookmarksUiState(
     val usage: OfflineUsage = OfflineUsage(),
     val offlineSettings: OfflineSettings = OfflineSettings(),
 ) {
+    /**
+     * The full-screen spinner, which is only honest while there is nothing at all to show.
+     *
+     * The list comes off disk, so the ordinary trip into 收藏 has rows before the first request
+     * finishes and never sees this. What is left for it is the first ever visit on this device, and
+     * the moment before the stored list arrives.
+     */
+    val isLoading: Boolean get() = isSyncing && entries.isEmpty()
+
+    /**
+     * True when the rows on screen are the stored list and the site could not be asked for a newer
+     * one — which is what the screen says out loud rather than replacing the list with the failure.
+     */
+    val isStale: Boolean get() = error != null && entries.isNotEmpty()
+
     val inSelection: Boolean get() = selection != null
 
     val downloadedCount: Int get() = entries.count { it.offline is OfflineState.Downloaded }
@@ -159,6 +180,13 @@ private val OfflineState.downloadRank: Int
  * [MAX_PAGES] so a pathological account cannot turn the screen into an unbounded fetch; when that
  * bound bites, [BookmarksUiState.truncated] says so instead of the counts quietly being wrong.
  *
+ * Local-first, and on this screen that is not a nicety. 收藏 is the way into downloaded threads, so
+ * a version of it that could only be drawn from a fresh response made the download feature useless
+ * in exactly the situation it exists for: the network is gone, the thread is on the disk, and the
+ * list in front of it is an error page. So the rows come from [CollectedPostMetaStore], which every
+ * successful walk writes the whole collection into, and the walk on top of it is a *refresh* — it
+ * replaces the list when it succeeds and says so quietly when it does not.
+ *
  * The site publishes nobody else's collections, so there is no uid here — this screen is only ever
  * about the signed-in account.
  */
@@ -171,29 +199,18 @@ class BookmarksViewModel(
     private val _uiState = MutableStateFlow(BookmarksUiState(offlineAvailable = offline.isAvailable))
     val uiState: StateFlow<BookmarksUiState> = _uiState.asStateFlow()
 
-    /**
-     * The list exactly as the site returned it, before anything local is laid over it.
-     *
-     * Kept apart from [BookmarksUiState.entries] because a row is built from three sources that
-     * change independently — the site's list, what this device knows about those threads, and what
-     * it has downloaded of them — and folding each new arrival into the previous row would make the
-     * result depend on the order they happened to land in. Rebuilding from the three is the only
-     * version where a later, better answer can replace an earlier, thinner one.
-     */
-    private val siteRows = MutableStateFlow<List<SpacePost>>(emptyList())
-
     private var loadJob: Job? = null
     private var estimateJob: Job? = null
 
     init {
         load(refresh = false)
+        // Two sources, rebuilt rather than folded together: the stored collection and what this
+        // device has downloaded of it change independently, and a row patched in place would end up
+        // depending on which of the two happened to land last.
         viewModelScope.launch {
-            combine(siteRows, offline.states, collectedMeta.observe()) { rows, states, meta ->
-                rows.map { post ->
-                    post.toEntry(
-                        offline = states[post.postId] ?: OfflineState.NotDownloaded,
-                        known = meta[post.postId],
-                    )
+            combine(collectedMeta.observeCollection(), offline.states) { collection, states ->
+                collection.map { meta ->
+                    meta.toEntry(offline = states[meta.postId] ?: OfflineState.NotDownloaded)
                 }
             }.collect { entries -> _uiState.update { it.copy(entries = entries) } }
         }
@@ -292,9 +309,13 @@ class BookmarksViewModel(
     fun removeSelected(onDone: (removed: List<BookmarkEntry>, failed: SiteError?) -> Unit) {
         val target = _uiState.value.selected
         if (target.isEmpty()) return
+        // The list as it stands, kept for the refusal below — the removal is about to change it.
+        val before = _uiState.value.entries.map { it.postId }
         viewModelScope.launch {
             val ids = target.map { it.postId }.toSet()
-            siteRows.update { rows -> rows.filterNot { row -> row.postId in ids } }
+            // Straight into the store, because that is what the list is drawn from now. Only the
+            // list marks come off; the details stay, so 撤销 does not have to carry them back.
+            collectedMeta.forget(ids)
             _uiState.update { it.copy(selection = null) }
             val failure =
                 target.firstNotNullOfOrNull { entry ->
@@ -302,7 +323,14 @@ class BookmarksViewModel(
                         .exceptionOrNull()
                         ?.toSiteError()
                 }
-            if (failure != null) load(refresh = true)
+            if (failure != null) {
+                // Put the rows back here as well as asking for the list again. The reload is the
+                // better answer when the site can be reached at all, and this is the one that works
+                // when the refusal *was* that it could not be — where a removal left on disk would
+                // otherwise outlive the screen, the session and the reader's memory of doing it.
+                collectedMeta.relist(before)
+                load(refresh = true)
+            }
             onDone(target, failure)
         }
     }
@@ -353,29 +381,32 @@ class BookmarksViewModel(
 
     // --- loading ------------------------------------------------------------------------------
 
+    /**
+     * Walks the endpoint and hands the result to the store, which is what the screen reads.
+     *
+     * [refresh] no longer decides whether a spinner is drawn — [BookmarksUiState.isLoading] works
+     * that out from whether there is anything to draw instead — and is kept only because a manual
+     * retry and the trip into the screen are the same request.
+     */
     private fun load(refresh: Boolean) {
         loadJob?.cancel()
         loadJob =
             viewModelScope.launch {
-                _uiState.update {
-                    it.copy(isLoading = !refresh && it.entries.isEmpty(), isRefreshing = refresh, error = null)
-                }
+                _uiState.update { it.copy(isSyncing = true, error = null) }
                 runCatchingExceptCancellation { loadAllPages() }
                     .onSuccess { (posts, truncated) ->
-                        // Whatever this load *did* carry is written down, because the endpoint is not
-                        // reliably going to say it again and something on this device may want it
-                        // when it does not — see [CollectedPostMetaStore].
-                        collectedMeta.remember(posts.map(SpacePost::toKnownMeta).filterNot { it.isEmpty })
+                        // The whole walk, wholesale: this is both what the endpoint said about each
+                        // thread — which it will not reliably say again, see [CollectedPostMetaStore]
+                        // — and the list itself, which is what 收藏 draws from with the network off.
+                        collectedMeta.rememberCollection(posts.map(SpacePost::toKnownMeta))
                         // What the site says each thread's reply count is *now* — the only half of
                         // 「离线版落后 N 条回复」 a stored copy cannot work out for itself. This screen
                         // is holding both numbers already, so it hands them over rather than leaving
                         // the library to go and ask for what the app was just given.
                         offline.noteReplyCounts(posts.mapNotNull { post -> post.commentCount?.let { post.postId to it } }.toMap())
-                        siteRows.value = posts
                         _uiState.update { state ->
                             state.copy(
-                                isLoading = false,
-                                isRefreshing = false,
+                                isSyncing = false,
                                 error = null,
                                 truncated = truncated,
                                 // A thread removed on another device must not stay ticked.
@@ -384,9 +415,11 @@ class BookmarksViewModel(
                             )
                         }
                     }.onFailure { throwable ->
-                        _uiState.update {
-                            it.copy(isLoading = false, isRefreshing = false, error = throwable.toSiteError())
-                        }
+                        // The rows stay. What failed is the refresh, and the screen has a line for
+                        // saying so — replacing a readable list with a retry button would take the
+                        // downloaded threads away at the one moment they are the only ones worth
+                        // anything.
+                        _uiState.update { it.copy(isSyncing = false, error = throwable.toSiteError()) }
                     }
             }
     }
@@ -432,28 +465,30 @@ class BookmarksViewModel(
 }
 
 /**
- * One row: the site's answer, with what this device already knew filling the gaps it leaves.
+ * One row, out of everything this device has been told about the thread.
  *
  * `list-collection` returns a title and, in practice, nothing else — no board, no author, no reply
  * count — which is why the same `ThreadRow` that carries four pieces of information on the front
- * page carries one here. [known] is what the site itself said about the thread somewhere else, so
- * the fallback is a remembered answer rather than an invented one, and the site's own value always
- * wins where it has one.
+ * page would carry one here. The gaps are filled by what the site said about the thread somewhere
+ * else: on the feed it was scrolled past on, on the page opened to press the star, in the pages a
+ * download fetched. The merge itself happens on the way *into* the store, which coalesces rather
+ * than replaces and lets the endpoint's own answer win wherever it has one — so by the time a row
+ * is read back it is already the best answer anything has given, and never an invented one.
  */
-private fun SpacePost.toEntry(
-    offline: OfflineState,
-    known: CollectedPostMeta?,
-) = BookmarkEntry(
-    postId = postId,
-    title = title,
-    categoryTitle = categoryTitle ?: known?.categoryTitle,
-    categorySlug = categorySlug ?: known?.categorySlug,
-    authorName = authorName ?: known?.authorName,
-    avatarUrl = known?.resolvedAvatarUrl,
-    commentCount = commentCount ?: known?.commentCount,
-    createdAtText = createdAtText ?: known?.createdAtText,
-    offline = offline,
-)
+private fun CollectedPostMeta.toEntry(offline: OfflineState) =
+    BookmarkEntry(
+        postId = postId,
+        // Only ever null for a row nothing has named, which cannot be on the list: the one write
+        // that puts a thread there is a walk of an endpoint whose single reliable field is the title.
+        title = title.orEmpty(),
+        categoryTitle = categoryTitle,
+        categorySlug = categorySlug,
+        authorName = authorName,
+        avatarUrl = resolvedAvatarUrl,
+        commentCount = commentCount,
+        createdAtText = createdAtText,
+        offline = offline,
+    )
 
 /** What one row of the site's answer is worth writing down. */
 private fun SpacePost.toKnownMeta() =

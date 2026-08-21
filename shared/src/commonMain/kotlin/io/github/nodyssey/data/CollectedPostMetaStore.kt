@@ -54,10 +54,41 @@ data class CollectedPostMeta(
 interface CollectedPostMetaStore {
     fun observe(): Flow<Map<Long, CollectedPostMeta>>
 
+    /**
+     * The collection itself, in collection order, as of the last complete walk of the endpoint.
+     *
+     * The 收藏 list reads from here rather than from the request that filled it, which is what makes
+     * the screen open onto content with the network off. Empty until a walk has recorded one — a
+     * device that has never listed the collection has no honest answer, and 「还没有收藏」 with a
+     * retry is a better one than a list assembled out of whatever else happens to be remembered.
+     */
+    fun observeCollection(): Flow<List<CollectedPostMeta>>
+
     /** Fills in whatever these carry, leaving every field they are silent about as it was. */
     suspend fun remember(metas: List<CollectedPostMeta>)
 
     suspend fun remember(meta: CollectedPostMeta) = remember(listOf(meta))
+
+    /**
+     * Records a complete walk of the collection endpoint as *the* collection, in the given order.
+     *
+     * Wholesale: threads no longer in [metas] come off the list, because a walk that did not return
+     * one is the only way this device hears that it was un-collected somewhere else. Their details
+     * stay — see the DAO — so re-collecting one does not cost the row what it knew.
+     */
+    suspend fun rememberCollection(metas: List<CollectedPostMeta>)
+
+    /** Takes threads off the list, for the moment this account un-collects one. */
+    suspend fun forget(postIds: Collection<Long>)
+
+    /**
+     * Makes exactly these the list, in this order — 撤销 for [forget].
+     *
+     * 收藏 removes rows before the site has answered, and that write lands on disk now. A refusal
+     * has to be undone here rather than by reloading, because the refusal that matters most is the
+     * one that says there is no network to reload from.
+     */
+    suspend fun relist(postIds: List<Long>)
 }
 
 class RoomCollectedPostMetaStore(
@@ -67,18 +98,38 @@ class RoomCollectedPostMetaStore(
     override fun observe(): Flow<Map<Long, CollectedPostMeta>> =
         dao.observeAll().map { rows -> rows.associate { it.postId to it.toMeta() } }
 
+    override fun observeCollection(): Flow<List<CollectedPostMeta>> =
+        dao.observeCollection().map { rows -> rows.map { it.toMeta() } }
+
     override suspend fun remember(metas: List<CollectedPostMeta>) {
         if (metas.isEmpty()) return
         dao.remember(metas.map { it.toEntity(clock.nowMillis()) }, clock.nowMillis())
         dao.trimTo(MAX_REMEMBERED)
     }
 
+    override suspend fun rememberCollection(metas: List<CollectedPostMeta>) {
+        val now = clock.nowMillis()
+        // Not short-circuited on empty: a collection emptied on another device is a fact this walk
+        // has just established, and returning early here would leave the old list on screen forever.
+        dao.replaceCollection(metas.map { it.toEntity(now) }, now)
+        dao.trimTo(MAX_REMEMBERED)
+    }
+
+    override suspend fun forget(postIds: Collection<Long>) {
+        if (postIds.isEmpty()) return
+        dao.unlist(postIds.toList())
+    }
+
+    override suspend fun relist(postIds: List<Long>) = dao.replaceOrder(postIds)
+
     companion object {
         /**
-         * How many threads' details are worth keeping.
+         * How many *off-list* threads' details are worth keeping.
          *
-         * Far above any collection the screen will ever list — it walks 20 pages at most — and the
-         * point is only that a device which has collected and un-collected for years has a bound.
+         * The collection itself is not counted against this and never trimmed — those rows are the
+         * list 收藏 draws, and evicting one would take a thread out of the collection on this device
+         * alone. The bound is for what is left behind: a device which has collected and un-collected
+         * for years accumulates rows nobody will list again, and this is where they stop.
          */
         const val MAX_REMEMBERED = 2_000
     }

@@ -26,6 +26,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -295,20 +296,34 @@ fun BookmarksScreen(
                         onFilter = onFilter,
                         sortMenu = { SortMenu(current = state.sort, onSort = onSort) },
                     )
+                    // Not while a selection is up: that mode has its own toolbar and its own bar, and
+                    // the strip is about a list the reader is reading rather than one they are acting on.
+                    state.error?.takeIf { state.isStale }?.let { error ->
+                        BookmarkStaleBanner(error = error, onRetry = onRetry)
+                    }
                 }
-                BookmarkList(
-                    state = state,
-                    onPostClick = onPostClick,
-                    onOpenBrowser = onOpenBrowser,
-                    onRetry = onRetry,
-                    onStartSelection = { postId ->
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onStartSelection(postId)
-                    },
-                    onToggleSelection = onToggleSelection,
-                    onRowOfflineAction = onRowOfflineAction,
-                    modifier = Modifier.weight(1f),
-                )
+                Box(Modifier.weight(1f)) {
+                    BookmarkList(
+                        state = state,
+                        onPostClick = onPostClick,
+                        onOpenBrowser = onOpenBrowser,
+                        onRetry = onRetry,
+                        onStartSelection = { postId ->
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onStartSelection(postId)
+                        },
+                        onToggleSelection = onToggleSelection,
+                        onRowOfflineAction = onRowOfflineAction,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    // The whole point of reading the list off disk is that the walk behind it is no
+                    // longer something to wait for — so it gets a hairline at the top of the rows
+                    // instead of the screen. Overlaid rather than laid out, because a strip that
+                    // appears and disappears on every load would shove the list 4dp each way.
+                    if (state.isSyncing && state.entries.isNotEmpty()) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                    }
+                }
             }
             if (state.inSelection) {
                 SelectionToolbar(
@@ -702,7 +717,7 @@ private fun previewEntries() =
 private fun previewState(selection: Set<Long>? = null) =
     BookmarksUiState(
         entries = previewEntries(),
-        isLoading = false,
+        isSyncing = false,
         selection = selection,
         selectionEstimateBytes = if (selection == null) null else 4_823_449,
         offlineAvailable = true,

@@ -386,6 +386,10 @@ data class SelfProfileEntity(
  *
  * [updatedAtMillis] exists to order the trim; a device that has collected and un-collected for
  * years must not accumulate rows for threads nobody will list again.
+ *
+ * [listedOrder] is the one column here that is not a cached *detail* but the cached *list*. It is
+ * what lets this table answer "what is in the collection, and in what order" with the network off,
+ * which is why 收藏 opens onto a list on a train rather than onto an error page.
  */
 @Entity(tableName = "collected_post_meta")
 data class CollectedPostMetaEntity(
@@ -408,5 +412,17 @@ data class CollectedPostMetaEntity(
     /** The site's own reply count when it was last stated, not the number of replies stored. */
     val commentCount: Int? = null,
     val createdAtText: String? = null,
+    /**
+     * Where this thread sat in the collection when the site last listed it, or null for a thread
+     * that is remembered but not on the list.
+     *
+     * Both halves of that matter. Non-null is the membership mark, and it is written only by a
+     * *complete* walk of `list-collection` — one that also clears the mark from every row the walk
+     * did not return — so the marked rows are the collection as the site last stated it rather than
+     * everything this device has ever seen a star on. The number itself is collection order, which
+     * is the site's own ordering and the only thing 收藏's 「收藏顺序」 can honestly mean when the
+     * list came off disk.
+     */
+    val listedOrder: Int? = null,
     val updatedAtMillis: Long,
 )
