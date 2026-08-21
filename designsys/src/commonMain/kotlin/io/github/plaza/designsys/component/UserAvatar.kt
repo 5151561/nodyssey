@@ -2,12 +2,15 @@ package io.github.plaza.designsys.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
 
 /**
  * The site's own avatar shape: `border-radius: 15%` on every list and thread avatar.
@@ -63,22 +66,26 @@ fun UserAvatar(
         return
     }
 
-    SubcomposeAsyncImage(
+    // Plain [AsyncImage], not `SubcomposeAsyncImage`. The subcompose variant runs a whole extra
+    // subcomposition per avatar to lay out its `loading`/`error` slots — a cost Coil's own docs
+    // steer lists away from, and one that lands on every row of every feed, thread and profile list
+    // this app scrolls. The two states those slots drew are kept without the subcomposition: the
+    // surfaceVariant ground shows through until the opaque, cropped picture paints over it, and a
+    // 404 flips `failed` to draw the initial — the same `onError` fallback the rest of the app uses.
+    var failed by remember(url) { mutableStateOf(false) }
+    if (failed) {
+        fallback(modifier.size(size))
+        return
+    }
+    AsyncImage(
         model = url,
         contentDescription = null,
         contentScale = ContentScale.Crop,
-        loading = {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .clip(shape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-            )
-        },
-        error = { fallback(Modifier.fillMaxSize()) },
+        onError = { failed = true },
         modifier = modifier
             .size(size)
-            .clip(shape),
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
     )
 }
 
