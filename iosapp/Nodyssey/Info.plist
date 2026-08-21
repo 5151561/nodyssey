@@ -68,5 +68,17 @@
 	     uses runs out of process precisely so that it does not. -->
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>把看到的图片存进相册。</string>
+	<!-- The offline downloader's `BGTaskScheduler` work — see `BgTaskOfflineScheduler`. `processing`
+	     is what a `BGProcessingTaskRequest` runs under; the two identifiers must match the ones the
+	     scheduler submits, or `submit` throws. This is step D4's Android→iOS map of WorkManager. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>processing</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>io.github.nodyssey.offline.drain</string>
+		<string>io.github.nodyssey.offline.maintenance</string>
+	</array>
 </dict>
 </plist>

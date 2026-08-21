@@ -62,6 +62,7 @@ import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.local.createNodeSeekDatabase
 import io.github.nodyssey.data.offline.OfflineSettingsStore
+import io.github.nodyssey.data.offline.OfflineWorkScheduler
 import io.github.nodyssey.data.offline.RoomOfflineLibrary
 import io.github.nodyssey.data.offline.UrlSessionOfflineImageSource
 import io.github.nodyssey.data.proxy.DataStoreProxySettings
@@ -121,9 +122,14 @@ import platform.Foundation.NSURLSession
  *
  * @param userAgent resolved before the graph is built — see [NodysseyApp] and `resolveWebKitUserAgent`
  *   for why it cannot be read synchronously and must not be guessed at.
+ * @param offlineScheduler passed in rather than built here because it is registered with
+ *   `BGTaskScheduler` before this graph exists — see [NodysseyApp.registerBackgroundTasks]. Its own
+ *   handlers close back over the container through the same lazy resolver, so one instance serves
+ *   both the engine that queues work and the tasks that drain it.
  */
 class IosAppContainer(
     override val userAgent: UserAgent,
+    private val offlineScheduler: OfflineWorkScheduler,
     override val dispatchers: AppDispatchers = AppDispatchers(),
     override val clock: AppClock = AppClock.System,
 ) : AppContainer {
@@ -335,7 +341,7 @@ class IosAppContainer(
             images = UrlSessionOfflineImageSource { urlSession },
             collectedMeta = collectedPostMetaStore,
             settingsStore = OfflineSettingsStore(createPreferenceDataStore("offline")),
-            scheduler = NoOfflineWorkScheduler,
+            scheduler = offlineScheduler,
             clock = clock,
             dispatchers = dispatchers,
         )
