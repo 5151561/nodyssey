@@ -132,6 +132,7 @@ import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PrefetchAvatars
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
@@ -522,7 +523,19 @@ fun PostListScreen(
                             onBrowseElsewhere = { onBoardClick(null) }.takeIf { state.categorySlug != null },
                         )
 
-                    else ->
+                    else -> {
+                        // The rows carry their author's face, and one HTML page hands over fifty
+                        // addresses at once — but not fifty pictures. Without this the reader
+                        // scrolls onto a row and then waits for it; see [PrefetchAvatars].
+                        //
+                        // `peek` rather than `get`: asking for a row this far ahead must not be
+                        // read as the reader arriving there and pull the next page in early.
+                        PrefetchAvatars(
+                            listState = listState,
+                            itemCount = posts.itemCount,
+                            size = listAvatarSize(),
+                            urlAt = { index -> posts.peek(index)?.summary?.avatarUrl },
+                        )
                         PullToRefreshBox(
                             isRefreshing = refreshState is LoadState.Loading,
                             onRefresh = posts::refresh,
@@ -566,6 +579,7 @@ fun PostListScreen(
                                 }
                             }
                         }
+                    }
                 }
             }
 

@@ -1,6 +1,7 @@
 package io.github.nodyssey.ui.account
 
 import androidx.compose.ui.graphics.ImageBitmap
+import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.UserProfile
 import io.github.nodyssey.data.account.AccountProfileFields
@@ -64,8 +65,22 @@ class ProfileFieldsViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
+    /** Records what the screen asked the image caches to forget; nothing here has caches to empty. */
+    private val caches =
+        object : AppCacheStore {
+            val evicted = mutableListOf<String>()
+
+            override suspend fun sizeBytes() = 0L
+
+            override suspend fun clear() = Unit
+
+            override suspend fun evictImage(url: String) {
+                evicted += url
+            }
+        }
+
     private fun viewModel(repository: FakeAccountSettingsRepository) =
-        ProfileFieldsViewModel(repository, profiles)
+        ProfileFieldsViewModel(repository, profiles, caches)
 
     @Test
     fun `loads the avatar from the forum profile and the fields from the settings page`() =
@@ -161,6 +176,52 @@ class ProfileFieldsViewModelTest {
             )
             assertTrue(vm.uiState.value.message is AccountMessage.Failure)
             assertTrue("the picked image is still worth keeping", vm.uiState.value.pendingAvatar != null)
+        }
+
+    /**
+     * The address of an avatar does not change when the picture does, and the image cache holds one
+     * for a week without asking the server — so the upload is the only thing that knows. Nobody would
+     * see the new picture for a week otherwise, least of all the person who just chose it.
+     */
+    @Test
+    fun `uploading an avatar drops the old one out of the image caches`() =
+        runTest(dispatcher) {
+            val vm = viewModel(FakeAccountSettingsRepository(fields = stored))
+            advanceUntilIdle()
+
+            vm.setPendingAvatar(pendingAvatar())
+            vm.save()
+            advanceUntilIdle()
+
+            assertEquals(listOf("https://www.nodeseek.com/avatar/52425.png"), caches.evicted)
+        }
+
+    /** Saving text alone changes no picture, and emptying a cache entry for it would be superstition. */
+    @Test
+    fun `saving text fields alone touches no image cache`() =
+        runTest(dispatcher) {
+            val vm = viewModel(FakeAccountSettingsRepository(fields = stored))
+            advanceUntilIdle()
+
+            vm.updateBio("新的一句话")
+            vm.save()
+            advanceUntilIdle()
+
+            assertEquals(emptyList<String>(), caches.evicted)
+        }
+
+    /** A picture the site refused is still the old one; forgetting it would only cost a re-download. */
+    @Test
+    fun `a failed avatar upload leaves the caches alone`() =
+        runTest(dispatcher) {
+            val vm = viewModel(FakeAccountSettingsRepository.failing())
+            advanceUntilIdle()
+
+            vm.setPendingAvatar(pendingAvatar())
+            vm.save()
+            advanceUntilIdle()
+
+            assertEquals(emptyList<String>(), caches.evicted)
         }
 
     @Test

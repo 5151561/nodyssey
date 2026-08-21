@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.account.AccountProfileFields
 import io.github.nodyssey.data.account.AccountSettingsRepository
@@ -30,6 +31,8 @@ import kotlinx.coroutines.launch
 class ProfileFieldsViewModel(
     private val account: AccountSettingsRepository,
     private val profiles: ProfileRepository,
+    /** Only for the one address this screen can change under the caches — see [save]. */
+    private val caches: AppCacheStore,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileFieldsUiState())
     val uiState: StateFlow<ProfileFieldsUiState> = _uiState.asStateFlow()
@@ -109,6 +112,19 @@ class ProfileFieldsViewModel(
                     }
                     return@launch
                 }
+                if (avatarResult != null) {
+                    /*
+                     * The picture at that address just changed and the address did not, which is the
+                     * one case the image cache cannot see coming: it holds an avatar for a week
+                     * without asking the server, on the grounds that the address belongs to the
+                     * account rather than to the picture. See [AppCacheStore.evictImage].
+                     *
+                     * Before the update below, not after. That update clears [pendingAvatar], which
+                     * is what swaps the picked file on screen for the remote address — and that
+                     * request has to be the one that finds both caches empty.
+                     */
+                    current.avatarUrl?.let { caches.evictImage(it) }
+                }
 
                 runCatchingExceptCancellation { account.saveProfileFields(fields) }
                     .onSuccess {
@@ -140,6 +156,7 @@ class ProfileFieldsViewModel(
                     ProfileFieldsViewModel(
                         account = container.accountSettingsRepository,
                         profiles = container.profileRepository,
+                        caches = container.appCacheStore,
                     )
                 }
             }

@@ -17,4 +17,15 @@ interface AppCacheStore {
 
     /** Empties everything [sizeBytes] counts. */
     suspend fun clear()
+
+    /**
+     * Drops one picture out of the image caches, leaving the rest of them alone.
+     *
+     * Not a smaller 清除缓存 but the answer to a different question. The image cache deliberately
+     * stops asking the server about an avatar for a week, because its address is fixed for the life
+     * of the account and checking every few hours costs a round trip per face in a list. That is a
+     * fair trade for a stranger's new picture and a bad one for the reader's own, so the upload path
+     * says which address it just changed instead of waiting the week out.
+     */
+    suspend fun evictImage(url: String)
 }

@@ -287,6 +287,7 @@ class ProfileScreenTest {
                     onSettings = {},
                     onAccountSettings = {},
                     onOpenWebsite = {},
+                    onVerify = {},
                     onOpenSpace = {},
                     onCollections = {},
                     onHistory = {},
