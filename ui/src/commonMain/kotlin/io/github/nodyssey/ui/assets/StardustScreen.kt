@@ -31,8 +31,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,6 +63,8 @@ import io.github.nodyssey.ui.common.NoLedgerEntriesState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
+import io.github.nodyssey.ui.common.siteErrorRecovery
+import io.github.nodyssey.ui.common.snackbarDuration
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -123,16 +127,35 @@ fun StardustRoute(
     onBack: () -> Unit,
     onOpenBrowser: () -> Unit,
     onSignIn: () -> Unit,
+    /** Clears a Cloudflare challenge on the ledger, then comes back to the transfer form. */
+    onVerify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val messageText = state.message?.let { stardustMessageText(it) }
+    val message = state.message
+    val messageText = message?.let { stardustMessageText(it) }
+    // A refused 转账 is the one refusal on this screen worth a button: the amount and the recipient
+    // are still in the form, so clearing the wall is the difference between sending it and typing it
+    // again. Only [StardustMessage.Failed] carries an error — 「已转出」 has nothing to recover from.
+    val recovery =
+        (message as? StardustMessage.Failed)?.error?.let { error ->
+            siteErrorRecovery(error, onVerify = onVerify, onSignIn = onSignIn)
+        }
 
     LaunchedEffect(state.message, messageText) {
         if (messageText == null) return@LaunchedEffect
-        snackbarHostState.showSnackbar(messageText)
+        val result =
+            snackbarHostState.showSnackbar(
+                message = messageText,
+                actionLabel = recovery?.label,
+                duration =
+                (message as? StardustMessage.Failed)
+                    ?.error
+                    ?.let { snackbarDuration(it) } ?: SnackbarDuration.Short,
+            )
         viewModel.consumeMessage()
+        if (result == SnackbarResult.ActionPerformed) recovery?.onClick?.invoke()
     }
 
     StardustScreen(
@@ -146,6 +169,7 @@ fun StardustRoute(
         onRetry = viewModel::refresh,
         onOpenBrowser = onOpenBrowser,
         onSignIn = onSignIn,
+        onVerify = onVerify,
         onOpenTransfer = viewModel::openTransfer,
         onDismissTransfer = viewModel::dismissTransfer,
         onRequestConfirm = viewModel::requestConfirm,
@@ -191,6 +215,8 @@ fun StardustScreen(
     onRetry: () -> Unit,
     onOpenBrowser: () -> Unit,
     onSignIn: () -> Unit,
+    /** Clears a Cloudflare challenge on the ledger; see [StardustRoute] for why it is its own. */
+    onVerify: () -> Unit,
     onOpenTransfer: () -> Unit,
     onDismissTransfer: () -> Unit,
     onRequestConfirm: () -> Unit,
@@ -242,6 +268,7 @@ fun StardustScreen(
                 onRetry = onRetry,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
+                onVerify = onVerify,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -308,6 +335,7 @@ private fun StardustLedger(
     onRetry: () -> Unit,
     onOpenBrowser: () -> Unit,
     onSignIn: () -> Unit,
+    onVerify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val refresh = rows.loadState.refresh
@@ -326,6 +354,7 @@ private fun StardustLedger(
                 onRetry = retry,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
+                onVerify = onVerify,
                 modifier = modifier,
             )
 
@@ -675,6 +704,7 @@ private fun PreviewScreen(
         onRetry = {},
         onOpenBrowser = {},
         onSignIn = {},
+        onVerify = {},
         onOpenTransfer = {},
         onDismissTransfer = {},
         onRequestConfirm = {},

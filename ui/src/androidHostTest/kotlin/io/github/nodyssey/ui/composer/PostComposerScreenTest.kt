@@ -46,6 +46,7 @@ class PostComposerScreenTest {
                     onRemoveAttachment = { removed = it },
                     onRetryAttachment = {},
                     onPublish = {},
+                    onVerify = {},
                     onContinueDraft = {},
                     onDiscardDraft = {},
                     onToolbarChange = {},

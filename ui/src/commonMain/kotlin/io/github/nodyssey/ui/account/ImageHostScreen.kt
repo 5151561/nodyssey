@@ -157,13 +157,15 @@ fun ImageHostRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val messageText = state.message?.let { accountMessageText(it) }
-
-    LaunchedEffect(state.message, messageText) {
-        if (messageText == null) return@LaunchedEffect
-        snackbarHostState.showSnackbar(messageText)
-        viewModel.consumeMessage()
-    }
+    // No recovery wired: every refusal this screen can raise comes back as an
+    // [AccountMessage.Info] — a host's own wording for a bad key or an unreachable API — so there is
+    // never a [SiteError] to derive a button from. An image host is a different site with a
+    // different session, and NodeSeek's web view cannot clear a wall standing in front of it.
+    AccountMessageSnackbar(
+        message = state.message,
+        snackbarHostState = snackbarHostState,
+        onShown = viewModel::consumeMessage,
+    )
 
     ImageHostScreen(
         state = state,

@@ -268,6 +268,7 @@ fun NotificationsScreen(
                                 error = state.error,
                                 onRetry = onRetry,
                                 onOpenBrowser = onVerify,
+                                onVerify = onVerify,
                                 onSignIn = onSignIn,
                             )
 
@@ -281,6 +282,8 @@ fun NotificationsScreen(
                                 onSearch = onNewConversationSearch,
                                 onDismiss = onNewConversationDismiss,
                                 onRecipientClick = onRecipientClick,
+                                onSignIn = onSignIn,
+                                onVerify = onVerify,
                             )
 
                         state.items.isEmpty() ->

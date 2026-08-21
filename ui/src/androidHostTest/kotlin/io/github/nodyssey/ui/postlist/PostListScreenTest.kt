@@ -559,6 +559,53 @@ class PostListScreenTest {
         composeRule.onNodeWithText("重试").assertIsDisplayed()
     }
 
+    /**
+     * The case the snackbar was quietly wrong about.
+     *
+     * Its action was a hardcoded 重试, which for a wall is a button that cannot work: retrying earns
+     * the same wall, and the web view that clears it lives on the full-screen state — which never
+     * appears here, because rows on screen are exactly what stops it appearing. A reader who had ever
+     * loaded the feed once therefore had no way out of the loop at all.
+     */
+    @Test
+    fun `a Cloudflare wall over cached rows offers the verify button, not a retry that cannot work`() {
+        setScreen(
+            posts = listOf(feedPost(1, "cached post")),
+            refresh = LoadState.Error(SiteException(SiteError.Cloudflare)),
+        )
+
+        composeRule.onNodeWithText("cached post").assertIsDisplayed()
+        composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
+        composeRule.onNodeWithText("去验证").assertIsDisplayed()
+        composeRule.onNodeWithText("重试").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the verify button on a cached feed opens the challenge page`() {
+        var opened = false
+        setScreen(
+            posts = listOf(feedPost(1, "cached post")),
+            refresh = LoadState.Error(SiteException(SiteError.Cloudflare)),
+            onRecoverInBrowser = { opened = true },
+        )
+
+        composeRule.onNodeWithText("去验证").performClick()
+
+        assert(opened)
+    }
+
+    /** A failure a retry *can* fix keeps the retry: the rule is per error, not "never 重试". */
+    @Test
+    fun `a network failure over cached rows still offers a retry`() {
+        setScreen(
+            posts = listOf(feedPost(1, "cached post")),
+            refresh = LoadState.Error(SiteException(SiteError.Network)),
+        )
+
+        composeRule.onNodeWithText("重试").assertIsDisplayed()
+        composeRule.onNodeWithText("去验证").assertDoesNotExist()
+    }
+
     /** Nothing to announce while the rows are current — the snackbar is a failure's, not a refresh's. */
     @Test
     fun `a successful refresh says nothing`() {

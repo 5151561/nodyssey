@@ -489,6 +489,11 @@ fun MainNavigation(
                     hasAppUpdate = updateState.available != null,
                     onAccountSettings = { backStack.add(AccountSettingsKey) },
                     onOpenWebsite = { openWebUrl(NodeSeekSite.BASE_URL) },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
+                        )
+                    },
                     onOpenSpace = { uid -> backStack.add(UserSpaceKey(uid, isSelf = true)) },
                     // 我的收藏 has its own screen (board i1) rather than the space page's tab: it is
                     // the only list here that is always about you, and the things the board asks for
@@ -659,6 +664,7 @@ fun MainNavigation(
                     onOpenBrowser = openWebUrl,
                     onLinkClick = openContentUrl,
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                 )
             }
 
@@ -670,6 +676,12 @@ fun MainNavigation(
                     onBack = { backStack.removeLastOrNull() },
                     onPostClick = { postId -> backStack.add(PostDetailKey(postId)) },
                     onOpenBrowser = openWebUrl,
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
+                        )
+                    },
                 )
             }
 
@@ -696,8 +708,10 @@ fun MainNavigation(
                     },
                     // `/fans` only exists for the signed-in user, so it follows the app's rule for
                     // authenticated pages: the session's own web view, never the system browser.
+                    // The screen asks for this in one place — its error state — so the goal is the
+                    // one that closes itself once the wall is down.
                     onOpenBrowser = { url ->
-                        backStack.add(WebKey(url, siteTitle, WebViewGoal.MANAGE))
+                        backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
                     },
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                 )
@@ -732,12 +746,17 @@ fun MainNavigation(
                     // like every other authenticated page. It is now the fallback rather than the
                     // destination: the native list above is the ledger, and this is where a
                     // Cloudflare challenge gets solved so the native list can load.
+                    //
+                    // [WebViewGoal.CHALLENGE], not MANAGE, because solving it is the whole errand:
+                    // MANAGE waits for no cookie, so it sat there after the wall came down and left
+                    // the reader to work out they were done — with a way out to a real browser on
+                    // the toolbar, which is where a pass earned lands somewhere the app cannot read.
                     onOpenBrowser = {
                         backStack.add(
                             WebKey(
                                 NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH,
                                 siteTitle,
-                                WebViewGoal.MANAGE,
+                                WebViewGoal.CHALLENGE,
                             ),
                         )
                     },
@@ -763,6 +782,15 @@ fun MainNavigation(
                         )
                     },
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(
+                                ledgerUrl ?: NodeSeekSite.BASE_URL,
+                                siteTitle,
+                                WebViewGoal.CHALLENGE,
+                            ),
+                        )
+                    },
                 )
             }
 
@@ -800,6 +828,16 @@ fun MainNavigation(
                 ProfileFieldsRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_INTRODUCTION),
+                                siteTitle,
+                                WebViewGoal.CHALLENGE,
+                            ),
+                        )
+                    },
                 )
             }
 
@@ -815,6 +853,16 @@ fun MainNavigation(
                     // instead of appearing to do nothing.
                     onOpenEnrolmentUri = { uri ->
                         runCatching { uriHandler.openUri(uri) }.isSuccess
+                    },
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_SECURITY),
+                                siteTitle,
+                                WebViewGoal.CHALLENGE,
+                            ),
+                        )
                     },
                 )
             }
@@ -837,6 +885,16 @@ fun MainNavigation(
                             ),
                         )
                     },
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_CONTACT),
+                                siteTitle,
+                                WebViewGoal.CHALLENGE,
+                            ),
+                        )
+                    },
                 )
             }
 
@@ -846,6 +904,16 @@ fun MainNavigation(
                 BlockListRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_BLOCK),
+                                siteTitle,
+                                WebViewGoal.CHALLENGE,
+                            ),
+                        )
+                    },
                 )
             }
 
@@ -855,6 +923,16 @@ fun MainNavigation(
                 PreferencesRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
+                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onVerify = {
+                        backStack.add(
+                            WebKey(
+                                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_PREFERENCE),
+                                siteTitle,
+                                WebViewGoal.CHALLENGE,
+                            ),
+                        )
+                    },
                 )
             }
 
@@ -878,7 +956,12 @@ fun MainNavigation(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
                     onPostClick = { backStack.add(PostDetailKey(it)) },
-                    onOpenBrowser = openWebUrl,
+                    // 加精 asks for a web view in one place only — the error state — so this is a
+                    // challenge to be cleared rather than a page to be browsed, and `openWebUrl`'s
+                    // MANAGE would have left it open with nothing saying the errand was finished.
+                    onOpenBrowser = { url ->
+                        backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
+                    },
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                 )
             }
@@ -914,6 +997,9 @@ fun MainNavigation(
                     },
                     onUserClick = openSpace,
                     onOpenBrowser = openWebUrl,
+                    onVerify = { url ->
+                        backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
+                    },
                     onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
                 )
             }

@@ -5,13 +5,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import io.github.nodyssey.ui.common.siteErrorRecovery
+import io.github.nodyssey.ui.common.snackbarDuration
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_cancel
@@ -58,6 +64,43 @@ internal fun accountMessageText(message: AccountMessage): String =
         is AccountMessage.Failure -> stringResource(message.error.messageRes())
         is AccountMessage.Detail -> message.text
     }
+
+/**
+ * The one snackbar every account sub-page says its news through.
+ *
+ * Each page used to run its own `showSnackbar(text)`, which said the right sentence and offered
+ * nothing to press — so a setting refused by Cloudflare read as a statement of fact. The sentence is
+ * still [accountMessageText]'s; what this adds is [siteErrorRecovery]'s button, and only a
+ * [AccountMessage.Failure] has an error to derive one from. An 「已保存」 needs no button and a
+ * refusal the site explained in its own words has none to offer.
+ *
+ * The recoveries are nullable and default to none: a page with no way to reach the sign-in page or
+ * the web view passes nothing and shows no button, rather than one wired to a no-op.
+ */
+@Composable
+internal fun AccountMessageSnackbar(
+    message: AccountMessage?,
+    snackbarHostState: SnackbarHostState,
+    onShown: () -> Unit,
+    onSignIn: (() -> Unit)? = null,
+    onVerify: (() -> Unit)? = null,
+    onRetry: (() -> Unit)? = null,
+) {
+    val text = message?.let { accountMessageText(it) }
+    val error = (message as? AccountMessage.Failure)?.error
+    val action = error?.let { siteErrorRecovery(it, onVerify = onVerify, onSignIn = onSignIn, onRetry = onRetry) }
+    LaunchedEffect(message, text) {
+        if (text == null) return@LaunchedEffect
+        val result =
+            snackbarHostState.showSnackbar(
+                message = text,
+                actionLabel = action?.label,
+                duration = error?.let { snackbarDuration(it) } ?: SnackbarDuration.Short,
+            )
+        onShown()
+        if (result == SnackbarResult.ActionPerformed) action?.onClick?.invoke()
+    }
+}
 
 @Composable
 private fun SiteError.messageRes(): StringResource =

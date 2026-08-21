@@ -174,7 +174,12 @@ fun AssetsScreen(
             SiteErrorState(
                 error = state.error,
                 onRetry = onRetry,
+                // Named rather than left to [SiteErrorState]'s fallback. This screen asks for a
+                // web view in one place only, so the two are the same closure — and a challenge
+                // reaching it by fallback is exactly how other screens ended up handing one to a
+                // plain reading view without anything in the code saying so.
                 onOpenBrowser = onOpenBrowser,
+                onVerify = onOpenBrowser,
                 onSignIn = onSignIn,
                 modifier = Modifier.padding(padding),
             )

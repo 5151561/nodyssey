@@ -109,9 +109,10 @@ import io.github.nodyssey.ui.common.sharedThreadAvatar
 import io.github.nodyssey.ui.common.sharedThreadBoard
 import io.github.nodyssey.ui.common.sharedThreadTitle
 import io.github.nodyssey.ui.common.shortMessage
+import io.github.nodyssey.ui.common.siteErrorRecovery
+import io.github.nodyssey.ui.common.snackbarDuration
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_create_post
-import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.action_scroll_to_top
 import io.github.nodyssey.ui.resources.action_sort
 import io.github.nodyssey.ui.resources.feed_page_size_note
@@ -332,19 +333,38 @@ fun PostListScreen(
      *
      * Keyed on the message: a refresh starting clears it to null, which cancels the snackbar the way
      * a new attempt should, and the next failure re-raises it even when it says the same thing.
+     *
+     * The button is [siteErrorRecovery]'s, not a hardcoded 重试. This strip is the *only* thing a
+     * reader with a cached feed is shown — the full-screen state below takes over when there is
+     * nothing cached — so 重试 on a Cloudflare wall left them pressing a button that earns the same
+     * wall every time, with the web view that would clear it on a screen they never reached.
      */
     val snackbarHostState = remember { SnackbarHostState() }
-    val staleRefreshMessage =
+    val staleRefreshError =
         (refreshState as? LoadState.Error)
             ?.takeIf { posts.itemCount > 0 }
             ?.error
             ?.toSiteError()
-            ?.shortMessage()
-    val retryLabel = stringResource(Res.string.action_retry)
+    val staleRefreshMessage = staleRefreshError?.shortMessage()
+    val staleRefreshAction =
+        staleRefreshError?.let { error ->
+            siteErrorRecovery(
+                error = error,
+                onVerify = onRecoverInBrowser,
+                onSignIn = onSignInClick,
+                onRetry = posts::refresh,
+            )
+        }
     LaunchedEffect(staleRefreshMessage) {
+        val error = staleRefreshError ?: return@LaunchedEffect
         val message = staleRefreshMessage ?: return@LaunchedEffect
-        val result = snackbarHostState.showSnackbar(message = message, actionLabel = retryLabel)
-        if (result == SnackbarResult.ActionPerformed) posts.refresh()
+        val result =
+            snackbarHostState.showSnackbar(
+                message = message,
+                actionLabel = staleRefreshAction?.label,
+                duration = snackbarDuration(error),
+            )
+        if (result == SnackbarResult.ActionPerformed) staleRefreshAction?.onClick?.invoke()
     }
 
     /*
@@ -484,7 +504,13 @@ fun PostListScreen(
                             onRetry = posts::refresh,
                             // Both recoveries open a browser, but not the same page: a challenge is
                             // cleared on the list URL, a locked board on the sign-in page.
+                            //
+                            // 去验证 is named rather than left to fall back on [onOpenBrowser]. They
+                            // happen to be the same closure here, and the fallback is what let other
+                            // screens hand a challenge to a plain reading web view without anything
+                            // saying so.
                             onOpenBrowser = onRecoverInBrowser,
+                            onVerify = onRecoverInBrowser,
                             onSignIn = onSignInClick,
                             boardTitle = state.selectedBoardTitle,
                             onBrowseElsewhere = { onBoardClick(null) }.takeIf { state.categorySlug != null },

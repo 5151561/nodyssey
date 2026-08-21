@@ -116,6 +116,15 @@ fun ProfileRoute(
     hasAppUpdate: Boolean,
     onAccountSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
+    /**
+     * Clears a Cloudflare challenge, then returns here.
+     *
+     * Separate from [onOpenWebsite]: 访问网站 is an invitation to go read the forum and stays open
+     * until the reader leaves, while a wall is an errand that ends when the pass arrives. One
+     * callback served both, so 去验证 opened the reading web view — which never closes itself and
+     * carries a way out to a real browser, where a pass earned is a pass the app cannot see.
+     */
+    onVerify: () -> Unit,
     onOpenSpace: (Long) -> Unit,
     /**
      * 我的收藏 — its own screen (board i1).
@@ -141,6 +150,7 @@ fun ProfileRoute(
         hasAppUpdate = hasAppUpdate,
         onAccountSettings = onAccountSettings,
         onOpenWebsite = onOpenWebsite,
+        onVerify = onVerify,
         onOpenSpace = { state.uid?.let(onOpenSpace) },
         onCollections = onCollections,
         onHistory = onHistory,
@@ -193,6 +203,8 @@ fun ProfileScreen(
     onSettings: () -> Unit,
     onAccountSettings: () -> Unit,
     onOpenWebsite: () -> Unit,
+    /** Clears a Cloudflare challenge; see [ProfileRoute] for why it is not [onOpenWebsite]. */
+    onVerify: () -> Unit,
     onOpenSpace: () -> Unit,
     onCollections: () -> Unit,
     onHistory: () -> Unit,
@@ -241,6 +253,7 @@ fun ProfileScreen(
                 error = state.error,
                 onRetry = onRetry,
                 onOpenBrowser = onOpenWebsite,
+                onVerify = onVerify,
                 onSignIn = onSignIn,
                 modifier = Modifier.padding(padding),
             )
@@ -713,6 +726,7 @@ private fun ProfileSignedInPreview() {
             onSettings = {},
             onAccountSettings = {},
             onOpenWebsite = {},
+            onVerify = {},
             onOpenSpace = {},
             onCollections = {},
             onHistory = {},
@@ -746,6 +760,7 @@ private fun ProfileSignedOutPreview() {
             onSettings = {},
             onAccountSettings = {},
             onOpenWebsite = {},
+            onVerify = {},
             onOpenSpace = {},
             onCollections = {},
             onHistory = {},

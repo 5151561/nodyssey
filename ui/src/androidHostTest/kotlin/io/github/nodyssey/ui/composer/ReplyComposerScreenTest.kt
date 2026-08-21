@@ -48,6 +48,8 @@ class ReplyComposerScreenTest {
                     onRetryFailedUploads = {},
                     onPublish = {},
                     onClearError = {},
+                    onSignIn = {},
+                    onVerify = {},
                     onToolbarChange = {},
                     onToolbarReset = {},
                     onCreateVote = { _, _, _, _, _ -> },

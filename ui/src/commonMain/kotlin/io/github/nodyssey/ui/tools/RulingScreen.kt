@@ -114,6 +114,15 @@ fun RulingRoute(
     onPostClick: (Long, Int?) -> Unit,
     onUserClick: (Long) -> Unit,
     onOpenBrowser: (String) -> Unit,
+    /**
+     * Clears a Cloudflare challenge on the log, then returns.
+     *
+     * Separate from [onOpenBrowser] because the two want different web views: 在网页打开 is a page to
+     * read and stays open until the reader leaves it, while a wall is an errand that ends the moment
+     * the pass arrives. Sharing one callback gave 去验证 the reading one — a page that sits there
+     * after the wall is down, offering a way out to a browser whose cookie jar the app cannot read.
+     */
+    onVerify: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -138,6 +147,7 @@ fun RulingRoute(
         // The page the user is on, not the top of the log: a decision they are looking at is on page
         // 37 and nowhere else, and the site's own pager is a hash route the URL can carry.
         onOpenBrowser = { page -> onOpenBrowser(NodeSeekSite.BASE_URL + NodeSeekSite.rulingPath(page)) },
+        onVerify = { page -> onVerify(NodeSeekSite.BASE_URL + NodeSeekSite.rulingPath(page)) },
         onSignIn = onSignIn,
         modifier = modifier,
     )
@@ -171,6 +181,8 @@ fun RulingScreen(
     onRecordClick: (RulingRecord) -> Unit,
     /** Opens the web log at the page named, which is the one the reader is looking at. */
     onOpenBrowser: (Int) -> Unit,
+    /** Clears a Cloudflare challenge on that same page; see [RulingRoute] for why it is not the above. */
+    onVerify: (Int) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -273,6 +285,7 @@ fun RulingScreen(
                         error = state.error,
                         onRetry = onRetry,
                         onOpenBrowser = { onOpenBrowser(1) },
+                        onVerify = { onVerify(1) },
                         onSignIn = onSignIn,
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -661,6 +674,7 @@ private fun RulingPreview() {
             onRetry = {},
             onRecordClick = {},
             onOpenBrowser = {},
+            onVerify = {},
             onSignIn = {},
         )
     }
@@ -679,6 +693,7 @@ private fun RulingAppendingPreview() {
             onRetry = {},
             onRecordClick = {},
             onOpenBrowser = {},
+            onVerify = {},
             onSignIn = {},
         )
     }
@@ -697,6 +712,7 @@ private fun RulingSignedOutPreview() {
             onRetry = {},
             onRecordClick = {},
             onOpenBrowser = {},
+            onVerify = {},
             onSignIn = {},
         )
     }

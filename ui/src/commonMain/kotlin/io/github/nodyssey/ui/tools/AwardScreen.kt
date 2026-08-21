@@ -120,7 +120,9 @@ fun AwardScreen(
                     SiteErrorState(
                         error = state.error,
                         onRetry = onRetry,
+                        // Named rather than reached by fallback; see the same note in `AssetsScreen`.
                         onOpenBrowser = onOpenBrowser,
+                        onVerify = onOpenBrowser,
                         onSignIn = onSignIn,
                         modifier = Modifier.fillMaxSize(),
                     )

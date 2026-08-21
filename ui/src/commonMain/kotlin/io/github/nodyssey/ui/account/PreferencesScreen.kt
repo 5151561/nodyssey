@@ -60,17 +60,20 @@ import org.jetbrains.compose.resources.stringResource
 fun PreferencesRoute(
     viewModel: PreferencesViewModel,
     onBack: () -> Unit,
+    onSignIn: () -> Unit,
+    /** Clears a Cloudflare challenge, then comes back to this page. */
+    onVerify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val messageText = state.message?.let { accountMessageText(it) }
-
-    LaunchedEffect(state.message, messageText) {
-        if (messageText == null) return@LaunchedEffect
-        snackbarHostState.showSnackbar(messageText)
-        viewModel.consumeMessage()
-    }
+    AccountMessageSnackbar(
+        message = state.message,
+        snackbarHostState = snackbarHostState,
+        onShown = viewModel::consumeMessage,
+        onSignIn = onSignIn,
+        onVerify = onVerify,
+    )
 
     PreferencesScreen(
         state = state,
