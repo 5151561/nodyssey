@@ -123,6 +123,44 @@ class PostConfigParserTest {
         assertEquals(setOf(1L), config.ownCommentIds)
     }
 
+    /**
+     * `editedDate` is null on every floor nobody has touched, which is how a marker is *not* drawn.
+     * Any one of the three edited fields is enough to state the fact — the site has printed the
+     * relative form on its own before it prints the rest.
+     */
+    @Test
+    fun `reads the edit stamp only for the floors that carry one`() {
+        val config =
+            parse(
+                postData =
+                """
+                "comments":[
+                  {"commentId":1,"time":{"createdDateRel":"36min ago","editedDate":null,
+                   "editedDateFormated":null,"editedDateRel":null}},
+                  {"commentId":2,"time":{"editedDate":"2026-04-27T08:20:00.000Z",
+                   "editedDateFormated":"2026-04-27 16:20:00","editedDateRel":"5min ago"}},
+                  {"commentId":3,"time":{"editedDateRel":"1天前"}},
+                  {"commentId":4}
+                ]
+                """.trimIndent(),
+            )
+
+        assertEquals(setOf(2L, 3L), config.editedTimes.keys)
+        val edited = requireNotNull(config.editedTimes[2L])
+        assertEquals("5min ago", edited.relative)
+        assertEquals("2026-04-27 16:20:00", edited.absolute)
+        assertNull(requireNotNull(config.editedTimes[3L]).absolute)
+    }
+
+    /** A reshaped `time` must cost the stamp and nothing else on the page. */
+    @Test
+    fun `a time that is not an object leaves the tallies intact`() {
+        val config = parse(postData = """"comments":[{"commentId":1,"time":"just now","likeCount":3}]""")
+
+        assertTrue(config.editedTimes.isEmpty())
+        assertEquals(3, requireNotNull(config.reactions[1L]).likeCount)
+    }
+
     /** A reshaped `poster` must cost the ownership flag and nothing else on the page. */
     @Test
     fun `a poster that is not an object leaves the tallies intact`() {

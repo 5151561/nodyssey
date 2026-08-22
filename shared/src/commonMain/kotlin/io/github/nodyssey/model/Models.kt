@@ -138,8 +138,15 @@ data class PostContent(
      */
     /** The header's `edited Xmin ago` marker (additions.md §1.4) — posts and comments alike. */
     val isEdited: Boolean = false,
-    /** The marker's own text, kept verbatim for the 已编辑 row's accessibility label. */
+    /**
+     * When the edit happened, relatively — "5min ago", the site's own wording.
+     *
+     * Null when the page said only *that* a floor was edited: the marker renders as a bare 已编辑
+     * on some floors, and a marker with no time is still a marker.
+     */
     val editedAtText: String? = null,
+    /** The same moment spelled out — `2026-04-27 15:57:00`, for the marker's accessible name. */
+    val editedAtTitle: String? = null,
     /** The public Markdown signature rendered below this floor, empty when the user has none. */
     val signatureNodes: List<RichNode> = emptyList(),
     /** Counts and this account's own marks, or null when the page did not carry them. */

@@ -4,6 +4,7 @@ import com.fleeksoft.ksoup.nodes.Document
 import io.github.nodyssey.model.PostReactions
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -30,6 +31,13 @@ internal data class PostConfig(
      */
     val ownCommentIds: Set<Long> = emptySet(),
     /**
+     * When each floor was last edited, per the blob's `comments[].time`.
+     *
+     * Holds only the floors the site named a time for: an unedited floor arrives with
+     * `editedDate: null`, so an absent key is "never edited" rather than "not told".
+     */
+    val editedTimes: Map<Long, FloorEditTime> = emptyMap(),
+    /**
      * Whether this account has the thread in its collection.
      *
      * Null when the page carried no blob — which is not "not collected". The site has no endpoint
@@ -38,6 +46,19 @@ internal data class PostConfig(
      */
     val collected: Boolean? = null,
     val collectionCount: Int? = null,
+)
+
+/**
+ * When a floor was last edited, in the site's own words.
+ *
+ * [relative] is the blob's `editedDateRel` ("5min ago"), [absolute] its `editedDateFormated`
+ * ("2026-04-27 15:57:00") — the same pair the site renders the created time from, and the reason the
+ * marker can say *when* rather than only *that*. Either half can be missing on its own; the floor
+ * was still edited, which is the claim the marker itself makes.
+ */
+internal data class FloorEditTime(
+    val relative: String?,
+    val absolute: String?,
 )
 
 /**
@@ -68,6 +89,7 @@ internal object PostConfigParser {
         val reactions = mutableMapOf<Long, PostReactions>()
         val blocked = mutableSetOf<Long>()
         val own = mutableSetOf<Long>()
+        val edited = mutableMapOf<Long, FloorEditTime>()
         // Absent on a reshaped page, which costs the tallies but must not cost the thread-level
         // state sitting next to them — hence a loop over nothing rather than an early return.
         postData["comments"]?.jsonArray.orEmpty().forEach { entry ->
@@ -86,18 +108,44 @@ internal object PostConfigParser {
             // Safe cast, not `jsonObject`: that accessor throws on a reshaped `poster`, and this
             // loop is inside the pass that must not cost the page its tallies.
             if ((comment["poster"] as? JsonObject)?.bool("isMe") == true) own += commentId
+            (comment["time"] as? JsonObject)?.let { time -> edited.putEdit(commentId, time) }
         }
         return PostConfig(
             reactions = reactions,
             blockedCommentIds = blocked,
             ownCommentIds = own,
+            editedTimes = edited,
             // Thread-level, so they sit on `postData` itself rather than inside `comments`.
             collected = postData.boolOrNull("collected"),
             collectionCount = postData.intOrNull("collectionCount"),
         )
     }
 
+    /**
+     * The floor's edit stamp, or no entry at all.
+     *
+     * `editedDate` is the field the site nulls out on a floor nobody has edited, and the two
+     * rendered forms follow it — but any one of the three is enough to state the fact, so a blob
+     * that carried only the relative string still marks the floor.
+     */
+    private fun MutableMap<Long, FloorEditTime>.putEdit(
+        commentId: Long,
+        time: JsonObject,
+    ) {
+        val relative = time.string("editedDateRel")
+        val absolute = time.string("editedDateFormated")
+        if (time.string("editedDate") == null && relative == null && absolute == null) return
+        this[commentId] = FloorEditTime(relative = relative, absolute = absolute)
+    }
+
     private fun JsonObject.long(key: String): Long? = this[key]?.jsonPrimitive?.longOrNull
+
+    /*
+     * Via `as?` rather than `jsonPrimitive`: a reshaped `time` whose fields arrived as objects would
+     * otherwise throw out of the loop, and the marker is not worth the page's tallies.
+     */
+    private fun JsonObject.string(key: String): String? =
+        (this[key] as? JsonPrimitive)?.contentOrNull?.trim()?.ifBlank { null }
 
     /*
      * Via the string form, not `intOrNull`: the counts have arrived as both `12` and `"12"` depending

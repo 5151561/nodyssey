@@ -21,16 +21,22 @@ class FloorMarkersTest {
         assertEquals(listOf("楼主", "服主", "管理", "管理(退休)"), body.badges)
     }
 
+    /**
+     * The fallback path: this fixture carries no `__config__`, so the time has to come off the marker
+     * itself — the word is dropped and what trails it is kept, which is what the row renders after
+     * 编辑于. A bare 已编辑 trails nothing and keeps no time rather than inventing one.
+     */
     @Test
     fun `edited marker is read from the header strip in either language`() {
         val detail = PostDetailParser.parse(html, postId = 999901L, page = 1)
         val body = requireNotNull(detail.body)
         assertTrue(body.isEdited)
-        assertEquals("edited 5min ago", body.editedAtText)
+        assertEquals("5min ago", body.editedAtText)
+        assertNull(body.editedAtTitle)
 
         val punished = detail.comments.first { it.floor == "#1" }
         assertTrue(punished.isEdited)
-        assertEquals("已编辑", punished.editedAtText)
+        assertNull(punished.editedAtText)
         assertEquals(listOf("骗子", "违规禁止"), punished.badges)
     }
 

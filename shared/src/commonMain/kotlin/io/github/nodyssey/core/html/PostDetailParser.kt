@@ -66,6 +66,9 @@ object PostDetailParser {
      */
     private val EDITED_MARKER = Regex("""^(edited\b|已编辑)""", RegexOption.IGNORE_CASE)
 
+    /** What can sit between the marker word and its time: `edited: 5min ago`, `已编辑 · 5min ago`. */
+    private val MARKER_SEPARATORS = charArrayOf(' ', '\t', ':', '：', '·', '-', ',', '，')
+
     private fun parseContent(
         element: Element,
         isBody: Boolean,
@@ -75,7 +78,11 @@ object PostDetailParser {
         val authorLink = element.selectFirst(Selectors.CONTENT_AUTHOR)
         val createdAt = element.selectFirst(Selectors.CONTENT_CREATED_AT)
         val posterBadge = element.selectFirst(Selectors.CONTENT_POSTER_BADGE)
-        val editedText = element.selectFirst(Selectors.CONTENT_INFO)?.let(::findEditedMarker)
+        // The blob's own `time.editedDate*` first: it carries the moment, where the markup marker
+        // carries only whatever the site chose to print next to it. The marker stays as the fallback
+        // for a page whose blob we could not read.
+        val edited = commentId?.let(config.editedTimes::get)
+            ?: element.selectFirst(Selectors.CONTENT_INFO)?.let(::findEditedMarker)
 
         return PostContent(
             commentId = commentId,
@@ -96,8 +103,9 @@ object PostDetailParser {
             categoryTitle = element.selectFirst(Selectors.CONTENT_CATEGORY)?.text()?.trim()
                 ?.ifBlank { null },
             nodes = RichContentParser.parse(element.selectFirst(Selectors.CONTENT_ARTICLE)),
-            isEdited = editedText != null,
-            editedAtText = editedText,
+            isEdited = edited != null,
+            editedAtText = edited?.relative,
+            editedAtTitle = edited?.absolute,
             signatureNodes = RichContentParser.parse(element.selectFirst(Selectors.CONTENT_SIGNATURE)),
             reactions = commentId?.let(config.reactions::get),
             // Either source will do, and they answer for different pages: the blob covers a floor the
@@ -116,8 +124,17 @@ object PostDetailParser {
      * device yet, so this checks every element in the header strip — plus the strip's bare text,
      * in case the marker is not wrapped at all — and takes whatever starts like the marker.
      */
-    private fun findEditedMarker(contentInfo: Element): String? =
+    private fun findEditedMarker(contentInfo: Element): FloorEditTime? =
         (contentInfo.select("*").map { it.ownText() } + contentInfo.ownText())
             .map { it.trim() }
             .firstOrNull { EDITED_MARKER.containsMatchIn(it) }
+            ?.let { marker ->
+                // "edited 5min ago" → "5min ago"; a bare 已编辑 leaves nothing, which is the null the
+                // marker renders without a time. The absolute stamp is the blob's alone — the
+                // marker's markup has never been captured, so nothing here may claim to hold it.
+                FloorEditTime(
+                    relative = EDITED_MARKER.replaceFirst(marker, "").trim(*MARKER_SEPARATORS).ifBlank { null },
+                    absolute = null,
+                )
+            }
 }

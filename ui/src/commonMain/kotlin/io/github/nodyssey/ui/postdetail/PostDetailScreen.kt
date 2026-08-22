@@ -145,6 +145,7 @@ import io.github.nodyssey.ui.resources.post_comments_empty_hint
 import io.github.nodyssey.ui.resources.post_comments_header
 import io.github.nodyssey.ui.resources.post_edit_action
 import io.github.nodyssey.ui.resources.post_edited
+import io.github.nodyssey.ui.resources.post_edited_at
 import io.github.nodyssey.ui.resources.post_link_copied
 import io.github.nodyssey.ui.resources.post_open_original
 import io.github.nodyssey.ui.resources.post_page_progress
@@ -1850,14 +1851,24 @@ private fun FloorTimeLine(
         content.createdAtText?.let { MetaText(it) }
         if (content.isEdited) {
             if (content.createdAtText != null) MetaText("·")
-            EditedMarker(content.editedAtText)
+            EditedMarker(content)
         }
     }
 }
 
+/**
+ * 已编辑, and after it the moment — `编辑于 5min ago`, the same claim the site prints.
+ *
+ * The time is dropped rather than invented when the page did not carry one: some floors carry a bare
+ * marker, and "编辑于" with nothing after it would read as a truncation.
+ */
 @Composable
-private fun EditedMarker(fullText: String?) {
-    val label = stringResource(Res.string.post_edited)
+private fun EditedMarker(content: PostContent) {
+    val plain = stringResource(Res.string.post_edited)
+    val label = content.editedAtText?.let { stringResource(Res.string.post_edited_at, it) } ?: plain
+    // The absolute stamp is the accessible name where the page gave one — a relative label read
+    // aloud out of context ("5min ago", from a screen opened ten minutes back) dates itself.
+    val spoken = content.editedAtTitle?.let { stringResource(Res.string.post_edited_at, it) } ?: label
     val underline = MaterialTheme.colorScheme.outlineVariant
     Text(
         text = label,
@@ -1865,9 +1876,7 @@ private fun EditedMarker(fullText: String?) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier =
         Modifier
-            // The site's marker text ("edited 36min ago") is the accessible name; the visible
-            // label compresses it to two characters.
-            .semantics { contentDescription = fullText ?: label }
+            .semantics { contentDescription = spoken }
             .drawBehind {
                 // TextDecoration has no dashed variant, so the spec's dashed underline is drawn.
                 val y = size.height - 0.5.dp.toPx()

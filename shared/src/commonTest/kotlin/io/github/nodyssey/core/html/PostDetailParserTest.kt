@@ -226,6 +226,39 @@ class PostDetailParserTest {
         assertTrue(detail.comments.none { it.isBlocked })
     }
 
+    /**
+     * The blob names the moment; the markup marker only ever says that an edit happened. Both halves
+     * matter to the reader — "编辑于 5min ago" next to a floor posted three hours back is the whole
+     * point of the marker.
+     */
+    @Test
+    fun `takes the edit time from the config blob`() {
+        val target = requireNotNull(detail.comments.first().commentId)
+        val config =
+            """
+            {"postData":{"comments":[{"commentId":$target,"time":{
+              "createdDateRel":"36min ago","editedDate":"2026-04-27T08:20:00.000Z",
+              "editedDateFormated":"2026-04-27 16:20:00","editedDateRel":"5min ago"}}]}}
+            """.trimIndent()
+
+        val parsed = PostDetailParser.parse(withConfig(config), postId = 703863L, page = 1)
+        val edited = parsed.comments.first { it.commentId == target }
+
+        assertTrue(edited.isEdited)
+        assertEquals("5min ago", edited.editedAtText)
+        assertEquals("2026-04-27 16:20:00", edited.editedAtTitle)
+        assertTrue(parsed.comments.count { it.isEdited } == 1)
+        assertFalse(requireNotNull(parsed.body).isEdited)
+    }
+
+    /** An unedited floor is what the fixture's own blob is full of: `editedDate` arrives null. */
+    @Test
+    fun `leaves an unedited floor unmarked`() {
+        assertFalse(body.isEdited)
+        assertNull(body.editedAtText)
+        assertNull(body.editedAtTitle)
+    }
+
     /** Swaps the fixture's bootstrap blob for [json], base64 as the site encodes it. */
     private fun withConfig(json: String): String {
         val encoded = kotlin.io.encoding.Base64.encode(json.encodeToByteArray())

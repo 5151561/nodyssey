@@ -65,8 +65,9 @@
     <string name="post_badge_original_poster">楼主</string>
     <!-- Badge stack overflow chip (b1 §8: at most three chips, the rest fold into +N) -->
     <string name="post_badge_more">+%1$d</string>
-    <!-- The header's edited marker; the site's own text ("edited 36min ago") becomes the a11y label -->
+    <!-- The header's edited marker, with and without the time the page gave for it -->
     <string name="post_edited">已编辑</string>
+    <string name="post_edited_at">编辑于 %1$s</string>
 
     <!-- Post composer -->
     <string name="composer_title_hint">一句话说清主题</string>
