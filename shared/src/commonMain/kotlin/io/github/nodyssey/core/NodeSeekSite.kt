@@ -376,9 +376,18 @@ object NodeSeekSite {
         val trimmed = url?.trim().orEmpty()
         return when {
             trimmed.isEmpty() -> null
+
             trimmed.startsWith("http://") || trimmed.startsWith("https://") -> trimmed
+
+            // A `mailto:` names an address, not a place on the site, so the base URL has nothing to
+            // add to it. Without this branch the fallback below made one anyway — an author's
+            // `[联系我](mailto:a@b.com)` became `https://www.nodeseek.com/mailto:a@b.com`.
+            trimmed.startsWith("mailto:", ignoreCase = true) -> trimmed
+
             trimmed.startsWith("//") -> "https:$trimmed"
+
             trimmed.startsWith("/") -> BASE_URL + trimmed
+
             else -> "$BASE_URL/$trimmed"
         }
     }
@@ -433,6 +442,26 @@ object NodeSeekSite {
         parseWebUrl(url)?.let { parsed ->
             parsed.host != null && (parsed.scheme == "https" || parsed.scheme == "http")
         } == true
+
+    /**
+     * `mailto:` — the one non-web scheme a post can legitimately produce.
+     *
+     * Post content reaches a browser through a gate that admits `http`/`https` and nothing else,
+     * which is what keeps an author's `javascript:` or `content://` from being handed to the
+     * platform. An email address is the one thing that gate was refusing for no good reason: the
+     * site's posts are full of them, and Cloudflare's obfuscation — undone in `SiteHtml` — turns the
+     * ones written as links back into exactly this shape.
+     *
+     * Parsed rather than prefix-matched, so the same well-formedness rules every other link is held
+     * to apply here too: no whitespace, no control characters, no `//` authority pretending to be an
+     * address. A `mailto:` with nothing after the colon opens a blank draft and is refused.
+     */
+    fun isMailUrl(url: String): Boolean {
+        val trimmed = url.trim()
+        val parsed = parseWebUrl(trimmed) ?: return false
+        if (parsed.scheme != "mailto" || parsed.host != null) return false
+        return trimmed.substringAfter(':').substringBefore('?').isNotEmpty()
+    }
 
     /**
      * The link as something with a host, or null when it is not a URL worth deciding about.

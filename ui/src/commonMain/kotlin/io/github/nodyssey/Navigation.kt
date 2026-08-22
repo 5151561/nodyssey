@@ -170,10 +170,14 @@ fun MainNavigation(
      * Narrow on purpose. Anything on nodeseek.com should go through `openWebUrl` below instead; what
      * is left here is the handful of links that genuinely want a browser: an image the user means to
      * download or share, the terms of service, and the escape hatch out of the web view itself.
+     *
+     * `mailto:` is admitted alongside the web schemes because a post may carry an address the author
+     * wrote as a link. The Custom Tab declines it — see `usesCustomTab` — and the platform handler
+     * passes it to whatever writes mail on this device; the gate stays shut on every other scheme.
      */
     val openExternalUrl: (String) -> Unit = remember(uriHandler) {
         { url ->
-            if (NodeSeekSite.isExternalWebUrl(url)) {
+            if (NodeSeekSite.isExternalWebUrl(url) || NodeSeekSite.isMailUrl(url)) {
                 runCatching { uriHandler.openUri(url) }
             }
         }
