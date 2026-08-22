@@ -154,6 +154,31 @@ object Selectors {
     )
 
     /**
+     * 「搜索词太短😭」, the whole answer `/search?q=x` gives a one-character query.
+     *
+     * Not on [LOGIN_REQUIRED_MARKERS]' side of the fence and not a challenge: the page is the ordinary
+     * signed-in frame, carries `id="nsk-body"`, and holds that sentence where the list would be. Its
+     * status is **404**, which nothing sees — [USABLE_PAGE_MARKERS] classifies the body as real content
+     * before the status is consulted — so the sentence is the only thing that separates "your term is
+     * too short" from "nothing matched". Measured against the live site on 2026-08-22: one character
+     * refuses, ASCII or CJK alike (`a`, `测`), and two characters search (`ab`, `测试`).
+     *
+     * The site's own text node reads 搜索词太短😭; the emoji is left off the marker so a change of
+     * face does not cost us the classification.
+     */
+    val SEARCH_TOO_SHORT_MARKERS = listOf("搜索词太短")
+
+    /**
+     * The same refusal from `/api/account/find/…`, which words it its own way: HTTP **200** with
+     * `{"success":false,"message":"用户名过短"}` — see [io.github.nodyssey.data.NetworkSearchRepository].
+     *
+     * Fragments rather than the whole sentence because the two routes already disagree about how to
+     * say it (搜索词太短 against 用户名过短) and a third wording is likelier than a third meaning;
+     * nothing else this endpoint refuses with is worded 过短 or 太短.
+     */
+    val USER_SEARCH_TOO_SHORT_MARKERS = listOf("过短", "太短")
+
+    /**
      * Cloudflare's markup, not NodeSeek's, so the list itself lives in `:core`.
      *
      * Re-exported under this name because the JSON callers below check a response body for an

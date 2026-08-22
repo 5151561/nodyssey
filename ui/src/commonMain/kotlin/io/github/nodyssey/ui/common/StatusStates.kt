@@ -46,6 +46,8 @@ import io.github.nodyssey.ui.resources.status_no_results_body
 import io.github.nodyssey.ui.resources.status_no_results_title
 import io.github.nodyssey.ui.resources.status_not_wired_body
 import io.github.nodyssey.ui.resources.status_not_wired_title
+import io.github.nodyssey.ui.resources.status_query_too_short_body
+import io.github.nodyssey.ui.resources.status_query_too_short_title
 import io.github.nodyssey.ui.resources.status_rate_limited_body
 import io.github.nodyssey.ui.resources.status_rate_limited_title
 import io.github.nodyssey.ui.resources.status_sign_in_body
@@ -94,6 +96,8 @@ fun SiteError.shortMessage(): String =
         is SiteError.LevelRequired ->
             requiredLevel?.let { stringResource(Res.string.status_level_required_title_level, it) }
                 ?: stringResource(Res.string.status_level_required_title)
+
+        SiteError.QueryTooShort -> stringResource(Res.string.status_query_too_short_title)
 
         SiteError.Network -> stringResource(Res.string.status_network_title)
 
@@ -206,6 +210,20 @@ fun SiteErrorState(
                 } ?: stringResource(Res.string.status_level_required_body_unknown),
                 primaryAction =
                 onBack?.let { StatusAction(stringResource(Res.string.status_level_required_action), it) },
+                modifier = modifier,
+            )
+
+        // Nothing was searched, so there is nothing to retry and nothing the web page would show
+        // either — it refuses the same query with the same sentence. The one move is in the search
+        // box, which is already on screen above this state, so the state carries no button.
+        SiteError.QueryTooShort ->
+            StatusView(
+                icon = Icons.Default.Search,
+                shape = StatusShapes.NoResults,
+                containerColor = extra.warningContainer,
+                iconColor = extra.onWarningContainer,
+                title = stringResource(Res.string.status_query_too_short_title),
+                description = stringResource(Res.string.status_query_too_short_body),
                 modifier = modifier,
             )
 

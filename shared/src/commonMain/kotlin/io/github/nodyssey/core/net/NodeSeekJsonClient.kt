@@ -23,8 +23,8 @@ data class JsonPostResponse(
  * The handful of real JSON endpoints NodeSeek exposes. They do not cover browsing — lists and post
  * pages are still HTML — but they are authoritative where one exists, so prefer them over scraping.
  *
- * Endpoints under `/api/notification`, `/api/statistics` and `/api/admin` answer **500 when
- * unauthenticated** rather than 401. [NodeSeekJsonClient] maps that quirk to
+ * Endpoints under `/api/notification`, `/api/statistics` and `/api/admin`, and `/api/account/find`,
+ * answer **500 when unauthenticated** rather than 401. [NodeSeekJsonClient] maps that quirk to
  * [SiteError.LoginRequired] itself, so callers see the same error a 401 would have produced.
  */
 interface JsonSource {
@@ -252,7 +252,11 @@ class NodeSeekJsonClient(
             // 管理记录 is public reading behind a private endpoint: signed out it answers 500 with
             // `{"message":"USER NOT FOUND"}`, so without this the moderation log would offer a retry
             // button for a state no retry clears.
-            path.startsWith("/api/admin")
+            path.startsWith("/api/admin") ||
+            // 用户搜索, same 500 and the same `USER NOT FOUND` body signed out (measured 2026-08-22).
+            // Narrower than the families above on purpose: `/api/account/getInfo` and the rest of
+            // that path answer signed-out readers, and only `find` refuses them.
+            path.startsWith("/api/account/find")
 
     companion object {
         const val PATH_CATEGORIES = "/api/content/list-categories"

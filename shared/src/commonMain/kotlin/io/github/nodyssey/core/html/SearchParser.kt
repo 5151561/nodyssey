@@ -23,6 +23,13 @@ object SearchParser {
         if (document.getElementById("nsk-frame") == null) {
             throw SiteException(SiteError.LoginRequired)
         }
+        // Before the empty-list reading below, because this page *is* an empty list as far as the
+        // markup goes: the site answers a one-character query with the ordinary frame, no rows, and
+        // the sentence in [Selectors.SEARCH_TOO_SHORT_MARKERS]. Without this it reads as
+        // "没搜到相关帖子" — an answer to a search that never ran.
+        if (Selectors.SEARCH_TOO_SHORT_MARKERS.any { html.contains(it) }) {
+            throw SiteException(SiteError.QueryTooShort)
+        }
         // The list parser already reads the pager, "..100"-style elided totals included.
         val parsed = PostListParser.parse(html, page)
         return parsed.copy(hasNextPage = parsed.posts.isNotEmpty() && parsed.hasNextPage)

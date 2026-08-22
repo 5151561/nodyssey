@@ -4,11 +4,14 @@ import io.github.nodyssey.core.html.Fixtures
 import io.github.nodyssey.core.net.JsonSource
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.HtmlSource
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import kotlin.test.assertFailsWith
 
 class SearchRepositoryTest {
     @Test
@@ -33,6 +36,49 @@ class SearchRepositoryTest {
             assertEquals(4, user.topicCount)
             assertEquals(87, user.commentCount)
             assertEquals("22days ago", user.joinedText)
+        }
+
+    /**
+     * A one-character query, which this endpoint answers `{"success":false,"message":"用户名过短"}`
+     * with an HTTP 200.
+     *
+     * Every `success:false` used to be read as "sign in", which sent a signed-in reader to a login
+     * screen for a query the site simply would not run. It cannot be a session problem in the first
+     * place: signed out, the endpoint answers 500 and never reaches this code.
+     */
+    @Test
+    fun `a term the site will not search is its own failure, not a sign-in wall`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository =
+                NetworkSearchRepository(
+                    jsonSource = RecordingJsonSource("""{"success":false,"message":"用户名过短"}"""),
+                    htmlSource = RecordingHtmlSource(),
+                    dispatchers = AppDispatchers(dispatcher, dispatcher),
+                )
+
+            val failure = assertFailsWith<SiteException> { repository.searchUsers("a") }
+
+            assertEquals(SiteError.QueryTooShort, failure.error)
+            assertEquals("用户名过短", failure.detail)
+        }
+
+    /** Any other refusal keeps the site's own sentence instead of being guessed at. */
+    @Test
+    fun `an unrecognised refusal carries the site's sentence`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository =
+                NetworkSearchRepository(
+                    jsonSource = RecordingJsonSource("""{"success":false,"message":"服务维护中"}"""),
+                    htmlSource = RecordingHtmlSource(),
+                    dispatchers = AppDispatchers(dispatcher, dispatcher),
+                )
+
+            val failure = assertFailsWith<SiteException> { repository.searchUsers("ab") }
+
+            assertEquals(SiteError.Unknown, failure.error)
+            assertEquals("服务维护中", failure.detail)
         }
 
     /**
