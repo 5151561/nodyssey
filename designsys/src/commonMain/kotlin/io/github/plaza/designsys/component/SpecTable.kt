@@ -12,11 +12,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -121,6 +125,11 @@ fun SpecTable(
                         // and a blank there is the finding.
                         List(columns.size) { row.cells.getOrElse(it) { AnnotatedString("") } }
                             .forEachIndexed { index, cell ->
+                                // A 拼车 post files its benchmark reports in a table column, so this
+                                // cell is where most of the outbound links in a thread are — and the
+                                // one place worth telling the browser about a link while the finger
+                                // is still on it. See `prefetchLinksOnPress`.
+                                var layout by remember(cell) { mutableStateOf<TextLayoutResult?>(null) }
                                 Text(
                                     text = cell,
                                     style = cellStyle,
@@ -130,9 +139,11 @@ fun SpecTable(
                                     // reads as a rendering fault rather than as "there is more here".
                                     // The ellipsis is the only thing that says which.
                                     overflow = TextOverflow.Ellipsis,
+                                    onTextLayout = { layout = it },
                                     modifier = Modifier
                                         .width(widths.cells[index])
-                                        .padding(horizontal = Spacing.sm, vertical = 5.dp),
+                                        .padding(horizontal = Spacing.sm, vertical = 5.dp)
+                                        .prefetchLinksOnPress(cell) { layout },
                                 )
                             }
                     }

@@ -16,7 +16,7 @@ import java.nio.file.Files
 /**
  * 测评报告 round-trips through the store, and a value it cannot read falls back to the card.
  *
- * Same reasoning as [ExternalLinkTargetSettingTest]: the stored form is the enum name, so a renamed
+ * The stored form is the enum name, so a renamed
  * constant would otherwise hand the renderer a format it has no case for. Defaulting keeps that a
  * report drawn the ordinary way rather than a crash on the first post that carries one.
  */

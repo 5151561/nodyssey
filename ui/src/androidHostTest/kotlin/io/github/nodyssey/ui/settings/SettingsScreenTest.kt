@@ -57,7 +57,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -88,7 +87,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -131,7 +129,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = { uniform = it },
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -163,7 +160,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -193,7 +189,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = { wifiOnly = it },
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -214,40 +209,6 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun `external link target defaults to the in-app tab and can be switched`() {
-        composeRule.setContent {
-            var target by remember { mutableStateOf(UserSettings().externalLinkTarget) }
-            PlazaTheme {
-                SettingsScreen(
-                    state = SettingsUiState(UserSettings(externalLinkTarget = target)),
-                    onBack = {},
-                    onOpenTheme = {},
-                    onThemeModeChange = {},
-                    onOneHandModeChange = {},
-                    onFontScaleChange = {},
-                    onStickerUniformSizeChange = {},
-                    onStickerSizeChange = {},
-                    onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = { target = it },
-                    onReportFormatChange = {},
-                    onHomePageBarChange = {},
-                    onUpdateCheckOnLaunchChange = {},
-                    onUpdateDevChannelChange = {},
-                    onClearCache = {},
-                    appLinkHandlingEnabled = null,
-                    onOpenAppLinkSettings = {},
-                )
-            }
-        }
-
-        // 内容 sits below the fold on a 800dp screen now that 外观 carries the sticker controls,
-        // and a tap aimed off the viewport never lands.
-        composeRule.onNodeWithText("应用内浏览").performScrollTo().assertIsSelected()
-        composeRule.onNodeWithText("系统浏览器").performClick()
-        composeRule.onNodeWithText("系统浏览器").assertIsSelected()
-    }
-
-    @Test
     fun `report format defaults to the adapted card and can be switched to the source`() {
         composeRule.setContent {
             var format by remember { mutableStateOf(UserSettings().reportFormat) }
@@ -262,7 +223,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = { format = it },
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -295,7 +255,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = { enabled = it },
                     onUpdateCheckOnLaunchChange = {},
@@ -330,7 +289,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -370,7 +328,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -409,7 +366,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -444,7 +400,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {
@@ -480,7 +435,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -509,7 +463,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},
@@ -540,7 +493,6 @@ class SettingsScreenTest {
                     onStickerUniformSizeChange = {},
                     onStickerSizeChange = {},
                     onImagesOnWifiOnlyChange = {},
-                    onExternalLinkTargetChange = {},
                     onReportFormatChange = {},
                     onHomePageBarChange = {},
                     onUpdateCheckOnLaunchChange = {},

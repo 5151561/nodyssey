@@ -9,7 +9,6 @@ import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.session.SessionRepository
-import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
@@ -93,10 +92,6 @@ class SettingsViewModel(
 
     fun setImagesOnWifiOnly(value: Boolean) {
         viewModelScope.launch { settings.setImagesOnWifiOnly(value) }
-    }
-
-    fun setExternalLinkTarget(value: ExternalLinkTarget) {
-        viewModelScope.launch { settings.setExternalLinkTarget(value) }
     }
 
     fun setReportFormat(value: ReportFormat) {

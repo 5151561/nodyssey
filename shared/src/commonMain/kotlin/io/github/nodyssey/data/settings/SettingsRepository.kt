@@ -75,9 +75,6 @@ class SettingsRepository(
                 stickerSize = (preferences[KEY_STICKER_SIZE] ?: DEFAULT_STICKER_SIZE_SP)
                     .coerceIn(MIN_STICKER_SIZE_SP, MAX_STICKER_SIZE_SP),
                 imagesOnWifiOnly = preferences[KEY_IMAGES_WIFI_ONLY] ?: false,
-                externalLinkTarget = preferences[KEY_EXTERNAL_LINK_TARGET]
-                    ?.let { runCatching { ExternalLinkTarget.valueOf(it) }.getOrNull() }
-                    ?: ExternalLinkTarget.CUSTOM_TAB,
                 reportFormat = preferences[KEY_REPORT_FORMAT]
                     ?.let { runCatching { ReportFormat.valueOf(it) }.getOrNull() }
                     ?: ReportFormat.ADAPTED,
@@ -223,9 +220,6 @@ class SettingsRepository(
         edit { it[KEY_STICKER_SIZE] = sizeSp.coerceIn(MIN_STICKER_SIZE_SP, MAX_STICKER_SIZE_SP) }
 
     suspend fun setImagesOnWifiOnly(enabled: Boolean) = edit { it[KEY_IMAGES_WIFI_ONLY] = enabled }
-
-    suspend fun setExternalLinkTarget(target: ExternalLinkTarget) =
-        edit { it[KEY_EXTERNAL_LINK_TARGET] = target.name }
 
     suspend fun setReportFormat(format: ReportFormat) = edit { it[KEY_REPORT_FORMAT] = format.name }
 
@@ -565,7 +559,6 @@ class SettingsRepository(
         private val KEY_STICKER_UNIFORM_SIZE = booleanPreferencesKey("sticker_uniform_size")
         private val KEY_STICKER_SIZE = intPreferencesKey("sticker_size_sp")
         private val KEY_IMAGES_WIFI_ONLY = booleanPreferencesKey("images_on_wifi_only")
-        private val KEY_EXTERNAL_LINK_TARGET = stringPreferencesKey("external_link_target")
         private val KEY_REPORT_FORMAT = stringPreferencesKey("report_format")
         private val KEY_RECENT_SEARCHES = stringPreferencesKey("recent_searches")
         private val KEY_SEARCH_HISTORY = stringPreferencesKey("search_history_v3")
@@ -701,7 +694,6 @@ data class UserSettings(
     /** The side of that square in sp, between [SettingsRepository.MIN_STICKER_SIZE_SP] and its max. */
     val stickerSize: Int = SettingsRepository.DEFAULT_STICKER_SIZE_SP,
     val imagesOnWifiOnly: Boolean = false,
-    val externalLinkTarget: ExternalLinkTarget = ExternalLinkTarget.CUSTOM_TAB,
     /** How a NodeQuality-style benchmark report is drawn in a post; see [ReportFormat]. */
     val reportFormat: ReportFormat = ReportFormat.ADAPTED,
     /**
@@ -814,21 +806,6 @@ data class SavedTheme(
     /** ARGB, and the identity of the entry: saving the same colour twice renames it. */
     val color: Int,
 )
-
-/**
- * Where a link that leaves the app goes.
- *
- * [CUSTOM_TAB] is the default because a thread is mostly other people's links: handing every one of
- * them to the browser as a separate task is what turns "glance at what they linked" into "find your
- * way back to the app". A Custom Tab keeps the back gesture pointing at the thread, and — unlike the
- * in-app WebView, which exists to carry the NodeSeek session and must never hold a stranger's page —
- * it is the browser's own process, with the browser's origin bar and its cookies, not ours.
- *
- * [BROWSER] is the escape hatch for anyone who wants their links in the browser they already have
- * signed in, with their extensions and their tab list. It is also what runs when no installed
- * browser supports Custom Tabs, whatever this setting says.
- */
-enum class ExternalLinkTarget { CUSTOM_TAB, BROWSER }
 
 /**
  * How a benchmark report inside a post is drawn.

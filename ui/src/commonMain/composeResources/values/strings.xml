@@ -349,13 +349,9 @@
     <string name="settings_sticker_size_value">%1$dsp</string>
     <string name="settings_text_preview">预览：中文长文的阅读体验。</string>
     <string name="settings_content">内容</string>
-    <string name="settings_external_link">站外链接</string>
     <string name="settings_app_links">站内链接</string>
     <string name="settings_app_links_hint_on">已开启：在别的 App 里点 NodeSeek 的帖子、用户、通知链接会直接进来</string>
     <string name="settings_app_links_hint_off">未开启：站内链接仍由浏览器打开。点这里去系统设置里打开「打开支持的链接」</string>
-    <string name="settings_external_link_hint">帖子里指向别的网站的链接怎么打开</string>
-    <string name="settings_external_link_custom_tab">应用内浏览</string>
-    <string name="settings_external_link_browser">系统浏览器</string>
     <string name="settings_report_format">测评报告</string>
     <string name="settings_report_format_hint">帖子里的跑分报告是重排成卡片还是照原样显示</string>
     <string name="settings_report_format_adapted">适配格式</string>

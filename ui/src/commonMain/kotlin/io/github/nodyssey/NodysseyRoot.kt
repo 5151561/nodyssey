@@ -18,12 +18,13 @@ import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.common.LocalAppName
-import io.github.nodyssey.ui.common.rememberExternalUriHandler
+import io.github.nodyssey.ui.common.rememberBrowserLinks
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.richtext.LocalReportFormat
 import io.github.nodyssey.ui.settings.theme.activeCharacterPalette
 import io.github.nodyssey.ui.settings.theme.rememberActiveSeed
 import io.github.nodyssey.ui.settings.theme.toPlaza
+import io.github.plaza.designsys.component.LocalLinkPrefetcher
 import io.github.plaza.designsys.richtext.LocalStickerSizing
 import io.github.plaza.designsys.richtext.StickerSizing
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -85,8 +86,12 @@ fun NodysseyRoot(
                     uniformSize = settings.stickerSize.sp,
                 )
             }
+        // The handler and the prefetcher are one object because on Android they are one connection
+        // to the browser: what gets warmed on press is what the tab is then launched through.
+        val browserLinks = rememberBrowserLinks()
         CompositionLocalProvider(
-            LocalUriHandler provides rememberExternalUriHandler(settings.externalLinkTarget),
+            LocalUriHandler provides browserLinks.uriHandler,
+            LocalLinkPrefetcher provides browserLinks.prefetcher,
             LocalReportFormat provides settings.reportFormat,
             LocalStickerSizing provides stickerSizing,
             // The one thing on this list that is not a setting: it is what the platform says this

@@ -15,6 +15,23 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!--
+        Makes the installed browsers visible to `CustomTabsClient.getPackageName`, which is what
+        `CustomTabsWarmer` asks before it can bind the browser's Custom Tabs service and warm it up.
+        Without this the query comes back empty on API 30+ — package visibility hides every browser
+        from us — and every link opens the way it used to: browser process cold-started at the moment
+        of the tap, DNS not started until it exists.
+
+        Declared here rather than in :designsys, which is where the code is: a library manifest would
+        merge the same element, but this is the only Android application in the build and the entry
+        is a statement about what *this* app looks up.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
+
+    <!--
         Backup is on, but the WebView profile is excluded. Backing it up would put the session cookie
         obtained by signing in into a cloud backup and onto any restored device — a credential leaving
         the device it was issued to. The Room cache is excluded too because it can contain content

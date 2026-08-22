@@ -125,6 +125,12 @@ kotlin {
             // module knows about opening a link is Compose's own `LocalUriHandler`.
             implementation(libs.androidx.browser)
 
+            // `LocalLifecycleOwner`, in the same file: the Custom Tabs binding is taken on ON_START
+            // and released on ON_STOP, because what it keeps warm is another app's process and
+            // holding that open while the reader is elsewhere is not ours to do. `:ui` has had this
+            // artifact all along; this module now needs its own, being below it.
+            implementation(libs.androidx.lifecycle.runtime.compose)
+
             // `androidx.core.net.toUri`, in the same file. Named rather than inherited: it used to
             // arrive through the androidx Compose artifacts, and those are no longer what this
             // module asks for.

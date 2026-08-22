@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.data.settings.ExternalLinkTarget
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
@@ -63,10 +62,6 @@ import io.github.nodyssey.ui.resources.settings_body_size_value
 import io.github.nodyssey.ui.resources.settings_clear_cache
 import io.github.nodyssey.ui.resources.settings_clear_cache_size
 import io.github.nodyssey.ui.resources.settings_content
-import io.github.nodyssey.ui.resources.settings_external_link
-import io.github.nodyssey.ui.resources.settings_external_link_browser
-import io.github.nodyssey.ui.resources.settings_external_link_custom_tab
-import io.github.nodyssey.ui.resources.settings_external_link_hint
 import io.github.nodyssey.ui.resources.settings_home_page_bar
 import io.github.nodyssey.ui.resources.settings_home_page_bar_hint
 import io.github.nodyssey.ui.resources.settings_licenses
@@ -141,7 +136,6 @@ fun SettingsRoute(
         onStickerUniformSizeChange = viewModel::setStickerUniformSize,
         onStickerSizeChange = viewModel::setStickerSize,
         onImagesOnWifiOnlyChange = viewModel::setImagesOnWifiOnly,
-        onExternalLinkTargetChange = viewModel::setExternalLinkTarget,
         onReportFormatChange = viewModel::setReportFormat,
         onHomePageBarChange = viewModel::setHomePageBar,
         onUpdateCheckOnLaunchChange = viewModel::setUpdateCheckOnLaunch,
@@ -170,7 +164,6 @@ fun SettingsScreen(
     onStickerUniformSizeChange: (Boolean) -> Unit,
     onStickerSizeChange: (Int) -> Unit,
     onImagesOnWifiOnlyChange: (Boolean) -> Unit,
-    onExternalLinkTargetChange: (ExternalLinkTarget) -> Unit,
     onReportFormatChange: (ReportFormat) -> Unit,
     onHomePageBarChange: (Boolean) -> Unit,
     onUpdateCheckOnLaunchChange: (Boolean) -> Unit,
@@ -328,19 +321,9 @@ fun SettingsScreen(
 
             SettingsSectionTitle(stringResource(Res.string.settings_content))
             SettingsGroup {
-                SettingsBlock(
-                    icon = { Icon(PlazaIcons.OpenInNew, contentDescription = null) },
-                    title = stringResource(Res.string.settings_external_link),
-                    subtitle = stringResource(Res.string.settings_external_link_hint),
-                    top = true,
-                ) {
-                    ConnectedExternalLinkButtons(
-                        selected = state.settings.externalLinkTarget,
-                        onSelected = onExternalLinkTargetChange,
-                    )
-                }
                 appLinkHandlingEnabled?.let { enabled ->
                     SettingsRow(
+                        top = true,
                         leading = { Icon(PlazaIcons.Link, contentDescription = null) },
                         title = stringResource(Res.string.settings_app_links),
                         subtitle =
@@ -355,6 +338,9 @@ fun SettingsScreen(
                     )
                 }
                 SettingsBlock(
+                    // The group's first card when the platform has no App Links notion to show —
+                    // 站外链接 used to hold that place and no longer exists; see `ExternalLinks`.
+                    top = appLinkHandlingEnabled == null,
                     icon = { Icon(PlazaIcons.Code, contentDescription = null) },
                     title = stringResource(Res.string.settings_report_format),
                     subtitle = stringResource(Res.string.settings_report_format_hint),
@@ -492,24 +478,6 @@ fun SettingsScreen(
     }
 }
 
-@Composable
-private fun ConnectedExternalLinkButtons(
-    selected: ExternalLinkTarget,
-    onSelected: (ExternalLinkTarget) -> Unit,
-) {
-    val choices =
-        listOf(
-            ExternalLinkTarget.CUSTOM_TAB to
-                stringResource(Res.string.settings_external_link_custom_tab),
-            ExternalLinkTarget.BROWSER to stringResource(Res.string.settings_external_link_browser),
-        )
-    ConnectedChoiceButtons(
-        labels = choices.map { it.second },
-        selectedIndex = choices.indexOfFirst { it.first == selected },
-        onSelect = { onSelected(choices[it].first) },
-    )
-}
-
 /**
  * 跟随系统 / 浅色 / 深色.
  *
@@ -632,7 +600,6 @@ private fun SettingsPreview() {
             onStickerUniformSizeChange = {},
             onStickerSizeChange = {},
             onImagesOnWifiOnlyChange = {},
-            onExternalLinkTargetChange = {},
             onReportFormatChange = {},
             onHomePageBarChange = {},
             onUpdateCheckOnLaunchChange = {},
