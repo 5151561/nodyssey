@@ -49,9 +49,10 @@ fun siteErrorRecovery(
 
         SiteError.LoginRequired -> onSignIn?.let { StatusAction(signIn, it) }
 
-        // 阅读权限 and "nothing was requested" both fail the same test: there is no press that
-        // changes the answer. See the matching branches in [SiteErrorState].
-        is SiteError.LevelRequired, SiteError.NotWired -> null
+        // 阅读权限, "nothing was requested" and a term the site would not even search all fail the
+        // same test: there is no press that changes the answer. See the matching branches in
+        // [SiteErrorState].
+        is SiteError.LevelRequired, SiteError.NotWired, SiteError.QueryTooShort -> null
 
         SiteError.Network,
         SiteError.Unparsable,

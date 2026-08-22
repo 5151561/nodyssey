@@ -677,6 +677,9 @@
     <string name="status_deleted_body">这个帖子被作者或管理员删除了。</string>
     <string name="status_deleted_action">返回列表</string>
 
+    <string name="status_query_too_short_title">关键词太短了</string>
+    <string name="status_query_too_short_body">NodeSeek 的搜索至少要两个字，一个字它不查。补一个字再搜。</string>
+
     <string name="status_no_results_title">没搜到相关帖子</string>
     <string name="status_no_results_body">换个关键词，或者去版块里翻翻。</string>
     <string name="status_no_results_action">清空关键词</string>

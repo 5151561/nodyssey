@@ -25,6 +25,7 @@ import io.github.nodyssey.ui.resources.status_challenge_title
 import io.github.nodyssey.ui.resources.status_level_required_title
 import io.github.nodyssey.ui.resources.status_network_title
 import io.github.nodyssey.ui.resources.status_not_wired_title
+import io.github.nodyssey.ui.resources.status_query_too_short_title
 import io.github.nodyssey.ui.resources.status_rate_limited_title
 import io.github.nodyssey.ui.resources.status_sign_in_title
 import io.github.nodyssey.ui.resources.status_unknown_title
@@ -120,6 +121,9 @@ private fun SiteError.messageRes(): StringResource =
         SiteError.NotWired -> Res.string.status_not_wired_title
 
         SiteError.RateLimited -> Res.string.status_rate_limited_title
+
+        // Nothing on this screen searches; the branch exists because the `when` is exhaustive.
+        SiteError.QueryTooShort -> Res.string.status_query_too_short_title
 
         is SiteError.Http, SiteError.Unknown -> Res.string.status_unknown_title
     }

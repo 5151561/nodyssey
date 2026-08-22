@@ -1,0 +1,25 @@
+<!--
+  /search?q=a as the live site served it on 2026-08-22, trimmed to the frame and the sentence.
+
+  Two things about it are the whole reason SearchParser looks for that sentence. The status is 404,
+  which no caller ever sees — the body carries `id="nsk-body"`, so ChallengeDetector calls it real
+  content before it looks at the status. And the frame is the ordinary one, with no `post-list` in
+  it, so what is left is indistinguishable from "nothing matched" apart from the sentence itself.
+
+  Measured the same day: one character is refused whether it is ASCII or CJK (`a`, `测`), and two
+  characters search (`ab`, `测试`).
+-->
+<!doctype html>
+<html>
+<body>
+<section id="nsk-frame">
+  <div id="nsk-body" class="nsk-container">
+    <div>
+      <div>
+        搜索词太短😭
+      </div>
+    </div>
+  </div>
+</section>
+</body>
+</html>

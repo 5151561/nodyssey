@@ -27,6 +27,17 @@ sealed interface SiteError {
     data class LevelRequired(val requiredLevel: Int?) : SiteError
 
     /**
+     * The search term is shorter than the site will accept, and nothing was searched.
+     *
+     * Its own case rather than [Http] or [Unparsable] because the answer is complete and correct —
+     * the site read the query and declined it — and because the only thing that changes it is the
+     * reader typing more. Apart from [LoginRequired] for the same reason a level wall is: a signed-in
+     * reader sent an account-sized sign-in screen for a one-letter query is being told to fix the
+     * wrong thing.
+     */
+    data object QueryTooShort : SiteError
+
+    /**
      * The site's own throttle, not Cloudflare's.
      *
      * Kept apart from [Http] because the recovery is "wait a moment", not "retry now" — and apart

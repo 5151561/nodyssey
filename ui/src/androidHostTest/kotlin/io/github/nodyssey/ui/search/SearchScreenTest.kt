@@ -23,6 +23,7 @@ import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.model.SearchTarget
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.PlazaTheme
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
@@ -127,6 +128,26 @@ class SearchScreenTest {
             target = SearchTarget.POSTS,
             boards = boards,
         )
+
+    /**
+     * A one-character query, which the site declines to search on either tab.
+     *
+     * It used to arrive as [SiteError.LoginRequired] and put a sign-in screen in front of a reader
+     * who was already signed in — the tell that the state did not exist and the refusal was falling
+     * through to the nearest one that did.
+     */
+    @Test
+    fun `a term the site will not search says so instead of asking for a sign-in`() {
+        setScreen(
+            searchedState().copy(
+                target = SearchTarget.USERS,
+                userLoadState = SearchLoadState.Error(SiteError.QueryTooShort),
+            ),
+        )
+
+        composeRule.onNodeWithText("关键词太短了").assertIsDisplayed()
+        composeRule.onNodeWithText("需要登录后查看").assertDoesNotExist()
+    }
 
     /**
      * The whole header goes: the field, the tabs and the scope row. That is ~170dp of an 800dp
