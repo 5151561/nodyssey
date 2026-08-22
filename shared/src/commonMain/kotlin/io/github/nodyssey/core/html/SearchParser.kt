@@ -1,7 +1,5 @@
 package io.github.nodyssey.core.html
 
-import com.fleeksoft.ksoup.Ksoup
-import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.model.PostListPage
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
@@ -21,7 +19,7 @@ object SearchParser {
      * renders `pager-next` as a disabled `<span>` and the ordinary rule already applies.
      */
     fun parsePosts(html: String, page: Int): PostListPage {
-        val document = Ksoup.parse(html, NodeSeekSite.BASE_URL)
+        val document = SiteHtml.parse(html)
         if (document.getElementById("nsk-frame") == null) {
             throw SiteException(SiteError.LoginRequired)
         }

@@ -1,7 +1,5 @@
 package io.github.nodyssey.core.html
 
-import com.fleeksoft.ksoup.Ksoup
-import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.model.TermsBlock
 import io.github.nodyssey.model.TermsDocument
 
@@ -9,7 +7,7 @@ object TermsParser {
     private val effectiveDatePattern = Regex("(\\d{4}-\\d{2}-\\d{2})")
 
     fun parse(html: String): TermsDocument {
-        val document = Ksoup.parse(html, NodeSeekSite.BASE_URL)
+        val document = SiteHtml.parse(html)
         val article = document.selectFirst("article")
             ?: error("Terms article not found")
         val elements = article.children().toList()

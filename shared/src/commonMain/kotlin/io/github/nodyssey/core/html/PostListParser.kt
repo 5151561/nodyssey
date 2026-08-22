@@ -1,6 +1,5 @@
 package io.github.nodyssey.core.html
 
-import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Element
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.model.PostListPage
@@ -10,7 +9,7 @@ import io.github.nodyssey.model.PostSummary
 object PostListParser {
 
     fun parse(html: String, page: Int): PostListPage {
-        val document = Ksoup.parse(html, NodeSeekSite.BASE_URL)
+        val document = SiteHtml.parse(html)
         val posts = document.select(Selectors.LIST_ITEM).mapNotNull(::parseItem)
         return PostListPage(
             posts = posts,

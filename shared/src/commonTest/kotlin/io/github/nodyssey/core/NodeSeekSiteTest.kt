@@ -39,6 +39,27 @@ class NodeSeekSiteTest {
         assertFalse(NodeSeekSite.isExternalWebUrl("content://example.provider/item"))
     }
 
+    /** The one non-web scheme a post may carry out of the app, and the shapes that only look like it. */
+    @Test
+    fun `an email address may leave the app but a scheme dressed as one may not`() {
+        assertTrue(NodeSeekSite.isMailUrl("mailto:hello@example.com"))
+        assertTrue(NodeSeekSite.isMailUrl("mailto:hello@example.com?subject=hi"))
+        assertTrue(NodeSeekSite.isMailUrl("MAILTO:hello@example.com"))
+
+        assertFalse(NodeSeekSite.isMailUrl("mailto:"))
+        assertFalse(NodeSeekSite.isMailUrl("mailto:?subject=hi"))
+        assertFalse(NodeSeekSite.isMailUrl("mailto://evil.example/"))
+        assertFalse(NodeSeekSite.isMailUrl("mailto:hello@example.com\nBcc: victim@example.com"))
+        assertFalse(NodeSeekSite.isMailUrl("javascript:alert(1)"))
+    }
+
+    /** An address is not a place on the site, so nothing may be prepended to it. */
+    @Test
+    fun `resolving leaves a mailto link alone`() {
+        assertEquals("mailto:hello@example.com", NodeSeekSite.absoluteUrl("mailto:hello@example.com"))
+        assertEquals("https://www.nodeseek.com/avatar/1.png", NodeSeekSite.absoluteUrl("/avatar/1.png"))
+    }
+
     /**
      * `rank² × 100`, read off the site's own `/progress` bundle — the 400 that used to be treated as
      * the only published threshold is just this at Lv1.

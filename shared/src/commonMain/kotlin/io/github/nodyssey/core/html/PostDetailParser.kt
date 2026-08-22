@@ -1,6 +1,5 @@
 package io.github.nodyssey.core.html
 
-import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Element
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.model.PostContent
@@ -10,7 +9,7 @@ import io.github.nodyssey.model.PostDetail
 object PostDetailParser {
 
     fun parse(html: String, postId: Long, page: Int): PostDetail {
-        val document = Ksoup.parse(html, NodeSeekSite.BASE_URL)
+        val document = SiteHtml.parse(html)
 
         val title = document.selectFirst(Selectors.DETAIL_TITLE)?.text()?.trim()
             ?: document.selectFirst(Selectors.DETAIL_TITLE_FALLBACK)?.text()?.trim()
