@@ -416,10 +416,10 @@ private fun RefusalBanner(refusal: SignInOutcome.Refused?) {
 /**
  * h1's 人机验证 strip, which is the widget itself plus whatever has to be said around it.
  *
- * Cloudflare draws its own checkbox, its own wording and its own branding, so the board's strip *is*
- * the widget once there is one — the surface below is the frame the board puts around it, not a
- * second copy of its contents. Only [VerificationState.NotWired] replaces it, because in that state
- * there is nothing to frame.
+ * No container of its own. Cloudflare's widget already draws a bordered, filled box with its own
+ * checkbox, wording and branding, so the board's strip *is* the widget once there is one — framing
+ * it again put a box inside a box. What is left here is layout: the widget at full width, and a
+ * line under it only when the app has something to add that the widget does not already say.
  *
  * The widget stays mounted once it is up, [VerificationState.Passed] included. Unmounting it would
  * destroy the web view and its script, and the very next thing that happens after a refusal is that
@@ -427,55 +427,65 @@ private fun RefusalBanner(refusal: SignInOutcome.Refused?) {
  */
 @Composable
 private fun VerificationBlock(verification: VerificationState, turnstile: @Composable () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    Column(
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            modifier = Modifier.padding(Spacing.sm),
-        ) {
-            if (verification is VerificationState.NotWired) {
-                VerificationNotice(Icons.Default.Info, stringResource(Res.string.sign_in_verify_not_wired))
-            } else {
-                turnstile()
-                when (verification) {
-                    VerificationState.Expired ->
-                        VerificationNotice(
-                            Icons.Default.Refresh,
-                            stringResource(Res.string.sign_in_verify_expired),
-                        )
+        if (verification is VerificationState.NotWired) {
+            VerificationNotice(Icons.Default.Info, stringResource(Res.string.sign_in_verify_not_wired))
+        } else {
+            turnstile()
+            when (verification) {
+                VerificationState.Expired ->
+                    VerificationNotice(
+                        Icons.Default.Refresh,
+                        stringResource(Res.string.sign_in_verify_expired),
+                    )
 
-                    VerificationState.NotRequired ->
-                        VerificationNotice(
-                            Icons.Default.CheckCircle,
-                            stringResource(Res.string.sign_in_verify_not_required),
-                        )
+                VerificationState.NotRequired ->
+                    VerificationNotice(
+                        Icons.Default.CheckCircle,
+                        stringResource(Res.string.sign_in_verify_not_required),
+                    )
 
-                    // 已通过 and 等待勾选 are both already drawn by the widget itself, in its own
-                    // words. A line of ours underneath would be the app narrating what the user can
-                    // see.
-                    else -> Unit
-                }
+                // 已通过 and 等待勾选 are both already drawn by the widget itself, in its own words.
+                // A line of ours underneath would be the app narrating what the user can see.
+                else -> Unit
             }
         }
     }
 }
 
+/**
+ * One line about the verification, in the form's own supporting-text voice.
+ *
+ * Reads as helper text under the widget rather than as a component: it sits on the page's surface
+ * now, so it names `onSurfaceVariant` explicitly instead of inheriting a container's content
+ * colour.
+ */
 @Composable
 private fun VerificationNotice(icon: ImageVector, text: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xs),
+        modifier = Modifier.padding(horizontal = Spacing.xs),
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-        Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
         Text(
             stringResource(Res.string.sign_in_verify_brand),
             style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.End,
         )
     }
