@@ -30,6 +30,16 @@ internal val Context.proxyDataStore: DataStore<Preferences> by preferencesDataSt
     name = "proxy",
 )
 
+/**
+ * 加密 DNS's own file rather than a corner of the proxy's.
+ *
+ * They are two settings that happen to sit in the same section of 设置: one decides where a request
+ * goes, the other how a name becomes an address, and either is useful with the other switched off.
+ */
+internal val Context.dnsDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "dns",
+)
+
 internal val Context.postComposerDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "post-composer",
 )

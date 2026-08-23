@@ -108,6 +108,8 @@ import io.github.nodyssey.ui.settings.AppLinks
 import io.github.nodyssey.ui.settings.ChangelogRoute
 import io.github.nodyssey.ui.settings.ChangelogViewModel
 import io.github.nodyssey.ui.settings.CommunityLinks
+import io.github.nodyssey.ui.settings.DohSettingsRoute
+import io.github.nodyssey.ui.settings.DohSettingsViewModel
 import io.github.nodyssey.ui.settings.NotificationSettingsRoute
 import io.github.nodyssey.ui.settings.NotificationSettingsViewModel
 import io.github.nodyssey.ui.settings.OpenSourceLicensesScreen
@@ -520,6 +522,7 @@ fun MainNavigation(
                     onOpenTheme = { backStack.add(ThemeSettingsKey) },
                     onOpenNotifications = { backStack.add(NotificationSettingsKey) },
                     onOpenProxy = { backStack.add(ProxySettingsKey) },
+                    onOpenDoh = { backStack.add(DohSettingsKey) },
                     onOpenImageHost = { backStack.add(ImageHostKey) },
                     onOpenAbout = { backStack.add(AboutAppKey) },
                     onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
@@ -563,6 +566,21 @@ fun MainNavigation(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
                 )
+            }
+
+            entry<DohSettingsKey> {
+                // Null on a platform that cannot apply a DoH server at all, where the row in 设置
+                // that leads here is not drawn either. Nothing is drawn if it is reached some other
+                // way, which is the honest answer for a screen whose every control would write a
+                // setting nothing reads.
+                container.doh?.let { doh ->
+                    val viewModel: DohSettingsViewModel =
+                        viewModel(factory = DohSettingsViewModel.factory(doh))
+                    DohSettingsRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                    )
+                }
             }
 
             entry<AboutAppKey> {

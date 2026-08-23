@@ -179,6 +179,8 @@ dependencies {
     // Networking: OkHttp shares its cookie jar with the WebView used for login.
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+    // 加密 DNS: the `Dns` implementation behind `AppDns`. See `core/net/AppDns.kt`.
+    implementation(libs.okhttp.dnsoverhttps)
 
     implementation(libs.kotlinx.serialization.json)
 

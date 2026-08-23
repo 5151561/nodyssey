@@ -6,12 +6,14 @@ import androidx.datastore.preferences.core.Preferences
 import coil3.SingletonImageLoader
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.NodysseyRelease
+import io.github.nodyssey.core.net.AppDns
 import io.github.nodyssey.core.net.AppProxyAuthenticator
 import io.github.nodyssey.core.net.AppProxySelector
 import io.github.nodyssey.core.net.AppSocksAuthenticator
 import io.github.nodyssey.core.net.DynamicSignTransport
 import io.github.nodyssey.core.net.LiveProxyConfig
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.nodyssey.core.net.dnsOverHttpsResolvers
 import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
@@ -64,6 +66,11 @@ import io.github.nodyssey.data.composer.ImageHostUploader
 import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostEditor
+import io.github.nodyssey.data.dns.DataStoreDohSettings
+import io.github.nodyssey.data.dns.DohCapabilities
+import io.github.nodyssey.data.dns.DohSettings
+import io.github.nodyssey.data.dns.DohSupport
+import io.github.nodyssey.data.dns.OkHttpDnsResolutionTester
 import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
 import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
@@ -107,7 +114,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import okhttp3.Cache
 import okhttp3.ConnectionPool
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -183,6 +192,75 @@ class DefaultAppContainer(
         LiveProxyConfig(appScope, proxySettings.config, onRoutingChanged = connectionPool::evictAll)
     }
 
+    private val dohSettings: DohSettings by lazy { DataStoreDohSettings(appContext.dnsDataStore) }
+
+    /**
+     * The client 加密 DNS's own queries travel on, and the one client in the graph that must not use
+     * [appDns].
+     *
+     * It is built here rather than derived from [okHttpClient] for three reasons, and each of them is
+     * a way the shared one would be wrong: its dispatcher is its own, because a lookup blocks the
+     * thread that asked for it and a query queued behind the calls waiting on it never returns; it
+     * carries neither the forum's cookie jar nor its `Referer`, because the resolver is a third party
+     * with no part in that session; and it has a cache, which is what turns a DoH server's TTL into
+     * lookups that cost nothing. `DnsOverHttps` replaces this client's own resolver with the
+     * bootstrap one, so there is no recursion to avoid beyond that.
+     *
+     * The proxy is shared, on the same reasoning as the image host's: a user routing the forum
+     * through a node is usually on a network that reaches a DoH endpoint no better.
+     */
+    private val dohClient: OkHttpClient by lazy {
+        OkHttpClient
+            .Builder()
+            .connectionPool(connectionPool)
+            .proxySelector(AppProxySelector(liveProxyConfig, ProxyClientKind.FORUM))
+            .proxyAuthenticator(AppProxyAuthenticator(liveProxyConfig))
+            // Small on purpose: a DNS answer is a few hundred bytes and the TTL throws it away
+            // shortly anyway. 清除缓存 may delete this directory out from under the running cache,
+            // which OkHttp recovers from by rebuilding its journal — the same deal `updates` has.
+            .cache(Cache(File(appContext.cacheDir, "doh"), DOH_CACHE_BYTES))
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build()
+    }
+
+    /**
+     * The resolver behind all three clients below.
+     *
+     * Every one of them, rather than the forum's alone: an app whose posts arrive over a DoH-resolved
+     * address while its avatars still ask the network's resolver is an app where the setting means
+     * something different on every screen — the same argument `ProxyScope.EVERYTHING` is the default
+     * for, minus the reason to opt out of it, since resolving a name costs nothing wherever it goes.
+     */
+    private val appDns: AppDns by lazy {
+        AppDns(
+            scope = appScope,
+            config = dohSettings.config,
+            resolvers = dnsOverHttpsResolvers { dohClient },
+            // A connection already open to an address the old resolver handed out would otherwise
+            // keep carrying requests, and the change would look like it had done nothing.
+            onResolverChanged = connectionPool::evictAll,
+        )
+    }
+
+    /**
+     * Both capabilities are yes here, and the reason is the same one: on this platform the app *is*
+     * the resolver. `AppDns` decides which record types to ask for and what to do when the answer
+     * does not come — neither of which is a question `NSURLSession` lets its side ask.
+     */
+    override val doh: DohSupport by lazy {
+        DohSupport(
+            settings = dohSettings,
+            tester = OkHttpDnsResolutionTester(
+                dns = { appDns },
+                host = NodeSeekSite.BASE_URL.toHttpUrl().host,
+                dispatchers = dispatchers,
+                clock = clock,
+            ),
+            capabilities = DohCapabilities(canChooseRecordTypes = true, canFallBackToSystem = true),
+        )
+    }
+
     override val okHttpClient: OkHttpClient by lazy {
         // SOCKS auth has no per-client hook, only this process-wide one — see [AppSocksAuthenticator].
         java.net.Authenticator.setDefault(AppSocksAuthenticator(liveProxyConfig))
@@ -190,6 +268,8 @@ class DefaultAppContainer(
             .Builder()
             .cookieJar(WebViewCookieJar(cookieStore))
             .connectionPool(connectionPool)
+            // 加密 DNS, or the platform resolver while it is off — see [AppDns].
+            .dns(appDns)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             // A ProxySelector, not `.proxy(Proxy)`: consulted on every call rather than baked in once,
@@ -408,6 +488,7 @@ class DefaultAppContainer(
         OkHttpClient
             .Builder()
             .connectionPool(connectionPool)
+            .dns(appDns)
             // The proxy is shared even though nothing else is: a user who routes the forum through a
             // node is usually on a network that reaches the image host no better. `FORUM_ONLY` is how
             // they say otherwise, and this selector is what reads it.
@@ -468,6 +549,7 @@ class DefaultAppContainer(
         OkHttpClient
             .Builder()
             .connectionPool(connectionPool)
+            .dns(appDns)
             // Same reasoning as `imageHostClient`: whatever reaches the forum is the user's best guess
             // at what reaches a release download too, unless they picked `FORUM_ONLY`.
             .proxySelector(AppProxySelector(liveProxyConfig, ProxyClientKind.THIRD_PARTY))
@@ -499,6 +581,11 @@ class DefaultAppContainer(
     }
 
     override val apkInstaller: ApkInstaller by lazy { AndroidApkInstaller(appContext, dispatchers) }
+
+    private companion object {
+        /** A DNS answer is a few hundred bytes; this holds far more of them than the app ever asks for. */
+        const val DOH_CACHE_BYTES = 1L * 1024 * 1024
+    }
 
     override val appCacheStore: AppCacheStore by lazy {
         DefaultAppCacheStore(

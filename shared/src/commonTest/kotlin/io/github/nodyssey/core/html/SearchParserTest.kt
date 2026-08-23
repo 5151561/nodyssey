@@ -28,7 +28,7 @@ class SearchParserTest {
      * carries `id="nsk-body"`, which classifies it as real content before any status is consulted.
      */
     @Test
-    fun `a term the site will not search is its own failure, not an empty result`() {
+    fun `a term the site will not search is its own failure rather than an empty result`() {
         val html = Fixtures.load("search-too-short.html")
 
         val failure =

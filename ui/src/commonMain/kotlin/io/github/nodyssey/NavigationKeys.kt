@@ -49,6 +49,16 @@ data object NotificationSettingsKey : NavKey
 data object ProxySettingsKey : NavKey
 
 /**
+ * 加密 DNS — a child of [SettingsKey]'s 网络 group, beside 代理.
+ *
+ * Reachable only where `AppContainer.dohSettings` is non-null: 设置 hides the row that leads here on a
+ * platform whose HTTP client cannot be handed a resolver, and the entry draws nothing if it is
+ * reached anyway.
+ */
+@Serializable
+data object DohSettingsKey : NavKey
+
+/**
  * 图床 — which image host is connected, and with what.
  *
  * A child of [SettingsKey] rather than of 账号设置: the host is not a NodeSeek account setting at all.
