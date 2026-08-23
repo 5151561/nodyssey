@@ -40,15 +40,18 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalAutofillManager
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -127,8 +130,34 @@ fun SignInRoute(
         onRetry = viewModel::retry,
     )
 
+    /*
+     * The save half of autofill, which naming the fields' content types does not buy on its own.
+     *
+     * A password manager offers to save when the *autofill context* is committed, and the framework
+     * commits one by itself when it sees the screen it was filling go away. In a single-Activity
+     * Compose app it never sees that: the whole sign-in is one window, so without saying so here the
+     * credentials the user just typed are filled from a manager happily and never offered back to
+     * one.
+     *
+     * Committed only on a session that actually landed. A password the site refused is not worth
+     * offering to save, and 2FA is the reason this is not at the credentials leg: the first call
+     * succeeding still leaves a sign-in that can fail.
+     */
+    val autofillManager = LocalAutofillManager.current
+    val hasSignedIn by rememberUpdatedState(state.signedIn)
+
     LaunchedEffect(state.signedIn) {
-        if (state.signedIn) onSignedIn()
+        if (!state.signedIn) return@LaunchedEffect
+        autofillManager?.commit()
+        onSignedIn()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            // Left without signing in — abandoned, refused, or gone to the web page instead. Dropping
+            // the context is what stops a manager offering to save a password that did not work.
+            if (!hasSignedIn) autofillManager?.cancel()
+        }
     }
 
     /*
@@ -260,7 +289,12 @@ fun SignInScreen(
                 enabled = state.isFormEnabled,
                 label = { Text(stringResource(Res.string.sign_in_account)) },
                 lineLimits = TextFieldLineLimits.SingleLine,
-                modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Username },
+                // Both, because the label offers both and the endpoint takes either in `username`.
+                // A manager holding only an email would not recognise a username-only field.
+                modifier =
+                Modifier.fillMaxWidth().semantics {
+                    contentType = ContentType.Username + ContentType.EmailAddress
+                },
             )
 
             SecureTextField(

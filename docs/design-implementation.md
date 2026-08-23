@@ -367,6 +367,15 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
   否则用户会拿一个已经花掉的 token 再点一次，然后把第二次同样的拒绝读成「密码又错了」。
 - 两步验证是独立页，6 个格子是**一个** `BasicTextField` 加 `decorator`，不是六个输入框：
   六个框在粘贴、退格和自动填充上都是坏的。数字过滤用 `digitsOnly(6)`。
+- 两个输入框都报 `ContentType`：账号是 `Username + EmailAddress`（标签写着「用户名 / 邮箱」，
+  只报其中一个会让管理器认不出来），密码是 `Password`。密码框用 `SecureTextField`。
+  两步验证那个框**不报** `SmsOtpCode`——那是给短信验证码用的，会招来错误的自动填充，
+  这里的码来自验证器 App。
+- 登录成功时调 `LocalAutofillManager.commit()`，离开而没登上时调 `cancel()`。
+  光报 `ContentType` 只买到「填」，买不到「存」：密码管理器是在 autofill context 提交时才问要不要保存，
+  而框架自己提交的时机是「看到正在填的那屏消失」——单 Activity 的 Compose 应用里它永远看不到，
+  所以必须由 App 说。只在真拿到会话时才 commit：站点拒绝掉的密码不值得存，
+  两步验证也是这条规则的理由（第一腿成功不等于登录成功）。
 - 「当前验证码剩余 N 秒」从时钟算，不是从 30 倒数——TOTP 的窗口是墙上时间的属性，
   从进页面才开始数会差掉第一腿请求的耗时。这一段不联网。
   重复读表的循环在 `SignInRoute` 的 `produceState` 里，不在 ViewModel 里：
