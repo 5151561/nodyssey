@@ -103,6 +103,9 @@ androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecy
 androidx-material3-adaptive-navigation3 = { module = "androidx.compose.material3.adaptive:adaptive-navigation3", version.ref = "material3Adaptive" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-logging = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
+# DoH 设置's resolver. OkHttp's own extension artifact rather than a hand-rolled DNS-wire codec:
+# `Dns` is the interface the client already takes, and this is the implementation of it Square ships.
+okhttp-dnsoverhttps = { module = "com.squareup.okhttp3:okhttp-dnsoverhttps", version.ref = "okhttp" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 # jsoup's API reimplemented on Kotlin Multiplatform. The parsers moved to `:shared` are written
 # against this; `:app` keeps jsoup for the HTML it still handles on the Android side.

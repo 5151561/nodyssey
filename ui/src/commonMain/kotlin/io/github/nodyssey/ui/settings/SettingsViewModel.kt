@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.PostRepository
+import io.github.nodyssey.data.dns.DohSupport
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.ReportFormat
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -31,6 +33,8 @@ class SettingsViewModel(
     private val updates: AppUpdateRepository,
     imageHost: ImageHostRepository,
     appVersion: AppVersion,
+    /** Null where the platform cannot apply one, which is how the 加密 DNS row knows to stay away. */
+    doh: DohSupport?,
 ) : ViewModel() {
     private val clearingCache = MutableStateFlow(false)
 
@@ -39,20 +43,33 @@ class SettingsViewModel(
 
     private val versionName = appVersion.name.ifBlank { "—" }
 
+    /**
+     * The two rows on this screen that report on a screen behind them, folded into one flow.
+     *
+     * Folded rather than combined alongside the rest because `combine` has a typed overload for five
+     * flows and this would have been the sixth; two subtitles are a smaller thing than an array of
+     * `Any?` to unpack.
+     */
+    private val entries =
+        doh?.settings?.config?.let { config ->
+            combine(imageHost.current, config) { host, doh -> SettingsEntries(host.isConfigured, doh.enabled) }
+        } ?: imageHost.current.map { host -> SettingsEntries(host.isConfigured, dohEnabled = null) }
+
     val uiState: StateFlow<SettingsUiState> =
         combine(
             settings.settings,
             clearingCache,
             cacheSizeBytes,
             updates.state,
-            imageHost.current,
-        ) { values, clearing, cacheSize, update, imageHostConfig ->
+            entries,
+        ) { values, clearing, cacheSize, update, entries ->
             SettingsUiState(
                 settings = values,
                 isClearingCache = clearing,
                 cacheSizeBytes = cacheSize,
                 versionName = versionName,
-                imageHostConnected = imageHostConfig.isConfigured,
+                imageHostConnected = entries.imageHostConnected,
+                dohEnabled = entries.dohEnabled,
                 // Read off the shared updater rather than checked here: the answer is already in
                 // memory by the time this screen opens, and 我的 shows the same dot from the same
                 // state.
@@ -152,6 +169,7 @@ class SettingsViewModel(
                         updates = container.appUpdateRepository,
                         imageHost = container.imageHostRepository,
                         appVersion = container.appVersion,
+                        doh = container.doh,
                     )
                 }
             }
@@ -169,4 +187,11 @@ data class SettingsUiState(
     val updateVersionName: String? = null,
     /** Whether the selected image host is usable — the 图床 row's subtitle, and nothing more of it. */
     val imageHostConnected: Boolean = false,
+    /**
+     * Whether 加密 DNS is on, or null where the platform has none to offer — in which case the row is
+     * not drawn at all, the same way 默认打开方式 is absent where the system has no such switch.
+     */
+    val dohEnabled: Boolean? = null,
 )
+
+private data class SettingsEntries(val imageHostConnected: Boolean, val dohEnabled: Boolean?)

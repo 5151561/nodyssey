@@ -57,6 +57,11 @@ import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.createPreferenceDataStore
+import io.github.nodyssey.data.dns.DataStoreDohSettings
+import io.github.nodyssey.data.dns.DohCapabilities
+import io.github.nodyssey.data.dns.DohSettings
+import io.github.nodyssey.data.dns.DohSupport
+import io.github.nodyssey.data.dns.resolvesOverHttps
 import io.github.nodyssey.data.imagehost.DataStoreImageHostSettings
 import io.github.nodyssey.data.imagehost.DefaultImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostRepository
@@ -79,6 +84,8 @@ import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
 import io.github.plaza.core.net.AppleCookieStore
+import io.github.plaza.core.net.EncryptedNameResolution
+import io.github.plaza.core.net.EncryptedResolver
 import io.github.plaza.core.net.NSUrlSessionTransport
 import io.github.plaza.core.net.ProxiedUrlSession
 import io.github.plaza.core.net.ProxyRoute
@@ -86,6 +93,7 @@ import io.github.plaza.core.net.ProxyRouteType
 import io.github.plaza.core.net.SessionCookies
 import io.github.plaza.core.net.SiteHtmlClient
 import io.github.plaza.core.net.UserAgent
+import io.github.plaza.core.net.WebUrl
 import io.github.plaza.core.net.appleUrlSession
 import io.github.plaza.core.net.deviceAcceptLanguage
 import io.github.plaza.core.readAppVersion
@@ -258,6 +266,49 @@ class IosAppContainer(
     }
 
     override val proxyConnectionTester: ProxyConnectionTester by lazy { IosProxyConnectionTester(jsonClient) }
+
+    private val dohSettings: DohSettings by lazy { DataStoreDohSettings(createPreferenceDataStore("dns")) }
+
+    /**
+     * 加密 DNS, with two of its switches missing and the third path to it taken.
+     *
+     * Neither capability is available here and both refusals are quoted from `privacy_context.h` —
+     * see [EncryptedNameResolution], which is also why this needs no session rebuilt and no client
+     * handed anything: the setting lands on the process's default privacy context, and every
+     * resolution in the process inherits it.
+     *
+     * 测试解析 is a request rather than a lookup for the same reason; see [IosDnsResolutionTester].
+     */
+    override val doh: DohSupport by lazy {
+        DohSupport(
+            settings = dohSettings,
+            tester = IosDnsResolutionTester(
+                session = { forumSession.current },
+                url = NodeSeekSite.BASE_URL,
+                host = WebUrl.parse(NodeSeekSite.BASE_URL)?.host.orEmpty(),
+                clock = clock,
+            ),
+            capabilities = DohCapabilities(canChooseRecordTypes = false, canFallBackToSystem = false),
+        )
+    }
+
+    /**
+     * Applied at construction rather than lazily, because unlike every other member here this one is
+     * not read by anybody: its whole effect is a side effect on the process, and a resolver setting
+     * that only takes hold once somebody opens 设置 is a resolver setting that does not work.
+     */
+    private val encryptedNameResolution =
+        EncryptedNameResolution(
+            appScope,
+            dohSettings.config
+                .map { config ->
+                    if (!config.resolvesOverHttps()) {
+                        null
+                    } else {
+                        EncryptedResolver(url = config.serverUrl, serverAddresses = config.bootstrap)
+                    }
+                },
+        )
 
     override val postRepository: PostRepository by lazy {
         OfflineFirstPostRepository(

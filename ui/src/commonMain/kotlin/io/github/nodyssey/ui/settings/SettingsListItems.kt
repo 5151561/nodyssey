@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -108,6 +109,11 @@ internal fun SettingsRow(
     bottom: Boolean = false,
     subtitle: String? = null,
     onClick: (() -> Unit)? = null,
+    /**
+     * Set on a row that is one of several choices, so the row reads as a radio button rather than as
+     * a button that happens to have one drawn in it. Takes [onClick] as its action.
+     */
+    selected: Boolean? = null,
     checked: Boolean? = null,
     onCheckedChange: ((Boolean) -> Unit)? = null,
     enabled: Boolean = true,
@@ -127,6 +133,14 @@ internal fun SettingsRow(
                         enabled = enabled,
                         role = Role.Switch,
                         onValueChange = onCheckedChange,
+                    )
+
+                selected != null && onClick != null ->
+                    Modifier.selectable(
+                        selected = selected,
+                        enabled = enabled,
+                        role = Role.RadioButton,
+                        onClick = onClick,
                     )
 
                 onClick != null -> Modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick)
@@ -155,6 +169,14 @@ internal fun SettingsRow(
         }
     }
 }
+
+/**
+ * What a screen dims the settings *behind* a master switch to.
+ *
+ * Shared by the three screens that have one, for the same reason the group shapes are: a settings
+ * screen that dims to a different value than its neighbour looks broken rather than different.
+ */
+internal const val DISABLED_ALPHA = 0.5f
 
 /**
  * The M3E connected button group: one full-round selected segment with a check, 5dp seams between

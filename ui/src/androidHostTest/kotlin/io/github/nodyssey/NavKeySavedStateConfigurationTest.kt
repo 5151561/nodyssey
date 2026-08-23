@@ -135,6 +135,7 @@ private val EVERY_KEY: List<NavKey> =
         DynamicColorKey,
         NotificationSettingsKey,
         ProxySettingsKey,
+        DohSettingsKey,
         ImageHostKey,
         AboutAppKey,
         AboutCommunityKey,

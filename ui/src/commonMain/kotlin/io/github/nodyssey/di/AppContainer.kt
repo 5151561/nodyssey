@@ -25,6 +25,7 @@ import io.github.nodyssey.data.composer.CommentComposerRepository
 import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostEditor
+import io.github.nodyssey.data.dns.DohSupport
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
@@ -141,4 +142,19 @@ interface AppContainer {
      */
     val proxySettings: ProxySettings
     val proxyConnectionTester: ProxyConnectionTester
+
+    /**
+     * 加密 DNS — a DoH server for the app's own lookups, and the test that proves it answers.
+     *
+     * Both platforms have one, by two different routes. Android hands each of its `OkHttpClient`s a
+     * `Dns`, so the resolver is the app's own object. Apple has no such parameter on `NSURLSession`
+     * — what it has is `nw_privacy_context_require_encrypted_name_resolution` on
+     * `NW_DEFAULT_PRIVACY_CONTEXT`, which the header describes as inherited by every other
+     * resolution in the same process, `NSURLSession` included. What that costs is two of the
+     * switches: see `DohCapabilities`.
+     *
+     * Nullable because a platform could still lack it, and 设置 reads the null to leave the row out
+     * rather than offer a screen that stores a server nothing reads.
+     */
+    val doh: DohSupport?
 }

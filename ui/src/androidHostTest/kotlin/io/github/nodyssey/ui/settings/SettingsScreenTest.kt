@@ -510,4 +510,71 @@ class SettingsScreenTest {
 
         assertTrue(opened)
     }
+
+    /**
+     * 加密 DNS is a row about a resolver the app can actually be handed, so a platform whose HTTP
+     * client takes none does not get the row at all — the same treatment 默认打开方式 gets where the
+     * system has no such switch.
+     */
+    @Test
+    fun `the encrypted DNS row is absent where the platform has none`() {
+        composeRule.setContent {
+            PlazaTheme {
+                SettingsScreen(
+                    state = SettingsUiState(dohEnabled = null),
+                    onBack = {},
+                    onOpenTheme = {},
+                    onThemeModeChange = {},
+                    onOneHandModeChange = {},
+                    onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = {},
+                    onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
+                    onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("代理").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("加密 DNS").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the encrypted DNS row reports whether it is on, and opens the page`() {
+        var opened = false
+        composeRule.setContent {
+            PlazaTheme {
+                SettingsScreen(
+                    state = SettingsUiState(dohEnabled = true),
+                    onBack = {},
+                    onOpenTheme = {},
+                    onThemeModeChange = {},
+                    onOneHandModeChange = {},
+                    onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = {},
+                    onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
+                    onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
+                    onOpenDoh = { opened = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("已开启，App 内的域名走 DoH 解析").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("加密 DNS").performScrollTo().performClick()
+
+        assertTrue(opened)
+    }
 }

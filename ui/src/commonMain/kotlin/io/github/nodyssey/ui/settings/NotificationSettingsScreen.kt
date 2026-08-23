@@ -274,8 +274,6 @@ fun NotificationSettingsScreen(
     }
 }
 
-private const val DISABLED_ALPHA = 0.5f
-
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun NotificationSettingsPreview() {

@@ -62,6 +62,9 @@ import io.github.nodyssey.ui.resources.settings_body_size_value
 import io.github.nodyssey.ui.resources.settings_clear_cache
 import io.github.nodyssey.ui.resources.settings_clear_cache_size
 import io.github.nodyssey.ui.resources.settings_content
+import io.github.nodyssey.ui.resources.settings_doh_entry
+import io.github.nodyssey.ui.resources.settings_doh_entry_hint_off
+import io.github.nodyssey.ui.resources.settings_doh_entry_hint_on
 import io.github.nodyssey.ui.resources.settings_home_page_bar
 import io.github.nodyssey.ui.resources.settings_home_page_bar_hint
 import io.github.nodyssey.ui.resources.settings_licenses
@@ -114,6 +117,7 @@ fun SettingsRoute(
     onOpenTheme: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenProxy: () -> Unit,
+    onOpenDoh: () -> Unit,
     onOpenImageHost: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenLicenses: () -> Unit,
@@ -143,6 +147,7 @@ fun SettingsRoute(
         onClearCache = viewModel::clearCache,
         onOpenNotifications = onOpenNotifications,
         onOpenProxy = onOpenProxy,
+        onOpenDoh = onOpenDoh,
         onOpenImageHost = onOpenImageHost,
         onOpenAbout = onOpenAbout,
         onOpenLicenses = onOpenLicenses,
@@ -172,6 +177,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onOpenNotifications: () -> Unit = {},
     onOpenProxy: () -> Unit = {},
+    onOpenDoh: () -> Unit = {},
     onOpenImageHost: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
@@ -427,9 +433,25 @@ fun SettingsScreen(
                     title = stringResource(Res.string.settings_proxy_entry),
                     subtitle = stringResource(Res.string.settings_proxy_entry_hint),
                     top = true,
-                    bottom = true,
+                    bottom = state.dohEnabled == null,
                     onClick = onOpenProxy,
                 )
+                // Absent rather than disabled where the platform cannot apply a DoH server at all —
+                // see [SettingsUiState.dohEnabled], and 默认打开方式 above for the same treatment.
+                state.dohEnabled?.let { enabled ->
+                    SettingsRow(
+                        title = stringResource(Res.string.settings_doh_entry),
+                        subtitle = stringResource(
+                            if (enabled) {
+                                Res.string.settings_doh_entry_hint_on
+                            } else {
+                                Res.string.settings_doh_entry_hint_off
+                            },
+                        ),
+                        bottom = true,
+                        onClick = onOpenDoh,
+                    )
+                }
             }
 
             SettingsSectionTitle(stringResource(Res.string.settings_about))
