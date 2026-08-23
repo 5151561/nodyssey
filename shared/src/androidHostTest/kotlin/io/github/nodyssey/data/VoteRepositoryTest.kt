@@ -240,6 +240,7 @@ private class FakeVoteApi(
         path: String,
         body: String,
         referer: String,
+        extraHeaders: Map<String, String>,
     ): JsonPostResponse {
         recorded += Triple(path, method, body)
         return requireNotNull(writes[path]) { "No write stubbed for $path" }

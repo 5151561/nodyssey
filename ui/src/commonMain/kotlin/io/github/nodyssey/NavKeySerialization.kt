@@ -66,6 +66,7 @@ internal val NavKeySavedStateConfiguration =
                     subclass(InviteKey::class)
                     subclass(RulingKey::class)
                     subclass(ImageViewerKey::class)
+                    subclass(SignInKey::class)
                     subclass(WebKey::class)
                 }
             }

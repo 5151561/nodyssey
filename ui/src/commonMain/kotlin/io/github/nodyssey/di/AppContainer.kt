@@ -30,6 +30,7 @@ import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.session.SessionRepository
+import io.github.nodyssey.data.session.SignInRepository
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.plaza.core.AppClock
@@ -79,6 +80,9 @@ interface AppContainer {
     /** The selected image host — a service of its own, with its own credential. See [ImageHostRepository]. */
     val imageHostRepository: ImageHostRepository
     val sessionRepository: SessionRepository
+
+    /** 登录 · 原生表单 (h1). Apart from [sessionRepository], which only reads the cookie jar. */
+    val signInRepository: SignInRepository
     val userSpaceRepository: UserSpaceRepository
 
     /**

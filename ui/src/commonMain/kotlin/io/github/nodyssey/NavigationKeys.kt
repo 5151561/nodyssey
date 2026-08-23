@@ -281,6 +281,16 @@ data class ImageViewerKey(
 ) : NavKey
 
 /**
+ * 登录 · 原生表单 (h1) — the username-and-password form, as opposed to the site's own page.
+ *
+ * Every 登录 in the app lands here now. The site's own page is still reachable, from the two places
+ * that need it: 改用网页登录 when the verification widget cannot start, and 忘记密码 / 还没有账号,
+ * which have no verified URL of their own to go to.
+ */
+@Serializable
+data object SignInKey : NavKey
+
+/**
  * Opens the restricted in-app browser for login and Cloudflare challenges.
  *
  * [goal] is what turns it from a browser into a step in a flow: it names the cookie the screen is

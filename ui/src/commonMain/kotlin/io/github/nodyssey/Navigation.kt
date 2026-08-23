@@ -77,6 +77,8 @@ import io.github.nodyssey.ui.composer.PostComposerViewModel
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
 import io.github.nodyssey.ui.history.ReadHistoryRoute
 import io.github.nodyssey.ui.history.ReadHistoryViewModel
+import io.github.nodyssey.ui.login.SignInRoute
+import io.github.nodyssey.ui.login.SignInViewModel
 import io.github.nodyssey.ui.login.WebViewGoal
 import io.github.nodyssey.ui.login.WebViewRoute
 import io.github.nodyssey.ui.messages.MessageThreadRoute
@@ -398,7 +400,7 @@ fun MainNavigation(
                     },
                     onCreatePost = { backStack.add(PostComposerKey()) },
                     onSignIn = {
-                        backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
+                        backStack.add(SignInKey)
                     },
                     onVerify = {
                         backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE))
@@ -423,7 +425,7 @@ fun MainNavigation(
                             UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid),
                         )
                     },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                     onNavigationBarHiddenChanged = { hidden ->
                         if (!currentListDetailExpanded) tabBarHiddenByScroll = hidden
@@ -434,7 +436,7 @@ fun MainNavigation(
             entry<NotificationsKey> {
                 NotificationsRoute(
                     viewModel = notificationsViewModel,
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = {
                         backStack.add(
                             WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
@@ -463,7 +465,7 @@ fun MainNavigation(
                     viewModel = viewModel,
                     showBackButton = !(currentListDetailExpanded && backStack.showsListPane()),
                     onBack = { backStack.removeLastOrNull() },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = {
                         backStack.add(
                             WebKey(
@@ -490,7 +492,7 @@ fun MainNavigation(
                 val updateState by container.appUpdateRepository.state.collectAsStateWithLifecycle()
                 ProfileRoute(
                     viewModel = viewModel,
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onSettings = { backStack.add(SettingsKey) },
                     hasAppUpdate = updateState.available != null,
                     onAccountSettings = { backStack.add(AccountSettingsKey) },
@@ -685,7 +687,7 @@ fun MainNavigation(
                     onEditProfile = { backStack.add(AccountProfileFieldsKey) },
                     onOpenBrowser = openWebUrl,
                     onLinkClick = openContentUrl,
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                 )
             }
@@ -698,7 +700,7 @@ fun MainNavigation(
                     onBack = { backStack.removeLastOrNull() },
                     onPostClick = { postId -> backStack.add(PostDetailKey(postId)) },
                     onOpenBrowser = openWebUrl,
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = {
                         backStack.add(
                             WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
@@ -735,7 +737,7 @@ fun MainNavigation(
                     onOpenBrowser = { url ->
                         backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
                     },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                 )
             }
 
@@ -754,7 +756,7 @@ fun MainNavigation(
                             WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
                         )
                     },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                 )
             }
 
@@ -782,7 +784,7 @@ fun MainNavigation(
                             ),
                         )
                     },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                 )
             }
 
@@ -803,7 +805,7 @@ fun MainNavigation(
                             WebKey(ledgerUrl ?: NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.MANAGE),
                         )
                     },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = {
                         backStack.add(
                             WebKey(
@@ -850,7 +852,7 @@ fun MainNavigation(
                 ProfileFieldsRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = {
                         backStack.add(
                             WebKey(
@@ -876,7 +878,7 @@ fun MainNavigation(
                     onOpenEnrolmentUri = { uri ->
                         runCatching { uriHandler.openUri(uri) }.isSuccess
                     },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = {
                         backStack.add(
                             WebKey(
@@ -907,7 +909,7 @@ fun MainNavigation(
                             ),
                         )
                     },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = {
                         backStack.add(
                             WebKey(
@@ -926,7 +928,7 @@ fun MainNavigation(
                 BlockListRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = {
                         backStack.add(
                             WebKey(
@@ -945,7 +947,7 @@ fun MainNavigation(
                 PreferencesRoute(
                     viewModel = viewModel,
                     onBack = { backStack.removeLastOrNull() },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = {
                         backStack.add(
                             WebKey(
@@ -984,7 +986,7 @@ fun MainNavigation(
                     onOpenBrowser = { url ->
                         backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
                     },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                 )
             }
 
@@ -1022,7 +1024,7 @@ fun MainNavigation(
                     onVerify = { url ->
                         backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
                     },
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                 )
             }
 
@@ -1103,7 +1105,7 @@ fun MainNavigation(
                     onOpenBrowser = openWebUrl,
                     onLinkClick = openContentUrl,
                     onAuthorClick = openSpace,
-                    onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                    onSignIn = { backStack.add(SignInKey) },
                     onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
                     onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
                     onEdit = { target -> backStack.add(PostComposerKey(target)) },
@@ -1117,7 +1119,7 @@ fun MainNavigation(
                                 key = "vote-$voteId",
                                 factory = VoteViewModel.factory(container, voteId),
                             ),
-                            onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                            onSignIn = { backStack.add(SignInKey) },
                             onUserClick = openSpace,
                         )
                     },
@@ -1132,7 +1134,7 @@ fun MainNavigation(
                                 key = "stardust-${node.memberId}-${node.refId}",
                                 factory = StardustReceiveViewModel.factory(container, node),
                             ),
-                            onSignIn = { backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN)) },
+                            onSignIn = { backStack.add(SignInKey) },
                         )
                     },
                 )
@@ -1155,7 +1157,7 @@ fun MainNavigation(
                     viewModel = viewModel,
                     onClose = { backStack.removeLastOrNull() },
                     onSignIn = {
-                        backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
+                        backStack.add(SignInKey)
                     },
                     onVerify = {
                         backStack.add(WebKey(webUrl, siteTitle, WebViewGoal.CHALLENGE))
@@ -1168,6 +1170,30 @@ fun MainNavigation(
                         // An edit returns to the thread it came from, which is already underneath —
                         // pushing it again would stack a second copy of the screen being updated.
                         if (key.edit == null) postId?.let { backStack.add(PostDetailKey(it)) }
+                    },
+                )
+            }
+
+            entry<SignInKey> {
+                val viewModel: SignInViewModel = viewModel(factory = SignInViewModel.factory(container))
+                SignInRoute(
+                    viewModel = viewModel,
+                    // The widget's web view has to look like the app's other requests, or Cloudflare
+                    // is grading a different client than the one that will send the token.
+                    userAgent = container.userAgent,
+                    onClose = { backStack.removeLastOrNull() },
+                    // The screen that asked for a session is underneath; dropping this one puts the
+                    // user back on it, and its own reload keys on the session generation.
+                    onSignedIn = { backStack.removeLastOrNull() },
+                    onUseWebSignIn = {
+                        backStack.removeLastOrNull()
+                        backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
+                    },
+                    // 忘记密码 and 还没有账号 both land on the site's own sign-in page, on top of this
+                    // screen rather than instead of it. Neither has a verified URL of its own, and a
+                    // guessed one would be a button that goes nowhere.
+                    onOpenSiteSignInPage = {
+                        backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
                     },
                 )
             }

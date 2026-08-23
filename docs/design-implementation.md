@@ -327,3 +327,74 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 - 自定义种子色的调色面板画的是 HCT 的鲜艳度 × 明度，不是 HSV 的饱和度 × 明度：
   生成器只读种子的色相和鲜艳度，HSV 面板上竖直拖半屏会几乎不改变 App 的观感。
   外观与设计稿一致，但面板上每个位置都对应一套能分辨出来的配色。
+
+## 批次 H
+
+| 画板 | 实现状态 | 主要代码 | 仍需注意 |
+|---|---|---|---|
+| h1 登录 · 原生表单（三态） | 已按稿实现并接入 | `ui/login/SignInScreen.kt`、`TwoFactorScreen.kt`、`SignInViewModel.kt`、`TurnstileWidget.kt`（+ android / ios / jvm 三个 actual）、`:shared` 的 `data/session/SignInRepository.kt`、`NodeSeekSignInRepository.kt`、`NavigationKeys.kt`、`Navigation.kt` | 全应用 22 处 `onSignIn` 已指向 `SignInKey`；网页登录仍保留为挂件起不来时的退路。**Turnstile 是否在真机上通过，只有真机能证明** |
+
+## h1 接口事实
+
+协议是从站点自己的登录页读出来的（`www.nodeseek.com/signIn.html` 的 JS bundle），不是文档，
+所以 `NodeSeekSignInRepositoryTest` 就是这份记录本身——站点改了哪一条，是它先红。
+
+- 两条腿走**同一个** endpoint：`POST /api/account/signIn`。画板「2FA 是否走同一 endpoint」的待校准项到此为止。
+- 第一腿 body `{"username","password"}`，头上带 `x-captcha-token: <turnstile>` 和 `x-captcha-source: turnstile`。
+- 第二腿 body `{"otp_code","otp_session"}`，**不重发账号密码，也不带验证头**——`otpSession` 已经代表了前一腿。
+- 响应 `{success, message, need2FA, otpSession, redirect, redirectEmail}`。
+  `success && need2FA` 是「密码对了，还差一步」；`success` 单独出现是登录完成；`success:false` 时 `message` 就是要显示的那句话。
+- 唯一一个机读错误码是 `OTP_EXPIRED_OR_NOT_EXIST`，含义是 `otpSession` 过期，只能回到密码那一步重来。
+- Turnstile sitekey：生产 `0x4AAAAAAAaNy7leGjewpVyR`（另有一个 `0x4AAAAAACYfzKxNfR026Cpk` 只在 localhost / 127.0.0.1 用）。
+
+## h1 与画板不一致的三处
+
+- **「保持登录（30 天）」没有画。** 接口的 body 只有 `username` 和 `password`，没有任何 remember/keep 字段。
+  会话时长是站点定的，App 无从表达；画一个不接线的勾比不画更糟。
+- **「使用恢复码」换成了「改用网页登录」。** 站点自己对「忘记 2FA」的答复是**邮箱登录**（另一套登录方式，
+  有自己的流程），不是恢复码；endpoint 上也没有可以投递恢复码的字段。
+- **顶栏的帮助按钮没画。** 画板没说它打开什么，也没有可核实的目标页。
+- 密码框沿用 `SecureTextField` 的 `RevealLastTyped`，没有画板上那个眼睛开关——
+  和 d6 2/4「安全」是同一个决定，理由见 `SecurityScreen.kt` 里 `PasswordField` 的注释。
+
+## h1 验收对照
+
+- 三张卡是 `SignInUiState` 的三个值，不是三个页面：卡 2 只是 `isSubmitting` 和 `refusal` 的组合。
+- 提交不会让用户损失已经输入的东西：拒绝和请求失败都不清空任何一栏，Snackbar 的「重试」原样再发一次。
+- 提交中整表单只读，按钮换成转圈和「登录中…」，重复点击进不到网络层。
+- 拒绝优先显示**站点自己那句话**；画板上「连续 5 次失败后需要等待 10 分钟」是占位数字，没有进任何字符串资源。
+- 一次被拒绝会把验证块置为「已过期」——站点自己的表单也是每次失败就重置挂件，
+  否则用户会拿一个已经花掉的 token 再点一次，然后把第二次同样的拒绝读成「密码又错了」。
+- 两步验证是独立页，6 个格子是**一个** `BasicTextField` 加 `decorator`，不是六个输入框：
+  六个框在粘贴、退格和自动填充上都是坏的。数字过滤用 `digitsOnly(6)`。
+- 「当前验证码剩余 N 秒」从时钟算，不是从 30 倒数——TOTP 的窗口是墙上时间的属性，
+  从进页面才开始数会差掉第一腿请求的耗时。这一段不联网。
+  重复读表的循环在 `SignInRoute` 的 `produceState` 里，不在 ViewModel 里：
+  `viewModelScope` 中一个 `while (true) { delay(…) }` 会让状态永远到不了 idle，
+  `runTest` 的 `advanceUntilIdle()` 就此在虚拟时间里空转，凡是走到两步验证这一步的测试都会挂死而不是失败。
+  ViewModel 只留 `secondsUntilNextCode()` 这个纯函数。
+- `otpSession` 过期会带着站点那句话退回卡 1，而不是留在一个已经没东西可提交的页面上。
+- 颜色、字阶与明暗模式全部来自 `MaterialTheme` token，没有把画板 hex 复制进 Compose；h1-dark 因此不需要单独一套代码。
+
+## h1 的 Turnstile 挂件
+
+Cloudflare 的挂件是一段自己画界面、自己决定信不信任客户端的 JS，没有可以调的 token 接口，
+Compose 画不出来。所以它是一个 72dp 高的 WebView，只显示那个勾选框，token 通过 bridge 回到
+`SignInViewModel.onVerified`。表单其余部分仍是原生的——这就是 h1 的全部意义。
+
+- **base URL 必须是 `https://www.nodeseek.com/`。** sitekey 是绑主机名的，
+  文档没有 origin 或 origin 不对，挂件在用户看到勾选框之前就被拒了。用 `loadDataWithBaseURL` /
+  `loadHTMLString(baseURL:)` 就是为了这个。
+- **第三方 Cookie 必须开。** 挂件跑在 `challenges.cloudflare.com` 的 iframe 里，
+  它的 cookie 天生是第三方的，关掉就永远勾不上——旁边的登录 WebView 早就为同一个理由这么做了。
+- **这个 WebView 不能导航。** Android 的 `shouldOverrideUrlLoading` 一律返回 true，
+  iOS 的 navigation delegate 只放行第一次加载。JS bridge 只暴露一个收两个字符串的方法。
+- **token 是一次性的。** 每次被拒绝就 `spend()`：状态置为「已过期」，
+  同时 `verificationGeneration` 加一，界面把它当作 reset 信号让挂件重新取一个。
+  用计数器不用布尔值，因为连续两次失败需要两个新 token。
+- **卡 1 上有「改用网页登录」，稿子上没有。** 稿子只在卡 3 画了它，因为稿子假设卡 1 永远有一个能用的勾选框。
+  实际不一定：挂件起不来就是 `VerificationState.NotWired`，登录按钮永远灰着，
+  一个登不进去的登录页是这个屏幕能犯的最严重的错误。桌面端（`TurnstileWidget.jvm.kt`）永远是这个状态。
+
+**真机没验。** 挂件是否通过取决于真实设备指纹和出口 IP，本机这边证明不了任何事——
+编译过、协议对、状态机有测试，但「勾选框在手机上真的能勾上」只有装到机器上才知道。

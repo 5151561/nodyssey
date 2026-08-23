@@ -371,6 +371,16 @@ object NodeSeekSite {
 
     const val SIGN_IN_PATH = "/signIn.html"
 
+    /**
+     * The Cloudflare Turnstile sitekey the sign-in form renders with.
+     *
+     * Read off the live page on 2026-08-24, not from documentation — `signIn.html` picks between two,
+     * and the other one (`0x4AAAAAACYfzKxNfR026Cpk`) is only chosen when the page is served from
+     * `localhost` or `127.0.0.1`. A sitekey is public by design; it is checked against the hostname
+     * the widget is rendered on, which is why the app's own widget loads with [BASE_URL] as its base.
+     */
+    const val TURNSTILE_SITEKEY = "0x4AAAAAAAaNy7leGjewpVyR"
+
     /** Resolves site-relative URLs (`/avatar/1.png`) against the base URL; leaves absolute ones alone. */
     fun absoluteUrl(url: String?): String? {
         val trimmed = url?.trim().orEmpty()
