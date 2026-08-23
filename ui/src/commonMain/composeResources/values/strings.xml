@@ -1267,4 +1267,35 @@
     <string name="offline_clear_body">已下载的正文、回复和图片都会删掉。收藏本身不动，随时可以重新下载。</string>
     <string name="offline_clear_confirm">清空</string>
     <string name="offline_done">完成</string>
+
+    <!-- 登录 · 原生表单 (h1) -->
+    <string name="sign_in_title">登录 NodeSeek</string>
+    <string name="sign_in_mark">NS</string>
+    <string name="sign_in_subtitle">使用论坛账号直接登录，密码只发往官方接口，不经过第三方。</string>
+    <string name="sign_in_account">用户名 / 邮箱</string>
+    <string name="sign_in_password">密码</string>
+    <string name="sign_in_password_hint">区分大小写</string>
+    <string name="sign_in_password_rejected">密码错误，请重新输入</string>
+    <string name="sign_in_forgot">忘记密码</string>
+    <string name="sign_in_submit">登录</string>
+    <string name="sign_in_submitting">登录中…</string>
+    <string name="sign_in_refused_generic">用户名或密码不正确。</string>
+    <string name="sign_in_register_hint">还没有账号？注册需要邀请码</string>
+    <string name="sign_in_terms">登录即表示同意《服务条款》与《隐私协议》</string>
+    <string name="sign_in_readonly_hint">按钮在验证通过前保持禁用；提交后整表单只读，避免重复请求触发限流。</string>
+    <string name="sign_in_use_web">改用网页登录</string>
+
+    <string name="sign_in_verify_brand">Cloudflare Turnstile</string>
+    <string name="sign_in_verify_expired">验证已过期，请重新验证</string>
+    <string name="sign_in_verify_not_wired">人机验证还没接进 App，原生登录暂时用不了</string>
+    <string name="sign_in_verify_not_required">本次无需人机验证</string>
+
+    <string name="sign_in_2fa_title">两步验证</string>
+    <string name="sign_in_2fa_headline">输入 6 位验证码</string>
+    <string name="sign_in_2fa_body">打开验证器 App，输入 %1$s 当前的动态码。验证码 30 秒刷新一次。</string>
+    <string name="sign_in_2fa_countdown">当前验证码剩余 %1$d 秒</string>
+    <string name="sign_in_2fa_code">验证码</string>
+    <string name="sign_in_2fa_submit">验证并登录</string>
+    <string name="sign_in_2fa_rejected">验证码不对，再试一次</string>
+    <string name="sign_in_2fa_note">只有账号开启了双因素验证才会出现这一步；未开启则登录接口直接返回会话。</string>
 </resources>

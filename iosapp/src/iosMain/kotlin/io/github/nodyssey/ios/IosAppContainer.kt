@@ -76,7 +76,9 @@ import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.proxy.ProxyType
 import io.github.nodyssey.data.proxy.routes
+import io.github.nodyssey.data.session.NodeSeekSignInRepository
 import io.github.nodyssey.data.session.SessionRepository
+import io.github.nodyssey.data.session.SignInRepository
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.di.AppContainer
@@ -454,6 +456,8 @@ class IosAppContainer(
     private val imagePreparer: ImagePreparer by lazy { IosImagePreparer(dispatchers) }
 
     override val sessionRepository: SessionRepository by lazy { SessionRepository(sessionCookies) }
+
+    override val signInRepository: SignInRepository by lazy { NodeSeekSignInRepository(jsonClient) }
 
     override val appVersion: AppVersion by lazy { readAppVersion() }
 

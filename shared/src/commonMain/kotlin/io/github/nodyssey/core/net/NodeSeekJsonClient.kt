@@ -75,12 +75,17 @@ interface JsonWriteSource {
      * would explain less than this does.
      *
      * Defaults to throwing, like [JsonSource.postJson], so the read-only test doubles stay small.
+     *
+     * [extraHeaders] is for the endpoints that carry something the shared XHR header set cannot
+     * know: 登录 sends Cloudflare's Turnstile token as `x-captcha-token`. It is a map rather than a
+     * named parameter because the next such header will not be that one.
      */
     suspend fun sendJson(
         method: String,
         path: String,
         body: String,
         referer: String = NodeSeekSite.BASE_URL + "/",
+        extraHeaders: Map<String, String> = emptyMap(),
     ): JsonPostResponse = throw UnsupportedOperationException("This JsonWriteSource does not support $method")
 }
 
@@ -151,11 +156,19 @@ class NodeSeekJsonClient(
         path: String,
         body: String,
         referer: String,
+        extraHeaders: Map<String, String>,
     ): JsonPostResponse =
         withContext(dispatchers.io) {
             val response =
                 transport.execute(
-                    xhrRequest(path, referer, method = method, body = HttpBody.Text(body), origin = true),
+                    xhrRequest(
+                        path,
+                        referer,
+                        method = method,
+                        body = HttpBody.Text(body),
+                        origin = true,
+                        extraHeaders = extraHeaders,
+                    ),
                 )
             // Still thrown, and still before the status: a challenge is not an answer from the
             // site, so there is no site sentence for the caller to read.
@@ -275,6 +288,12 @@ class NodeSeekJsonClient(
         /** The setting page requests these flags to include the editable Markdown fields. */
         fun accountSettingsInfoPath(uid: Long) =
             "/api/account/getInfo/$uid?readme=1&signature=1&phone=1"
+
+        /**
+         * Both legs of 登录, credentials and the second factor. See
+         * [io.github.nodyssey.data.session.NodeSeekSignInRepository].
+         */
+        const val PATH_ACCOUNT_SIGN_IN = "/api/account/signIn"
 
         const val PATH_ACCOUNT_INTRODUCTION = "/api/account/introduction"
         const val PATH_AVATAR_UPLOAD = "/api/avatar/upload"
