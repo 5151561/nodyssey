@@ -1,0 +1,59 @@
+# Network.framework's privacy context, reached from C rather than from Kotlin.
+#
+# `NW_DEFAULT_PRIVACY_CONTEXT` is `extern const nw_privacy_context_t _nw_privacy_context_default_context`,
+# and cinterop types every `nw_*_t` as `NSObject?`. Reading that global from Kotlin therefore goes
+# through `Kotlin_Interop_refFromObjC`, which finds a block-backed object it has no signature for and
+# throws `NSGenericException: Converting Obj-C blocks with non-reference-typed return value to
+# kotlin.Any is not supported (v)` — on a background dispatch queue, so the process aborts. That is
+# not a DoH-only path: the setting starts off, and the very first emission still reads the global.
+#
+# So no `nw_*` object crosses the Kotlin boundary at all. Kotlin passes strings; everything the
+# framework hands back is created, used and released inside `plaza_apply_encrypted_dns`.
+package = io.github.plaza.core.net.dns
+language = Objective-C
+headers = Network/Network.h
+compilerOpts = -fno-objc-arc
+linkerOpts = -framework Network
+
+---
+
+#include <Network/Network.h>
+
+// `-fno-objc-arc` above is what makes the `nw_release` calls here both legal and required: cinterop
+// compiles this stub without ARC, and the two `create` functions return a reference this owns.
+//
+// A NULL `url` is the off state, which the header documents as `require = false` with no config —
+// that restores the default rather than leaving the last server quietly in place. The cache is
+// flushed either way because a privacy context caches answers, and the addresses the old resolver
+// gave would otherwise keep being used.
+static inline void plaza_apply_encrypted_dns(const char *url,
+                                             const char *const *server_addresses,
+                                             int server_address_count) {
+	nw_resolver_config_t config = NULL;
+	if (url != NULL) {
+		nw_endpoint_t endpoint = nw_endpoint_create_url(url);
+		if (endpoint != NULL) {
+			config = nw_resolver_config_create_https(endpoint);
+			nw_release(endpoint);
+		}
+	}
+	if (config != NULL) {
+		for (int index = 0; index < server_address_count; index++) {
+			// DoH is HTTPS, and a server address carries no port of its own. A numeric host is an
+			// address endpoint, which is what a server address has to be; a hostname here would be
+			// one more name needing resolution, and the screen refuses to save one.
+			nw_endpoint_t server = nw_endpoint_create_host(server_addresses[index], "443");
+			if (server != NULL) {
+				nw_resolver_config_add_server_address(config, server);
+				nw_release(server);
+			}
+		}
+	}
+	nw_privacy_context_require_encrypted_name_resolution(NW_DEFAULT_PRIVACY_CONTEXT,
+	                                                     config != NULL,
+	                                                     config);
+	nw_privacy_context_flush_cache(NW_DEFAULT_PRIVACY_CONTEXT);
+	if (config != NULL) {
+		nw_release(config);
+	}
+}

@@ -157,6 +157,15 @@ kotlin {
     iosSimulatorArm64()
     macosArm64()
 
+    // The Network.framework stub `EncryptedNameResolution` calls. Declared for every Native target
+    // this module has, because the class lives in `appleMain` and all three compile it — see
+    // `src/nativeInterop/cinterop/encrypteddns.def` for why the call cannot be made from Kotlin.
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
+        compilations.getByName("main").cinterops.create("encrypteddns") {
+            definitionFile.set(layout.projectDirectory.file("src/nativeInterop/cinterop/encrypteddns.def"))
+        }
+    }
+
     // `java.time` is the JVM part of Android rather than the Android part of it, and both targets
     // answer for it identically — as do `System.currentTimeMillis()` and `Dispatchers.IO`. Without a
     // source set between `commonMain` and the two of them, `TimeFormat` and the two `actual`s in

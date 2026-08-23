@@ -1,18 +1,19 @@
 package io.github.plaza.core.net
 
+import io.github.plaza.core.net.dns.plaza_apply_encrypted_dns
+import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.CPointerVar
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.cstr
+import kotlinx.cinterop.get
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.set
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import platform.Network.NW_DEFAULT_PRIVACY_CONTEXT
-import platform.Network.nw_endpoint_create_host
-import platform.Network.nw_endpoint_create_url
-import platform.Network.nw_privacy_context_flush_cache
-import platform.Network.nw_privacy_context_require_encrypted_name_resolution
-import platform.Network.nw_resolver_config_add_server_address
-import platform.Network.nw_resolver_config_create_https
 
 /**
  * One DoH server, in the terms Network.framework takes them.
@@ -60,6 +61,11 @@ data class EncryptedResolver(
  *
  * Turning the setting off is `require = false` with no config, which the header documents as the
  * default state — this restores it rather than leaving the last server quietly in place.
+ *
+ * **None of that is called from here.** Reading `NW_DEFAULT_PRIVACY_CONTEXT` from Kotlin aborts the
+ * process on the first emission — the setting being off does not save you — so the whole sequence
+ * lives in a C stub and this class passes it strings. `src/nativeInterop/cinterop/encrypteddns.def`
+ * carries the exception and why cinterop cannot type that global.
  */
 @OptIn(ExperimentalForeignApi::class)
 class EncryptedNameResolution(
@@ -74,30 +80,13 @@ class EncryptedNameResolution(
     }
 
     private fun apply(resolver: EncryptedResolver?) {
-        val context = NW_DEFAULT_PRIVACY_CONTEXT
-        val config = resolver?.let { built ->
-            nw_endpoint_create_url(built.url)?.let(::nw_resolver_config_create_https)
+        val addresses = resolver?.serverAddresses.orEmpty()
+        memScoped {
+            // `allocArray(0)` is not a thing worth relying on, and the count is what the stub reads
+            // anyway — an empty list means the array is never indexed.
+            val array = allocArray<CPointerVar<ByteVar>>(maxOf(addresses.size, 1))
+            addresses.forEachIndexed { index, address -> array[index] = address.cstr.getPointer(this) }
+            plaza_apply_encrypted_dns(resolver?.url, array, addresses.size)
         }
-        if (config != null) {
-            resolver.serverAddresses.forEach { address ->
-                // The endpoint `NWEndpoint.hostPort(host:port:)` makes on the Swift side. A numeric
-                // host is an address endpoint, which is what a server address has to be; a hostname
-                // typed here would be one more name needing resolution, and the screen refuses to
-                // save one.
-                nw_endpoint_create_host(address, DOH_PORT)
-                    ?.let { endpoint -> nw_resolver_config_add_server_address(config, endpoint) }
-            }
-        }
-        nw_privacy_context_require_encrypted_name_resolution(
-            privacy_context = context,
-            require_encrypted_name_resolution = config != null,
-            fallback_resolver_config = config,
-        )
-        nw_privacy_context_flush_cache(context)
-    }
-
-    private companion object {
-        /** DoH is HTTPS, and a server address carries no port of its own. */
-        const val DOH_PORT = "443"
     }
 }
