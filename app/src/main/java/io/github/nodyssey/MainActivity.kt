@@ -1,5 +1,6 @@
 package io.github.nodyssey
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.nodyssey.ui.navigation.TopLevelDestination
+import io.github.nodyssey.ui.settings.AndroidAppLanguage
 
 class MainActivity : ComponentActivity() {
     /*
@@ -20,6 +22,18 @@ class MainActivity : ComponentActivity() {
      * replay a link the user has already followed.
      */
     private var launchRequest by mutableStateOf<LaunchRequest?>(null)
+
+    /**
+     * The same wrapping `NodysseyApp` does, for this activity's own resources.
+     *
+     * An activity does not inherit the application's base context: the system builds it one from the
+     * device configuration. Without this line `LocalConfiguration` here would still name the device's
+     * language while every string on screen was drawn in the chosen one — which is what
+     * `rememberGroupedNumber` reads to pick a thousands separator.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AndroidAppLanguage.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

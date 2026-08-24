@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.annotation.PluralsRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -93,7 +94,10 @@ class NotificationPollWorker(
                 .Builder(context, NotificationChannels.channelId(category))
                 .setSmallIcon(R.drawable.ic_stat_notification)
                 .setContentTitle(context.getString(titleRes(category)))
-                .setContentText(context.getString(bodyRes(category), count))
+                // A quantity string, so English can say "1 new reply" without this file knowing
+                // which languages have a singular. `count` twice on purpose: once to choose the
+                // form, once to fill the `%1$d` inside it.
+                .setContentText(context.resources.getQuantityString(bodyRes(category), count, count))
                 .setContentIntent(openApp)
                 .setAutoCancel(true)
                 .build()
@@ -121,10 +125,11 @@ class NotificationPollWorker(
             NotificationCategory.MESSAGES -> R.string.notifications_messages
         }
 
+    @PluralsRes
     private fun bodyRes(category: NotificationCategory): Int =
         when (category) {
-            NotificationCategory.MENTIONS -> R.string.notify_body_mentions
-            NotificationCategory.REPLIES -> R.string.notify_body_replies
-            NotificationCategory.MESSAGES -> R.string.notify_body_messages
+            NotificationCategory.MENTIONS -> R.plurals.notify_body_mentions
+            NotificationCategory.REPLIES -> R.plurals.notify_body_replies
+            NotificationCategory.MESSAGES -> R.plurals.notify_body_messages
         }
 }

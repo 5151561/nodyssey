@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  繁體中文. The Traditional half of the shared components' wording; `values/strings.xml` holds the
+  Simplified original and every comment explaining what a string is for.
+
+  Keyed by region rather than by script — `values-zh-rTW` and not `values-b+zh+Hant` — because
+  Compose Resources prefers a region-less `zh` bundle over the unqualified default for *every*
+  Chinese environment, including the Simplified ones. `isTraditionalChineseTag` in `:shared` carries
+  the other half of that trade: it is what turns a `zh-Hant-HK` device into the `zh-TW` this file
+  answers to.
+-->
+<resources>
+    <string name="composer_format_bold">粗體</string>
+    <string name="composer_format_italic">斜體</string>
+    <string name="composer_format_strikethrough">刪除線</string>
+    <string name="composer_format_heading">二級標題</string>
+    <string name="composer_format_code">行內程式碼</string>
+    <string name="composer_format_quote">引用</string>
+    <string name="composer_format_list">無序清單</string>
+    <string name="composer_format_link">連結</string>
+    <string name="composer_format_mention">提及某人</string>
+    <string name="composer_format_image">圖片</string>
+    <string name="composer_format_emoji">表情</string>
+
+    <string name="composer_toolbar_customize">自訂工具列</string>
+    <string name="composer_toolbar_enabled">工具列上的按鍵</string>
+    <string name="composer_toolbar_available">可加入</string>
+    <string name="composer_toolbar_reorder">拖曳排序</string>
+    <string name="composer_toolbar_remove">移出工具列</string>
+    <string name="composer_toolbar_add">加入工具列</string>
+    <string name="composer_toolbar_reset">恢復預設</string>
+
+    <string name="composer_emoji_recent">最近使用</string>
+    <string name="composer_emoji_backspace">刪除</string>
+
+    <string name="richtext_image_loading">圖片載入中…</string>
+    <string name="richtext_image_label">圖片</string>
+    <string name="richtext_image_view_full">點擊檢視原圖</string>
+    <string name="richtext_image_load_failed">圖片載入失敗</string>
+    <string name="richtext_image_failed_challenge">圖床要求人機驗證，App 過不去（HTTP %1$d）</string>
+    <string name="richtext_image_failed_http">圖床拒絕了這張圖（HTTP %1$d）</string>
+    <string name="richtext_image_failed_unreachable">連不上圖床，檢查一下網路</string>
+    <string name="richtext_image_failed_timeout">連線圖床逾時</string>
+    <string name="richtext_image_failed_connection">連線中斷</string>
+    <string name="richtext_action_retry">重試</string>
+    <string name="richtext_action_open_in_browser">用瀏覽器開啟</string>
+    <string name="richtext_code_copied">程式碼已複製</string>
+    <string name="richtext_action_copy">複製</string>
+    <string name="richtext_quote_reply">@%1$s %2$s</string>
+    <string name="richtext_sticker_description">表情</string>
+    <string name="richtext_image_skipped_title">已開啟「僅 Wi-Fi 載入圖片」，目前不是 Wi-Fi</string>
+    <string name="richtext_image_skipped_action">點按載入這張圖</string>
+    <string name="richtext_poll_title">投票</string>
+    <string name="richtext_poll_body">在文章裡檢視並參與</string>
+    <string name="richtext_fold_title_fallback">摺疊內容</string>
+    <string name="richtext_fold_expand">展開</string>
+    <string name="richtext_fold_collapse">收合</string>
+
+    <string name="richtext_stardust_ref_id">Ref ID %1$d</string>
+    <string name="richtext_stardust_onetime">一次性</string>
+</resources>

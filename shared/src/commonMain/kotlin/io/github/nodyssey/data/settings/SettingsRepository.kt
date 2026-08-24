@@ -55,6 +55,7 @@ class SettingsRepository(
                 themeMode = preferences[KEY_THEME_MODE]
                     ?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                     ?: ThemeMode.SYSTEM,
+                appLanguage = AppLanguage.ofName(preferences[KEY_APP_LANGUAGE]),
                 colorSource = preferences[KEY_COLOR_SOURCE]
                     ?.let(::decodeColorSource)
                     // 动态取色 used to be a bare switch. A store written by an older build has no
@@ -128,6 +129,12 @@ class SettingsRepository(
     }
 
     suspend fun setThemeMode(mode: ThemeMode) = edit { it[KEY_THEME_MODE] = mode.name }
+
+    /**
+     * 语言. Stored, and nothing more: applying it is the platform's half — see `ApplyAppLanguage` in
+     * `:ui`, which is what turns this value into the locale the resources are read under.
+     */
+    suspend fun setAppLanguage(language: AppLanguage) = edit { it[KEY_APP_LANGUAGE] = language.name }
 
     suspend fun setColorSource(source: ColorSource) = edit { it[KEY_COLOR_SOURCE] = source.name }
 
@@ -520,6 +527,7 @@ class SettingsRepository(
         const val DEFAULT_READ_HISTORY_LIMIT = 300
 
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        private val KEY_APP_LANGUAGE = stringPreferencesKey("app_language")
 
         /** Read only to migrate a store written before 配色来源 existed; nothing writes it now. */
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
@@ -656,6 +664,16 @@ enum class ComposerSurface { POST, REPLY, MESSAGE }
 
 data class UserSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    /**
+     * 语言 — which translation the interface is drawn in, or [AppLanguage.SYSTEM] for the device's
+     * own.
+     *
+     * The odd one out on this list: every other setting here is read by whatever it changes, and
+     * this one is read by nothing but the row that sets it. What draws a screen in the chosen
+     * language is the platform's own locale, which `ApplyAppLanguage` in `:ui` puts this value into
+     * once per launch — so no string lookup anywhere has to know this field exists.
+     */
+    val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val colorSource: ColorSource = ColorSource.PRESET,
     /** The preset 预设 is on, by id; only read while [colorSource] is [ColorSource.PRESET]. */
     val presetId: String = SettingsRepository.DEFAULT_PRESET_ID,

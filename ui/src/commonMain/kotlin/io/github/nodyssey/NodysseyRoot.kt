@@ -21,6 +21,7 @@ import io.github.nodyssey.ui.common.LocalAppName
 import io.github.nodyssey.ui.common.rememberBrowserLinks
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.richtext.LocalReportFormat
+import io.github.nodyssey.ui.settings.ApplyAppLanguage
 import io.github.nodyssey.ui.settings.theme.activeCharacterPalette
 import io.github.nodyssey.ui.settings.theme.rememberActiveSeed
 import io.github.nodyssey.ui.settings.theme.toPlaza
@@ -50,6 +51,12 @@ fun NodysseyRoot(
     // never leave part of the app on the old value.
     val settings by container.settingsRepository.settings
         .collectAsStateWithLifecycle(initialValue = UserSettings())
+
+    // 语言, before anything is drawn in it. Idempotent by contract, so the common launch — the
+    // setting has not changed since the last one — costs nothing; see `ApplyAppLanguage`. It sits
+    // outside the theme because it is not a colour and because the strings the theme's own screens
+    // read are resolved against what this call puts in force.
+    ApplyAppLanguage(settings.appLanguage)
 
     val darkTheme = when (settings.themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()

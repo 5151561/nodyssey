@@ -239,6 +239,48 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("显示原文").assertIsSelected()
     }
 
+    /**
+     * 语言 — four rows, the reader's own choice selected, and every label written in the language it
+     * selects except the first.
+     *
+     * 跟随系统语言 rather than 跟随系统 because 明暗 two groups above already answers to those four
+     * characters, and `onNodeWithText` finding both is the same ambiguity a screen reader would read
+     * out. That is what the first assertion here is really pinning.
+     */
+    @Test
+    fun `language offers the three bundles and following the system`() {
+        composeRule.setContent {
+            var language by remember { mutableStateOf(UserSettings().appLanguage) }
+            PlazaTheme {
+                SettingsScreen(
+                    state = SettingsUiState(UserSettings(appLanguage = language)),
+                    onBack = {},
+                    onOpenTheme = {},
+                    onThemeModeChange = {},
+                    onOneHandModeChange = {},
+                    onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = {},
+                    onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
+                    onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
+                    onAppLanguageChange = { language = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("跟随系统语言").performScrollTo().assertIsSelected()
+        composeRule.onNodeWithText("繁體中文").performScrollTo().performClick()
+        composeRule.onNodeWithText("繁體中文").assertIsSelected()
+        composeRule.onNodeWithText("English").performScrollTo().performClick()
+        composeRule.onNodeWithText("English").assertIsSelected()
+    }
+
     /** On is the default: 首页 is read by page number in the browser, and the bar says which one. */
     @Test
     fun `the home page bar starts on and toggles from the whole row`() {

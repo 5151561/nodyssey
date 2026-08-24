@@ -18,6 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.data.settings.AppLanguage
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
@@ -67,6 +69,12 @@ import io.github.nodyssey.ui.resources.settings_doh_entry_hint_off
 import io.github.nodyssey.ui.resources.settings_doh_entry_hint_on
 import io.github.nodyssey.ui.resources.settings_home_page_bar
 import io.github.nodyssey.ui.resources.settings_home_page_bar_hint
+import io.github.nodyssey.ui.resources.settings_language
+import io.github.nodyssey.ui.resources.settings_language_en
+import io.github.nodyssey.ui.resources.settings_language_restart_hint
+import io.github.nodyssey.ui.resources.settings_language_system
+import io.github.nodyssey.ui.resources.settings_language_zh_hans
+import io.github.nodyssey.ui.resources.settings_language_zh_hant
 import io.github.nodyssey.ui.resources.settings_licenses
 import io.github.nodyssey.ui.resources.settings_network
 import io.github.nodyssey.ui.resources.settings_one_hand
@@ -135,6 +143,7 @@ fun SettingsRoute(
         onBack = onBack,
         onOpenTheme = onOpenTheme,
         onThemeModeChange = viewModel::setThemeMode,
+        onAppLanguageChange = viewModel::setAppLanguage,
         onOneHandModeChange = viewModel::setOneHandMode,
         onFontScaleChange = viewModel::setFontScale,
         onStickerUniformSizeChange = viewModel::setStickerUniformSize,
@@ -181,6 +190,7 @@ fun SettingsScreen(
     onOpenImageHost: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
+    onAppLanguageChange: (AppLanguage) -> Unit = {},
 ) {
     var bodyFontSize by remember(state.settings.fontScale) {
         mutableFloatStateOf(fontScaleToBodySize(state.settings.fontScale))
@@ -323,6 +333,39 @@ fun SettingsScreen(
                         StickerSizePreview(sizeSp = stickerSize.roundToInt())
                     }
                 }
+            }
+
+            // 语言 gets a section rather than a row inside 外观: four choices is one more than a
+            // connected button row can carry at this width, and the entries are written in the
+            // language each one selects, which makes them longer than any label above them.
+            SettingsSectionTitle(stringResource(Res.string.settings_language))
+            SettingsGroup {
+                val languages = appLanguageChoices()
+                languages.forEachIndexed { index, choice ->
+                    SettingsRow(
+                        title = choice.second,
+                        top = index == 0,
+                        bottom = index == languages.lastIndex,
+                        selected = choice.first == state.settings.appLanguage,
+                        onClick = { onAppLanguageChange(choice.first) },
+                        trailing = {
+                            RadioButton(
+                                selected = choice.first == state.settings.appLanguage,
+                                onClick = null,
+                            )
+                        },
+                    )
+                }
+            }
+            // Absent on Android, where the activity is recreated under the new locale and the
+            // change is already on screen by the time this would have been read.
+            if (appLanguageAppliesOnRestart) {
+                Text(
+                    text = stringResource(Res.string.settings_language_restart_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = Spacing.xs),
+                )
             }
 
             SettingsSectionTitle(stringResource(Res.string.settings_content))
@@ -499,6 +542,23 @@ fun SettingsScreen(
         }
     }
 }
+
+/**
+ * The four entries of 语言, in the order the rows are drawn.
+ *
+ * The three that name a bundle read the same in every language, because each is written in the one
+ * it selects — that is what lets a reader who has landed in a language they cannot read find their
+ * way back out. Only the first is translated, and it is the one that has to be, since it describes
+ * a behaviour rather than naming a language.
+ */
+@Composable
+private fun appLanguageChoices(): List<Pair<AppLanguage, String>> =
+    listOf(
+        AppLanguage.SYSTEM to stringResource(Res.string.settings_language_system),
+        AppLanguage.SIMPLIFIED_CHINESE to stringResource(Res.string.settings_language_zh_hans),
+        AppLanguage.TRADITIONAL_CHINESE to stringResource(Res.string.settings_language_zh_hant),
+        AppLanguage.ENGLISH to stringResource(Res.string.settings_language_en),
+    )
 
 /**
  * 跟随系统 / 浅色 / 深色.

@@ -10,6 +10,7 @@ import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.dns.DohSupport
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.session.SessionRepository
+import io.github.nodyssey.data.settings.AppLanguage
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
@@ -88,6 +89,18 @@ class SettingsViewModel(
     /** 明暗 is the one theme control 设置 kept; the rest are on [ThemeSettingsViewModel]. */
     fun setThemeMode(value: ThemeMode) {
         viewModelScope.launch { settings.setThemeMode(value) }
+    }
+
+    /**
+     * 语言 — stored here and applied by the platform.
+     *
+     * Nothing else happens on this call: `ApplyAppLanguage` at the root of the composition is
+     * watching the same settings flow, and on Android that is what recreates the activity under the
+     * new locale. A ViewModel that also poked the platform would be a second path to the same
+     * change, and the two would disagree the first time one of them was skipped.
+     */
+    fun setAppLanguage(value: AppLanguage) {
+        viewModelScope.launch { settings.setAppLanguage(value) }
     }
 
     /** 单手模式 — one answer for every screen that carries a `OneHandTopAppBar`. */

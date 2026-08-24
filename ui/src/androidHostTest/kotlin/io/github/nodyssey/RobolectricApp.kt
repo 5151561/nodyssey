@@ -1,10 +1,12 @@
 package io.github.nodyssey
 
 import android.app.Application
+import android.os.LocaleList
 import android.os.Looper
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.TestLifecycleApplication
 import java.lang.reflect.Method
+import java.util.Locale
 
 /**
  * A bare [Application] plus one teardown chore, installed for every Robolectric test by
@@ -35,7 +37,23 @@ import java.lang.reflect.Method
 class RobolectricApp :
     Application(),
     TestLifecycleApplication {
-    override fun beforeTest(method: Method?) = Unit
+    /**
+     * Pins the locale every test's resources are read under.
+     *
+     * The strings in this suite are asserted in Simplified Chinese, and since the app ships English
+     * and Traditional bundles beside them that is a choice rather than the only answer. Compose
+     * Resources resolves against `androidx.compose.ui.text.intl.Locale.current`, which on Android is
+     * the *process* default locale — Robolectric never sets that, so without this line the language
+     * of the suite would be the language of whichever machine ran it. `en-US` on CI, and every
+     * assertion below fails on a build that changed nothing.
+     *
+     * `LocaleList.setDefault` rather than `@Config(qualifiers = "zh-rCN")` on forty classes: the
+     * qualifier reaches the `Configuration`, which is a different thing entirely and not the one
+     * Compose reads.
+     */
+    override fun beforeTest(method: Method?) {
+        LocaleList.setDefault(LocaleList(Locale.SIMPLIFIED_CHINESE))
+    }
 
     override fun prepareTest(test: Any?) = Unit
 
