@@ -66,6 +66,9 @@ import io.github.nodyssey.data.composer.ImageHostUploader
 import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostEditor
+import io.github.nodyssey.data.diagnostics.BrowserIdentities
+import io.github.nodyssey.data.diagnostics.NetworkDiagnostics
+import io.github.nodyssey.data.diagnostics.OkHttpNetworkDiagnostics
 import io.github.nodyssey.data.dns.DataStoreDohSettings
 import io.github.nodyssey.data.dns.DohCapabilities
 import io.github.nodyssey.data.dns.DohSettings
@@ -94,6 +97,10 @@ import io.github.nodyssey.data.update.DefaultAppUpdateRepository
 import io.github.nodyssey.platform.AndroidApkInstaller
 import io.github.nodyssey.platform.DefaultImagePreparer
 import io.github.nodyssey.platform.KeystoreSecretCipher
+import io.github.nodyssey.platform.customTabsProvider
+import io.github.nodyssey.platform.defaultBrowser
+import io.github.nodyssey.platform.deviceIdentity
+import io.github.nodyssey.platform.networkSnapshot
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
@@ -260,6 +267,35 @@ class DefaultAppContainer(
                 clock = clock,
             ),
             capabilities = DohCapabilities(canChooseRecordTypes = true, canFallBackToSystem = true),
+        )
+    }
+
+    /**
+     * 网络自检, wired to the two clients whose numbers are worth comparing.
+     *
+     * The forum's client and GitHub's, because the pair is what makes either number mean anything —
+     * see `ProbeTarget`. [gitHubClient] is deliberately the one used for the second probe rather than
+     * a client built here: it is routed as `THIRD_PARTY`, so a reader who chose `FORUM_ONLY` sees a
+     * proxied path and a direct one measured side by side, which is exactly the comparison that
+     * setting creates and the one nothing else in the app displays.
+     */
+    override val networkDiagnostics: NetworkDiagnostics by lazy {
+        OkHttpNetworkDiagnostics(
+            forumClient = { okHttpClient },
+            updatesClient = { gitHubClient },
+            updatesUrl = NodysseyRelease.UPDATES_BASE_URL + UpdateManifestSource.CHANGELOG_MANIFEST,
+            device = deviceIdentity(),
+            appVersion = appVersion.name,
+            proxyConfig = proxySettings.config,
+            dohConfig = dohSettings.config,
+            network = appContext::networkSnapshot,
+            browsers = {
+                BrowserIdentities(
+                    customTabs = appContext.customTabsProvider(),
+                    default = appContext.defaultBrowser(),
+                )
+            },
+            dispatchers = dispatchers,
         )
     }
 

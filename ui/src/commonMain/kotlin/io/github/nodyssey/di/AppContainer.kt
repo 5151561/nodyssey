@@ -25,6 +25,7 @@ import io.github.nodyssey.data.composer.CommentComposerRepository
 import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostEditor
+import io.github.nodyssey.data.diagnostics.NetworkDiagnostics
 import io.github.nodyssey.data.dns.DohSupport
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
@@ -161,4 +162,14 @@ interface AppContainer {
      * rather than offer a screen that stores a server nothing reads.
      */
     val doh: DohSupport?
+
+    /**
+     * 网络自检 — the app measuring its own connection, so "很慢" can arrive as numbers.
+     *
+     * Nullable on the same terms as [doh], and 设置 reads the null the same way. What a platform
+     * needs in order to have one is a client that will report where the time in a request went;
+     * Android's does, and until the Apple side has an equivalent this is null there rather than a
+     * screen that would show two rows and shrug at the rest.
+     */
+    val networkDiagnostics: NetworkDiagnostics?
 }

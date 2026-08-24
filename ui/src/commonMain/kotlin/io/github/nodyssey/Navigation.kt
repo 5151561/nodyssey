@@ -112,6 +112,8 @@ import io.github.nodyssey.ui.settings.ChangelogViewModel
 import io.github.nodyssey.ui.settings.CommunityLinks
 import io.github.nodyssey.ui.settings.DohSettingsRoute
 import io.github.nodyssey.ui.settings.DohSettingsViewModel
+import io.github.nodyssey.ui.settings.NetworkCheckRoute
+import io.github.nodyssey.ui.settings.NetworkCheckViewModel
 import io.github.nodyssey.ui.settings.NotificationSettingsRoute
 import io.github.nodyssey.ui.settings.NotificationSettingsViewModel
 import io.github.nodyssey.ui.settings.OpenSourceLicensesScreen
@@ -525,6 +527,7 @@ fun MainNavigation(
                     onOpenNotifications = { backStack.add(NotificationSettingsKey) },
                     onOpenProxy = { backStack.add(ProxySettingsKey) },
                     onOpenDoh = { backStack.add(DohSettingsKey) },
+                    onOpenNetworkCheck = { backStack.add(NetworkCheckKey) },
                     onOpenImageHost = { backStack.add(ImageHostKey) },
                     onOpenAbout = { backStack.add(AboutAppKey) },
                     onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
@@ -579,6 +582,20 @@ fun MainNavigation(
                     val viewModel: DohSettingsViewModel =
                         viewModel(factory = DohSettingsViewModel.factory(doh))
                     DohSettingsRoute(
+                        viewModel = viewModel,
+                        onBack = { backStack.removeLastOrNull() },
+                    )
+                }
+            }
+
+            entry<NetworkCheckKey> {
+                // Null where the platform has no implementation, where the row in 设置 that leads
+                // here is not drawn either — the same treatment DohSettingsKey above gets, for the
+                // same reason.
+                container.networkDiagnostics?.let { diagnostics ->
+                    val viewModel: NetworkCheckViewModel =
+                        viewModel(factory = NetworkCheckViewModel.factory(diagnostics))
+                    NetworkCheckRoute(
                         viewModel = viewModel,
                         onBack = { backStack.removeLastOrNull() },
                     )

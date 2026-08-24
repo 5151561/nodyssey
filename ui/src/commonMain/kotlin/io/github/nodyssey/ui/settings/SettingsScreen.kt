@@ -69,6 +69,8 @@ import io.github.nodyssey.ui.resources.settings_home_page_bar
 import io.github.nodyssey.ui.resources.settings_home_page_bar_hint
 import io.github.nodyssey.ui.resources.settings_licenses
 import io.github.nodyssey.ui.resources.settings_network
+import io.github.nodyssey.ui.resources.settings_network_check_entry
+import io.github.nodyssey.ui.resources.settings_network_check_entry_hint
 import io.github.nodyssey.ui.resources.settings_one_hand
 import io.github.nodyssey.ui.resources.settings_one_hand_hint
 import io.github.nodyssey.ui.resources.settings_proxy_entry
@@ -118,6 +120,7 @@ fun SettingsRoute(
     onOpenNotifications: () -> Unit,
     onOpenProxy: () -> Unit,
     onOpenDoh: () -> Unit,
+    onOpenNetworkCheck: () -> Unit,
     onOpenImageHost: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenLicenses: () -> Unit,
@@ -148,6 +151,7 @@ fun SettingsRoute(
         onOpenNotifications = onOpenNotifications,
         onOpenProxy = onOpenProxy,
         onOpenDoh = onOpenDoh,
+        onOpenNetworkCheck = onOpenNetworkCheck,
         onOpenImageHost = onOpenImageHost,
         onOpenAbout = onOpenAbout,
         onOpenLicenses = onOpenLicenses,
@@ -178,6 +182,7 @@ fun SettingsScreen(
     onOpenNotifications: () -> Unit = {},
     onOpenProxy: () -> Unit = {},
     onOpenDoh: () -> Unit = {},
+    onOpenNetworkCheck: () -> Unit = {},
     onOpenImageHost: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
@@ -433,7 +438,7 @@ fun SettingsScreen(
                     title = stringResource(Res.string.settings_proxy_entry),
                     subtitle = stringResource(Res.string.settings_proxy_entry_hint),
                     top = true,
-                    bottom = state.dohEnabled == null,
+                    bottom = state.dohEnabled == null && !state.hasNetworkCheck,
                     onClick = onOpenProxy,
                 )
                 // Absent rather than disabled where the platform cannot apply a DoH server at all —
@@ -448,8 +453,19 @@ fun SettingsScreen(
                                 Res.string.settings_doh_entry_hint_off
                             },
                         ),
-                        bottom = true,
+                        bottom = !state.hasNetworkCheck,
                         onClick = onOpenDoh,
+                    )
+                }
+                // Last in the group on purpose: the two above are settings that change how the app
+                // behaves, and this one only reports on them. Absent where the platform has no
+                // implementation — see [SettingsUiState.hasNetworkCheck].
+                if (state.hasNetworkCheck) {
+                    SettingsRow(
+                        title = stringResource(Res.string.settings_network_check_entry),
+                        subtitle = stringResource(Res.string.settings_network_check_entry_hint),
+                        bottom = true,
+                        onClick = onOpenNetworkCheck,
                     )
                 }
             }

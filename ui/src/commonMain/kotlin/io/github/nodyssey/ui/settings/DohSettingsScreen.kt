@@ -356,8 +356,9 @@ private fun DohResolutionText(resolution: DnsResolution) {
     )
 }
 
+/** Shared with 网络自检, which names the same provider on a row of its own. */
 @Composable
-private fun dohProviderLabel(provider: DohProvider): String =
+internal fun dohProviderLabel(provider: DohProvider): String =
     stringResource(
         when (provider) {
             DohProvider.ALIDNS -> Res.string.doh_provider_alidns

@@ -29,6 +29,18 @@
         <intent>
             <action android:name="android.support.customtabs.action.CustomTabsService" />
         </intent>
+        <!--
+            Not for launching anything — every link this app opens goes out through a Custom Tab or
+            the platform handler, neither of which needs to see the resolver list. This is so 网络自检
+            can *name* the browser that would answer, beside the Custom Tabs provider above. Readers
+            compare "in the app" against "in the browser" without knowing those can be two different
+            packages, and on a phone routing traffic per application that difference is the whole
+            explanation. Without this entry API 30+ answers null for a browser that is installed.
+        -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
     </queries>
 
     <!--

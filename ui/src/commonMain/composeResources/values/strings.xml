@@ -441,6 +441,65 @@
     <string name="doh_proxy_hint">开着代理的时候，域名交给代理那边解析，这里的设置对走代理的请求不起作用。</string>
     <string name="doh_webview_hint">登录用的是系统 WebView，它走自己的网络和系统的私人 DNS，不受这里影响。</string>
 
+    <!-- 网络自检 — a child of Settings' 网络 group, below 代理 and 加密 DNS. See NetworkDiagnostics. -->
+    <string name="settings_network_check_entry">网络自检</string>
+    <string name="settings_network_check_entry_hint">测一次连接，把代理、VPN、DNS 和实际速度列出来；反馈「很慢」的时候截这张图</string>
+    <string name="network_check_title">网络自检</string>
+    <string name="network_check_rerun">重新检测</string>
+    <string name="network_check_running">检测中…</string>
+    <string name="network_check_copy">复制结果</string>
+    <string name="network_check_copied">已复制</string>
+
+    <string name="network_check_section_environment">环境</string>
+    <string name="network_check_device">机型</string>
+    <string name="network_check_os">系统版本</string>
+    <string name="network_check_app_version">App 版本</string>
+    <string name="network_check_transport">网络类型</string>
+    <string name="network_check_transport_wifi">Wi-Fi</string>
+    <string name="network_check_transport_cellular">移动数据</string>
+    <string name="network_check_transport_ethernet">以太网</string>
+    <string name="network_check_transport_other">其它</string>
+    <string name="network_check_transport_none">没有连接</string>
+    <string name="network_check_vpn">VPN</string>
+    <string name="network_check_vpn_on">已连接</string>
+    <string name="network_check_vpn_off">未连接</string>
+    <string name="network_check_metered">按流量计费</string>
+    <string name="network_check_proxy">代理</string>
+    <string name="network_check_proxy_off">关闭</string>
+    <!-- %1$s 是 HTTP 或 SOCKS5，%2$d 是端口。主机地址是用户自己的，不进这份报告。 -->
+    <string name="network_check_proxy_local">%1$s · 本机 %2$d</string>
+    <string name="network_check_proxy_remote">%1$s · 远程主机 %2$d</string>
+    <string name="network_check_proxy_forum_only">（仅论坛）</string>
+    <string name="network_check_doh">加密 DNS</string>
+    <string name="network_check_doh_off">关闭</string>
+    <string name="network_check_custom_tab_app">链接打开方式</string>
+    <string name="network_check_default_browser">默认浏览器</string>
+    <string name="network_check_app_none">没有</string>
+    <string name="network_check_yes">是</string>
+    <string name="network_check_no">否</string>
+
+    <string name="network_check_section_forum">论坛</string>
+    <string name="network_check_section_updates">更新源</string>
+    <string name="network_check_status">结果</string>
+    <string name="network_check_status_code">HTTP %1$d</string>
+    <string name="network_check_dns">DNS 解析</string>
+    <string name="network_check_connect">建立连接</string>
+    <string name="network_check_tls">TLS 握手</string>
+    <string name="network_check_first_byte">首字节</string>
+    <string name="network_check_download">下载</string>
+    <!-- %1$s 是大小，%2$s 是耗时。两个都显示：样本太小的时候速率本身不可信，看得见大小才知道。 -->
+    <string name="network_check_download_value">%1$s / %2$s</string>
+    <string name="network_check_rate">速率</string>
+    <string name="network_check_rate_immeasurable">太快，测不出</string>
+    <string name="network_check_reused">连接复用，没测到</string>
+    <string name="network_check_pending">…</string>
+    <string name="network_check_failed">失败（%1$s）</string>
+
+    <string name="network_check_hint_title">这份报告说明什么</string>
+    <string name="network_check_hint_layers">DNS、连接、首字节三项大而下载快，是在等；三项都小而下载慢，才是带宽被限。进度条一点点爬属于后者。</string>
+    <string name="network_check_hint_custom_tab">帖子里的链接是交给上面那个 App 打开的，流量算它的，不算 Nodyssey 的。它和默认浏览器不是同一个的时候，「App 里慢、浏览器里快」多半就是这个原因——VPN 的分应用代理是按 App 算的。</string>
+    <string name="network_check_hint_scope">论坛和更新源分开测：只有一边慢，是那条线路的问题；两边都慢，是这台设备的连接。</string>
+
     <!-- About & community (board f1). -->
     <string name="about_title">关于 Nodyssey</string>
     <string name="about_community_title">关于 · 社区</string>

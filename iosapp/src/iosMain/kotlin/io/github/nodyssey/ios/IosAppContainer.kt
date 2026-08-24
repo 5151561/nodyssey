@@ -57,6 +57,7 @@ import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.createPreferenceDataStore
+import io.github.nodyssey.data.diagnostics.NetworkDiagnostics
 import io.github.nodyssey.data.dns.DataStoreDohSettings
 import io.github.nodyssey.data.dns.DohCapabilities
 import io.github.nodyssey.data.dns.DohSettings
@@ -293,6 +294,17 @@ class IosAppContainer(
             capabilities = DohCapabilities(canChooseRecordTypes = false, canFallBackToSystem = false),
         )
     }
+
+    /**
+     * No 网络自检 here yet, and 设置 leaves the row out rather than offering half of one.
+     *
+     * The screen's value is the breakdown — where in a request the time went — and on this platform
+     * that means `NSURLSessionTaskTransactionMetrics`, which arrives on a session delegate rather
+     * than as a return value. `ProxiedUrlSession` builds its sessions per proxy config and none of
+     * them carries such a delegate today, so wiring one is a change to how sessions are made, not a
+     * class to add beside them. Null until that is done.
+     */
+    override val networkDiagnostics: NetworkDiagnostics? = null
 
     /**
      * Applied at construction rather than lazily, because unlike every other member here this one is
