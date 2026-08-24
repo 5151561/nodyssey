@@ -240,12 +240,15 @@ class SettingsScreenTest {
     }
 
     /**
-     * 语言 — four rows, the reader's own choice selected, and every label written in the language it
-     * selects except the first.
+     * 语言 — one row of 外观 carrying the current answer, and four choices behind it.
      *
-     * 跟随系统语言 rather than 跟随系统 because 明暗 two groups above already answers to those four
+     * 跟随系统语言 rather than 跟随系统 because 明暗 in the same group already answers to those four
      * characters, and `onNodeWithText` finding both is the same ambiguity a screen reader would read
      * out. That is what the first assertion here is really pinning.
+     *
+     * Each label is looked up while the menu is shut, so the one node matching it is the row's own
+     * value rather than the menu item that set it — the two carry the same text, and asserting on
+     * an open menu would pass whether or not the choice ever reached the row.
      */
     @Test
     fun `language offers the three bundles and following the system`() {
@@ -274,11 +277,18 @@ class SettingsScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("跟随系统语言").performScrollTo().assertIsSelected()
-        composeRule.onNodeWithText("繁體中文").performScrollTo().performClick()
-        composeRule.onNodeWithText("繁體中文").assertIsSelected()
-        composeRule.onNodeWithText("English").performScrollTo().performClick()
-        composeRule.onNodeWithText("English").assertIsSelected()
+        composeRule.onNodeWithText("语言").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("跟随系统语言").assertIsDisplayed()
+
+        composeRule.onNodeWithText("语言").performClick()
+        composeRule.onNodeWithText("繁體中文").performClick()
+        composeRule.onNodeWithText("繁體中文").assertIsDisplayed()
+        composeRule.onNodeWithText("跟随系统语言").assertDoesNotExist()
+
+        composeRule.onNodeWithText("语言").performClick()
+        composeRule.onNodeWithText("English").performClick()
+        composeRule.onNodeWithText("English").assertIsDisplayed()
+        composeRule.onNodeWithText("繁體中文").assertDoesNotExist()
     }
 
     /** On is the default: 首页 is read by page number in the browser, and the bar says which one. */

@@ -8,23 +8,26 @@ import platform.Foundation.NSUserDefaults
 /**
  * Writes the choice into `AppleLanguages`, which is where iOS keeps a per-app language.
  *
- * The system reads that key when the process starts and hands the result to everything that asks
- * what language this app is in — `NSLocale.preferredLanguages`, the bundle's own lookups, and the
- * locale Compose reports. Nothing re-reads it while the app is running, which is why
- * [appLanguageAppliesOnRestart] is true here and the settings screen says so.
+ * Not for the screen — `ProvideAppLanguage` answers that out of composition state and puts a change
+ * on screen at once. This is for everything iOS renders on the app's behalf and reads its own
+ * locale for: the system's own alert and share sheets, date and number formatting, and the language
+ * a `WKWebView` announces. The system reads this key when the process starts and never re-reads it,
+ * so those follow at the next launch — which is the platform's rule and not this app's.
  *
  * [AppLanguage.SYSTEM] removes the key rather than writing the device's current language into it:
  * the point of that entry is to keep following the device, and a tag frozen at the moment the user
  * chose "follow the system" would stop doing exactly that.
  *
- * Unlike the Android actual there is no narrowing of a Traditional Chinese device to `zh-TW` under
- * [AppLanguage.SYSTEM]. It would have to be written into this same key to take effect, and that
- * would freeze the very setting it is applied on behalf of. A reader on `zh-Hant-HK` is served
- * Simplified until they pick 繁體中文 by hand — the one case on this platform where the entry is
- * not merely a preference.
+ * There is no Traditional Chinese narrowing here, unlike the Android actual. It would have to be
+ * written into this same key to take effect, and that would freeze the very setting it is applied
+ * on behalf of. On screen it does not matter — `ProvideAppLanguage` narrows a `zh-Hant-HK` reader
+ * to `values-zh-rTW` for every platform alike, and that is where the app's own words come from.
  */
 @Composable
-actual fun ApplyAppLanguage(language: AppLanguage) {
+actual fun ApplyAppLanguage(language: AppLanguage?) {
+    // Null means the store has not answered yet; see the note on the expect. Removing the key on
+    // that first composition would read as 跟随系统 and throw away a choice already on disk.
+    if (language == null) return
     LaunchedEffect(language) {
         val defaults = NSUserDefaults.standardUserDefaults
         val tag = language.tag
@@ -35,8 +38,6 @@ actual fun ApplyAppLanguage(language: AppLanguage) {
         }
     }
 }
-
-actual val appLanguageAppliesOnRestart: Boolean = true
 
 /** The `NSUserDefaults` key iOS itself reads; the name is the platform's, not ours. */
 private const val APPLE_LANGUAGES = "AppleLanguages"

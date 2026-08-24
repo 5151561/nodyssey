@@ -46,12 +46,26 @@ region, the same gap resolves to the default, which is Simplified. The other hal
 this bundle answers to. Both halves go the day Compose Resources can alias one bundle to several
 qualifiers.
 
-设置 · 语言 stores an `AppLanguage` in the settings SSOT and `ApplyAppLanguage` in `:ui` puts it into
-force, once, from `NodysseyRoot`. The Android actual is hand-rolled over `LocaleList.setDefault` and
-a `SharedPreferences` mirror rather than using `LocaleManager`, and `AndroidAppLanguage` states at
-length why — API 33, an AppCompat backport this app cannot use, and `SYSTEM` needing to be narrowed
-to a bundle the app actually ships. iOS and the desktop JVM apply at the next launch and the settings
-screen says so.
+设置 › 外观 › 语言 stores an `AppLanguage` in the settings SSOT, and `NodysseyRoot` puts it into
+force through two calls that answer two different questions. `ProvideAppLanguage` is the screen:
+Compose Resources resolves a bundle through `LocalComposeEnvironment`, which is `internal`, so the
+Android actual reaches it sideways by providing a `Configuration` carrying the new locale — that
+invalidates the default environment, which has to read the configuration to report a theme
+qualifier, and it re-reads the process locale on the way back. The result is a recomposition rather
+than an `Activity.recreate()`: no black frame, and the scroll position and back stack survive.
+`AppLanguageRecompositionTest` is what pins that, because it rests on somebody else's implementation
+detail and a compile error would never catch its going away. iOS and the desktop JVM have no such
+lever, take effect at the next launch, and say so on the settings screen through
+`appLanguageAppliesOnRestart`.
+
+`ApplyAppLanguage` is the other half and covers only what the platform draws on the app's behalf:
+the notification channel names and bodies `:app` posts out of `res/values-…`, what a WebView
+reports, `Accept-Language`, number formats. It is hand-rolled over `LocaleList.setDefault` and a
+`SharedPreferences` mirror rather than `LocaleManager`, and `AndroidAppLanguage` states at length
+why — API 33, an AppCompat backport this app cannot use, and `SYSTEM` needing to be narrowed to a
+bundle the app actually ships. Note that `LocaleManager` would buy nothing on screen even after a
+`minSdk` bump: the platform applies a per-app language by handing the activity a configuration
+change, and it is `ProvideAppLanguage` that turns one of those into new strings.
 
 Every Robolectric suite that reads a string pins the process locale to Simplified Chinese, because
 Compose Resources resolves against `Locale.current` — the *process* default, which Robolectric never

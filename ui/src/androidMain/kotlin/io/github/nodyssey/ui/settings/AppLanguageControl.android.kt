@@ -1,8 +1,7 @@
 package io.github.nodyssey.ui.settings
 
-import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
+import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.LocaleList
@@ -14,13 +13,13 @@ import io.github.nodyssey.data.settings.AppLanguage
 import io.github.nodyssey.data.settings.isTraditionalChineseTag
 
 @Composable
-actual fun ApplyAppLanguage(language: AppLanguage) {
+actual fun ApplyAppLanguage(language: AppLanguage?) {
     val context = LocalContext.current
+    // Null means the store has not answered yet, and there is nothing to apply — see the note on
+    // the expect. Acting on it would read as 跟随系统 and undo whatever the reader had chosen.
+    if (language == null) return
     LaunchedEffect(context, language) { AndroidAppLanguage.applyLanguage(context, language) }
 }
-
-/** Android recreates the activity under the new locale, so the change is on screen at once. */
-actual val appLanguageAppliesOnRestart: Boolean = false
 
 /**
  * 语言, as this platform stores and applies it.
@@ -43,19 +42,28 @@ actual val appLanguageAppliesOnRestart: Boolean = false
  *
  * Replace all of it with `LocaleManager` on the day `minSdk` reaches 33 *and* Compose Resources can
  * name one bundle from several locale qualifiers, which is what would let `SYSTEM` mean the empty
- * locale list the platform expects.
+ * locale list the platform expects. Note that it would buy nothing on screen even then: the
+ * platform applies a per-app language by handing the activity a configuration change, and Compose
+ * Resources reads neither the configuration nor the `Context` — see `ProvideAppLanguage`.
  */
 object AndroidAppLanguage {
     /**
-     * The applied tag, mirrored out of DataStore so that [wrap] can read it.
+     * The chosen [AppLanguage], by name, mirrored out of DataStore so that [wrap] can read it.
      *
      * `attachBaseContext` runs before anything asynchronous can have finished, and the settings
      * store is a suspending `Flow` — so the one value the platform needs before the first frame is
      * kept where a synchronous read can get at it. DataStore stays the source of truth; this is a
      * cache of one field, written only after that field has changed.
+     *
+     * The *choice* and not the tag it resolves to, because [AppLanguage.SYSTEM] resolves to a
+     * different tag on a Traditional device than on any other, and the device can change underneath
+     * a mirror that was written months ago. Only a composition ever writes here, and a process woken
+     * by WorkManager alone never has one — so a stored `zh-TW` would keep posting Traditional
+     * notifications to a reader who had since moved their device to English. Storing the choice
+     * moves that derivation into [wrap], which runs at every process start.
      */
     private const val PREFERENCES = "app_language"
-    private const val KEY_TAG = "language_tag"
+    private const val KEY_LANGUAGE = "language"
 
     /**
      * Applies [language], and does nothing when it is already in force.
@@ -64,28 +72,27 @@ object AndroidAppLanguage {
      * launch whose stored answer disagrees with the one being applied has any work to do.
      */
     internal fun applyLanguage(context: Context, language: AppLanguage) {
-        val tag = desiredTag(language)
         val preferences = preferences(context)
-        if (preferences.getString(KEY_TAG, null) == tag) return
-        preferences.edit { if (tag == null) remove(KEY_TAG) else putString(KEY_TAG, tag) }
-        setProcessLocales(tag)
-        // The composition on screen was built against the old locale and no amount of recomposing
-        // rereads it — `Locale.current` is the process's answer, read once per composition. A
-        // recreate is what re-enters `attachBaseContext` and builds the whole tree again.
-        context.findActivity()?.recreate()
+        if (storedLanguage(preferences) == language) return
+        preferences.edit { putString(KEY_LANGUAGE, language.name) }
+        setProcessLocales(desiredTag(language))
     }
 
     /**
      * The base context a shell should hand to `super.attachBaseContext`, carrying the stored locale.
      *
-     * Two things happen here and they are for two different resource systems. Setting the process
-     * default is what `:ui`'s and `:designsys`' Compose Resources read, since those resolve against
-     * `Locale.current` and never see a `Context` at all. The returned configuration context is what
-     * `:app`'s own `res/values-…` are read through — the notification channel names and bodies,
-     * which is all that is left there.
+     * Two things happen here and neither of them is the screen — that is `ProvideAppLanguage`, out
+     * of composition state. Setting the process default is what a WebView, `Accept-Language` and
+     * the number formats read. The returned configuration context is what `:app`'s own
+     * `res/values-…` are read through — the notification channel names and bodies, which is all
+     * that is left there, and which a process woken by WorkManager alone still has to get right.
+     *
+     * The tag is derived here rather than read off the mirror, so that a [AppLanguage.SYSTEM] whose
+     * answer depends on the device — the Traditional narrowing — is re-derived at every process
+     * start, including one that only ever runs a worker.
      */
     fun wrap(base: Context): Context {
-        val tag = preferences(base).getString(KEY_TAG, null) ?: return base
+        val tag = desiredTag(storedLanguage(preferences(base))) ?: return base
         val locales = LocaleList.forLanguageTags(tag)
         LocaleList.setDefault(locales)
         val configuration = Configuration(base.resources.configuration)
@@ -109,6 +116,10 @@ object AndroidAppLanguage {
         }
     }
 
+    /** The locale list [language] means on this device, for a composition to read a bundle by. */
+    internal fun localesFor(language: AppLanguage): LocaleList =
+        desiredTag(language)?.let(LocaleList::forLanguageTags) ?: systemLocales()
+
     private fun setProcessLocales(tag: String?) {
         val locales = tag?.let(LocaleList::forLanguageTags) ?: systemLocales()
         if (!locales.isEmpty) LocaleList.setDefault(locales)
@@ -125,12 +136,7 @@ object AndroidAppLanguage {
     private fun preferences(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
-    private fun Context.findActivity(): Activity? {
-        var current: Context = this
-        while (current is ContextWrapper) {
-            if (current is Activity) return current
-            current = current.baseContext ?: return null
-        }
-        return null
-    }
+    /** What the mirror holds, with a store nobody has written yet reading as [AppLanguage.SYSTEM]. */
+    private fun storedLanguage(preferences: SharedPreferences): AppLanguage =
+        AppLanguage.ofName(preferences.getString(KEY_LANGUAGE, null))
 }
