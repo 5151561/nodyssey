@@ -68,6 +68,8 @@ paging = "3.5.0"
 robolectric = "4.16.1"
 leakcanary = "2.14"
 roborazzi = "1.73.0"
+androidxBenchmark = "1.5.0-rc01"
+androidxProfileinstaller = "1.4.1"
 spotless = "8.9.0"
 ktlint = "1.8.0"
 
@@ -156,6 +158,10 @@ leakcanary = { module = "com.squareup.leakcanary:leakcanary-android", version.re
 # properties on `testAndroidHostTest` — see :designsys's build file.
 roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
 roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
+androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "androidxBenchmark" }
+# What turns the committed `baseline-prof.txt` into a compiled profile on devices that never see
+# Play: sideloaded installs get no cloud profile, so the app has to install its own.
+androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "androidxProfileinstaller" }
 
 # Compose Multiplatform, for the modules that compile for more than Android. Same package names as
 # androidx — `androidx.compose.material3.Button` is the same import either way — so a module switching

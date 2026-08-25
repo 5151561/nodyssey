@@ -108,6 +108,11 @@ dependencies {
     debugImplementation(composeBom)
     androidTestImplementation(composeBom)
 
+    // What compiles `src/main/baseline-prof.txt` on devices that never see Play: a sideloaded
+    // install gets no cloud profile, so without this the committed profile would only help the
+    // benchmark that measures it. See `:benchmark` for how the file is produced.
+    implementation(libs.androidx.profileinstaller)
+
     // Core Android dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

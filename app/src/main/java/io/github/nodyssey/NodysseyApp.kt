@@ -113,23 +113,6 @@ open class NodysseyApp :
     }
 
     /**
-     * The forum's own images share the app's OkHttp client so avatars and attachments carry the same
-     * cookies and browser headers as page requests — Cloudflare rejects them otherwise. Images a post
-     * embeds from anywhere else go through [ImageCallRouter]'s cookie-less client instead; see
-     * `imageContentClient` in `DefaultAppContainer` for why the jar is the one thing they must not
-     * share.
-     *
-     * The cache strategy is neither of the two Coil offers. `DefaultCacheStrategy.read` hands back
-     * the cached response whenever there is one and never asks the server about it, which is
-     * invisible for an attachment — its URL changes when its bytes do — and wrong for an avatar,
-     * which the site serves from `/avatar/<uid>.png` for the life of the account, so changing a
-     * picture would change nothing here forever. `CacheControlCacheStrategy` alone goes too far the
-     * other way: the site's own `max-age` on an avatar is four hours and most of it is spent in the
-     * CDN before the response arrives, so every few hours every face in a list needs a round trip to
-     * be told it has not changed. [LongLivedImageCacheStrategy] keeps the second one's behaviour and
-     * gives avatars a lifetime of the app's own choosing; its note has the measurements.
-     */
-    /**
      * StrictMode on debug builds only — the MAD review's F-15 asked for a performance canary that
      * costs release users nothing, and this is it. `penaltyLog` rather than `penaltyDeath`: a logged
      * violation during development is a lead to follow, a killed process during development is a
@@ -154,6 +137,23 @@ open class NodysseyApp :
         )
     }
 
+    /**
+     * The forum's own images share the app's OkHttp client so avatars and attachments carry the same
+     * cookies and browser headers as page requests — Cloudflare rejects them otherwise. Images a post
+     * embeds from anywhere else go through [ImageCallRouter]'s cookie-less client instead; see
+     * `imageContentClient` in `DefaultAppContainer` for why the jar is the one thing they must not
+     * share.
+     *
+     * The cache strategy is neither of the two Coil offers. `DefaultCacheStrategy.read` hands back
+     * the cached response whenever there is one and never asks the server about it, which is
+     * invisible for an attachment — its URL changes when its bytes do — and wrong for an avatar,
+     * which the site serves from `/avatar/<uid>.png` for the life of the account, so changing a
+     * picture would change nothing here forever. `CacheControlCacheStrategy` alone goes too far the
+     * other way: the site's own `max-age` on an avatar is four hours and most of it is spent in the
+     * CDN before the response arrives, so every few hours every face in a list needs a round trip to
+     * be told it has not changed. [LongLivedImageCacheStrategy] keeps the second one's behaviour and
+     * gives avatars a lifetime of the app's own choosing; its note has the measurements.
+     */
     @OptIn(ExperimentalCoilApi::class)
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader

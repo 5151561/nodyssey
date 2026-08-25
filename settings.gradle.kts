@@ -48,6 +48,13 @@ include(":app")
 // as shipped.
 include(":smoke")
 
+// The performance harness, same `com.android.test` shape as `:smoke`: a generator that walks the
+// launch-and-scroll journey to produce `app/src/main/baseline-prof.txt`, and a cold-start
+// Macrobenchmark to measure what the committed profile buys. Neither runs in CI — the profile is a
+// committed artifact regenerated on demand (see the module's README), and startup numbers from a
+// shared CI emulator would be noise presented as measurement.
+include(":benchmark")
+
 // Compose theme and components with no knowledge of any particular forum. Kept as its own module so
 // the compiler, not a review convention, is what stops site-specific types leaking into it.
 //

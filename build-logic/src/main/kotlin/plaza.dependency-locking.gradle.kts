@@ -32,6 +32,10 @@ val lockedConfigurations =
         "debugAndroidTestRuntimeClasspath",
         "minifiedCompileClasspath",
         "minifiedRuntimeClasspath",
+        // The un-renamed twin the baseline-profile generator captures from; see the build type's
+        // note in `plaza.android.application` for why it exists at all.
+        "nonMinifiedCompileClasspath",
+        "nonMinifiedRuntimeClasspath",
         // The same two categories again for a Kotlin Multiplatform module, where none of the six
         // names above exists: build types are an Android idea, and a KMP module names its
         // configurations after targets and compilations instead.
