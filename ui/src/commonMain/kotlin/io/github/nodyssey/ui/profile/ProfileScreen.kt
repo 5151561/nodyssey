@@ -36,7 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -57,9 +56,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
 import io.github.nodyssey.ui.common.AttendanceModeDialog
+import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot
-import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_sign_out
 import io.github.nodyssey.ui.resources.assets_signed_in
@@ -223,14 +222,20 @@ fun ProfileScreen(
     onRetryAttendanceBoard: () -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    // The sign-in request now runs on this screen, so its refusals have to land here too.
-    val failure = state.attendanceFailure
-    val failureMessage = failure?.shortMessage()
-    LaunchedEffect(failure) {
-        if (failure == null) return@LaunchedEffect
-        snackbarHostState.showSnackbar(failureMessage.orEmpty())
-        onAttendanceFailureShown()
-    }
+    // The sign-in request now runs on this screen, so its refusals have to land here too — and
+    // through [SiteErrorSnackbar], because a bare sentence is the wrong answer to a wall: 领鸡腿
+    // refused with 需要确认一下你不是机器人 and nothing to press left the reader knowing what was
+    // wrong and not that a web view fixes it.
+    SiteErrorSnackbar(
+        error = state.attendanceFailure,
+        snackbarHostState = snackbarHostState,
+        onShown = onAttendanceFailureShown,
+        onVerify = onVerify,
+        onSignIn = onSignIn,
+        // The chooser, not the request: the mode picked is not kept once the sheet closes, so the
+        // only honest retry is the one that asks again.
+        onRetry = onAttendance,
+    )
     Scaffold(modifier = modifier, snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         if (!state.isSignedIn) {
             SignedOutProfile(
