@@ -19,6 +19,7 @@ import io.github.nodyssey.data.offline.OfflineImageInterceptor
 import io.github.nodyssey.data.offline.OfflineWork
 import io.github.nodyssey.di.AndroidAppContainer
 import io.github.nodyssey.di.DefaultAppContainer
+import io.github.nodyssey.image.ImageCallRouter
 import io.github.nodyssey.image.ImageNetworkPolicyInterceptor
 import io.github.nodyssey.notifications.NotificationChannels
 import io.github.nodyssey.notifications.NotificationPollScheduler
@@ -98,8 +99,11 @@ open class NodysseyApp :
     }
 
     /**
-     * Images share the app's OkHttp client so avatars and attachments carry the same cookies and
-     * browser headers as page requests — Cloudflare rejects them otherwise.
+     * The forum's own images share the app's OkHttp client so avatars and attachments carry the same
+     * cookies and browser headers as page requests — Cloudflare rejects them otherwise. Images a post
+     * embeds from anywhere else go through [ImageCallRouter]'s cookie-less client instead; see
+     * `imageContentClient` in `DefaultAppContainer` for why the jar is the one thing they must not
+     * share.
      *
      * The cache strategy is neither of the two Coil offers. `DefaultCacheStrategy.read` hands back
      * the cached response whenever there is one and never asks the server about it, which is
@@ -130,7 +134,12 @@ open class NodysseyApp :
                 )
                 add(
                     OkHttpNetworkFetcherFactory(
-                        callFactory = { container.okHttpClient },
+                        callFactory = {
+                            ImageCallRouter(
+                                forum = { container.okHttpClient },
+                                elsewhere = { container.imageContentClient },
+                            )
+                        },
                         cacheStrategy = {
                             LongLivedImageCacheStrategy(
                                 delegate = CacheControlCacheStrategy(),

@@ -216,6 +216,7 @@ private fun WebViewScreen(
                             },
                             onOpenPopup = { child -> popup = child },
                             onClosePopup = { popup = null },
+                            onBlockedNavigation = { openExternal(it) },
                         )
                         loadUrl(url)
                         webView = this
@@ -272,6 +273,12 @@ private fun WebView.configureForNodeSeek(
     onPageLoaded: (WebView) -> Unit,
     onOpenPopup: (WebView) -> Unit,
     onClosePopup: () -> Unit,
+    /**
+     * What happens to a navigation that reached `onPageStarted` without passing [staysHere] — see
+     * the override below for how one gets there. The page hands the URL to the browser; a popup
+     * additionally closes itself, because a popup with nothing to show is not a screen to leave up.
+     */
+    onBlockedNavigation: (String) -> Unit,
 ) {
     settings.javaScriptEnabled = true
     settings.domStorageEnabled = true
@@ -311,6 +318,12 @@ private fun WebView.configureForNodeSeek(
                 onPageLoaded = {},
                 onOpenPopup = onOpenPopup,
                 onClosePopup = onClosePopup,
+                // A blocked popup closes as well as handing off: unlike the page, there is nothing
+                // underneath it to keep showing.
+                onBlockedNavigation = { url ->
+                    onClosePopup()
+                    openExternal(url)
+                },
             )
             onOpenPopup(child)
             transport.webView = child
@@ -336,6 +349,26 @@ private fun WebView.configureForNodeSeek(
             // challenge pages.
             view?.post { openExternal(target) }
             return true
+        }
+
+        /**
+         * The whitelist [shouldOverrideUrlLoading] enforces, applied to the navigations that never
+         * pass through it.
+         *
+         * There is exactly one of those that matters: the *first* load of a popup. When a page calls
+         * `window.open(url)`, the URL travels through the `WebViewTransport` in `onCreateWindow` and
+         * the child starts loading it without ever consulting the child's `WebViewClient` — a
+         * documented WebView quirk, and on a screen with no address bar it is a phishing surface: any
+         * script that survives onto the page could open a look-alike sign-in form from any host and
+         * nothing on screen would say so. This override is the same `staysHere` question asked at the
+         * point the platform actually announces the load. For the main page it is a no-op safety net —
+         * everything reaching it already passed the client — and `about:blank` is let through because
+         * that is what a popup shows in the moment before its opener scripts it somewhere real.
+         */
+        override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+            if (url == null || url == "about:blank" || staysHere(url)) return
+            view?.stopLoading()
+            onBlockedNavigation(url)
         }
 
         override fun onPageFinished(view: WebView?, url: String?) {

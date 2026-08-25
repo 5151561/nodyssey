@@ -126,17 +126,23 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 /**
- * The two members of the graph that name a type `:ui` cannot.
+ * The members of the graph that name a type `:ui` cannot.
  *
- * The `OkHttpClient` is Coil's call factory, handed over in [io.github.nodyssey.NodysseyApp], and
- * [SessionCookies] is read off the same cookie jar it is built with. Neither is reached from a
- * screen — see the note on [AppContainer] — so step D1 left them up here rather than widening the
+ * The two `OkHttpClient`s are Coil's call factories, handed over in [io.github.nodyssey.NodysseyApp],
+ * and [SessionCookies] is read off the same cookie jar the first is built with. None is reached from
+ * a screen — see the note on [AppContainer] — so step D1 left them up here rather than widening the
  * common interface to a type that only exists on two of the four targets `:shared` builds for.
  */
 interface AndroidAppContainer : AppContainer {
     /** What the shared cookie store says about this session. See [SessionCookies]. */
     val sessionCookies: SessionCookies
     val okHttpClient: OkHttpClient
+
+    /**
+     * What an image from anywhere other than nodeseek.com loads over — the same browser headers as
+     * [okHttpClient], minus the cookie jar. See the builder for why the jar is the one thing removed.
+     */
+    val imageContentClient: OkHttpClient
 }
 
 class DefaultAppContainer(
@@ -292,6 +298,44 @@ class DefaultAppContainer(
             // A *network* interceptor, because it is about a hop the application layer never sees:
             // the `Referer` stamped above must not follow a redirect off the host it was addressed
             // to, or an image host that 302s to a CDN with hotlink protection refuses every image.
+            .addNetworkInterceptor(CrossOriginRefererInterceptor())
+            .build()
+    }
+
+    /**
+     * [okHttpClient] for images that live somewhere else — same headers, no cookie jar.
+     *
+     * A post can embed a picture from any host its author liked, and for years those loads rode the
+     * forum's client. The cookies that jar sends are scoped per domain, so nothing of NodeSeek's
+     * session ever left home — but the jar also *saves*, which is the half that matters: a `Set-Cookie`
+     * from a third-party image host went into the shared WebView store and came back on every later
+     * load, a persistent tracking identifier planted through an `<img>` tag. The project already made
+     * this exact call once for the 图床 API ([imageHostClient], "the cookies are not its business");
+     * this client is the same judgment applied to the images themselves. No jar configured means
+     * OkHttp's `CookieJar.NO_COOKIES`: nothing sent, nothing saved.
+     *
+     * The `Referer` stays, deliberately — a browser rendering the page would send one to every
+     * embedded image, hotlink-protected hosts that whitelist nodeseek.com depend on it, and
+     * [CrossOriginRefererInterceptor] still strips it the moment a redirect leaves the addressed
+     * host. The proxy kind is `THIRD_PARTY` for the same reason the 图床's is: `FORUM_ONLY` is the
+     * user saying only the forum goes through the node, and these hosts are not the forum.
+     */
+    override val imageContentClient: OkHttpClient by lazy {
+        OkHttpClient
+            .Builder()
+            .connectionPool(connectionPool)
+            .dns(appDns)
+            .proxySelector(AppProxySelector(liveProxyConfig, ProxyClientKind.THIRD_PARTY))
+            .proxyAuthenticator(AppProxyAuthenticator(liveProxyConfig))
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .addInterceptor(
+                BrowserHeadersInterceptor(
+                    userAgent = userAgent.value,
+                    acceptLanguage = acceptLanguage,
+                    referer = "${NodeSeekSite.BASE_URL}/",
+                ),
+            )
             .addNetworkInterceptor(CrossOriginRefererInterceptor())
             .build()
     }
@@ -586,6 +630,7 @@ class DefaultAppContainer(
                 dispatchers = dispatchers,
                 userAgent = "Nodyssey/${appVersion.name} (+https://github.com/${NodysseyRelease.REPOSITORY})",
                 manifestBaseUrl = NodysseyRelease.UPDATES_BASE_URL,
+                repository = NodysseyRelease.REPOSITORY,
             ),
             store = settingsRepository,
             clock = clock,
