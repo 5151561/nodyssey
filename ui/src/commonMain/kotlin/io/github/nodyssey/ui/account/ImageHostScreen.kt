@@ -59,6 +59,7 @@ import io.github.nodyssey.data.imagehost.CustomHostFields
 import io.github.nodyssey.data.imagehost.HostedImage
 import io.github.nodyssey.data.imagehost.ImageHostError
 import io.github.nodyssey.data.imagehost.ImageHostProvider
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_refresh
@@ -646,7 +647,7 @@ private fun ImagesSection(
                 .padding(Spacing.lg),
             horizontalArrangement = Arrangement.Center,
         ) {
-            CircularProgressIndicator(Modifier.size(22.dp))
+            CircularProgressIndicator(Modifier.size(22.dp).describedAsLoading())
         }
 
         /*

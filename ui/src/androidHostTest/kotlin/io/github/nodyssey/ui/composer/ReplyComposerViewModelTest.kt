@@ -72,7 +72,7 @@ class ReplyComposerViewModelTest {
      */
     @Test
     fun `inserting a receive code from the reply sheet writes the same marker`() = runTest(dispatcher) {
-        val viewModel = viewModel(profiles = FakeReplyProfileRepository(selfUid = 52_425))
+        val viewModel = viewModel(profiles = FakeReplyProfileRepository(uid = 52_425))
         viewModel.open()
         advanceUntilIdle()
 
@@ -88,7 +88,7 @@ class ReplyComposerViewModelTest {
     /** No uid, no payee — and the sheet says so rather than writing a code that collects for nobody. */
     @Test
     fun `the reply sheet declines a receive code before the account is known`() = runTest(dispatcher) {
-        val viewModel = viewModel(profiles = FakeReplyProfileRepository(selfUid = null))
+        val viewModel = viewModel(profiles = FakeReplyProfileRepository(uid = null))
         viewModel.open()
         advanceUntilIdle()
 
@@ -166,6 +166,29 @@ class ReplyComposerViewModelTest {
         assertEquals(7, submission?.quotedFloor)
         // No blockquote and no timestamp: 回复 addresses the floor, it does not reproduce it.
         assertEquals("@ipv4 [#7](/post-703863-1#7) 想要十几刀年付的中盘鸡", submission?.body)
+    }
+
+    /**
+     * What is sent must be exactly what is on screen. The `snapshotFlow` mirror in the UiState runs
+     * a frame behind the field, and an IME that commits a candidate right before 发送 is exactly a
+     * frame; the mirror is deliberately not drained here so it still holds the first segment.
+     * Publishing the mirror sent a reply missing the last thing typed — and then deleted the draft.
+     */
+    @Test
+    fun `publishing sends the field's text, not the frame-old mirror`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.open()
+        advanceUntilIdle()
+        viewModel.bodyState.typeText("第一段")
+        runCurrent()
+        advanceUntilIdle()
+        assertEquals("第一段", viewModel.uiState.value.body)
+
+        viewModel.bodyState.typeMore("，候选词刚上屏的第二段")
+        viewModel.publish {}
+        advanceUntilIdle()
+
+        assertEquals("第一段，候选词刚上屏的第二段", repository.submission?.body)
     }
 
     /**
@@ -375,10 +398,12 @@ class ReplyComposerViewModelTest {
 
 /** Only [selfUid] matters here — the reply sheet asks the profile for nothing else. */
 private class FakeReplyProfileRepository(
-    override val selfUid: Long?,
+    private val uid: Long?,
 ) : ProfileRepository {
+    override val selfUid = MutableStateFlow(uid)
+
     override suspend fun profile(refresh: Boolean): UserProfile =
-        UserProfile(uid = selfUid ?: 0L, name = "我", avatarUrl = "", rank = 3)
+        UserProfile(uid = uid ?: 0L, name = "我", avatarUrl = "", rank = 3)
 
     override suspend fun profile(uid: Long): UserProfile = profile(refresh = false)
 }
@@ -401,6 +426,10 @@ private class FakeCommentComposerRepository : CommentComposerRepository {
     override suspend fun deleteDraft(postId: Long) {
         saved.remove(postId)
         flow(postId).value = null
+    }
+
+    override suspend fun deleteAllDrafts() {
+        saved.keys.toList().forEach { deleteDraft(it) }
     }
 
     override suspend fun publish(submission: CommentSubmission): Int? {

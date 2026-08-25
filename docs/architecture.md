@@ -1,12 +1,13 @@
 # 架构与 MAD 现代化
 
-首次评估：2026-07-25 · 最近复核：2026-07-28 · 范围：整个 `:app` 模块 · 基线：Android 官方架构指南 + Now in Android
+首次评估：2026-07-25 · 最近复核：2026-08-25 · 范围：**全仓八个模块**（`:app` / `:iosapp` / `:ui` / `:shared` / `:designsys` / `:richtext` / `:gallery` / `:smoke`）· 基线：Android 官方架构指南 + Now in Android
 
-这份文档记录**架构约定**和**为什么这么定**。改架构前先读这里；新增代码违反这里的约定，要么改代码，要么先改这份文档。
+这份文档记录**架构约定**和**为什么这么定**。改架构前先读这里；新增代码违反这里的约定，要么改代码，要么先改这份文档。模块边界与各模块职责的权威描述在 [`AGENTS.md`](../AGENTS.md)，KMP 拆分的过程与决策在 [`kmp-migration-plan.md`](kmp-migration-plan.md)——本文不重复它们，只记录跨模块都要守的约定。
 
-当前状态：阶段一至三已完成，阶段四的大部分页面与批次 F（f1–f4）已经落地。当前工作区有
-409 个 JVM/Robolectric 测试；Room/Paging 离线优先、WorkManager 通知轮询和 CI 门禁均已接入。
-下一步是帖子互动（点赞/反对/投喂）等真实写操作，以及仍缺可靠数据源的动态站点页面。
+当前状态：阶段一至四完成，KMP 拆分（A、B、D 系列）完成，iOS shell 可在模拟器运行。当前工作区约
+1,500+ 条 JVM/Robolectric/桌面测试；Room/Paging 离线优先、离线下载引擎、WorkManager（含
+WorkerFactory 构造注入）、CI 门禁（含 R8 minified 冒烟与依赖锁定）均已接入。
+2026-08-25 的全项目 MAD 体检结论与整改进度见下文第 3 节。
 
 功能是否真的可用以 [`implementation-status.md`](implementation-status.md) 为准；设计画板完成度不作为实现证据。
 
@@ -91,30 +92,32 @@
 
 ## 2. 分层
 
+层与模块自 KMP 拆分（步骤 A5–A7、D1）起对齐：一层基本就是一个模块。
+
 ```
-ui/          Compose。Route(有状态) + Screen(无状态) 分离，Screen 可 @Preview 可测
-  └ 只依赖 UiState / LazyPagingItems 和回调，不认识 Repository
+:app / :iosapp   平台壳。Activity/入口、DI 容器组装、WorkManager/BGTaskScheduler、
+                 通知、图片选择器——命名平台而不是命名屏幕的那些部分
 
-ViewModel    状态容器。镜像 SSOT 进 UiState，转发用户意图，不持有内容
+:ui              Compose 屏幕 + ViewModel + 导航（io.github.nodyssey.ui）
+  ├ Route(有状态) + Screen(无状态) 分离，Screen 可 @Preview 可测
+  ├ 屏幕只依赖 UiState / LazyPagingItems 和回调，不认识 Repository
+  ├ ViewModel 镜像 SSOT 进 UiState，转发用户意图，不持有内容
+  └ Navigation.kt + 七个按区域拆分的 entry 文件（TabEntries 等），共享捕获
+    显式化为 StackEntryScope，每个 tab 栈一份——导航层不做仓库直调，
+    由 :ui 的 UiImportBoundaryTest 机器守护
 
-data/        Repository。隐藏数据源，暴露领域模型
-  ├ PostRepository          离线优先：Room 为 SSOT + Pager
-  ├ FeedRemoteMediator      把网络页写进 Room，自己不返回数据
-  ├ PostRemoteDataSource    只抓取和解析（原来的 NetworkPostRepository）
-  ├ CategoryRepository      JSON 接口 → boards 表
-  ├ ProfileRepository       我的资料离线优先：按会话指纹隔离，Room 先显示、网络后刷新
-  ├ local/                  Room：实体、DAO、TypeConverter
-  ├ session/                共享 cookie store 的读模型（登录态 + 人机验证态）
-  ├ imagehost/              站外图床（六选一）：凭证存储 + 上传/列表/删除，每家一个 client
-  ├ update/                 GitHub Releases 查询、APK 下载与 PackageInstaller 会话
-  └ settings/               DataStore，SSOT
+:shared          业务核心（Kotlin Multiplatform，四平台）
+  ├ model/       领域模型
+  ├ core/html    Ksoup 解析，选择器全部集中在 Selectors.kt
+  ├ core/net     HttpTransport 契约（OkHttp/NSURLSession 各是一个实现）、
+                 Cookie 桥、challenge 检测
+  ├ core/update  版本名比较与 Release 说明裁剪
+  ├ data/        Repository：PostRepository（离线优先）、FeedRemoteMediator、
+                 CategoryRepository、ProfileRepository、OfflineLibrary（离线下载
+                 引擎）、imagehost/（六家图床 client）、update/、settings/、session/
+  └ data/local   Room：实体、DAO、TypeConverter、迁移（schema 在 shared/schemas/）
 
-core/        无 Android 依赖的纯逻辑（parser、错误类型、URL 词表、时钟）
-  ├ html/    jsoup 解析，选择器全部集中在 Selectors.kt
-  ├ net/     OkHttp 客户端、Cookie 桥、challenge 检测
-  └ update/  版本名比较与 Release 说明裁剪
-
-notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
+:designsys       主题与不含站点知识的组件；:richtext 是它画的那棵 RichNode 树
 ```
 
 **线程约定**：
@@ -257,8 +260,8 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
   帖子列表、详情和已读标记在一个事务中清除，版块与设置保留。这样进程恢复也不会先闪出旧账号内容。
 - **内置 WebView 不是通用浏览器。** 只允许 HTTPS 的 `nodeseek.com` / `www.nodeseek.com` 主页面；
   帖子外链、图片和跨域跳转交给系统 URI handler。WebView 显式关闭 file/content 访问和混合内容。
-- **站外链接走 Custom Tab，靠替换 `LocalUriHandler` 实现。** `MainActivity` 在主题内部把
-  `CustomTabUriHandler`（`ui/common/ExternalLinks.kt`）提供给整棵树，所以显式的 `openUri` 调用和
+- **站外链接走 Custom Tab，靠替换 `LocalUriHandler` 实现。** `NodysseyRoot` 在主题内部把
+  浏览器 handler（`:ui` 的 `ui/common/ExternalLinks.kt`）提供给整棵树，所以显式的 `openUri` 调用和
   Compose 自己解析的正文链接注解走同一条路，不会漏掉一处。只接 http(s)：`mailto:` / `tg://` /
   `otpauth://` 原样落回平台 handler，并保留它「无人接收就抛异常」的语义——两步验证页靠这个失败告诉
   用户没装验证器。工具栏取当前 `MaterialTheme` 配色，`setColorScheme` 用 App 自己解析的深浅色而不是
@@ -275,8 +278,9 @@ notifications/ WorkManager 周期轮询、系统通知渠道与免打扰判断
 - **每个 tab 一条返回栈。** 之前切 tab 用 `backStack.clear()`，entry 被移除 →
   SaveableStateHolder 丢掉它的状态 → 列表滚动位置归零。四条栈各自 `rememberNavBackStack`，
   切换只换当前指向哪条。
-- **二级 tab 在根部按返回回首页，而不是退出应用。** `NavDisplay` 只在当前栈还有东西可弹时接管返回，
-  所以这条要自己挂 `BackHandler`。
+- **二级 tab 在根部按返回回首页，而不是退出应用。** 现在的做法不再是 `BackHandler`：首页的 entries
+  垫在每个二级 tab 的 entries 底下（`homeEntries + tabEntries`），返回就是一次普通的 pop，因此有动画、
+  预测性返回手势也有东西可预览。见 `Navigation.kt` 里 `entries` 的注释。
 - **顶层导航不要写死 `NavigationBar`。** 用 `NavigationSuiteScaffold`，窗口宽了自己变 rail。
   targetSdk 36 之后大屏不能再拒绝缩放，手机形状的单列布局是会真的被用户看到的。
   隐藏导航用 `NavigationSuiteType.None`——那是「不为导航留空间」，不是画一条空栏。
@@ -484,10 +488,13 @@ Route/Screen 拆分 + Preview；ViewModel 测试（含两个回归用例）。
 
 **站点改版导致解析失败** → 只改 `Selectors.kt`，跑 `./gradlew testDebugUnitTest`。
 
-**给帖子加一个要持久化的字段** → 改 `PostEntity` + 两个 mapper，`NodeSeekDatabase` 的 `version` 加一。
-schema 会重新导出到 `app/schemas/`，**这个 diff 必须一起提交**，否则 CI 会拦。
-这些表全是公开页面的缓存、没有用户原创内容，所以走 `fallbackToDestructiveMigration`：
-重新下载比写迁移便宜。**哪天存了用户自己写的东西（草稿、离线队列），这条就不成立了，必须改成写真迁移。**
+**给帖子加一个要持久化的字段** → 改 `PostEntity` + 两个 mapper，`NodeSeekDatabase` 的 `version` 加一，
+**写一条真迁移**加进 `NODESEEK_MIGRATIONS`，并给它一条 `NodeSeekDatabaseMigrationTest`。schema 会重新
+导出到 `shared/schemas/`，**这个 diff 必须一起提交**，否则 CI 会拦。早期这里写的是「走
+`fallbackToDestructiveMigration`，重新下载比写迁移便宜」，并预言「哪天存了用户自己写的东西这条就不
+成立」——`offline_threads`（离线下载的正文）到来的那天它就不成立了：现在两端工厂只对 v1/v2 和降级
+做破坏性回退（`fallbackToDestructiveMigrationFrom(1, 2)`），漏写迁移会在 open 时崩溃点名，而不是
+静默清库。v3 起每一级都有迁移和测试，另有一条 3→14 链式测试证明它们能拼起来。
 
 **加一个 Repository 方法** → 读一律返回 `Flow`，不要返回一次性的 getter。
 getter 会让调用方把结果存进字段，那就是又一份副本。
@@ -499,5 +506,7 @@ getter 会让调用方把结果存进字段，那就是又一份副本。
 **动了依赖** → `./gradlew resolveAndLockAll --write-locks`，把各模块的 `gradle.lockfile` 都提交。
 
 **提交前** → `./gradlew spotlessApply` 然后
-`./gradlew spotlessCheck testDebugUnitTest :app:lintDebug :app:assembleDebug`
-（就是 CI 跑的那几道）。
+`./gradlew spotlessCheck testDebugUnitTest testAndroidHostTest jvmTest :app:lintDebug :app:assembleDebug`
+（就是 CI 跑的那几道；三个测试任务名缺一不可，KMP 模块没有 `testDebugUnitTest`，见 `ci.yml` 的注释）。
+Mac 上再跑 `./gradlew :shared:macosArm64Test`——Linux CI 跑不了 Kotlin/Native，release 的 macOS job
+每个 tag 兜底跑一次。

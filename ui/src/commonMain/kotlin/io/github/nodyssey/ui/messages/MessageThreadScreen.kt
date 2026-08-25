@@ -85,6 +85,7 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.composer.AttachmentTray
 import io.github.nodyssey.ui.composer.NodeSeekEmojiPanel
 import io.github.nodyssey.ui.composer.rememberImagePicker
@@ -655,7 +656,7 @@ private fun MessageStatusLine(
             SendStatus.SENDING -> {
                 CircularProgressIndicator(
                     strokeWidth = 1.6.dp,
-                    modifier = Modifier.size(10.dp),
+                    modifier = Modifier.size(10.dp).describedAsLoading(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(

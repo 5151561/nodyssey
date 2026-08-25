@@ -26,7 +26,11 @@ fun createNodeSeekDatabase(): NodeSeekDatabase =
         .databaseBuilder<NodeSeekDatabase>(name = nodeSeekDatabasePath())
         .setDriver(BundledSQLiteDriver())
         .addMigrations(*NODESEEK_MIGRATIONS)
-        .fallbackToDestructiveMigration(dropAllTables = true)
+        // The same narrowing as the Android factory, and see the note there: only v1/v2 — the
+        // versions with no migration — and downgrades fall back destructively; a missing future
+        // migration crashes at open instead of silently emptying the store.
+        .fallbackToDestructiveMigrationFrom(dropAllTables = true, 1, 2)
+        .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
         .build()
 
 @OptIn(ExperimentalForeignApi::class)

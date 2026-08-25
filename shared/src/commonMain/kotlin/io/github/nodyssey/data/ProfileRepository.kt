@@ -12,6 +12,8 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -80,10 +82,16 @@ interface ProfileRepository {
     /**
      * The signed-in account's uid, remembered from the last successful load or persisted emission.
      *
-     * Null until a profile has loaded once this process. Callers that navigate to a user's space use
-     * it to decide `isSelf` — a null simply means "not known to be self", never "known not to be".
+     * `null` until a profile has loaded once this process. Callers that navigate to a user's space
+     * use it to decide `isSelf` — a null simply means "not known to be self", never "known not to
+     * be".
+     *
+     * A [StateFlow] rather than the `@Volatile var` it used to be, so a reader has both shapes: a
+     * click handler takes `.value` at the moment of the click, and a composition that wants to
+     * *react* to the answer arriving can collect. The default builds a fresh always-null flow per
+     * read, which is exactly right for the fakes that inherit it.
      */
-    val selfUid: Long? get() = null
+    val selfUid: StateFlow<Long?> get() = MutableStateFlow(null)
 
     /**
      * Whether the signed-in account is a site moderator.
@@ -113,9 +121,8 @@ class NetworkProfileRepository(
 ) : ProfileRepository {
     private val json = Json { ignoreUnknownKeys = true }
 
-    @Volatile
-    override var selfUid: Long? = null
-        private set
+    private val selfUidState = MutableStateFlow<Long?>(null)
+    override val selfUid: StateFlow<Long?> = selfUidState
 
     @Volatile
     override var selfIsAdmin: Boolean = false
@@ -125,7 +132,7 @@ class NetworkProfileRepository(
 
     override fun observeProfile(sessionFingerprint: Int): Flow<UserProfile?> =
         profileDao.observe(sessionFingerprint).map { entity ->
-            entity?.toProfile()?.also { selfUid = it.uid }
+            entity?.toProfile()?.also { selfUidState.value = it.uid }
         }
 
     override suspend fun refreshProfile(sessionFingerprint: Int) {
@@ -135,7 +142,7 @@ class NetworkProfileRepository(
     override suspend fun clearCachedProfile() {
         cacheLock.withLock {
             profileDao.deleteAll()
-            selfUid = null
+            selfUidState.value = null
             selfIsAdmin = false
         }
     }
@@ -150,7 +157,7 @@ class NetworkProfileRepository(
                     .find(fingerprint)
                     ?.takeIf { clock.nowMillis() - it.cachedAtMillis < PROFILE_CACHE_TTL_MILLIS }
                     ?.toProfile()
-                    ?.also { selfUid = it.uid }
+                    ?.also { selfUidState.value = it.uid }
                     ?.let { return@withLock it }
             }
             fetchAndStore(fingerprint)
@@ -166,7 +173,7 @@ class NetworkProfileRepository(
         // The page parsed but named no account: the session cookie is missing or stale. Reporting
         // that as Unparsable sent users to a "站点改版" card whose retry can never succeed.
         val uid = bootstrap.uid ?: throw SiteException(SiteError.LoginRequired)
-        selfUid = uid
+        selfUidState.value = uid
         val account =
             runCatchingExceptCancellation {
                 parseProfileJson(

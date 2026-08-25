@@ -64,6 +64,7 @@ import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_cancel
 import io.github.nodyssey.ui.resources.action_publish
@@ -306,7 +307,7 @@ fun PostComposerScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(Modifier.describedAsLoading())
             }
         } else if (loadError != null) {
             SiteErrorState(
@@ -428,7 +429,7 @@ private fun PublishButton(
     ) {
         if (isPublishing) {
             CircularProgressIndicator(
-                modifier = Modifier.size(14.dp),
+                modifier = Modifier.size(14.dp).describedAsLoading(),
                 strokeWidth = 2.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberGroupedNumber
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.about_community
@@ -264,7 +265,7 @@ private fun CommunityStats(
             when (state) {
                 CommunityStatsUiState.Loading ->
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(20.dp).describedAsLoading(),
                         strokeWidth = 2.dp,
                     )
 

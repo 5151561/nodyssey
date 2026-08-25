@@ -1,0 +1,52 @@
+// Renovate's marching orders. json5 so the reasons can live next to the rules, in this
+// repository's habit of writing down why.
+//
+// Renovate only runs once the Mend Renovate GitHub App is installed on this repository — the
+// config alone does nothing. The real gate on every update PR is not this file but CI: all seven
+// module lockfiles are in STRICT mode, so a bump whose lockfile update came out incomplete fails
+// the build loudly instead of shipping a half-locked classpath. When that happens the fix is the
+// repo's own `./gradlew resolveAndLockAll --write-locks`, which resolves every locked
+// configuration in one pass (Renovate's per-dependency lockfile updates don't always reach the
+// androidTest/minified configurations that task exists for).
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: ['config:recommended', ':dependencyDashboard'],
+  timezone: 'Asia/Shanghai',
+  // A weekly batch rather than a PR per version: this is a single-maintainer project, and the
+  // interesting question each week is "what moved", not fifteen separate diffs.
+  schedule: ['before 8am on saturday'],
+  prConcurrentLimit: 5,
+  labels: ['dependencies'],
+  packageRules: [
+    {
+      // Everything non-major rides in one PR: CI (tests + Roborazzi goldens + lint) is the
+      // reviewer that matters, and one green batch is one decision.
+      matchUpdateTypes: ['minor', 'patch'],
+      groupName: 'weekly non-major bumps',
+    },
+    {
+      // Kotlin, KSP and the Compose compiler version-lock each other; a PR moving one without
+      // the others is guaranteed red. Majors included — they still have to move together.
+      matchPackagePatterns: ['^org\\.jetbrains\\.kotlin', '^com\\.google\\.devtools\\.ksp'],
+      groupName: 'kotlin toolchain',
+    },
+    {
+      // AGP majors change build semantics (the nonMinified build type and baseline-profile
+      // plumbing lean on current behaviour); keep them visible as their own PR, never batched.
+      matchPackagePrefixes: ['com.android.tools'],
+      matchUpdateTypes: ['major'],
+      groupName: 'android gradle plugin (major)',
+    },
+    {
+      // ci.yml pins gradle/actions at v5 on purpose — v6 split the cache into a proprietary
+      // provider and an MIT one with no fallback matching; see the comment above that step.
+      // Renovate proposing v6 weekly would be noise asking to undo a decision.
+      matchManagers: ['github-actions'],
+      matchPackageNames: ['gradle/actions'],
+      enabled: false,
+    },
+  ],
+  // M3 alpha and CMP rc are deliberate channels here (the Roborazzi goldens exist to make their
+  // pixel drift visible). Renovate's default already does the right thing: a dependency currently
+  // on a pre-release keeps following that stream, stable ones are never offered pre-releases.
+}

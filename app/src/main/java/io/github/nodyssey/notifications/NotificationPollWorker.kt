@@ -13,10 +13,13 @@ import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import io.github.nodyssey.MainActivity
-import io.github.nodyssey.NodysseyApp
 import io.github.nodyssey.R
 import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
+import io.github.nodyssey.data.NotificationRepository
+import io.github.nodyssey.data.session.SessionRepository
+import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.plaza.core.AppClock
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.flow.first
@@ -31,32 +34,37 @@ import java.time.ZoneId
  * the run as success: a periodic worker that keeps retrying against a challenge page would be
  * exactly the burst of non-browser traffic the challenge exists to stop. Only transport failures
  * retry, with WorkManager's own backoff.
+ *
+ * Dependencies arrive through the constructor, built by `NodysseyWorkerFactory`.
  */
 class NotificationPollWorker(
     context: Context,
     parameters: WorkerParameters,
+    private val settingsRepository: SettingsRepository,
+    private val sessionRepository: SessionRepository,
+    private val notificationRepository: NotificationRepository,
+    private val clock: AppClock,
 ) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {
-        val container = (applicationContext as NodysseyApp).container
-        val settings = container.settingsRepository.settings.first()
+        val settings = settingsRepository.settings.first()
         if (!settings.notificationsEnabled) return Result.success()
-        if (!container.sessionRepository.peek().isSignedIn) return Result.success()
+        if (!sessionRepository.peek().isSignedIn) return Result.success()
 
         val counts =
             try {
-                container.notificationRepository.refreshCounts()
+                notificationRepository.refreshCounts()
             } catch (e: SiteException) {
                 return if (e.error is SiteError.Network) Result.retry() else Result.success()
             }
 
-        val previous = container.settingsRepository.notificationSeenCounts()
+        val previous = settingsRepository.notificationSeenCounts()
         // Recorded before deciding whether to post, so the quiet window "collects silently":
         // arrivals inside it never turn into a burst of stale notifications at 07:00.
-        container.settingsRepository.setNotificationSeenCounts(counts)
+        settingsRepository.setNotificationSeenCounts(counts)
 
         val minuteOfDay =
             Instant
-                .ofEpochMilli(container.clock.nowMillis())
+                .ofEpochMilli(clock.nowMillis())
                 .atZone(ZoneId.systemDefault())
                 .toLocalTime()
                 .let { it.hour * 60 + it.minute }

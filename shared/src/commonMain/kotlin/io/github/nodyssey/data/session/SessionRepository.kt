@@ -49,7 +49,10 @@ class SessionRepository(
         return _state.value
     }
 
-    fun signOut() {
+    // Suspend because [SessionCookies.clearSession] only returns once the store is actually empty —
+    // the [sync] on the next line is a re-read, and re-reading before the removal lands published
+    // nothing (the fingerprint had not changed yet), which looked like a sign-out that did not take.
+    suspend fun signOut() {
         cookies.clearSession()
         sync()
     }

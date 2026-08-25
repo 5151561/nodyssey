@@ -2,6 +2,7 @@ package io.github.nodyssey.data.session
 
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.plaza.core.net.SessionCookies
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -166,7 +167,7 @@ class SessionRepositoryTest {
     }
 
     @Test
-    fun `signing out clears the session and reports it`() {
+    fun `signing out clears the session and reports it`() = runTest {
         setCookie("session=abc123")
         val signedIn = repository.sync()
 

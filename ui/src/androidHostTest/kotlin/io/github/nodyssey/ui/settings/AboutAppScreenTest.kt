@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import io.github.nodyssey.ui.assertEveryTouchTargetAtLeast48dp
+import io.github.plaza.core.crash.CrashReport
 import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.AppUpdateState
 import io.github.plaza.core.update.UpdateCheck
@@ -43,6 +45,8 @@ class AboutAppScreenTest {
                     onOpenChangelog = {},
                     onOpenLicenses = { openedLicenses = true },
                     onOpenUri = {},
+                    onExportCrashReport = {},
+                    onClearCrashReport = {},
                 )
             }
         }
@@ -73,6 +77,8 @@ class AboutAppScreenTest {
                     onOpenChangelog = {},
                     onOpenLicenses = {},
                     onOpenUri = {},
+                    onExportCrashReport = {},
+                    onClearCrashReport = {},
                 )
             }
         }
@@ -114,6 +120,8 @@ class AboutAppScreenTest {
                     onOpenChangelog = {},
                     onOpenLicenses = {},
                     onOpenUri = {},
+                    onExportCrashReport = {},
+                    onClearCrashReport = {},
                 )
             }
         }
@@ -126,7 +134,85 @@ class AboutAppScreenTest {
         assertTrue(installed)
     }
 
+    /** Every row and button on 关于 — with the update card and crash rows up — clears 48dp. */
+    @Test
+    fun `every touch target on the about screen holds 48dp`() {
+        composeRule.setContent {
+            PlazaTheme {
+                AboutAppScreen(
+                    state =
+                    AboutAppUiState(
+                        versionName = "1.1.0",
+                        versionCode = 3,
+                        update = AppUpdateState(check = UpdateCheck.Available(RELEASE)),
+                        crashReport = CRASH,
+                    ),
+                    onBack = {},
+                    onCheckUpdates = {},
+                    onDownloadUpdate = {},
+                    onCancelDownload = {},
+                    onInstallUpdate = {},
+                    onGrantInstallPermission = {},
+                    onOpenChangelog = {},
+                    onOpenLicenses = {},
+                    onOpenUri = {},
+                    onExportCrashReport = {},
+                    onClearCrashReport = {},
+                )
+            }
+        }
+
+        composeRule.assertEveryTouchTargetAtLeast48dp()
+    }
+
+    /**
+     * The crash rows exist only after a crash: a healthy install shows nothing, a recorded one shows
+     * 导出 with the crash's own moment and version, and 清除 is the way back to nothing.
+     */
+    @Test
+    fun `a recorded crash offers export and clearing, and a healthy install offers neither`() {
+        var exported: CrashReport? = null
+        var cleared = false
+        composeRule.setContent {
+            PlazaTheme {
+                val report = remember { mutableStateOf<CrashReport?>(CRASH) }
+                AboutAppScreen(
+                    state = AboutAppUiState(versionName = "1.3.0", versionCode = 5, crashReport = report.value),
+                    onBack = {},
+                    onCheckUpdates = {},
+                    onDownloadUpdate = {},
+                    onCancelDownload = {},
+                    onInstallUpdate = {},
+                    onGrantInstallPermission = {},
+                    onOpenChangelog = {},
+                    onOpenLicenses = {},
+                    onOpenUri = {},
+                    onExportCrashReport = { exported = it },
+                    onClearCrashReport = {
+                        cleared = true
+                        report.value = null
+                    },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("导出崩溃日志").performScrollTo().performClick()
+        assertTrue(exported === CRASH)
+
+        composeRule.onNodeWithText("清除崩溃记录").performScrollTo().performClick()
+        assertTrue(cleared)
+        composeRule.onNodeWithText("导出崩溃日志").assertDoesNotExist()
+        composeRule.onNodeWithText("清除崩溃记录").assertDoesNotExist()
+    }
+
     private companion object {
+        val CRASH =
+            CrashReport(
+                occurredAtMillis = 1_756_000_000_000,
+                versionName = "1.3.0",
+                text = "java.lang.IllegalStateException: it died",
+            )
+
         val RELEASE =
             AppRelease(
                 versionName = "1.2.0",

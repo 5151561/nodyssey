@@ -634,6 +634,50 @@ class PostDetailViewModelTest {
             assertNull(vm.uiState.value.pendingScroll)
         }
 
+    /**
+     * The editor closes, and the next thing the reader must see is their own reply. `refresh()` used
+     * to re-read the window's *first* page here, so on a multi-page thread the new floor stayed out
+     * of sight and the only feedback was the sheet closing. The floor's page is re-fetched even when
+     * it is the loaded tail — the copy on screen is stale by exactly this reply — and the scroll
+     * rides the fetch so the landing is the new floor itself.
+     */
+    @Test
+    fun `a published reply re-fetches its own page and scrolls to the new floor`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 5)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+            vm.loadPage(5)
+            advanceUntilIdle()
+            val requestsBefore = remote.detailRequests.size
+
+            // Floor #43 lives on page 5 — the loaded tail, on screen and missing this reply.
+            vm.showPublishedReply(floor = 43)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals(listOf(42L to 5), remote.detailRequests.drop(requestsBefore))
+            assertEquals(PendingScroll(page = 5, floor = "#43"), state.pendingScroll)
+            assertEquals(5, state.lastLoadedPage)
+        }
+
+    /** No floor in the site's answer means nothing to land on; the old whole-window refresh stands. */
+    @Test
+    fun `a published reply without a floor number falls back to refreshing the window`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            val requestsBefore = remote.detailRequests.size
+
+            vm.showPublishedReply(floor = null)
+            advanceUntilIdle()
+
+            assertEquals(listOf(42L to 1), remote.detailRequests.drop(requestsBefore))
+            assertNull(vm.uiState.value.pendingScroll)
+        }
+
     /** The pages either side of the slice are what a reader scrolls into, so they join it. */
     @Test
     fun `paging back from a jumped-to page keeps the page it came from`() =

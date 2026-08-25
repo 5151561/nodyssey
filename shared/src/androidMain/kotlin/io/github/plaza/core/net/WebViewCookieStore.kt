@@ -1,6 +1,8 @@
 package io.github.plaza.core.net
 
 import android.webkit.CookieManager
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 /**
  * [SessionCookieStore] on Android's own `CookieManager`.
@@ -22,7 +24,13 @@ class WebViewCookieStore(
 
     override fun setCookie(url: String, cookie: String) = cookieManager.setCookie(url, cookie)
 
-    override fun removeAll() = cookieManager.removeAllCookies(null)
+    // `removeAllCookies` completes on a callback; passing null used to mean "and never find out
+    // when". Sign-out re-reads the store the moment this returns, so returning before the callback
+    // let it read the cookies it had just removed and conclude nothing changed.
+    override suspend fun removeAll(): Unit =
+        suspendCancellableCoroutine { continuation ->
+            cookieManager.removeAllCookies { continuation.resume(Unit) }
+        }
 
     override fun flush() = cookieManager.flush()
 }

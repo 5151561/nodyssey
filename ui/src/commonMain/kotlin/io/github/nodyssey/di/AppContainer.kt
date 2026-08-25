@@ -30,6 +30,7 @@ import io.github.nodyssey.data.dns.DohSupport
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
+import io.github.nodyssey.data.session.AccountSignOut
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.session.SignInRepository
 import io.github.nodyssey.data.settings.SettingsRepository
@@ -37,6 +38,7 @@ import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
+import io.github.plaza.core.crash.CrashReportStore
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.core.update.ApkInstaller
 
@@ -81,6 +83,12 @@ interface AppContainer {
     /** The selected image host — a service of its own, with its own credential. See [ImageHostRepository]. */
     val imageHostRepository: ImageHostRepository
     val sessionRepository: SessionRepository
+
+    /**
+     * The one sign-out. Both screens that offer it go through this rather than each keeping its own
+     * list of stores to clear — the lists are what drifted apart. See [AccountSignOut].
+     */
+    val accountSignOut: AccountSignOut
 
     /** 登录 · 原生表单 (h1). Apart from [sessionRepository], which only reads the cookie jar. */
     val signInRepository: SignInRepository
@@ -129,6 +137,12 @@ interface AppContainer {
 
     /** 清除缓存 — the image, WebView and update caches on disk. See [AppCacheStore]. */
     val appCacheStore: AppCacheStore
+
+    /**
+     * The last crash, kept locally for 关于 › 导出崩溃日志 — the zero-telemetry answer to "它闪退了".
+     * See [CrashReportStore]; platforms with no capture wired provide `NoCrashReports`.
+     */
+    val crashReportStore: CrashReportStore
 
     /**
      * The UA the WebView and OkHttp both use. Shared rather than duplicated: `cf_clearance` is issued

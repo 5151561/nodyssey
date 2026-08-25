@@ -77,6 +77,13 @@ jobs:
       - name: Unit tests
         run: ./gradlew testDebugUnitTest testAndroidHostTest jvmTest
 
+      # The manifest-writing half of the update protocol. It only ever runs for real inside
+      # release.yml, where a regression surfaces as every installed app refusing the update — the
+      # client hard-rejects a blank sha256 or a URL off this repository's releases tree. Testing it
+      # here means the release day is not the first execution. Stdlib unittest, nothing to install.
+      - name: Release script tests
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+
       # warningsAsErrors is on, so a new lint warning fails the build here. Qualified to the
       # application module because `plaza.android.application` sets `checkDependencies`, which pulls
       # every module it depends on into this one run and report — so this covers the whole repository.
@@ -177,6 +184,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # Two invocations on one booted emulator: the debug journeys, and then `:smoke`'s startup
+      # check against the R8-minified, resource-shrunk build — the variant every release ships as
+      # and, until that module existed, the one no test had ever run. See `smoke/build.gradle.kts`
+      # for why the minified build gets its own module instead of a deeper journey.
       - name: Run device journeys
         uses: reactivecircus/android-emulator-runner@v2.38.0
         with:
@@ -184,7 +195,15 @@ jobs:
           arch: x86_64
           profile: pixel_7
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./gradlew :app:connectedDebugAndroidTest
+          # The `||` tail runs while the emulator is still alive — the runner tears it down when
+          # the step ends, so a later `if: failure()` step would have nothing to ask. `/data/anr`
+          # is where the platform writes the main-thread stacks of a wedged app, and the smoke's
+          # CI-only startup timeout is exactly that shape: process up, Application done, no first
+          # frame, logcat silent. The screenshot the test itself dumps says what the screen shows;
+          # these traces say what the main thread was doing instead of drawing it. One line on
+          # purpose: the runner executes each `script` line as its own command, so a multi-line
+          # `{ … }` block arrives as fragments that are each a syntax error.
+          script: "./gradlew :app:connectedDebugAndroidTest :smoke:connectedMinifiedAndroidTest || { mkdir -p device-failure-dump; adb root || true; adb pull /data/anr device-failure-dump/anr || true; adb shell dumpsys activity processes > device-failure-dump/dumpsys-processes.txt || true; adb logcat -d > device-failure-dump/logcat-full.txt || true; exit 1; }"
 
       - name: Upload device test reports
         if: always()
@@ -194,5 +213,9 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+            smoke/build/reports/androidTests/
+            smoke/build/outputs/androidTest-results/
+            smoke/build/outputs/connected_android_test_additional_output/
+            device-failure-dump/
           retention-days: 14
           if-no-files-found: ignore

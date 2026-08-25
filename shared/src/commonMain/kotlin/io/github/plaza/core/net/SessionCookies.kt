@@ -53,7 +53,7 @@ class SessionCookies(
         store.flush()
     }
 
-    fun clearSession() {
+    suspend fun clearSession() {
         store.removeAll()
         store.flush()
     }

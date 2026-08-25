@@ -9,6 +9,7 @@ import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -377,7 +378,7 @@ private class FakePostJsonSource(
 
 /** The account behind the live capture these tests were written from. */
 private object FakeProfileRepository : ProfileRepository {
-    override val selfUid: Long = 52425
+    override val selfUid = MutableStateFlow<Long?>(52425)
 
     override suspend fun profile(refresh: Boolean): UserProfile =
         UserProfile(

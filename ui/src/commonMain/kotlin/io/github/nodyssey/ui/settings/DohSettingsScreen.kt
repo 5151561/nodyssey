@@ -42,6 +42,7 @@ import io.github.nodyssey.data.dns.DnsResolution
 import io.github.nodyssey.data.dns.DohConfigProblem
 import io.github.nodyssey.data.dns.DohProvider
 import io.github.nodyssey.ui.account.AccountMessageSnackbar
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.doh_bootstrap_invalid
@@ -302,7 +303,7 @@ fun DohSettingsScreen(
                     }
                     TextButton(onClick = onTest, enabled = state.enabled && !state.testing) {
                         if (state.testing) {
-                            CircularProgressIndicator(Modifier.size(18.dp))
+                            CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading())
                         } else {
                             Text(stringResource(Res.string.doh_test))
                         }

@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">Nodyssey</string>
 
+    <!-- 屏幕阅读器焦点落在进度指示器上时读出的名字；见 Modifier.describedAsLoading -->
+    <string name="loading_indicator_label">加载中</string>
+
     <!-- Actions -->
     <string name="action_back">返回</string>
     <string name="action_close">关闭</string>
@@ -208,6 +211,10 @@
     <string name="search_history_scope">帖子 · 全部版块</string>
     <string name="search_user_history_scope">用户</string>
     <string name="search_history_board_scope">帖子 · %1$s</string>
+    <!-- The meta line under a user search result: UID Lv 主题 评论 · joined with " · " in code -->
+    <string name="search_user_topics">主题 %1$d</string>
+    <string name="search_user_comments">评论 %1$d</string>
+    <string name="search_user_joined">加入 %1$s</string>
     <string name="search_board_range">版块范围</string>
     <string name="search_board_range_hint">只能选一个版块，站点搜索接口本身只支持单版块；最近使用会置顶</string>
     <string name="search_recent_boards">最近使用</string>
@@ -259,6 +266,10 @@
 
     <!-- Profile -->
     <string name="profile_session_active">NodeSeek 登录会话有效</string>
+    <!-- The line under the display name once the profile has loaded; the site sometimes omits the
+         registration date, which is what the UID-only variant is for -->
+    <string name="profile_member_since">%1$d年%2$d月 注册 · UID %3$d</string>
+    <string name="profile_member_uid">UID %1$d</string>
     <string name="profile_level_unknown">Lv —</string>
     <string name="profile_edit">编辑个人主页</string>
     <string name="profile_chicken">鸡腿</string>
@@ -347,6 +358,8 @@
     <string name="settings_sticker_uniform">表情统一缩限</string>
     <string name="settings_sticker_uniform_hint">开启后所有表情一样大，可调；关闭则各按表情原本的大小显示</string>
     <string name="settings_sticker_size">表情大小</string>
+    <!-- The sample line the 表情大小 slider redraws live, next to two real stickers -->
+    <string name="settings_sticker_preview_caption">表情就这么大</string>
     <string name="settings_sticker_size_value">%1$dsp</string>
     <string name="settings_text_preview">预览：中文长文的阅读体验。</string>
     <string name="settings_content">内容</string>
@@ -567,6 +580,9 @@
     <string name="about_deepflood">DeepFlood</string>
     <string name="about_deepflood_hint">姊妹站 · deepflood.com</string>
     <string name="about_licenses_hint">本应用许可证与第三方库清单</string>
+    <string name="about_crash_export">导出崩溃日志</string>
+    <string name="about_crash_export_hint">上次崩溃：%1$s · v%2$s。日志只存在本机，是否发给开发者由你决定</string>
+    <string name="about_crash_clear">清除崩溃记录</string>
     <string name="about_unofficial_notice">本应用是 NodeSeek 论坛的非官方开源客户端，与站点运营方无隶属关系；帖子与评论内容的版权归论坛及原作者所有。</string>
 
     <!-- Privacy terms (board f2); WebView is only the load/parse fallback. -->
@@ -1304,6 +1320,8 @@
     <string name="offline_failed_space">下载失败 · 图片超出剩余空间</string>
     <string name="offline_failed_network">下载失败 · 网络中断</string>
     <string name="offline_failed_unavailable">下载失败 · 帖子已不可见</string>
+    <string name="offline_failed_challenge">下载失败 · 需要人机验证</string>
+    <string name="offline_failed_rate_limited">下载失败 · 站点限流，稍后再试</string>
 
     <string name="offline_sheet_title">离线阅读</string>
     <string name="offline_sheet_body">下载收藏帖的正文与回复，断网时照常看</string>

@@ -16,6 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 /**
  * Asked against the real [CacheControlCacheStrategy] rather than a stand-in, because the claim being
@@ -28,9 +29,16 @@ class LongLivedImageCacheStrategyTest {
     private val context: PlatformContext = ApplicationProvider.getApplicationContext()
     private val options = Options(context)
 
+    /**
+     * The delegate reads a clock to decide freshness, and is handed one stopped at [NOW] rather than
+     * the machine's. Otherwise a fixture written as an absolute instant is fresh until the real date
+     * catches up with it and stale on every run after that.
+     */
+    private fun cacheControl() = CacheControlCacheStrategy(now = { Instant.fromEpochMilliseconds(NOW) })
+
     private val strategy =
         LongLivedImageCacheStrategy(
-            delegate = CacheControlCacheStrategy(),
+            delegate = cacheControl(),
             isLongLived = { url -> url.startsWith("$SITE/avatar/") },
         )
 
@@ -74,7 +82,7 @@ class LongLivedImageCacheStrategyTest {
         runTest {
             val asServed = served(NOW - 5.hours.inWholeMilliseconds)
 
-            val baseline = CacheControlCacheStrategy().read(asServed, NetworkRequest(AVATAR), options)
+            val baseline = cacheControl().read(asServed, NetworkRequest(AVATAR), options)
             assertNull("the site's own answer sends this one back to the server", baseline.response)
 
             val stored = requireNotNull(strategy.write(null, NetworkRequest(AVATAR), asServed, options).response)
@@ -99,7 +107,10 @@ class LongLivedImageCacheStrategyTest {
         const val AVATAR = "$SITE/avatar/52425.png"
         const val ATTACHMENT = "https://img.example.test/photo.png"
 
-        /** Fixed rather than read off the clock: the arithmetic under test is about elapsed time. */
+        /**
+         * Fixed rather than read off the clock: the arithmetic under test is about elapsed time. Only
+         * safe to fix because [cacheControl] is told to read the same instant back.
+         */
         const val NOW = 1_787_000_000_000L
     }
 }

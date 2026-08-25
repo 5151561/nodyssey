@@ -29,10 +29,16 @@ interface OfflineDownloads {
  * The distinction is what a worker reports back: an emptied queue is a success, a queue abandoned
  * because the site could not be reached is a retry, and turning the second into the first would
  * leave the reader's downloads sitting still until they opened 收藏 and asked again.
+ *
+ * [BLOCKED] is the third answer, and it maps to *neither* of those: the site is answering with a
+ * challenge or a rate limit, so the queue must stop — every further request is aimed at the same
+ * wall — but a scheduler retry would be that same burst on a timer. The rows keep their queued
+ * state; the next drain the reader causes (a new download, 重试 after the WebView) picks them up.
  */
 enum class DrainOutcome {
     DRAINED,
     NETWORK_FAILED,
+    BLOCKED,
 }
 
 /**

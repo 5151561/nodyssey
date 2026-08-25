@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.composer.UploadFailure
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -639,7 +640,7 @@ private fun PublishReplyButton(
     ) {
         if (isPublishing) {
             CircularProgressIndicator(
-                modifier = Modifier.size(14.dp),
+                modifier = Modifier.size(14.dp).describedAsLoading(),
                 strokeWidth = 2.dp,
                 color = MaterialTheme.colorScheme.onPrimary,
             )

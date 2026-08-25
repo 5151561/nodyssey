@@ -16,8 +16,10 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.nodyssey.data.AttendanceBoardEntry
 import io.github.nodyssey.data.AttendanceMode
+import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -304,6 +306,49 @@ class ProfileScreenTest {
         composeRule.onNodeWithText("固定 5 个鸡腿").performClick()
 
         assertEquals(AttendanceMode.FIXED_FIVE, picked)
+    }
+
+    /**
+     * 领鸡腿 refused by a wall used to say 需要确认一下你不是机器人 and offer nothing to press, which
+     * for a challenge is the whole failure: the one control that clears it lives in the web view,
+     * and the reader was never told so.
+     */
+    @Test
+    fun `a wall refusing the sign in offers the verify button`() {
+        var verified = false
+        composeRule.setContent {
+            PlazaTheme {
+                ProfileScreen(
+                    state =
+                    ProfileUiState(
+                        isSignedIn = true,
+                        displayName = "nodyssey_dev",
+                        attendanceKnown = true,
+                        attendanceFailure = SiteError.Cloudflare,
+                    ),
+                    onSignIn = {},
+                    onSignOut = {},
+                    onRetry = {},
+                    onSettings = {},
+                    onAccountSettings = {},
+                    onOpenWebsite = {},
+                    onVerify = { verified = true },
+                    onOpenSpace = {},
+                    onCollections = {},
+                    onHistory = {},
+                    onAssets = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
+                    onFollow = {},
+                    onTools = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
+        composeRule.onNodeWithText("去验证").performClick()
+
+        assertTrue(verified)
     }
 
     @Test
