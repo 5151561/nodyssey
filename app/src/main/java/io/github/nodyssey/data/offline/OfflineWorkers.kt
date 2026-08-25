@@ -25,6 +25,12 @@ class OfflineDownloadWorker(
             // download is about that thread, is already recorded on its row, and would answer the
             // same way however many times it were asked.
             DrainOutcome.NETWORK_FAILED -> Result.retry()
+
+            // A challenge or a rate limit: the site is refusing this client, and a backoff curve of
+            // further requests is exactly the traffic the refusal exists to stop. Reported as success
+            // so WorkManager does not retry; the queued rows stay, and the next drain the reader
+            // causes picks them up.
+            DrainOutcome.BLOCKED -> Result.success()
         }
     }
 }

@@ -1245,6 +1245,8 @@
     <string name="offline_failed_space">下载失败 · 图片超出剩余空间</string>
     <string name="offline_failed_network">下载失败 · 网络中断</string>
     <string name="offline_failed_unavailable">下载失败 · 帖子已不可见</string>
+    <string name="offline_failed_challenge">下载失败 · 需要人机验证</string>
+    <string name="offline_failed_rate_limited">下载失败 · 站点限流，稍后再试</string>
 
     <string name="offline_sheet_title">离线阅读</string>
     <string name="offline_sheet_body">下载收藏帖的正文与回复，断网时照常看</string>

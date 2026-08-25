@@ -65,7 +65,9 @@ import io.github.nodyssey.ui.resources.bookmarks_selection_partial
 import io.github.nodyssey.ui.resources.bookmarks_selection_size
 import io.github.nodyssey.ui.resources.bookmarks_stale
 import io.github.nodyssey.ui.resources.offline_behind_replies
+import io.github.nodyssey.ui.resources.offline_failed_challenge
 import io.github.nodyssey.ui.resources.offline_failed_network
+import io.github.nodyssey.ui.resources.offline_failed_rate_limited
 import io.github.nodyssey.ui.resources.offline_failed_space
 import io.github.nodyssey.ui.resources.offline_failed_unavailable
 import io.github.nodyssey.ui.resources.offline_state_downloaded
@@ -634,4 +636,6 @@ internal val OfflineFailure.messageRes: StringResource
             OfflineFailure.OutOfSpace -> Res.string.offline_failed_space
             OfflineFailure.Network -> Res.string.offline_failed_network
             OfflineFailure.Unavailable -> Res.string.offline_failed_unavailable
+            OfflineFailure.Challenge -> Res.string.offline_failed_challenge
+            OfflineFailure.RateLimited -> Res.string.offline_failed_rate_limited
         }

@@ -222,10 +222,9 @@ class RoomOfflineLibrary(
     override suspend fun drainQueue(): DrainOutcome =
         withContext(dispatchers.io) {
             val settings = settingsStore.settings.first()
-            var networkFailed = false
             while (true) {
                 val row = dao.nextQueued() ?: break
-                val keepGoing =
+                val step =
                     runCatchingExceptCancellation { downloadOne(row, settings) }
                         .getOrElse { thrown ->
                             // A row deleted under a running download — 取消, or 清空离线内容 — takes
@@ -233,27 +232,41 @@ class RoomOfflineLibrary(
                             // so the write fails. [fail] is a no-op on a row that is no longer being
                             // downloaded, and the queue behind this thread is still worth draining.
                             fail(row.postId, thrown.toOfflineFailure())
-                            true
+                            StepOutcome.NEXT
                         }
-                if (!keepGoing) {
-                    networkFailed = true
-                    break
+                when (step) {
+                    StepOutcome.NEXT -> Unit
+                    StepOutcome.NETWORK -> return@withContext DrainOutcome.NETWORK_FAILED
+                    StepOutcome.BLOCKED -> return@withContext DrainOutcome.BLOCKED
                 }
             }
-            if (networkFailed) DrainOutcome.NETWORK_FAILED else DrainOutcome.DRAINED
+            DrainOutcome.DRAINED
         }
+
+    /** What one thread's attempt means for the rest of the queue — see [downloadOne]. */
+    private enum class StepOutcome {
+        /** This thread is done, stored or failed on its own account; the queue continues. */
+        NEXT,
+
+        /** The network gave out. Stop, and let the scheduler's backoff try the queue again. */
+        NETWORK,
+
+        /** The site is refusing — a challenge or a rate limit. Stop, and do not let it retry. */
+        BLOCKED,
+    }
 
     /**
      * Downloads one thread whole, or records why it could not be.
      *
-     * @return false when the *network* was the reason, which is the one failure worth handing back
-     * to WorkManager's own backoff — everything else is about this thread and retrying the queue
-     * behind it would only produce the same answer with more requests.
+     * The return value is about the *queue*, not this thread: a transport failure is worth the
+     * scheduler's backoff, a challenge or rate limit will meet every following row too and must not
+     * be retried at ([StepOutcome.BLOCKED]), and everything else is about this thread alone —
+     * retrying the queue behind it would only produce the same answer with more requests.
      */
     private suspend fun downloadOne(
         row: OfflineThreadEntity,
         settings: OfflineSettings,
-    ): Boolean {
+    ): StepOutcome {
         val postId = row.postId
         // Where a top-up starts. The last stored page is re-fetched rather than skipped: it was
         // partial when it was stored, and the replies that arrived since begin inside it.
@@ -275,13 +288,17 @@ class RoomOfflineLibrary(
         var page = fromPage
         while (page <= totalPages) {
             if (page > fromPage) delayBetweenRequests()
-            if (!stillWanted(postId)) return true
+            if (!stillWanted(postId)) return StepOutcome.NEXT
             val detail =
                 runCatchingExceptCancellation { remote.loadDetail(postId, page) }
                     .getOrElse { thrown ->
                         val failure = thrown.toOfflineFailure()
                         fail(postId, failure)
-                        return failure != OfflineFailure.Network
+                        return when (failure) {
+                            OfflineFailure.Network -> StepOutcome.NETWORK
+                            OfflineFailure.Challenge, OfflineFailure.RateLimited -> StepOutcome.BLOCKED
+                            else -> StepOutcome.NEXT
+                        }
                     }
             totalPages = detail.totalPages.coerceAtLeast(page)
             if (detail.title.isNotBlank()) title = detail.title
@@ -293,7 +310,7 @@ class RoomOfflineLibrary(
             // Re-asked after the request, not only before it: the reader had the length of a page
             // fetch to press 停止, and writing comments for a row that is gone is a foreign key
             // violation rather than a wasted write.
-            if (!stillWanted(postId)) return true
+            if (!stillWanted(postId)) return StepOutcome.NEXT
             if (!replaced) {
                 dao.deleteCommentsFrom(postId, fromPage)
                 replaced = true
@@ -314,9 +331,9 @@ class RoomOfflineLibrary(
 
         if (settings.includeImages && !storePictures(postId, pictures)) {
             fail(postId, OfflineFailure.OutOfSpace)
-            return true
+            return StepOutcome.NEXT
         }
-        if (!stillWanted(postId)) return true
+        if (!stillWanted(postId)) return StepOutcome.NEXT
 
         val stored = dao.commentCount(postId)
         val textBytes = dao.commentBytes(postId) + (body?.sizeBytes() ?: 0L)
@@ -356,7 +373,7 @@ class RoomOfflineLibrary(
                 createdAtText = body?.createdAtText,
             ),
         )
-        return true
+        return StepOutcome.NEXT
     }
 
     /**
@@ -496,16 +513,20 @@ private fun PostContent.sizeBytes(): Long =
         .toLong()
 
 /**
- * Which of the row's three words this failure gets.
+ * Which of the row's words this failure gets.
  *
- * The split is by what tapping 重试 would achieve: everything on the first branch is a way of not
- * reaching the site, and is worth another go; everything on the second is the site declining to
- * show this thread to this account, which another request cannot change.
+ * The split is by what would fix it: a transport failure is worth another go and gets the
+ * scheduler's backoff; a challenge or a rate limit is the site refusing *this client right now* —
+ * more requests are the problem, so those stop the queue instead of retrying it (the rule the
+ * notification poller and the maintenance sweep already follow); everything else is the site
+ * declining to show this thread to this account, which another request cannot change.
  */
 private fun Throwable.toOfflineFailure(): OfflineFailure {
     val error = (this as? SiteException)?.error ?: return OfflineFailure.Network
     return when (error) {
-        SiteError.Network, SiteError.Cloudflare, SiteError.RateLimited, SiteError.Unknown -> OfflineFailure.Network
+        SiteError.Network, SiteError.Unknown -> OfflineFailure.Network
+        SiteError.Cloudflare -> OfflineFailure.Challenge
+        SiteError.RateLimited -> OfflineFailure.RateLimited
         is SiteError.Http -> if (error.statusCode >= 500) OfflineFailure.Network else OfflineFailure.Unavailable
         else -> OfflineFailure.Unavailable
     }

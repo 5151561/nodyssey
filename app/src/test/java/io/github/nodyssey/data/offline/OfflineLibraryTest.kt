@@ -144,6 +144,42 @@ class OfflineLibraryTest {
             assertEquals(OfflineState.Downloading(null), library.states.first()[2L])
         }
 
+    /**
+     * A challenge is the site refusing this client, and the refused traffic is the request stream
+     * itself. The drain stops — every row behind this one faces the same wall — and the outcome is
+     * deliberately not NETWORK_FAILED: that word hands the queue to the scheduler's backoff, which
+     * is the same burst on a timer. The notification poller and the maintenance sweep already follow
+     * this rule; the drain used to be the one place that filed Cloudflare under Network and broke it.
+     */
+    @Test
+    fun `a challenge stops the drain without asking the scheduler to retry`() =
+        runTest {
+            remote.detailError = SiteException(SiteError.Cloudflare)
+            val library = library(testPreferenceStore(backgroundScope))
+
+            library.download(listOf(1L, 2L))
+            val outcome = library.drainQueue()
+
+            assertEquals(DrainOutcome.BLOCKED, outcome)
+            assertEquals(OfflineState.Failed(OfflineFailure.Challenge), library.states.first()[1L])
+            // Row 2 was never asked for; it keeps its place in the queue for the next drain.
+            assertEquals(listOf(1L to 1), remote.detailRequests)
+            assertEquals(OfflineState.Downloading(null), library.states.first()[2L])
+        }
+
+    @Test
+    fun `a rate limit stops the drain the same way`() =
+        runTest {
+            remote.detailError = SiteException(SiteError.RateLimited)
+            val library = library(testPreferenceStore(backgroundScope))
+
+            library.download(listOf(9L))
+            val outcome = library.drainQueue()
+
+            assertEquals(DrainOutcome.BLOCKED, outcome)
+            assertEquals(OfflineState.Failed(OfflineFailure.RateLimited), library.states.first()[9L])
+        }
+
     @Test
     fun `the site's own reply count is what makes a stored copy stale`() =
         runTest {
