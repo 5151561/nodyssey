@@ -118,8 +118,11 @@ import io.github.nodyssey.ui.resources.search_recent
 import io.github.nodyssey.ui.resources.search_recent_boards
 import io.github.nodyssey.ui.resources.search_remove_recent
 import io.github.nodyssey.ui.resources.search_submit
+import io.github.nodyssey.ui.resources.search_user_comments
 import io.github.nodyssey.ui.resources.search_user_hint
 import io.github.nodyssey.ui.resources.search_user_history_scope
+import io.github.nodyssey.ui.resources.search_user_joined
+import io.github.nodyssey.ui.resources.search_user_topics
 import io.github.nodyssey.ui.resources.search_users_tab
 import io.github.nodyssey.ui.resources.sort_by_post_time
 import io.github.nodyssey.ui.resources.sort_by_reply_time
@@ -847,14 +850,17 @@ private fun UserResults(
     }
 }
 
+@Composable
 private fun userDetail(user: UserSearchResult): String =
     buildList {
         add("UID ${user.uid}")
         user.level?.let { add("Lv $it") }
-        user.topicCount?.let { add("主题 $it") }
-        user.commentCount?.let { add("评论 $it") }
+        user.topicCount?.let { add(stringResource(Res.string.search_user_topics, it)) }
+        user.commentCount?.let { add(stringResource(Res.string.search_user_comments, it)) }
         user.bio?.let { add(it) }
-        if (user.bio == null) user.joinedText?.let { add("加入 $it") }
+        if (user.bio == null) {
+            user.joinedText?.let { add(stringResource(Res.string.search_user_joined, it)) }
+        }
     }.joinToString(" · ")
 
 /**

@@ -307,27 +307,24 @@ class ProfileViewModel(
     }
 }
 
-private fun UserProfile.toUiState(): ProfileUiState =
-    ProfileUiState(
+private fun UserProfile.toUiState(): ProfileUiState {
+    // Year and month travel as numbers and the screen owns the wording — the one label this used
+    // to format here was the only user-visible copy a ViewModel in this module built by hand.
+    val match = createdAt?.let(REGISTERED_YEAR_MONTH::find)
+    val year = match?.groupValues?.get(1)?.toIntOrNull()
+    val month = match?.groupValues?.get(2)?.toIntOrNull()
+    val complete = year != null && month != null
+    return ProfileUiState(
         isSignedIn = true,
         uid = uid,
         displayName = name,
         avatarUrl = avatarUrl,
         level = rank?.let { "Lv $it" },
-        memberSince = memberSinceLabel(),
+        registeredYear = if (complete) year else null,
+        registeredMonth = if (complete) month else null,
         chickenCount = chickenCount,
         starCount = starCount,
     )
-
-private fun UserProfile.memberSinceLabel(): String {
-    val match = createdAt?.let(REGISTERED_YEAR_MONTH::find)
-    val date =
-        match?.let {
-            val year = it.groupValues[1].toIntOrNull()
-            val month = it.groupValues[2].toIntOrNull()
-            if (year != null && month != null) "${year}年${month}月 注册 · " else ""
-        }.orEmpty()
-    return "${date}UID $uid"
 }
 
 data class ProfileUiState(
@@ -338,7 +335,9 @@ data class ProfileUiState(
     val displayName: String = "",
     val avatarUrl: String? = null,
     val level: String? = null,
-    val memberSince: String? = null,
+    /** Both set or both null: a year without its month is not worth half a label. */
+    val registeredYear: Int? = null,
+    val registeredMonth: Int? = null,
     val chickenCount: Int? = null,
     val starCount: Int? = null,
     val isCheckingAttendance: Boolean = false,
