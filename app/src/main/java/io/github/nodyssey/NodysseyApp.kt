@@ -47,9 +47,16 @@ open class NodysseyApp :
      * On-demand WorkManager initialization — the androidx.startup initializer is removed in the
      * manifest. On demand means the same code path initializes it in production and under
      * Robolectric, where the startup provider does not run before the Application does.
+     *
+     * The factory is what hands each worker its repositories out of [container]; as a lambda so the
+     * read happens when a worker is built, which is always after `onCreate` has assigned it.
      */
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder().build()
+        get() =
+            Configuration
+                .Builder()
+                .setWorkerFactory(NodysseyWorkerFactory { container })
+                .build()
 
     /** Lives as long as the process; the launch update check and the settings watcher below use it. */
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

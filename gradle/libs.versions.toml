@@ -115,6 +115,7 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 material-color-utilities = { module = "com.materialkolor:material-color-utilities", version.ref = "materialColorUtilities" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidxDatastore" }
 androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "androidxWork" }
+androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "androidxWork" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 # The request/interceptor half without Compose, for the module that owns the data-usage policy.
 coil-core = { module = "io.coil-kt.coil3:coil-core", version.ref = "coil" }

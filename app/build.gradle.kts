@@ -158,6 +158,9 @@ dependencies {
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.paging.testing)
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    // `TestListenableWorkerBuilder`, which is how the worker tests run `doWork` against fakes
+    // without a WorkManager instance behind them.
+    testImplementation(libs.androidx.work.testing)
 
     // Instrumented tests: jUnit rules and runners
     androidTestImplementation(libs.androidx.test.core)
