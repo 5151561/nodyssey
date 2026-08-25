@@ -169,6 +169,29 @@ class ReplyComposerViewModelTest {
     }
 
     /**
+     * What is sent must be exactly what is on screen. The `snapshotFlow` mirror in the UiState runs
+     * a frame behind the field, and an IME that commits a candidate right before 发送 is exactly a
+     * frame; the mirror is deliberately not drained here so it still holds the first segment.
+     * Publishing the mirror sent a reply missing the last thing typed — and then deleted the draft.
+     */
+    @Test
+    fun `publishing sends the field's text, not the frame-old mirror`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.open()
+        advanceUntilIdle()
+        viewModel.bodyState.typeText("第一段")
+        runCurrent()
+        advanceUntilIdle()
+        assertEquals("第一段", viewModel.uiState.value.body)
+
+        viewModel.bodyState.typeMore("，候选词刚上屏的第二段")
+        viewModel.publish {}
+        advanceUntilIdle()
+
+        assertEquals("第一段，候选词刚上屏的第二段", repository.submission?.body)
+    }
+
+    /**
      * The exact shape matters, and it is not ours either: fixture `post-703863-1.html` floor #7 is a
      * 引用. The header line names the author and links the floor, the quoted text follows as
      * blockquote lines, and the reply starts after a blank line — `@name` at the *end* of the
@@ -401,6 +424,10 @@ private class FakeCommentComposerRepository : CommentComposerRepository {
     override suspend fun deleteDraft(postId: Long) {
         saved.remove(postId)
         flow(postId).value = null
+    }
+
+    override suspend fun deleteAllDrafts() {
+        saved.keys.toList().forEach { deleteDraft(it) }
     }
 
     override suspend fun publish(submission: CommentSubmission): Int? {

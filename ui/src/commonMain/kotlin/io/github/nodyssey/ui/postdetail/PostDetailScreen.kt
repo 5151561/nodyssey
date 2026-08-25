@@ -258,7 +258,10 @@ fun PostDetailRoute(
         onRemoveAttachment = replyViewModel::removeAttachment,
         onRetryAttachment = replyViewModel::retryUpload,
         onRetryFailedUploads = replyViewModel::retryFailedUploads,
-        onPublish = { replyViewModel.publish { viewModel.refresh() } },
+        // The floor number the site reports rides through to the jump: refresh() alone re-read the
+        // window's first page, and on a multi-page thread the reply the reader just wrote stayed
+        // out of sight. See [PostDetailViewModel.showPublishedReply].
+        onPublish = { replyViewModel.publish(viewModel::showPublishedReply) },
         onClearError = replyViewModel::clearPublishError,
         onSignIn = onSignIn,
         onVerify = { onVerify(postUrl) },

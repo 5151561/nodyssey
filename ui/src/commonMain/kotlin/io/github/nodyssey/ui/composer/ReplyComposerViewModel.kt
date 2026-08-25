@@ -264,13 +264,18 @@ class ReplyComposerViewModel(
     fun publish(onPublished: (Int?) -> Unit) {
         val state = _uiState.value
         if (!state.canPublish || publishJob?.isActive == true) return
+        // Straight from the field, not from the mirrored copy — the same rule
+        // PostComposerViewModel.publish states: the snapshotFlow mirror runs a frame behind, and what
+        // is published must be exactly what is on screen. Publishing the mirror could send a reply
+        // missing the keystrokes the IME committed just before 发送 — and then delete the draft.
+        val body = bodyState.text.toString()
         publishJob = viewModelScope.launch {
             _uiState.update { it.copy(isPublishing = true, publishError = null, publishErrorDetail = null) }
             runCatchingExceptCancellation {
                 repository.publish(
                     CommentSubmission(
                         postId = postId,
-                        body = state.submissionBody,
+                        body = state.copy(body = body).submissionBody,
                         quotedFloor = state.replyTo?.floor,
                     ),
                 )
