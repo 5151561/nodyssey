@@ -35,6 +35,8 @@ class SettingsViewModel(
     appVersion: AppVersion,
     /** Null where the platform cannot apply one, which is how the 加密 DNS row knows to stay away. */
     doh: DohSupport?,
+    /** See [SettingsUiState.hasNetworkCheck] — a fact about the platform, fixed for the process. */
+    private val hasNetworkCheck: Boolean,
 ) : ViewModel() {
     private val clearingCache = MutableStateFlow(false)
 
@@ -70,6 +72,7 @@ class SettingsViewModel(
                 versionName = versionName,
                 imageHostConnected = entries.imageHostConnected,
                 dohEnabled = entries.dohEnabled,
+                hasNetworkCheck = hasNetworkCheck,
                 // Read off the shared updater rather than checked here: the answer is already in
                 // memory by the time this screen opens, and 我的 shows the same dot from the same
                 // state.
@@ -170,6 +173,7 @@ class SettingsViewModel(
                         imageHost = container.imageHostRepository,
                         appVersion = container.appVersion,
                         doh = container.doh,
+                        hasNetworkCheck = container.networkDiagnostics != null,
                     )
                 }
             }
@@ -192,6 +196,12 @@ data class SettingsUiState(
      * not drawn at all, the same way 默认打开方式 is absent where the system has no such switch.
      */
     val dohEnabled: Boolean? = null,
+    /**
+     * Whether 网络自检 exists on this platform. A plain flag rather than a nullable state like
+     * [dohEnabled], because there is nothing about it to report in a subtitle: the row either leads
+     * somewhere or is not drawn.
+     */
+    val hasNetworkCheck: Boolean = false,
 )
 
 private data class SettingsEntries(val imageHostConnected: Boolean, val dohEnabled: Boolean?)
