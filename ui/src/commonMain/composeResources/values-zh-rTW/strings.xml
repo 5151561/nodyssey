@@ -14,6 +14,7 @@
   proper noun the site itself does not translate.
 -->
 <resources>
+    <string name="loading_indicator_label">載入中</string>
     <string name="action_back">返回</string>
     <string name="action_close">關閉</string>
     <string name="action_expand">展開</string>
@@ -178,6 +179,9 @@
     <string name="search_history_scope">文章 · 全部版塊</string>
     <string name="search_user_history_scope">使用者</string>
     <string name="search_history_board_scope">文章 · %1$s</string>
+    <string name="search_user_topics">主題 %1$d</string>
+    <string name="search_user_comments">評論 %1$d</string>
+    <string name="search_user_joined">加入 %1$s</string>
     <string name="search_board_range">版塊範圍</string>
     <string name="search_board_range_hint">只能選一個版塊，站台搜尋介面本身只支援單版塊；最近使用會置頂</string>
     <string name="search_recent_boards">最近使用</string>
@@ -220,6 +224,7 @@
     <string name="message_copied">訊息已複製</string>
 
     <string name="profile_session_active">NodeSeek 登入工作階段有效</string>
+    <string name="profile_member_since">%1$d年%2$d月 註冊 · UID %3$d</string>
     <string name="profile_edit">編輯個人主頁</string>
     <string name="profile_chicken">雞腿</string>
     <string name="profile_stars">星辰</string>
@@ -303,6 +308,7 @@
     <string name="settings_sticker_uniform">表情統一縮限</string>
     <string name="settings_sticker_uniform_hint">開啟後所有表情一樣大，可調；關閉則各按表情原本的大小顯示</string>
     <string name="settings_sticker_size">表情大小</string>
+    <string name="settings_sticker_preview_caption">表情就這麼大</string>
     <string name="settings_text_preview">預覽：中文長文的閱讀體驗。</string>
     <string name="settings_content">內容</string>
     <string name="settings_app_links">站內連結</string>
@@ -384,6 +390,53 @@
     <string name="doh_limits_hint">網域被劫持、被汙染，換成 DoH 解析就能直連。但如果目標 IP 本身被封、交握時按 SNI 阻斷或者被回 RST，換什麼 DNS 都沒用，那種情況還得掛代理。</string>
     <string name="doh_proxy_hint">開著代理的時候，網域交給代理那邊解析，這裡的設定對走代理的請求不起作用。</string>
     <string name="doh_webview_hint">登入用的是系統 WebView，它走自己的網路和系統的私人 DNS，不受這裡影響。</string>
+    <string name="settings_network_check_entry">網路自檢</string>
+    <string name="settings_network_check_entry_hint">測一次連線，把代理、VPN、DNS 和實際速度列出來；回報「很慢」的時候截這張圖</string>
+    <string name="network_check_title">網路自檢</string>
+    <string name="network_check_rerun">重新檢測</string>
+    <string name="network_check_running">檢測中…</string>
+    <string name="network_check_copy">複製結果</string>
+    <string name="network_check_copied">已複製</string>
+    <string name="network_check_section_environment">環境</string>
+    <string name="network_check_device">機型</string>
+    <string name="network_check_os">系統版本</string>
+    <string name="network_check_app_version">App 版本</string>
+    <string name="network_check_transport">網路類型</string>
+    <string name="network_check_transport_cellular">行動數據</string>
+    <string name="network_check_transport_ethernet">乙太網路</string>
+    <string name="network_check_transport_other">其他</string>
+    <string name="network_check_transport_none">沒有連線</string>
+    <string name="network_check_vpn_on">已連線</string>
+    <string name="network_check_vpn_off">未連線</string>
+    <string name="network_check_metered">按流量計費</string>
+    <string name="network_check_proxy">代理</string>
+    <string name="network_check_proxy_off">關閉</string>
+    <string name="network_check_proxy_local">%1$s · 本機 %2$d</string>
+    <string name="network_check_proxy_remote">%1$s · 遠端主機 %2$d</string>
+    <string name="network_check_proxy_forum_only">（僅論壇）</string>
+    <string name="network_check_doh">加密 DNS</string>
+    <string name="network_check_doh_off">關閉</string>
+    <string name="network_check_custom_tab_app">連結開啟方式</string>
+    <string name="network_check_default_browser">預設瀏覽器</string>
+    <string name="network_check_app_none">沒有</string>
+    <string name="network_check_yes">是</string>
+    <string name="network_check_no">否</string>
+    <string name="network_check_section_forum">論壇</string>
+    <string name="network_check_section_updates">更新來源</string>
+    <string name="network_check_status">結果</string>
+    <string name="network_check_dns">DNS 解析</string>
+    <string name="network_check_connect">建立連線</string>
+    <string name="network_check_tls">TLS 交握</string>
+    <string name="network_check_first_byte">首位元組</string>
+    <string name="network_check_download">下載</string>
+    <string name="network_check_rate">速率</string>
+    <string name="network_check_rate_immeasurable">太快，測不出</string>
+    <string name="network_check_reused">連線重用，沒測到</string>
+    <string name="network_check_failed">失敗（%1$s）</string>
+    <string name="network_check_hint_title">這份報告說明什麼</string>
+    <string name="network_check_hint_layers">DNS、連線、首位元組三項大而下載快，是在等；三項都小而下載慢，才是頻寬被限。進度條一點點爬屬於後者。</string>
+    <string name="network_check_hint_custom_tab">貼文裡的連結是交給上面那個 App 開啟的，流量算它的，不算 Nodyssey 的。它和預設瀏覽器不是同一個的時候，「App 裡慢、瀏覽器裡快」多半就是這個原因——VPN 的分應用代理是按 App 算的。</string>
+    <string name="network_check_hint_scope">論壇和更新來源分開測：只有一邊慢，是那條線路的問題；兩邊都慢，是這台裝置的連線。</string>
 
     <string name="about_title">關於 Nodyssey</string>
     <string name="about_community_title">關於 · 社群</string>
@@ -449,6 +502,9 @@
     <string name="about_email">聯絡我們</string>
     <string name="about_deepflood_hint">姊妹站 · deepflood.com</string>
     <string name="about_licenses_hint">本應用程式授權與第三方函式庫清單</string>
+    <string name="about_crash_export">匯出當機日誌</string>
+    <string name="about_crash_export_hint">上次當機：%1$s · v%2$s。日誌只存在本機，要不要傳給開發者由你決定</string>
+    <string name="about_crash_clear">清除當機記錄</string>
     <string name="about_unofficial_notice">本應用程式是 NodeSeek 論壇的非官方開源用戶端，與站台營運方無隸屬關係；文章與評論內容的著作權歸論壇及原作者所有。</string>
 
     <string name="privacy_title">隱私協議</string>
@@ -1094,6 +1150,8 @@
     <string name="offline_failed_space">下載失敗 · 圖片超出剩餘空間</string>
     <string name="offline_failed_network">下載失敗 · 網路中斷</string>
     <string name="offline_failed_unavailable">下載失敗 · 文章已不可見</string>
+    <string name="offline_failed_challenge">下載失敗 · 需要人機驗證</string>
+    <string name="offline_failed_rate_limited">下載失敗 · 站點限流，稍後再試</string>
 
     <string name="offline_sheet_title">離線閱讀</string>
     <string name="offline_sheet_body">下載收藏文章的內文與回覆，斷網時照常看</string>

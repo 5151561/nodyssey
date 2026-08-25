@@ -76,7 +76,11 @@ fun NodysseyRoot(
     // Outside the theme, because the strings its own screens read resolve against this and because
     // a language is not a colour. Changing it recomposes the tree underneath in the new language —
     // no restart, no black frame, and the scroll position and back stack stay where they were.
-    ProvideAppLanguage(settings.appLanguage) {
+    // The nullable read, not the defaulted `settings`: handing the placeholder's SYSTEM to a frame
+    // the store has not answered yet would reset the language `attachBaseContext` already applied,
+    // and flash the device's language on every cold start — the same reason `ApplyAppLanguage`
+    // above takes the nullable.
+    ProvideAppLanguage(storedSettings?.appLanguage) {
         PlazaTheme(
             darkTheme = darkTheme,
             // The three sources differ only in where the seed came from; 动态取色 is the one that can

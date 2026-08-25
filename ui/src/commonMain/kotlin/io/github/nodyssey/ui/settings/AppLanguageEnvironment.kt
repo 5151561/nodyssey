@@ -16,10 +16,19 @@ import io.github.nodyssey.data.settings.AppLanguage
  *
  * Android has a lever anyway, and the Android actual explains it. iOS and the desktop JVM do not,
  * which is what [appLanguageAppliesOnRestart] says out loud.
+ *
+ * Null means the settings store has not answered yet, and the honest move is to change nothing:
+ * on Android the shell's `attachBaseContext` has already put the *stored* choice into the
+ * configuration this composition starts from, so the first frames are right as they stand.
+ * Substituting [AppLanguage.SYSTEM] for "no answer yet" — which is what a placeholder
+ * `UserSettings()` would do — reset that to the device's language for a frame or two on every
+ * cold start, and a reader whose chosen language differs from the device's watched the whole
+ * screen flash through the wrong one. The same null-guard `ApplyAppLanguage` documents, for the
+ * same reason.
  */
 @Composable
 expect fun ProvideAppLanguage(
-    language: AppLanguage,
+    language: AppLanguage?,
     content: @Composable () -> Unit,
 )
 

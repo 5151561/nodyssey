@@ -45,6 +45,7 @@
     <string name="richtext_action_copy">Copy</string>
     <string name="richtext_quote_reply">@%1$s %2$s</string>
     <string name="richtext_sticker_description">Sticker</string>
+    <string name="richtext_sticker_fallback">[Sticker]</string>
     <string name="richtext_image_skipped_title">Load images on Wi-Fi only is on, and this is not Wi-Fi</string>
     <string name="richtext_image_skipped_action">Tap to load this image</string>
     <string name="richtext_poll_title">Poll</string>

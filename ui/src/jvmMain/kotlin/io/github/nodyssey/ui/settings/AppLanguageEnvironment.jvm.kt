@@ -13,7 +13,7 @@ import io.github.nodyssey.data.settings.AppLanguage
  */
 @Composable
 actual fun ProvideAppLanguage(
-    language: AppLanguage,
+    language: AppLanguage?,
     content: @Composable () -> Unit,
 ) = content()
 

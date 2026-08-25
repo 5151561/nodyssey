@@ -29,7 +29,7 @@ import io.github.nodyssey.data.settings.AppLanguage
  */
 @Composable
 actual fun ProvideAppLanguage(
-    language: AppLanguage,
+    language: AppLanguage?,
     content: @Composable () -> Unit,
 ) {
     // Derived from the configuration in force rather than from `context.resources.configuration`,
@@ -38,12 +38,20 @@ actual fun ProvideAppLanguage(
     // stale window size for as long as the language stayed put.
     val base = LocalConfiguration.current
     val configuration =
-        remember(language, base) {
-            val locales = AndroidAppLanguage.localesFor(language)
-            // In composition rather than an effect: an effect runs after the tree below has already
-            // resolved its strings, which would leave the first frame in the old language.
-            LocaleList.setDefault(locales)
-            Configuration(base).apply { setLocales(locales) }
+        if (language == null) {
+            // The store has not answered. `base` already carries the stored choice — `wrap` put it
+            // there before this composition existed — so passing it through untouched is what keeps
+            // the first frames in the right language. See the note on the expect.
+            base
+        } else {
+            remember(language, base) {
+                val locales = AndroidAppLanguage.localesFor(language)
+                // In composition rather than an effect: an effect runs after the tree below has
+                // already resolved its strings, which would leave the first frame in the old
+                // language.
+                LocaleList.setDefault(locales)
+                Configuration(base).apply { setLocales(locales) }
+            }
         }
     CompositionLocalProvider(LocalConfiguration provides configuration, content = content)
 }
