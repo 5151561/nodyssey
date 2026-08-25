@@ -10,6 +10,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /**
  * Launches the R8-minified, resource-shrunk build and checks it survives to a drawn frame.
@@ -40,9 +41,11 @@ class MinifiedStartupSmokeTest {
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         context.startActivity(launch)
 
+        val drew = device.wait(Until.hasObject(By.pkg(APP).text("首页")), STARTUP_TIMEOUT_MS)
+        if (!drew) dumpDiagnostics(device, "startup-timeout")
         assertTrue(
             "the app did not draw its bottom navigation within ${STARTUP_TIMEOUT_MS / 1000}s of launch",
-            device.wait(Until.hasObject(By.pkg(APP).text("首页")), STARTUP_TIMEOUT_MS),
+            drew,
         )
 
         val search = device.wait(Until.findObject(By.pkg(APP).text("搜索")), UI_TIMEOUT_MS)
@@ -54,6 +57,25 @@ class MinifiedStartupSmokeTest {
             "the app stopped drawing after switching to 搜索",
             device.wait(Until.hasObject(By.pkg(APP).text("首页")), UI_TIMEOUT_MS),
         )
+    }
+
+    /**
+     * A screenshot and the window hierarchy, pulled into the CI artifacts with the test report.
+     *
+     * Added after a CI-only timeout that logcat could not explain: the process started, the
+     * Application ran, and then nothing — no crash, no activity, no way to tell what the screen
+     * actually showed. `additionalTestOutputDir` is the directory AGP pulls off the device after a
+     * connected run; absent (an unusual runner) the diagnostics are skipped rather than failing the
+     * test a second time.
+     */
+    private fun dumpDiagnostics(device: UiDevice, name: String) {
+        val dirPath =
+            InstrumentationRegistry.getArguments().getString("additionalTestOutputDir") ?: return
+        runCatching {
+            val dir = File(dirPath).apply { mkdirs() }
+            device.takeScreenshot(File(dir, "$name.png"))
+            File(dir, "$name-hierarchy.xml").outputStream().use { device.dumpWindowHierarchy(it) }
+        }
     }
 
     private companion object {

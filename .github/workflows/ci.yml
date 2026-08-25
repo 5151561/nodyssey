@@ -200,5 +200,6 @@ jobs:
             app/build/outputs/androidTest-results/
             smoke/build/reports/androidTests/
             smoke/build/outputs/androidTest-results/
+            smoke/build/outputs/connected_android_test_additional_output/
           retention-days: 14
           if-no-files-found: ignore
