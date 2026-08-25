@@ -63,6 +63,7 @@ import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -707,7 +708,7 @@ private fun <T : Any> SpaceListTab(
                 contentAlignment = Alignment.Center,
             ) {
                 when (list.loadState.append) {
-                    LoadState.Loading -> CircularProgressIndicator(Modifier.size(22.dp))
+                    LoadState.Loading -> CircularProgressIndicator(Modifier.size(22.dp).describedAsLoading())
 
                     is LoadState.Error ->
                         TextButton(onClick = list::retry) {
@@ -722,7 +723,7 @@ private fun <T : Any> SpaceListTab(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         } else {
-                            CircularProgressIndicator(Modifier.size(22.dp))
+                            CircularProgressIndicator(Modifier.size(22.dp).describedAsLoading())
                         }
                 }
             }

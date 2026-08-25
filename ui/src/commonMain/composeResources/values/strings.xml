@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">Nodyssey</string>
 
+    <!-- 屏幕阅读器焦点落在进度指示器上时读出的名字；见 Modifier.describedAsLoading -->
+    <string name="loading_indicator_label">加载中</string>
+
     <!-- Actions -->
     <string name="action_back">返回</string>
     <string name="action_close">关闭</string>

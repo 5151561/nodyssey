@@ -67,6 +67,7 @@ import io.github.nodyssey.data.OfflineState
 import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.common.snackbarDuration
@@ -354,7 +355,7 @@ fun BookmarksScreen(
                     // instead of the screen. Overlaid rather than laid out, because a strip that
                     // appears and disappears on every load would shove the list 4dp each way.
                     if (state.isSyncing && state.entries.isNotEmpty()) {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).describedAsLoading())
                     }
                 }
             }

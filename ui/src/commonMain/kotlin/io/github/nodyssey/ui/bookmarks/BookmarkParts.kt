@@ -51,6 +51,7 @@ import io.github.nodyssey.data.OfflineState
 import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.resources.Res
@@ -332,14 +333,14 @@ private fun DownloadProgressRing(
     Box(contentAlignment = Alignment.Center) {
         if (progress == null) {
             CircularProgressIndicator(
-                modifier = Modifier.size(size),
+                modifier = Modifier.size(size).describedAsLoading(),
                 strokeWidth = RING_STROKE,
                 strokeCap = StrokeCap.Butt,
             )
         } else {
             CircularProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.size(size),
+                modifier = Modifier.size(size).describedAsLoading(),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.outlineVariant,
                 strokeWidth = RING_STROKE,

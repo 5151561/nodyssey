@@ -90,6 +90,7 @@ import io.github.nodyssey.ui.common.NavigationBarScrollConnection
 import io.github.nodyssey.ui.common.NavigationDirectionThreshold
 import io.github.nodyssey.ui.common.NoSearchResultsState
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.postlist.FeedRowPlaceholder
 import io.github.nodyssey.ui.postlist.PostRow
 import io.github.nodyssey.ui.postlist.toSiteError
@@ -693,7 +694,7 @@ private fun LazyListScope.appendRow(posts: LazyPagingItems<FeedPost>) {
         LoadState.Loading ->
             item("appending") {
                 Box(Modifier.fillMaxWidth().padding(Spacing.lg), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(24.dp))
+                    CircularProgressIndicator(Modifier.size(24.dp).describedAsLoading())
                 }
             }
 

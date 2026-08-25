@@ -56,7 +56,7 @@ fun AttendanceBoardDialog(
                             .fillMaxWidth()
                             .height(160.dp),
                         contentAlignment = Alignment.Center,
-                    ) { CircularProgressIndicator(Modifier.size(24.dp)) }
+                    ) { CircularProgressIndicator(Modifier.size(24.dp).describedAsLoading()) }
 
                 error != null ->
                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {

@@ -41,6 +41,7 @@ import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.ui.common.UpdateDot
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberFileSizeLabel
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -409,7 +410,7 @@ fun SettingsScreen(
                     leading = { Icon(Icons.Default.Delete, contentDescription = null) },
                     trailing = {
                         if (state.isClearingCache) {
-                            CircularProgressIndicator(Modifier.size(22.dp))
+                            CircularProgressIndicator(Modifier.size(22.dp).describedAsLoading())
                         }
                     },
                 )

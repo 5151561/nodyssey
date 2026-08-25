@@ -72,6 +72,7 @@ import io.github.nodyssey.ui.bookmarks.BookmarksRoute
 import io.github.nodyssey.ui.bookmarks.BookmarksViewModel
 import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.common.appName
+import io.github.nodyssey.ui.common.rememberTouchExplorationEnabled
 import io.github.nodyssey.ui.composer.PostComposerRoute
 import io.github.nodyssey.ui.composer.PostComposerViewModel
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
@@ -281,8 +282,12 @@ fun MainNavigation(
     // whether the top of the stack is part of a pane scene at all, not which tab it belongs to —
     // 首页, 搜索, 通知 and a user's space all pair with a detail now.
     val atTabRoot = TopLevelDestination.forKey(backStack.lastOrNull()) != null
+    // Scroll-to-hide assumes the same gesture brings the bar back, which is only true of direct
+    // touch: a screen reader's swipes move accessibility focus, so for TalkBack/VoiceOver a hidden
+    // bar is not tucked away, it is gone. Under touch exploration the bar stays put.
+    val touchExploration = rememberTouchExplorationEnabled()
     val showNavigationSuite =
-        (atTabRoot && (!tabBarHiddenByScroll || isListDetailExpanded)) ||
+        (atTabRoot && (!tabBarHiddenByScroll || isListDetailExpanded || touchExploration)) ||
             (isListDetailExpanded && paneRoleOf(backStack.lastOrNull()) != null)
     val navigationSuiteState = rememberNavigationSuiteScaffoldState()
     LaunchedEffect(showNavigationSuite) {

@@ -106,6 +106,7 @@ import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.RoleBadgeRow
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberShareText
 import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
@@ -658,7 +659,7 @@ fun PostDetailScreen(
             // A pull-to-refresh is the one load excused: its own indicator is already saying it.
             if (state.isLoading && !state.isRefreshing && state.hasContent) {
                 LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter),
+                    modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).describedAsLoading(),
                 )
             }
 
@@ -1733,7 +1734,7 @@ private fun QuietReaction(
     ) {
         if (pending) {
             CircularProgressIndicator(
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(18.dp).describedAsLoading(),
                 strokeWidth = 2.dp,
             )
         } else {

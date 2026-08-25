@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberFileSizeLabel
 import io.github.nodyssey.ui.common.rememberShareText
 import io.github.nodyssey.ui.resources.Res
@@ -321,7 +322,7 @@ private fun AppIdentity(
             ) {
                 if (check is UpdateCheck.Checking) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(18.dp).describedAsLoading(),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
@@ -506,9 +507,9 @@ private fun DownloadProgress(
     val fraction = download.fraction
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         if (fraction == null) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().describedAsLoading())
         } else {
-            LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth().describedAsLoading())
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(

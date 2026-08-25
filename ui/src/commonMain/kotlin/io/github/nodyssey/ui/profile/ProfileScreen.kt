@@ -59,6 +59,7 @@ import io.github.nodyssey.ui.common.AttendanceModeDialog
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_sign_out
 import io.github.nodyssey.ui.resources.assets_signed_in
@@ -295,7 +296,7 @@ fun ProfileScreen(
                 ) {
                     when {
                         state.isSigningIn -> {
-                            CircularProgressIndicator(Modifier.size(18.dp))
+                            CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading())
                             Text(
                                 stringResource(Res.string.assets_signing_in),
                                 modifier = Modifier.padding(start = Spacing.sm),
@@ -303,7 +304,7 @@ fun ProfileScreen(
                         }
 
                         state.isAttendanceUnknown -> {
-                            CircularProgressIndicator(Modifier.size(18.dp))
+                            CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading())
                             Text(
                                 stringResource(Res.string.profile_attendance_checking),
                                 modifier = Modifier.padding(start = Spacing.sm),

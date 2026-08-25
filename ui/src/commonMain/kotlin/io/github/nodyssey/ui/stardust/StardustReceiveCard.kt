@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.stardust_receive_confirm_amount
@@ -127,7 +128,7 @@ fun StardustReceiveCard(
                         enabled = !state.isPaying,
                     ) {
                         if (state.isPaying) {
-                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading(), strokeWidth = 2.dp)
                         } else {
                             Text(
                                 stringResource(

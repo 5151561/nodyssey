@@ -52,6 +52,7 @@ import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.assets_board
@@ -508,7 +509,7 @@ private fun AttendanceButton(
     ) {
         when {
             state.isSigningIn -> {
-                CircularProgressIndicator(Modifier.size(18.dp))
+                CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading())
                 Text(
                     stringResource(Res.string.assets_signing_in),
                     modifier = Modifier.padding(start = Spacing.sm),
