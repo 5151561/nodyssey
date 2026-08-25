@@ -59,6 +59,16 @@ data object ProxySettingsKey : NavKey
 data object DohSettingsKey : NavKey
 
 /**
+ * 网络自检 — a child of [SettingsKey]'s 网络 group, below 代理 and 加密 DNS.
+ *
+ * Reachable only where `AppContainer.networkDiagnostics` is non-null, on the same terms as
+ * [DohSettingsKey]: 设置 hides the row on a platform with no implementation, and the entry draws
+ * nothing if it is reached anyway.
+ */
+@Serializable
+data object NetworkCheckKey : NavKey
+
+/**
  * 图床 — which image host is connected, and with what.
  *
  * A child of [SettingsKey] rather than of 账号设置: the host is not a NodeSeek account setting at all.
