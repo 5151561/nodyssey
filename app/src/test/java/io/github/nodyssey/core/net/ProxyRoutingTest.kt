@@ -185,6 +185,55 @@ class ProxyRoutingTest {
             Authenticator.setDefault(null)
         }
     }
+
+    /**
+     * The authenticator is process-wide, so a SOCKS5 handshake with a proxy the app did *not*
+     * configure — a VPN's declared one, say — also lands here. The credential belongs to the
+     * configured proxy alone; any other asker, or one that does not name itself, gets nothing.
+     */
+    @Test
+    fun `the SOCKS5 credential is only offered to the configured proxy`() = runTest {
+        val live = LiveProxyConfig(
+            backgroundScope,
+            MutableStateFlow(CONFIGURED.copy(username = "someone", password = "secret")),
+        )
+        runCurrent()
+        try {
+            Authenticator.setDefault(AppSocksAuthenticator(live))
+
+            val otherHost = Authenticator.requestPasswordAuthentication(
+                "10.0.0.9",
+                InetAddress.getLoopbackAddress(),
+                7890,
+                "SOCKS5",
+                "SOCKS authentication",
+                null,
+            )
+            assertNull(otherHost)
+
+            val otherPort = Authenticator.requestPasswordAuthentication(
+                "127.0.0.1",
+                InetAddress.getLoopbackAddress(),
+                1080,
+                "SOCKS5",
+                "SOCKS authentication",
+                null,
+            )
+            assertNull(otherPort)
+
+            val anonymous = Authenticator.requestPasswordAuthentication(
+                null,
+                InetAddress.getLoopbackAddress(),
+                7890,
+                "SOCKS5",
+                "SOCKS authentication",
+                null,
+            )
+            assertNull(anonymous)
+        } finally {
+            Authenticator.setDefault(null)
+        }
+    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
