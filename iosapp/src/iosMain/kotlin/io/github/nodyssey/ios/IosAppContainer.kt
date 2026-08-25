@@ -87,6 +87,8 @@ import io.github.nodyssey.di.AppContainer
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
+import io.github.plaza.core.crash.CrashReportStore
+import io.github.plaza.core.crash.NoCrashReports
 import io.github.plaza.core.net.AppleCookieStore
 import io.github.plaza.core.net.EncryptedNameResolution
 import io.github.plaza.core.net.EncryptedResolver
@@ -478,6 +480,11 @@ class IosAppContainer(
     override val appUpdateRepository: AppUpdateRepository get() = NoAppUpdates
 
     override val apkInstaller: ApkInstaller get() = NoApkInstaller
+
+    // Not wired yet, not can't-be-wired: capture here means `setUnhandledExceptionHook` for the
+    // Kotlin side plus something for NSException/signal crashes, and neither exists today. The
+    // 关于 screen reads this as "no record" and shows no 导出 row.
+    override val crashReportStore: CrashReportStore get() = NoCrashReports
 
     private companion object {
         /** Sixty seconds, as `DefaultAppContainer` gives its image-host client, and for its reason. */

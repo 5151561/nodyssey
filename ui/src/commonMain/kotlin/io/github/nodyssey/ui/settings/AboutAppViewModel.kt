@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.plaza.core.AppVersion
+import io.github.plaza.core.crash.CrashReport
+import io.github.plaza.core.crash.CrashReportStore
 import io.github.plaza.core.update.ApkInstaller
 import io.github.plaza.core.update.AppUpdateState
 import io.github.plaza.core.update.InstallFailure
@@ -24,6 +26,7 @@ class AboutAppViewModel(
     private val updates: AppUpdateRepository,
     private val installer: ApkInstaller,
     private val appVersion: AppVersion,
+    private val crashes: CrashReportStore,
 ) : ViewModel() {
     /**
      * "允许安装未知应用" is off for this app.
@@ -33,14 +36,18 @@ class AboutAppViewModel(
      */
     private val needsInstallPermission = MutableStateFlow(false)
 
+    /** Read once when the screen opens; a crash cannot happen while the user is looking at 关于. */
+    private val crashReport = MutableStateFlow<CrashReport?>(null)
+
     val uiState: StateFlow<AboutAppUiState> =
-        combine(updates.state, needsInstallPermission) { update, blocked ->
+        combine(updates.state, needsInstallPermission, crashReport) { update, blocked, crash ->
             AboutAppUiState(
                 appName = appVersion.label,
                 versionName = appVersion.name.ifBlank { "—" },
                 versionCode = appVersion.code,
                 update = update,
                 needsInstallPermission = blocked,
+                crashReport = crash,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -57,6 +64,15 @@ class AboutAppViewModel(
         // Opening 关于 is not a manual check: this is answered from the stored result unless it has
         // gone stale, so the screen states something true without asking GitHub every time it opens.
         updates.check()
+        viewModelScope.launch { crashReport.value = crashes.latest() }
+    }
+
+    /** Forgets the stored crash; the 导出 rows disappear with it. */
+    fun clearCrashReport() {
+        viewModelScope.launch {
+            crashes.clear()
+            crashReport.value = null
+        }
     }
 
     fun checkForUpdates() = updates.check(force = true)
@@ -104,6 +120,7 @@ class AboutAppViewModel(
                         updates = container.appUpdateRepository,
                         installer = container.apkInstaller,
                         appVersion = container.appVersion,
+                        crashes = container.crashReportStore,
                     )
                 }
             }
@@ -117,4 +134,6 @@ data class AboutAppUiState(
     val versionCode: Long = 0L,
     val update: AppUpdateState = AppUpdateState(),
     val needsInstallPermission: Boolean = false,
+    /** The last crash, when one is on record — see [CrashReportStore]. Null hides the 导出 rows. */
+    val crashReport: CrashReport? = null,
 )

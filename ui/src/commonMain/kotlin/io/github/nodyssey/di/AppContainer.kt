@@ -37,6 +37,7 @@ import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
+import io.github.plaza.core.crash.CrashReportStore
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.core.update.ApkInstaller
 
@@ -135,6 +136,12 @@ interface AppContainer {
 
     /** 清除缓存 — the image, WebView and update caches on disk. See [AppCacheStore]. */
     val appCacheStore: AppCacheStore
+
+    /**
+     * The last crash, kept locally for 关于 › 导出崩溃日志 — the zero-telemetry answer to "它闪退了".
+     * See [CrashReportStore]; platforms with no capture wired provide `NoCrashReports`.
+     */
+    val crashReportStore: CrashReportStore
 
     /**
      * The UA the WebView and OkHttp both use. Shared rather than duplicated: `cf_clearance` is issued

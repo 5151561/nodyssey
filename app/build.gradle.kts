@@ -144,6 +144,9 @@ dependencies {
     // Instrumented tests
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // Installs itself through a ContentProvider; no code names it. Debug-only by construction —
+    // `debugImplementation` keeps it off every release classpath, which the lockfile can prove.
+    debugImplementation(libs.leakcanary)
 
     // Local tests: jUnit and coroutines.
     testImplementation(libs.junit)

@@ -66,6 +66,7 @@ room = "2.8.4"
 sqlite = "2.6.2"
 paging = "3.5.0"
 robolectric = "4.16.1"
+leakcanary = "2.14"
 spotless = "8.9.0"
 ktlint = "1.8.0"
 
@@ -146,6 +147,9 @@ androidx-paging-compose = { module = "androidx.paging:paging-compose", version.r
 androidx-paging-common = { module = "androidx.paging:paging-common", version.ref = "paging" }
 androidx-paging-testing = { module = "androidx.paging:paging-testing", version.ref = "paging" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+# Debug builds only — a leaked Activity or ViewModel surfaces as a notification on the dev's own
+# device instead of as a slow OOM report from a user's. Never on any release classpath.
+leakcanary = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
 
 # Compose Multiplatform, for the modules that compile for more than Android. Same package names as
 # androidx — `androidx.compose.material3.Button` is the same import either way — so a module switching

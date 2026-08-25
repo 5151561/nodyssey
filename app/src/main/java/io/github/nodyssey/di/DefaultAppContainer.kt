@@ -99,6 +99,8 @@ import io.github.nodyssey.platform.KeystoreSecretCipher
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
+import io.github.plaza.core.crash.CrashReportStore
+import io.github.plaza.core.crash.FileCrashReportStore
 import io.github.plaza.core.net.BrowserHeadersInterceptor
 import io.github.plaza.core.net.CrossOriginRefererInterceptor
 import io.github.plaza.core.net.OkHttpTransport
@@ -595,6 +597,15 @@ class DefaultAppContainer(
     }
 
     override val signInRepository: SignInRepository by lazy { NodeSeekSignInRepository(jsonClient) }
+
+    /**
+     * The same `crash/` directory `NodysseyCrashHandler` writes into — the handler is installed in
+     * `NodysseyApp.onCreate` with a plain `File` because it must not touch this lazy graph while the
+     * process is dying.
+     */
+    override val crashReportStore: CrashReportStore by lazy {
+        FileCrashReportStore(File(appContext.filesDir, "crash"), dispatchers)
+    }
 
     override val appVersion: AppVersion by lazy { readAppVersion(appContext) }
 

@@ -508,6 +508,9 @@
     <string name="about_deepflood">DeepFlood</string>
     <string name="about_deepflood_hint">姊妹站 · deepflood.com</string>
     <string name="about_licenses_hint">本应用许可证与第三方库清单</string>
+    <string name="about_crash_export">导出崩溃日志</string>
+    <string name="about_crash_export_hint">上次崩溃：%1$s · v%2$s。日志只存在本机，是否发给开发者由你决定</string>
+    <string name="about_crash_clear">清除崩溃记录</string>
     <string name="about_unofficial_notice">本应用是 NodeSeek 论坛的非官方开源客户端，与站点运营方无隶属关系；帖子与评论内容的版权归论坛及原作者所有。</string>
 
     <!-- Privacy terms (board f2); WebView is only the load/parse fallback. -->
