@@ -30,7 +30,7 @@ class FakeSessionCookieStore : SessionCookieStore {
         cookies[pair.substringBefore('=').trim()] = pair.substringAfter('=', "").trim()
     }
 
-    override fun removeAll() = cookies.clear()
+    override suspend fun removeAll() = cookies.clear()
 
     override fun flush() {
         flushes++

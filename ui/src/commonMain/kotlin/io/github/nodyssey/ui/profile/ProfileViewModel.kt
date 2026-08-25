@@ -9,9 +9,9 @@ import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AttendanceBoardEntry
 import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.AttendanceStatus
-import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.UserProfile
+import io.github.nodyssey.data.session.AccountSignOut
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.postlist.toSiteError
@@ -37,9 +37,9 @@ import kotlinx.coroutines.launch
  */
 class ProfileViewModel(
     private val session: SessionRepository,
-    private val postRepository: PostRepository,
     private val profileRepository: ProfileRepository,
     private val assetsRepository: AssetsRepository,
+    private val accountSignOut: AccountSignOut,
 ) : ViewModel() {
     private var signOutJob: Job? = null
     private var loadJob: Job? = null
@@ -287,15 +287,9 @@ class ProfileViewModel(
 
     fun signOut() {
         if (signOutJob?.isActive == true) return
-        signOutJob =
-            viewModelScope.launch {
-                // Remove authenticated content before publishing the signed-out state. Other tabs
-                // keep their Navigation 3 entries alive, so clearing cookies alone would leave their
-                // already-rendered private rows readable.
-                postRepository.clearSessionData()
-                profileRepository.clearCachedProfile()
-                session.signOut()
-            }
+        // The full list of what goes — content, offline copies, drafts, poll bookkeeping, then the
+        // cookies — lives in [AccountSignOut], shared with the account settings screen's button.
+        signOutJob = viewModelScope.launch { accountSignOut.signOut() }
     }
 
     companion object {
@@ -304,9 +298,9 @@ class ProfileViewModel(
                 initializer {
                     ProfileViewModel(
                         session = container.sessionRepository,
-                        postRepository = container.postRepository,
                         profileRepository = container.profileRepository,
                         assetsRepository = container.assetsRepository,
+                        accountSignOut = container.accountSignOut,
                     )
                 }
             }

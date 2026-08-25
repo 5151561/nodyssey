@@ -10,11 +10,10 @@ import io.github.nodyssey.data.AttendanceStatus
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.GrowthSnapshot
-import io.github.nodyssey.data.NoOpPostRepository
-import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.ReadHistoryEntry
 import io.github.nodyssey.data.UserProfile
+import io.github.nodyssey.data.session.AccountSignOut
 import io.github.nodyssey.data.session.FakeSessionCookieStore
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.model.FeedSort
@@ -68,7 +67,7 @@ class ProfileViewModelTest {
             val viewModel =
                 ProfileViewModel(
                     session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
-                    postRepository = NoOpPostRepository(),
+                    accountSignOut = AccountSignOut {},
                     profileRepository =
                     FakeProfileRepository(
                         UserProfile(
@@ -102,7 +101,7 @@ class ProfileViewModelTest {
             val viewModel =
                 ProfileViewModel(
                     session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
-                    postRepository = NoOpPostRepository(),
+                    accountSignOut = AccountSignOut {},
                     profileRepository =
                     FakeProfileRepository(
                         error = SiteException(SiteError.Network),
@@ -131,7 +130,7 @@ class ProfileViewModelTest {
             val viewModel =
                 ProfileViewModel(
                     session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
-                    postRepository = NoOpPostRepository(),
+                    accountSignOut = AccountSignOut {},
                     profileRepository =
                     FakeProfileRepository(
                         profile = fresh,
@@ -161,7 +160,7 @@ class ProfileViewModelTest {
             val viewModel =
                 ProfileViewModel(
                     session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
-                    postRepository = NoOpPostRepository(),
+                    accountSignOut = AccountSignOut {},
                     profileRepository =
                     FakeProfileRepository(
                         UserProfile(
@@ -187,7 +186,7 @@ class ProfileViewModelTest {
             val viewModel =
                 ProfileViewModel(
                     session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
-                    postRepository = NoOpPostRepository(),
+                    accountSignOut = AccountSignOut {},
                     profileRepository =
                     FakeProfileRepository(
                         UserProfile(
@@ -230,7 +229,7 @@ class ProfileViewModelTest {
             val viewModel =
                 ProfileViewModel(
                     session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
-                    postRepository = NoOpPostRepository(),
+                    accountSignOut = AccountSignOut {},
                     profileRepository =
                     FakeProfileRepository(
                         UserProfile(
@@ -259,7 +258,7 @@ class ProfileViewModelTest {
             val viewModel =
                 ProfileViewModel(
                     session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
-                    postRepository = NoOpPostRepository(),
+                    accountSignOut = AccountSignOut {},
                     profileRepository =
                     FakeProfileRepository(
                         UserProfile(

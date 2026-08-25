@@ -85,6 +85,8 @@ import io.github.nodyssey.data.proxy.NetworkProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxyClientKind
 import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
+import io.github.nodyssey.data.session.AccountSignOut
+import io.github.nodyssey.data.session.DefaultAccountSignOut
 import io.github.nodyssey.data.session.NodeSeekSignInRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.session.SignInRepository
@@ -535,6 +537,18 @@ class DefaultAppContainer(
      * ones the WebView collects have to be the same cookies, or "am I signed in" gets two answers.
      */
     override val sessionRepository: SessionRepository by lazy { SessionRepository(sessionCookies) }
+
+    override val accountSignOut: AccountSignOut by lazy {
+        DefaultAccountSignOut(
+            posts = postRepository,
+            profiles = profileRepository,
+            offline = offlineLibrary,
+            postDrafts = postComposerRepository,
+            commentDrafts = commentComposerRepository,
+            settings = settingsRepository,
+            session = sessionRepository,
+        )
+    }
 
     override val signInRepository: SignInRepository by lazy { NodeSeekSignInRepository(jsonClient) }
 
