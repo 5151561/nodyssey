@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,7 +42,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberFileSizeLabel
+import io.github.nodyssey.ui.common.rememberShareText
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.about_app_channel
 import io.github.nodyssey.ui.resources.about_app_channel_hint
@@ -49,6 +52,9 @@ import io.github.nodyssey.ui.resources.about_app_group
 import io.github.nodyssey.ui.resources.about_app_group_hint
 import io.github.nodyssey.ui.resources.about_changelog
 import io.github.nodyssey.ui.resources.about_check_updates
+import io.github.nodyssey.ui.resources.about_crash_clear
+import io.github.nodyssey.ui.resources.about_crash_export
+import io.github.nodyssey.ui.resources.about_crash_export_hint
 import io.github.nodyssey.ui.resources.about_feedback
 import io.github.nodyssey.ui.resources.about_feedback_hint
 import io.github.nodyssey.ui.resources.about_install_failed_blocked
@@ -86,6 +92,8 @@ import io.github.nodyssey.ui.resources.about_update_unknown
 import io.github.nodyssey.ui.resources.about_version
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.settings_licenses
+import io.github.plaza.core.TimeFormat
+import io.github.plaza.core.crash.CrashReport
 import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.AppUpdateState
 import io.github.plaza.core.update.InstallFailure
@@ -114,6 +122,7 @@ fun AboutAppRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val requestInstallPermission = rememberInstallPermissionRequest(viewModel::onInstallPermissionResult)
+    val share = rememberShareText()
 
     AboutAppScreen(
         state = state,
@@ -126,6 +135,10 @@ fun AboutAppRoute(
         onOpenChangelog = onOpenChangelog,
         onOpenLicenses = onOpenLicenses,
         onOpenUri = onOpenUri,
+        // The share sheet, not an upload: the stack trace leaves the device only through the user's
+        // own hands — see CrashReportStore for the zero-telemetry stance this preserves.
+        onExportCrashReport = { report -> share(report.text, null) },
+        onClearCrashReport = viewModel::clearCrashReport,
         modifier = modifier,
     )
 }
@@ -144,6 +157,8 @@ fun AboutAppScreen(
     onOpenChangelog: () -> Unit,
     onOpenLicenses: () -> Unit,
     onOpenUri: (String) -> Unit,
+    onExportCrashReport: (CrashReport) -> Unit,
+    onClearCrashReport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val appBarState = rememberOneHandAppBarState()
@@ -234,6 +249,28 @@ fun AboutAppScreen(
                 icon = PlazaIcons.Code,
                 onClick = onOpenLicenses,
             )
+            // Present only while a crash is on record: on a healthy install the section does not
+            // exist, rather than sitting there promising logs that were never written.
+            state.crashReport?.let { report ->
+                AboutActionRow(
+                    title = stringResource(Res.string.about_crash_export),
+                    // Absolute rather than the relative "5min ago" the rest of the app favours: a
+                    // crash record can be weeks old, and a bug report needs the actual moment.
+                    subtitle =
+                    stringResource(
+                        Res.string.about_crash_export_hint,
+                        TimeFormat.absolute(report.occurredAtMillis),
+                        report.versionName,
+                    ),
+                    icon = PlazaIcons.BugReport,
+                    onClick = { onExportCrashReport(report) },
+                )
+                AboutActionRow(
+                    title = stringResource(Res.string.about_crash_clear),
+                    icon = Icons.Default.Delete,
+                    onClick = onClearCrashReport,
+                )
+            }
             Text(
                 stringResource(Res.string.about_theme_signature),
                 style = MaterialTheme.typography.labelSmall,
@@ -285,7 +322,7 @@ private fun AppIdentity(
             ) {
                 if (check is UpdateCheck.Checking) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(18.dp).describedAsLoading(),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
@@ -470,9 +507,9 @@ private fun DownloadProgress(
     val fraction = download.fraction
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         if (fraction == null) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().describedAsLoading())
         } else {
-            LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth().describedAsLoading())
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -568,6 +605,38 @@ internal object AppLinks {
 private fun AboutAppPreview() {
     PlazaTheme {
         AboutAppScreen(
+            state =
+            AboutAppUiState(
+                versionName = "1.0.0",
+                versionCode = 100,
+                // The preview shows the after-a-crash shape; a healthy install has no such rows.
+                crashReport =
+                CrashReport(
+                    occurredAtMillis = 1_756_000_000_000,
+                    versionName = "1.0.0",
+                    text = "java.lang.IllegalStateException: preview",
+                ),
+            ),
+            onBack = {},
+            onCheckUpdates = {},
+            onDownloadUpdate = {},
+            onCancelDownload = {},
+            onInstallUpdate = {},
+            onGrantInstallPermission = {},
+            onOpenChangelog = {},
+            onOpenLicenses = {},
+            onOpenUri = {},
+            onExportCrashReport = {},
+            onClearCrashReport = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 840, heightDp = 800, name = "f1 关于 Nodyssey · 840dp")
+@Composable
+private fun AboutAppWidePreview() {
+    PlazaTheme {
+        AboutAppScreen(
             state = AboutAppUiState(versionName = "1.0.0", versionCode = 100),
             onBack = {},
             onCheckUpdates = {},
@@ -578,6 +647,8 @@ private fun AboutAppPreview() {
             onOpenChangelog = {},
             onOpenLicenses = {},
             onOpenUri = {},
+            onExportCrashReport = {},
+            onClearCrashReport = {},
         )
     }
 }
@@ -616,6 +687,8 @@ private fun AboutAppUpdatePreview() {
             onOpenChangelog = {},
             onOpenLicenses = {},
             onOpenUri = {},
+            onExportCrashReport = {},
+            onClearCrashReport = {},
         )
     }
 }

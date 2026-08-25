@@ -127,7 +127,7 @@ class VoteViewModel(
                             // ticks are now facts, and holding them separately would double-mark.
                             selectedIds = emptySet(),
                             voters = emptyMap(),
-                            selfUid = profile.selfUid,
+                            selfUid = profile.selfUid.value,
                             isAdmin = profile.selfIsAdmin,
                         )
                     }

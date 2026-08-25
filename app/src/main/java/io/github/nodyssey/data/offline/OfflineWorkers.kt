@@ -3,21 +3,28 @@ package io.github.nodyssey.data.offline
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import io.github.nodyssey.NodysseyApp
+import io.github.nodyssey.data.OfflineLibrary
+import io.github.nodyssey.data.UserSpaceRepository
+import io.github.nodyssey.data.session.SessionRepository
 
 /**
  * Works the download queue until it is empty.
  *
  * Holds no state of its own — the queue is rows in Room — so being killed mid-thread costs the
  * pages of one thread and nothing else, and the next run picks the same row up again.
+ *
+ * Dependencies arrive through the constructor, built by `NodysseyWorkerFactory`; [downloads] is
+ * null when the installed library has no download half, and a worker with nothing to drive
+ * finishes successfully — the same answer the old `as?` cast gave, now visible in a signature a
+ * test can satisfy.
  */
 class OfflineDownloadWorker(
     context: Context,
     parameters: WorkerParameters,
+    private val downloads: OfflineDownloads?,
 ) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {
-        val downloads = (applicationContext as NodysseyApp).container.offlineLibrary as? OfflineDownloads
-            ?: return Result.success()
+        val downloads = downloads ?: return Result.success()
         return when (downloads.drainQueue()) {
             DrainOutcome.DRAINED -> Result.success()
 
@@ -25,6 +32,12 @@ class OfflineDownloadWorker(
             // download is about that thread, is already recorded on its row, and would answer the
             // same way however many times it were asked.
             DrainOutcome.NETWORK_FAILED -> Result.retry()
+
+            // A challenge or a rate limit: the site is refusing this client, and a backoff curve of
+            // further requests is exactly the traffic the refusal exists to stop. Reported as success
+            // so WorkManager does not retry; the queued rows stay, and the next drain the reader
+            // causes picks them up.
+            DrainOutcome.BLOCKED -> Result.success()
         }
     }
 }
@@ -39,15 +52,15 @@ class OfflineDownloadWorker(
 class OfflineMaintenanceWorker(
     context: Context,
     parameters: WorkerParameters,
+    private val library: OfflineLibrary,
+    private val downloads: OfflineDownloads?,
+    private val session: SessionRepository,
+    private val userSpace: UserSpaceRepository,
 ) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {
-        val container = (applicationContext as NodysseyApp).container
-        val library = container.offlineLibrary
-        val downloads = library as? OfflineDownloads ?: return Result.success()
+        val downloads = downloads ?: return Result.success()
 
-        return when (
-            runOfflineMaintenance(library, downloads, container.sessionRepository, container.userSpaceRepository)
-        ) {
+        return when (runOfflineMaintenance(library, downloads, session, userSpace)) {
             MaintenanceOutcome.COMPLETED -> Result.success()
             MaintenanceOutcome.NETWORK_FAILED -> Result.retry()
         }

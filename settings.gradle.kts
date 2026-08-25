@@ -35,6 +35,26 @@ plugins {
 rootProject.name = "Nodyssey"
 include(":app")
 
+// The R8 smoke: a `com.android.test` module that installs `:app`'s minified build on the CI
+// emulator, launches it, and checks it draws. Until it existed the optimized build was compiled on
+// every commit and executed by nobody, so a stripped serializer or a shrunk resource was found by
+// whichever user installed the release first.
+//
+// A separate module rather than pointing `:app`'s own androidTest at the minified variant, because
+// the existing journey test is a Compose-rule test: it shares classes with the app under test, and
+// R8's renaming breaks that sharing unless everything the test touches is kept — keep rules that
+// would defeat the point of testing minification. This module's UIAutomator test drives the app
+// from outside the process, the same shape a Macrobenchmark module uses, so the app stays exactly
+// as shipped.
+include(":smoke")
+
+// The performance harness, same `com.android.test` shape as `:smoke`: a generator that walks the
+// launch-and-scroll journey to produce `app/src/main/baseline-prof.txt`, and a cold-start
+// Macrobenchmark to measure what the committed profile buys. Neither runs in CI — the profile is a
+// committed artifact regenerated on demand (see the module's README), and startup numbers from a
+// shared CI emulator would be noise presented as measurement.
+include(":benchmark")
+
 // Compose theme and components with no knowledge of any particular forum. Kept as its own module so
 // the compiler, not a review convention, is what stops site-specific types leaking into it.
 //

@@ -57,6 +57,12 @@ interface CommentComposerRepository {
 
     suspend fun deleteDraft(postId: Long)
 
+    /**
+     * Every thread's draft at once — the sign-out path. Drafts are the account's own words, and the
+     * store is one file with no account dimension, so the next account would inherit them verbatim.
+     */
+    suspend fun deleteAllDrafts()
+
     /** @return the new floor number when the site reports one. */
     suspend fun publish(submission: CommentSubmission): Int?
 
@@ -109,6 +115,12 @@ class DefaultCommentComposerRepository(
 
     override suspend fun deleteDraft(postId: Long) {
         dataStore.edit { preferences -> preferences.remove(key(postId)) }
+    }
+
+    // `clear()` and not a walk over `draft-` keys: drafts are the only thing this store holds, and a
+    // filter would silently start keeping whatever key somebody adds to it next.
+    override suspend fun deleteAllDrafts() {
+        dataStore.edit { preferences -> preferences.clear() }
     }
 
     override suspend fun publish(submission: CommentSubmission): Int? = withContext(dispatchers.io) {

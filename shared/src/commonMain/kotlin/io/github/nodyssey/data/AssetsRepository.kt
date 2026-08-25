@@ -203,7 +203,7 @@ class NetworkAssetsRepository(
      */
     private suspend fun attendanceQuotaToday(): DailyQuota {
         val gain = attendanceRecordToday() ?: attendanceGainToday()
-        profileRepository.selfUid?.let { uid ->
+        profileRepository.selfUid.value?.let { uid ->
             attendanceStatus.value =
                 AttendanceStatus(
                     uid = uid,
@@ -269,7 +269,7 @@ class NetworkAssetsRepository(
             if (!response.isSuccessful) throw SiteException(SiteError.Http(response.code))
             throw SiteException(SiteError.Unparsable)
         }
-        profileRepository.selfUid?.let { uid ->
+        profileRepository.selfUid.value?.let { uid ->
             val resolvedGain =
                 result.gain
                     ?: runCatchingExceptCancellation {

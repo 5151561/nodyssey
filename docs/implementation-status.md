@@ -1,8 +1,9 @@
 # 实现状态
 
-更新日期：2026-08-02 · 代码基线：当前工作区（基于 `273673a`，版本 1.1.1）
+更新日期：2026-08-25 · 代码基线：当前工作区（1.2.12 之后，KMP 拆分完成）
 
-这份文档只描述 **Android App 当前真实实现**。视觉目标与站点实测数据分别见
+这份文档只描述 **Android App 当前真实实现**；iOS shell 已能在模拟器运行同一套屏幕，
+其进度以 [`kmp-migration-plan.md`](kmp-migration-plan.md) 为准，不在本页逐项记录。视觉目标与站点实测数据分别见
 [`design-requirements.md`](design-requirements.md) 和
 [`design-requirements-remaining.md`](design-requirements-remaining.md)。设计稿“已出稿”不等于功能“已接入”；
 判断某项能否使用，以本页和代码为准。
@@ -106,7 +107,7 @@ nodeimage、兰空 Lsky Pro、简单图床 EasyImage、sm.ms、imgbb，以及手
 契约取自 `/setting` 的前端分块而不是猜测，逐条记录在 `docs/private/api-notes.md`（不提交）。
 随之删除的还有全套“尚未接入”横幅——生产代码里已经没有会触发它的路径，留着就是一段永远不会显示的界面。
 
-## 已有入口或表单，最终转网页完成（4 项）
+## 已有入口或表单，最终转网页完成（3 项）
 
 这些能力没有原生接口闭环，但会把用户带到真实站点完成，不属于“假成功”。
 
@@ -171,7 +172,7 @@ App 按“地址只能靠收验证码设置”推导）。前者的按钮与确�
 ## WebView 边界
 
 - 登录与 Cloudflare 验证必须使用 WebView，以取得与 OkHttp 共用的 Cookie。
-- NodeSeek 站内尚未原生化的页面，以及上方 4 项原生接口未闭环能力，可作为明确降级打开。
+- NodeSeek 站内尚未原生化的页面，以及上方 3 项原生接口未闭环能力，可作为明确降级打开。
 - 帖子、评论、搜索结果和隐私协议正常路径均为原生 Compose。
 - 普通站外链接默认走 Chrome Custom Tab（设置 › 内容 › 站外链接可改成系统浏览器）；内置 WebView 只允许
   HTTPS 的 `nodeseek.com` 域名。Custom Tab 是浏览器自己的进程和 Cookie，不碰 App 的会话。
@@ -181,10 +182,15 @@ App 按“地址只能靠收验证码设置”推导）。前者的按钮与确�
 提交前执行：
 
 ```bash
-./gradlew spotlessCheck :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+./gradlew spotlessCheck testDebugUnitTest testAndroidHostTest jvmTest :app:lintDebug :app:assembleDebug
 ./gradlew --stop
 ```
 
-2026-08-02 当前工作区快照（`6f3031c`）为 739 个 JVM/Robolectric 测试（0 失败 0 跳过）；spotless、单测、
-lint、assemble 四项门禁全部通过，Room schema 无变化（管理记录与更新簿记都不落库，后者写在 DataStore 里）。
-每次后续功能提交都应重新生成实际数字，不要沿用本快照冒充当前结果。
+**三个测试任务名缺一不可，且不要加 `:app:` 前缀**：KMP 模块（`:shared` / `:ui` / `:designsys` /
+`:richtext`）没有 `testDebugUnitTest`，限定到 `:app` 或漏掉后两个名字都会静默跳过绝大多数测试——
+release.yml 曾因此在发布门禁上只跑了 14/217 个测试文件。Mac 上另跑
+`./gradlew :shared:macosArm64Test`（Kotlin/Native 侧；Linux CI 跑不了，release 的 macOS job 每 tag 兜底一次）。
+
+2026-08-25 当前工作区快照约 1,570 条 `@Test`（跨六个模块；`commonTest` 的用例会在 host JVM 与桌面
+JVM 各跑一遍），三个任务全绿；设备侧另有 `:app` 的 debug journey 与 `:smoke` 对 R8 minified 包的
+启动冒烟，跑在 CI 模拟器上。每次后续功能提交都应重新生成实际数字，不要沿用本快照冒充当前结果。

@@ -42,6 +42,7 @@ import coil3.compose.AsyncImage
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.data.composer.UploadStatus
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.composer_image_failed
 import io.github.nodyssey.ui.resources.composer_image_failed_count
@@ -158,7 +159,7 @@ private fun AttachmentCell(
                         Thumbnail(attachment, dimmed = true)
                         CircularProgressIndicator(
                             progress = { attachment.progress },
-                            modifier = Modifier.size(34.dp),
+                            modifier = Modifier.size(34.dp).describedAsLoading(),
                             strokeWidth = 4.dp,
                             trackColor = MaterialTheme.colorScheme.outlineVariant,
                         )

@@ -144,7 +144,9 @@ class BgTaskOfflineScheduler(
             if (!networkAllows(library.settings.first().wifiOnly)) {
                 true
             } else {
-                downloads.drainQueue() == DrainOutcome.DRAINED
+                // BLOCKED counts as completed for the same reason the Android worker maps it to
+                // success: the site is refusing, and a rescheduled retry is the refused traffic.
+                downloads.drainQueue() != DrainOutcome.NETWORK_FAILED
             }
         }
     }

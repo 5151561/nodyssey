@@ -34,6 +34,20 @@ object PlazaIcons {
         )
     }
 
+    /** 导出崩溃日志 on the About screen — the record of a crash, not a live error state. */
+    val BugReport: ImageVector by lazy {
+        materialIcon(
+            name = "BugReport",
+            pathData =
+            "M20,8h-2.81c-0.45,-0.78 -1.07,-1.45 -1.82,-1.96L17,4.41 15.59,3l-2.17,2.17" +
+                "C12.96,5.06 12.49,5 12,5c-0.49,0 -0.96,0.06 -1.41,0.17L8.41,3 7,4.41l1.62,1.63" +
+                "C7.88,6.55 7.26,7.22 6.81,8H4v2h2.09c-0.05,0.33 -0.09,0.66 -0.09,1v1H4v2h2v1" +
+                "c0,0.34 0.04,0.67 0.09,1H4v2h2.81c1.04,1.79 2.97,3 5.19,3s4.15,-1.21 5.19,-3H20v-2" +
+                "h-2.09c0.05,-0.33 0.09,-0.66 0.09,-1v-1h2v-2h-2v-1c0,-0.34 -0.04,-0.67 -0.09,-1H20V8z" +
+                "M14,16h-4v-2h4v2zM14,12h-4v-2h4v2z",
+        )
+    }
+
     /** Entering the authenticated session, kept distinct from the existing sign-out glyph. */
     val Login: ImageVector by lazy {
         materialIcon(

@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.model.TermsBlock
 import io.github.nodyssey.model.TermsDocument
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_retry
@@ -128,7 +129,7 @@ fun PrivacyScreen(
             PrivacyUiState.Loading -> Box(
                 Modifier.padding(padding).fillMaxSize(),
                 contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
+            ) { CircularProgressIndicator(Modifier.describedAsLoading()) }
 
             PrivacyUiState.Error -> PrivacyError(
                 onRetry = onRetry,

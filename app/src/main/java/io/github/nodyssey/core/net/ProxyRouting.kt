@@ -168,6 +168,13 @@ class AppSocksAuthenticator(private val live: LiveProxyConfig) : java.net.Authen
         val config = live.value
         if (config.type != ProxyType.SOCKS || config.username.isBlank()) return null
         if (!requestingProtocol.equals("SOCKS5", ignoreCase = true)) return null
+        // Process-wide means any SOCKS5 handshake in the process lands here — including one to a
+        // proxy this app did not configure, such as a VPN's declared proxy that a request fell
+        // through to. The credential is for the configured proxy only, so the asker has to be it.
+        // The host arrives as the string [AppProxySelector] put into the unresolved address, so a
+        // plain comparison against the config is exact; a null host is an asker that identifies
+        // itself some other way, and gets nothing rather than a guess.
+        if (!config.host.equals(requestingHost, ignoreCase = true) || config.port != requestingPort) return null
         return PasswordAuthentication(config.username, config.password.toCharArray())
     }
 }

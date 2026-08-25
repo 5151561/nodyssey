@@ -59,6 +59,7 @@ import io.github.nodyssey.ui.common.AttendanceModeDialog
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_sign_out
 import io.github.nodyssey.ui.resources.assets_signed_in
@@ -83,6 +84,8 @@ import io.github.nodyssey.ui.resources.profile_guest_tools_hint
 import io.github.nodyssey.ui.resources.profile_history
 import io.github.nodyssey.ui.resources.profile_level
 import io.github.nodyssey.ui.resources.profile_level_unknown
+import io.github.nodyssey.ui.resources.profile_member_since
+import io.github.nodyssey.ui.resources.profile_member_uid
 import io.github.nodyssey.ui.resources.profile_session_active
 import io.github.nodyssey.ui.resources.profile_sign_in
 import io.github.nodyssey.ui.resources.profile_sign_in_hint
@@ -295,7 +298,7 @@ fun ProfileScreen(
                 ) {
                     when {
                         state.isSigningIn -> {
-                            CircularProgressIndicator(Modifier.size(18.dp))
+                            CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading())
                             Text(
                                 stringResource(Res.string.assets_signing_in),
                                 modifier = Modifier.padding(start = Spacing.sm),
@@ -303,7 +306,7 @@ fun ProfileScreen(
                         }
 
                         state.isAttendanceUnknown -> {
-                            CircularProgressIndicator(Modifier.size(18.dp))
+                            CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading())
                             Text(
                                 stringResource(Res.string.profile_attendance_checking),
                                 modifier = Modifier.padding(start = Spacing.sm),
@@ -616,7 +619,21 @@ private fun ProfileHeader(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = state.memberSince ?: stringResource(Res.string.profile_session_active),
+                text = when {
+                    // uid is only ever set from a loaded profile, so its absence is the
+                    // signed-in-but-still-loading window the session line covers.
+                    state.uid == null -> stringResource(Res.string.profile_session_active)
+
+                    state.registeredYear != null && state.registeredMonth != null ->
+                        stringResource(
+                            Res.string.profile_member_since,
+                            state.registeredYear,
+                            state.registeredMonth,
+                            state.uid,
+                        )
+
+                    else -> stringResource(Res.string.profile_member_uid, state.uid)
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -719,9 +736,11 @@ private fun ProfileSignedInPreview() {
             state =
             ProfileUiState(
                 isSignedIn = true,
+                uid = 88423,
                 displayName = "nodyssey_dev",
                 level = "Lv 3",
-                memberSince = "2023年5月 注册 · UID 88423",
+                registeredYear = 2023,
+                registeredMonth = 5,
                 chickenCount = 1_284,
                 starCount = 356,
             ),

@@ -1,7 +1,9 @@
 package io.github.nodyssey
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
 import android.os.Build
+import android.os.StrictMode
 import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -19,6 +21,7 @@ import io.github.nodyssey.data.offline.OfflineImageInterceptor
 import io.github.nodyssey.data.offline.OfflineWork
 import io.github.nodyssey.di.AndroidAppContainer
 import io.github.nodyssey.di.DefaultAppContainer
+import io.github.nodyssey.image.ImageCallRouter
 import io.github.nodyssey.image.ImageNetworkPolicyInterceptor
 import io.github.nodyssey.notifications.NotificationChannels
 import io.github.nodyssey.notifications.NotificationPollScheduler
@@ -32,6 +35,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.io.File
 
 // Open only so the unit tests can install a subclass carrying Robolectric's teardown hook; see
 // RobolectricApp in the test sources. Nothing in the app subclasses this.
@@ -47,9 +51,16 @@ open class NodysseyApp :
      * On-demand WorkManager initialization — the androidx.startup initializer is removed in the
      * manifest. On demand means the same code path initializes it in production and under
      * Robolectric, where the startup provider does not run before the Application does.
+     *
+     * The factory is what hands each worker its repositories out of [container]; as a lambda so the
+     * read happens when a worker is built, which is always after `onCreate` has assigned it.
      */
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder().build()
+        get() =
+            Configuration
+                .Builder()
+                .setWorkerFactory(NodysseyWorkerFactory { container })
+                .build()
 
     /** Lives as long as the process; the launch update check and the settings watcher below use it. */
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -57,6 +68,17 @@ open class NodysseyApp :
     override fun onCreate() {
         super.onCreate()
         container = DefaultAppContainer(this)
+
+        // Installed before anything that could crash gets to run. Chained onto whatever handler was
+        // there first — the system's, which still shows the dialog and kills the process.
+        Thread.setDefaultUncaughtExceptionHandler(
+            NodysseyCrashHandler(
+                directory = File(filesDir, "crash"),
+                versionName = container.appVersion.name,
+                next = Thread.getDefaultUncaughtExceptionHandler(),
+            ),
+        )
+        enableDebugStrictMode()
 
         NotificationChannels.ensure(this)
         // 应用内更新 asks once per launch: the dot on 设置 and 我的 is there from the first frame, and a
@@ -91,8 +113,36 @@ open class NodysseyApp :
     }
 
     /**
-     * Images share the app's OkHttp client so avatars and attachments carry the same cookies and
-     * browser headers as page requests — Cloudflare rejects them otherwise.
+     * StrictMode on debug builds only — the MAD review's F-15 asked for a performance canary that
+     * costs release users nothing, and this is it. `penaltyLog` rather than `penaltyDeath`: a logged
+     * violation during development is a lead to follow, a killed process during development is a
+     * different bug report. Release builds never reach this line's policies.
+     */
+    private fun enableDebugStrictMode() {
+        val debuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (!debuggable) return
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy
+                .Builder()
+                .detectAll()
+                .penaltyLog()
+                .build(),
+        )
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy
+                .Builder()
+                .detectAll()
+                .penaltyLog()
+                .build(),
+        )
+    }
+
+    /**
+     * The forum's own images share the app's OkHttp client so avatars and attachments carry the same
+     * cookies and browser headers as page requests — Cloudflare rejects them otherwise. Images a post
+     * embeds from anywhere else go through [ImageCallRouter]'s cookie-less client instead; see
+     * `imageContentClient` in `DefaultAppContainer` for why the jar is the one thing they must not
+     * share.
      *
      * The cache strategy is neither of the two Coil offers. `DefaultCacheStrategy.read` hands back
      * the cached response whenever there is one and never asks the server about it, which is
@@ -123,7 +173,12 @@ open class NodysseyApp :
                 )
                 add(
                     OkHttpNetworkFetcherFactory(
-                        callFactory = { container.okHttpClient },
+                        callFactory = {
+                            ImageCallRouter(
+                                forum = { container.okHttpClient },
+                                elsewhere = { container.imageContentClient },
+                            )
+                        },
                         cacheStrategy = {
                             LongLivedImageCacheStrategy(
                                 delegate = CacheControlCacheStrategy(),

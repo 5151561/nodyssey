@@ -325,6 +325,42 @@ class PostDetailViewModel(
     }
 
     /**
+     * Shows the floor a just-published reply landed on.
+     *
+     * Not [jumpToFloor], for one reason: the floor is seconds old, so the page it lives on — almost
+     * always the loaded window's own tail — is stale by exactly that reply, and [bringIntoView]
+     * would see the page as already loaded and scroll into a copy the floor is not in. The page is
+     * re-fetched even when it is on screen, and the scroll rides the fetch so the landing is the new
+     * floor itself. Without this the editor closed, the window quietly refreshed its *first* page,
+     * and on a multi-page thread nothing on screen showed the reply the reader had just written.
+     *
+     * A null [floor] is the site declining to name one (`redirectHash` missing or unreadable); the
+     * old whole-window refresh is the honest fallback, since a guessed floor would scroll to
+     * somebody else's reply.
+     */
+    fun showPublishedReply(floor: Int?) {
+        if (floor == null) {
+            refresh()
+            return
+        }
+        val state = _uiState.value
+        val page = NodeSeekSite.pageOfFloor(floor)
+        val scroll = PendingScroll(page, "#$floor")
+        when {
+            // The reply's page is the loaded tail: re-read it in place, keeping the pages above —
+            // the reader is at the bottom of a scroll they built, same rule as [refreshTail].
+            page == state.lastLoadedPage -> load(page = page, replacesWindow = false, scrollTo = scroll, tail = true)
+
+            // The reply started a fresh page just past the window: append it, ordinary reading order.
+            page == state.lastLoadedPage + 1 -> load(page = page, replacesWindow = false, scrollTo = scroll)
+
+            // Anywhere else — a window the reader had jumped away from — the reply's page becomes
+            // the window, exactly as a jump to it would.
+            else -> load(page = page, replacesWindow = true, scrollTo = scroll)
+        }
+    }
+
+    /**
      * Returns to where this thread was left off, exactly — the floor when one was recorded, the page
      * otherwise. A no-op when nothing was: the control that offers this hides itself in that case.
      */

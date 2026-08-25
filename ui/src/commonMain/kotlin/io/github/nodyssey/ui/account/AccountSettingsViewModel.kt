@@ -5,10 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.nodyssey.data.PostRepository
-import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.account.AccountSettingsRepository
-import io.github.nodyssey.data.session.SessionRepository
+import io.github.nodyssey.data.session.AccountSignOut
 import io.github.nodyssey.di.AppContainer
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
@@ -32,9 +30,7 @@ import kotlinx.coroutines.launch
  */
 class AccountSettingsViewModel(
     private val account: AccountSettingsRepository,
-    private val profiles: ProfileRepository,
-    private val posts: PostRepository,
-    private val session: SessionRepository,
+    private val accountSignOut: AccountSignOut,
 ) : ViewModel() {
     private val remote = MutableStateFlow(RemoteAccountState())
     private val signedOut = MutableStateFlow(false)
@@ -80,11 +76,9 @@ class AccountSettingsViewModel(
         if (signOutJob?.isActive == true) return
         signOutJob =
             viewModelScope.launch {
-                // Same order as 我的: drop authenticated rows before the signed-out state is published,
-                // or the tabs still holding a Navigation 3 entry keep showing what they already drew.
-                posts.clearSessionData()
-                profiles.clearCachedProfile()
-                session.signOut()
+                // The one sign-out list, shared with 我的 — see [AccountSignOut] for what goes and in
+                // which order.
+                accountSignOut.signOut()
                 signedOut.value = true
             }
     }
@@ -97,9 +91,7 @@ class AccountSettingsViewModel(
                 initializer {
                     AccountSettingsViewModel(
                         account = container.accountSettingsRepository,
-                        profiles = container.profileRepository,
-                        posts = container.postRepository,
-                        session = container.sessionRepository,
+                        accountSignOut = container.accountSignOut,
                     )
                 }
             }

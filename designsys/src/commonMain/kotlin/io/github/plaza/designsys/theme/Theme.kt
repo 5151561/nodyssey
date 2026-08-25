@@ -1,5 +1,7 @@
 package io.github.plaza.designsys.theme
 
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
@@ -71,6 +73,15 @@ fun PlazaTheme(
     fontScale: Float = 1f,
     /** 单手模式; see [LocalOneHandMode] for what turning it off does. */
     oneHandMode: Boolean = true,
+    /**
+     * The OS accessibility setting that asks for animations to be removed — Android's 移除动画,
+     * iOS's Reduce Motion. Compose ignores the platform animator scale (its animations are not
+     * Animators), so the theme honours it here instead: every spec the motion scheme hands out
+     * becomes a snap, which silences the M3 components and all 38 `motionScheme` call sites in one
+     * move. Animations written against their own hardcoded specs are outside its reach — which is
+     * also this codebase's discipline for why there should not be any.
+     */
+    reducedMotion: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     // Asked for only when it could win: 角色预设 beats it, and building a scheme that is about to be
@@ -102,7 +113,7 @@ fun PlazaTheme(
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
-            motionScheme = MotionScheme.expressive(),
+            motionScheme = if (reducedMotion) SnapMotionScheme else MotionScheme.expressive(),
             // Remembered rather than rebuilt: the scale only moves when the reading-size setting
             // does, and each call copies three TextStyles.
             typography = remember(fontScale) { plazaTypography(fontScale) },
@@ -110,4 +121,24 @@ fun PlazaTheme(
             content = content,
         )
     }
+}
+
+/**
+ * Every spec is a snap: state changes land on their final frame with no motion in between.
+ *
+ * An object rather than `MotionScheme.standard()` with short durations, because "reduce" here
+ * means *remove* — the user asked the OS for no animation, and a fast animation is still one.
+ */
+private object SnapMotionScheme : MotionScheme {
+    override fun <T> defaultSpatialSpec(): FiniteAnimationSpec<T> = snap()
+
+    override fun <T> fastSpatialSpec(): FiniteAnimationSpec<T> = snap()
+
+    override fun <T> slowSpatialSpec(): FiniteAnimationSpec<T> = snap()
+
+    override fun <T> defaultEffectsSpec(): FiniteAnimationSpec<T> = snap()
+
+    override fun <T> fastEffectsSpec(): FiniteAnimationSpec<T> = snap()
+
+    override fun <T> slowEffectsSpec(): FiniteAnimationSpec<T> = snap()
 }

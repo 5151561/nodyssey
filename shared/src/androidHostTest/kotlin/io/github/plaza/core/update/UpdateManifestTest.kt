@@ -92,8 +92,63 @@ class UpdateManifestTest {
         assertEquals(true, matchesChecksum(hex(downloaded), downloaded))
         assertEquals(true, matchesChecksum(hex(downloaded).uppercase(), downloaded))
         assertEquals(false, matchesChecksum(hex(somethingElse), downloaded))
-        // A manifest that states no digest is not a manifest that fails one.
-        assertEquals(true, matchesChecksum("", downloaded))
+        // The workflow always states a digest, so a manifest without one was written by someone
+        // else — the download it names is refused, not waved through.
+        assertEquals(false, matchesChecksum("", downloaded))
+    }
+
+    /**
+     * The manifest is a static file on a Pages branch — the least protected link in the update
+     * chain — so its download URL is held to what `release.yml` actually writes: this repository's
+     * own `releases/download/` tree over HTTPS, nothing else. "Somewhere on GitHub" is not enough;
+     * anyone can create a repository there.
+     */
+    @Test
+    fun `a download may only come from this repository's own releases`() {
+        val repo = "5151561/nodyssey"
+        val good = "https://github.com/5151561/nodyssey/releases/download/v1.2.9/nodyssey-v1.2.9.apk"
+
+        assertEquals(true, isTrustedDownloadUrl(good, repo))
+        assertEquals(false, isTrustedDownloadUrl(good.replace("https", "http"), repo))
+        assertEquals(false, isTrustedDownloadUrl("https://evil.example/nodyssey.apk", repo))
+        assertEquals(
+            false,
+            isTrustedDownloadUrl("https://github.com/attacker/repo/releases/download/v1/x.apk", repo),
+        )
+        // `https://github.com@evil.example/` names evil.example; a URL leaning on that reading has
+        // no honest reason to be in a manifest.
+        assertEquals(
+            false,
+            isTrustedDownloadUrl("https://github.com@evil.example/$repo/releases/download/v1/x.apk", repo),
+        )
+        assertEquals(false, isTrustedDownloadUrl("not a url", repo))
+    }
+
+    /**
+     * The fixture — the workflow's real output — passes whole, and blanking any one claim fails it.
+     * The blank-digest case is the acceptance the review asked for: a manifest that states no sha256
+     * is refused, not offered.
+     */
+    @Test
+    fun `a release is trusted only with a digest, a home URL and a bare asset name`() {
+        val repo = "5151561/nodyssey"
+        val release =
+            requireNotNull(json.decodeFromString<UpdateManifest>(load("update-stable.json")).toRelease())
+
+        assertEquals(true, isTrustedRelease(release, repo))
+        assertEquals(false, isTrustedRelease(release.copy(sha256 = ""), repo))
+        assertEquals(false, isTrustedRelease(release.copy(downloadUrl = "https://evil.example/x.apk"), repo))
+        assertEquals(false, isTrustedRelease(release.copy(assetName = "../x.apk"), repo))
+    }
+
+    /** The asset name becomes a filename in the cache; a separator in it is choosing another directory. */
+    @Test
+    fun `an asset name with a path separator is refused`() {
+        assertEquals(true, isSafeAssetName("nodyssey-v1.2.9.apk"))
+        assertEquals(false, isSafeAssetName("../../../data/app/injected.apk"))
+        assertEquals(false, isSafeAssetName("evil\\name.apk"))
+        assertEquals(false, isSafeAssetName(""))
+        assertEquals(false, isSafeAssetName(".."))
     }
 
     private fun sha256(bytes: ByteArray): ByteArray =
