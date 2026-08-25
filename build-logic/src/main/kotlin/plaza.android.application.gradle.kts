@@ -44,6 +44,24 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+
+        /*
+         * The release build's R8 and resource shrinking under a key CI owns.
+         *
+         * This is the variant the `:smoke` test module instruments: `release` itself cannot be — CI
+         * has no release keystore and an unsigned APK does not install — and `debug` proves nothing
+         * about minification, which is where serialization and reflection break at runtime rather
+         * than at build time. Debug-signed, so the emulator installs it; everything else is the
+         * release configuration, inherited rather than restated so the two cannot drift apart.
+         *
+         * No `applicationIdSuffix`: the debug suffix exists so a debug install can sit beside a
+         * release one on a person's phone, and nothing installs this build on a person's phone.
+         */
+        create("minified") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+        }
     }
 
     compileOptions {

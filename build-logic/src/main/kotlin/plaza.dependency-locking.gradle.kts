@@ -24,6 +24,14 @@ val lockedConfigurations =
         // What the tests run against, since a test-only dependency drifting is just as confusing.
         "debugUnitTestCompileClasspath",
         "debugUnitTestRuntimeClasspath",
+        // The instrumented tests — the last executed classpath that was still unlocked, and not
+        // hypothetically: espresso had already drifted a version on it while everything else was
+        // pinned. The `minified` pair covers both `:app`'s R8 variant and the `:smoke` test module,
+        // whose whole variant is named after the build type it instruments.
+        "debugAndroidTestCompileClasspath",
+        "debugAndroidTestRuntimeClasspath",
+        "minifiedCompileClasspath",
+        "minifiedRuntimeClasspath",
         // The same two categories again for a Kotlin Multiplatform module, where none of the six
         // names above exists: build types are an Android idea, and a KMP module names its
         // configurations after targets and compilations instead.

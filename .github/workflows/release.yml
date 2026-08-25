@@ -435,6 +435,15 @@ jobs:
       # guidance is three dotted integers, but that is an App Store submission rule, and this build
       # never goes near the App Store — a sideloaded `.ipa` installs with the string as written, and
       # a tester who cannot tell which dev build is on their phone is the worse outcome.
+      # The Native half of the common test suite. Every Linux job compiles these sources for the
+      # host JVM and runs them there; only a Mac can *execute* them on a Kotlin/Native target, so
+      # until this line the whole Native side ran only on whichever contributor remembered the local
+      # gate. This job is the one paid-for Mac the project boots, so the tests ride along — the
+      # toolchain they need is already here for the build below, and macosArm64 is the cheap target:
+      # a test binary, not a whole app link.
+      - name: Run the common tests on Kotlin/Native
+        run: ./gradlew :shared:macosArm64Test
+
       - name: Build the unsigned app
         env:
           # Raises the Gradle daemon's heap for this job only, and it is not a precaution: at the

@@ -177,6 +177,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # Two invocations on one booted emulator: the debug journeys, and then `:smoke`'s startup
+      # check against the R8-minified, resource-shrunk build — the variant every release ships as
+      # and, until that module existed, the one no test had ever run. See `smoke/build.gradle.kts`
+      # for why the minified build gets its own module instead of a deeper journey.
       - name: Run device journeys
         uses: reactivecircus/android-emulator-runner@v2.38.0
         with:
@@ -184,7 +188,7 @@ jobs:
           arch: x86_64
           profile: pixel_7
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./gradlew :app:connectedDebugAndroidTest
+          script: ./gradlew :app:connectedDebugAndroidTest :smoke:connectedMinifiedAndroidTest
 
       - name: Upload device test reports
         if: always()
@@ -194,5 +198,7 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+            smoke/build/reports/androidTests/
+            smoke/build/outputs/androidTest-results/
           retention-days: 14
           if-no-files-found: ignore
