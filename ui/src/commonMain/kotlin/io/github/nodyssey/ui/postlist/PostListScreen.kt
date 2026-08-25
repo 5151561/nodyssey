@@ -1249,6 +1249,25 @@ private fun PostListScreenPreview() {
     }
 }
 
+// The review's F-13: every preview in the repository was 360dp, so a regression that only exists
+// on a tablet-width window had nowhere to be seen before a device test. This is the list at the
+// width where it shares the window with a detail pane.
+@Preview(showBackground = true, widthDp = 840, heightDp = 800, name = "Post list · 840dp")
+@Composable
+private fun PostListScreenWidePreview() {
+    PlazaTheme {
+        PostListScreen(
+            state = previewState,
+            posts = previewFeed().collectAsLazyPagingItems(),
+            onPostClick = {},
+            onBoardClick = {},
+            onSortChange = {},
+            onSignInClick = {},
+            onRecoverInBrowser = {},
+        )
+    }
+}
+
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Post list · dark")
 @Composable
 private fun PostListScreenDarkPreview() {

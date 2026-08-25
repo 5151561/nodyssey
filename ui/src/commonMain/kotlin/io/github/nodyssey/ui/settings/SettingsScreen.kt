@@ -632,3 +632,29 @@ private fun SettingsPreview() {
         )
     }
 }
+
+// The tablet width — what `readableWidth` is supposed to do to a form this tall is only visible here.
+@Preview(showBackground = true, widthDp = 840, heightDp = 800, name = "设置 · 840dp")
+@Composable
+private fun SettingsWidePreview() {
+    PlazaTheme {
+        SettingsScreen(
+            state = SettingsUiState(versionName = "1.1.1"),
+            onBack = {},
+            onOpenTheme = {},
+            onThemeModeChange = {},
+            onOneHandModeChange = {},
+            onFontScaleChange = {},
+            onStickerUniformSizeChange = {},
+            onStickerSizeChange = {},
+            onImagesOnWifiOnlyChange = {},
+            onReportFormatChange = {},
+            onHomePageBarChange = {},
+            onUpdateCheckOnLaunchChange = {},
+            onUpdateDevChannelChange = {},
+            onClearCache = {},
+            appLinkHandlingEnabled = false,
+            onOpenAppLinkSettings = {},
+        )
+    }
+}

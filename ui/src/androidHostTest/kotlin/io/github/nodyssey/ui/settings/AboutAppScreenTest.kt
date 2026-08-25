@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import io.github.nodyssey.ui.assertEveryTouchTargetAtLeast48dp
 import io.github.plaza.core.crash.CrashReport
 import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.AppUpdateState
@@ -131,6 +132,37 @@ class AboutAppScreenTest {
 
         composeRule.onNodeWithText("立即安装").performClick()
         assertTrue(installed)
+    }
+
+    /** Every row and button on 关于 — with the update card and crash rows up — clears 48dp. */
+    @Test
+    fun `every touch target on the about screen holds 48dp`() {
+        composeRule.setContent {
+            PlazaTheme {
+                AboutAppScreen(
+                    state =
+                    AboutAppUiState(
+                        versionName = "1.1.0",
+                        versionCode = 3,
+                        update = AppUpdateState(check = UpdateCheck.Available(RELEASE)),
+                        crashReport = CRASH,
+                    ),
+                    onBack = {},
+                    onCheckUpdates = {},
+                    onDownloadUpdate = {},
+                    onCancelDownload = {},
+                    onInstallUpdate = {},
+                    onGrantInstallPermission = {},
+                    onOpenChangelog = {},
+                    onOpenLicenses = {},
+                    onOpenUri = {},
+                    onExportCrashReport = {},
+                    onClearCrashReport = {},
+                )
+            }
+        }
+
+        composeRule.assertEveryTouchTargetAtLeast48dp()
     }
 
     /**

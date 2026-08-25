@@ -631,6 +631,27 @@ private fun AboutAppPreview() {
     }
 }
 
+@Preview(showBackground = true, widthDp = 840, heightDp = 800, name = "f1 关于 Nodyssey · 840dp")
+@Composable
+private fun AboutAppWidePreview() {
+    PlazaTheme {
+        AboutAppScreen(
+            state = AboutAppUiState(versionName = "1.0.0", versionCode = 100),
+            onBack = {},
+            onCheckUpdates = {},
+            onDownloadUpdate = {},
+            onCancelDownload = {},
+            onInstallUpdate = {},
+            onGrantInstallPermission = {},
+            onOpenChangelog = {},
+            onOpenLicenses = {},
+            onOpenUri = {},
+            onExportCrashReport = {},
+            onClearCrashReport = {},
+        )
+    }
+}
+
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "f1 关于 Nodyssey · 有新版本")
 @Composable
 private fun AboutAppUpdatePreview() {
