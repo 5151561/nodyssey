@@ -52,10 +52,14 @@ class MinifiedStartupSmokeTest {
         assertNotNull("the 搜索 tab is missing from the bottom navigation", search)
         search.click()
 
-        // Still alive and still drawing after a navigation — the tab bar persists across tabs.
+        // Still alive and still drawing after a navigation — asserted on the search screen's own
+        // content, not on the tab bar staying visible. On a phone-shaped window 搜索 focuses its
+        // field and the IME slides over the bottom bar by design; the first version of this test
+        // asserted 首页 was still on screen, which only held on the tablet-width emulator it was
+        // written against (a navigation rail sits beside the IME instead of under it).
         assertTrue(
             "the app stopped drawing after switching to 搜索",
-            device.wait(Until.hasObject(By.pkg(APP).text("首页")), UI_TIMEOUT_MS),
+            device.wait(Until.hasObject(By.pkg(APP).text("版块")), UI_TIMEOUT_MS),
         )
     }
 

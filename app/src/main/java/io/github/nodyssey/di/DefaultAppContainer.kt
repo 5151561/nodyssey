@@ -162,7 +162,27 @@ class DefaultAppContainer(
 
     override val sessionCookies: SessionCookies by lazy { SessionCookies(NodeSeekSite.CONFIG, cookieStore) }
 
-    override val userAgent: UserAgent by lazy { resolveUserAgent(appContext, NodeSeekSite.CONFIG) }
+    /**
+     * Eager, and the only member of the graph that must be: this is where the WebView provider gets
+     * initialised, and that initialisation **waits on the main thread**.
+     *
+     * It was a `lazy` like everything else, and the combination deadlocked the app at launch — found
+     * by the R8 smoke on CI, reproduced at 420dpi, and diagnosed from the ANR trace. The shape: the
+     * first worker's constructor injection resolves `offlineLibrary` on a WorkManager thread, which
+     * walks `htmlClient → transport → okHttpClient → userAgent` and, holding those lazy locks, calls
+     * `WebSettings.getDefaultUserAgent` — whose provider init blocks until the main thread runs a
+     * task for it. The main thread meanwhile is composing the first frame, creating a ViewModel whose
+     * repository walks `jsonClient → transport` and parks on the lock the worker holds. Neither side
+     * can move; the launch screen stays up forever. Whether the two collide is pure timing — screen
+     * density changed layout timing enough to flip it — which is why it passed on one emulator and
+     * hung on another.
+     *
+     * Resolving here instead — in the container's constructor, on the main thread, holding no lazy
+     * lock — pays the provider-init cost at a moment that cannot deadlock, and every later reader on
+     * any thread gets a plain value. If another main-thread-dependent initialisation ever joins the
+     * graph, it needs this same treatment, not a `lazy`.
+     */
+    override val userAgent: UserAgent = resolveUserAgent(appContext, NodeSeekSite.CONFIG)
 
     /**
      * The other header a browser always sends and OkHttp never does — see [deviceAcceptLanguage].
