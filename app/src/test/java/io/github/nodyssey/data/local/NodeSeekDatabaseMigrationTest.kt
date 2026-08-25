@@ -187,6 +187,45 @@ class NodeSeekDatabaseMigrationTest {
     }
 
     /**
+     * Both defaults describe a v8 store honestly: every stored feed began at page 1, so `page = 1`
+     * is right for the head and self-correcting for the tail (the next refresh rewrites every row),
+     * and `totalPages = 1` is the claim that keeps 首页翻页栏 hidden until a fresh page says more.
+     * The row that must survive is the position itself — it is what puts a stored feed back in order.
+     */
+    @Test
+    fun `migration 8 to 9 teaches stored feeds their page without dropping rows`() {
+        helper.createDatabase(DATABASE_NAME, 8).apply {
+            execSQL(
+                """
+                INSERT INTO feed_positions(feedKey, postId, sortIndex)
+                VALUES('daily', 42, 7)
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO feed_remote_keys(feedKey, nextPage, refreshedAtMillis)
+                VALUES('daily', 3, 1000)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 9, true, MIGRATION_8_9)
+
+        migrated.query("SELECT sortIndex, page FROM feed_positions WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals(7, it.getInt(0))
+            assertEquals(1, it.getInt(1))
+        }
+        migrated.query("SELECT nextPage, totalPages FROM feed_remote_keys WHERE feedKey = 'daily'").use {
+            it.moveToFirst()
+            assertEquals(3, it.getInt(0))
+            assertEquals(1, it.getInt(1))
+        }
+        migrated.close()
+    }
+
+    /**
      * The two 推荐阅读 columns start at different values on purpose: a list row is rewritten by the next
      * refresh, so `0` corrects itself, while a cached thread may never be re-read from page 1 and only
      * null can say "no page has told us".
@@ -341,6 +380,66 @@ class NodeSeekDatabaseMigrationTest {
         migrated.query("SELECT title, listedOrder FROM collected_post_meta WHERE postId = 42").use {
             it.moveToFirst()
             assertEquals("一篇收藏", it.getString(0))
+            assertTrue(it.isNull(1))
+        }
+        migrated.close()
+    }
+
+    /**
+     * The whole ladder at once, which is the only test that runs it the way a device does.
+     *
+     * Every step above proves its own rung against the schema beside it; none of them proves that
+     * the rungs compose — that a column one migration adds is where a later migration's SQL expects
+     * it, on a file that has actually climbed the versions in between rather than being created at
+     * the version under test. A reader on the oldest still-migratable store upgrades through all
+     * eleven in one open, so that is what this runs: real v3 rows in, `runMigrationsAndValidate`
+     * against the exported v14 schema out, the oldest data still readable at the top.
+     */
+    @Test
+    fun `a v3 store climbs every migration to v14 with its data intact`() {
+        helper.createDatabase(DATABASE_NAME, 3).apply {
+            execSQL(
+                """
+                INSERT INTO posts(
+                    postId, title, authorName, authorUid, avatarUrl, categoryTitle, categorySlug,
+                    viewCount, commentCount, lastActiveText, lastActiveTitle, isPinned, isLocked,
+                    lockLevel, cachedAtMillis
+                )
+                VALUES(42, 'a cached post', 'someone', 7, NULL, '日常', 'daily', 100, 3, NULL, NULL, 0, 0, NULL, 1000)
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO post_details(postId, title, body, totalPages, loadedPages, cachedAtMillis)
+                VALUES(42, 'a cached thread', NULL, 9, 3, 1000)
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO post_read_marks(postId, lastReadAtMillis, lastSeenCommentCount)
+                VALUES(42, 1000, 3)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 14, true, *NODESEEK_MIGRATIONS)
+
+        migrated.query("SELECT title, isBlocked, isAwarded FROM posts WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("a cached post", it.getString(0))
+            assertEquals(0, it.getInt(1))
+            assertEquals(0, it.getInt(2))
+        }
+        migrated.query("SELECT title, firstLoadedPage, collected FROM post_details WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("a cached thread", it.getString(0))
+            assertEquals(1, it.getInt(1))
+            assertTrue(it.isNull(2))
+        }
+        migrated.query("SELECT lastSeenCommentCount, title FROM post_read_marks WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals(3, it.getInt(0))
             assertTrue(it.isNull(1))
         }
         migrated.close()
