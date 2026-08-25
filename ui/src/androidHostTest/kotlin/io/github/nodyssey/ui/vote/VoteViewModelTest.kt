@@ -409,9 +409,11 @@ private class FakeVoteRepository(
 }
 
 private class FakeProfile(
-    override val selfUid: Long?,
+    selfUid: Long?,
     override val selfIsAdmin: Boolean,
 ) : ProfileRepository {
+    override val selfUid = MutableStateFlow(selfUid)
+
     override suspend fun profile(refresh: Boolean): UserProfile = error("not used")
 
     override suspend fun profile(uid: Long): UserProfile = error("not used")

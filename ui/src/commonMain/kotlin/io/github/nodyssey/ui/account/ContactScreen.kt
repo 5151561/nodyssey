@@ -45,6 +45,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.account.TelegramBinding
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.account_contact_title
 import io.github.nodyssey.ui.resources.account_email_change
@@ -507,7 +508,7 @@ private fun TelegramBindDialog(
                     )
                     TextButton(onClick = onRefresh, enabled = !isRefreshing) {
                         if (isRefreshing) {
-                            CircularProgressIndicator(Modifier.size(14.dp))
+                            CircularProgressIndicator(Modifier.size(14.dp).describedAsLoading())
                         } else {
                             Text(
                                 stringResource(Res.string.account_telegram_refresh),

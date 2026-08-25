@@ -37,6 +37,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // First frame only, styled from the OS's night mode — the best guess available before the
+        // settings have loaded. `SystemBarsMatchTheme` inside `NodysseyRoot` re-styles with the
+        // theme the app actually resolved, which can disagree with the OS (主题外观 forced 深色/浅色).
         enableEdgeToEdge()
 
         val container = (application as NodysseyApp).container

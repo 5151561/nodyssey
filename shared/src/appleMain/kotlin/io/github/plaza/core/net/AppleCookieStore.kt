@@ -43,7 +43,8 @@ class AppleCookieStore(
         storage.setCookies(parsed, forURL = target, mainDocumentURL = null)
     }
 
-    override fun removeAll() {
+    // Suspend only because the Android implementation genuinely is; deletion here is synchronous.
+    override suspend fun removeAll() {
         storage.cookies.orEmpty().forEach { storage.deleteCookie(it as NSHTTPCookie) }
     }
 

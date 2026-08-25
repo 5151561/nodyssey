@@ -54,6 +54,7 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.VoteItem
 import io.github.nodyssey.model.totalCount
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_cancel
@@ -252,7 +253,7 @@ private fun VoteBody(
             modifier = Modifier.padding(top = Spacing.sm).fillMaxWidth(),
         ) {
             if (state.isSubmitting) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading(), strokeWidth = 2.dp)
             } else {
                 Text(
                     stringResource(
@@ -688,7 +689,7 @@ private fun VoterStrip(
             )
         }
         if (list.isLoading) {
-            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading(), strokeWidth = 2.dp)
         } else if (list.hasMore) {
             TextButton(onClick = onLoadMore) { Text(stringResource(Res.string.vote_voters_more)) }
         }

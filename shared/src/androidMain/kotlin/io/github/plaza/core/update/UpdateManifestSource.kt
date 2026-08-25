@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -72,12 +73,17 @@ interface ReleaseSource {
  * project's own file rather than a hunt for a GitHub field that means roughly that.
  *
  * @param manifestBaseUrl the directory the three files sit in, trailing slash included.
+ * @param repository `owner/name`, the one repository a download is allowed to come from. The manifest
+ * names the download URL, and the manifest is the least protected link in the chain — a static file
+ * on a Pages branch, not a signed artifact — so its claims are checked against what `release.yml`
+ * would actually write rather than taken at their word.
  */
 class UpdateManifestSource(
     private val okHttpClient: OkHttpClient,
     private val dispatchers: AppDispatchers,
     private val userAgent: String,
     private val manifestBaseUrl: String,
+    private val repository: String,
 ) : ReleaseSource {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -90,7 +96,7 @@ class UpdateManifestSource(
                 } catch (e: IllegalArgumentException) {
                     throw AppUpdateException(UpdateFailure.Unreadable, e)
                 }
-            manifest.toRelease()
+            manifest.toRelease()?.also(::requireTrusted)
         }
 
     override suspend fun releaseNotes(includePreRelease: Boolean): List<ReleaseNote> =
@@ -113,6 +119,9 @@ class UpdateManifestSource(
         onProgress: (Long, Long) -> Unit,
     ) {
         withContext(dispatchers.io) {
+            // Checked again even though `latestRelease` already refused an untrusted answer: the
+            // release being downloaded may be a stored one, written by a build that vetted less.
+            requireTrusted(release)
             val request =
                 Request
                     .Builder()
@@ -169,11 +178,29 @@ class UpdateManifestSource(
      * The APK is signed and the system installer checks that, so this is not the thing standing
      * between a user and a hostile build — it is what tells a truncated or mangled download apart from
      * a corrupt one, before the installer says "解析包时出现问题" with no way to know which it was.
-     * Skipped when the manifest states no digest, which is what an older manifest looks like.
      */
     private fun verifyChecksum(release: AppRelease, actual: ByteArray) {
         if (!matchesChecksum(release.sha256, actual)) {
             throw AppUpdateException(UpdateFailure.Checksum)
+        }
+    }
+
+    /**
+     * Refuses a release whose manifest claims something `release.yml` would never write.
+     *
+     * The workflow always states a digest, always publishes onto this repository's own releases, and
+     * always names the asset with a bare filename — so a manifest missing any of the three is not an
+     * older format to be lenient with, it is a file someone else wrote. Refusing it as unreadable is
+     * the honest answer: the check screen reports a broken update channel instead of quietly offering
+     * 已是最新, which is what returning null here would amount to.
+     *
+     * This is defence in depth, not the last line — the installer still verifies the APK signature.
+     * What it removes is the step before that: a tampered manifest steering the downloader at an
+     * arbitrary URL, or a crafted `assetName` walking the target file out of the cache directory.
+     */
+    private fun requireTrusted(release: AppRelease) {
+        if (!isTrustedRelease(release, repository)) {
+            throw AppUpdateException(UpdateFailure.Unreadable)
         }
     }
 
@@ -294,18 +321,57 @@ internal data class ChangelogEntry(
         )
 }
 
+/** The three claims `requireTrusted` holds a manifest to, as one testable answer. */
+internal fun isTrustedRelease(release: AppRelease, repository: String): Boolean =
+    release.sha256.isNotBlank() &&
+        isTrustedDownloadUrl(release.downloadUrl, repository) &&
+        isSafeAssetName(release.assetName)
+
 /**
- * Whether [actual] is the digest [expected] names, with a blank expectation matching anything.
+ * Whether [actual] is the digest [expected] names. A blank expectation matches nothing.
  *
- * Blank passes because a manifest is allowed not to state one — an older file, or a future channel
- * that publishes something other than an APK. Refusing a download over a field the publisher did not
- * fill in would be inventing a requirement.
+ * Blank used to pass, on the reasoning that refusing a download over a field the publisher left empty
+ * would be inventing a requirement. But the publisher is `build-update-manifests.py` and it has always
+ * filled the field in — so the only manifest that arrives without one is a manifest the workflow did
+ * not write, and waving its download through is precisely the wrong reflex. `requireTrusted` refuses
+ * such a release long before the bytes arrive; this returning false is the same rule restated at the
+ * last gate rather than a second opinion.
  */
 internal fun matchesChecksum(expected: String, actual: ByteArray): Boolean {
-    if (expected.isBlank()) return true
+    if (expected.isBlank()) return false
     val hex = actual.joinToString("") { byte -> "%02x".format(byte) }
     return hex.equals(expected.trim(), ignoreCase = true)
 }
+
+/**
+ * Whether [url] is somewhere `release.yml` actually publishes: HTTPS, `github.com`, and this
+ * repository's own `releases/download/` tree — not merely GitHub, because "any repository on GitHub"
+ * is an arbitrary host with extra steps when anyone can create one.
+ *
+ * The redirect GitHub answers with (to `objects.githubusercontent.com`) is followed inside OkHttp and
+ * needs no entry here: this vets where the downloader is *sent*, not every hop the bytes travel.
+ * A `userInfo` is refused for the same reason `NodeSeekSite.parseWebUrl` refuses one — in
+ * `https://github.com@evil.example/` the host is `evil.example`, and OkHttp's parser puts it there,
+ * but a URL relying on that reading has no honest reason to exist in a manifest.
+ */
+internal fun isTrustedDownloadUrl(url: String, repository: String): Boolean {
+    val parsed = url.toHttpUrlOrNull() ?: return false
+    return parsed.isHttps &&
+        parsed.host == "github.com" &&
+        parsed.username.isEmpty() &&
+        parsed.password.isEmpty() &&
+        parsed.encodedPath.startsWith("/$repository/releases/download/")
+}
+
+/**
+ * Whether [name] can safely become a filename in the download cache.
+ *
+ * `prepareTarget` hands it to `File(directory, name)`, which happily resolves `../` segments — so a
+ * name carrying a separator is a manifest choosing where on disk the APK lands, and the only names
+ * with a separator in them are hostile ones: the workflow names assets `nodyssey-v1.2.9.apk`.
+ */
+internal fun isSafeAssetName(name: String): Boolean =
+    name.isNotBlank() && '/' !in name && '\\' !in name && name != "." && name != ".."
 
 private const val SUPPORTED_SCHEMA = 1
 private const val DEV_CHANNEL = "dev"

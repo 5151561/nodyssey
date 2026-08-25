@@ -122,6 +122,7 @@ import io.github.plaza.designsys.resources.richtext_image_loading
 import io.github.plaza.designsys.resources.richtext_image_view_full
 import io.github.plaza.designsys.resources.richtext_quote_reply
 import io.github.plaza.designsys.resources.richtext_sticker_description
+import io.github.plaza.designsys.resources.richtext_sticker_fallback
 import io.github.plaza.designsys.theme.CodeStyle
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.PostBody
@@ -1169,6 +1170,7 @@ private fun InlineText(
         inlines.filterIsInstance<InlineNode.Image>().associateWith { image ->
             image.alt ?: stringResource(Res.string.richtext_image_label)
         }
+    val stickerFallback = stringResource(Res.string.richtext_sticker_fallback)
 
     /*
      * One listener per kind, remembered, rather than a fresh lambda per annotation.
@@ -1210,6 +1212,7 @@ private fun InlineText(
             codeBackground,
             quoteLabels,
             imageLabels,
+            stickerFallback,
             linkListener,
             quoteListener,
         ) {
@@ -1279,7 +1282,7 @@ private fun InlineText(
                             is InlineNode.Sticker -> {
                                 appendInlineContent(
                                     STICKER_PREFIX + inline.url,
-                                    inline.alt ?: "[表情]",
+                                    inline.alt ?: stickerFallback,
                                 )
                                 prevChar = '\u0000'
                                 prevIsCode = false

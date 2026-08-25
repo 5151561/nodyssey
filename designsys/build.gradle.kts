@@ -161,6 +161,13 @@ kotlin {
             // freshness arithmetic the app runs instead of a stand-in that agrees with it by
             // construction. Test-only: the app shells own the decision to install it.
             implementation(libs.coil.network.cache.control)
+
+            // Screenshot baselines — the missing half of the alpha-dependency guard. This module
+            // rides Material 3 alpha versions on purpose (the lockfile pins them exactly), and a
+            // pinned version number says nothing about what a bump *draws*; the goldens under
+            // `src/androidHostTest/snapshots/` do. See DesignSystemSnapshotTest for the record flow.
+            implementation(libs.roborazzi)
+            implementation(libs.roborazzi.compose)
         }
 
         commonTest.dependencies {
@@ -183,4 +190,20 @@ compose.resources {
     // Named for the module rather than left to the default `io.github.plaza.designsys.generated.resources`,
     // which puts a package called `generated` in the middle of an import that a person reads.
     packageOfResClass = "io.github.plaza.designsys.resources"
+}
+
+// Roborazzi's mode switches, which its Gradle plugin would otherwise set. The plugin is not applied
+// — it expects a plain Android test variant, not a KMP `androidHostTest` — so the same two system
+// properties are set here by hand. The default is *verify*: every ordinary `testAndroidHostTest`
+// run, local or CI, compares the screen against the goldens under `src/androidHostTest/snapshots/`
+// and fails on drift, which is what makes the baseline a gate rather than a habit. Recording is the
+// explicit act:
+//
+//     ./gradlew :designsys:testAndroidHostTest -ProborazziRecord --rerun-tasks
+//
+// rewrites the goldens; the diff review of those PNGs is where a human decides the change is wanted.
+tasks.withType<Test>().configureEach {
+    val record = providers.gradleProperty("roborazziRecord").isPresent
+    systemProperty("roborazzi.test.record", record.toString())
+    systemProperty("roborazzi.test.verify", (!record).toString())
 }

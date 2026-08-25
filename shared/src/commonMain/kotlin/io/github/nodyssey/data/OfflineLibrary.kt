@@ -122,6 +122,9 @@ sealed interface OfflineState {
  * An enum rather than the engine's own message: the row shows the reason in eleven characters next
  * to a 重试 button, and whatever a failing HTTP layer has to say does not fit there and is not what
  * the reader needs in order to decide whether tapping 重试 is worth anything.
+ *
+ * The ordinal is what the row stores (`offline_threads.failure`), so entries are append-only:
+ * reordering these renames every failure already on disk.
  */
 enum class OfflineFailure {
     /** No room left. Retrying changes nothing until something is cleared. */
@@ -132,6 +135,18 @@ enum class OfflineFailure {
 
     /** The thread is gone or no longer visible to this account. */
     Unavailable,
+
+    /**
+     * Cloudflare wants a human. Not [Network], though it used to be filed there: that classification
+     * handed the queue to WorkManager's backoff, and a challenge answered with a retry curve of
+     * non-browser traffic is how a challenge that would have passed becomes one that never does —
+     * the exact behaviour the notification poller and the maintenance sweep already refuse. 重试 is
+     * still right, but only after the reader has been through the WebView.
+     */
+    Challenge,
+
+    /** The site said slow down. More background requests are the opposite of the remedy. */
+    RateLimited,
 }
 
 /** The size breakdown the 离线管理 sheet draws, in bytes. */

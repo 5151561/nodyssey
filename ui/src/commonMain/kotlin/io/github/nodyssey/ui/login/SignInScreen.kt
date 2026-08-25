@@ -64,6 +64,7 @@ import io.github.nodyssey.data.session.SignInOutcome
 import io.github.nodyssey.data.session.SignInRefusal
 import io.github.nodyssey.data.session.TwoFactorChallenge
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_close
 import io.github.nodyssey.ui.resources.sign_in_account
@@ -326,7 +327,7 @@ fun SignInScreen(
             ) {
                 if (state.isSubmitting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(18.dp).describedAsLoading(),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary,
                     )

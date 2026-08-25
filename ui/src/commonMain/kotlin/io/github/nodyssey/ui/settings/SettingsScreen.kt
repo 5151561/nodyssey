@@ -50,6 +50,7 @@ import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.ui.common.UpdateDot
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberFileSizeLabel
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -92,6 +93,7 @@ import io.github.nodyssey.ui.resources.settings_report_format
 import io.github.nodyssey.ui.resources.settings_report_format_adapted
 import io.github.nodyssey.ui.resources.settings_report_format_hint
 import io.github.nodyssey.ui.resources.settings_report_format_source
+import io.github.nodyssey.ui.resources.settings_sticker_preview_caption
 import io.github.nodyssey.ui.resources.settings_sticker_size
 import io.github.nodyssey.ui.resources.settings_sticker_size_value
 import io.github.nodyssey.ui.resources.settings_sticker_uniform
@@ -429,7 +431,7 @@ fun SettingsScreen(
                     leading = { Icon(Icons.Default.Delete, contentDescription = null) },
                     trailing = {
                         if (state.isClearingCache) {
-                            CircularProgressIndicator(Modifier.size(22.dp))
+                            CircularProgressIndicator(Modifier.size(22.dp).describedAsLoading())
                         }
                     },
                 )
@@ -664,7 +666,7 @@ private fun StickerSizePreview(sizeSp: Int) {
             LocalStickerSizing provides StickerSizing(uniform = true, uniformSize = sizeSp.sp),
         ) {
             PostRichContent(
-                nodes = STICKER_PREVIEW_NODES,
+                nodes = stickerPreviewNodes(),
                 onLinkClick = {},
                 onImageClick = {},
                 // Nothing here is worth copying, and a selection handle inside a settings row is a
@@ -676,22 +678,27 @@ private fun StickerSizePreview(sizeSp: Int) {
     }
 }
 
-private val STICKER_PREVIEW_NODES =
-    listOf(
-        RichNode.Paragraph(
-            listOf(
-                InlineNode.Text("表情就这么大"),
-                InlineNode.Sticker(
-                    url = NodeSeekSite.stickerUrl(group = "ac", code = "01", extension = "png"),
-                    alt = "ac01",
-                ),
-                InlineNode.Sticker(
-                    url = NodeSeekSite.stickerUrl(group = "yct", code = "001", extension = "gif"),
-                    alt = "yct001",
+@Composable
+private fun stickerPreviewNodes(): List<RichNode> {
+    val caption = stringResource(Res.string.settings_sticker_preview_caption)
+    return remember(caption) {
+        listOf(
+            RichNode.Paragraph(
+                listOf(
+                    InlineNode.Text(caption),
+                    InlineNode.Sticker(
+                        url = NodeSeekSite.stickerUrl(group = "ac", code = "01", extension = "png"),
+                        alt = "ac01",
+                    ),
+                    InlineNode.Sticker(
+                        url = NodeSeekSite.stickerUrl(group = "yct", code = "001", extension = "gif"),
+                        alt = "yct001",
+                    ),
                 ),
             ),
-        ),
-    )
+        )
+    }
+}
 
 private val STICKER_SIZE_RANGE =
     SettingsRepository.MIN_STICKER_SIZE_SP.toFloat()..SettingsRepository.MAX_STICKER_SIZE_SP.toFloat()
@@ -716,6 +723,32 @@ private fun bodySizeToFontScale(bodySize: Float): Float =
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun SettingsPreview() {
+    PlazaTheme {
+        SettingsScreen(
+            state = SettingsUiState(versionName = "1.1.1"),
+            onBack = {},
+            onOpenTheme = {},
+            onThemeModeChange = {},
+            onOneHandModeChange = {},
+            onFontScaleChange = {},
+            onStickerUniformSizeChange = {},
+            onStickerSizeChange = {},
+            onImagesOnWifiOnlyChange = {},
+            onReportFormatChange = {},
+            onHomePageBarChange = {},
+            onUpdateCheckOnLaunchChange = {},
+            onUpdateDevChannelChange = {},
+            onClearCache = {},
+            appLinkHandlingEnabled = false,
+            onOpenAppLinkSettings = {},
+        )
+    }
+}
+
+// The tablet width — what `readableWidth` is supposed to do to a form this tall is only visible here.
+@Preview(showBackground = true, widthDp = 840, heightDp = 800, name = "设置 · 840dp")
+@Composable
+private fun SettingsWidePreview() {
     PlazaTheme {
         SettingsScreen(
             state = SettingsUiState(versionName = "1.1.1"),

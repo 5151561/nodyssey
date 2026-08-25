@@ -517,8 +517,10 @@ class PostComposerViewModelTest {
 private class FakeProfileRepository(
     private val rank: Int?,
     private val fails: Boolean = false,
-    override var selfUid: Long? = null,
+    selfUid: Long? = null,
 ) : ProfileRepository {
+    override val selfUid = MutableStateFlow(selfUid)
+
     override suspend fun profile(refresh: Boolean): UserProfile {
         if (fails) throw SiteException(SiteError.Network)
         return UserProfile(uid = 1L, name = "我", avatarUrl = "", rank = rank)

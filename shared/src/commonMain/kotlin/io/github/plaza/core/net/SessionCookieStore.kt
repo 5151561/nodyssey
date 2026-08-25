@@ -14,10 +14,15 @@ package io.github.plaza.core.net
  * What is *not* about the platform, in any of those three, is reading a signed-in state off the
  * names a site issues; that lives in [SessionCookies] and needs no device.
  *
- * The interface speaks in raw header strings, and is synchronous. Both are affordable only because
- * every implementation is something that can answer immediately: `WKHTTPCookieStore.getAllCookies`
- * answers on a callback and so must never sit directly behind [cookieHeader] — the mirror is what
- * makes this signature honest, not an implementation detail of it.
+ * The interface speaks in raw header strings, and the reads are synchronous. Both are affordable
+ * only because every implementation is something that can answer immediately: `WKHTTPCookieStore.
+ * getAllCookies` answers on a callback and so must never sit directly behind [cookieHeader] — the
+ * mirror is what makes this signature honest, not an implementation detail of it.
+ *
+ * [removeAll] is the one exception, and it is suspend for the opposite reason: Android's
+ * `CookieManager.removeAllCookies` completes on a callback, and a caller that read the store on the
+ * next line used to see the cookies it had just asked to remove — a sign-out whose fingerprint had
+ * not changed yet, so nothing was published and the UI stayed signed in.
  */
 interface SessionCookieStore {
     /**
@@ -30,7 +35,8 @@ interface SessionCookieStore {
     /** [cookie] is one `Set-Cookie` value, attributes and all; the store decides what it keeps. */
     fun setCookie(url: String, cookie: String)
 
-    fun removeAll()
+    /** Returns only after the store would answer [cookieHeader] empty — see the class KDoc. */
+    suspend fun removeAll()
 
     /**
      * Writes whatever is held in memory to wherever the store persists.

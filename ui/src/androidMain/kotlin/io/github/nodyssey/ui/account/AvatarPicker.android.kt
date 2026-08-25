@@ -9,10 +9,15 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.scale
 import io.github.nodyssey.data.account.AvatarUpload
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
 
@@ -33,13 +38,28 @@ internal actual fun rememberAvatarPicker(
 ): AvatarPickerController {
     val context = LocalContext.current
     val resolver = context.contentResolver
+    val scope = rememberCoroutineScope()
+    val currentPicked = rememberUpdatedState(onPicked)
+    val currentFailed = rememberUpdatedState(onFailed)
+
+    /**
+     * Both launchers end here, and [prepare] runs off the main thread — the same shape as the iOS
+     * actual, and for the same reason it gives: the launcher callbacks arrive on the main thread,
+     * and what stands behind them is a decode of a camera-roll photo plus a JPEG encode. Done
+     * inline that is a visible hitch, and on a cheap device an ANR candidate.
+     */
+    fun accept(prepare: () -> PendingAvatar?) {
+        scope.launch {
+            val avatar = withContext(Dispatchers.Default) { prepare() }
+            if (avatar == null) currentFailed.value() else currentPicked.value(avatar)
+        }
+    }
 
     val cameraLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
             // A null bitmap is the user backing out of the camera, which is not a failure.
             if (bitmap == null) return@rememberLauncherForActivityResult
-            val prepared = runCatching { bitmap.toPendingAvatar() }.getOrNull()
-            if (prepared == null) onFailed() else onPicked(prepared)
+            accept { runCatching { bitmap.toPendingAvatar() }.getOrNull() }
         }
 
     val galleryLauncher =
@@ -47,8 +67,7 @@ internal actual fun rememberAvatarPicker(
             ActivityResultContracts.PickVisualMedia(),
         ) { uri ->
             if (uri == null) return@rememberLauncherForActivityResult
-            val prepared = resolver.decodeAvatar(uri)
-            if (prepared == null) onFailed() else onPicked(prepared)
+            accept { resolver.decodeAvatar(uri) }
         }
 
     return remember(cameraLauncher, galleryLauncher) {

@@ -151,6 +151,8 @@ private class RecordingCommentComposer : CommentComposerRepository {
 
     override suspend fun deleteDraft(postId: Long) = Unit
 
+    override suspend fun deleteAllDrafts() = Unit
+
     override suspend fun publish(submission: CommentSubmission): Int? = null
 
     override suspend fun edit(postId: Long, commentId: Long, body: String) {

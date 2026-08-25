@@ -44,6 +44,48 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+
+        /*
+         * The release build's R8 and resource shrinking under a key CI owns.
+         *
+         * This is the variant the `:smoke` test module instruments: `release` itself cannot be — CI
+         * has no release keystore and an unsigned APK does not install — and `debug` proves nothing
+         * about minification, which is where serialization and reflection break at runtime rather
+         * than at build time. Debug-signed, so the emulator installs it; everything else is the
+         * release configuration, inherited rather than restated so the two cannot drift apart.
+         *
+         * No `applicationIdSuffix`: the debug suffix exists so a debug install can sit beside a
+         * release one on a person's phone, and nothing installs this build on a person's phone.
+         */
+        create("minified") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+            // What lets `:benchmark` watch this build from outside its process: profile capture and
+            // startup tracing need the target to declare itself observable, and a debuggable build
+            // would defeat the measurement instead. Release stays as it was — nothing benchmarks it.
+            isProfileable = true
+        }
+
+        /*
+         * `minified` without the R8: what the baseline-profile generator runs against.
+         *
+         * The distinction was learned the empirical way. A profile captured from the minified build
+         * records the names R8 *gave* the methods that run — `La00;` and friends — and R8 assigns
+         * those names anew on every build, so committing such a profile pins method names that will
+         * never exist again. The committed `baseline-prof.txt` has to speak source names and let
+         * each release build's own R8 translate it while compiling the profile. This variant exists
+         * to be captured from: release in every respect except the rename. (It is also why the
+         * official baselineprofile plugin generates against a `nonMinified` variant of its own.)
+         */
+        create("nonMinified") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+            isMinifyEnabled = false
+            isShrinkResources = false
+            isProfileable = true
+        }
     }
 
     compileOptions {

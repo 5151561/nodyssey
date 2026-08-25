@@ -1,19 +1,23 @@
 package io.github.nodyssey.ui.messages
 
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.UploadStatus
+import io.github.nodyssey.ui.assertEveryTouchTargetAtLeast48dp
 import io.github.nodyssey.ui.composer.EditorActions
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.toolbarLayout
@@ -47,50 +51,72 @@ class MessageComposerTest {
     private fun setScreen(
         draft: String = "",
         markdown: Boolean = true,
+        fontScale: Float = 1f,
     ) {
         composeRule.setContent {
             var isMarkdown by remember { mutableStateOf(markdown) }
             draftState = remember { TextFieldState(draft) }
-            PlazaTheme {
-                MessageThreadScreen(
-                    state =
-                    MessageThreadUiState(
-                        uid = 4471,
-                        userName = "iwil",
-                        isMarkdown = isMarkdown,
-                        hasDraftText = draft.isNotBlank(),
-                        messages =
-                        listOf(
-                            MessageBubble(
-                                id = "1",
-                                isMine = false,
-                                content = "在的",
-                                isMarkdown = true,
-                                sentAtMillis = 1_785_000_000_000L,
-                                sentAtText = null,
-                                status = SendStatus.SENT,
+            val density = Density(LocalDensity.current.density, fontScale = fontScale)
+            CompositionLocalProvider(LocalDensity provides density) {
+                PlazaTheme {
+                    MessageThreadScreen(
+                        state =
+                        MessageThreadUiState(
+                            uid = 4471,
+                            userName = "iwil",
+                            isMarkdown = isMarkdown,
+                            hasDraftText = draft.isNotBlank(),
+                            messages =
+                            listOf(
+                                MessageBubble(
+                                    id = "1",
+                                    isMine = false,
+                                    content = "在的",
+                                    isMarkdown = true,
+                                    sentAtMillis = 1_785_000_000_000L,
+                                    sentAtText = null,
+                                    status = SendStatus.SENT,
+                                ),
                             ),
                         ),
-                    ),
-                    draftState = draftState,
-                    onBack = {},
-                    onSignIn = {},
-                    onVerify = {},
-                    onOpenBrowser = {},
-                    onOpenSpace = {},
-                    onRetryLoad = {},
-                    onToggleMarkdown = { isMarkdown = !isMarkdown },
-                    onSend = {},
-                    onRetrySend = {},
-                    onQuote = {},
-                    onPickImages = {},
-                    onRemoveAttachment = {},
-                    onRetryAttachment = {},
-                    onToolbarChange = {},
-                    onToolbarReset = {},
-                )
+                        draftState = draftState,
+                        onBack = {},
+                        onSignIn = {},
+                        onVerify = {},
+                        onOpenBrowser = {},
+                        onOpenSpace = {},
+                        onRetryLoad = {},
+                        onToggleMarkdown = { isMarkdown = !isMarkdown },
+                        onSend = {},
+                        onRetrySend = {},
+                        onQuote = {},
+                        onPickImages = {},
+                        onRemoveAttachment = {},
+                        onRetryAttachment = {},
+                        onToolbarChange = {},
+                        onToolbarReset = {},
+                    )
+                }
             }
         }
+    }
+
+    /**
+     * The whole conversation screen, not one toolbar key: this was the repository's single 48dp
+     * assertion, widened into the sweep the review asked for. The second run is the app's own
+     * maximum font setting — bigger glyphs must grow the targets or wrap the layout, never shrink
+     * what a finger can hit.
+     */
+    @Test
+    fun `every touch target on the conversation screen holds 48dp`() {
+        setScreen(draft = "写到一半")
+        composeRule.assertEveryTouchTargetAtLeast48dp()
+    }
+
+    @Test
+    fun `the largest font setting does not shrink any touch target below 48dp`() {
+        setScreen(draft = "写到一半", fontScale = 1.5f)
+        composeRule.assertEveryTouchTargetAtLeast48dp()
     }
 
     @Test

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- The launch window is drawn from this theme before any Compose runs, so without a night
+         variant a dark-mode cold start opens on Theme.Material.Light's white window background and
+         flashes until the first frame. This only tracks the OS's night mode — the in-app 深色/定时
+         override isn't readable this early — which fixes the common case (system dark, app dark)
+         and leaves the system-light-app-dark flash as the price of that override. -->
+    <style name="Theme.Nodyssey" parent="android:Theme.Material.NoActionBar" />
+</resources>

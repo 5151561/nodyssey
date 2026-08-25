@@ -156,9 +156,12 @@ jobs:
       - name: Check formatting
         run: ./gradlew spotlessCheck
 
-      # Unqualified so every module runs its own tests, not just `:app`.
+      # The same three task names as ci.yml, verbatim. `testDebugUnitTest` alone only matches `:app`:
+      # the KMP modules have no build types, so their tests live under `testAndroidHostTest` (and
+      # `jvmTest` for the desktop run of the common tests) — one name here once meant a release gate
+      # that ran 14 of the repository's 217 test files and skipped the rest silently.
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testDebugUnitTest testAndroidHostTest jvmTest
 
       - name: Android lint
         run: ./gradlew :app:lintDebug
@@ -209,6 +212,18 @@ jobs:
           mv app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/$name"
           echo "path=$RUNNER_TEMP/$name" >> "$GITHUB_OUTPUT"
 
+      # The R8 mapping, kept beside the APK it deobfuscates. There is no crash reporter — by choice —
+      # so a stack trace a user pastes into the Telegram channel is the only field signal there is,
+      # and without this file it stops being readable the day the CI artifact expires. Deliberately
+      # *not* named with the `nodyssey-` prefix: the in-app update check identifies the APK asset by
+      # that prefix, and a second asset wearing it would be a candidate.
+      - name: Stage the R8 mapping
+        id: mapping
+        run: |
+          name="mapping-${{ steps.version.outputs.tag }}.txt"
+          cp app/build/outputs/mapping/release/mapping.txt "$RUNNER_TEMP/$name"
+          echo "path=$RUNNER_TEMP/$name" >> "$GITHUB_OUTPUT"
+
       - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -224,13 +239,14 @@ jobs:
             # A re-run after a fix: replace the notes and the asset rather than failing on the
             # release that already exists.
             gh release edit "$tag" --title "Nodyssey $tag" --notes-file release-notes.md "${prerelease_flag[@]}"
-            gh release upload "$tag" "${{ steps.apk.outputs.path }}" --clobber
+            gh release upload "$tag" "${{ steps.apk.outputs.path }}" "${{ steps.mapping.outputs.path }}" --clobber
           else
             gh release create "$tag" \
               --title "Nodyssey $tag" \
               --notes-file release-notes.md \
               "${prerelease_flag[@]}" \
-              "${{ steps.apk.outputs.path }}"
+              "${{ steps.apk.outputs.path }}" \
+              "${{ steps.mapping.outputs.path }}"
           fi
 
       # What the app actually reads to learn a new build exists.
@@ -419,6 +435,15 @@ jobs:
       # guidance is three dotted integers, but that is an App Store submission rule, and this build
       # never goes near the App Store — a sideloaded `.ipa` installs with the string as written, and
       # a tester who cannot tell which dev build is on their phone is the worse outcome.
+      # The Native half of the common test suite. Every Linux job compiles these sources for the
+      # host JVM and runs them there; only a Mac can *execute* them on a Kotlin/Native target, so
+      # until this line the whole Native side ran only on whichever contributor remembered the local
+      # gate. This job is the one paid-for Mac the project boots, so the tests ride along — the
+      # toolchain they need is already here for the build below, and macosArm64 is the cheap target:
+      # a test binary, not a whole app link.
+      - name: Run the common tests on Kotlin/Native
+        run: ./gradlew :shared:macosArm64Test
+
       - name: Build the unsigned app
         env:
           # Raises the Gradle daemon's heap for this job only, and it is not a precaution: at the

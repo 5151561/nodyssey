@@ -431,7 +431,7 @@ class PostComposerViewModel(
      * Read at the moment the dialog opens rather than held in [uiState], because it is a session fact
      * that may still be arriving — the same reason `VoteViewModel` re-reads it on every load.
      */
-    fun receiveCodePayeeUid(): Long? = profileRepository?.selfUid
+    fun receiveCodePayeeUid(): Long? = profileRepository?.selfUid?.value
 
     /**
      * Splices a 收款码 in at the caret.
@@ -446,7 +446,7 @@ class PostComposerViewModel(
         description: String,
         onetime: Boolean,
     ) {
-        val payee = profileRepository?.selfUid ?: return
+        val payee = profileRepository?.selfUid?.value ?: return
         // `editFromViewModel` for the same reason [createVote] uses it: without the apply notification
         // the body's snapshotFlow mirror never sees the marker and the draft autosaves the old text.
         bodyState.editFromViewModel {

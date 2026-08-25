@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_cancel
 import io.github.nodyssey.ui.resources.vote_compose_add_option
@@ -208,7 +209,7 @@ fun VoteComposeDialog(
         confirmButton = {
             TextButton(onClick = { confirming = true }, enabled = canCreate) {
                 if (state is VoteCreationState.InFlight) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading(), strokeWidth = 2.dp)
                 } else {
                     Text(stringResource(Res.string.vote_compose_create))
                 }

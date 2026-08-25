@@ -216,7 +216,7 @@ class ReplyComposerViewModel(
     }
 
     /** The uid a 收款码 would collect for, or null when the app does not know it yet. */
-    fun receiveCodePayeeUid(): Long? = profileRepository?.selfUid
+    fun receiveCodePayeeUid(): Long? = profileRepository?.selfUid?.value
 
     /** Splices a 收款码 in at the caret. No request; see the post editor's `insertReceiveCode`. */
     fun insertReceiveCode(
@@ -225,7 +225,7 @@ class ReplyComposerViewModel(
         description: String,
         onetime: Boolean,
     ) {
-        val payee = profileRepository?.selfUid ?: return
+        val payee = profileRepository?.selfUid?.value ?: return
         bodyState.editFromViewModel {
             insertText(
                 StardustReceiveMarkup.marker(
@@ -264,13 +264,18 @@ class ReplyComposerViewModel(
     fun publish(onPublished: (Int?) -> Unit) {
         val state = _uiState.value
         if (!state.canPublish || publishJob?.isActive == true) return
+        // Straight from the field, not from the mirrored copy — the same rule
+        // PostComposerViewModel.publish states: the snapshotFlow mirror runs a frame behind, and what
+        // is published must be exactly what is on screen. Publishing the mirror could send a reply
+        // missing the keystrokes the IME committed just before 发送 — and then delete the draft.
+        val body = bodyState.text.toString()
         publishJob = viewModelScope.launch {
             _uiState.update { it.copy(isPublishing = true, publishError = null, publishErrorDetail = null) }
             runCatchingExceptCancellation {
                 repository.publish(
                     CommentSubmission(
                         postId = postId,
-                        body = state.submissionBody,
+                        body = state.copy(body = body).submissionBody,
                         quotedFloor = state.replyTo?.floor,
                     ),
                 )

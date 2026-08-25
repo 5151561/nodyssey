@@ -57,6 +57,9 @@
     <string name="richtext_action_copy">复制</string>
     <string name="richtext_quote_reply">@%1$s %2$s</string>
     <string name="richtext_sticker_description">表情</string>
+    <!-- The bracketed text form of the same fallback: what a sticker with no alt contributes to the
+         copyable string, where richtext_sticker_description names it for the screen reader. -->
+    <string name="richtext_sticker_fallback">[表情]</string>
     <!-- Names the 「仅 Wi-Fi 加载图片」 setting by its label. An app consuming this module signs up
          to calling that setting the same thing; one that names it differently has to override this
          copy, not hope nobody notices the mismatch. -->

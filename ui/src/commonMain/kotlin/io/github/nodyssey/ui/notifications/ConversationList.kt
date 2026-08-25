@@ -46,6 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.resources.Res
@@ -340,7 +341,7 @@ private fun NewConversationSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
             when {
-                state.isSearching -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+                state.isSearching -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally).describedAsLoading())
 
                 // Before the empty case: a search that never reached the server has not found
                 // "no such user", and telling the user it did sends them off renaming their query.

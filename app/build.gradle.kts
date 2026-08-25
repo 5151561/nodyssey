@@ -108,6 +108,11 @@ dependencies {
     debugImplementation(composeBom)
     androidTestImplementation(composeBom)
 
+    // What compiles `src/main/baseline-prof.txt` on devices that never see Play: a sideloaded
+    // install gets no cloud profile, so without this the committed profile would only help the
+    // benchmark that measures it. See `:benchmark` for how the file is produced.
+    implementation(libs.androidx.profileinstaller)
+
     // Core Android dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -144,6 +149,9 @@ dependencies {
     // Instrumented tests
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // Installs itself through a ContentProvider; no code names it. Debug-only by construction —
+    // `debugImplementation` keeps it off every release classpath, which the lockfile can prove.
+    debugImplementation(libs.leakcanary)
 
     // Local tests: jUnit and coroutines.
     testImplementation(libs.junit)
@@ -158,6 +166,9 @@ dependencies {
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.paging.testing)
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    // `TestListenableWorkerBuilder`, which is how the worker tests run `doWork` against fakes
+    // without a WorkManager instance behind them.
+    testImplementation(libs.androidx.work.testing)
 
     // Instrumented tests: jUnit rules and runners
     androidTestImplementation(libs.androidx.test.core)
@@ -178,7 +189,6 @@ dependencies {
 
     // Networking: OkHttp shares its cookie jar with the WebView used for login.
     implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
     // 加密 DNS: the `Dns` implementation behind `AppDns`. See `core/net/AppDns.kt`.
     implementation(libs.okhttp.dnsoverhttps)
 
