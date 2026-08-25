@@ -18,6 +18,7 @@ import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.common.LocalAppName
+import io.github.nodyssey.ui.common.SystemBarsMatchTheme
 import io.github.nodyssey.ui.common.rememberBrowserLinks
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.richtext.LocalReportFormat
@@ -73,6 +74,9 @@ fun NodysseyRoot(
         // composition local, so none of them has to be told about the setting.
         oneHandMode = settings.oneHandMode,
     ) {
+        // Inside the theme on purpose: the system bar icons follow the answer PlazaTheme was just
+        // given, not the OS's night mode — the same rule the Custom Tab colours already follow.
+        SystemBarsMatchTheme(darkTheme)
         // Every link that leaves the app goes through LocalUriHandler — the explicit `openUri` calls
         // in Navigation and the ones Compose resolves for a link inside post text alike. Overriding
         // it here, inside the theme so the tab can match the colours on screen, is what makes
