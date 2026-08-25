@@ -188,7 +188,21 @@ jobs:
           arch: x86_64
           profile: pixel_7
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./gradlew :app:connectedDebugAndroidTest :smoke:connectedMinifiedAndroidTest
+          # The `||` block runs while the emulator is still alive — the runner tears it down when
+          # the step ends, so a later `if: failure()` step would have nothing to ask. `/data/anr`
+          # is where the platform writes the main-thread stacks of a wedged app, and the smoke's
+          # CI-only startup timeout is exactly that shape: process up, Application done, no first
+          # frame, logcat silent. The screenshot the test itself dumps says what the screen shows;
+          # these traces say what the main thread was doing instead of drawing it.
+          script: |
+            ./gradlew :app:connectedDebugAndroidTest :smoke:connectedMinifiedAndroidTest || {
+              mkdir -p device-failure-dump
+              adb root >/dev/null 2>&1 || true
+              adb pull /data/anr device-failure-dump/anr >/dev/null 2>&1 || true
+              adb shell dumpsys activity processes > device-failure-dump/dumpsys-processes.txt 2>/dev/null || true
+              adb logcat -d > device-failure-dump/logcat-full.txt 2>/dev/null || true
+              exit 1
+            }
 
       - name: Upload device test reports
         if: always()
@@ -201,5 +215,6 @@ jobs:
             smoke/build/reports/androidTests/
             smoke/build/outputs/androidTest-results/
             smoke/build/outputs/connected_android_test_additional_output/
+            device-failure-dump/
           retention-days: 14
           if-no-files-found: ignore
