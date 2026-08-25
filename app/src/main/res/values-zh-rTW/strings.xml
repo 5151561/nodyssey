@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  繁體中文 for the seven strings the *platform* reads rather than a screen. See `values/strings.xml`
+  for what each one is and why it is here rather than in `:ui`.
+
+  `app_name` is not in this file or the English one: it is a name, and a name does not translate.
+
+  Keyed by region for the same reason `:designsys` and `:ui` are — one convention across the three
+  resource systems this app draws from, and a Traditional device is narrowed to `zh-TW` before any
+  of them is asked. See `AndroidAppLanguage`.
+-->
+<resources>
+    <string name="notifications_mentions">@我</string>
+    <string name="notifications_replies">回覆主題</string>
+    <string name="notifications_messages">私訊</string>
+    <plurals name="notify_body_mentions">
+        <item quantity="other">%1$d 則新的 @ 提醒</item>
+    </plurals>
+    <plurals name="notify_body_replies">
+        <item quantity="other">%1$d 則新回覆</item>
+    </plurals>
+    <plurals name="notify_body_messages">
+        <item quantity="other">%1$d 則新私訊</item>
+    </plurals>
+</resources>

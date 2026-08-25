@@ -13,5 +13,5 @@
     installed at the same time. See `app/build.gradle.kts`.
 -->
 <resources>
-    <string name="app_name">Nodyssey·D</string>
+    <string name="app_name" translatable="false">Nodyssey·D</string>
 </resources>

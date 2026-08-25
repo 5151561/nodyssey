@@ -1,6 +1,7 @@
 package io.github.nodyssey
 
 import android.app.Application
+import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.os.StrictMode
@@ -27,6 +28,7 @@ import io.github.nodyssey.notifications.NotificationChannels
 import io.github.nodyssey.notifications.NotificationPollScheduler
 import io.github.nodyssey.platform.CompatSvgParser
 import io.github.nodyssey.platform.hasValidatedUnmeteredNetwork
+import io.github.nodyssey.ui.settings.AndroidAppLanguage
 import io.github.plaza.designsys.image.LongLivedImageCacheStrategy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,6 +66,20 @@ open class NodysseyApp :
 
     /** Lives as long as the process; the launch update check and the settings watcher below use it. */
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * 语言, put in force before anything can read a string.
+     *
+     * Here rather than in `onCreate` because it has to be earlier than the application context
+     * exists in its final form: what this returns is the context every resource lookup in `:app`
+     * goes through, including the notification channel names `NotificationChannels.ensure` writes
+     * below and the bodies the poll worker builds. `AndroidAppLanguage.wrap` reads the choice out of
+     * a `SharedPreferences` mirror rather than out of DataStore, which is the whole reason that
+     * mirror exists — see the note on it.
+     */
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(AndroidAppLanguage.wrap(base))
+    }
 
     override fun onCreate() {
         super.onCreate()

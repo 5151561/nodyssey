@@ -292,6 +292,20 @@
     <string name="settings_one_hand">单手模式</string>
     <string name="settings_one_hand_hint">二级页面用可下拉的大标题栏，最多占四成屏幕；关掉是普通标题栏</string>
 
+    <!--
+      语言. Each entry is written in the language it selects, which is how a reader who has landed on
+      the wrong one finds their way back out; 跟随系统语言 is the exception and stays in the language
+      being drawn. It also cannot be 跟随系统 on the nose — 明暗 above already says that, and two rows
+      on one screen answering to the same words is a screen reader reading the wrong one.
+    -->
+    <string name="settings_language">语言</string>
+    <string name="settings_language_system">跟随系统语言</string>
+    <string name="settings_language_zh_hans">简体中文</string>
+    <string name="settings_language_zh_hant">繁體中文</string>
+    <string name="settings_language_en">English</string>
+    <!-- Only drawn where a change waits for the next launch; see `appLanguageAppliesOnRestart`. -->
+    <string name="settings_language_restart_hint">重新打开 App 后生效</string>
+
     <!-- 主题 · 配色来源 -->
     <string name="settings_color_source">配色来源</string>
     <string name="settings_color_source_preset">预设</string>

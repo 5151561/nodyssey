@@ -37,6 +37,55 @@ The dependency arrows run one way only: the shells depend on `:ui`, `:ui` on `:d
 
 Shared Android configuration lives in `build-logic/` as five convention plugins (`plaza.android.application`, `plaza.android.library`, `plaza.android.compose`, `plaza.kmp.library`, `plaza.dependency-locking`); a module's own build file should carry only what genuinely differs. **Which targets a KMP module declares is not one of those things** — it is a decision about that module, so `iosArm64()` / `macosArm64()` are in `shared/build.gradle.kts` and `jvm()` is in `designsys/build.gradle.kts`. Both modules declare their own `jvmCommon` source set the same way, through `applyDefaultHierarchyTemplate`'s custom-hierarchy overload — never `dependsOn` by hand, which switches the default template off for the whole module and takes `androidHostTest`, `jvmTest` and `appleMain` with it. Android `res/` resources exist only in `:app` now; the KMP modules keep their strings and drawables as Compose resources in `commonMain/composeResources`. JVM and Robolectric tests mirror production packages under `src/test/java`; the KMP modules use `src/commonTest/kotlin` instead, plus `src/androidHostTest/kotlin` for the tests that need a JVM class or an Android manifest on purpose. Captured HTML lives in `shared/src/commonTest/resources/fixtures` — read as generated Kotlin constants by the common tests, and as ordinary resources by the `:app` tests, which take that directory as a resource root. Instrumented tests belong in `app/src/androidTest` (debug variant); the R8 smoke against the minified variant lives in `:smoke`, whose `src/main` *is* its tests, the way a Macrobenchmark module's is. Room schemas are versioned in each module's `schemas/` — only `:shared` has one, since the `@Database` class moved there in step A6. `:app` still runs `NodeSeekDatabaseMigrationTest`, and its debug assets point at that directory rather than holding a copy; architecture and design context lives in `docs/`.
 
+## Languages and Resources
+
+The app ships three languages — 简体中文, 繁體中文 and English — and the Simplified strings are the
+originals. They live in the unqualified directory of each module, which makes them the fallback for
+every language there is no bundle for, and they are the only copy carrying comments: a translation
+file says what a string *is* in that language and nothing about why it exists.
+
+Three resource systems are involved and each keeps its own copy of the same three languages:
+`ui/src/commonMain/composeResources/values{,-en,-zh-rTW}` (1,117 strings, the screens),
+`designsys/src/commonMain/composeResources/values{,-en,-zh-rTW}` (44, the shared components) and
+`app/src/main/res/values{,-en,-zh-rTW}` (7, the launcher label and what the notification worker
+posts). A key present only in the unqualified file is not a gap — it falls back, which is right for a
+format string that is only punctuation and for a proper noun.
+
+**Traditional Chinese is keyed by region — `values-zh-rTW` — and not by the script that names it.**
+Compose Resources prefers a `zh` item carrying no region over the unqualified default for *every*
+Chinese environment, so a `values-b+zh+Hant` bundle would be handed to Simplified readers on any
+platform that reports no script. That failure is the wrong language rather than a fallback; keyed by
+region, the same gap resolves to the default, which is Simplified. The other half of that trade is
+`isTraditionalChineseTag` in `:shared`, which is what turns a `zh-Hant-HK` device into the `zh-TW`
+this bundle answers to. Both halves go the day Compose Resources can alias one bundle to several
+qualifiers.
+
+设置 › 外观 › 语言 stores an `AppLanguage` in the settings SSOT, and `NodysseyRoot` puts it into
+force through two calls that answer two different questions. `ProvideAppLanguage` is the screen:
+Compose Resources resolves a bundle through `LocalComposeEnvironment`, which is `internal`, so the
+Android actual reaches it sideways by providing a `Configuration` carrying the new locale — that
+invalidates the default environment, which has to read the configuration to report a theme
+qualifier, and it re-reads the process locale on the way back. The result is a recomposition rather
+than an `Activity.recreate()`: no black frame, and the scroll position and back stack survive.
+`AppLanguageRecompositionTest` is what pins that, because it rests on somebody else's implementation
+detail and a compile error would never catch its going away. iOS and the desktop JVM have no such
+lever, take effect at the next launch, and say so on the settings screen through
+`appLanguageAppliesOnRestart`.
+
+`ApplyAppLanguage` is the other half and covers only what the platform draws on the app's behalf:
+the notification channel names and bodies `:app` posts out of `res/values-…`, what a WebView
+reports, `Accept-Language`, number formats. It is hand-rolled over `LocaleList.setDefault` and a
+`SharedPreferences` mirror rather than `LocaleManager`, and `AndroidAppLanguage` states at length
+why — API 33, an AppCompat backport this app cannot use, and `SYSTEM` needing to be narrowed to a
+bundle the app actually ships. Note that `LocaleManager` would buy nothing on screen even after a
+`minSdk` bump: the platform applies a per-app language by handing the activity a configuration
+change, and it is `ProvideAppLanguage` that turns one of those into new strings.
+
+Every Robolectric suite that reads a string pins the process locale to Simplified Chinese, because
+Compose Resources resolves against `Locale.current` — the *process* default, which Robolectric never
+sets — so without the pin the language of a test run would be the language of the machine running it.
+That is `RobolectricApp.beforeTest` in `:ui` and `:app`, and `DesignsysTestApp` in `:designsys`.
+
 ## Build, Test, and Development Commands
 
 The project requires JDK 21 and Android SDK 37. Use the checked-in Gradle wrapper:

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  English. `values/strings.xml` holds the Simplified Chinese original, which is also the fallback for
+  every language this app has no bundle for, and every comment explaining what a string is for.
+
+  No backslash escapes beyond \n, \t and \uXXXX: Compose Resources unescapes only those, so a
+  `\'` would reach the screen with its backslash still attached. Apostrophes are written plainly.
+-->
+<resources>
+    <string name="composer_format_bold">Bold</string>
+    <string name="composer_format_italic">Italic</string>
+    <string name="composer_format_strikethrough">Strikethrough</string>
+    <string name="composer_format_heading">Heading</string>
+    <string name="composer_format_code">Inline code</string>
+    <string name="composer_format_quote">Quote</string>
+    <string name="composer_format_list">Bulleted list</string>
+    <string name="composer_format_link">Link</string>
+    <string name="composer_format_mention">Mention someone</string>
+    <string name="composer_format_image">Image</string>
+    <string name="composer_format_emoji">Emoji</string>
+
+    <string name="composer_toolbar_customize">Customise toolbar</string>
+    <string name="composer_toolbar_enabled">On the toolbar</string>
+    <string name="composer_toolbar_available">Available</string>
+    <string name="composer_toolbar_reorder">Drag to reorder</string>
+    <string name="composer_toolbar_remove">Remove from toolbar</string>
+    <string name="composer_toolbar_add">Add to toolbar</string>
+    <string name="composer_toolbar_reset">Reset to default</string>
+
+    <string name="composer_emoji_recent">Recently used</string>
+    <string name="composer_emoji_backspace">Delete</string>
+
+    <string name="richtext_image_loading">Loading image…</string>
+    <string name="richtext_image_label">Image</string>
+    <string name="richtext_image_view_full">Tap to see the full image</string>
+    <string name="richtext_image_load_failed">Image failed to load</string>
+    <string name="richtext_image_failed_challenge">The image host wants a human check the app cannot pass (HTTP %1$d)</string>
+    <string name="richtext_image_failed_http">The image host refused this image (HTTP %1$d)</string>
+    <string name="richtext_image_failed_unreachable">Cannot reach the image host — check your network</string>
+    <string name="richtext_image_failed_timeout">Timed out reaching the image host</string>
+    <string name="richtext_image_failed_connection">Connection interrupted</string>
+    <string name="richtext_action_retry">Retry</string>
+    <string name="richtext_action_open_in_browser">Open in browser</string>
+    <string name="richtext_code_copied">Code copied</string>
+    <string name="richtext_action_copy">Copy</string>
+    <string name="richtext_quote_reply">@%1$s %2$s</string>
+    <string name="richtext_sticker_description">Sticker</string>
+    <string name="richtext_image_skipped_title">Load images on Wi-Fi only is on, and this is not Wi-Fi</string>
+    <string name="richtext_image_skipped_action">Tap to load this image</string>
+    <string name="richtext_poll_title">Poll</string>
+    <string name="richtext_poll_body">Open the post to see it and vote</string>
+    <string name="richtext_fold_title_fallback">Collapsed content</string>
+    <string name="richtext_fold_expand">Expand</string>
+    <string name="richtext_fold_collapse">Collapse</string>
+
+    <string name="richtext_stardust_ref_id">Ref ID %1$d</string>
+    <string name="richtext_stardust_onetime">One-time</string>
+</resources>

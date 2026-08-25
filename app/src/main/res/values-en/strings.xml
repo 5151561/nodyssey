@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  English for the seven strings the *platform* reads rather than a screen. See `values/strings.xml`
+  for what each one is and why it is here rather than in `:ui`.
+
+  `app_name` is absent on purpose: it is a name, and a name does not translate.
+
+  The channel names are what the system settings list this app's notifications under, so they are
+  the reader's words for the three things the site notifies about — not the site's own labels.
+-->
+<resources>
+    <string name="notifications_mentions">Mentions</string>
+    <string name="notifications_replies">Thread replies</string>
+    <string name="notifications_messages">Direct messages</string>
+    <plurals name="notify_body_mentions">
+        <item quantity="one">%1$d new mention</item>
+        <item quantity="other">%1$d new mentions</item>
+    </plurals>
+    <plurals name="notify_body_replies">
+        <item quantity="one">%1$d new reply</item>
+        <item quantity="other">%1$d new replies</item>
+    </plurals>
+    <plurals name="notify_body_messages">
+        <item quantity="one">%1$d new direct message</item>
+        <item quantity="other">%1$d new direct messages</item>
+    </plurals>
+</resources>

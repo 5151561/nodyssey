@@ -7,13 +7,32 @@
   The three channel names and `app_name` also exist in `ui/src/commonMain/composeResources`. That is
   a copy, and deliberately so: the settings screen draws the same names, and the alternative is
   `runBlocking { getString(…) }` inside `Application.onCreate` to reach a suspend accessor.
+
+  `tools:locale` states what the folder name cannot: this is Simplified Chinese and not English, so
+  lint reads the plurals below against Chinese rules and stops asking for the `one` form Chinese has
+  no use for. `values-en` and `values-zh-rTW` are the other two; `AndroidAppLanguage` in `:ui` is
+  what decides which of the three this process reads.
 -->
-<resources>
-    <string name="app_name">Nodyssey</string>
+<resources
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:locale="zh">
+    <!-- A name, so it reads the same in every language and has nothing to translate. -->
+    <string name="app_name" translatable="false">Nodyssey</string>
     <string name="notifications_mentions">@我</string>
     <string name="notifications_replies">回复主题</string>
     <string name="notifications_messages">私信</string>
-    <string name="notify_body_mentions">%1$d 条新的 @ 提醒</string>
-    <string name="notify_body_replies">%1$d 条新回复</string>
-    <string name="notify_body_messages">%1$d 条新私信</string>
+    <!--
+      Plurals rather than plain strings because English needs two forms of each and Chinese needs
+      one. The count is always in the text, so a language whose singular reads "one new reply" gets
+      to say that without the app knowing which languages those are.
+    -->
+    <plurals name="notify_body_mentions">
+        <item quantity="other">%1$d 条新的 @ 提醒</item>
+    </plurals>
+    <plurals name="notify_body_replies">
+        <item quantity="other">%1$d 条新回复</item>
+    </plurals>
+    <plurals name="notify_body_messages">
+        <item quantity="other">%1$d 条新私信</item>
+    </plurals>
 </resources>

@@ -239,6 +239,58 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("显示原文").assertIsSelected()
     }
 
+    /**
+     * 语言 — one row of 外观 carrying the current answer, and four choices behind it.
+     *
+     * 跟随系统语言 rather than 跟随系统 because 明暗 in the same group already answers to those four
+     * characters, and `onNodeWithText` finding both is the same ambiguity a screen reader would read
+     * out. That is what the first assertion here is really pinning.
+     *
+     * Each label is looked up while the menu is shut, so the one node matching it is the row's own
+     * value rather than the menu item that set it — the two carry the same text, and asserting on
+     * an open menu would pass whether or not the choice ever reached the row.
+     */
+    @Test
+    fun `language offers the three bundles and following the system`() {
+        composeRule.setContent {
+            var language by remember { mutableStateOf(UserSettings().appLanguage) }
+            PlazaTheme {
+                SettingsScreen(
+                    state = SettingsUiState(UserSettings(appLanguage = language)),
+                    onBack = {},
+                    onOpenTheme = {},
+                    onThemeModeChange = {},
+                    onOneHandModeChange = {},
+                    onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = {},
+                    onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
+                    onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
+                    onAppLanguageChange = { language = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("语言").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("跟随系统语言").assertIsDisplayed()
+
+        composeRule.onNodeWithText("语言").performClick()
+        composeRule.onNodeWithText("繁體中文").performClick()
+        composeRule.onNodeWithText("繁體中文").assertIsDisplayed()
+        composeRule.onNodeWithText("跟随系统语言").assertDoesNotExist()
+
+        composeRule.onNodeWithText("语言").performClick()
+        composeRule.onNodeWithText("English").performClick()
+        composeRule.onNodeWithText("English").assertIsDisplayed()
+        composeRule.onNodeWithText("繁體中文").assertDoesNotExist()
+    }
+
     /** On is the default: 首页 is read by page number in the browser, and the bar says which one. */
     @Test
     fun `the home page bar starts on and toggles from the whole row`() {

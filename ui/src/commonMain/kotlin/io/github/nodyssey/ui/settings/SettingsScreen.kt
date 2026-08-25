@@ -1,7 +1,9 @@
 package io.github.nodyssey.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -10,11 +12,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,8 +33,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
@@ -37,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.data.settings.AppLanguage
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
@@ -68,6 +77,12 @@ import io.github.nodyssey.ui.resources.settings_doh_entry_hint_off
 import io.github.nodyssey.ui.resources.settings_doh_entry_hint_on
 import io.github.nodyssey.ui.resources.settings_home_page_bar
 import io.github.nodyssey.ui.resources.settings_home_page_bar_hint
+import io.github.nodyssey.ui.resources.settings_language
+import io.github.nodyssey.ui.resources.settings_language_en
+import io.github.nodyssey.ui.resources.settings_language_restart_hint
+import io.github.nodyssey.ui.resources.settings_language_system
+import io.github.nodyssey.ui.resources.settings_language_zh_hans
+import io.github.nodyssey.ui.resources.settings_language_zh_hant
 import io.github.nodyssey.ui.resources.settings_licenses
 import io.github.nodyssey.ui.resources.settings_network
 import io.github.nodyssey.ui.resources.settings_network_check_entry
@@ -140,6 +155,7 @@ fun SettingsRoute(
         onBack = onBack,
         onOpenTheme = onOpenTheme,
         onThemeModeChange = viewModel::setThemeMode,
+        onAppLanguageChange = viewModel::setAppLanguage,
         onOneHandModeChange = viewModel::setOneHandMode,
         onFontScaleChange = viewModel::setFontScale,
         onStickerUniformSizeChange = viewModel::setStickerUniformSize,
@@ -188,6 +204,7 @@ fun SettingsScreen(
     onOpenImageHost: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
+    onAppLanguageChange: (AppLanguage) -> Unit = {},
 ) {
     var bodyFontSize by remember(state.settings.fontScale) {
         mutableFloatStateOf(fontScaleToBodySize(state.settings.fontScale))
@@ -297,9 +314,6 @@ fun SettingsScreen(
                     subtitle = stringResource(Res.string.settings_sticker_uniform_hint),
                     checked = state.settings.stickerUniformSize,
                     onCheckedChange = onStickerUniformSizeChange,
-                    // The slider below only exists while the switch is on, so which of the two
-                    // carries the group's rounded bottom edge moves with it.
-                    bottom = !state.settings.stickerUniformSize,
                     trailing = {
                         Switch(
                             checked = state.settings.stickerUniformSize,
@@ -314,7 +328,6 @@ fun SettingsScreen(
                             Res.string.settings_sticker_size_value,
                             stickerSize.roundToInt(),
                         ),
-                        bottom = true,
                     ) {
                         Slider(
                             value = stickerSize,
@@ -330,6 +343,13 @@ fun SettingsScreen(
                         StickerSizePreview(sizeSp = stickerSize.roundToInt())
                     }
                 }
+                // 语言 is one more thing about how the interface looks, so it rides in this group
+                // rather than opening a section of its own — and it is the group's last row, which
+                // is why neither of the two above claims the rounded bottom edge any more.
+                AppLanguageRow(
+                    selected = state.settings.appLanguage,
+                    onSelect = onAppLanguageChange,
+                )
             }
 
             SettingsSectionTitle(stringResource(Res.string.settings_content))
@@ -517,6 +537,91 @@ fun SettingsScreen(
         }
     }
 }
+
+/**
+ * 语言, behind a dropdown.
+ *
+ * Four choices spelled out as four rows cost a section of their own for a decision that is made
+ * once and then rarely revisited, and the entries are written in the language each one selects,
+ * which makes them the longest labels on the screen. Collapsed this reads as one more row of 外观
+ * with its answer on the right; opened it still puts all four side by side, which is the one thing
+ * that helps make the choice.
+ */
+@Composable
+private fun AppLanguageRow(
+    selected: AppLanguage,
+    onSelect: (AppLanguage) -> Unit,
+) {
+    val choices = appLanguageChoices()
+    var expanded by remember { mutableStateOf(false) }
+    SettingsRow(
+        title = stringResource(Res.string.settings_language),
+        // Only where a change waits for the next launch. Android redraws the screen in the new
+        // language as this row is tapped, so there is nothing to warn about there.
+        subtitle = stringResource(Res.string.settings_language_restart_hint)
+            .takeIf { appLanguageAppliesOnRestart },
+        bottom = true,
+        onClick = { expanded = true },
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = choices.first { it.first == selected }.second,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // The menu hangs off the chevron and nothing wider, because a `DropdownMenu` is
+                // anchored to its *parent* layout node — `Popup` reads `parentLayoutCoordinates`,
+                // not the position of its own zero-sized node. Put it a level up and the anchor
+                // becomes the whole row, so the menu opens at the row's bottom left however the
+                // enclosing box is aligned; this box is the chevron and only the chevron, so the
+                // menu ends where it does, tucked under the control that opened it.
+                Box {
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        choices.forEach { (language, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    expanded = false
+                                    onSelect(language)
+                                },
+                                // A tick rather than a radio: a menu shows one row at a time as the
+                                // finger moves down it, and a column of empty circles reads as a
+                                // form rather than as a list with one answer already in it.
+                                trailingIcon = {
+                                    if (language == selected) {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        },
+    )
+}
+
+/**
+ * The four entries of 语言, in the order the menu lists them.
+ *
+ * The three that name a bundle read the same in every language, because each is written in the one
+ * it selects — that is what lets a reader who has landed in a language they cannot read find their
+ * way back out. Only the first is translated, and it is the one that has to be, since it describes
+ * a behaviour rather than naming a language.
+ */
+@Composable
+private fun appLanguageChoices(): List<Pair<AppLanguage, String>> =
+    listOf(
+        AppLanguage.SYSTEM to stringResource(Res.string.settings_language_system),
+        AppLanguage.SIMPLIFIED_CHINESE to stringResource(Res.string.settings_language_zh_hans),
+        AppLanguage.TRADITIONAL_CHINESE to stringResource(Res.string.settings_language_zh_hant),
+        AppLanguage.ENGLISH to stringResource(Res.string.settings_language_en),
+    )
 
 /**
  * 跟随系统 / 浅色 / 深色.

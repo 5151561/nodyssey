@@ -11,6 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.regex.Pattern
 
 /**
  * Launches the R8-minified, resource-shrunk build and checks it survives to a drawn frame.
@@ -24,8 +25,10 @@ import java.io.File
  *
  * The tab labels are spelled out rather than read from `Res.string`: reading them would mean
  * depending on `:ui`, whose classes would then exist unminified in this APK while the app carries
- * renamed ones — the exact sharing this module exists to avoid. If a label changes, this match
- * fails with a screenshot in the CI artifacts, which is a cheap price for the isolation.
+ * renamed ones — the exact sharing this module exists to avoid. Spelled out in all three languages
+ * the app ships, because the app follows the system locale and this test must not care what locale
+ * the emulator booted with. If a label changes, this match fails with a screenshot in the CI
+ * artifacts, which is a cheap price for the isolation.
  */
 @RunWith(AndroidJUnit4::class)
 class MinifiedStartupSmokeTest {
@@ -41,14 +44,14 @@ class MinifiedStartupSmokeTest {
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         context.startActivity(launch)
 
-        val drew = device.wait(Until.hasObject(By.pkg(APP).text("首页")), STARTUP_TIMEOUT_MS)
+        val drew = device.wait(Until.hasObject(By.pkg(APP).text(HOME_TAB)), STARTUP_TIMEOUT_MS)
         if (!drew) dumpDiagnostics(device, "startup-timeout")
         assertTrue(
             "the app did not draw its bottom navigation within ${STARTUP_TIMEOUT_MS / 1000}s of launch",
             drew,
         )
 
-        val search = device.wait(Until.findObject(By.pkg(APP).text("搜索")), UI_TIMEOUT_MS)
+        val search = device.wait(Until.findObject(By.pkg(APP).text(SEARCH_TAB)), UI_TIMEOUT_MS)
         assertNotNull("the 搜索 tab is missing from the bottom navigation", search)
         search.click()
 
@@ -59,7 +62,7 @@ class MinifiedStartupSmokeTest {
         // written against (a navigation rail sits beside the IME instead of under it).
         assertTrue(
             "the app stopped drawing after switching to 搜索",
-            device.wait(Until.hasObject(By.pkg(APP).text("版块")), UI_TIMEOUT_MS),
+            device.wait(Until.hasObject(By.pkg(APP).text(BOARD_SECTION)), UI_TIMEOUT_MS),
         )
     }
 
@@ -97,5 +100,10 @@ class MinifiedStartupSmokeTest {
         /** Generous because the CI emulator cold-starts the process under swiftshader. */
         const val STARTUP_TIMEOUT_MS = 30_000L
         const val UI_TIMEOUT_MS = 10_000L
+
+        /** One label per language the app ships: 简体中文, 繁體中文, English. */
+        val HOME_TAB: Pattern = Pattern.compile("首页|首頁|Home")
+        val SEARCH_TAB: Pattern = Pattern.compile("搜索|搜尋|Search")
+        val BOARD_SECTION: Pattern = Pattern.compile("版块|版塊|Board")
     }
 }
