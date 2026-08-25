@@ -77,6 +77,13 @@ jobs:
       - name: Unit tests
         run: ./gradlew testDebugUnitTest testAndroidHostTest jvmTest
 
+      # The manifest-writing half of the update protocol. It only ever runs for real inside
+      # release.yml, where a regression surfaces as every installed app refusing the update — the
+      # client hard-rejects a blank sha256 or a URL off this repository's releases tree. Testing it
+      # here means the release day is not the first execution. Stdlib unittest, nothing to install.
+      - name: Release script tests
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+
       # warningsAsErrors is on, so a new lint warning fails the build here. Qualified to the
       # application module because `plaza.android.application` sets `checkDependencies`, which pulls
       # every module it depends on into this one run and report — so this covers the whole repository.
