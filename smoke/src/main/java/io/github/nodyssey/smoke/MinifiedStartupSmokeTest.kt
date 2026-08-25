@@ -75,6 +75,14 @@ class MinifiedStartupSmokeTest {
             val dir = File(dirPath).apply { mkdirs() }
             device.takeScreenshot(File(dir, "$name.png"))
             File(dir, "$name-hierarchy.xml").outputStream().use { device.dumpWindowHierarchy(it) }
+            // The app's thread stacks, captured while it is still wedged — the screenshot showed a
+            // first frame that never came, and only this says what the main thread is doing
+            // instead. `debuggerd -j` needs no root on the userdebug emulator images CI runs, and
+            // the process is gone by the time any post-failure workflow step could ask.
+            val pid = device.executeShellCommand("pidof $APP").trim()
+            if (pid.isNotEmpty()) {
+                File(dir, "$name-stacks.txt").writeText(device.executeShellCommand("debuggerd -j $pid"))
+            }
         }
     }
 
