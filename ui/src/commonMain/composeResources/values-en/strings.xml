@@ -8,7 +8,8 @@
 
   A key absent here is not missing: it falls back to the Simplified entry, which is the right outcome
   for the handful that are the same in every language — a format string that is only punctuation, a
-  proper noun, the app's own name.
+  proper noun, the app's own name. `StringCatalogParityTest` holds this paragraph to its word: an
+  absence has to be declared there, or the build fails.
 
   No backslash escapes beyond \n, \t and \uXXXX: Compose Resources unescapes only those, so a `\'`
   would reach the screen with the backslash still on it. Apostrophes are written plainly.
@@ -18,6 +19,7 @@
   languages still has to recognise what they are looking at on the web version.
 -->
 <resources>
+    <string name="loading_indicator_label">Loading</string>
     <string name="action_back">Back</string>
     <string name="action_close">Close</string>
     <string name="action_expand">Expand</string>
@@ -183,6 +185,9 @@
     <string name="search_history_scope">Posts · all boards</string>
     <string name="search_user_history_scope">Users</string>
     <string name="search_history_board_scope">Posts · %1$s</string>
+    <string name="search_user_topics">%1$d topics</string>
+    <string name="search_user_comments">%1$d comments</string>
+    <string name="search_user_joined">Joined %1$s</string>
     <string name="search_board_range">Board scope</string>
     <string name="search_board_range_hint">One board at a time — the site search itself takes only one; the ones you use most sit at the top</string>
     <string name="search_recent_boards">Recently used</string>
@@ -225,6 +230,7 @@
     <string name="message_copied">Message copied</string>
 
     <string name="profile_session_active">Signed in to NodeSeek</string>
+    <string name="profile_member_since">Joined %1$d/%2$d · UID %3$d</string>
     <string name="profile_edit">Edit your space</string>
     <string name="profile_chicken">Drumsticks</string>
     <string name="profile_stars">Stardust</string>
@@ -308,6 +314,7 @@
     <string name="settings_sticker_uniform">One size for every sticker</string>
     <string name="settings_sticker_uniform_hint">On, every sticker is drawn at the same adjustable size; off, each keeps the size it was made at</string>
     <string name="settings_sticker_size">Sticker size</string>
+    <string name="settings_sticker_preview_caption">Stickers are this big</string>
     <string name="settings_text_preview">Preview: what a long passage reads like at this size.</string>
     <string name="settings_content">Content</string>
     <string name="settings_app_links">Site links</string>
@@ -389,6 +396,53 @@
     <string name="doh_limits_hint">A hijacked or poisoned hostname connects again once DoH resolves it. But when the address itself is blocked, the handshake is cut on its SNI, or the connection is reset, no DNS helps and only a proxy will.</string>
     <string name="doh_proxy_hint">While a proxy is on, hostnames are resolved at the proxy and nothing here applies to those requests.</string>
     <string name="doh_webview_hint">Signing in uses the system WebView, which has its own networking and the system private DNS, untouched by this.</string>
+    <string name="settings_network_check_entry">Network check</string>
+    <string name="settings_network_check_entry_hint">Runs one real request and lists the proxy, VPN, DNS and measured speed; the screen to screenshot when reporting that the app is slow</string>
+    <string name="network_check_title">Network check</string>
+    <string name="network_check_rerun">Run again</string>
+    <string name="network_check_running">Checking…</string>
+    <string name="network_check_copy">Copy the report</string>
+    <string name="network_check_copied">Copied</string>
+    <string name="network_check_section_environment">Environment</string>
+    <string name="network_check_device">Device</string>
+    <string name="network_check_os">OS version</string>
+    <string name="network_check_app_version">App version</string>
+    <string name="network_check_transport">Network type</string>
+    <string name="network_check_transport_cellular">Cellular</string>
+    <string name="network_check_transport_ethernet">Ethernet</string>
+    <string name="network_check_transport_other">Other</string>
+    <string name="network_check_transport_none">No connection</string>
+    <string name="network_check_vpn_on">Connected</string>
+    <string name="network_check_vpn_off">Not connected</string>
+    <string name="network_check_metered">Metered</string>
+    <string name="network_check_proxy">Proxy</string>
+    <string name="network_check_proxy_off">Off</string>
+    <string name="network_check_proxy_local">%1$s · localhost %2$d</string>
+    <string name="network_check_proxy_remote">%1$s · remote host %2$d</string>
+    <string name="network_check_proxy_forum_only"> (forum only)</string>
+    <string name="network_check_doh">Encrypted DNS</string>
+    <string name="network_check_doh_off">Off</string>
+    <string name="network_check_custom_tab_app">Links open with</string>
+    <string name="network_check_default_browser">Default browser</string>
+    <string name="network_check_app_none">None</string>
+    <string name="network_check_yes">Yes</string>
+    <string name="network_check_no">No</string>
+    <string name="network_check_section_forum">Forum</string>
+    <string name="network_check_section_updates">Update source</string>
+    <string name="network_check_status">Result</string>
+    <string name="network_check_dns">DNS lookup</string>
+    <string name="network_check_connect">Connect</string>
+    <string name="network_check_tls">TLS handshake</string>
+    <string name="network_check_first_byte">First byte</string>
+    <string name="network_check_download">Download</string>
+    <string name="network_check_rate">Speed</string>
+    <string name="network_check_rate_immeasurable">Too fast to measure</string>
+    <string name="network_check_reused">Connection reused — not measured</string>
+    <string name="network_check_failed">Failed (%1$s)</string>
+    <string name="network_check_hint_title">How to read this report</string>
+    <string name="network_check_hint_layers">Large DNS, connect and first-byte numbers next to a fast download mean waiting; all three small with a slow download means the bandwidth is capped. A progress bar crawling along is the latter.</string>
+    <string name="network_check_hint_custom_tab">Links in posts are handed to the app named above, and the traffic counts as that app’s, not Nodyssey’s. When it is not the same app as the default browser, that gap is usually the whole story behind “slow in the app, fast in the browser” — a VPN’s per-app rules go by app.</string>
+    <string name="network_check_hint_scope">The forum and the update source are probed separately: one side slow means that route is the problem; both slow means this device’s connection.</string>
 
     <string name="about_title">About Nodyssey</string>
     <string name="about_community_title">About · community</string>
@@ -454,6 +508,9 @@
     <string name="about_email">Email us</string>
     <string name="about_deepflood_hint">Sister site · deepflood.com</string>
     <string name="about_licenses_hint">This app’s licence and the third-party libraries it uses</string>
+    <string name="about_crash_export">Export the crash log</string>
+    <string name="about_crash_export_hint">Last crash: %1$s · v%2$s. The log stays on this device; whether it goes to the developer is your call</string>
+    <string name="about_crash_clear">Clear the crash record</string>
     <string name="about_unofficial_notice">Nodyssey is an unofficial, open-source client for the NodeSeek forum and has no affiliation with the people who run the site; posts and comments remain the copyright of the forum and their authors.</string>
 
     <string name="privacy_title">Privacy policy</string>
@@ -1101,6 +1158,8 @@
     <string name="offline_failed_space">Download failed · the images do not fit in the space left</string>
     <string name="offline_failed_network">Download failed · the network dropped</string>
     <string name="offline_failed_unavailable">Download failed · the post is no longer visible</string>
+    <string name="offline_failed_challenge">Download failed · the site is asking for a human check</string>
+    <string name="offline_failed_rate_limited">Download failed · rate limited by the site, try again later</string>
 
     <string name="offline_sheet_title">Offline reading</string>
     <string name="offline_sheet_body">Downloads the body and replies of bookmarked posts to read without a network</string>
