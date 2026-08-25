@@ -122,6 +122,7 @@ import io.github.nodyssey.ui.settings.ProxySettingsViewModel
 import io.github.nodyssey.ui.settings.SettingsRoute
 import io.github.nodyssey.ui.settings.SettingsViewModel
 import io.github.nodyssey.ui.settings.UpdateReminderDialog
+import io.github.nodyssey.ui.settings.UpdateReminderViewModel
 import io.github.nodyssey.ui.settings.theme.DynamicColorRoute
 import io.github.nodyssey.ui.settings.theme.ThemeSettingsRoute
 import io.github.nodyssey.ui.settings.theme.ThemeSettingsViewModel
@@ -307,7 +308,7 @@ fun MainNavigation(
      */
     LaunchedEffect(launchRequest) {
         val openSpaceOnHome: (Long) -> Unit = { uid ->
-            homeStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid))
+            homeStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid.value))
         }
         when (val request = launchRequest) {
             null -> return@LaunchedEffect
@@ -366,858 +367,6 @@ fun MainNavigation(
         onLaunchRequestHandled()
     }
 
-    fun destinationEntries(
-        backStack: NavBackStack<NavKey>,
-        openWebUrl: (String) -> Unit,
-        openSpace: (Long) -> Unit,
-        openContentUrl: (String) -> Unit,
-    ) =
-        entryProvider<NavKey> {
-            entry<PostListKey> {
-                val viewModel: PostListViewModel =
-                    viewModel(factory = PostListViewModel.factory(container))
-                PostListRoute(
-                    viewModel = viewModel,
-                    listState = homeListState,
-                    // The whole of what the row is already showing, not just the id: the thread
-                    // draws these four before the network answers, and they are what the row's own
-                    // title, avatar, name and board tag fly into.
-                    onPostClick = { post ->
-                        backStack.add(
-                            PostDetailKey(
-                                post.summary.postId,
-                                preview =
-                                ThreadPreview(
-                                    title = post.summary.title,
-                                    authorName = post.summary.authorName,
-                                    avatarUrl = post.summary.avatarUrl,
-                                    categoryTitle = post.summary.categoryTitle,
-                                    categorySlug = post.summary.categorySlug,
-                                    isAwarded = post.summary.isAwarded,
-                                ),
-                            ),
-                        )
-                    },
-                    onCreatePost = { backStack.add(PostComposerKey()) },
-                    onSignIn = {
-                        backStack.add(SignInKey)
-                    },
-                    onVerify = {
-                        backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE))
-                    },
-                    onNavigationBarHiddenChanged = { hidden ->
-                        if (!currentListDetailExpanded) tabBarHiddenByScroll = hidden
-                    },
-                    scrollToTopRequests = homeScrollToTopRequests,
-                )
-            }
-
-            entry<SearchKey> {
-                val viewModel: SearchViewModel =
-                    viewModel(factory = SearchViewModel.factory(container))
-                SearchRoute(
-                    viewModel = viewModel,
-                    onPostClick = { backStack.add(PostDetailKey(it)) },
-                    // A user result now has a screen of its own, so it stays in the app. Finding
-                    // yourself in search must open the same self-shaped space 我的 opens.
-                    onUserClick = { uid ->
-                        backStack.add(
-                            UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid),
-                        )
-                    },
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
-                    onNavigationBarHiddenChanged = { hidden ->
-                        if (!currentListDetailExpanded) tabBarHiddenByScroll = hidden
-                    },
-                )
-            }
-
-            entry<NotificationsKey> {
-                NotificationsRoute(
-                    viewModel = notificationsViewModel,
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = {
-                        backStack.add(
-                            WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
-                        )
-                    },
-                    onNotificationClick = { notification ->
-                        notification.postId?.let {
-                            backStack.add(PostDetailKey(it, notification.floor))
-                        }
-                    },
-                    onOpenThread = { uid, name ->
-                        backStack.add(MessageThreadKey(uid, name))
-                    },
-                    scrollToTopRequests = notificationsScrollToTopRequests,
-                )
-            }
-
-            entry<MessageThreadKey> { key ->
-                val viewModel: MessageThreadViewModel =
-                    viewModel(
-                        key = "message-${key.uid}",
-                        factory =
-                        MessageThreadViewModel.factory(container, key.uid, key.userName),
-                    )
-                MessageThreadRoute(
-                    viewModel = viewModel,
-                    showBackButton = !(currentListDetailExpanded && backStack.showsListPane()),
-                    onBack = { backStack.removeLastOrNull() },
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.NOTIFICATION_PATH,
-                                siteTitle,
-                                WebViewGoal.CHALLENGE,
-                            ),
-                        )
-                    },
-                    onOpenBrowser = openWebUrl,
-                    // Pushed rather than swapped in: on a wide window the space lands in the list
-                    // pane and the conversation stays beside it, which is why `paneRoleOf` calls a
-                    // space a list wherever it is reached from.
-                    onOpenSpace = { openSpace(key.uid) },
-                    onLinkClick = openContentUrl,
-                )
-            }
-
-            entry<ProfileKey> {
-                val viewModel: ProfileViewModel =
-                    viewModel(factory = ProfileViewModel.factory(container))
-                // Read here rather than folded into ProfileViewModel: signing out rebuilds that
-                // state from scratch, and whether a newer APK exists is not a fact about the session.
-                val updateState by container.appUpdateRepository.state.collectAsStateWithLifecycle()
-                ProfileRoute(
-                    viewModel = viewModel,
-                    onSignIn = { backStack.add(SignInKey) },
-                    onSettings = { backStack.add(SettingsKey) },
-                    hasAppUpdate = updateState.available != null,
-                    onAccountSettings = { backStack.add(AccountSettingsKey) },
-                    onOpenWebsite = { openWebUrl(NodeSeekSite.BASE_URL) },
-                    onVerify = {
-                        backStack.add(
-                            WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
-                        )
-                    },
-                    onOpenSpace = { uid -> backStack.add(UserSpaceKey(uid, isSelf = true)) },
-                    // 我的收藏 has its own screen (board i1) rather than the space page's tab: it is
-                    // the only list here that is always about you, and the things the board asks for
-                    // — filters over the whole collection, multi-select, offline downloads — are
-                    // about the collection rather than about a profile. The space page keeps its tab.
-                    onCollections = { backStack.add(BookmarksKey) },
-                    onHistory = { backStack.add(ReadHistoryKey) },
-                    onAssets = { backStack.add(AssetsKey) },
-                    onFollow = { backStack.add(FollowKey) },
-                    onTools = { backStack.add(CommunityToolsKey) },
-                )
-            }
-
-            entry<SettingsKey> {
-                val viewModel: SettingsViewModel =
-                    viewModel(factory = SettingsViewModel.factory(container))
-                SettingsRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onOpenTheme = { backStack.add(ThemeSettingsKey) },
-                    onOpenNotifications = { backStack.add(NotificationSettingsKey) },
-                    onOpenProxy = { backStack.add(ProxySettingsKey) },
-                    onOpenDoh = { backStack.add(DohSettingsKey) },
-                    onOpenImageHost = { backStack.add(ImageHostKey) },
-                    onOpenAbout = { backStack.add(AboutAppKey) },
-                    onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
-                )
-            }
-
-            entry<ThemeSettingsKey> {
-                val viewModel: ThemeSettingsViewModel =
-                    viewModel(factory = ThemeSettingsViewModel.factory(container))
-                ThemeSettingsRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onOpenDynamicColor = { backStack.add(DynamicColorKey) },
-                )
-            }
-
-            entry<DynamicColorKey> {
-                val viewModel: ThemeSettingsViewModel =
-                    viewModel(factory = ThemeSettingsViewModel.factory(container))
-                DynamicColorRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                )
-            }
-
-            entry<NotificationSettingsKey> {
-                val viewModel: NotificationSettingsViewModel =
-                    viewModel(factory = NotificationSettingsViewModel.factory(container))
-                NotificationSettingsRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    // 绑定 Telegram lives on 联系方式 (d6 3/4), the site's own binding entry.
-                    onOpenTelegram = { backStack.add(AccountContactKey) },
-                )
-            }
-
-            entry<ProxySettingsKey> {
-                val viewModel: ProxySettingsViewModel =
-                    viewModel(factory = ProxySettingsViewModel.factory(container))
-                ProxySettingsRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                )
-            }
-
-            entry<DohSettingsKey> {
-                // Null on a platform that cannot apply a DoH server at all, where the row in 设置
-                // that leads here is not drawn either. Nothing is drawn if it is reached some other
-                // way, which is the honest answer for a screen whose every control would write a
-                // setting nothing reads.
-                container.doh?.let { doh ->
-                    val viewModel: DohSettingsViewModel =
-                        viewModel(factory = DohSettingsViewModel.factory(doh))
-                    DohSettingsRoute(
-                        viewModel = viewModel,
-                        onBack = { backStack.removeLastOrNull() },
-                    )
-                }
-            }
-
-            entry<AboutAppKey> {
-                val viewModel: AboutAppViewModel =
-                    viewModel(factory = AboutAppViewModel.factory(container))
-                AboutAppRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onOpenChangelog = { backStack.add(ChangelogKey) },
-                    onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
-                    onOpenUri = openExternalUrl,
-                )
-            }
-
-            entry<AboutCommunityKey> {
-                val copyRss = rememberSilentClipboardCopy()
-                AboutCommunityScreen(
-                    onBack = { backStack.removeLastOrNull() },
-                    onOpenAboutSite = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.ABOUT_PATH,
-                                aboutSiteTitle,
-                                WebViewGoal.MANAGE,
-                            ),
-                        )
-                    },
-                    onOpenPrivacy = { backStack.add(PrivacyKey) },
-                    onOpenUri = { uri ->
-                        if (NodeSeekSite.isExternalWebUrl(uri)) {
-                            openExternalUrl(uri)
-                        } else if (uri == CommunityLinks.EMAIL) {
-                            runCatching { uriHandler.openUri(uri) }
-                        }
-                    },
-                    // The screen shows its own snackbar, so this is the copy that stays quiet.
-                    onCopyRss = { copyRss(rssLabel, CommunityLinks.RSS) },
-                )
-            }
-
-            entry<PrivacyKey> {
-                val privacyViewModel: PrivacyViewModel =
-                    viewModel(factory = PrivacyViewModel.factory(container))
-                PrivacyRoute(
-                    viewModel = privacyViewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    // 「在浏览器中打开原文」 says the browser and means it — the terms are a public
-                    // page, and a reader checking what they agreed to may well want it outside the
-                    // app that is quoting it. The web view below is the fallback for when no
-                    // browser takes the intent.
-                    onOpenOriginal = {
-                        openExternalUrl(NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH)
-                    },
-                    onOpenWebFallback = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.TERMS_OF_SERVICE_PATH,
-                                privacyTitle,
-                                WebViewGoal.MANAGE,
-                            ),
-                        )
-                    },
-                )
-            }
-
-            entry<ChangelogKey> {
-                val changelogViewModel: ChangelogViewModel =
-                    viewModel(factory = ChangelogViewModel.factory(container))
-                ChangelogRoute(
-                    viewModel = changelogViewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onOpenReleases = { openExternalUrl(AppLinks.RELEASES) },
-                    onOpenUri = { openExternalUrl(it) },
-                )
-            }
-
-            entry<OpenSourceLicensesKey> {
-                OpenSourceLicensesScreen(
-                    onBack = { backStack.removeLastOrNull() },
-                    onOpenUri = openExternalUrl,
-                )
-            }
-
-            entry<UserSpaceKey> { key ->
-                val viewModel: UserSpaceViewModel =
-                    viewModel(
-                        // The landing tab is part of the identity: 我的主页 and 我的收藏 are the same
-                        // uid, and without it in the key the second would reuse the first's tab.
-                        key = "space-${key.uid}-${key.openCollections}",
-                        factory =
-                        UserSpaceViewModel.factory(container, key.uid, key.isSelf, key.openCollections),
-                    )
-                UserSpaceRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onPostClick = { postId, floor -> backStack.add(PostDetailKey(postId, floor)) },
-                    // The same conversation screen 私信 opens from the notification tab (board 7f).
-                    // It reads and writes this thread through the site's own message endpoints, so
-                    // there is nothing here the web view was needed for.
-                    onMessage = { uid, name -> backStack.add(MessageThreadKey(uid, name)) },
-                    // 空间页右上角的笔是「编辑资料」，直接进资料编辑页，不是账号设置的目录页。
-                    onEditProfile = { backStack.add(AccountProfileFieldsKey) },
-                    onOpenBrowser = openWebUrl,
-                    onLinkClick = openContentUrl,
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
-                )
-            }
-
-            entry<BookmarksKey> {
-                val viewModel: BookmarksViewModel =
-                    viewModel(factory = BookmarksViewModel.factory(container))
-                BookmarksRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onPostClick = { postId -> backStack.add(PostDetailKey(postId)) },
-                    onOpenBrowser = openWebUrl,
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = {
-                        backStack.add(
-                            WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
-                        )
-                    },
-                )
-            }
-
-            entry<ReadHistoryKey> {
-                val viewModel: ReadHistoryViewModel =
-                    viewModel(factory = ReadHistoryViewModel.factory(container))
-                ReadHistoryRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onPostClick = { postId -> backStack.add(PostDetailKey(postId)) },
-                )
-            }
-
-            entry<FollowKey> {
-                val viewModel: FollowViewModel =
-                    viewModel(factory = FollowViewModel.factory(container))
-                FollowRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onUserClick = { uid ->
-                        backStack.add(
-                            UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid),
-                        )
-                    },
-                    // `/fans` only exists for the signed-in user, so it follows the app's rule for
-                    // authenticated pages: the session's own web view, never the system browser.
-                    // The screen asks for this in one place — its error state — so the goal is the
-                    // one that closes itself once the wall is down.
-                    onOpenBrowser = { url ->
-                        backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
-                    },
-                    onSignIn = { backStack.add(SignInKey) },
-                )
-            }
-
-            entry<AssetsKey> {
-                val viewModel: AssetsViewModel =
-                    viewModel(factory = AssetsViewModel.factory(container))
-                AssetsRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onChickenLedger = { backStack.add(CreditKey) },
-                    onStardust = { backStack.add(StardustKey) },
-                    // In-app, not the system browser: a Cloudflare pass earned out there lands in
-                    // Chrome's cookie store, and the app's own retry keeps failing forever.
-                    onOpenBrowser = {
-                        backStack.add(
-                            WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
-                        )
-                    },
-                    onSignIn = { backStack.add(SignInKey) },
-                )
-            }
-
-            entry<CreditKey> {
-                val viewModel: CreditViewModel =
-                    viewModel(factory = CreditViewModel.factory(container))
-                CreditRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    // `/credit` needs the session's cookies, so it opens in the app's own web view
-                    // like every other authenticated page. It is now the fallback rather than the
-                    // destination: the native list above is the ledger, and this is where a
-                    // Cloudflare challenge gets solved so the native list can load.
-                    //
-                    // [WebViewGoal.CHALLENGE], not MANAGE, because solving it is the whole errand:
-                    // MANAGE waits for no cookie, so it sat there after the wall came down and left
-                    // the reader to work out they were done — with a way out to a real browser on
-                    // the toolbar, which is where a pass earned lands somewhere the app cannot read.
-                    onOpenBrowser = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH,
-                                siteTitle,
-                                WebViewGoal.CHALLENGE,
-                            ),
-                        )
-                    },
-                    onSignIn = { backStack.add(SignInKey) },
-                )
-            }
-
-            entry<StardustKey> {
-                val viewModel: StardustViewModel =
-                    viewModel(factory = StardustViewModel.factory(container))
-                val state by viewModel.uiState.collectAsStateWithLifecycle()
-                // The ledger URL is per-member, so it exists only once the profile call has said who
-                // we are; before that "在网页打开" can only offer the site's front page.
-                val ledgerUrl = state.uid?.let { NodeSeekSite.BASE_URL + NodeSeekSite.stardustPath(it) }
-                StardustRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    // The ledger needs the session's cookies, so it opens in-app like every other
-                    // authenticated page rather than in the cookie-less system browser.
-                    onOpenBrowser = {
-                        backStack.add(
-                            WebKey(ledgerUrl ?: NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.MANAGE),
-                        )
-                    },
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = {
-                        backStack.add(
-                            WebKey(
-                                ledgerUrl ?: NodeSeekSite.BASE_URL,
-                                siteTitle,
-                                WebViewGoal.CHALLENGE,
-                            ),
-                        )
-                    },
-                )
-            }
-
-            entry<AccountSettingsKey> {
-                val viewModel: AccountSettingsViewModel =
-                    viewModel(factory = AccountSettingsViewModel.factory(container))
-                AccountSettingsRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onOpenProfileFields = { backStack.add(AccountProfileFieldsKey) },
-                    onOpenSecurity = { backStack.add(AccountSecurityKey) },
-                    onOpenContact = { backStack.add(AccountContactKey) },
-                    onOpenBlockList = { backStack.add(AccountBlockListKey) },
-                    // 常用偏好 and 首页版块 share one page (d6 5/5): three of their rows are the
-                    // same account-side switches, and splitting them would leave two stub screens.
-                    onOpenPreferences = { backStack.add(AccountPreferencesKey) },
-                )
-            }
-
-            entry<ImageHostKey> {
-                val viewModel: ImageHostViewModel =
-                    viewModel(factory = ImageHostViewModel.factory(container))
-                ImageHostRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    // Every image host is a different site with a different session; the in-app web
-                    // view exists to carry NodeSeek's cookies and has no business holding these.
-                    onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
-                )
-            }
-
-            entry<AccountProfileFieldsKey> {
-                val viewModel: ProfileFieldsViewModel =
-                    viewModel(factory = ProfileFieldsViewModel.factory(container))
-                ProfileFieldsRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_INTRODUCTION),
-                                siteTitle,
-                                WebViewGoal.CHALLENGE,
-                            ),
-                        )
-                    },
-                )
-            }
-
-            entry<AccountSecurityKey> {
-                val viewModel: SecurityViewModel =
-                    viewModel(factory = SecurityViewModel.factory(container))
-                SecurityRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    // `otpauth://` belongs to whichever authenticator app registered for it, so it
-                    // leaves the app rather than being rendered here — the app never holds the
-                    // secret. Returns false when nothing claims the scheme, so the screen can say so
-                    // instead of appearing to do nothing.
-                    onOpenEnrolmentUri = { uri ->
-                        runCatching { uriHandler.openUri(uri) }.isSuccess
-                    },
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_SECURITY),
-                                siteTitle,
-                                WebViewGoal.CHALLENGE,
-                            ),
-                        )
-                    },
-                )
-            }
-
-            entry<AccountContactKey> {
-                val viewModel: ContactViewModel =
-                    viewModel(factory = ContactViewModel.factory(container))
-                ContactRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    // 修改邮箱 and 绑定 Telegram are errands on nodeseek.com's own settings page, so
-                    // they go to the web view that shares the app's session. A Custom Tab would hand
-                    // them to the browser's cookie jar, where the account is not signed in.
-                    onOpenSite = { url, forBinding ->
-                        backStack.add(
-                            WebKey(
-                                url,
-                                siteTitle,
-                                if (forBinding) WebViewGoal.TELEGRAM_BIND else WebViewGoal.MANAGE,
-                            ),
-                        )
-                    },
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_CONTACT),
-                                siteTitle,
-                                WebViewGoal.CHALLENGE,
-                            ),
-                        )
-                    },
-                )
-            }
-
-            entry<AccountBlockListKey> {
-                val viewModel: BlockListViewModel =
-                    viewModel(factory = BlockListViewModel.factory(container))
-                BlockListRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_BLOCK),
-                                siteTitle,
-                                WebViewGoal.CHALLENGE,
-                            ),
-                        )
-                    },
-                )
-            }
-
-            entry<AccountPreferencesKey> {
-                val viewModel: PreferencesViewModel =
-                    viewModel(factory = PreferencesViewModel.factory(container))
-                PreferencesRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = {
-                        backStack.add(
-                            WebKey(
-                                NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_PREFERENCE),
-                                siteTitle,
-                                WebViewGoal.CHALLENGE,
-                            ),
-                        )
-                    },
-                )
-            }
-
-            entry<CommunityToolsKey> {
-                CommunityToolsScreen(
-                    onBack = { backStack.removeLastOrNull() },
-                    onAward = { backStack.add(AwardKey) },
-                    onProviders = { openWebUrl(NodeSeekSite.BASE_URL + NodeSeekSite.PROVIDERS_PATH) },
-                    onFriends = { openWebUrl(NodeSeekSite.BASE_URL + NodeSeekSite.FRIENDS_PATH) },
-                    onLucky = { backStack.add(LuckyKey) },
-                    onInvite = { backStack.add(InviteKey) },
-                    onRuling = { backStack.add(RulingKey) },
-                    onAboutCommunity = { backStack.add(AboutCommunityKey) },
-                )
-            }
-
-            entry<AwardKey> {
-                val viewModel: AwardViewModel =
-                    viewModel(factory = AwardViewModel.factory(container))
-                AwardRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onPostClick = { backStack.add(PostDetailKey(it)) },
-                    // 加精 asks for a web view in one place only — the error state — so this is a
-                    // challenge to be cleared rather than a page to be browsed, and `openWebUrl`'s
-                    // MANAGE would have left it open with nothing saying the errand was finished.
-                    onOpenBrowser = { url ->
-                        backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
-                    },
-                    onSignIn = { backStack.add(SignInKey) },
-                )
-            }
-
-            entry<LuckyKey> {
-                val viewModel: LuckyViewModel =
-                    viewModel(factory = LuckyViewModel.factory(container))
-                LuckyRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onOpenBrowser = openWebUrl,
-                )
-            }
-
-            entry<InviteKey> {
-                val viewModel: InviteViewModel =
-                    viewModel(factory = InviteViewModel.factory(container))
-                InviteRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onBuyOnSite = { backStack.add(inviteWebKey(siteTitle)) },
-                )
-            }
-
-            entry<RulingKey> {
-                val viewModel: RulingViewModel =
-                    viewModel(factory = RulingViewModel.factory(container))
-                RulingRoute(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeLastOrNull() },
-                    onPostClick = { postId, floor ->
-                        backStack.add(PostDetailKey(postId, floor = floor?.toString()))
-                    },
-                    onUserClick = openSpace,
-                    onOpenBrowser = openWebUrl,
-                    onVerify = { url ->
-                        backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
-                    },
-                    onSignIn = { backStack.add(SignInKey) },
-                )
-            }
-
-            entry<ImageViewerKey>(
-                /*
-                 * Fades rather than the default slide.
-                 *
-                 * Every other destination is a page that follows the one before it, and sliding says
-                 * so. This one is the picture already on screen, filled out — it is the same object
-                 * seen closer, not a place the user travelled to, and sliding it in from the edge
-                 * reads as having left the thread rather than having zoomed into it.
-                 */
-                metadata =
-                NavDisplay.transitionSpec { fadeIn() togetherWith fadeOut() } +
-                    NavDisplay.popTransitionSpec { fadeIn() togetherWith fadeOut() } +
-                    NavDisplay.predictivePopTransitionSpec { _ ->
-                        fadeIn() togetherWith fadeOut()
-                    },
-            ) { key ->
-                val saver = rememberImageGallerySaver(container.dispatchers)
-                val viewModel: ImageViewerViewModel =
-                    viewModel(factory = ImageViewerViewModel.factory(saver))
-                val saveOutcome by viewModel.saveOutcome.collectAsStateWithLifecycle()
-                ImageViewerScreen(
-                    urls = key.urls,
-                    initialIndex = key.index,
-                    onClose = { backStack.removeLastOrNull() },
-                    // The browser, even for an image hosted on nodeseek.com: this one is the user
-                    // reaching for downloading and sharing, which is the browser's job and not
-                    // something the session's web view does better.
-                    onOpenBrowser = openExternalUrl,
-                    saveOutcome = saveOutcome,
-                    onSave = viewModel::save,
-                )
-            }
-
-            entry<PostDetailKey>(
-                /*
-                 * Fades rather than the default slide — but only for a thread opened from a row that
-                 * handed over its title.
-                 *
-                 * A slide and a shared element contradict each other: the title would detach from
-                 * the page it belongs to and fly across a screen that is itself travelling sideways.
-                 * Fading the two pages leaves the title as the only thing moving, which is the whole
-                 * point of moving it. Where no row supplied a title there is nothing to fly — a
-                 * notification, a deep link, the composer — and those keep the slide, which is still
-                 * the honest description of what happened: a page arrived from somewhere else.
-                 */
-                metadata = { key ->
-                    if (key.preview == null) emptyMap() else ThreadOpenTransition
-                },
-            ) { key ->
-                // Keyed so navigating to a different post builds a fresh ViewModel.
-                val viewModel: PostDetailViewModel =
-                    viewModel(
-                        key = "post-${key.postId}",
-                        factory =
-                        PostDetailViewModel.factory(
-                            container,
-                            key.postId,
-                            initialFloor = key.floor,
-                            initialPage = key.page,
-                            preview = key.preview,
-                        ),
-                    )
-                // Its own ViewModel, keyed the same way: an unsent reply belongs to one thread
-                // and has to outlive the sheet that shows it.
-                val replyViewModel: ReplyComposerViewModel =
-                    viewModel(
-                        key = "reply-${key.postId}",
-                        factory = ReplyComposerViewModel.factory(container, key.postId),
-                    )
-                PostDetailRoute(
-                    viewModel = viewModel,
-                    replyViewModel = replyViewModel,
-                    showBackButton = !(currentListDetailExpanded && backStack.showsListPane()),
-                    onBack = { backStack.removeLastOrNull() },
-                    onOpenBrowser = openWebUrl,
-                    onLinkClick = openContentUrl,
-                    onAuthorClick = openSpace,
-                    onSignIn = { backStack.add(SignInKey) },
-                    onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
-                    onImageClick = { urls, url -> backStack.add(imageViewerKeyFor(urls, url)) },
-                    onEdit = { target -> backStack.add(PostComposerKey(target)) },
-                    // Supplied here because this is the only layer that can reach the container.
-                    // Keyed by vote id and not merely by post: a thread may embed more than one, and
-                    // without the key they would share a single ViewModel and each other's state.
-                    voteContent = { voteId ->
-                        VoteCard(
-                            viewModel =
-                            viewModel(
-                                key = "vote-$voteId",
-                                factory = VoteViewModel.factory(container, voteId),
-                            ),
-                            onSignIn = { backStack.add(SignInKey) },
-                            onUserClick = openSpace,
-                        )
-                    },
-                    // Keyed by payee *and* Ref ID, for the same reason a vote is keyed by its id: one
-                    // post may carry several codes, and a shared ViewModel would show one code's
-                    // tally under another's amount.
-                    stardustContent = { node ->
-                        StardustReceiveCard(
-                            node = node,
-                            viewModel =
-                            viewModel(
-                                key = "stardust-${node.memberId}-${node.refId}",
-                                factory = StardustReceiveViewModel.factory(container, node),
-                            ),
-                            onSignIn = { backStack.add(SignInKey) },
-                        )
-                    },
-                )
-            }
-
-            entry<PostComposerKey> { key ->
-                val viewModel: PostComposerViewModel =
-                    viewModel(
-                        // Keyed by what is being written, or two edits opened in one session would
-                        // share the first one's ViewModel — and therefore the first one's text.
-                        key = "composer-${key.edit?.commentId ?: "new"}",
-                        factory = PostComposerViewModel.factory(container, key.edit),
-                    )
-                // Whatever this editor is about: the thread when editing, the new-post page otherwise.
-                val webUrl =
-                    key.edit
-                        ?.let { NodeSeekSite.BASE_URL + NodeSeekSite.postPath(it.postId, it.page) }
-                        ?: (NodeSeekSite.BASE_URL + NodeSeekSite.NEW_DISCUSSION_PATH)
-                PostComposerRoute(
-                    viewModel = viewModel,
-                    onClose = { backStack.removeLastOrNull() },
-                    onSignIn = {
-                        backStack.add(SignInKey)
-                    },
-                    onVerify = {
-                        backStack.add(WebKey(webUrl, siteTitle, WebViewGoal.CHALLENGE))
-                    },
-                    onOpenBrowser = {
-                        backStack.add(WebKey(webUrl, siteTitle, WebViewGoal.MANAGE))
-                    },
-                    onPublished = { postId ->
-                        backStack.removeLastOrNull()
-                        // An edit returns to the thread it came from, which is already underneath —
-                        // pushing it again would stack a second copy of the screen being updated.
-                        if (key.edit == null) postId?.let { backStack.add(PostDetailKey(it)) }
-                    },
-                )
-            }
-
-            entry<SignInKey> {
-                val viewModel: SignInViewModel = viewModel(factory = SignInViewModel.factory(container))
-                SignInRoute(
-                    viewModel = viewModel,
-                    // The widget's web view has to look like the app's other requests, or Cloudflare
-                    // is grading a different client than the one that will send the token.
-                    userAgent = container.userAgent,
-                    onClose = { backStack.removeLastOrNull() },
-                    // The screen that asked for a session is underneath; dropping this one puts the
-                    // user back on it, and its own reload keys on the session generation.
-                    onSignedIn = { backStack.removeLastOrNull() },
-                    onUseWebSignIn = {
-                        backStack.removeLastOrNull()
-                        backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
-                    },
-                    // 忘记密码 and 还没有账号 both land on the site's own sign-in page, on top of this
-                    // screen rather than instead of it. Neither has a verified URL of its own, and a
-                    // guessed one would be a button that goes nowhere.
-                    onOpenSiteSignInPage = {
-                        backStack.add(WebKey(signInUrl, siteTitle, WebViewGoal.SIGN_IN))
-                    },
-                )
-            }
-
-            entry<WebKey> { key ->
-                WebViewRoute(
-                    url = key.url,
-                    title = key.title,
-                    goal = key.goal,
-                    session = container.sessionRepository,
-                    userAgent = container.userAgent,
-                    onOpenExternal = openExternalUrl,
-                    onClose = { backStack.removeLastOrNull() },
-                    // A failed poll means "not yet", never "give up": the page is still open and the
-                    // user is still working, so a hiccup on one request must not end the watch.
-                    isBound = {
-                        runCatchingExceptCancellation {
-                            container.accountSettingsRepository.telegramBinding().bound
-                        }.getOrDefault(false)
-                    },
-                )
-            }
-        }
-
     /*
      * The entries for one tab's stack, with every "open this somewhere" closure bound to that same
      * stack.
@@ -1232,6 +381,11 @@ fun MainNavigation(
      *
      * The parameter shadows nothing now — these three used to be declared beside `backStack` above,
      * where they read the `when (currentTab)` result.
+     *
+     * The entries themselves live in the region files beside this one — `TabEntries.kt`,
+     * `SettingsEntries.kt`, `AccountEntries.kt`, `SpaceEntries.kt`, `ToolsEntries.kt`,
+     * `ThreadEntries.kt`, `SessionEntries.kt` — assembled here through one [StackEntryScope] per
+     * stack, which is what keeps the per-stack binding this comment is about.
      */
     fun destinationProvider(backStack: NavBackStack<NavKey>): (NavKey) -> NavEntry<NavKey> {
         /*
@@ -1263,7 +417,7 @@ fun MainNavigation(
         // Content links: our own post/space/mention URLs get a native screen, and everything else —
         // including the rest of nodeseek.com — goes through the routing above.
         val openSpace: (Long) -> Unit = { uid ->
-            backStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid))
+            backStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid.value))
         }
         val openContentUrl: (String) -> Unit = { url ->
             when (val route = NodeSeekSite.parseInternalRoute(url)) {
@@ -1301,7 +455,36 @@ fun MainNavigation(
             }
         }
 
-        return destinationEntries(backStack, openWebUrl, openSpace, openContentUrl)
+        val entryScope =
+            StackEntryScope(
+                container = container,
+                backStack = backStack,
+                siteTitle = siteTitle,
+                aboutSiteTitle = aboutSiteTitle,
+                privacyTitle = privacyTitle,
+                rssLabel = rssLabel,
+                signInUrl = signInUrl,
+                uriHandler = uriHandler,
+                notificationsViewModel = notificationsViewModel,
+                homeListState = homeListState,
+                homeScrollToTopRequests = { homeScrollToTopRequests },
+                notificationsScrollToTopRequests = { notificationsScrollToTopRequests },
+                isListDetailExpanded = { currentListDetailExpanded },
+                onTabBarHiddenByScroll = { tabBarHiddenByScroll = it },
+                openExternalUrl = openExternalUrl,
+                openWebUrl = openWebUrl,
+                openSpace = openSpace,
+                openContentUrl = openContentUrl,
+            )
+        return entryProvider {
+            tabRootEntries(entryScope)
+            settingsEntries(entryScope)
+            accountEntries(entryScope)
+            spaceEntries(entryScope)
+            toolsEntries(entryScope)
+            threadEntries(entryScope)
+            sessionEntries(entryScope)
+        }
     }
 
     /*
@@ -1402,16 +585,18 @@ fun MainNavigation(
      * happen to be on that screen. Read straight off the shared updater — the same instance 关于 uses,
      * so 下载并安装 hands the download to a screen that is already watching it.
      */
-    val updateReminder by container.appUpdateRepository.launchReminder.collectAsStateWithLifecycle()
+    val updateReminderViewModel: UpdateReminderViewModel =
+        viewModel(factory = UpdateReminderViewModel.factory(container))
+    val updateReminder by updateReminderViewModel.launchReminder.collectAsStateWithLifecycle()
     updateReminder?.let { release ->
         UpdateReminderDialog(
             release = release,
             onDownload = {
-                container.appUpdateRepository.acceptLaunchReminder()
+                updateReminderViewModel.acceptReminder()
                 // Onto the current tab's stack, so Back returns to whatever the reminder interrupted.
                 backStack.add(AboutAppKey)
             },
-            onPostpone = container.appUpdateRepository::postponeLaunchReminder,
+            onPostpone = updateReminderViewModel::postponeReminder,
         )
     }
 
@@ -1575,16 +760,6 @@ internal fun emptyDetailTextOf(key: NavKey): StringResource =
         else -> error("$key is a list pane with nothing to say when its detail is empty")
     }
 
-/**
- * What a thread opened from a list row animates as. See the `entry<PostDetailKey>` metadata for why
- * this is not the default slide, and [io.github.nodyssey.ui.common.sharedThreadTitle] for the thing
- * the fade is clearing the way for.
- */
-private val ThreadOpenTransition =
-    NavDisplay.transitionSpec { fadeIn() togetherWith fadeOut() } +
-        NavDisplay.popTransitionSpec { fadeIn() togetherWith fadeOut() } +
-        NavDisplay.predictivePopTransitionSpec { _ -> fadeIn() togetherWith fadeOut() }
-
 private fun stackScopedEntryProvider(
     destination: TopLevelDestination,
     provider: (NavKey) -> NavEntry<NavKey>,
@@ -1598,10 +773,6 @@ private fun stackScopedEntryProvider(
         entry.Content()
     }
 }
-
-/** Buying an invite code is a site-side spend; the app only confirms it. */
-private fun inviteWebKey(title: String): WebKey =
-    WebKey(NodeSeekSite.BASE_URL + NodeSeekSite.INVITE_PATH, title, WebViewGoal.MANAGE)
 
 /**
  * Opens a 私信 conversation, unless it is already the screen on top.
@@ -1622,6 +793,3 @@ private fun NodeSeekSite.NotificationGroup.toCategory(): NotificationCategory =
         NodeSeekSite.NotificationGroup.MENTIONS -> NotificationCategory.MENTIONS
         NodeSeekSite.NotificationGroup.MESSAGES -> NotificationCategory.MESSAGES
     }
-
-private fun imageViewerKeyFor(urls: List<String>, url: String): ImageViewerKey =
-    ImageViewerKey(urls = urls, index = urls.indexOf(url).coerceAtLeast(0))

@@ -216,7 +216,7 @@ class ReplyComposerViewModel(
     }
 
     /** The uid a 收款码 would collect for, or null when the app does not know it yet. */
-    fun receiveCodePayeeUid(): Long? = profileRepository?.selfUid
+    fun receiveCodePayeeUid(): Long? = profileRepository?.selfUid?.value
 
     /** Splices a 收款码 in at the caret. No request; see the post editor's `insertReceiveCode`. */
     fun insertReceiveCode(
@@ -225,7 +225,7 @@ class ReplyComposerViewModel(
         description: String,
         onetime: Boolean,
     ) {
-        val payee = profileRepository?.selfUid ?: return
+        val payee = profileRepository?.selfUid?.value ?: return
         bodyState.editFromViewModel {
             insertText(
                 StardustReceiveMarkup.marker(

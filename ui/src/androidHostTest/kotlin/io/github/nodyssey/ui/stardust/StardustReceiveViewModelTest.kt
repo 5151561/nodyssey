@@ -237,10 +237,12 @@ private class FakeStardustRepository(
 }
 
 private class FakeProfile(
-    override val selfUid: Long?,
+    private val uid: Long?,
 ) : ProfileRepository {
+    override val selfUid = MutableStateFlow(uid)
+
     override suspend fun profile(refresh: Boolean): UserProfile =
-        UserProfile(uid = selfUid ?: 0L, name = "我", avatarUrl = "", rank = 3)
+        UserProfile(uid = uid ?: 0L, name = "我", avatarUrl = "", rank = 3)
 
     override suspend fun profile(uid: Long): UserProfile = profile(refresh = false)
 }

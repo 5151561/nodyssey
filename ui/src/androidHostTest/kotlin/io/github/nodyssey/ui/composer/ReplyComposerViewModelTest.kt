@@ -72,7 +72,7 @@ class ReplyComposerViewModelTest {
      */
     @Test
     fun `inserting a receive code from the reply sheet writes the same marker`() = runTest(dispatcher) {
-        val viewModel = viewModel(profiles = FakeReplyProfileRepository(selfUid = 52_425))
+        val viewModel = viewModel(profiles = FakeReplyProfileRepository(uid = 52_425))
         viewModel.open()
         advanceUntilIdle()
 
@@ -88,7 +88,7 @@ class ReplyComposerViewModelTest {
     /** No uid, no payee — and the sheet says so rather than writing a code that collects for nobody. */
     @Test
     fun `the reply sheet declines a receive code before the account is known`() = runTest(dispatcher) {
-        val viewModel = viewModel(profiles = FakeReplyProfileRepository(selfUid = null))
+        val viewModel = viewModel(profiles = FakeReplyProfileRepository(uid = null))
         viewModel.open()
         advanceUntilIdle()
 
@@ -398,10 +398,12 @@ class ReplyComposerViewModelTest {
 
 /** Only [selfUid] matters here — the reply sheet asks the profile for nothing else. */
 private class FakeReplyProfileRepository(
-    override val selfUid: Long?,
+    private val uid: Long?,
 ) : ProfileRepository {
+    override val selfUid = MutableStateFlow(uid)
+
     override suspend fun profile(refresh: Boolean): UserProfile =
-        UserProfile(uid = selfUid ?: 0L, name = "我", avatarUrl = "", rank = 3)
+        UserProfile(uid = uid ?: 0L, name = "我", avatarUrl = "", rank = 3)
 
     override suspend fun profile(uid: Long): UserProfile = profile(refresh = false)
 }

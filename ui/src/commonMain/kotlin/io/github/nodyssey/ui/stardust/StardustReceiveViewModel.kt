@@ -78,7 +78,7 @@ class StardustReceiveViewModel(
     fun load() {
         _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
-            val self = profile.selfUid
+            val self = profile.selfUid.value
             runCatchingExceptCancellation {
                 val all = repository.receipts(memberId = node.memberId, refId = node.refId)
                 // Only ask the second question when there is an account to ask it about. Signed out,
@@ -112,7 +112,7 @@ class StardustReceiveViewModel(
      */
     fun pay() {
         if (_uiState.value.isPaying) return
-        val self = profile.selfUid ?: return
+        val self = profile.selfUid.value ?: return
         _uiState.update { it.copy(isPaying = true, failure = null) }
         viewModelScope.launch {
             runCatchingExceptCancellation {
