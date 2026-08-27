@@ -1,22 +1,33 @@
 package io.github.nodyssey.ui.postlist
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.preferencesOf
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.paging.PagingData
 import androidx.paging.testing.asSnapshot
 import io.github.nodyssey.core.net.JsonSource
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.FakePostRemoteDataSource
+import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.data.MutableClock
 import io.github.nodyssey.data.OfflineFirstPostRepository
+import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.inMemoryDatabase
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.testSettingsRepository
+import io.github.nodyssey.model.FeedSort
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -172,6 +183,71 @@ class PostListViewModelTest {
             assertTrue(before === vm.uiState.value)
         }
 
+    /**
+     * The bug this exists for: 排序 used to live and die with the process, so the reader who prefers
+     * 新帖子 was re-picking it from the menu on every launch.
+     */
+    @Test
+    fun `a cold start opens on the stored sort`() =
+        runTest(dispatcher) {
+            val settings = testSettingsRepository(backgroundScope)
+            val first = viewModel(settings)
+            advanceUntilIdle()
+            first.selectSort(FeedSort.POST_TIME)
+            // The menu's write is a launch, not a suspend, and DataStore finishes it off the test
+            // scheduler — so wait for the value to come back rather than for the scheduler to idle.
+            assertEquals(FeedSort.POST_TIME, first.uiState.first { it.sort == FeedSort.POST_TIME }.sort)
+
+            val second = viewModel(settings)
+
+            assertEquals(FeedSort.POST_TIME, second.uiState.first { it.sort == FeedSort.POST_TIME }.sort)
+        }
+
+    /**
+     * Restoring is only half of it: the two orders are two different feeds, so a pager opened before
+     * DataStore has answered fetches 新评论 and throws it away a frame later.
+     *
+     * The store is hand-held here rather than real precisely because that race is a race — a real one
+     * answers fast enough to hide the bug most runs. Holding the answer back makes "the feed waited"
+     * something the test can state instead of hope for.
+     */
+    @Test
+    fun `the feed opens no pager until the stored sort is known`() =
+        runTest(dispatcher) {
+            val preferences = MutableSharedFlow<Preferences>(replay = 1)
+            val repository = RecordingFeedRepository(OfflineFirstPostRepository(database, remote, clock))
+            val vm =
+                PostListViewModel(
+                    repository = repository,
+                    categoryRepository = CategoryRepository(failingJson, database.boardDao(), clock),
+                    settingsRepository = SettingsRepository(HeldPreferencesStore(preferences)),
+                    session = session,
+                )
+            backgroundScope.launch { vm.feed.collect { } }
+            advanceUntilIdle()
+
+            assertEquals("opened a pager before the sort was read", emptyList<FeedSort>(), repository.feedSorts)
+
+            preferences.emit(preferencesOf(stringPreferencesKey("feed_sort") to FeedSort.POST_TIME.name))
+            advanceUntilIdle()
+
+            assertEquals(FeedSort.POST_TIME, vm.uiState.value.sort)
+            assertEquals(listOf(FeedSort.POST_TIME), repository.feedSorts)
+        }
+
+    @Test
+    fun `re-selecting the current sort is a no-op`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            val before = vm.uiState.value
+
+            vm.selectSort(FeedSort.LAST_REPLY)
+            advanceUntilIdle()
+
+            assertTrue(before === vm.uiState.value)
+        }
+
     @Test
     fun `the challenge url follows the selected board`() =
         runTest(dispatcher) {
@@ -269,4 +345,39 @@ class PostListViewModelTest {
 
             assertEquals(requestsBefore, remote.listRequests.size)
         }
+}
+
+/**
+ * A [DataStore] whose first answer arrives only when the test says so.
+ *
+ * Nothing in these tests writes through it, so [updateData] exists to satisfy the interface and
+ * fails loudly rather than pretending to store anything.
+ */
+private class HeldPreferencesStore(
+    override val data: MutableSharedFlow<Preferences>,
+) : DataStore<Preferences> {
+    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
+        throw UnsupportedOperationException("this store only reads")
+}
+
+/**
+ * Records the orders the ViewModel actually opens a pager on.
+ *
+ * The assertion cannot be made on the `PagingData` stream: `cachedIn` finishes its work off the test
+ * scheduler, so `advanceUntilIdle` returns before any of it lands. The call into the repository is
+ * the same event one step earlier, and it happens on the collector's own dispatcher.
+ */
+private class RecordingFeedRepository(
+    private val delegate: PostRepository,
+) : PostRepository by delegate {
+    val feedSorts = mutableListOf<FeedSort>()
+
+    override fun feed(
+        categorySlug: String?,
+        sort: FeedSort,
+        startPage: Int,
+    ): Flow<PagingData<FeedPost>> {
+        feedSorts += sort
+        return delegate.feed(categorySlug, sort, startPage)
+    }
 }

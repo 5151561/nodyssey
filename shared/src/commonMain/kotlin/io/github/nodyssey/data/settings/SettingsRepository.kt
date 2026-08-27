@@ -79,6 +79,9 @@ class SettingsRepository(
                 reportFormat = preferences[KEY_REPORT_FORMAT]
                     ?.let { runCatching { ReportFormat.valueOf(it) }.getOrNull() }
                     ?: ReportFormat.ADAPTED,
+                feedSort = preferences[KEY_FEED_SORT]
+                    ?.let { runCatching { FeedSort.valueOf(it) }.getOrNull() }
+                    ?: FeedSort.LAST_REPLY,
                 homePageBar = preferences[KEY_HOME_PAGE_BAR] ?: true,
                 holidayTheme = preferences[KEY_HOLIDAY_THEME] ?: false,
                 searchHistory = decodeSearchHistory(preferences),
@@ -229,6 +232,9 @@ class SettingsRepository(
     suspend fun setImagesOnWifiOnly(enabled: Boolean) = edit { it[KEY_IMAGES_WIFI_ONLY] = enabled }
 
     suspend fun setReportFormat(format: ReportFormat) = edit { it[KEY_REPORT_FORMAT] = format.name }
+
+    /** 首页排序; see [UserSettings.feedSort] for why it is kept. */
+    suspend fun setFeedSort(sort: FeedSort) = edit { it[KEY_FEED_SORT] = sort.name }
 
     /** 首页翻页栏; see [UserSettings.homePageBar] for what it adds. */
     suspend fun setHomePageBar(enabled: Boolean) = edit { it[KEY_HOME_PAGE_BAR] = enabled }
@@ -577,6 +583,7 @@ class SettingsRepository(
         private val KEY_POST_TOOLBAR = stringPreferencesKey("post_toolbar_actions")
         private val KEY_REPLY_TOOLBAR = stringPreferencesKey("reply_toolbar_actions")
         private val KEY_MESSAGE_TOOLBAR = stringPreferencesKey("message_toolbar_actions")
+        private val KEY_FEED_SORT = stringPreferencesKey("feed_sort")
         private val KEY_HOME_PAGE_BAR = booleanPreferencesKey("home_page_bar")
         private val KEY_HOLIDAY_THEME = booleanPreferencesKey("holiday_theme")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
@@ -714,6 +721,17 @@ data class UserSettings(
     val imagesOnWifiOnly: Boolean = false,
     /** How a NodeQuality-style benchmark report is drawn in a post; see [ReportFormat]. */
     val reportFormat: ReportFormat = ReportFormat.ADAPTED,
+    /**
+     * 首页 › 排序 — 新评论 or 新帖子, kept across launches.
+     *
+     * The two orders are two different feeds, cached separately, so this also decides which of them
+     * a cold start paints. That is the point: the reader who switched to 新帖子 last night wants the
+     * app to open on 新帖子, not to re-pick it every launch.
+     *
+     * [FeedSort.LAST_REPLY] is the default because it is what the site itself serves with no
+     * `sortBy` parameter.
+     */
+    val feedSort: FeedSort = FeedSort.LAST_REPLY,
     /**
      * Whether 首页 carries the same 翻页栏 the thread and 管理记录 have.
      *

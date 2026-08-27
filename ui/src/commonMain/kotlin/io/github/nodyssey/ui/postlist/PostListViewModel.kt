@@ -70,6 +70,15 @@ class PostListViewModel(
     private val feedGeneration = MutableStateFlow(-1)
 
     /**
+     * False until the stored 排序 has been read back.
+     *
+     * Same reason [feedGeneration] starts negative: the two orders are two different feeds, so
+     * opening a pager before the answer is in would paint — and fetch — 新评论 on every cold start,
+     * only to throw it away a frame later when DataStore says 新帖子.
+     */
+    private val sortRestored = MutableStateFlow(false)
+
+    /**
      * `cachedIn` keeps the loaded pages alive across configuration changes and across navigating into
      * a post and back. Without it, returning to the list restarts paging at page one and the scroll
      * position goes with it — the exact regression phase two exists to fix.
@@ -78,7 +87,10 @@ class PostListViewModel(
         combine(
             uiState.map { FeedKey(it.categorySlug, it.sort, it.startPage, 0) },
             feedGeneration,
-        ) { key, generation -> key.copy(sessionGeneration = generation) }
+            sortRestored,
+        ) { key, generation, restored ->
+            key.copy(sessionGeneration = if (restored) generation else -1)
+        }
             .filter { it.sessionGeneration >= 0 }
             .distinctUntilChanged()
             .flatMapLatest { key -> repository.feed(key.categorySlug, key.sort, key.startPage) }
@@ -120,6 +132,22 @@ class PostListViewModel(
                 )
             }
         }.launchIn(viewModelScope)
+
+        settingsRepository.settings
+            .map { it.feedSort }
+            .distinctUntilChanged()
+            .onEach { sort ->
+                // A stored order lands the same way a tapped one does: it selects a different feed,
+                // so whatever page 翻页栏 had travelled to does not carry over to it.
+                _uiState.update { state ->
+                    if (state.sort == sort) {
+                        state
+                    } else {
+                        state.copy(sort = sort, startPage = FeedRemoteMediator.FIRST_PAGE)
+                    }
+                }
+                sortRestored.value = true
+            }.launchIn(viewModelScope)
 
         settingsRepository.settings
             .map { it.homePageBar }
@@ -176,15 +204,16 @@ class PostListViewModel(
     }
 
     /**
-     * Sort order is session state rather than a stored setting.
+     * Sort order is a stored preference, not session state.
      *
-     * Switching it is a "look at this differently for a minute" action, not a preference — and each
-     * order is a separate feed in the database, so persisting it would also mean deciding which of
-     * the two cached lists a cold start should paint.
+     * It used to be the latter, on the reading that switching order is a "look at this differently
+     * for a minute" action. Readers say otherwise: the one who prefers 新帖子 was re-picking it on
+     * every launch. So the write goes to DataStore and the collector above is what moves the state —
+     * one source of truth, and the cold start reads the same field the menu wrote.
      */
     fun selectSort(sort: FeedSort) {
         if (_uiState.value.sort == sort) return
-        _uiState.update { it.copy(sort = sort, startPage = FeedRemoteMediator.FIRST_PAGE) }
+        viewModelScope.launch { settingsRepository.setFeedSort(sort) }
     }
 
     /**
@@ -281,6 +310,10 @@ data class PostListUiState(
      */
     val parkedBoards: List<Board> = emptyList(),
     val categorySlug: String? = null,
+    /**
+     * 排序, mirroring [io.github.nodyssey.data.settings.UserSettings.feedSort]'s own default so the
+     * menu does not show the wrong tick for the frame before DataStore answers.
+     */
     val sort: FeedSort = FeedSort.LAST_REPLY,
     /**
      * 设置 › 首页翻页栏, mirroring [io.github.nodyssey.data.settings.UserSettings.homePageBar]'s own
