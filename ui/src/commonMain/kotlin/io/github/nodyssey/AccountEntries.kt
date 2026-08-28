@@ -138,6 +138,7 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },
             onSignIn = { backStack.add(SignInKey) },
+            onOpenUser = openSpace,
             onVerify = {
                 backStack.add(
                     WebKey(

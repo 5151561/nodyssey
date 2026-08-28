@@ -29,6 +29,7 @@ class BlockListScreenTest {
     val composeRule = createComposeRule()
 
     private val blocks = mutableListOf<String>()
+    private val openedUsers = mutableListOf<Long>()
 
     /** The name lives in Compose state so the send button re-enables the way it does in the app. */
     private fun setContent(state: BlockListUiState) {
@@ -45,6 +46,7 @@ class BlockListScreenTest {
                     onRequestUnblock = {},
                     onDismissUnblock = {},
                     onConfirmUnblock = {},
+                    onOpenUser = { openedUsers += it },
                 )
             }
         }
@@ -76,6 +78,16 @@ class BlockListScreenTest {
         composeRule.onNodeWithText("添加").performClick()
 
         assertEquals(listOf("someone"), blocks)
+    }
+
+    /** Blocking hides someone's words, not their door: the row still leads to their space. */
+    @Test
+    fun `opens the blocked user's space from their row`() {
+        setContent(populated)
+
+        composeRule.onNodeWithText("vps_matthew").performScrollTo().performClick()
+
+        assertEquals(listOf(7L), openedUsers)
     }
 
     @Test
