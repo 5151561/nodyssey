@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.account
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -78,6 +79,7 @@ fun BlockListRoute(
     onSignIn: () -> Unit,
     /** Clears a Cloudflare challenge, then comes back to this page. */
     onVerify: () -> Unit,
+    onOpenUser: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -100,6 +102,7 @@ fun BlockListRoute(
         onRequestUnblock = viewModel::requestUnblock,
         onDismissUnblock = viewModel::dismissUnblock,
         onConfirmUnblock = viewModel::confirmUnblock,
+        onOpenUser = onOpenUser,
         modifier = modifier,
     )
 }
@@ -125,6 +128,7 @@ fun BlockListScreen(
     onRequestUnblock: (BlockedUser) -> Unit,
     onDismissUnblock: () -> Unit,
     onConfirmUnblock: () -> Unit,
+    onOpenUser: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val appBarState = rememberOneHandAppBarState()
@@ -190,7 +194,11 @@ fun BlockListScreen(
             } else {
                 Column {
                     state.blocked.forEachIndexed { index, user ->
-                        BlockedRow(user = user, onUnblock = { onRequestUnblock(user) })
+                        BlockedRow(
+                            user = user,
+                            onOpen = { onOpenUser(user.uid) },
+                            onUnblock = { onRequestUnblock(user) },
+                        )
                         if (index != state.blocked.lastIndex) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
@@ -309,10 +317,11 @@ private fun AddBlockField(
 @Composable
 private fun BlockedRow(
     user: BlockedUser,
+    onOpen: () -> Unit,
     onUnblock: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
@@ -386,6 +395,7 @@ private fun BlockListPreview() {
             onRequestUnblock = {},
             onDismissUnblock = {},
             onConfirmUnblock = {},
+            onOpenUser = {},
         )
     }
 }
