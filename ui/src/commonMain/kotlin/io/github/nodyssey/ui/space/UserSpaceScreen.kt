@@ -60,10 +60,13 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
+import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.nodyssey.ui.common.LockBadge
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.lockBadgeDescription
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -71,6 +74,7 @@ import io.github.nodyssey.ui.resources.action_more
 import io.github.nodyssey.ui.resources.action_open_in_browser
 import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.assets_level
+import io.github.nodyssey.ui.resources.post_badge_private
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.post_view_count
 import io.github.nodyssey.ui.resources.profile_edit
@@ -743,12 +747,31 @@ private fun SpacePostRow(
             .padding(horizontal = Spacing.lg, vertical = 11.dp),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Text(
-            text = post.title,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = post.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                // Not filling, so the lock keeps its place beside the title rather than being
+                // pushed off the end — the same arrangement the feed's title line uses.
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            // 私有 is a lock with nothing to count: the level is not a floor a reader can climb to,
+            // it is the author alone. Every other restricted rank names the level it wants.
+            if (post.permission != PostPermission.PUBLIC) {
+                val level = post.permission.requiredLevel
+                LockBadge(
+                    level = level,
+                    description =
+                    if (level == null) {
+                        stringResource(Res.string.post_badge_private)
+                    } else {
+                        lockBadgeDescription(level)
+                    },
+                )
+            }
+        }
         Row(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
@@ -831,8 +854,18 @@ private val previewTopics =
         SpacePost(1, "第一次用 nftables 做端口转发，记录一下踩的坑", "技术", "tech", null, 12, 843, "3天前"),
         SpacePost(2, "签到鸡腿是随机的吗？连续七天都是 6 个", "日常", "daily", null, 18, 976, "上周"),
         SpacePost(3, "求推荐一台香港小鸡，跑 uptime 监控用", "日常", "daily", null, 21, 1024, "6月11日"),
-        SpacePost(4, "【出】甲骨文 ARM 一台求接手", "交易", "trade", null, 6, 412, "5月2日"),
-        SpacePost(5, "Debian 12 升 13 之后 ss 命令输出格式变了？", "技术", "tech", null, 9, 655, "4月20日"),
+        SpacePost(4, "【出】甲骨文 ARM 一台求接手", "交易", "trade", null, 6, 412, "5月2日", PostPermission(3)),
+        SpacePost(
+            5,
+            "Debian 12 升 13 之后 ss 命令输出格式变了？",
+            "技术",
+            "tech",
+            null,
+            9,
+            655,
+            "4月20日",
+            PostPermission.PRIVATE,
+        ),
     )
 
 private val previewSelfState =

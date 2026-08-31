@@ -65,6 +65,7 @@
     <string name="post_badge_awarded">推荐阅读</string>
     <string name="post_badge_locked">已锁帖</string>
     <string name="post_badge_locked_level">%1$d 级可见</string>
+    <string name="post_badge_private">仅自己可见</string>
     <string name="post_badge_original_poster">楼主</string>
     <!-- Badge stack overflow chip (b1 §8: at most three chips, the rest fold into +N) -->
     <string name="post_badge_more">+%1$d</string>

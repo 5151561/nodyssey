@@ -72,6 +72,7 @@
     <string name="post_badge_awarded">Recommended</string>
     <string name="post_badge_locked">Locked</string>
     <string name="post_badge_locked_level">Level %1$d and up</string>
+    <string name="post_badge_private">Author only</string>
     <string name="post_badge_original_poster">OP</string>
     <string name="post_edited">Edited</string>
     <string name="post_edited_at">Edited %1$s</string>

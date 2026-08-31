@@ -97,13 +97,16 @@ import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.EmptyFeedState
 import io.github.nodyssey.ui.common.JumpDestination
 import io.github.nodyssey.ui.common.LocalThreadTransition
+import io.github.nodyssey.ui.common.LockBadge
 import io.github.nodyssey.ui.common.NavigationBarScrollConnection
 import io.github.nodyssey.ui.common.NavigationDirectionThreshold
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.TITLE_BADGE_SIZE
 import io.github.nodyssey.ui.common.appName
+import io.github.nodyssey.ui.common.lockBadgeDescription
 import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
 import io.github.nodyssey.ui.common.sharedThreadBoard
@@ -118,8 +121,6 @@ import io.github.nodyssey.ui.resources.action_sort
 import io.github.nodyssey.ui.resources.feed_page_size_note
 import io.github.nodyssey.ui.resources.page_jump_newest
 import io.github.nodyssey.ui.resources.post_badge_awarded
-import io.github.nodyssey.ui.resources.post_badge_locked
-import io.github.nodyssey.ui.resources.post_badge_locked_level
 import io.github.nodyssey.ui.resources.post_badge_pinned
 import io.github.nodyssey.ui.resources.post_new_reply_count
 import io.github.nodyssey.ui.resources.post_reply_count
@@ -895,26 +896,10 @@ internal fun PostRow(
                     .thenIf(sharedWithThread) { Modifier.sharedThreadTitle(summary.postId) },
             )
             if (summary.isLocked) {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription =
-                    summary.lockLevel
-                        ?.let { stringResource(Res.string.post_badge_locked_level, it) }
-                        ?: stringResource(Res.string.post_badge_locked),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    // 16dp per the b1 §8 只读→锁定 mapping spec, in sp so it tracks the title
-                    // it stands beside rather than shrinking against a raised reading size.
-                    modifier = Modifier
-                        .padding(start = Spacing.xs)
-                        .size(textScaledSize(TITLE_BADGE_SIZE)),
+                LockBadge(
+                    level = summary.lockLevel,
+                    description = lockBadgeDescription(summary.lockLevel),
                 )
-                summary.lockLevel?.let { level ->
-                    Text(
-                        text = level.toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
             if (showAwardBadge && summary.isAwarded) {
                 Icon(
@@ -933,9 +918,6 @@ internal fun PostRow(
         meta = { PostMetaItems(post, sharedWithThread) },
     )
 }
-
-/** The lock and the 加精 mark beside a title, at the size the b1 §8 badge spec gives them. */
-private val TITLE_BADGE_SIZE = 16.sp
 
 /**
  * Applies [modifier] only when [condition] holds.
