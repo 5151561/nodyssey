@@ -81,6 +81,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.isUnspecified
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -104,6 +105,7 @@ import io.github.plaza.designsys.component.prefetchLinksOnPress
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberTerminalText
 import io.github.plaza.designsys.component.specTableFits
+import io.github.plaza.designsys.editor.previousGraphemeBoundary
 import io.github.plaza.designsys.image.ImageLoadFailure
 import io.github.plaza.designsys.image.ImagesDeferredException
 import io.github.plaza.designsys.image.allowMeteredImage
@@ -1318,7 +1320,7 @@ private fun InlineText(
                                     // Spaces reserve the chip's horizontal padding without introducing a
                                     // separate inline layout whose baseline can drift from this paragraph.
                                     append(QUOTE_HORIZONTAL_SPACE)
-                                    append(quoteLabels.getValue(inline).replace(' ', '\u00A0'))
+                                    append(quoteLabels.getValue(inline).replace(' ', '\u00A0').unbreakable())
                                     append(QUOTE_HORIZONTAL_SPACE)
                                 }
                                 ranges += start until length
@@ -1346,6 +1348,25 @@ private fun InlineText(
         inlines.filterIsInstance<InlineNode.Sticker>().associate { sticker ->
             sticker.url to stickerSizing.boxSize(StickerSizeCache.naturalSize(sticker.url), density)
         }
+    /*
+     * The air a 表情's box keeps above and below the picture in it.
+     *
+     * Only in a paragraph that has given up its fixed line height, which is exactly the paragraph
+     * where a 表情 is what *sets* the line: its box then ends where the line ends, so it lands flush
+     * against whatever is on the line before and after it. Nothing else in a body carries a
+     * background, so that contact went unnoticed until a 引用 chip — which does — sat on the line
+     * above a large 表情 and the two met along a straight edge.
+     *
+     * A paragraph that kept its rhythm needs none of it: its leading already stands the sticker off
+     * its neighbours, and a taller box there would push every line holding a 20sp 表情 a dp past the
+     * 27sp it is supposed to be — which is what `InlineStickerSizeTest` pins down.
+     */
+    val stickerGap =
+        with(density) {
+            val line = if (style.lineHeight.isSpecified) style.lineHeight.toDp() else 0.dp
+            val tallest = stickerBoxes.values.maxOfOrNull { it.height } ?: 0.dp
+            if (tallest <= line) 0.dp else STICKER_LINE_GAP.toDp()
+        }
     val stickerContent =
         inlines.filterIsInstance<InlineNode.Sticker>().associate { sticker ->
             val box = stickerBoxes.getValue(sticker.url)
@@ -1353,7 +1374,7 @@ private fun InlineText(
                 InlineTextContent(
                     Placeholder(
                         width = with(density) { box.width.toSp() },
-                        height = with(density) { box.height.toSp() },
+                        height = with(density) { (box.height + stickerGap * 2).toSp() },
                         // Centred on the text, not the baseline: a box hung off the baseline would
                         // push the whole line taller and break the 27sp rhythm. That is what keeps
                         // the smallest 统一缩限 setting — a 20sp square — inside the line at all.
@@ -1406,11 +1427,11 @@ private fun InlineText(
                             // Fits the box rather than filling its width: 统一缩限 hands every
                             // sticker the same square, and a tall one used to be drawn to that
                             // square's width and overdraw the lines above and below it.
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().padding(vertical = stickerGap),
                         )
                     } else {
                         ImageFallback(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().padding(vertical = stickerGap),
                             deferred = failed == StickerFailure.Deferred,
                         )
                     }
@@ -1447,12 +1468,27 @@ private fun InlineText(
                     // above the middle of a 12sp label — which drew the chip a couple of sp high,
                     // with the label grazing its bottom edge.
                     val centerY = layout.getLineBaseline(line) - labelCenter
-                    drawRoundRect(
-                        color = quoteBackground,
-                        topLeft = Offset(left, centerY - chipHeight / 2f),
-                        size = Size(right - left, chipHeight),
-                        cornerRadius = CornerRadius(chipHeight / 2f),
-                    )
+                    // Never taller than the line it sits on. The chip is a background, and a
+                    // background is drawn before everything else in the paragraph — including the
+                    // 表情 on the next line, whose box is opaque and simply covers whatever part of
+                    // the chip hangs down into it. A reply's 15/25 body, tighter still at the
+                    // smallest reading size and tighter again once a large 表情 gives up the fixed
+                    // line height, leaves a 22sp chip several sp too tall for its own line, which
+                    // is 「@某人 被表情包遮住」. Fitting it to the line costs a couple of sp of
+                    // height in exactly those cases and nothing in any other.
+                    val height =
+                        minOf(
+                            chipHeight,
+                            2f * minOf(centerY - layout.getLineTop(line), layout.getLineBottom(line) - centerY),
+                        )
+                    if (height > 0f) {
+                        drawRoundRect(
+                            color = quoteBackground,
+                            topLeft = Offset(left, centerY - height / 2f),
+                            size = Size(right - left, height),
+                            cornerRadius = CornerRadius(height / 2f),
+                        )
+                    }
                     start = end
                 }
             }
@@ -1496,8 +1532,11 @@ private fun TextStyle.fitStickers(
 /** Why a sticker is not on screen, kept apart for the reason [ImageFallback] states. */
 private enum class StickerFailure { Deferred, Failed }
 
-private val QUOTE_HEIGHT = 22.sp
-private val QUOTE_LABEL_SIZE = 12.sp
+/** @see stickerGap */
+private val STICKER_LINE_GAP = 4.sp
+
+private val QUOTE_HEIGHT = 18.sp
+private val QUOTE_LABEL_SIZE = 11.sp
 
 /**
  * How far the quote label's optical middle sits above the baseline, and so where the chip drawn
@@ -1508,6 +1547,45 @@ private val QUOTE_LABEL_SIZE = 12.sp
  * centres a label that is usually both at once, `@某人 #12`.
  */
 private val QUOTE_LABEL_CENTER = QUOTE_LABEL_SIZE * 0.37f
+
+/**
+ * The label with a word joiner at every break opportunity, so a chip that does not fit on the line
+ * moves to the next one whole.
+ *
+ * Hanzi breaks between any two characters, so a name long enough to reach the edge used to be split
+ * mid-word and drawn as *two* pills. The second one is the damage: its background starts flush
+ * against the glyph that opens the line, with no padding to keep the pill's round cap off it, and a
+ * name ending in an emoji — which NodeSeek names often do — then has that emoji sticking out of the
+ * corner. One `@某人 #12` reading as two chips was the milder half of the same bug.
+ *
+ * Joined per *grapheme* rather than per code point: a word joiner dropped inside 👨‍👩‍👧 would split
+ * the sequence into the three people it is made of, and one inside a base + variation selector
+ * would leave the black text-style glyph behind. A line narrower than the whole chip still breaks
+ * it — the line breaker has to put the text somewhere — which is the old rendering, not a worse one.
+ */
+internal fun String.unbreakable(): String {
+    if (length <= 1) return this
+    val boundaries = mutableListOf<Int>()
+    var index = length
+    while (index > 0) {
+        val previous = previousGraphemeBoundary(this, index)
+        if (previous <= 0 || previous >= index) break
+        boundaries += previous
+        index = previous
+    }
+    if (boundaries.isEmpty()) return this
+    return buildString(length + boundaries.size) {
+        var cursor = 0
+        boundaries.asReversed().forEach { boundary ->
+            append(this@unbreakable, cursor, boundary)
+            append(WORD_JOINER)
+            cursor = boundary
+        }
+        append(this@unbreakable, cursor, this@unbreakable.length)
+    }
+}
+
+private const val WORD_JOINER = '\u2060'
 private const val QUOTE_HORIZONTAL_SPACE = "\u00A0\u00A0"
 private const val STICKER_PREFIX = "sticker:"
 private const val QUOTE_PREFIX = "quote:"
