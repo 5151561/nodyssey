@@ -2,6 +2,14 @@
   "schema": 1,
   "versions": [
     {
+      "versionName": "1.2.14",
+      "tag": "v1.2.14",
+      "publishedOn": "2026-08-31",
+      "preRelease": false,
+      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.14",
+      "notes": "### 新增\n\n- 个人主页的帖子显示阅读权限等级。\n\n### 改进\n\n- 帖子里 @某人 的引用标签瘦了一圈。\n\n- 大表情包和上下行之间留出了空隙。\n\n### 修复\n\n- 引用标签不再被表情包遮住或断成两截。\n\n- 点链接进来后转屏，返回不再跳回首页。"
+    },
+    {
       "versionName": "1.2.13",
       "tag": "v1.2.13",
       "publishedOn": "2026-08-28",
