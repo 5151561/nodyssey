@@ -4,6 +4,7 @@ import com.fleeksoft.ksoup.Ksoup
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonSource
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.nodyssey.data.composer.PostPermission
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
@@ -21,6 +22,14 @@ data class SpacePost(
     val commentCount: Int?,
     val viewCount: Int?,
     val createdAtText: String?,
+    /**
+     * 阅读权限, the same `rank` the composer sends and the feed badges as 「N 级可见」.
+     *
+     * [PostPermission.PUBLIC] both for an open thread and for a payload that does not carry the
+     * field at all — a missing 权限 must read as "no restriction stated", never as a lock this
+     * screen invented.
+     */
+    val permission: PostPermission = PostPermission.PUBLIC,
 )
 
 /** One of the user's comments, with enough of the thread around it to be worth tapping. */
@@ -158,6 +167,11 @@ private fun JsonObject.toSpacePost(): SpacePost? {
         commentCount = int("comments", "comment_count", "nComment", "reply_count"),
         viewCount = int("views", "view_count", "click", "nView"),
         createdAtText = text("created_at_str", "created_at", "createdAt", "time", "date"),
+        // `rank` is the whole of what this endpoint says about 阅读权限, and one of only three
+        // fields a topic row carries at all: `{"rank":1,"title":"…","post_id":903281}`, read off
+        // /api/content/list-discussions on 2026-08-31. 0 is 公开, 255 is 私有, and everything
+        // between is the level a reader needs.
+        permission = int("rank")?.let(::PostPermission) ?: PostPermission.PUBLIC,
     )
 }
 

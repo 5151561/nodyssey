@@ -2,6 +2,7 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.core.net.JsonSource
 import io.github.nodyssey.core.net.NodeSeekJsonClient
+import io.github.nodyssey.data.composer.PostPermission
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
@@ -47,6 +48,36 @@ class UserSpaceRepositoryTest {
             assertEquals(12, topic.commentCount)
             assertEquals(843, topic.viewCount)
             assertFalse(page.hasNextPage)
+        }
+
+    /**
+     * `rank` is 阅读权限, and the live payload carries little else: a topic row read off
+     * `/api/content/list-discussions` on 2026-08-31 was `{"rank":1,"title":"…","post_id":903281}`
+     * and nothing more. 0 is 公开, 255 is 私有, in between is the level a reader needs.
+     */
+    @Test
+    fun `reads the reading permission a topic row carries`() =
+        runTest {
+            val source =
+                FakeSpaceJsonSource(
+                    """
+                    {"success":true,"discussions":[
+                      {"rank":0,"title":"公开的","post_id":1},
+                      {"rank":3,"title":"三级可见","post_id":2},
+                      {"rank":255,"title":"仅自己","post_id":3},
+                      {"title":"没有这个字段","post_id":4}
+                    ]}
+                    """.trimIndent(),
+                )
+
+            val topics = NetworkUserSpaceRepository(source, dispatchers).topics(21596, 1).items
+
+            assertEquals(PostPermission.PUBLIC, topics[0].permission)
+            assertEquals(3, topics[1].permission.requiredLevel)
+            assertEquals(PostPermission.PRIVATE, topics[2].permission)
+            assertEquals(null, topics[2].permission.requiredLevel)
+            // A row with no `rank` must read as unrestricted rather than as a lock we invented.
+            assertEquals(PostPermission.PUBLIC, topics[3].permission)
         }
 
     /** `pid` / `nComment` / `click` are the other spellings the site uses for the same three fields. */
