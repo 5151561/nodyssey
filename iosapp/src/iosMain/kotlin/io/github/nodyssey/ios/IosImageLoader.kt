@@ -10,7 +10,6 @@ import coil3.network.NetworkRequest
 import coil3.network.NetworkResponse
 import coil3.network.NetworkResponseBody
 import coil3.network.cachecontrol.CacheControlCacheStrategy
-import coil3.svg.SvgDecoder
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.plaza.core.net.getBytes
 import io.github.plaza.core.toByteArray
@@ -60,10 +59,16 @@ internal fun nodysseyImageLoader(
                 ),
             )
             // An account that never uploaded a picture is served a generated cartoon *SVG* from
-            // `/avatar/<uid>.png` — the extension lies, the `Content-Type` does not. Without this
+            // `/avatar/<uid>.png` — the extension lies, the `Content-Type` does not. Without an SVG
             // decoder every such user wears an initial instead, which is exactly what the first run
             // of this shell drew.
-            add(SvgDecoder.Factory())
+            //
+            // [IosSvgDecoder] rather than Coil's own, and for the same shape of reason `:app` passes
+            // its `CompatSvgParser`: the renderer this platform gets by default cannot draw the whole
+            // language. It draws no `<text>` and no `<image>`, so an IP card in a readme and every
+            // shields.io badge came out as an empty frame. That decoder keeps Coil's for the documents
+            // Skia does draw and sends the rest through WebKit.
+            add(IosSvgDecoder.Factory())
         }
         .diskCache {
             DiskCache
