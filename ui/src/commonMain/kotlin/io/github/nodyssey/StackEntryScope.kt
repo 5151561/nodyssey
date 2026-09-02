@@ -38,7 +38,7 @@ internal class StackEntryScope(
     val notificationsViewModel: NotificationsViewModel,
     /** 首页's list state, owned by `MainNavigation` so Back reveals the same list object. */
     val homeListState: LazyListState,
-    val homeScrollToTopRequests: () -> Int,
+    val homeReselectRequests: () -> Int,
     val notificationsScrollToTopRequests: () -> Int,
     val isListDetailExpanded: () -> Boolean,
     val onTabBarHiddenByScroll: (Boolean) -> Unit,

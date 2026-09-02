@@ -60,7 +60,7 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
             onNavigationBarHiddenChanged = { hidden ->
                 if (!isListDetailExpanded()) onTabBarHiddenByScroll(hidden)
             },
-            scrollToTopRequests = homeScrollToTopRequests(),
+            reselectRequests = homeReselectRequests(),
         )
     }
 

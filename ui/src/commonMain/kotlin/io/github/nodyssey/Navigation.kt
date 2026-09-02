@@ -244,9 +244,10 @@ fun MainNavigation(
     var tabBarHiddenByScroll by remember { mutableStateOf(false) }
 
     /*
-     * Tapping 首页 while already on 首页 is the platform's "back to the top" gesture, and until now it
-     * was the one place in the bar where a tap did nothing at all. 通知 answers the same tap the same
-     * way; the two counters are separate because a tap on one tab is not a request to the other.
+     * Tapping 首页 while already on 首页 is the platform's "back to the top" gesture, and here it also
+     * reloads: a reader who is already looking at the feed taps its own tab to ask for 新帖. 通知
+     * answers the same tap with the jump alone — its list refreshes on its own — and the two counters
+     * are separate because a tap on one tab is not a request to the other.
      *
      * A counter rather than a boolean flag: two taps in a row are two separate requests, and a flag
      * would need clearing afterwards — which is a second write the screen would have to own. Saved
@@ -254,7 +255,7 @@ fun MainNavigation(
      * which request it has already answered; a counter that reset while that record did not would
      * look like a fresh tap and scroll a restored list back to the top.
      */
-    var homeScrollToTopRequests by rememberSaveable { mutableIntStateOf(0) }
+    var homeReselectRequests by rememberSaveable { mutableIntStateOf(0) }
     var notificationsScrollToTopRequests by rememberSaveable { mutableIntStateOf(0) }
 
     val backStack: NavBackStack<NavKey> =
@@ -472,7 +473,7 @@ fun MainNavigation(
                 uriHandler = uriHandler,
                 notificationsViewModel = notificationsViewModel,
                 homeListState = homeListState,
-                homeScrollToTopRequests = { homeScrollToTopRequests },
+                homeReselectRequests = { homeReselectRequests },
                 notificationsScrollToTopRequests = { notificationsScrollToTopRequests },
                 isListDetailExpanded = { currentListDetailExpanded },
                 onTabBarHiddenByScroll = { tabBarHiddenByScroll = it },
@@ -610,12 +611,14 @@ fun MainNavigation(
             NodysseyNavigationItems(
                 current = currentTab,
                 onSelect = { destination ->
-                    // Re-selecting a tab scrolls its list back to the start — but only the two tabs
-                    // that *are* a list long enough to get lost in. 搜索 and 我的 stay inert, because
-                    // a tab that silently jumps somewhere is worse than one that does nothing.
+                    // Re-selecting a tab takes its list back to the start — 首页 reloads on the way,
+                    // since the one thing a reader taps 首页 for while already on 首页 is 新帖. Only
+                    // the two tabs that *are* a list long enough to get lost in answer at all; 搜索
+                    // and 我的 stay inert, because a tab that silently jumps somewhere is worse than
+                    // one that does nothing.
                     if (destination == currentTab) {
                         when (destination) {
-                            TopLevelDestination.HOME -> homeScrollToTopRequests++
+                            TopLevelDestination.HOME -> homeReselectRequests++
                             TopLevelDestination.NOTIFICATIONS -> notificationsScrollToTopRequests++
                             else -> Unit
                         }

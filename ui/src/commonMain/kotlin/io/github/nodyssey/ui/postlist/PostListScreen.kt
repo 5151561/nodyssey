@@ -168,7 +168,7 @@ fun PostListRoute(
     onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
     onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
-    scrollToTopRequests: Int = 0,
+    reselectRequests: Int = 0,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     PostListScreen(
@@ -188,7 +188,7 @@ fun PostListRoute(
         onRecoverInBrowser = { onVerify(viewModel.challengeUrl()) },
         modifier = modifier,
         onNavigationBarHiddenChanged = onNavigationBarHiddenChanged,
-        scrollToTopRequests = scrollToTopRequests,
+        reselectRequests = reselectRequests,
     )
 }
 
@@ -227,11 +227,11 @@ fun PostListScreen(
     /** Keeps the host navigation bar hidden until the user deliberately scrolls toward the list start. */
     onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
     /**
-     * How many times the host has asked for the top of the feed — one per tap on the already-selected
-     * 首页 tab. Any increase scrolls; the count itself means nothing, which is what lets two taps in a
-     * row read as two requests without the host having to clear a flag afterwards.
+     * How many times the host has reported a tap on the already-selected 首页 tab. Any increase
+     * reloads the feed and returns to its first row; the count itself means nothing, which is what
+     * lets two taps in a row read as two requests without the host having to clear a flag afterwards.
      */
-    scrollToTopRequests: Int = 0,
+    reselectRequests: Int = 0,
 ) {
     val directionThresholdPx = with(LocalDensity.current) { NavigationDirectionThreshold.toPx() }
     val currentOnNavigationBarHiddenChanged by
@@ -313,10 +313,16 @@ fun PostListScreen(
      * the list had just restored. A tap that happened before the thread was opened is not a request
      * to scroll after returning from it.
      */
-    var answeredScrollRequest by rememberSaveable { mutableIntStateOf(scrollToTopRequests) }
-    LaunchedEffect(scrollToTopRequests) {
-        if (scrollToTopRequests != answeredScrollRequest) {
-            answeredScrollRequest = scrollToTopRequests
+    var answeredRequest by rememberSaveable { mutableIntStateOf(reselectRequests) }
+    LaunchedEffect(reselectRequests) {
+        if (reselectRequests != answeredRequest) {
+            answeredRequest = reselectRequests
+            /*
+             * Reload first, then travel. `refresh` returns at once and only flips the load state, so
+             * the pull-to-refresh spinner is already turning while the list animates back — asking
+             * for it after the animation would leave the tap looking unanswered for its whole length.
+             */
+            posts.refresh()
             scrollToTop()
         }
     }

@@ -30,7 +30,11 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
@@ -148,7 +152,7 @@ class PostListScreenTest {
         onBoardClick: (String?) -> Unit,
         onSortChange: (FeedSort) -> Unit,
         onRecoverInBrowser: () -> Unit,
-        scrollToTopRequests: Int = 0,
+        reselectRequests: Int = 0,
         onGoToPage: (Int) -> Unit = {},
         onFindPageRow: suspend (Int) -> Int? = { null },
     ) {
@@ -173,7 +177,7 @@ class PostListScreenTest {
             onRecoverInBrowser = onRecoverInBrowser,
             onGoToPage = onGoToPage,
             onFindPageRow = onFindPageRow,
-            scrollToTopRequests = scrollToTopRequests,
+            reselectRequests = reselectRequests,
         )
     }
 
@@ -344,7 +348,7 @@ class PostListScreenTest {
 
     /** Re-selecting 首页 in the host bar arrives here as an increment, not as a scroll call. */
     @Test
-    fun `a scroll-to-top request returns to the first row`() {
+    fun `a reselect returns to the first row`() {
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var requests by mutableStateOf(0)
         composeRule.setContent {
@@ -358,7 +362,7 @@ class PostListScreenTest {
                     onBoardClick = {},
                     onSortChange = {},
                     onRecoverInBrowser = {},
-                    scrollToTopRequests = requests,
+                    reselectRequests = requests,
                 )
             }
         }
@@ -372,11 +376,62 @@ class PostListScreenTest {
     }
 
     /**
+     * And it reloads on the way: 新帖 is the one thing a reader taps 首页 for while already on 首页.
+     *
+     * A real [Pager] rather than the hand-built [PagingData] the rest of the file uses — `refresh()`
+     * on a stream built from a fixed list is a no-op, so the assertion would pass with the reload
+     * deleted. Counting how many times the source is asked for is what makes the reload observable.
+     */
+    @Test
+    fun `a reselect reloads the feed`() {
+        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
+        var loads = 0
+        val pager =
+            Pager(PagingConfig(pageSize = 20, enablePlaceholders = false)) {
+                loads++
+                object : PagingSource<Int, FeedPost>() {
+                    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, FeedPost> =
+                        LoadResult.Page(posts, prevKey = null, nextKey = null)
+
+                    override fun getRefreshKey(state: PagingState<Int, FeedPost>): Int? = null
+                }
+            }
+        var requests by mutableStateOf(0)
+        composeRule.setContent {
+            PlazaTheme {
+                PostListScreen(
+                    state = PostListUiState(boards = boards),
+                    posts = pager.flow.collectAsLazyPagingItems(),
+                    onPostClick = {},
+                    onBoardClick = {},
+                    onSortChange = {},
+                    onSignInClick = {},
+                    onRecoverInBrowser = {},
+                    reselectRequests = requests,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("post 1").assertIsDisplayed()
+        assertEquals(1, loads)
+
+        composeRule.onNode(feedList).performScrollToIndex(20)
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+
+        requests++
+        composeRule.waitForIdle()
+
+        // Both halves of the tap: the source asked a second time, and the list back at its start.
+        assertEquals(2, loads)
+        composeRule.onNodeWithText("post 1").assertIsDisplayed()
+    }
+
+    /**
      * A tap that has already been answered must not be answered a second time when the screen comes
      * back — which is what a rotation, or a return from a thread, looks like from inside the effect.
      */
     @Test
-    fun `a restored screen does not replay the last scroll-to-top`() {
+    fun `a restored screen does not replay the last reselect`() {
         val restorationTester = StateRestorationTester(composeRule)
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var requests by mutableStateOf(0)
@@ -391,7 +446,7 @@ class PostListScreenTest {
                     onBoardClick = {},
                     onSortChange = {},
                     onRecoverInBrowser = {},
-                    scrollToTopRequests = requests,
+                    reselectRequests = requests,
                 )
             }
         }
