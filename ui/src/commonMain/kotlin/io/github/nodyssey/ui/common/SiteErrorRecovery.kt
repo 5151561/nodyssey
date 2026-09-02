@@ -30,9 +30,10 @@ import org.jetbrains.compose.resources.stringResource
 /**
  * Which button this failure deserves, or none when the reader cannot do anything about it.
  *
- * Null in three cases, and each is a button that would lie: a level wall no press can raise, a
- * request that was never sent, and any failure whose recovery the caller did not supply — a screen
- * with no way to reach the web view passes no [onVerify], and gets no 去验证.
+ * Null in four cases, and each is a button that would lie: a level wall no press can raise, a 私有
+ * thread no press opens at all, a request that was never sent, and any failure whose recovery the
+ * caller did not supply — a screen with no way to reach the web view passes no [onVerify], and gets
+ * no 去验证.
  */
 @Composable
 fun siteErrorRecovery(
@@ -49,10 +50,14 @@ fun siteErrorRecovery(
 
         SiteError.LoginRequired -> onSignIn?.let { StatusAction(signIn, it) }
 
-        // 阅读权限, "nothing was requested" and a term the site would not even search all fail the
-        // same test: there is no press that changes the answer. See the matching branches in
-        // [SiteErrorState].
-        is SiteError.LevelRequired, SiteError.NotWired, SiteError.QueryTooShort -> null
+        // Both ends of 阅读权限, "nothing was requested" and a term the site would not even search
+        // all fail the same test: there is no press that changes the answer. See the matching
+        // branches in [SiteErrorState].
+        is SiteError.LevelRequired,
+        SiteError.PrivatePost,
+        SiteError.NotWired,
+        SiteError.QueryTooShort,
+        -> null
 
         SiteError.Network,
         SiteError.Unparsable,

@@ -18,6 +18,11 @@ class ChallengeDetector(private val markers: PageMarkers) {
             return SiteError.LevelRequired(match.groupValues.getOrNull(1)?.toIntOrNull())
         }
 
+        // Beside the level wall and for the same reason: the page it arrives on is an ordinary
+        // signed-in frame carrying `id="nsk-body"`, so anything checked after [markers.usablePage]
+        // would never see it. Its 404 is invisible for the same reason.
+        if (markers.privatePost.any { html.contains(it) }) return SiteError.PrivatePost
+
         if (markers.loginRequired.any { html.contains(it) }) return SiteError.LoginRequired
 
         // A normal page from a Cloudflare-fronted site also carries `Server: cloudflare`, so only an

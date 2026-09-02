@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_open_in_browser
 import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.action_sign_in
@@ -46,6 +47,8 @@ import io.github.nodyssey.ui.resources.status_no_results_body
 import io.github.nodyssey.ui.resources.status_no_results_title
 import io.github.nodyssey.ui.resources.status_not_wired_body
 import io.github.nodyssey.ui.resources.status_not_wired_title
+import io.github.nodyssey.ui.resources.status_private_post_body
+import io.github.nodyssey.ui.resources.status_private_post_title
 import io.github.nodyssey.ui.resources.status_query_too_short_body
 import io.github.nodyssey.ui.resources.status_query_too_short_title
 import io.github.nodyssey.ui.resources.status_rate_limited_body
@@ -96,6 +99,8 @@ fun SiteError.shortMessage(): String =
         is SiteError.LevelRequired ->
             requiredLevel?.let { stringResource(Res.string.status_level_required_title_level, it) }
                 ?: stringResource(Res.string.status_level_required_title)
+
+        SiteError.PrivatePost -> stringResource(Res.string.status_private_post_title)
 
         SiteError.QueryTooShort -> stringResource(Res.string.status_query_too_short_title)
 
@@ -210,6 +215,21 @@ fun SiteErrorState(
                 } ?: stringResource(Res.string.status_level_required_body_unknown),
                 primaryAction =
                 onBack?.let { StatusAction(stringResource(Res.string.status_level_required_action), it) },
+                modifier = modifier,
+            )
+
+        // The same wall with the level taken out, and the same three omissions: no retry, no browser
+        // button, and a way out only when the caller has somewhere to go back to. Nothing a reader
+        // does raises 私有 — not a level, not a wait — so the copy states the fact and stops there.
+        SiteError.PrivatePost ->
+            StatusView(
+                icon = Icons.Default.Lock,
+                shape = StatusShapes.Locked,
+                containerColor = extra.warningContainer,
+                iconColor = extra.onWarningContainer,
+                title = stringResource(Res.string.status_private_post_title),
+                description = stringResource(Res.string.status_private_post_body),
+                primaryAction = onBack?.let { StatusAction(stringResource(Res.string.action_back), it) },
                 modifier = modifier,
             )
 
@@ -472,6 +492,20 @@ private fun LevelRequiredStatePreview() {
     PlazaTheme {
         SiteErrorState(
             error = SiteError.LevelRequired(requiredLevel = 5),
+            onRetry = {},
+            onOpenBrowser = {},
+            onVerify = {},
+            onBack = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 700, name = "Private post")
+@Composable
+private fun PrivatePostStatePreview() {
+    PlazaTheme {
+        SiteErrorState(
+            error = SiteError.PrivatePost,
             onRetry = {},
             onOpenBrowser = {},
             onVerify = {},

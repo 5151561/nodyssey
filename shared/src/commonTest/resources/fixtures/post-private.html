@@ -1,0 +1,34 @@
+<!doctype html>
+<!--
+  Trimmed capture of /post-886959-1, read on 2026-09-02 through the account holder's own Chrome
+  while signed in as a Lv2 account that does not own the thread. Only the wrapper chain around the
+  refusal is kept; the header, the sidebar and the site's scripts are dropped.
+
+  Three things this fixture exists to pin, all true of the real page:
+  - the refusal is one text node in an unclassed <div>, the level wall's shape exactly;
+  - the page carries `id="nsk-body"`, a USABLE_PAGE_MARKER, so a check made after that one never
+    runs — which is why the sentence is consulted alongside the level wall rather than below it;
+  - it carries neither 需要注册用户才能查看 nor 权限不足, so before PRIVATE_POST_MARKERS existed
+    nothing classified it and the parsers were handed a thread with no title and no body.
+
+  The live response is HTTP 404, which nothing sees for the same reason the body wins over the
+  status everywhere else here. The tests pass that 404 in rather than a 200.
+-->
+<html>
+<head>
+    <title>NodeSeek</title>
+</head>
+<body class="bg1">
+    <section id="nsk-frame">
+        <div id="nsk-body" class="nsk-container">
+            <div id="nsk-body-left">
+                <div>
+                    <div style="line-height: 1.25;">
+                        本帖已经被用户设为私有，您没有阅读权限
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

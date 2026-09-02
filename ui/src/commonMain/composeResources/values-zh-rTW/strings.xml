@@ -685,6 +685,8 @@
     <string name="status_level_required_body">作者把本文的閱讀權限設成了 Lv%1$d，你的等級還差一截。NodeSeek 靠雞腿升級，攢夠了再回來。</string>
     <string name="status_level_required_body_unknown">本文設了閱讀等級門檻，你的等級還沒到。NodeSeek 靠雞腿升級，攢夠了再回來。</string>
     <string name="status_level_required_action">返回</string>
+    <string name="status_private_post_title">這是私有文，只有作者能看</string>
+    <string name="status_private_post_body">作者把本文的閱讀權限設成了私有，除了他自己誰都進不來。這道牆跟等級無關，攢雞腿也打不開。</string>
 
     <string name="status_deleted_title">內容已被刪除</string>
     <string name="status_deleted_body">這篇文章被作者或管理員刪除了。</string>

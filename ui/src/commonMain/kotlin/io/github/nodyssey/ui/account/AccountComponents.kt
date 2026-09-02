@@ -25,6 +25,7 @@ import io.github.nodyssey.ui.resources.status_challenge_title
 import io.github.nodyssey.ui.resources.status_level_required_title
 import io.github.nodyssey.ui.resources.status_network_title
 import io.github.nodyssey.ui.resources.status_not_wired_title
+import io.github.nodyssey.ui.resources.status_private_post_title
 import io.github.nodyssey.ui.resources.status_query_too_short_title
 import io.github.nodyssey.ui.resources.status_rate_limited_title
 import io.github.nodyssey.ui.resources.status_sign_in_title
@@ -113,6 +114,8 @@ private fun SiteError.messageRes(): StringResource =
         // The level, where the page named one, is lost on purpose: this is a snackbar line, and no
         // account setting is behind a reader level anyway.
         is SiteError.LevelRequired -> Res.string.status_level_required_title
+
+        SiteError.PrivatePost -> Res.string.status_private_post_title
 
         SiteError.Network -> Res.string.status_network_title
 

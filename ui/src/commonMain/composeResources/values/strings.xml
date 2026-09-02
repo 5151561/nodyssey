@@ -796,6 +796,9 @@
     <string name="status_level_required_body">作者把本帖的阅读权限设成了 Lv%1$d，你的等级还差一截。NodeSeek 靠鸡腿升级，攒够了再回来。</string>
     <string name="status_level_required_body_unknown">本帖设了阅读等级门槛，你的等级还没到。NodeSeek 靠鸡腿升级，攒够了再回来。</string>
     <string name="status_level_required_action">返回</string>
+    <!-- 阅读权限 的另一端：rank 255，作者独享，没有等级能翻过去 -->
+    <string name="status_private_post_title">这是私有帖，只有作者能看</string>
+    <string name="status_private_post_body">作者把本帖的阅读权限设成了私有，除了他自己谁都进不来。这道墙跟等级无关，攒鸡腿也打不开。</string>
 
     <string name="status_deleted_title">内容已被删除</string>
     <string name="status_deleted_body">这个帖子被作者或管理员删除了。</string>

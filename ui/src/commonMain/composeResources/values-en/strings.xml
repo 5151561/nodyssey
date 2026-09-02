@@ -691,6 +691,8 @@
     <string name="status_level_required_body">The author set the reading level to Lv%1$d and you are not there yet. Levels on NodeSeek come from drumsticks — come back once you have enough.</string>
     <string name="status_level_required_body_unknown">This post has a reading level you have not reached. Levels on NodeSeek come from drumsticks — come back once you have enough.</string>
     <string name="status_level_required_action">Back</string>
+    <string name="status_private_post_title">Private post — the author only</string>
+    <string name="status_private_post_body">The author set this post to private, which lets nobody else in. This wall has nothing to do with your level, and no amount of drumsticks opens it.</string>
 
     <string name="status_deleted_title">This has been deleted</string>
     <string name="status_deleted_body">The author or a moderator deleted this post.</string>

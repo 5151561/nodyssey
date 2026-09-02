@@ -65,6 +65,14 @@ data class PageMarkers(
      * why a list that carries both should put the capturing one first.
      */
     val levelRequired: List<Regex> = emptyList(),
+    /**
+     * The site's own wording for "the author sealed this thread", which no reader level clears.
+     *
+     * Separate from [levelRequired] because the two refusals only look alike: one names a floor a
+     * reader can climb to, this one names none because there is none. A plain string rather than a
+     * pattern for the same reason — there is no number in the sentence to read.
+     */
+    val privatePost: List<String> = emptyList(),
     /** The site's own throttle sentence, which can arrive on a 200 as easily as on a 429. */
     val rateLimit: List<String>,
     /** Left at the default unless a site fronts itself with something other than Cloudflare. */

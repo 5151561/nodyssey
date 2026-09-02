@@ -102,6 +102,34 @@ class ChallengeDetectorTest {
         assertEquals(SiteError.LevelRequired(requiredLevel = null), detector.detect(html, 200, emptyMap()))
     }
 
+    /**
+     * 私有 shares no phrase with either wall — 阅读权限 is not 权限不足 — so what this pins is that the
+     * sentence is consulted at all, and before the usable-page markers: the captured page carries
+     * `id="nsk-body"`, which classifies as real content and would send an empty thread to the parsers.
+     *
+     * The 404 is the live status, and passing it in is the second half of the same point: a check
+     * placed after the status handling would report HTTP 404 and lose the reason.
+     */
+    @Test
+    fun `a private thread is its own state rather than an empty page`() {
+        assertEquals(
+            SiteError.PrivatePost,
+            detector.detect(Fixtures.load("post-private.html"), 404, emptyMap()),
+        )
+    }
+
+    /** The wording is a whole clause because a thread *about* 私有 must still open. */
+    @Test
+    fun `a thread whose body discusses the feature is not a private thread`() {
+        val html =
+            """
+            <html><body><div id="nsk-body"><div class="post-content">
+            发帖的时候可以把阅读权限设为私有，只有自己能看
+            </div></div></body></html>
+            """.trimIndent()
+        assertNull(detector.detect(html, 200, emptyMap()))
+    }
+
     @Test
     fun `an unexpected status is reported as blocked`() {
         assertEquals(

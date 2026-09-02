@@ -154,6 +154,29 @@ object Selectors {
     )
 
     /**
+     * 私有 refused: 「本帖已经被用户设为私有，您没有阅读权限」.
+     *
+     * The other end of the 阅读权限 scale from [LEVEL_REQUIRED_MARKERS] — `rank` 255, the author
+     * alone — and a separate refusal rather than a level of 255, because no reader ever reaches it.
+     *
+     * Measured against `/post-886959-1` on 2026-09-02 through the account holder's own Chrome,
+     * signed in as a Lv2 account that does not own the thread, and the capture is
+     * `post-private.html`. Three things that page does that decide where this is checked: the
+     * sentence is a lone text node in an unclassed `<div>` (the level wall's shape exactly); the
+     * frame is the ordinary signed-in one and carries `id="nsk-body"`, a [USABLE_PAGE_MARKERS]
+     * entry, so a check after that one never runs; and the status is **404**, which nothing sees
+     * for the same reason.
+     *
+     * It shares no phrase with either [LEVEL_REQUIRED_MARKERS] or [LOGIN_REQUIRED_MARKERS] — 阅读权限
+     * is not 权限不足 — so before this list existed the page classified as real content and reached
+     * the parsers, which found a thread with no title and no body.
+     *
+     * The whole first clause rather than 设为私有 alone: this is tested against an entire page, and
+     * a thread whose *body* discusses the feature would otherwise refuse to open.
+     */
+    val PRIVATE_POST_MARKERS = listOf("本帖已经被用户设为私有")
+
+    /**
      * 「搜索词太短😭」, the whole answer `/search?q=x` gives a one-character query.
      *
      * Not on [LOGIN_REQUIRED_MARKERS]' side of the fence and not a challenge: the page is the ordinary

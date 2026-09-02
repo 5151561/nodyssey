@@ -27,6 +27,20 @@ sealed interface SiteError {
     data class LevelRequired(val requiredLevel: Int?) : SiteError
 
     /**
+     * The thread's author set its 阅读权限 to 私有, which admits nobody but them.
+     *
+     * Apart from [LevelRequired] because it is not a floor: there is no level that clears it and no
+     * number to name, so a screen that borrowed the level wall's copy would tell a reader to earn
+     * 鸡腿 for a wall no amount of them opens. The same `rank` field the composer writes — 255,
+     * where 1..254 are the levels [LevelRequired] covers.
+     *
+     * The site answers **404** for one of these, which nothing sees: the body carries `id="nsk-body"`
+     * and is classified as real content before the status is consulted, exactly as the level wall is.
+     * See [PageMarkers.privatePost].
+     */
+    data object PrivatePost : SiteError
+
+    /**
      * The search term is shorter than the site will accept, and nothing was searched.
      *
      * Its own case rather than [Http] or [Unparsable] because the answer is complete and correct —

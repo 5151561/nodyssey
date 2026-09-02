@@ -52,6 +52,7 @@ object NodeSeekSite {
                 usablePage = Selectors.USABLE_PAGE_MARKERS,
                 loginRequired = Selectors.LOGIN_REQUIRED_MARKERS,
                 levelRequired = Selectors.LEVEL_REQUIRED_MARKERS,
+                privatePost = Selectors.PRIVATE_POST_MARKERS,
                 rateLimit = Selectors.RATE_LIMIT_MARKERS,
             ),
         )
