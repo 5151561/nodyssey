@@ -2,6 +2,14 @@
   "schema": 1,
   "versions": [
     {
+      "versionName": "1.2.15",
+      "tag": "v1.2.15",
+      "publishedOn": "2026-09-02",
+      "preRelease": false,
+      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.15",
+      "notes": "### 改进\n\n- 已在首页时点首页，刷新并回到顶部。\n- 打开私有帖不再是空白，会说明原因。\n\n### 修复\n\n- 个人主页的 Readme 不再是空的。\n- iOS 上带文字的图片不再是空白。"
+    },
+    {
       "versionName": "1.2.14",
       "tag": "v1.2.14",
       "publishedOn": "2026-08-31",

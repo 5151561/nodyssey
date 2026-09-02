@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "channel": "dev",
-  "versionName": "1.2.14",
-  "tag": "v1.2.14",
-  "publishedOn": "2026-08-31",
-  "notes": "### 新增\n\n- 个人主页的帖子显示阅读权限等级。\n\n### 改进\n\n- 帖子里 @某人 的引用标签瘦了一圈。\n\n- 大表情包和上下行之间留出了空隙。\n\n### 修复\n\n- 引用标签不再被表情包遮住或断成两截。\n\n- 点链接进来后转屏，返回不再跳回首页。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.13-dev.1...v1.2.14",
+  "versionName": "1.2.15",
+  "tag": "v1.2.15",
+  "publishedOn": "2026-09-02",
+  "notes": "### 改进\n\n- 已在首页时点首页，刷新并回到顶部。\n- 打开私有帖不再是空白，会说明原因。\n\n### 修复\n\n- 个人主页的 Readme 不再是空的。\n- iOS 上带文字的图片不再是空白。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.14...v1.2.15",
   "apk": {
-    "name": "nodyssey-v1.2.14.apk",
-    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.14/nodyssey-v1.2.14.apk",
-    "sizeBytes": 4310679,
-    "sha256": "571c8cfde826c63fb3e48add3504ac14bd60afe347ddc3de8c37635e08f97415"
+    "name": "nodyssey-v1.2.15.apk",
+    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.15/nodyssey-v1.2.15.apk",
+    "sizeBytes": 4327343,
+    "sha256": "777bd6f3c8de3e411ba74a32d618ff3afe5c451a215b5fd2048f0e7274a4da43"
   },
-  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.14"
+  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.15"
 }
