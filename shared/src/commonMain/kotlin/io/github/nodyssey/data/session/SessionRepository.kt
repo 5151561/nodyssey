@@ -36,6 +36,18 @@ class SessionRepository(
      */
     fun peek(): SessionState = read().copy(generation = _state.value.generation)
 
+    /**
+     * Tells the site which of its two themes this app is drawing, by writing the cookie its own front
+     * end writes.
+     *
+     * On this layer because the cookie jar is: see [SessionCookies.applyColorScheme] for what it is
+     * really for, which is not the colour. Idempotent, and cheap enough to call on every theme
+     * change — the value it writes is the one the store already holds in every case but the change.
+     */
+    fun applyColorScheme(dark: Boolean) {
+        cookies.applyColorScheme(dark)
+    }
+
     /** Re-reads the cookie store, publishes what it says, and persists it. */
     fun sync(): SessionState {
         val snapshot = read()

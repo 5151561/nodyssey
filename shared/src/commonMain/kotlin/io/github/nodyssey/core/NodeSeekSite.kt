@@ -2,6 +2,7 @@ package io.github.nodyssey.core
 
 import io.github.nodyssey.core.html.Selectors
 import io.github.nodyssey.model.FeedSort
+import io.github.plaza.core.net.ColorSchemeCookie
 import io.github.plaza.core.net.PageMarkers
 import io.github.plaza.core.net.SiteConfig
 import io.github.plaza.core.net.WebUrl
@@ -47,6 +48,10 @@ object NodeSeekSite {
             htmlAccept = HTML_ACCEPT,
             // The site sets `session`; the JWT-style `token` shows up on some deployments.
             sessionCookieNames = listOf("session", "token"),
+            // `light` / `dark` are what the site's own theme switch writes, and `body.dark-layout`
+            // is what the page does with the second one. Its other, undocumented job is in
+            // [ColorSchemeCookie]: without this cookie the account endpoint returns no readme at all.
+            colorSchemeCookie = ColorSchemeCookie(name = "colorscheme", light = "light", dark = "dark"),
             markers =
             PageMarkers(
                 usablePage = Selectors.USABLE_PAGE_MARKERS,

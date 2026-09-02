@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -72,6 +73,13 @@ fun NodysseyRoot(
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
+
+    // The site's own light/dark cookie, written into the jar every request and the in-app browser
+    // share. It is here because this is the line that resolved 跟随系统 into an answer — and it is
+    // written at all because the account endpoint refuses to include anybody's readme without it, so
+    // an app that never writes it draws 「没有找到readme」on every profile. See
+    // `SessionCookies.applyColorScheme`.
+    LaunchedEffect(darkTheme) { container.sessionRepository.applyColorScheme(darkTheme) }
 
     // Outside the theme, because the strings its own screens read resolve against this and because
     // a language is not a colour. Changing it recomposes the tree underneath in the new language —

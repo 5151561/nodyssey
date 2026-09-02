@@ -38,7 +38,7 @@ class SessionCookies(
             hasClearance = pairs.any { (name, value) -> name == CLEARANCE_COOKIE && value.isNotBlank() },
             fingerprint =
             pairs
-                .filterNot { (name, _) -> isCloudflareNoise(name) }
+                .filterNot { (name, _) -> isCloudflareNoise(name) || isOurs(name) }
                 .sortedBy { (name, _) -> name }
                 .joinToString(";") { (name, value) -> "$name=$value" }
                 .hashCode(),
@@ -50,6 +50,28 @@ class SessionCookies(
 
     /** See [SessionCookieStore.flush] for why this is worth calling by hand. */
     fun flush() {
+        store.flush()
+    }
+
+    /**
+     * Writes the site's own light/dark cookie, so that a request from this app looks like one from a
+     * reader who has been on the site before.
+     *
+     * Here rather than beside the theme because this is the class that holds the one cookie jar, and
+     * a jar is what this has to be written into: it is not a header a client can add — the WebView
+     * and the HTTP client have to agree on it, and on Apple that agreement is a mirror rather than a
+     * shared store. [SiteConfig.colorSchemeCookie] is why a colour is being written at all, and it is
+     * the endpoint quirk documented there, not the colour, that makes this load-bearing.
+     *
+     * Flushed on the caller's behalf: on Android the store batches its writes, and the request that
+     * needs this cookie can be the next line of a cold start.
+     */
+    fun applyColorScheme(dark: Boolean) {
+        val cookie = config.colorSchemeCookie ?: return
+        val value = if (dark) cookie.dark else cookie.light
+        // Attributes the site's own switch writes too. `Max-Age` rather than a session cookie so the
+        // next cold start does not have to reach this line before its first request does.
+        store.setCookie(config.baseUrl, "${cookie.name}=$value; Path=/; Max-Age=$COLOR_SCHEME_MAX_AGE")
         store.flush()
     }
 
@@ -84,9 +106,21 @@ class SessionCookies(
                 if (name.isEmpty()) null else name to entry.substringAfter('=', "").trim()
             }
 
+    /**
+     * True for a cookie this app wrote itself.
+     *
+     * Kept out of the fingerprint for the same reason as Cloudflare's noise, arrived at from the
+     * other end: the fingerprint is what the feed reloads on, and a reader switching the app to dark
+     * mode has learned nothing new about the site.
+     */
+    private fun isOurs(name: String): Boolean = name == config.colorSchemeCookie?.name
+
     private companion object {
         /** Cloudflare's proof that a human cleared the challenge. Bound to the UA, hence the shared one. */
         const val CLEARANCE_COOKIE = "cf_clearance"
+
+        /** A year, which is what the site's own switch writes. */
+        const val COLOR_SCHEME_MAX_AGE = 31_536_000
     }
 }
 

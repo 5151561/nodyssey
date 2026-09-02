@@ -33,6 +33,33 @@ data class SiteConfig(
      */
     val sessionCookieNames: List<String>,
     val markers: PageMarkers,
+    /**
+     * The cookie the site's own front end writes to remember light or dark, when it has one.
+     *
+     * Not a nicety, and not about colour. NodeSeek's account endpoint omits a user's readme from its
+     * answer unless the request carries this cookie — measured 2026-09-02: same URL, same
+     * `?readme=1`, cookie present and `detail.readme` is there, cookie absent and every other field
+     * still is. Any value does, an empty one included, and no other cookie substitutes for it. A
+     * client that never writes it therefore draws 「没有找到readme」on every profile in the site,
+     * which is exactly what the iOS shell did on a fresh install.
+     *
+     * The value is still the site's own vocabulary rather than a placeholder, because this cookie is
+     * shared with the in-app browser: the same jar decides what the sign-in page looks like, and a
+     * reader in dark mode should not be handed a white page. See [SessionCookies.applyColorScheme].
+     */
+    val colorSchemeCookie: ColorSchemeCookie? = null,
+)
+
+/**
+ * The name a site remembers its light/dark choice under, and the two values it writes.
+ *
+ * Both values, rather than a boolean and a guess: what a site calls its dark mode is the site's
+ * business, and the endpoint quirk above only cares that *something* is there.
+ */
+data class ColorSchemeCookie(
+    val name: String,
+    val light: String,
+    val dark: String,
 )
 
 /**
