@@ -2,6 +2,14 @@
   "schema": 1,
   "versions": [
     {
+      "versionName": "1.2.16",
+      "tag": "v1.2.16",
+      "publishedOn": "2026-09-03",
+      "preRelease": false,
+      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.16",
+      "notes": "### 新增\n\n- 首次打开有五屏新手引导。\n- 「设置 › 关于」多了使用帮助。"
+    },
+    {
       "versionName": "1.2.15",
       "tag": "v1.2.15",
       "publishedOn": "2026-09-02",

@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "channel": "stable",
-  "versionName": "1.2.15",
-  "tag": "v1.2.15",
-  "publishedOn": "2026-09-02",
-  "notes": "### 改进\n\n- 已在首页时点首页，刷新并回到顶部。\n- 打开私有帖不再是空白，会说明原因。\n\n### 修复\n\n- 个人主页的 Readme 不再是空的。\n- iOS 上带文字的图片不再是空白。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.14...v1.2.15",
+  "versionName": "1.2.16",
+  "tag": "v1.2.16",
+  "publishedOn": "2026-09-03",
+  "notes": "### 新增\n\n- 首次打开有五屏新手引导。\n- 「设置 › 关于」多了使用帮助。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.15...v1.2.16",
   "apk": {
-    "name": "nodyssey-v1.2.15.apk",
-    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.15/nodyssey-v1.2.15.apk",
-    "sizeBytes": 4327343,
-    "sha256": "777bd6f3c8de3e411ba74a32d618ff3afe5c451a215b5fd2048f0e7274a4da43"
+    "name": "nodyssey-v1.2.16.apk",
+    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.16/nodyssey-v1.2.16.apk",
+    "sizeBytes": 4347687,
+    "sha256": "b405cf10da25989a3de76b1b3bc1218d8c0fa3cd70750254c3edb8d60cd92733"
   },
-  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.15"
+  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.16"
 }
