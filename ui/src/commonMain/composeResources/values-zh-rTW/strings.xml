@@ -484,6 +484,9 @@
     <string name="about_app_group">Telegram 官方群組</string>
     <string name="about_app_group_hint">聊 Nodyssey、回報 bug、看 dev 版動靜</string>
     <string name="about_changelog">更新紀錄</string>
+    <string name="about_help">使用說明</string>
+    <string name="about_help_hint">被當成 bug 的那幾件事，和不容易撞見的用法</string>
+
     <string name="about_theme_signature">Material 3 Expressive · 主題色「石墨青」</string>
     <string name="about_community">社群</string>
     <string name="about_forum_stats_value">%1$s 位 seeker</string>
@@ -1206,4 +1209,63 @@
     <string name="sign_in_2fa_rejected">驗證碼不對，再試一次</string>
     <string name="sign_in_2fa_note">只有帳號開啟了雙因素驗證才會出現這一步；未開啟則登入介面直接回傳工作階段。</string>
     <string name="proxy_type_title">代理類型</string>
+    <!-- 新手引導與它交棒的「使用說明」頁；每一屏寫什麼見基底檔。 -->
+    <string name="onboarding_skip">略過</string>
+    <string name="onboarding_next">下一步</string>
+    <string name="onboarding_done">開始使用</string>
+    <string name="onboarding_progress">第 %1$d 屏，共 %2$d 屏</string>
+
+    <string name="onboarding_welcome_title">歡迎使用 Nodyssey</string>
+    <string name="onboarding_welcome_body">NodeSeek 的第三方用戶端</string>
+
+    <string name="onboarding_one_hand_title">單手模式</string>
+    <string name="onboarding_one_hand_body">標題下移方便單手操作，可在設定關閉</string>
+
+    <string name="onboarding_home_title">首頁操作</string>
+    <string name="onboarding_home_boards">長按版塊列：拖曳排序、移出首頁</string>
+    <string name="onboarding_home_reselect">再點一下「首頁」：重新整理並回到頂端</string>
+    <string name="onboarding_home_sort">排序方式會記住</string>
+    <string name="onboarding_home_page_bar">點右下角的頁碼，能跳到任意頁</string>
+
+    <string name="onboarding_composer_title">編輯器工具列</string>
+    <string name="onboarding_composer_body">最右的扳手能拖曳排序、增刪按鍵</string>
+
+    <string name="onboarding_app_links_title">站內連結</string>
+    <string name="onboarding_app_links_body">開啟後，在別處點開 NodeSeek 連結直接進 App</string>
+    <string name="onboarding_app_links_action">去開啟</string>
+    <string name="onboarding_app_links_enabled">已開啟</string>
+
+    <string name="onboarding_more">更多用法見「設定 › 關於 › 使用說明」</string>
+
+    <string name="help_title">使用說明</string>
+    <string name="help_replay">再看一次新手引導</string>
+    <string name="help_replay_hint">五屏，每屏都能略過</string>
+
+    <string name="help_section_confusing">看起來像 bug 的</string>
+    <string name="help_one_hand_title">標題列下面空了一大塊</string>
+    <string name="help_one_hand_body">這是單手模式，「設定 › 外觀」裡可關。</string>
+    <string name="help_app_links_title">站內連結被瀏覽器搶走</string>
+    <string name="help_app_links_body">開啟後，在別處點開 NodeSeek 連結直接進 App。</string>
+    <string name="help_native_title">文字能選、程式碼能複製</string>
+    <string name="help_native_body">長按選取文字，程式碼區塊右上角有複製鍵，圖片點開可放大。</string>
+
+    <string name="help_section_home">首頁與清單</string>
+    <string name="help_boards_title">版塊列能自己排</string>
+    <string name="help_boards_body">長按版塊列進入排序：拖曳改順序，點角標移出或加回首頁。</string>
+    <string name="help_home_tap_title">再點一下「首頁」</string>
+    <string name="help_home_tap_body">已在首頁時點「首頁」：重新整理並回到頂端。點「通知」只回頂端。</string>
+    <string name="help_sort_title">排序會記住</string>
+    <string name="help_sort_body">「新留言」「新貼文」選過就記住，下次打開是上次那個。</string>
+    <string name="help_page_bar_title">想跳到第幾頁</string>
+    <string name="help_page_bar_body">「設定 › 內容 › 首頁翻頁列」打開後，首頁底部出現頁碼和跳頁按鈕。</string>
+
+    <string name="help_section_composer">發文與帳號</string>
+    <string name="help_toolbar_title">工具列可以自己排</string>
+    <string name="help_toolbar_body">工具列最右的扳手：拖曳排序、增刪按鍵。發文、回覆、私訊各記各的。</string>
+    <string name="help_draft_title">草稿自己會存</string>
+    <string name="help_draft_body">寫到一半退出，下次進編輯器會問要不要接著寫，配的圖也留著。</string>
+    <string name="help_preview_title">Markdown 邊寫邊看</string>
+    <string name="help_preview_body">編輯器頂部切「內容 / 預覽 / 對照」，對照是上下分欄。</string>
+    <string name="help_imagehost_title">發圖要先連圖床</string>
+    <string name="help_imagehost_body">論壇不存圖。「設定 › 圖床」裡選一家，六家可選，金鑰只留在本機。</string>
 </resources>

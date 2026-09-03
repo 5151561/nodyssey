@@ -574,6 +574,9 @@
     <string name="about_app_group">Telegram 官方群组</string>
     <string name="about_app_group_hint">聊 Nodyssey、报 bug、看 dev 版动静</string>
     <string name="about_changelog">更新日志</string>
+    <string name="about_help">使用帮助</string>
+    <string name="about_help_hint">被当成 bug 的那几件事，和不容易撞见的用法</string>
+
     <string name="about_theme_signature">Material 3 Expressive · 主题色「石墨青」</string>
     <string name="about_community">社区</string>
     <string name="about_forum_stats_value">%1$s 位 seeker</string>
@@ -1393,4 +1396,70 @@
     <string name="sign_in_2fa_submit">验证并登录</string>
     <string name="sign_in_2fa_rejected">验证码不对，再试一次</string>
     <string name="sign_in_2fa_note">只有账号开启了双因素验证才会出现这一步；未开启则登录接口直接返回会话。</string>
+    <!--
+      新手引导 — four screens on first launch, and the 使用帮助 page they hand off to.
+
+      Written as whole sentences rather than as feature bullets: what this has to fix is a reader who
+      has decided something is broken, and the answer to that is an explanation, not a label. Every
+      claim here is one the app actually keeps — see the 使用帮助 rows for where each is implemented.
+    -->
+    <string name="onboarding_skip">跳过</string>
+    <string name="onboarding_next">下一步</string>
+    <string name="onboarding_done">开始使用</string>
+    <string name="onboarding_progress">第 %1$d 屏，共 %2$d 屏</string>
+
+    <string name="onboarding_welcome_title">欢迎使用 Nodyssey</string>
+    <string name="onboarding_welcome_body">NodeSeek 的第三方客户端</string>
+
+    <string name="onboarding_one_hand_title">单手模式</string>
+    <string name="onboarding_one_hand_body">标题下移方便单手操作，可在设置关闭</string>
+
+    <string name="onboarding_home_title">首页操作</string>
+    <string name="onboarding_home_boards">长按版块条：拖动排序、移出首页</string>
+    <string name="onboarding_home_reselect">再点一下「首页」：刷新并回到顶部</string>
+    <string name="onboarding_home_sort">排序方式会记住</string>
+    <string name="onboarding_home_page_bar">点右下角的页码，能跳到任意页</string>
+
+    <string name="onboarding_composer_title">编辑器工具栏</string>
+    <string name="onboarding_composer_body">最右的扳手能拖动排序、增删按键</string>
+
+    <string name="onboarding_app_links_title">站内链接</string>
+    <string name="onboarding_app_links_body">开启后，在别处点开 NodeSeek 链接直接进 App</string>
+    <string name="onboarding_app_links_action">去开启</string>
+    <string name="onboarding_app_links_enabled">已开启</string>
+
+    <string name="onboarding_more">更多用法见「设置 › 关于 › 使用帮助」</string>
+
+    <!-- 使用帮助 — the same ground the guide covers, kept where it can be re-read. -->
+    <string name="help_title">使用帮助</string>
+    <string name="help_replay">再看一次新手引导</string>
+    <string name="help_replay_hint">五屏，每屏都能跳过</string>
+
+    <string name="help_section_confusing">看起来像 bug 的</string>
+    <string name="help_one_hand_title">标题栏下面空了一大块</string>
+    <string name="help_one_hand_body">这是单手模式，「设置 › 外观」里可关。</string>
+    <string name="help_app_links_title">站内链接被浏览器抢走</string>
+    <string name="help_app_links_body">开启后，在别处点开 NodeSeek 链接直接进 App。</string>
+    <string name="help_native_title">文字能选、代码能复制</string>
+    <string name="help_native_body">长按选中文字，代码块右上角有复制键，图片点开可放大。</string>
+
+    <string name="help_section_home">首页与列表</string>
+    <string name="help_boards_title">版块条能自己排</string>
+    <string name="help_boards_body">长按版块条进入排序：拖动改顺序，点角标移出或加回首页。</string>
+    <string name="help_home_tap_title">再点一下「首页」</string>
+    <string name="help_home_tap_body">已在首页时点「首页」：刷新并回到顶部。点「通知」只回顶部。</string>
+    <string name="help_sort_title">排序会记住</string>
+    <string name="help_sort_body">「新评论」「新帖子」选过就记住，下次打开是上次那个。</string>
+    <string name="help_page_bar_title">想跳到第几页</string>
+    <string name="help_page_bar_body">「设置 › 内容 › 首页翻页栏」打开后，首页底部出现页码和跳页按钮。</string>
+
+    <string name="help_section_composer">发帖与账号</string>
+    <string name="help_toolbar_title">工具栏可以自己排</string>
+    <string name="help_toolbar_body">工具栏最右的扳手：拖动排序、增删按键。发帖、回复、私信各记各的。</string>
+    <string name="help_draft_title">草稿自己会存</string>
+    <string name="help_draft_body">写到一半退出，下次进编辑器会问要不要接着写，配的图也留着。</string>
+    <string name="help_preview_title">Markdown 边写边看</string>
+    <string name="help_preview_body">编辑器顶部切「内容 / 预览 / 对照」，对照是上下分栏。</string>
+    <string name="help_imagehost_title">发图要先连图床</string>
+    <string name="help_imagehost_body">论坛不存图。「设置 › 图床」里选一家，六家可选，密钥只留在本机。</string>
 </resources>

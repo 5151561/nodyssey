@@ -142,6 +142,7 @@ private val EVERY_KEY: List<NavKey> =
         AboutCommunityKey,
         PrivacyKey,
         ChangelogKey,
+        HelpKey,
         OpenSourceLicensesKey,
         AccountSettingsKey,
         AccountProfileFieldsKey,

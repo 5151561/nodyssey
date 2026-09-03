@@ -57,6 +57,8 @@ import io.github.nodyssey.ui.resources.about_crash_export
 import io.github.nodyssey.ui.resources.about_crash_export_hint
 import io.github.nodyssey.ui.resources.about_feedback
 import io.github.nodyssey.ui.resources.about_feedback_hint
+import io.github.nodyssey.ui.resources.about_help
+import io.github.nodyssey.ui.resources.about_help_hint
 import io.github.nodyssey.ui.resources.about_install_failed_blocked
 import io.github.nodyssey.ui.resources.about_install_failed_conflict
 import io.github.nodyssey.ui.resources.about_install_failed_incompatible
@@ -116,6 +118,7 @@ fun AboutAppRoute(
     viewModel: AboutAppViewModel,
     onBack: () -> Unit,
     onOpenChangelog: () -> Unit,
+    onOpenHelp: () -> Unit,
     onOpenLicenses: () -> Unit,
     onOpenUri: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -133,6 +136,7 @@ fun AboutAppRoute(
         onInstallUpdate = viewModel::install,
         onGrantInstallPermission = requestInstallPermission,
         onOpenChangelog = onOpenChangelog,
+        onOpenHelp = onOpenHelp,
         onOpenLicenses = onOpenLicenses,
         onOpenUri = onOpenUri,
         // The share sheet, not an upload: the stack trace leaves the device only through the user's
@@ -155,6 +159,7 @@ fun AboutAppScreen(
     onInstallUpdate: () -> Unit,
     onGrantInstallPermission: () -> Unit,
     onOpenChangelog: () -> Unit,
+    onOpenHelp: () -> Unit,
     onOpenLicenses: () -> Unit,
     onOpenUri: (String) -> Unit,
     onExportCrashReport: (CrashReport) -> Unit,
@@ -237,6 +242,14 @@ fun AboutAppScreen(
                 icon = PlazaIcons.Group,
                 external = true,
                 onClick = { onOpenUri(AppLinks.TELEGRAM_GROUP) },
+            )
+            // Above 更新日志 on purpose: a reader on this screen looking for "how does this work"
+            // outnumbers the one looking for "what changed in 1.2.15", and the two rows read alike.
+            AboutActionRow(
+                title = stringResource(Res.string.about_help),
+                subtitle = stringResource(Res.string.about_help_hint),
+                icon = PlazaIcons.WavingHand,
+                onClick = onOpenHelp,
             )
             AboutActionRow(
                 title = stringResource(Res.string.about_changelog),
@@ -624,6 +637,7 @@ private fun AboutAppPreview() {
             onInstallUpdate = {},
             onGrantInstallPermission = {},
             onOpenChangelog = {},
+            onOpenHelp = {},
             onOpenLicenses = {},
             onOpenUri = {},
             onExportCrashReport = {},
@@ -645,6 +659,7 @@ private fun AboutAppWidePreview() {
             onInstallUpdate = {},
             onGrantInstallPermission = {},
             onOpenChangelog = {},
+            onOpenHelp = {},
             onOpenLicenses = {},
             onOpenUri = {},
             onExportCrashReport = {},
@@ -685,6 +700,7 @@ private fun AboutAppUpdatePreview() {
             onInstallUpdate = {},
             onGrantInstallPermission = {},
             onOpenChangelog = {},
+            onOpenHelp = {},
             onOpenLicenses = {},
             onOpenUri = {},
             onExportCrashReport = {},

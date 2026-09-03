@@ -1,6 +1,7 @@
 package io.github.nodyssey
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -9,6 +10,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
@@ -23,9 +25,12 @@ import io.github.nodyssey.ui.common.SystemBarsMatchTheme
 import io.github.nodyssey.ui.common.rememberBrowserLinks
 import io.github.nodyssey.ui.common.rememberReducedMotionEnabled
 import io.github.nodyssey.ui.navigation.TopLevelDestination
+import io.github.nodyssey.ui.onboarding.OnboardingScreen
 import io.github.nodyssey.ui.richtext.LocalReportFormat
 import io.github.nodyssey.ui.settings.ApplyAppLanguage
 import io.github.nodyssey.ui.settings.ProvideAppLanguage
+import io.github.nodyssey.ui.settings.rememberAppLinkHandlingEnabled
+import io.github.nodyssey.ui.settings.rememberAppLinkSettingsLauncher
 import io.github.nodyssey.ui.settings.theme.activeCharacterPalette
 import io.github.nodyssey.ui.settings.theme.rememberActiveSeed
 import io.github.nodyssey.ui.settings.theme.toPlaza
@@ -33,6 +38,7 @@ import io.github.plaza.designsys.component.LocalLinkPrefetcher
 import io.github.plaza.designsys.richtext.LocalStickerSizing
 import io.github.plaza.designsys.richtext.StickerSizing
 import io.github.plaza.designsys.theme.PlazaTheme
+import kotlinx.coroutines.launch
 
 /**
  * Everything the app draws, from the theme down.
@@ -67,6 +73,13 @@ fun NodysseyRoot(
     // Everything Compose draws is answered by `ProvideAppLanguage` below instead, which is why
     // nothing here recreates anything.
     ApplyAppLanguage(storedSettings?.appLanguage)
+
+    // Read here rather than inside the guide so that a Compose preview of it stays platform-free,
+    // and so the answer is re-read on resume — which is how coming back from the system settings
+    // with the switch thrown turns the guide's button into its own confirmation.
+    val appLinksEnabled = rememberAppLinkHandlingEnabled()
+    val openAppLinkSettings = rememberAppLinkSettingsLauncher()
+    val scope = rememberCoroutineScope()
 
     val darkTheme = when (settings.themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -141,12 +154,40 @@ fun NodysseyRoot(
                     modifier = modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    MainNavigation(
-                        container = container,
-                        initialTab = initialTab,
-                        launchRequest = launchRequest,
-                        onLaunchRequestHandled = onLaunchRequestHandled,
-                    )
+                    Box {
+                        MainNavigation(
+                            container = container,
+                            initialTab = initialTab,
+                            launchRequest = launchRequest,
+                            onLaunchRequestHandled = onLaunchRequestHandled,
+                        )
+                        /*
+                         * 新手引导, over the app rather than instead of it.
+                         *
+                         * Two reasons it is not an `if/else` around `MainNavigation`. A cold start
+                         * would otherwise have to paint something before the store has answered,
+                         * and the only honest something is blank — the very white flash 1.2.13 got
+                         * rid of. And 再看一次引导 on 使用帮助 clears this flag from two screens deep
+                         * in the back stack: swapping `MainNavigation` out would take that stack
+                         * with it, so finishing the guide would land on 首页 rather than back where
+                         * it was asked for.
+                         *
+                         * The nullable read, not the defaulted `settings`: `onboardingSeen` is
+                         * false before the store has been read as well as after, and drawing the
+                         * guide over that frame would show it to everyone, once, on every launch.
+                         */
+                        if (storedSettings?.onboardingSeen == false) {
+                            OnboardingScreen(
+                                onFinish = {
+                                    scope.launch {
+                                        container.settingsRepository.setOnboardingSeen(true)
+                                    }
+                                },
+                                appLinksEnabled = appLinksEnabled,
+                                onOpenAppLinkSettings = openAppLinkSettings,
+                            )
+                        }
+                    }
                 }
             }
         }

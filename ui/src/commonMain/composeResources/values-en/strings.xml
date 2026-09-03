@@ -490,6 +490,9 @@
     <string name="about_app_group">Telegram group</string>
     <string name="about_app_group_hint">Talk about Nodyssey, report bugs, follow the dev builds</string>
     <string name="about_changelog">Changelog</string>
+    <string name="about_help">How to use this app</string>
+    <string name="about_help_hint">The things that look like bugs, and the ones nobody stumbles onto</string>
+
     <string name="about_theme_signature">Material 3 Expressive · themed in Graphite teal</string>
     <string name="about_community">Community</string>
     <string name="about_forum_stats_value">%1$s seekers</string>
@@ -1215,4 +1218,63 @@
     <string name="sign_in_2fa_note">This step only appears for an account with two-factor verification on; without it the sign-in API returns the session straight away.</string>
     <string name="proxy_type_title">Proxy type</string>
     <string name="doh_test_result">%1$s → %2$s (%3$s ms)</string>
+    <!-- 新手引导 and the 使用帮助 page it hands off to; see the base file for what each screen says. -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_done">Get started</string>
+    <string name="onboarding_progress">Screen %1$d of %2$d</string>
+
+    <string name="onboarding_welcome_title">Welcome to Nodyssey</string>
+    <string name="onboarding_welcome_body">An unofficial client for NodeSeek</string>
+
+    <string name="onboarding_one_hand_title">One-handed mode</string>
+    <string name="onboarding_one_hand_body">Titles sit within thumb reach. Switchable in Settings.</string>
+
+    <string name="onboarding_home_title">On the feed</string>
+    <string name="onboarding_home_boards">Long-press the board strip: reorder, or park a board</string>
+    <string name="onboarding_home_reselect">Tap Home again: reload and jump to the top</string>
+    <string name="onboarding_home_sort">Your sort order is remembered</string>
+    <string name="onboarding_home_page_bar">Tap the page number at the bottom right to jump anywhere</string>
+
+    <string name="onboarding_composer_title">Editor toolbar</string>
+    <string name="onboarding_composer_body">The wrench at the right end reorders, adds and removes keys</string>
+
+    <string name="onboarding_app_links_title">NodeSeek links</string>
+    <string name="onboarding_app_links_body">Turn this on and NodeSeek links tapped anywhere open in the app</string>
+    <string name="onboarding_app_links_action">Turn it on</string>
+    <string name="onboarding_app_links_enabled">On</string>
+
+    <string name="onboarding_more">More under Settings › About › How to use this app</string>
+
+    <string name="help_title">How to use this app</string>
+    <string name="help_replay">Show the guide again</string>
+    <string name="help_replay_hint">Five screens, skippable at any point</string>
+
+    <string name="help_section_confusing">Things that look like bugs</string>
+    <string name="help_one_hand_title">A big blank under the title bar</string>
+    <string name="help_one_hand_body">This is one-handed mode; switch it off under Settings › Appearance.</string>
+    <string name="help_app_links_title">Forum links keep opening in a browser</string>
+    <string name="help_app_links_body">Turn this on and NodeSeek links tapped anywhere open in the app.</string>
+    <string name="help_native_title">Selectable text, copyable code</string>
+    <string name="help_native_body">Long-press to select text, copy a code block from its corner, tap an image to zoom.</string>
+
+    <string name="help_section_home">The feed and its lists</string>
+    <string name="help_boards_title">The board strip is yours to arrange</string>
+    <string name="help_boards_body">Long-press the board strip to rearrange: drag to reorder, tap a corner badge to park or restore a board.</string>
+    <string name="help_home_tap_title">Tapping Home twice</string>
+    <string name="help_home_tap_body">Tap Home while on Home: reload and jump to the top. The same tap on Notifications only jumps.</string>
+    <string name="help_sort_title">The sort order sticks</string>
+    <string name="help_sort_body">New replies or new posts — whichever you picked last is what the next launch opens on.</string>
+    <string name="help_page_bar_title">Jumping to a page number</string>
+    <string name="help_page_bar_body">Settings › Content › 首页翻页栏 puts page numbers and a jump button at the bottom of the feed.</string>
+
+    <string name="help_section_composer">Writing and your account</string>
+    <string name="help_toolbar_title">Rearrange the toolbar</string>
+    <string name="help_toolbar_body">The wrench at the right end: drag to reorder, add or remove keys. Posts, replies and messages each remember their own.</string>
+    <string name="help_draft_title">Drafts save themselves</string>
+    <string name="help_draft_body">Leave halfway through and the editor asks whether to carry on next time, images included.</string>
+    <string name="help_preview_title">Markdown as you type</string>
+    <string name="help_preview_body">The editor switches between 内容, 预览 and 对照; 对照 splits top and bottom.</string>
+    <string name="help_imagehost_title">Images need a host first</string>
+    <string name="help_imagehost_body">The forum stores no images. Pick one of six under Settings › 图床; the key stays on this device.</string>
 </resources>

@@ -1,10 +1,12 @@
 package io.github.nodyssey
 
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.ui.login.WebViewGoal
+import io.github.nodyssey.ui.onboarding.HelpRoute
 import io.github.nodyssey.ui.settings.AboutAppRoute
 import io.github.nodyssey.ui.settings.AboutAppViewModel
 import io.github.nodyssey.ui.settings.AboutCommunityScreen
@@ -29,6 +31,7 @@ import io.github.nodyssey.ui.settings.theme.DynamicColorRoute
 import io.github.nodyssey.ui.settings.theme.ThemeSettingsRoute
 import io.github.nodyssey.ui.settings.theme.ThemeSettingsViewModel
 import io.github.plaza.designsys.component.rememberSilentClipboardCopy
+import kotlinx.coroutines.launch
 
 /**
  * 设置 and everything under it: appearance, notifications, network, and the 关于 pages.
@@ -129,8 +132,21 @@ internal fun EntryProviderScope<NavKey>.settingsEntries(nav: StackEntryScope) = 
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },
             onOpenChangelog = { backStack.add(ChangelogKey) },
+            onOpenHelp = { backStack.add(HelpKey) },
             onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
             onOpenUri = openExternalUrl,
+        )
+    }
+
+    entry<HelpKey> {
+        val scope = rememberCoroutineScope()
+        HelpRoute(
+            onBack = { backStack.removeLastOrNull() },
+            // Clearing the flag is the whole of "show it again": the root draws 新手引导 whenever it
+            // is false, and 使用帮助 is two screens deep in the stack it draws over. Popping to the
+            // root as well would be a second answer to the same question, and the wrong one — the
+            // guide is over in four taps and Back should land where it was opened from.
+            onReplayGuide = { scope.launch { container.settingsRepository.setOnboardingSeen(false) } },
         )
     }
 

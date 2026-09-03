@@ -109,6 +109,7 @@ class SettingsRepository(
                 readHistoryLimit = readHistoryLimit(preferences),
                 updateCheckOnLaunch = preferences[KEY_UPDATE_CHECK_ON_LAUNCH] ?: true,
                 updateDevChannel = preferences[KEY_UPDATE_DEV_CHANNEL] ?: devChannelDefault,
+                onboardingSeen = preferences[KEY_ONBOARDING_SEEN] ?: false,
             )
         }
 
@@ -238,6 +239,16 @@ class SettingsRepository(
 
     /** 首页翻页栏; see [UserSettings.homePageBar] for what it adds. */
     suspend fun setHomePageBar(enabled: Boolean) = edit { it[KEY_HOME_PAGE_BAR] = enabled }
+
+    /**
+     * 新手引导 — written true when the guide is finished or skipped, and false by 再看一次引导 on
+     * 使用帮助.
+     *
+     * Takes the value rather than being a one-way `markOnboardingSeen`, because the guide is worth
+     * re-reading: it is the only place that says what the blank band under a second-level title is
+     * for, and someone who skipped it on install has no other way back to that sentence.
+     */
+    suspend fun setOnboardingSeen(seen: Boolean) = edit { it[KEY_ONBOARDING_SEEN] = seen }
 
     suspend fun setUpdateCheckOnLaunch(enabled: Boolean) =
         edit { it[KEY_UPDATE_CHECK_ON_LAUNCH] = enabled }
@@ -585,6 +596,7 @@ class SettingsRepository(
         private val KEY_MESSAGE_TOOLBAR = stringPreferencesKey("message_toolbar_actions")
         private val KEY_FEED_SORT = stringPreferencesKey("feed_sort")
         private val KEY_HOME_PAGE_BAR = booleanPreferencesKey("home_page_bar")
+        private val KEY_ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
         private val KEY_HOLIDAY_THEME = booleanPreferencesKey("holiday_theme")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         private val KEY_NOTIFICATION_POLL_MINUTES = intPreferencesKey("notification_poll_minutes")
@@ -799,6 +811,20 @@ data class UserSettings(
      * simply hears nothing further until a stable release passes that number.
      */
     val updateDevChannel: Boolean = false,
+    /**
+     * Whether the 新手引导 has been shown and dismissed.
+     *
+     * The one field on this list nothing on 设置 writes: it is a record of something that happened,
+     * not a preference. It rides here anyway because what reads it is the root composable, which
+     * already collects this flow — a second store and a second `catch` for one boolean would be more
+     * moving parts than the boolean is worth.
+     *
+     * False on an upgrade as well as on a fresh install, and deliberately: the readers who take 单手
+     * 模式 for a bug and never find 站内链接 are on builds that shipped before this existed, so they
+     * are the ones the guide is for. It is four screens with a 跳过 on every one, and it is shown
+     * once.
+     */
+    val onboardingSeen: Boolean = false,
 )
 
 /**

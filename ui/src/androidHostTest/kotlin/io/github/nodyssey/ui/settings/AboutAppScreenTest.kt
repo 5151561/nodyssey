@@ -43,6 +43,7 @@ class AboutAppScreenTest {
                     onInstallUpdate = {},
                     onGrantInstallPermission = {},
                     onOpenChangelog = {},
+                    onOpenHelp = {},
                     onOpenLicenses = { openedLicenses = true },
                     onOpenUri = {},
                     onExportCrashReport = {},
@@ -75,6 +76,7 @@ class AboutAppScreenTest {
                     onInstallUpdate = {},
                     onGrantInstallPermission = {},
                     onOpenChangelog = {},
+                    onOpenHelp = {},
                     onOpenLicenses = {},
                     onOpenUri = {},
                     onExportCrashReport = {},
@@ -118,6 +120,7 @@ class AboutAppScreenTest {
                     onInstallUpdate = { installed = true },
                     onGrantInstallPermission = {},
                     onOpenChangelog = {},
+                    onOpenHelp = {},
                     onOpenLicenses = {},
                     onOpenUri = {},
                     onExportCrashReport = {},
@@ -154,6 +157,7 @@ class AboutAppScreenTest {
                     onInstallUpdate = {},
                     onGrantInstallPermission = {},
                     onOpenChangelog = {},
+                    onOpenHelp = {},
                     onOpenLicenses = {},
                     onOpenUri = {},
                     onExportCrashReport = {},
@@ -185,6 +189,7 @@ class AboutAppScreenTest {
                     onInstallUpdate = {},
                     onGrantInstallPermission = {},
                     onOpenChangelog = {},
+                    onOpenHelp = {},
                     onOpenLicenses = {},
                     onOpenUri = {},
                     onExportCrashReport = { exported = it },
@@ -203,6 +208,39 @@ class AboutAppScreenTest {
         assertTrue(cleared)
         composeRule.onNodeWithText("导出崩溃日志").assertDoesNotExist()
         composeRule.onNodeWithText("清除崩溃记录").assertDoesNotExist()
+    }
+
+    /**
+     * 使用帮助 is only reachable from here, and it is the only place in the app that says what the
+     * blank band under a second-level title is — so a row that quietly stopped being drawn would
+     * take the answer with it.
+     */
+    @Test
+    fun `app page leads to 使用帮助`() {
+        var openedHelp = false
+        composeRule.setContent {
+            PlazaTheme {
+                AboutAppScreen(
+                    state = AboutAppUiState(versionName = "9.9", versionCode = 99),
+                    onBack = {},
+                    onCheckUpdates = {},
+                    onDownloadUpdate = {},
+                    onCancelDownload = {},
+                    onInstallUpdate = {},
+                    onGrantInstallPermission = {},
+                    onOpenChangelog = {},
+                    onOpenHelp = { openedHelp = true },
+                    onOpenLicenses = {},
+                    onOpenUri = {},
+                    onExportCrashReport = {},
+                    onClearCrashReport = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("使用帮助").performScrollTo().performClick()
+
+        assertTrue(openedHelp)
     }
 
     private companion object {

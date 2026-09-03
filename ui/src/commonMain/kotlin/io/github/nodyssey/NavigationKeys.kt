@@ -91,6 +91,14 @@ data object PrivacyKey : NavKey
 @Serializable
 data object ChangelogKey : NavKey
 
+/**
+ * 使用帮助 — a child of [AboutAppKey], and where 新手引导 sends whoever wants the rest of it.
+ *
+ * Under 关于 rather than at the top of 设置 because nothing on it is a control; see `HelpScreen`.
+ */
+@Serializable
+data object HelpKey : NavKey
+
 @Serializable
 data object OpenSourceLicensesKey : NavKey
 
