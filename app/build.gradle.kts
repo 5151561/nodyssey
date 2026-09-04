@@ -217,6 +217,17 @@ dependencies {
     implementation(libs.coil.network.cache.control)
     // The site's generated default avatars are SVG served from a `.png` path.
     implementation(libs.coil.svg)
+    /*
+     * AVIF in software, for the phones whose own decoder cannot do it.
+     *
+     * Android decodes AVIF from 12 (API 31) — where the device ships an AV1 decoder, which a run of
+     * Huawei models does not, so every AVIF in a thread is a broken image on them. This is
+     * AOMediaCodec's own libavif build: BSD-2, no transitive dependency, and its own consumer
+     * ProGuard rules for the JNI bindings. It costs 0.6–1.8MB of native code per ABI — the release
+     * APK is universal and carries all four, an install off the bundle carries one — which is why
+     * `AvifImageDecoder` only ever reaches for it after the platform has been seen to fail.
+     */
+    implementation(libs.libavif.android)
 
     /*
      * The androidx versions underneath the multiplatform pointers.
