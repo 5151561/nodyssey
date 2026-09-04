@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "channel": "stable",
-  "versionName": "1.2.16",
-  "tag": "v1.2.16",
-  "publishedOn": "2026-09-03",
-  "notes": "### 新增\n\n- 首次打开有五屏新手引导。\n- 「设置 › 关于」多了使用帮助。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.15...v1.2.16",
+  "versionName": "1.2.17",
+  "tag": "v1.2.17",
+  "publishedOn": "2026-09-04",
+  "notes": "### 修复\n\n- 折叠里的图片点开不再串成别的图。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.16...v1.2.17",
   "apk": {
-    "name": "nodyssey-v1.2.16.apk",
-    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.16/nodyssey-v1.2.16.apk",
-    "sizeBytes": 4347687,
-    "sha256": "b405cf10da25989a3de76b1b3bc1218d8c0fa3cd70750254c3edb8d60cd92733"
+    "name": "nodyssey-v1.2.17.apk",
+    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.17/nodyssey-v1.2.17.apk",
+    "sizeBytes": 4347683,
+    "sha256": "3d84c972ef246db146a7911efb2a2f10e51a998851d5a9fc645dc3bc1116c87d"
   },
-  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.16"
+  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.17"
 }

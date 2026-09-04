@@ -2,6 +2,14 @@
   "schema": 1,
   "versions": [
     {
+      "versionName": "1.2.17",
+      "tag": "v1.2.17",
+      "publishedOn": "2026-09-04",
+      "preRelease": false,
+      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.17",
+      "notes": "### 修复\n\n- 折叠里的图片点开不再串成别的图。"
+    },
+    {
       "versionName": "1.2.16",
       "tag": "v1.2.16",
       "publishedOn": "2026-09-03",
