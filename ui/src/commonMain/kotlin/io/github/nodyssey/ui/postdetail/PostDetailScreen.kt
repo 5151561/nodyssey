@@ -2206,6 +2206,13 @@ private fun List<RichNode>.imageUrls(): List<String> =
 
             is RichNode.Tabs -> node.tabs.flatMap { it.children.imageUrls() }
 
+            // A 折叠 is where a 测评 files its 三网测速 screenshots — post-910421 is three of them.
+            // Left out, every image inside one was "not in the list" and opened as page one, the
+            // same way a table cell's did before the branch above existed. Counted whether or not
+            // the fold is open: what the reader tapped has to be findable, and a viewer that paged
+            // past the images of a fold it was opened from would be counting a different post.
+            is RichNode.Fold -> node.children.imageUrls()
+
             else -> emptyList()
         }
     }

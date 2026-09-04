@@ -83,6 +83,30 @@ class PostDetailImagesTest {
         assertEquals(listOf("v4.png", "v6.png", "tabbed.png"), state.imageUrls())
     }
 
+    /**
+     * `/post-910421-1`: a 测评 whose 三网测速 screenshots all sit inside 折叠. Missing from this list,
+     * every one of them opened the viewer on the post's first tabbed image instead of itself — the
+     * fold's own six pictures could not be reached at all. Closed folds count too: the reader may
+     * open one at any time, and the list is built once for the whole thread.
+     */
+    @Test
+    fun `reaches images inside a fold`() {
+        val state =
+            PostDetailUiState(
+                body =
+                content(
+                    image("outside.png"),
+                    RichNode.Fold(
+                        title = "三网测速",
+                        children = listOf(image("telecom.png"), image("unicom.png")),
+                        open = false,
+                    ),
+                ),
+            )
+
+        assertEquals(listOf("outside.png", "telecom.png", "unicom.png"), state.imageUrls())
+    }
+
     /** A screenshot quoted by three people is one image, or the page count would lie. */
     @Test
     fun `keeps one entry per url`() {
