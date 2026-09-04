@@ -44,12 +44,25 @@ class MinifiedStartupSmokeTest {
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         context.startActivity(launch)
 
-        val drew = device.wait(Until.hasObject(By.pkg(APP).text(HOME_TAB)), STARTUP_TIMEOUT_MS)
-        if (!drew) dumpDiagnostics(device, "startup-timeout")
-        assertTrue(
+        // A fresh install draws 新手引导 over the app on its first launch, and the guide is an opaque
+        // full-screen surface: the tab bar underneath is neither on screen nor in the accessibility
+        // tree until the guide is dismissed. So the first frame this waits for is either the tab bar
+        // or the guide's 跳过, and the guide is skipped the way a user would skip it — `:smoke` shares
+        // no class with the app, so unlike `:app`'s own journeys it cannot pre-write the "seen" flag.
+        // The guide's first frame is as much proof of a survived startup as the tab bar's; skipping it
+        // then also puts the settings write and the recomposition it triggers under the R8 build.
+        val firstFrame = device.wait(Until.findObject(By.pkg(APP).text(HOME_TAB_OR_SKIP)), STARTUP_TIMEOUT_MS)
+        if (firstFrame == null) dumpDiagnostics(device, "startup-timeout")
+        assertNotNull(
             "the app did not draw its bottom navigation within ${STARTUP_TIMEOUT_MS / 1000}s of launch",
-            drew,
+            firstFrame,
         )
+        if (SKIP_GUIDE.matcher(firstFrame.text).matches()) {
+            firstFrame.click()
+            val drew = device.wait(Until.hasObject(By.pkg(APP).text(HOME_TAB)), UI_TIMEOUT_MS)
+            if (!drew) dumpDiagnostics(device, "guide-skip-timeout")
+            assertTrue("the app did not draw its bottom navigation after 新手引导 was skipped", drew)
+        }
 
         val search = device.wait(Until.findObject(By.pkg(APP).text(SEARCH_TAB)), UI_TIMEOUT_MS)
         assertNotNull("the 搜索 tab is missing from the bottom navigation", search)
@@ -103,6 +116,8 @@ class MinifiedStartupSmokeTest {
 
         /** One label per language the app ships: 简体中文, 繁體中文, English. */
         val HOME_TAB: Pattern = Pattern.compile("首页|首頁|Home")
+        val SKIP_GUIDE: Pattern = Pattern.compile("跳过|略過|Skip")
+        val HOME_TAB_OR_SKIP: Pattern = Pattern.compile("${HOME_TAB.pattern()}|${SKIP_GUIDE.pattern()}")
         val SEARCH_TAB: Pattern = Pattern.compile("搜索|搜尋|Search")
         val BOARD_SECTION: Pattern = Pattern.compile("版块|版塊|Board")
     }

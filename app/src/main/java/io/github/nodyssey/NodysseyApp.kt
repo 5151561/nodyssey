@@ -22,6 +22,7 @@ import io.github.nodyssey.data.offline.OfflineImageInterceptor
 import io.github.nodyssey.data.offline.OfflineWork
 import io.github.nodyssey.di.AndroidAppContainer
 import io.github.nodyssey.di.DefaultAppContainer
+import io.github.nodyssey.image.AvifImageDecoder
 import io.github.nodyssey.image.ImageCallRouter
 import io.github.nodyssey.image.ImageNetworkPolicyInterceptor
 import io.github.nodyssey.notifications.NotificationChannels
@@ -210,6 +211,13 @@ open class NodysseyApp :
                 // [CompatSvgParser] rather than the stock parser: the 测评 reports are SVG too, and
                 // they use CSS units and text properties the underlying AndroidSVG never implemented.
                 add(SvgDecoder.Factory(parser = CompatSvgParser()))
+                // AVIF on the phones that cannot decode it themselves — a run of Huawei models ship
+                // no AV1 decoder, and every AVIF attachment on them is 图片加载失败 and nothing else.
+                // Ahead of the decoders below and of Coil's own because a factory only gets its turn
+                // before the ones added after it; it declines every image the platform can handle,
+                // including every AVIF once the platform has been seen decoding one. See
+                // [AvifImageDecoder] for how that is decided.
+                add(AvifImageDecoder.Factory())
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     add(AnimatedImageDecoder.Factory())
                 } else {
