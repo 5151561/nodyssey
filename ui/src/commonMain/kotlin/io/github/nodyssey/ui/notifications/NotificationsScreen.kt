@@ -65,12 +65,6 @@ import io.github.nodyssey.ui.common.SignedOutState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_retry
-import io.github.nodyssey.ui.resources.notification_preview_code
-import io.github.nodyssey.ui.resources.notification_preview_image
-import io.github.nodyssey.ui.resources.notification_preview_payment
-import io.github.nodyssey.ui.resources.notification_preview_sticker
-import io.github.nodyssey.ui.resources.notification_preview_table
-import io.github.nodyssey.ui.resources.notification_preview_vote
 import io.github.nodyssey.ui.resources.notification_sentence_mention
 import io.github.nodyssey.ui.resources.notification_sentence_reply
 import io.github.nodyssey.ui.resources.notification_sentence_reply_mention
@@ -384,7 +378,7 @@ private fun NotificationRow(
             // somebody wrote something, and until this line was here the only way to find out what
             // was to open the thread — which, for the half of them that are a 谢谢老哥, is a page
             // load to learn nothing.
-            notificationPreview(item.preview)?.let { preview ->
+            previewText(item.preview)?.let { preview ->
                 Text(
                     text = preview,
                     style = MaterialTheme.typography.bodyMedium,
@@ -418,7 +412,9 @@ private fun notificationSentence(item: ForumNotification): AnnotatedString {
                 // A reply that opens with `@name #7` is both, and saying only one of them would be
                 // the merge showing through as a half-truth.
                 item.isReply && item.isMention -> Res.string.notification_sentence_reply_mention
+
                 item.isReply -> Res.string.notification_sentence_reply
+
                 else -> Res.string.notification_sentence_mention
             },
         )
@@ -438,42 +434,6 @@ private fun notificationSentence(item: ForumNotification): AnnotatedString {
         append(template.substring(cursor))
     }
 }
-
-/**
- * The comment itself, with the pictures named rather than drawn.
- *
- * The placeholders are strings rather than the pictures they stand for on purpose: a row that draws
- * a sticker is a row of a different height, and a list whose rows change height as their images
- * arrive is a list that moves under the thumb. `[图片]` also survives being read aloud, which an
- * `<img>` in a list row does not.
- */
-@Composable
-private fun notificationPreview(parts: List<PreviewPart>): String? {
-    if (parts.isEmpty()) return null
-    // Read before the loop rather than inside it: `stringResource` is a composable call and the
-    // loop's body is not a composable scope, and a comment carrying five stickers would otherwise
-    // read the same string five times.
-    val labels = placeholderLabels()
-    return buildString {
-        parts.forEach { part ->
-            when (part) {
-                is PreviewPart.Text -> append(part.text)
-                is PreviewPart.Placeholder -> append(labels.getValue(part.kind))
-            }
-        }
-    }.ifBlank { null }
-}
-
-@Composable
-private fun placeholderLabels(): Map<PreviewPlaceholder, String> =
-    mapOf(
-        PreviewPlaceholder.IMAGE to stringResource(Res.string.notification_preview_image),
-        PreviewPlaceholder.STICKER to stringResource(Res.string.notification_preview_sticker),
-        PreviewPlaceholder.CODE to stringResource(Res.string.notification_preview_code),
-        PreviewPlaceholder.TABLE to stringResource(Res.string.notification_preview_table),
-        PreviewPlaceholder.VOTE to stringResource(Res.string.notification_preview_vote),
-        PreviewPlaceholder.PAYMENT to stringResource(Res.string.notification_preview_payment),
-    )
 
 /** `26 分钟前 · 2026/7/26 09:56:03`, or the server's own wording when it sent no parsable time. */
 @Composable

@@ -27,9 +27,8 @@ import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
-import io.github.nodyssey.ui.resources.notifications_mentions
+import io.github.nodyssey.ui.resources.notifications_interactions
 import io.github.nodyssey.ui.resources.notifications_messages
-import io.github.nodyssey.ui.resources.notifications_replies
 import io.github.nodyssey.ui.resources.notify_channels_section
 import io.github.nodyssey.ui.resources.notify_frequency
 import io.github.nodyssey.ui.resources.notify_frequency_15
@@ -73,8 +72,7 @@ fun NotificationSettingsRoute(
         onPollMinutesChange = viewModel::setPollMinutes,
         onWifiOnlyChange = viewModel::setWifiOnly,
         onQuietHoursChange = viewModel::setQuietHours,
-        onNotifyMentionsChange = viewModel::setNotifyMentions,
-        onNotifyRepliesChange = viewModel::setNotifyReplies,
+        onNotifyInteractionsChange = viewModel::setNotifyInteractions,
         onNotifyMessagesChange = viewModel::setNotifyMessages,
         onOpenTelegram = onOpenTelegram,
         modifier = modifier,
@@ -90,8 +88,7 @@ fun NotificationSettingsScreen(
     onPollMinutesChange: (Int) -> Unit,
     onWifiOnlyChange: (Boolean) -> Unit,
     onQuietHoursChange: (Boolean) -> Unit,
-    onNotifyMentionsChange: (Boolean) -> Unit,
-    onNotifyRepliesChange: (Boolean) -> Unit,
+    onNotifyInteractionsChange: (Boolean) -> Unit,
     onNotifyMessagesChange: (Boolean) -> Unit,
     onOpenTelegram: () -> Unit,
     modifier: Modifier = Modifier,
@@ -204,30 +201,18 @@ fun NotificationSettingsScreen(
 
                 SettingsSectionTitle(stringResource(Res.string.notify_channels_section))
                 SettingsGroup {
+                    // One row for the two site groups, because one comment is filed under both and
+                    // the app posts one notification for it — see `NotificationChannels`.
                     SettingsRow(
-                        title = stringResource(Res.string.notifications_mentions),
+                        title = stringResource(Res.string.notifications_interactions),
                         top = true,
-                        leading = { Icon(PlazaIcons.AlternateEmail, contentDescription = null) },
-                        checked = settings.notifyMentions,
-                        onCheckedChange = onNotifyMentionsChange,
-                        enabled = enabled,
-                        trailing = {
-                            Switch(
-                                checked = settings.notifyMentions,
-                                onCheckedChange = null,
-                                enabled = enabled,
-                            )
-                        },
-                    )
-                    SettingsRow(
-                        title = stringResource(Res.string.notifications_replies),
                         leading = { Icon(PlazaIcons.ChatBubble, contentDescription = null) },
-                        checked = settings.notifyReplies,
-                        onCheckedChange = onNotifyRepliesChange,
+                        checked = settings.notifyInteractions,
+                        onCheckedChange = onNotifyInteractionsChange,
                         enabled = enabled,
                         trailing = {
                             Switch(
-                                checked = settings.notifyReplies,
+                                checked = settings.notifyInteractions,
                                 onCheckedChange = null,
                                 enabled = enabled,
                             )
@@ -285,8 +270,7 @@ private fun NotificationSettingsPreview() {
             onPollMinutesChange = {},
             onWifiOnlyChange = {},
             onQuietHoursChange = {},
-            onNotifyMentionsChange = {},
-            onNotifyRepliesChange = {},
+            onNotifyInteractionsChange = {},
             onNotifyMessagesChange = {},
             onOpenTelegram = {},
         )

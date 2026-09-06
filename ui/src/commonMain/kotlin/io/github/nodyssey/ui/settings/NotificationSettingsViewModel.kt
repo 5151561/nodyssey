@@ -44,12 +44,8 @@ class NotificationSettingsViewModel(
         viewModelScope.launch { settings.setNotificationQuietHours(value) }
     }
 
-    fun setNotifyMentions(value: Boolean) {
-        viewModelScope.launch { settings.setNotifyMentions(value) }
-    }
-
-    fun setNotifyReplies(value: Boolean) {
-        viewModelScope.launch { settings.setNotifyReplies(value) }
+    fun setNotifyInteractions(value: Boolean) {
+        viewModelScope.launch { settings.setNotifyInteractions(value) }
     }
 
     fun setNotifyMessages(value: Boolean) {

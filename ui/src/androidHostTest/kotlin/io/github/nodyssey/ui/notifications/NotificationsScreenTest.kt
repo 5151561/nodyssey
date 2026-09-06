@@ -20,6 +20,7 @@ import io.github.nodyssey.data.NotificationSource
 import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.data.PreviewPart
 import io.github.nodyssey.data.PreviewPlaceholder
+import io.github.nodyssey.data.contentPreview
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -160,6 +161,23 @@ class NotificationsScreenTest {
         composeRule.onNodeWithText("您的评论被用户iwil投喂鸡腿").assertIsDisplayed()
     }
 
+    /** A picture in a private message is named, for the same reason it is in a notification row. */
+    @Test
+    fun `a conversation whose last message is a picture says so`() {
+        setContent(
+            state(
+                tab = NotificationTab.MESSAGES,
+                conversations =
+                listOf(
+                    conversation(uid = 7, name = "老哥", stamp = NOW)
+                        .copy(snippet = contentPreview("![](https://img.example/1.png) 看这个")),
+                ),
+            ),
+        )
+
+        composeRule.onNodeWithText("[图片] 看这个").assertIsDisplayed()
+    }
+
     /**
      * Tapping 通知 while already on 通知 is the same "back to the top" the 首页 tab answers, and the
      * screen hears about it as a counter rather than a call — see the note on it in `Navigation`.
@@ -277,7 +295,7 @@ class NotificationsScreenTest {
         uid = uid,
         userName = name,
         avatarUrl = null,
-        snippet = "摘要",
+        snippet = contentPreview("摘要"),
         isSnippetMine = false,
         updatedAtMillis = stamp,
         updatedAtText = null,
@@ -290,7 +308,7 @@ class NotificationsScreenTest {
             uid = 1,
             userName = MessageConversation.SYSTEM_NAME,
             avatarUrl = null,
-            snippet = "您的[评论](/post-1-1)被用户[iwil](/space/4471)投喂鸡腿",
+            snippet = contentPreview("您的[评论](/post-1-1)被用户[iwil](/space/4471)投喂鸡腿"),
             isSnippetMine = false,
             updatedAtMillis = NOW - 70 * 60_000L,
             updatedAtText = null,

@@ -35,17 +35,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
+import io.github.nodyssey.data.contentPreview
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.common.siteErrorRecovery
@@ -59,9 +56,6 @@ import io.github.nodyssey.ui.resources.messages_pinned
 import io.github.nodyssey.ui.resources.messages_snippet_mine_prefix
 import io.github.nodyssey.ui.resources.unread_count_capped
 import io.github.plaza.core.TimeFormat
-import io.github.plaza.core.richtext.InlineNode
-import io.github.plaza.core.richtext.RichNode
-import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
@@ -75,8 +69,7 @@ import org.jetbrains.compose.resources.stringResource
  * Board 7e — the 私信 group of the notification tab.
  *
  * 系统通知 is pinned at the top by [io.github.nodyssey.data.NetworkMessageRepository]; it is an
- * ordinary conversation whose messages happen to be Markdown, which is why its snippet renders as
- * styled text while everyone else's is plain.
+ * ordinary conversation, drawn without an avatar because it has no member behind it.
  */
 @Composable
 internal fun ConversationList(
@@ -270,37 +263,17 @@ private fun conversationStamp(
         ?: conversation.updatedAtText
 
 /**
- * The snippet, with the system conversation's Markdown links picked out in the brand colour.
+ * The last message as one line: the Markdown flattened away, the pictures named — see [previewText].
  *
- * Only the link text survives — the row has one line, and the target is whatever the conversation
- * opens onto anyway.
+ * Only the words survive. Links keep their text and lose their target, which is the one the
+ * conversation opens onto anyway; the system conversation, which is all links, reads as the
+ * sentence it was written as instead of as its own markup.
  */
 @Composable
-private fun conversationSnippet(conversation: MessageConversation): AnnotatedString {
-    val emphasis = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-    val body =
-        if (conversation.isSystem) {
-            buildAnnotatedString {
-                parseMarkdown(conversation.snippet)
-                    .filterIsInstance<RichNode.Paragraph>()
-                    .flatMap(RichNode.Paragraph::inlines)
-                    .forEach { inline ->
-                        when (inline) {
-                            is InlineNode.Text -> append(inline.text)
-                            is InlineNode.Link -> withStyle(emphasis) { append(inline.text) }
-                            else -> Unit
-                        }
-                    }
-            }
-        } else {
-            AnnotatedString(conversation.snippet)
-        }
+private fun conversationSnippet(conversation: MessageConversation): String {
+    val body = previewText(conversation.snippet).orEmpty()
     if (!conversation.isSnippetMine) return body
-    val prefix = stringResource(Res.string.messages_snippet_mine_prefix)
-    return buildAnnotatedString {
-        append(prefix)
-        append(body)
-    }
+    return stringResource(Res.string.messages_snippet_mine_prefix) + body
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -430,7 +403,7 @@ private fun ConversationListPreview() {
                         uid = 1,
                         userName = MessageConversation.SYSTEM_NAME,
                         avatarUrl = null,
-                        snippet = "您的[评论](/post-1-1)被用户[iwil](/space/4471)投喂鸡腿",
+                        snippet = contentPreview("您的[评论](/post-1-1)被用户[iwil](/space/4471)投喂鸡腿"),
                         isSnippetMine = false,
                         updatedAtMillis = PREVIEW_NOW - 70 * 60_000L,
                         updatedAtText = null,
@@ -441,7 +414,7 @@ private fun ConversationListPreview() {
                         uid = 2,
                         userName = "nssk",
                         avatarUrl = null,
-                        snippet = "改名的事我问过管理，说要等 UID 显示上线",
+                        snippet = contentPreview("改名的事我问过管理，说要等 UID 显示上线"),
                         isSnippetMine = false,
                         updatedAtMillis = PREVIEW_NOW - 4 * 60_000L,
                         updatedAtText = null,
@@ -452,7 +425,7 @@ private fun ConversationListPreview() {
                         uid = 3,
                         userName = "demain",
                         avatarUrl = null,
-                        snippet = "好的，我先转账，晚点把 push 链接发我",
+                        snippet = contentPreview("好的，我先转账，晚点把 push 链接发我"),
                         isSnippetMine = true,
                         updatedAtMillis = PREVIEW_NOW - 26 * 60 * 60_000L,
                         updatedAtText = null,

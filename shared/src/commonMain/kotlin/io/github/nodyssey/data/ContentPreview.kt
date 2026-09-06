@@ -118,15 +118,25 @@ private class PreviewBuilder(
             if (full) return
             when (node) {
                 is RichNode.Paragraph -> appendInlines(node.inlines)
+
                 is RichNode.Heading -> appendInlines(node.inlines)
+
                 is RichNode.BlockImage -> placeholder(node.url.pictureKind())
+
                 is RichNode.CodeBlock -> placeholder(PreviewPlaceholder.CODE)
+
                 is RichNode.Table -> placeholder(PreviewPlaceholder.TABLE)
+
                 is RichNode.VotePlaceholder -> placeholder(PreviewPlaceholder.VOTE)
+
                 is RichNode.StardustReceive -> placeholder(PreviewPlaceholder.PAYMENT)
+
                 is RichNode.Quote -> appendBlocks(node.children)
+
                 is RichNode.ListBlock -> node.items.forEach(::appendBlocks)
+
                 is RichNode.Tabs -> node.tabs.forEach { appendBlocks(it.children) }
+
                 is RichNode.Fold -> {
                     text(node.title)
                     appendBlocks(node.children)
@@ -167,7 +177,11 @@ private class PreviewBuilder(
         used += collapsed.length
         if (used >= limit) full = true
         if (last is PreviewPart.Text) {
-            parts[parts.lastIndex] = PreviewPart.Text(last.text + kept)
+            // One space at a join, never two: a block that follows a placeholder contributes the
+            // separator above *and* whatever space its own text starts with, and `[图片]  看这个`
+            // reads as a missing word rather than as a gap between two runs.
+            parts[parts.lastIndex] =
+                PreviewPart.Text(last.text + if (last.text.endsWith(' ')) kept.trimStart(' ') else kept)
         } else {
             parts += PreviewPart.Text(kept)
         }

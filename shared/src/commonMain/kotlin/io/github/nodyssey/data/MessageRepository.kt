@@ -20,14 +20,20 @@ import kotlinx.serialization.json.put
  * One row of board 7e's conversation list.
  *
  * [isSystem] is the pinned 系统通知 conversation. It is an ordinary conversation on the site — there
- * is no separate system notification group — but its messages arrive as Markdown, so the row renders
- * the snippet as inline rich text rather than plain characters.
+ * is no separate system notification group — it is only pinned, and drawn without an avatar.
  */
 data class MessageConversation(
     val uid: Long,
     val userName: String,
     val avatarUrl: String?,
-    val snippet: String,
+    /**
+     * The last message, flattened to the one line a row can show — see [contentPreview].
+     *
+     * Private messages are Markdown, the system conversation's most of all, and the row used to
+     * print that Markdown as written: an image arrived as `![](https://…png)` and a link as its
+     * whole target. The same flattening the notification rows use answers all of it.
+     */
+    val snippet: List<PreviewPart>,
     /** The last message is ours, which the design shows as a `你：` prefix. */
     val isSnippetMine: Boolean,
     val updatedAtMillis: Long?,
@@ -249,7 +255,7 @@ class NetworkMessageRepository(
             uid = uid,
             userName = name,
             avatarUrl = if (isSystem) null else NodeSeekSite.avatarUrl(uid),
-            snippet = newest.content,
+            snippet = contentPreview(newest.content),
             isSnippetMine = newest.senderId != null && newest.senderId == ownUid,
             updatedAtMillis = newest.createdAtMillis,
             updatedAtText = newest.createdAtText,

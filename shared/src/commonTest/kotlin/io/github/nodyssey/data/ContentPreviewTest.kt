@@ -114,6 +114,26 @@ class ContentPreviewTest {
         )
     }
 
+    /**
+     * One space at a join, never two.
+     *
+     * A picture on its own line is a block, so the separator between blocks and the space the next
+     * block's own text begins with both land after the placeholder — and `[图片]  看这个` reads as a
+     * word that failed to render rather than as a gap.
+     */
+    @Test
+    fun `leaves one space between a placeholder and what follows it`() {
+        val parts = contentPreview("![](https://img.example.com/1.png) 看这个")
+
+        assertEquals(
+            listOf(
+                PreviewPart.Placeholder(PreviewPlaceholder.IMAGE),
+                PreviewPart.Text(" 看这个"),
+            ),
+            parts,
+        )
+    }
+
     /** A wall of text is cut where the row could not have shown more of it anyway. */
     @Test
     fun `stops at the limit and says so`() {

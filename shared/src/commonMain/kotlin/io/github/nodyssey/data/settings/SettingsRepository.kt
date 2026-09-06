@@ -103,8 +103,12 @@ class SettingsRepository(
                     .let { minutes -> if (minutes in POLL_MINUTE_CHOICES) minutes else DEFAULT_POLL_MINUTES },
                 notificationsWifiOnly = preferences[KEY_NOTIFICATIONS_WIFI_ONLY] ?: false,
                 notificationQuietHours = preferences[KEY_NOTIFICATION_QUIET_HOURS] ?: true,
-                notifyMentions = preferences[KEY_NOTIFY_MENTIONS] ?: true,
-                notifyReplies = preferences[KEY_NOTIFY_REPLIES] ?: true,
+                notifyInteractions =
+                preferences[KEY_NOTIFY_INTERACTIONS]
+                    // The two switches this one replaces, for a device that has them: either one on
+                    // means the reader wanted to hear about 互动. Read rather than rewritten, so the
+                    // migration costs nothing and an older build finds its own keys intact.
+                    ?: ((preferences[KEY_NOTIFY_MENTIONS] ?: true) || (preferences[KEY_NOTIFY_REPLIES] ?: true)),
                 notifyMessages = preferences[KEY_NOTIFY_MESSAGES] ?: true,
                 readHistoryLimit = readHistoryLimit(preferences),
                 updateCheckOnLaunch = preferences[KEY_UPDATE_CHECK_ON_LAUNCH] ?: true,
@@ -272,9 +276,8 @@ class SettingsRepository(
     suspend fun setNotificationQuietHours(enabled: Boolean) =
         edit { it[KEY_NOTIFICATION_QUIET_HOURS] = enabled }
 
-    suspend fun setNotifyMentions(enabled: Boolean) = edit { it[KEY_NOTIFY_MENTIONS] = enabled }
-
-    suspend fun setNotifyReplies(enabled: Boolean) = edit { it[KEY_NOTIFY_REPLIES] = enabled }
+    suspend fun setNotifyInteractions(enabled: Boolean) =
+        edit { it[KEY_NOTIFY_INTERACTIONS] = enabled }
 
     suspend fun setNotifyMessages(enabled: Boolean) = edit { it[KEY_NOTIFY_MESSAGES] = enabled }
 
@@ -434,6 +437,7 @@ class SettingsRepository(
             replies = preferences[KEY_SEEN_REPLIES] ?: 0,
             mentions = preferences[KEY_SEEN_MENTIONS] ?: 0,
             messages = preferences[KEY_SEEN_MESSAGES] ?: 0,
+            overlap = preferences[KEY_SEEN_OVERLAP] ?: 0,
         )
     }
 
@@ -442,6 +446,10 @@ class SettingsRepository(
             it[KEY_SEEN_REPLIES] = counts.replies
             it[KEY_SEEN_MENTIONS] = counts.mentions
             it[KEY_SEEN_MESSAGES] = counts.messages
+            // Stored with the rest because the worker compares 互动 totals, and that total is
+            // `replies + mentions - overlap`: keeping the two group numbers without the number of
+            // pairs among them would make the next run read a merge as an arrival.
+            it[KEY_SEEN_OVERLAP] = counts.overlap
         }
 
     /**
@@ -602,12 +610,16 @@ class SettingsRepository(
         private val KEY_NOTIFICATION_POLL_MINUTES = intPreferencesKey("notification_poll_minutes")
         private val KEY_NOTIFICATIONS_WIFI_ONLY = booleanPreferencesKey("notifications_wifi_only")
         private val KEY_NOTIFICATION_QUIET_HOURS = booleanPreferencesKey("notification_quiet_hours")
+        private val KEY_NOTIFY_INTERACTIONS = booleanPreferencesKey("notify_interactions")
+
+        // Written by no build any more, read only to migrate: see `notifyInteractions` above.
         private val KEY_NOTIFY_MENTIONS = booleanPreferencesKey("notify_mentions")
         private val KEY_NOTIFY_REPLIES = booleanPreferencesKey("notify_replies")
         private val KEY_NOTIFY_MESSAGES = booleanPreferencesKey("notify_messages")
         private val KEY_SEEN_REPLIES = intPreferencesKey("notification_seen_replies")
         private val KEY_SEEN_MENTIONS = intPreferencesKey("notification_seen_mentions")
         private val KEY_SEEN_MESSAGES = intPreferencesKey("notification_seen_messages")
+        private val KEY_SEEN_OVERLAP = intPreferencesKey("notification_seen_overlap")
         private val KEY_READ_HISTORY_LIMIT = intPreferencesKey("read_history_limit")
         private val KEY_UPDATE_CHECKED_AT = longPreferencesKey("update_checked_at")
         private val KEY_UPDATE_RELEASE = stringPreferencesKey("update_latest_release")
@@ -787,8 +799,14 @@ data class UserSettings(
     val notificationsWifiOnly: Boolean = false,
     /** Fixed 23:00–07:00 window (board f4): the worker still fetches, but posts nothing. */
     val notificationQuietHours: Boolean = true,
-    val notifyMentions: Boolean = true,
-    val notifyReplies: Boolean = true,
+    /**
+     * 回复与@我, one switch for the one list the screen shows — see `NotificationTab`.
+     *
+     * It used to be two, one per site group, and the site files the same comment under both: a reply
+     * that opens with `@name #7` raised a notification from each, for one thing to read. Splitting
+     * the switch could not fix that; only one posted notification per comment can.
+     */
+    val notifyInteractions: Boolean = true,
     val notifyMessages: Boolean = true,
     /** 浏览历史保留条数; [SettingsRepository.READ_HISTORY_UNLIMITED] for 无上限. */
     val readHistoryLimit: Int = SettingsRepository.DEFAULT_READ_HISTORY_LIMIT,
