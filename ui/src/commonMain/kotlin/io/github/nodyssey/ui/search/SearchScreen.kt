@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
@@ -95,6 +96,7 @@ import io.github.nodyssey.ui.postlist.FeedRowPlaceholder
 import io.github.nodyssey.ui.postlist.PostRow
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.action_sort
 import io.github.nodyssey.ui.resources.search_all_boards
@@ -142,6 +144,7 @@ fun SearchRoute(
     viewModel: SearchViewModel,
     onPostClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
+    onBack: () -> Unit,
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -162,6 +165,7 @@ fun SearchRoute(
         onSortChange = viewModel::selectSort,
         onPostClick = onPostClick,
         onUserClick = onUserClick,
+        onBack = onBack,
         onRetry = viewModel::retryUsers,
         onSignIn = onSignIn,
         onVerify = { onVerify(viewModel.challengeUrl()) },
@@ -195,6 +199,14 @@ fun SearchScreen(
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Leaves 搜索 for whatever it was opened from — 首页, in every case the app can reach today.
+     *
+     * The arrow is inside the input field rather than in an app bar of its own: this screen has no
+     * bar, and giving it one to hold a single arrow would push the field, the tabs and the scope row
+     * another 64dp down the screen for no other gain.
+     */
+    onBack: (() -> Unit)? = null,
     postResults: LazyPagingItems<FeedPost>? = null,
     onBoardChange: (String?) -> Unit = {},
     onSortChange: (FeedSort) -> Unit = {},
@@ -249,6 +261,7 @@ fun SearchScreen(
                 SearchInputField(
                     queryState = queryState,
                     placeholder = searchPlaceholder(state),
+                    onBack = onBack,
                     // Arriving with nothing searched yet means arriving to type; arriving back on a
                     // result list does not, and a keyboard over the results would only hide them.
                     autoFocus = state.submittedQuery == null,
@@ -352,6 +365,7 @@ private fun SearchInputField(
     placeholder: String,
     autoFocus: Boolean,
     onSearch: () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
@@ -372,6 +386,17 @@ private fun SearchInputField(
             .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
             .focusRequester(focusRequester),
         placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingIcon =
+        onBack?.let {
+            {
+                IconButton(onClick = it) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(Res.string.action_back),
+                    )
+                }
+            }
+        },
         // The field's own container is transparent by default because a search bar paints it from
         // the outside. Standing on its own, it has to paint itself — same token the bar would use.
         colors =
