@@ -22,7 +22,7 @@
     tools:locale="zh">
     <!-- A name, so it reads the same in every language and has nothing to translate. -->
     <string name="app_name" translatable="false">Nodyssey</string>
-    <string name="notifications_interactions">回复与@我</string>
+    <string name="notifications_interactions">互动</string>
     <string name="notifications_messages">私信</string>
     <!--
       Plurals rather than plain strings because English needs two forms of each and Chinese needs

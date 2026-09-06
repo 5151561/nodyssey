@@ -203,7 +203,7 @@
     <string name="notifications_mentions">Mentions</string>
     <string name="notifications_replies">Thread replies</string>
     <string name="notifications_messages">Messages</string>
-    <string name="notifications_interactions">Replies &amp; mentions</string>
+    <string name="notifications_interactions">Interactions</string>
     <string name="notifications_empty">Nothing here for now</string>
     <string name="notification_sentence_mention">%1$s mentioned you in %2$s</string>
     <string name="notification_sentence_reply">%1$s replied to %2$s</string>

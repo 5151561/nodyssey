@@ -234,7 +234,7 @@
     <string name="notifications_replies">回复主题</string>
     <string name="notifications_messages">私信</string>
     <!-- The chip over the merged list: 回复 and @我 are one tab in the App -->
-    <string name="notifications_interactions">回复与@我</string>
+    <string name="notifications_interactions">互动</string>
     <string name="notifications_empty">这里暂时没有通知</string>
     <string name="notification_sentence_mention">%1$s 在帖子 %2$s 中@了我</string>
     <string name="notification_sentence_reply">%1$s 回复了帖子 %2$s</string>

@@ -800,7 +800,7 @@ data class UserSettings(
     /** Fixed 23:00–07:00 window (board f4): the worker still fetches, but posts nothing. */
     val notificationQuietHours: Boolean = true,
     /**
-     * 回复与@我, one switch for the one list the screen shows — see `NotificationTab`.
+     * 互动, one switch for the one list the screen shows — see `NotificationTab`.
      *
      * It used to be two, one per site group, and the site files the same comment under both: a reply
      * that opens with `@name #7` raised a notification from each, for one thing to read. Splitting

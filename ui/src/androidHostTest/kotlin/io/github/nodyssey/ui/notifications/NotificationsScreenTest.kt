@@ -47,7 +47,7 @@ class NotificationsScreenTest {
     fun `offers the merged notification chip and 私信`() {
         setContent(state(items = listOf(mention())))
 
-        composeRule.onNodeWithText("回复与@我").assertIsDisplayed()
+        composeRule.onNodeWithText("互动").assertIsDisplayed()
         composeRule.onNodeWithText("私信").assertIsDisplayed()
         assertEquals(0, composeRule.onAllNodesWithText("回复主题").fetchSemanticsNodes().size)
         assertEquals(0, composeRule.onAllNodesWithText("系统").fetchSemanticsNodes().size)

@@ -9,7 +9,7 @@
   the reader's words for the two things the app notifies about — not the site's own labels.
 -->
 <resources>
-    <string name="notifications_interactions">Replies &amp; mentions</string>
+    <string name="notifications_interactions">Interactions</string>
     <string name="notifications_messages">Direct messages</string>
     <plurals name="notify_body_interactions">
         <item quantity="one">%1$d new interaction</item>

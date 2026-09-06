@@ -10,7 +10,7 @@
   of them is asked. See `AndroidAppLanguage`.
 -->
 <resources>
-    <string name="notifications_interactions">回覆與@我</string>
+    <string name="notifications_interactions">互動</string>
     <string name="notifications_messages">私訊</string>
     <plurals name="notify_body_interactions">
         <item quantity="other">%1$d 則新互動</item>
