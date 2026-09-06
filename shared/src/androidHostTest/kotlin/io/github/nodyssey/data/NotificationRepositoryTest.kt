@@ -111,7 +111,9 @@ class NotificationRepositoryTest {
             val source = FakeJsonSource(mapOf(UNREAD_COUNT to """{"reply":0,"atMe":1}"""))
             val repository = NotificationRepository(source)
 
-            repository.markViewed(NotificationCategory.MENTIONS, listOf(42L))
+            repository.markViewed(
+                listOf(NotificationSource(NotificationCategory.MENTIONS, viewedId = 42L, isUnread = true)),
+            )
 
             assertEquals(listOf("/api/notification/at-me/markViewed"), source.postedPaths)
             assertEquals(listOf("""{"atMe":[42]}"""), source.postedBodies)
@@ -139,7 +141,110 @@ class NotificationRepositoryTest {
             val item = NotificationRepository(source).notifications(NotificationCategory.REPLIES).single()
 
             assertEquals("42", item.id)
-            assertEquals(7L, item.viewedId)
+            assertEquals(42L, item.commentId)
+            assertEquals(7L, item.sources.single().viewedId)
+        }
+
+    /**
+     * The merge: one comment, both groups, one row that clears both.
+     *
+     * This is what the 通知 tab is: the site's 回复 button writes `@name #7` into every reply it
+     * sends, so the same comment raises a row in each list and reading them separately means reading
+     * it twice.
+     */
+    @Test
+    fun `a comment in both groups becomes one row carrying both`() =
+        runTest {
+            val source =
+                FakeJsonSource(
+                    mapOf(
+                        REPLY_LIST to
+                            """{"replyList":[{"id":7,"comment_id":42,"post_id":1,"floor_id":3,
+                               "content":"还没有这个功能","created_at":"2026-07-26 09:56:03","viewed":0}]}""",
+                        AT_LIST to
+                            """{"atList":[{"id":1,"comment_id":42,"post_id":1,
+                               "created_at":"2026-07-26 09:56:03","viewed":0}]}""",
+                        UNREAD_COUNT to """{"reply":1,"atMe":1}""",
+                    ),
+                )
+            val repository = NotificationRepository(source)
+            repository.refreshCounts()
+
+            val item = repository.interactions().single()
+
+            assertEquals("42", item.id)
+            assertTrue(item.isReply)
+            assertTrue(item.isMention)
+            // The reply row is the one kept, so the floor — and therefore the tap target — survives.
+            assertEquals("#3", item.floor)
+            assertEquals(
+                listOf(7L, 1L),
+                item.sources.map { it.viewedId },
+            )
+            // Two unread rows, one thing to read: the badge counts the row, not the rows.
+            assertEquals(1, repository.counts.value.interactions)
+        }
+
+    /** Two different comments are two rows, however alike the endpoints' own row ids happen to be. */
+    @Test
+    fun `rows naming different comments stay apart`() =
+        runTest {
+            val source =
+                FakeJsonSource(
+                    mapOf(
+                        REPLY_LIST to
+                            """{"replyList":[{"id":1,"comment_id":42,"post_id":1,
+                               "created_at":"2026-07-26 09:56:03"}]}""",
+                        AT_LIST to
+                            """{"atList":[{"id":1,"comment_id":43,"post_id":1,
+                               "created_at":"2026-07-26 10:56:03"}]}""",
+                    ),
+                )
+
+            val items = NotificationRepository(source).interactions()
+
+            assertEquals(listOf("43", "42"), items.map { it.id })
+        }
+
+    /** A row that names no comment cannot be identified, so it is shown rather than folded blind. */
+    @Test
+    fun `rows with nothing to identify them are left alone`() =
+        runTest {
+            val source =
+                FakeJsonSource(
+                    mapOf(
+                        REPLY_LIST to """{"replyList":[{"id":1,"post_id":1}]}""",
+                        AT_LIST to """{"atList":[{"id":1,"post_id":1}]}""",
+                    ),
+                )
+
+            val items = NotificationRepository(source).interactions()
+
+            assertEquals(2, items.size)
+            // …and their display keys still differ, or the list they share would collide on them.
+            assertEquals(2, items.map { it.id }.toSet().size)
+        }
+
+    /** The comment itself, which is what the row shows instead of sending the reader to the thread. */
+    @Test
+    fun `flattens the comment into the row's preview`() =
+        runTest {
+            val source =
+                FakeJsonSource(
+                    mapOf(
+                        AT_LIST to
+                            """{"atList":[{"id":1,"content":"@me [#3](/post-1-1#3) 收到 ![](/static/image/sticker/ac/01.png)"}]}""",
+                    ),
+                )
+
+            val item = NotificationRepository(source).notifications(NotificationCategory.MENTIONS).single()
+
+            assertEquals(
+                // The address the 回复 button wrote is gone, the sticker is named, and the space
+                // before it is the one the writer typed.
+                listOf(PreviewPart.Text("收到 "), PreviewPart.Placeholder(PreviewPlaceholder.STICKER)),
+                item.preview,
+            )
         }
 
     /** The badge has to move in the same frame as the row, not a round trip later. */
@@ -169,6 +274,8 @@ class NotificationRepositoryTest {
 }
 
 private const val UNREAD_COUNT = "/api/notification/unread-count"
+private const val REPLY_LIST = "/api/notification/reply-to-me/list?page=1"
+private const val AT_LIST = "/api/notification/at-me/list?page=1"
 
 private class FakeJsonSource(
     private val responses: Map<String, String>,

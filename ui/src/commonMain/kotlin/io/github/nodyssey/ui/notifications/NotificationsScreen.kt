@@ -46,6 +46,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -55,20 +56,30 @@ import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
+import io.github.nodyssey.data.NotificationSource
+import io.github.nodyssey.data.NotificationTab
+import io.github.nodyssey.data.PreviewPart
+import io.github.nodyssey.data.PreviewPlaceholder
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.SignedOutState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.notification_preview_code
+import io.github.nodyssey.ui.resources.notification_preview_image
+import io.github.nodyssey.ui.resources.notification_preview_payment
+import io.github.nodyssey.ui.resources.notification_preview_sticker
+import io.github.nodyssey.ui.resources.notification_preview_table
+import io.github.nodyssey.ui.resources.notification_preview_vote
 import io.github.nodyssey.ui.resources.notification_sentence_mention
 import io.github.nodyssey.ui.resources.notification_sentence_reply
+import io.github.nodyssey.ui.resources.notification_sentence_reply_mention
 import io.github.nodyssey.ui.resources.notification_time_pair
 import io.github.nodyssey.ui.resources.notification_unknown_thread
 import io.github.nodyssey.ui.resources.notifications_empty
+import io.github.nodyssey.ui.resources.notifications_interactions
 import io.github.nodyssey.ui.resources.notifications_mark_all_read
-import io.github.nodyssey.ui.resources.notifications_mentions
 import io.github.nodyssey.ui.resources.notifications_messages
-import io.github.nodyssey.ui.resources.notifications_replies
 import io.github.nodyssey.ui.resources.tab_notifications
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
@@ -107,7 +118,7 @@ fun NotificationsRoute(
         state = state,
         onSignIn = onSignIn,
         onVerify = onVerify,
-        onCategoryChange = viewModel::selectCategory,
+        onTabChange = viewModel::selectTab,
         onRetry = viewModel::refresh,
         onMarkAllRead = viewModel::markAllRead,
         onNotificationClick = {
@@ -143,7 +154,7 @@ fun NotificationsScreen(
     state: NotificationsUiState,
     onSignIn: () -> Unit,
     onVerify: () -> Unit,
-    onCategoryChange: (NotificationCategory) -> Unit,
+    onTabChange: (NotificationTab) -> Unit,
     onRetry: () -> Unit,
     onMarkAllRead: () -> Unit,
     onNotificationClick: (ForumNotification) -> Unit,
@@ -174,7 +185,7 @@ fun NotificationsScreen(
         // Alongside the scroll rather than before it: the title coming down and the list running up
         // are one movement, and awaiting the bar first would play them as two.
         launch { appBarState.unfold() }
-        if (state.selectedCategory == NotificationCategory.MESSAGES) {
+        if (state.selectedTab == NotificationTab.MESSAGES) {
             conversationListState.animateScrollToItem(0)
         } else {
             notificationListState.animateScrollToItem(0)
@@ -206,11 +217,11 @@ fun NotificationsScreen(
                 contentPadding = PaddingValues(horizontal = Spacing.lg),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                items(NotificationCategory.entries, key = { it.name }) { category ->
+                items(NotificationTab.entries, key = { it.name }) { tab ->
                     FilterChip(
-                        selected = category == state.selectedCategory,
-                        onClick = { onCategoryChange(category) },
-                        label = { Text(category.label()) },
+                        selected = tab == state.selectedTab,
+                        onClick = { onTabChange(tab) },
+                        label = { Text(tab.label()) },
                         colors =
                         FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -220,7 +231,7 @@ fun NotificationsScreen(
                         trailingIcon = {
                             // A plain tabular numeral, not a Badge: the count belongs to the chip's own
                             // colour pair, and Badge would drop a red pill into a row of brand chips.
-                            val count = state.counts.forCategory(category)
+                            val count = state.counts.forTab(tab)
                             if (count > 0) {
                                 Text(
                                     text = unreadLabel(count, MAX_BADGE),
@@ -272,7 +283,7 @@ fun NotificationsScreen(
                                 onSignIn = onSignIn,
                             )
 
-                        state.selectedCategory == NotificationCategory.MESSAGES ->
+                        state.selectedTab == NotificationTab.MESSAGES ->
                             ConversationList(
                                 state = state,
                                 listState = conversationListState,
@@ -369,6 +380,19 @@ private fun NotificationRow(
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
             )
+            // What was actually said. The whole point of the row: the sentence above says that
+            // somebody wrote something, and until this line was here the only way to find out what
+            // was to open the thread — which, for the half of them that are a 谢谢老哥, is a page
+            // load to learn nothing.
+            notificationPreview(item.preview)?.let { preview ->
+                Text(
+                    text = preview,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = PREVIEW_LINES,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             timestampLabel(item.createdAtMillis, item.createdAtText, nowMillis)?.let { stamp ->
                 Text(
                     text = stamp,
@@ -390,8 +414,11 @@ private fun NotificationRow(
 private fun notificationSentence(item: ForumNotification): AnnotatedString {
     val template =
         stringResource(
-            when (item.category) {
-                NotificationCategory.REPLIES -> Res.string.notification_sentence_reply
+            when {
+                // A reply that opens with `@name #7` is both, and saying only one of them would be
+                // the merge showing through as a half-truth.
+                item.isReply && item.isMention -> Res.string.notification_sentence_reply_mention
+                item.isReply -> Res.string.notification_sentence_reply
                 else -> Res.string.notification_sentence_mention
             },
         )
@@ -411,6 +438,42 @@ private fun notificationSentence(item: ForumNotification): AnnotatedString {
         append(template.substring(cursor))
     }
 }
+
+/**
+ * The comment itself, with the pictures named rather than drawn.
+ *
+ * The placeholders are strings rather than the pictures they stand for on purpose: a row that draws
+ * a sticker is a row of a different height, and a list whose rows change height as their images
+ * arrive is a list that moves under the thumb. `[图片]` also survives being read aloud, which an
+ * `<img>` in a list row does not.
+ */
+@Composable
+private fun notificationPreview(parts: List<PreviewPart>): String? {
+    if (parts.isEmpty()) return null
+    // Read before the loop rather than inside it: `stringResource` is a composable call and the
+    // loop's body is not a composable scope, and a comment carrying five stickers would otherwise
+    // read the same string five times.
+    val labels = placeholderLabels()
+    return buildString {
+        parts.forEach { part ->
+            when (part) {
+                is PreviewPart.Text -> append(part.text)
+                is PreviewPart.Placeholder -> append(labels.getValue(part.kind))
+            }
+        }
+    }.ifBlank { null }
+}
+
+@Composable
+private fun placeholderLabels(): Map<PreviewPlaceholder, String> =
+    mapOf(
+        PreviewPlaceholder.IMAGE to stringResource(Res.string.notification_preview_image),
+        PreviewPlaceholder.STICKER to stringResource(Res.string.notification_preview_sticker),
+        PreviewPlaceholder.CODE to stringResource(Res.string.notification_preview_code),
+        PreviewPlaceholder.TABLE to stringResource(Res.string.notification_preview_table),
+        PreviewPlaceholder.VOTE to stringResource(Res.string.notification_preview_vote),
+        PreviewPlaceholder.PAYMENT to stringResource(Res.string.notification_preview_payment),
+    )
 
 /** `26 分钟前 · 2026/7/26 09:56:03`, or the server's own wording when it sent no parsable time. */
 @Composable
@@ -452,18 +515,25 @@ private fun EmptyNotifications(
 }
 
 @Composable
-private fun NotificationCategory.label(): String =
+private fun NotificationTab.label(): String =
     stringResource(
         when (this) {
-            NotificationCategory.MENTIONS -> Res.string.notifications_mentions
-            NotificationCategory.REPLIES -> Res.string.notifications_replies
-            NotificationCategory.MESSAGES -> Res.string.notifications_messages
+            NotificationTab.INTERACTIONS -> Res.string.notifications_interactions
+            NotificationTab.MESSAGES -> Res.string.notifications_messages
         },
     )
 
 /** `%1$s` / `%2$s` in the sentence templates; the class keeps the dollar out of the raw string. */
 private val PLACEHOLDER = Regex("""%(\d)[$]s""")
 private const val MAX_BADGE = 99
+
+/**
+ * How much of a comment a row shows.
+ *
+ * Two lines is the trade the whole change rests on: one is a fragment often enough to send the
+ * reader into the thread anyway, and three turns a screenful of notifications into four rows.
+ */
+private const val PREVIEW_LINES = 2
 
 /**
  * Drops the avatar onto the sentence's cap line.
@@ -486,41 +556,51 @@ private fun NotificationsPreview() {
                 nowMillis = PREVIEW_NOW,
                 items =
                 listOf(
+                    // The folded row: one comment that both replied and @-ed, as most of them are.
                     ForumNotification(
                         id = "1",
-                        viewedId = 1L,
-                        category = NotificationCategory.MENTIONS,
+                        sources =
+                        listOf(
+                            NotificationSource(NotificationCategory.REPLIES, 1L, isUnread = true),
+                            NotificationSource(NotificationCategory.MENTIONS, 9L, isUnread = true),
+                        ),
+                        commentId = 1L,
                         postId = 1,
                         floor = "#3",
                         actorUid = 12,
                         actorName = "nssk",
                         avatarUrl = null,
-                        excerpt = null,
+                        preview =
+                        listOf(
+                            PreviewPart.Text("还没有这个功能，其实可以考虑花费星辰 "),
+                            PreviewPart.Placeholder(PreviewPlaceholder.STICKER),
+                        ),
                         threadTitle = "求教如何改用户名",
                         createdAtMillis = PREVIEW_NOW - 26 * 60_000L,
                         createdAtText = null,
-                        isUnread = true,
                     ),
                     ForumNotification(
                         id = "2",
-                        viewedId = 2L,
-                        category = NotificationCategory.MENTIONS,
+                        sources =
+                        listOf(
+                            NotificationSource(NotificationCategory.MENTIONS, 2L, isUnread = false),
+                        ),
+                        commentId = 2L,
                         postId = 2,
                         floor = null,
                         actorUid = 13,
                         actorName = "羽落无声",
                         avatarUrl = null,
-                        excerpt = null,
+                        preview = listOf(PreviewPart.Placeholder(PreviewPlaceholder.IMAGE)),
                         threadTitle = "Debian 13 上用 nftables 做端口转发的坑",
                         createdAtMillis = PREVIEW_NOW - 26 * 60 * 60_000L,
                         createdAtText = null,
-                        isUnread = false,
                     ),
                 ),
             ),
             onSignIn = {},
             onVerify = {},
-            onCategoryChange = {},
+            onTabChange = {},
             onRetry = {},
             onMarkAllRead = {},
             onNotificationClick = {},

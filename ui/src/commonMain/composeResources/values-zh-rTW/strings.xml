@@ -197,10 +197,18 @@
     <string name="notifications_mentions">@我</string>
     <string name="notifications_replies">回覆主題</string>
     <string name="notifications_messages">私訊</string>
+    <string name="notifications_interactions">回覆與@我</string>
     <string name="notifications_empty">這裡暫時沒有通知</string>
     <string name="notification_sentence_mention">%1$s 在文章 %2$s 中@了我</string>
     <string name="notification_sentence_reply">%1$s 回覆了文章 %2$s</string>
+    <string name="notification_sentence_reply_mention">%1$s 在文章 %2$s 中回覆並@了我</string>
     <string name="notification_unknown_thread">某篇文章</string>
+    <string name="notification_preview_image">[圖片]</string>
+    <string name="notification_preview_sticker">[貼圖]</string>
+    <string name="notification_preview_code">[程式碼]</string>
+    <string name="notification_preview_table">[表格]</string>
+    <string name="notification_preview_vote">[投票]</string>
+    <string name="notification_preview_payment">[星辰收款]</string>
 
     <string name="messages_empty">還沒有私訊</string>
     <string name="messages_pinned">置頂對話</string>

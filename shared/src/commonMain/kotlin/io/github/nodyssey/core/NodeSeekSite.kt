@@ -220,7 +220,18 @@ object NodeSeekSite {
         group: String,
         code: String,
         extension: String,
-    ): String = "$BASE_URL/static/image/sticker/$group/$code.$extension"
+    ): String = "$BASE_URL$STICKER_PATH$group/$code.$extension"
+
+    /** The directory half of [stickerUrl], which is also how a sticker is told from a photograph. */
+    const val STICKER_PATH = "/static/image/sticker/"
+
+    /**
+     * Whether a URL points at one of the site's own stickers.
+     *
+     * Path rather than host: a body written on the site can carry the sticker as a site-relative
+     * address or as an absolute one, and both are the same picture.
+     */
+    fun isStickerUrl(url: String): Boolean = url.contains(STICKER_PATH)
 
     const val NOTIFICATION_PATH = "/notification"
 

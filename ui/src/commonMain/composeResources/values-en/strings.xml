@@ -203,10 +203,18 @@
     <string name="notifications_mentions">Mentions</string>
     <string name="notifications_replies">Thread replies</string>
     <string name="notifications_messages">Messages</string>
+    <string name="notifications_interactions">Replies &amp; mentions</string>
     <string name="notifications_empty">Nothing here for now</string>
     <string name="notification_sentence_mention">%1$s mentioned you in %2$s</string>
     <string name="notification_sentence_reply">%1$s replied to %2$s</string>
+    <string name="notification_sentence_reply_mention">%1$s replied and mentioned you in %2$s</string>
     <string name="notification_unknown_thread">a post</string>
+    <string name="notification_preview_image">[Image]</string>
+    <string name="notification_preview_sticker">[Sticker]</string>
+    <string name="notification_preview_code">[Code]</string>
+    <string name="notification_preview_table">[Table]</string>
+    <string name="notification_preview_vote">[Poll]</string>
+    <string name="notification_preview_payment">[Payment]</string>
 
     <string name="messages_empty">No messages yet</string>
     <string name="messages_pinned">Pinned</string>

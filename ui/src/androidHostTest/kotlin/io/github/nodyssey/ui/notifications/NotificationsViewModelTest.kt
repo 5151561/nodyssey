@@ -22,6 +22,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,7 +60,7 @@ class NotificationsViewModelTest {
             assertEquals(2, viewModel.uiState.value.counts.mentions)
 
             api.counts = """{"atMe":1}"""
-            viewModel.markOpened("1")
+            viewModel.markOpened("42")
             advanceUntilIdle()
 
             assertFalse(viewModel.uiState.value.items.single().isUnread)
@@ -76,16 +77,44 @@ class NotificationsViewModelTest {
             val viewModel = viewModel(api, unread = false)
             advanceUntilIdle()
 
-            viewModel.markOpened("1")
+            viewModel.markOpened("42")
             advanceUntilIdle()
 
             assertEquals(emptyList<String>(), api.postedPaths)
             assertEquals(2, viewModel.uiState.value.counts.mentions)
         }
 
-    /** 全部已读 on @我 used to zero all three badges, 私信 included. */
+    /**
+     * The merge, end to end: one comment that replied *and* @-ed is one row, and opening it has to
+     * clear the row each group is holding. Clearing only one used to be the whole bug this screen
+     * had twice over — the badge came back on the next refresh, pointing at something already read.
+     */
     @Test
-    fun `mark all read only clears the group the button belongs to`() =
+    fun `a comment in both groups is one row, and reading it clears both`() =
+        runTest(dispatcher) {
+            val api = FakeApi(counts = """{"atMe":1,"reply":1}""", replies = REPLY_LIST)
+            val viewModel = viewModel(api)
+            advanceUntilIdle()
+            val item = viewModel.uiState.value.items.single()
+            assertTrue(item.isReply && item.isMention)
+            // Two groups, one thing to read: the badge says 1, not 2.
+            assertEquals(1, viewModel.uiState.value.counts.interactions)
+
+            api.counts = """{"atMe":0,"reply":0}"""
+            viewModel.markOpened(item.id)
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf("/api/notification/reply-to-me/markViewed", "/api/notification/at-me/markViewed"),
+                api.postedPaths,
+            )
+            assertEquals(listOf("""{"replys":[7]}""", """{"atMe":[1]}"""), api.postedBodies)
+            assertEquals(0, viewModel.uiState.value.counts.interactions)
+        }
+
+    /** 全部已读 on 通知 used to zero every badge, 私信 included. */
+    @Test
+    fun `mark all read clears both notification groups but not 私信`() =
         runTest(dispatcher) {
             val api = FakeApi(counts = """{"atMe":2,"message":3}""")
             val viewModel = viewModel(api)
@@ -95,6 +124,13 @@ class NotificationsViewModelTest {
             viewModel.markAllRead()
             advanceUntilIdle()
 
+            assertEquals(
+                listOf(
+                    "/api/notification/reply-to-me/markViewed?all=true",
+                    "/api/notification/at-me/markViewed?all=true",
+                ),
+                api.postedPaths,
+            )
             assertEquals(0, viewModel.uiState.value.counts.mentions)
             assertEquals(3, viewModel.uiState.value.counts.messages)
         }
@@ -164,8 +200,15 @@ private object NoMessages : MessageRepository {
     override suspend fun markAllRead() = Unit
 }
 
+/** The reply row for the same comment 42 the mention row names, as the site sends it. */
+private const val REPLY_LIST =
+    """{"replyList":[{"id":7,"comment_id":42,"post_id":703863,"floor_id":12,"commenter_name":"nssk",
+       "content":"@me [#3](/post-703863-1#3) 还没有这个功能","post_title":"求教如何改用户名","viewed":0}]}"""
+
 private class FakeApi(
     var counts: String,
+    /** Empty by default: most cases here are about one group, and an empty list is a valid answer. */
+    private val replies: String = """{"replyList":[]}""",
 ) : JsonApi {
     var mentionUnread = true
     val postedPaths = mutableListOf<String>()
@@ -175,9 +218,11 @@ private class FakeApi(
         when {
             path.startsWith("/api/notification/unread-count") -> counts
 
+            path.startsWith("/api/notification/reply-to-me") -> replies
+
             else ->
-                """{"atList":[{"id":1,"member_id":12,"username":"nssk","post_title":"求教如何改用户名",
-                   "viewed":${if (mentionUnread) 0 else 1}}]}"""
+                """{"atList":[{"id":1,"comment_id":42,"post_id":703863,"member_id":12,"username":"nssk",
+                   "post_title":"求教如何改用户名","viewed":${if (mentionUnread) 0 else 1}}]}"""
         }
 
     override suspend fun postJson(path: String, body: String, referer: String): String {

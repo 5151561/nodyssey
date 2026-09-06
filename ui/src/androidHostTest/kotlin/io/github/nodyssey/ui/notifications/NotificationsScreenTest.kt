@@ -16,6 +16,10 @@ import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
+import io.github.nodyssey.data.NotificationSource
+import io.github.nodyssey.data.NotificationTab
+import io.github.nodyssey.data.PreviewPart
+import io.github.nodyssey.data.PreviewPlaceholder
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -32,15 +36,46 @@ class NotificationsScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    /** Board 7d: three groups, and no 「系统」 — the site has never had one. */
+    /**
+     * Board 7d's groups, as the App shows them: 回复 and @我 folded into one chip, 私信 beside it.
+     *
+     * Still no 「系统」 — the site has never had one, and merging two groups is not an excuse to
+     * invent a third.
+     */
     @Test
-    fun `offers exactly the three groups the site has`() {
+    fun `offers the merged notification chip and 私信`() {
         setContent(state(items = listOf(mention())))
 
-        composeRule.onNodeWithText("@我").assertIsDisplayed()
-        composeRule.onNodeWithText("回复主题").assertIsDisplayed()
+        composeRule.onNodeWithText("回复与@我").assertIsDisplayed()
         composeRule.onNodeWithText("私信").assertIsDisplayed()
+        assertEquals(0, composeRule.onAllNodesWithText("回复主题").fetchSemanticsNodes().size)
         assertEquals(0, composeRule.onAllNodesWithText("系统").fetchSemanticsNodes().size)
+    }
+
+    /** The badge over the merged chip counts rows, not the two groups' rows added up. */
+    @Test
+    fun `the merged chip discounts what both groups counted twice`() {
+        setContent(
+            state(items = listOf(mention()), counts = NotificationCounts(replies = 5, mentions = 2, overlap = 2)),
+        )
+
+        composeRule.onNodeWithText("5").assertIsDisplayed()
+    }
+
+    /** The point of the row: what was written, without opening the thread. */
+    @Test
+    fun `shows the comment itself, with a placeholder for the picture`() {
+        setContent(state(items = listOf(mention(preview = preview()))))
+
+        composeRule.onNodeWithText("还没有这个功能 [图片]").assertIsDisplayed()
+    }
+
+    /** A comment that replied *and* @-ed is one row, and says so. */
+    @Test
+    fun `a folded row says both things happened`() {
+        setContent(state(items = listOf(mention(sources = bothGroups()))))
+
+        composeRule.onNodeWithText("nssk 在帖子 求教如何改用户名 中回复并@了我").assertIsDisplayed()
     }
 
     @Test
@@ -59,12 +94,12 @@ class NotificationsScreenTest {
                 NotificationsScreen(
                     state =
                     state(
-                        category = NotificationCategory.MESSAGES,
+                        tab = NotificationTab.MESSAGES,
                         conversations = listOf(systemConversation()),
                     ),
                     onSignIn = {},
                     onVerify = {},
-                    onCategoryChange = {},
+                    onTabChange = {},
                     onRetry = {},
                     onMarkAllRead = { markedAllRead = true },
                     onNotificationClick = {},
@@ -91,7 +126,7 @@ class NotificationsScreenTest {
     fun `conversation stamps share one right edge`() {
         setContent(
             state(
-                category = NotificationCategory.MESSAGES,
+                tab = NotificationTab.MESSAGES,
                 conversations =
                 listOf(
                     systemConversation(),
@@ -116,7 +151,7 @@ class NotificationsScreenTest {
     fun `system conversation snippet drops its markdown syntax`() {
         setContent(
             state(
-                category = NotificationCategory.MESSAGES,
+                tab = NotificationTab.MESSAGES,
                 conversations = listOf(systemConversation()),
             ),
         )
@@ -139,7 +174,7 @@ class NotificationsScreenTest {
                     state = state(items = items),
                     onSignIn = {},
                     onVerify = {},
-                    onCategoryChange = {},
+                    onTabChange = {},
                     onRetry = {},
                     onMarkAllRead = {},
                     onNotificationClick = {},
@@ -171,7 +206,7 @@ class NotificationsScreenTest {
                     state = state,
                     onSignIn = {},
                     onVerify = {},
-                    onCategoryChange = {},
+                    onTabChange = {},
                     onRetry = {},
                     onMarkAllRead = {},
                     onNotificationClick = {},
@@ -187,33 +222,51 @@ class NotificationsScreenTest {
     }
 
     private fun state(
-        category: NotificationCategory = NotificationCategory.MENTIONS,
+        tab: NotificationTab = NotificationTab.INTERACTIONS,
         items: List<ForumNotification> = emptyList(),
         conversations: List<MessageConversation> = emptyList(),
+        counts: NotificationCounts = NotificationCounts(replies = 5, mentions = 2, messages = 3),
     ) = NotificationsUiState(
         isSignedIn = true,
-        selectedCategory = category,
-        counts = NotificationCounts(replies = 5, mentions = 2, messages = 3),
+        selectedTab = tab,
+        counts = counts,
         items = items,
         conversations = conversations,
         nowMillis = NOW,
     )
 
-    private fun mention(id: String = "1", threadTitle: String = "求教如何改用户名") =
-        ForumNotification(
-            id = id,
-            viewedId = 1L,
-            category = NotificationCategory.MENTIONS,
-            postId = 1,
-            floor = null,
-            actorUid = 12,
-            actorName = "nssk",
-            avatarUrl = null,
-            excerpt = null,
-            threadTitle = threadTitle,
-            createdAtMillis = NOW - 26 * 60_000L,
-            createdAtText = null,
-            isUnread = true,
+    private fun mention(
+        id: String = "1",
+        threadTitle: String = "求教如何改用户名",
+        preview: List<PreviewPart> = emptyList(),
+        sources: List<NotificationSource> = listOf(mentionSource()),
+    ) = ForumNotification(
+        id = id,
+        sources = sources,
+        commentId = id.toLongOrNull(),
+        postId = 1,
+        floor = null,
+        actorUid = 12,
+        actorName = "nssk",
+        avatarUrl = null,
+        preview = preview,
+        threadTitle = threadTitle,
+        createdAtMillis = NOW - 26 * 60_000L,
+        createdAtText = null,
+    )
+
+    private fun mentionSource() = NotificationSource(NotificationCategory.MENTIONS, 1L, isUnread = true)
+
+    private fun bothGroups() =
+        listOf(
+            NotificationSource(NotificationCategory.REPLIES, 7L, isUnread = true),
+            mentionSource(),
+        )
+
+    private fun preview() =
+        listOf(
+            PreviewPart.Text("还没有这个功能 "),
+            PreviewPart.Placeholder(PreviewPlaceholder.IMAGE),
         )
 
     private fun conversation(
