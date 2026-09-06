@@ -27,7 +27,7 @@
     <string name="action_cancel">取消</string>
     <string name="action_done">确定</string>
     <string name="action_sort">排序方式</string>
-    <string name="action_scroll_to_top">回到顶部</string>
+    <string name="action_search">搜索</string>
     <string name="action_show_all_boards">全部版块</string>
     <string name="action_hide_all_boards">收起版块</string>
     <string name="action_create_post">发帖</string>
@@ -193,7 +193,6 @@
 
     <!-- Top-level navigation: a bar on a phone, a rail once the window is wide enough -->
     <string name="tab_home">首页</string>
-    <string name="tab_search">搜索</string>
     <string name="tab_notifications">通知</string>
     <string name="tab_profile">我的</string>
 

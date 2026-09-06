@@ -207,12 +207,14 @@ fun MainNavigation(
      * a thread half-read to glance at another tab and coming back to the top of the feed is the
      * regression that costs the most and shows up the fastest.
      *
-     * Written out rather than built in a loop: four `remember` calls whose order can never drift
+     * Written out rather than built in a loop: three `remember` calls whose order can never drift
      * are easier to be sure about than a map comprehension that happens to call `remember` inside
      * an inline lambda.
+     *
+     * 搜索 no longer has one. It is opened from 首页's app bar and rides 首页's stack, so a search and
+     * the list it was started from are one history rather than two.
      */
     val homeStack = rememberNavBackStack(NavKeySavedStateConfiguration, PostListKey)
-    val searchStack = rememberNavBackStack(NavKeySavedStateConfiguration, SearchKey)
     val notificationsStack = rememberNavBackStack(NavKeySavedStateConfiguration, NotificationsKey)
     val profileStack = rememberNavBackStack(NavKeySavedStateConfiguration, ProfileKey)
 
@@ -233,7 +235,7 @@ fun MainNavigation(
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
 
     /*
-     * Set by whichever tab root is currently reading a long list — the feed and search both do.
+     * Set by whichever tab root is currently reading a long list — only the feed does.
      *
      * One flag rather than one per tab because only one of them is on screen at a time, and each
      * clears it on the way out: leaving the composition is what a tab switch looks like from inside a
@@ -261,7 +263,6 @@ fun MainNavigation(
     val backStack: NavBackStack<NavKey> =
         when (currentTab) {
             TopLevelDestination.HOME -> homeStack
-            TopLevelDestination.SEARCH -> searchStack
             TopLevelDestination.NOTIFICATIONS -> notificationsStack
             TopLevelDestination.PROFILE -> profileStack
         }
@@ -281,7 +282,7 @@ fun MainNavigation(
     // Two panes changes what "under them" means: a detail is drawn *beside* its list, not over it,
     // so the tab root is still on screen and the bar still belongs to it. The question is therefore
     // whether the top of the stack is part of a pane scene at all, not which tab it belongs to —
-    // 首页, 搜索, 通知 and a user's space all pair with a detail now.
+    // 首页, 搜索, 通知 and a user's space all pair with a detail.
     val atTabRoot = TopLevelDestination.forKey(backStack.lastOrNull()) != null
     // Scroll-to-hide assumes the same gesture brings the bar back, which is only true of direct
     // touch: a screen reader's swipes move accessibility focus, so for TalkBack/VoiceOver a hidden
@@ -503,12 +504,10 @@ fun MainNavigation(
      * the composition or a state object read at draw time, so freezing the provider changes nothing
      * they can observe.
      *
-     * Four `remember` calls rather than a loop, for the same reason the stacks above are written out.
+     * Three `remember` calls rather than a loop, for the same reason the stacks above are written out.
      */
     val homeProvider =
         remember { stackScopedEntryProvider(TopLevelDestination.HOME, destinationProvider(homeStack)) }
-    val searchProvider =
-        remember { stackScopedEntryProvider(TopLevelDestination.SEARCH, destinationProvider(searchStack)) }
     val notificationsProvider =
         remember {
             stackScopedEntryProvider(
@@ -529,16 +528,6 @@ fun MainNavigation(
                 viewModelDecorator,
             ),
             entryProvider = homeProvider,
-        )
-    val searchEntries =
-        rememberDecoratedNavEntries(
-            backStack = searchStack,
-            entryDecorators =
-            listOf(
-                rememberSaveableStateHolderNavEntryDecorator(),
-                viewModelDecorator,
-            ),
-            entryProvider = searchProvider,
         )
     val notificationEntries =
         rememberDecoratedNavEntries(
@@ -563,7 +552,6 @@ fun MainNavigation(
     val tabEntries =
         when (currentTab) {
             TopLevelDestination.HOME -> homeEntries
-            TopLevelDestination.SEARCH -> searchEntries
             TopLevelDestination.NOTIFICATIONS -> notificationEntries
             TopLevelDestination.PROFILE -> profileEntries
         }
@@ -573,14 +561,14 @@ fun MainNavigation(
      * app through 首页.
      *
      * This used to be a `BackHandler` that flipped `currentTab`, which was correct but silent — the
-     * gesture had nothing to preview, so backing out of 搜索 was a hard cut. Handing `NavDisplay` a
+     * gesture had nothing to preview, so backing out of a tab was a hard cut. Handing `NavDisplay` a
      * stack that really does have 首页 underneath makes it an ordinary pop, which means it animates
      * and the predictive-back gesture shows where it is going.
      *
      * Safe only because each tab's panes carry their own scene key — see [paneMetadataOf].
      * `ListDetailSceneStrategy` collects the run of panes at the top of the list, and without the
-     * key it would have swept 首页's list into 搜索's scene and drawn 首页's empty-detail text beside
-     * the search results.
+     * key it would have swept 首页's list into 通知's scene and drawn 首页's empty-detail text beside
+     * the notification list.
      */
     val entries =
         if (currentTab == TopLevelDestination.HOME) tabEntries else homeEntries + tabEntries
@@ -613,9 +601,9 @@ fun MainNavigation(
                 onSelect = { destination ->
                     // Re-selecting a tab takes its list back to the start — 首页 reloads on the way,
                     // since the one thing a reader taps 首页 for while already on 首页 is 新帖. Only
-                    // the two tabs that *are* a list long enough to get lost in answer at all; 搜索
-                    // and 我的 stay inert, because a tab that silently jumps somewhere is worse than
-                    // one that does nothing.
+                    // the two tabs that *are* a list long enough to get lost in answer at all; 我的
+                    // stays inert, because a tab that silently jumps somewhere is worse than one
+                    // that does nothing.
                     if (destination == currentTab) {
                         when (destination) {
                             TopLevelDestination.HOME -> homeReselectRequests++
@@ -707,8 +695,9 @@ internal enum class PaneRole {
 
 internal fun paneRoleOf(key: NavKey?): PaneRole? =
     when (key) {
-        // Every tab root that is a list of things worth opening one of. 我的 is not one: it is a menu
-        // whose rows are settings pages, and a settings page is not a detail.
+        // Every list of things worth opening one of. 搜索 is one wherever it is reached from — it is
+        // pushed onto 首页's stack now, and a result opened from it still lands beside it. 我的 is not:
+        // it is a menu whose rows are settings pages, and a settings page is not a detail.
         PostListKey, SearchKey, NotificationsKey -> PaneRole.LIST
 
         // A user's space is a list wherever it is reached from — including on top of a thread, where

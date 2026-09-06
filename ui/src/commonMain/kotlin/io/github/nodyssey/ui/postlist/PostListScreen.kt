@@ -3,7 +3,6 @@ package io.github.nodyssey.ui.postlist
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,11 +13,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -31,6 +28,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -105,7 +103,6 @@ import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.TITLE_BADGE_SIZE
-import io.github.nodyssey.ui.common.appName
 import io.github.nodyssey.ui.common.lockBadgeDescription
 import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
@@ -116,7 +113,7 @@ import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.common.snackbarDuration
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_create_post
-import io.github.nodyssey.ui.resources.action_scroll_to_top
+import io.github.nodyssey.ui.resources.action_search
 import io.github.nodyssey.ui.resources.action_sort
 import io.github.nodyssey.ui.resources.feed_page_size_note
 import io.github.nodyssey.ui.resources.page_jump_newest
@@ -141,7 +138,6 @@ import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.textScaledSize
 import io.github.plaza.designsys.theme.PlazaTheme
-import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
@@ -164,6 +160,7 @@ fun PostListRoute(
     listState: LazyListState,
     onPostClick: (FeedPost) -> Unit,
     onCreatePost: () -> Unit,
+    onSearch: () -> Unit,
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -177,6 +174,7 @@ fun PostListRoute(
         listState = listState,
         onPostClick = onPostClick,
         onCreatePost = onCreatePost,
+        onSearch = onSearch,
         onBoardClick = viewModel::selectCategory,
         onArrangementChange = viewModel::saveBoardArrangement,
         onSortChange = viewModel::selectSort,
@@ -224,6 +222,8 @@ fun PostListScreen(
     /** Commits an edit made on the board strip itself: the pill order, and which boards are parked. */
     onArrangementChange: (order: List<String>, parked: Set<String>) -> Unit = { _, _ -> },
     onCreatePost: () -> Unit = {},
+    /** Opens 搜索 on top of this list, from the app bar's own action. */
+    onSearch: () -> Unit = {},
     /** Keeps the host navigation bar hidden until the user deliberately scrolls toward the list start. */
     onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
     /**
@@ -246,17 +246,17 @@ fun PostListScreen(
         }
 
     /*
-     * The wordmark row rides the scroll; the board strip under it does not.
+     * The 排序 / 搜索 row rides the scroll; the board strip under it does not.
      *
-     * Only the 大标题栏 is given a scroll behaviour, so the strip — which is navigation, and the one
-     * thing a reader reaches for mid-feed — stays put while the title and 排序 fold away. `enterAlways`
-     * rather than the navigation bar's sticky threshold: the bar is what the sort action lives in, and
-     * a short drag back up has to be enough to reach it.
+     * Only the app bar is given a scroll behaviour, so the strip — which is navigation, and the one
+     * thing a reader reaches for mid-feed — stays put while 排序 and 搜索 fold away. `enterAlways`
+     * rather than the navigation bar's sticky threshold: the bar is what those two live in, and a
+     * short drag back up has to be enough to reach them.
      */
     val topBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     /**
-     * Unfolds the title without a gesture, for the jumps that put the list back at its first row.
+     * Unfolds the app bar without a gesture, for the jumps that put the list back at its first row.
      *
      * The bar collapses only against scroll deltas it has consumed, so a programmatic scroll leaves it
      * folded at the top of the feed — the one place there is nothing left to scroll back up through.
@@ -289,11 +289,12 @@ fun PostListScreen(
     DisposableEffect(Unit) { onDispose { currentOnNavigationBarHiddenChanged(false) } }
 
     /*
-     * The two ways back to the start of the feed: the 首页 tab, and the wordmark above the list.
+     * Back to the start of the feed. Only the 首页 tab asks for this now — the wordmark that used to
+     * be the second way in is gone with the rest of the title.
      *
-     * The bar is revealed first and without waiting for the animation, because neither route came
-     * from a user scroll and the direction connection would otherwise leave the list sitting at its
-     * top with no bar — the one position from which nothing can be reached.
+     * The bar is revealed first and without waiting for the animation, because the request did not
+     * come from a user scroll and the direction connection would otherwise leave the list sitting at
+     * its top with no bar — the one position from which nothing can be reached.
      */
     val scope = rememberCoroutineScope()
     suspend fun scrollToTop() {
@@ -459,7 +460,7 @@ fun PostListScreen(
                 HomeTopBar(
                     sort = state.sort,
                     onSortChange = onSortChange,
-                    onTitleClick = { scope.launch { scrollToTop() } },
+                    onSearch = onSearch,
                     scrollBehavior = topBarScrollBehavior,
                 )
                 BoardStrip(
@@ -715,10 +716,16 @@ private const val FIRST_PAGE = 1
 private const val APPEND_WAIT_MILLIS = 15_000L
 
 /**
- * The home app bar carries the wordmark and exactly one action.
+ * The home app bar: 排序 at the start, 搜索 at the end, and nothing between them.
  *
- * Account and search both have their own tab at the bottom, so putting them up here as well would be
- * two ways to reach the same place. Sort has nowhere else to live.
+ * The wordmark used to fill the middle. It named a screen the reader had just arrived at from the
+ * navigation bar, which is the one thing an app bar title does not need to say, and it doubled as
+ * 回到顶部 — a target nothing on screen described. Both went, and the width they held now belongs to
+ * the two things this feed is actually operated with. 首页 still answers a second tap with the same
+ * jump back to the first row.
+ *
+ * `navigationIcon` rather than a second action: 排序 changes what the list below *is*, 搜索 leaves it
+ * for another list, and putting the two in one corner would make them look like a pair of filters.
  *
  * [scrollBehavior] folds the whole row away as the feed advances. It is measured out of the layout
  * rather than merely hidden, which is what lets the board strip below it ride up into the space.
@@ -728,30 +735,16 @@ private const val APPEND_WAIT_MILLIS = 15_000L
 private fun HomeTopBar(
     sort: FeedSort,
     onSortChange: (FeedSort) -> Unit,
-    onTitleClick: () -> Unit,
+    onSearch: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
 
     TopAppBar(
-        title = {
-            Text(
-                text = appName(),
-                style = MaterialTheme.typography.titleLarge,
-                // The wordmark doubles as the second way back to the top, and the only one that
-                // works while the navigation bar is hidden — which is exactly when a reader deep in
-                // the feed wants it. Height rather than padding grows the target to 48dp, so the
-                // title stays on the same start inset as the board strip below it.
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
-                    .clickable(
-                        onClickLabel = stringResource(Res.string.action_scroll_to_top),
-                        onClick = onTitleClick,
-                    ).heightIn(min = Sizes.minTouchTarget)
-                    .wrapContentHeight(Alignment.CenterVertically),
-            )
-        },
-        actions = {
+        // Empty rather than absent: the slot is what holds the bar to its own height, and the board
+        // strip below already says which list this is.
+        title = {},
+        navigationIcon = {
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
@@ -760,6 +753,8 @@ private fun HomeTopBar(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                // Anchored to the button rather than to the bar, so the menu opens down the start
+                // edge it was summoned from.
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     SortMenuItem(Res.string.sort_by_reply_time, FeedSort.LAST_REPLY, sort) {
                         onSortChange(it)
@@ -770,6 +765,15 @@ private fun HomeTopBar(
                         menuOpen = false
                     }
                 }
+            }
+        },
+        actions = {
+            IconButton(onClick = onSearch) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = stringResource(Res.string.action_search),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         colors =

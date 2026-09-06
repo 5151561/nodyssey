@@ -36,7 +36,7 @@
     <string name="action_cancel">取消</string>
     <string name="action_done">確定</string>
     <string name="action_sort">排序方式</string>
-    <string name="action_scroll_to_top">回到頂端</string>
+    <string name="action_search">搜尋</string>
     <string name="action_show_all_boards">全部版塊</string>
     <string name="action_hide_all_boards">收合版塊</string>
     <string name="action_create_post">發文</string>
@@ -162,7 +162,6 @@
     <string name="dislike_dialog_confirm">倒讚</string>
 
     <string name="tab_home">首頁</string>
-    <string name="tab_search">搜尋</string>
     <string name="tab_notifications">通知</string>
     <string name="tab_profile">我的</string>
 

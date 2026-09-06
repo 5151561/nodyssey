@@ -41,7 +41,7 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_done">OK</string>
     <string name="action_sort">Sort by</string>
-    <string name="action_scroll_to_top">Back to top</string>
+    <string name="action_search">Search</string>
     <string name="action_show_all_boards">All boards</string>
     <string name="action_hide_all_boards">Hide boards</string>
     <string name="action_create_post">New post</string>
@@ -168,7 +168,6 @@
     <string name="dislike_dialog_confirm">Dislike</string>
 
     <string name="tab_home">Home</string>
-    <string name="tab_search">Search</string>
     <string name="tab_notifications">Alerts</string>
     <string name="tab_profile">Me</string>
 

@@ -20,15 +20,15 @@ import java.util.regex.Pattern
  * database, serializers restore the navigation stack, and Compose Resources load the strings — a
  * class R8 renamed or a resource the shrinker removed fails right here, as a crash before the first
  * frame. So the assertion is deliberately humble: the bottom navigation is on screen with its
- * labels, and still is after switching tabs. Journey depth belongs to `:app`'s own androidTest,
- * which runs against debug where Compose rules work.
+ * labels, and the app still draws after one navigation away from the feed. Journey depth belongs to
+ * `:app`'s own androidTest, which runs against debug where Compose rules work.
  *
- * The tab labels are spelled out rather than read from `Res.string`: reading them would mean
- * depending on `:ui`, whose classes would then exist unminified in this APK while the app carries
- * renamed ones — the exact sharing this module exists to avoid. Spelled out in all three languages
- * the app ships, because the app follows the system locale and this test must not care what locale
- * the emulator booted with. If a label changes, this match fails with a screenshot in the CI
- * artifacts, which is a cheap price for the isolation.
+ * The labels are spelled out rather than read from `Res.string`: reading them would mean depending
+ * on `:ui`, whose classes would then exist unminified in this APK while the app carries renamed
+ * ones — the exact sharing this module exists to avoid. Spelled out in all three languages the app
+ * ships, because the app follows the system locale and this test must not care what locale the
+ * emulator booted with. If a label changes, this match fails with a screenshot in the CI artifacts,
+ * which is a cheap price for the isolation.
  */
 @RunWith(AndroidJUnit4::class)
 class MinifiedStartupSmokeTest {
@@ -64,17 +64,21 @@ class MinifiedStartupSmokeTest {
             assertTrue("the app did not draw its bottom navigation after 新手引导 was skipped", drew)
         }
 
-        val search = device.wait(Until.findObject(By.pkg(APP).text(SEARCH_TAB)), UI_TIMEOUT_MS)
-        assertNotNull("the 搜索 tab is missing from the bottom navigation", search)
+        // By description rather than by text: 搜索 left the bottom navigation for an icon in 首页's
+        // own app bar, and an icon button's accessible name is its content description.
+        val search = device.wait(Until.findObject(By.pkg(APP).desc(SEARCH_ACTION)), UI_TIMEOUT_MS)
+        assertNotNull("the 搜索 action is missing from 首页's app bar", search)
         search.click()
 
         // Still alive and still drawing after a navigation — asserted on the search screen's own
         // content, not on the tab bar staying visible. On a phone-shaped window 搜索 focuses its
         // field and the IME slides over the bottom bar by design; the first version of this test
         // asserted 首页 was still on screen, which only held on the tablet-width emulator it was
-        // written against (a navigation rail sits beside the IME instead of under it).
+        // written against (a navigation rail sits beside the IME instead of under it). Now 搜索 is a
+        // pushed screen rather than a tab, so on a phone there is no bottom bar there to assert on
+        // at all.
         assertTrue(
-            "the app stopped drawing after switching to 搜索",
+            "the app stopped drawing after opening 搜索",
             device.wait(Until.hasObject(By.pkg(APP).text(BOARD_SECTION)), UI_TIMEOUT_MS),
         )
     }
@@ -118,7 +122,9 @@ class MinifiedStartupSmokeTest {
         val HOME_TAB: Pattern = Pattern.compile("首页|首頁|Home")
         val SKIP_GUIDE: Pattern = Pattern.compile("跳过|略過|Skip")
         val HOME_TAB_OR_SKIP: Pattern = Pattern.compile("${HOME_TAB.pattern()}|${SKIP_GUIDE.pattern()}")
-        val SEARCH_TAB: Pattern = Pattern.compile("搜索|搜尋|Search")
+
+        /** The app bar action's content description, not a tab label — see where it is used. */
+        val SEARCH_ACTION: Pattern = Pattern.compile("搜索|搜尋|Search")
         val BOARD_SECTION: Pattern = Pattern.compile("版块|版塊|Board")
     }
 }

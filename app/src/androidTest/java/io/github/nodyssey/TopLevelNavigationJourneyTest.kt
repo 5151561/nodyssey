@@ -5,6 +5,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -15,8 +16,9 @@ import androidx.compose.ui.test.waitUntilExactlyOneExists
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_search
 import io.github.nodyssey.ui.resources.tab_home
-import io.github.nodyssey.ui.resources.tab_search
+import io.github.nodyssey.ui.resources.tab_notifications
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
@@ -53,9 +55,9 @@ class TopLevelNavigationJourneyTest {
     fun topLevelSelectionSurvivesRecreationAndBackReturnsHome() {
         navigationItem(Res.string.tab_home).assertIsSelected()
 
-        navigationItem(Res.string.tab_search).performClick().assertIsSelected()
+        navigationItem(Res.string.tab_notifications).performClick().assertIsSelected()
         composeRule.activityRule.scenario.recreate()
-        navigationItem(Res.string.tab_search).assertIsSelected()
+        navigationItem(Res.string.tab_notifications).assertIsSelected()
 
         composeRule.runOnUiThread {
             composeRule.activity.onBackPressedDispatcher.onBackPressed()
@@ -63,16 +65,29 @@ class TopLevelNavigationJourneyTest {
         navigationItem(Res.string.tab_home).assertIsSelected()
     }
 
+    /**
+     * 搜索 is reached from 首页's app bar rather than from a tab of its own, so Back out of it lands
+     * on the feed instead of leaving the app — the whole reason it rides 首页's stack.
+     */
+    @OptIn(ExperimentalTestApi::class)
     @Test
-    fun searchStateSurvivesSwitchingTopLevelDestinations() {
-        navigationItem(Res.string.tab_search).performClick()
-        searchInputField().performTextInput("保留搜索内容")
+    fun searchOpensFromTheFeedAndBackReturnsToIt() {
+        navigationItem(Res.string.tab_home).assertIsSelected()
 
-        navigationItem(Res.string.tab_home).performClick()
-        navigationItem(Res.string.tab_search).performClick()
+        composeRule.onNode(searchAction()).performClick()
+        searchInputField().performTextInput("搜索一下")
+        searchInputField().assertTextContains("搜索一下")
 
-        searchInputField().assertTextContains("保留搜索内容")
+        composeRule.runOnUiThread {
+            composeRule.activity.onBackPressedDispatcher.onBackPressed()
+        }
+        // The action is on 首页's own app bar, so finding it again is finding the feed again.
+        composeRule.waitUntilExactlyOneExists(searchAction())
+        navigationItem(Res.string.tab_home).assertIsSelected()
     }
+
+    private fun searchAction() =
+        hasContentDescription(runBlocking { getString(Res.string.action_search) }) and hasClickAction()
 
     /**
      * The search screen has one field and focuses it on arrival, so waiting for the focused one is
