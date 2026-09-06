@@ -386,7 +386,7 @@ object RichContentParser {
     }
 
     private fun isSticker(element: Element): Boolean =
-        element.hasClass(STICKER_CLASS) || element.attr("src").contains("/static/image/sticker/")
+        element.hasClass(STICKER_CLASS) || NodeSeekSite.isStickerUrl(element.attr("src"))
 
     /** Everything a finished run of inline content needs: trimmed, with quote references folded. */
     private fun finishInlines(inlines: List<InlineNode>): List<InlineNode> =

@@ -45,8 +45,7 @@ class NotificationSettingsScreenTest {
                 onPollMinutesChange = onPollMinutesChange,
                 onWifiOnlyChange = {},
                 onQuietHoursChange = {},
-                onNotifyMentionsChange = {},
-                onNotifyRepliesChange = {},
+                onNotifyInteractionsChange = {},
                 onNotifyMessagesChange = {},
                 onOpenTelegram = {},
             )

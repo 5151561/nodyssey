@@ -225,18 +225,29 @@
     <string name="search_clear_all">清除</string>
     <string name="search_remove_recent">删除搜索历史：%1$s</string>
 
-    <!-- Notifications: the site has three groups, and 私信 is a conversation list rather than rows -->
+    <!-- Notifications: the site has three groups; @我 and 回复 are shown as one, 私信 is a conversation list -->
     <!-- Unread counts past the cap. Without the +, a capped 150 reads as an exact 99. -->
     <string name="unread_count_capped">%1$d+</string>
     <string name="notifications_mark_all_read">全部已读</string>
     <string name="notifications_mentions">@我</string>
     <string name="notifications_replies">回复主题</string>
     <string name="notifications_messages">私信</string>
+    <!-- The chip over the merged list: 回复 and @我 are one tab in the App -->
+    <string name="notifications_interactions">互动</string>
     <string name="notifications_empty">这里暂时没有通知</string>
     <string name="notification_sentence_mention">%1$s 在帖子 %2$s 中@了我</string>
     <string name="notification_sentence_reply">%1$s 回复了帖子 %2$s</string>
+    <!-- One comment that did both, which is what the site's own 回复 button writes -->
+    <string name="notification_sentence_reply_mention">%1$s 在帖子 %2$s 中回复并@了我</string>
     <string name="notification_unknown_thread">某个帖子</string>
     <string name="notification_time_pair">%1$s · %2$s</string>
+    <!-- Stand-ins in a notification's one-line preview, for what a row cannot draw -->
+    <string name="notification_preview_image">[图片]</string>
+    <string name="notification_preview_sticker">[表情]</string>
+    <string name="notification_preview_code">[代码]</string>
+    <string name="notification_preview_table">[表格]</string>
+    <string name="notification_preview_vote">[投票]</string>
+    <string name="notification_preview_payment">[星辰收款]</string>
 
     <!-- Direct messages -->
     <string name="messages_empty">还没有私信</string>

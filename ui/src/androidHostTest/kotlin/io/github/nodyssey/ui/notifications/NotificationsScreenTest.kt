@@ -16,6 +16,9 @@ import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
+import io.github.nodyssey.data.NotificationSource
+import io.github.nodyssey.data.NotificationTab
+import io.github.nodyssey.data.contentPreview
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -32,15 +35,38 @@ class NotificationsScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    /** Board 7d: three groups, and no 「系统」 — the site has never had one. */
+    /**
+     * Board 7d's groups, as the App shows them: 回复 and @我 folded into one chip, 私信 beside it.
+     *
+     * Still no 「系统」 — the site has never had one, and merging two groups is not an excuse to
+     * invent a third.
+     */
     @Test
-    fun `offers exactly the three groups the site has`() {
+    fun `offers the merged notification chip and 私信`() {
         setContent(state(items = listOf(mention())))
 
-        composeRule.onNodeWithText("@我").assertIsDisplayed()
-        composeRule.onNodeWithText("回复主题").assertIsDisplayed()
+        composeRule.onNodeWithText("互动").assertIsDisplayed()
         composeRule.onNodeWithText("私信").assertIsDisplayed()
+        assertEquals(0, composeRule.onAllNodesWithText("回复主题").fetchSemanticsNodes().size)
         assertEquals(0, composeRule.onAllNodesWithText("系统").fetchSemanticsNodes().size)
+    }
+
+    /** The badge over the merged chip counts rows, not the two groups' rows added up. */
+    @Test
+    fun `the merged chip discounts what both groups counted twice`() {
+        setContent(
+            state(items = listOf(mention()), counts = NotificationCounts(replies = 5, mentions = 2, overlap = 2)),
+        )
+
+        composeRule.onNodeWithText("5").assertIsDisplayed()
+    }
+
+    /** A comment that replied *and* @-ed is one row, and says so. */
+    @Test
+    fun `a folded row says both things happened`() {
+        setContent(state(items = listOf(mention(sources = bothGroups()))))
+
+        composeRule.onNodeWithText("nssk 在帖子 求教如何改用户名 中回复并@了我").assertIsDisplayed()
     }
 
     @Test
@@ -59,12 +85,12 @@ class NotificationsScreenTest {
                 NotificationsScreen(
                     state =
                     state(
-                        category = NotificationCategory.MESSAGES,
+                        tab = NotificationTab.MESSAGES,
                         conversations = listOf(systemConversation()),
                     ),
                     onSignIn = {},
                     onVerify = {},
-                    onCategoryChange = {},
+                    onTabChange = {},
                     onRetry = {},
                     onMarkAllRead = { markedAllRead = true },
                     onNotificationClick = {},
@@ -91,7 +117,7 @@ class NotificationsScreenTest {
     fun `conversation stamps share one right edge`() {
         setContent(
             state(
-                category = NotificationCategory.MESSAGES,
+                tab = NotificationTab.MESSAGES,
                 conversations =
                 listOf(
                     systemConversation(),
@@ -116,13 +142,30 @@ class NotificationsScreenTest {
     fun `system conversation snippet drops its markdown syntax`() {
         setContent(
             state(
-                category = NotificationCategory.MESSAGES,
+                tab = NotificationTab.MESSAGES,
                 conversations = listOf(systemConversation()),
             ),
         )
 
         composeRule.onNodeWithText("系统通知").assertIsDisplayed()
         composeRule.onNodeWithText("您的评论被用户iwil投喂鸡腿").assertIsDisplayed()
+    }
+
+    /** A picture in a private message is named, for the same reason it is in a notification row. */
+    @Test
+    fun `a conversation whose last message is a picture says so`() {
+        setContent(
+            state(
+                tab = NotificationTab.MESSAGES,
+                conversations =
+                listOf(
+                    conversation(uid = 7, name = "老哥", stamp = NOW)
+                        .copy(snippet = contentPreview("![](https://img.example/1.png) 看这个")),
+                ),
+            ),
+        )
+
+        composeRule.onNodeWithText("[图片] 看这个").assertIsDisplayed()
     }
 
     /**
@@ -139,7 +182,7 @@ class NotificationsScreenTest {
                     state = state(items = items),
                     onSignIn = {},
                     onVerify = {},
-                    onCategoryChange = {},
+                    onTabChange = {},
                     onRetry = {},
                     onMarkAllRead = {},
                     onNotificationClick = {},
@@ -171,7 +214,7 @@ class NotificationsScreenTest {
                     state = state,
                     onSignIn = {},
                     onVerify = {},
-                    onCategoryChange = {},
+                    onTabChange = {},
                     onRetry = {},
                     onMarkAllRead = {},
                     onNotificationClick = {},
@@ -187,33 +230,43 @@ class NotificationsScreenTest {
     }
 
     private fun state(
-        category: NotificationCategory = NotificationCategory.MENTIONS,
+        tab: NotificationTab = NotificationTab.INTERACTIONS,
         items: List<ForumNotification> = emptyList(),
         conversations: List<MessageConversation> = emptyList(),
+        counts: NotificationCounts = NotificationCounts(replies = 5, mentions = 2, messages = 3),
     ) = NotificationsUiState(
         isSignedIn = true,
-        selectedCategory = category,
-        counts = NotificationCounts(replies = 5, mentions = 2, messages = 3),
+        selectedTab = tab,
+        counts = counts,
         items = items,
         conversations = conversations,
         nowMillis = NOW,
     )
 
-    private fun mention(id: String = "1", threadTitle: String = "求教如何改用户名") =
-        ForumNotification(
-            id = id,
-            viewedId = 1L,
-            category = NotificationCategory.MENTIONS,
-            postId = 1,
-            floor = null,
-            actorUid = 12,
-            actorName = "nssk",
-            avatarUrl = null,
-            excerpt = null,
-            threadTitle = threadTitle,
-            createdAtMillis = NOW - 26 * 60_000L,
-            createdAtText = null,
-            isUnread = true,
+    private fun mention(
+        id: String = "1",
+        threadTitle: String = "求教如何改用户名",
+        sources: List<NotificationSource> = listOf(mentionSource()),
+    ) = ForumNotification(
+        id = id,
+        sources = sources,
+        commentId = id.toLongOrNull(),
+        postId = 1,
+        floor = null,
+        actorUid = 12,
+        actorName = "nssk",
+        avatarUrl = null,
+        threadTitle = threadTitle,
+        createdAtMillis = NOW - 26 * 60_000L,
+        createdAtText = null,
+    )
+
+    private fun mentionSource() = NotificationSource(NotificationCategory.MENTIONS, 1L, isUnread = true)
+
+    private fun bothGroups() =
+        listOf(
+            NotificationSource(NotificationCategory.REPLIES, 7L, isUnread = true),
+            mentionSource(),
         )
 
     private fun conversation(
@@ -224,7 +277,7 @@ class NotificationsScreenTest {
         uid = uid,
         userName = name,
         avatarUrl = null,
-        snippet = "摘要",
+        snippet = contentPreview("摘要"),
         isSnippetMine = false,
         updatedAtMillis = stamp,
         updatedAtText = null,
@@ -237,7 +290,7 @@ class NotificationsScreenTest {
             uid = 1,
             userName = MessageConversation.SYSTEM_NAME,
             avatarUrl = null,
-            snippet = "您的[评论](/post-1-1)被用户[iwil](/space/4471)投喂鸡腿",
+            snippet = contentPreview("您的[评论](/post-1-1)被用户[iwil](/space/4471)投喂鸡腿"),
             isSnippetMine = false,
             updatedAtMillis = NOW - 70 * 60_000L,
             updatedAtText = null,

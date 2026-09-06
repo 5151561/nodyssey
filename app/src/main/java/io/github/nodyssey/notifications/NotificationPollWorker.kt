@@ -15,9 +15,9 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import io.github.nodyssey.MainActivity
 import io.github.nodyssey.R
-import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
 import io.github.nodyssey.data.NotificationRepository
+import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.plaza.core.AppClock
@@ -51,7 +51,7 @@ class NotificationPollWorker(
         if (!settings.notificationsEnabled) return Result.success()
         if (!sessionRepository.peek().isSignedIn) return Result.success()
 
-        val counts =
+        val fetched =
             try {
                 notificationRepository.refreshCounts()
             } catch (e: SiteException) {
@@ -59,6 +59,7 @@ class NotificationPollWorker(
             }
 
         val previous = settingsRepository.notificationSeenCounts()
+        val counts = withOverlap(previous, fetched) ?: return Result.retry()
         // Recorded before deciding whether to post, so the quiet window "collects silently":
         // arrivals inside it never turn into a burst of stale notifications at 07:00.
         settingsRepository.setNotificationSeenCounts(counts)
@@ -71,19 +72,46 @@ class NotificationPollWorker(
                 .let { it.hour * 60 + it.minute }
         if (settings.notificationQuietHours && isInQuietHours(minuteOfDay)) return Result.success()
 
-        val fresh = newlyUnreadCounts(previous, counts)
-        if (settings.notifyMentions) notify(NotificationCategory.MENTIONS, fresh)
-        if (settings.notifyReplies) notify(NotificationCategory.REPLIES, fresh)
-        if (settings.notifyMessages) notify(NotificationCategory.MESSAGES, fresh)
+        if (settings.notifyInteractions) notify(NotificationTab.INTERACTIONS, previous, counts)
+        if (settings.notifyMessages) notify(NotificationTab.MESSAGES, previous, counts)
         return Result.success()
+    }
+
+    /**
+     * The counts with the one number `unread-count` cannot answer: how many of them are one comment.
+     *
+     * The site files a reply that opens with `@name #7` under both 回复主题 and @我, so two of its
+     * unread are one thing to read — and only the lists say which. They are loaded on the runs that
+     * could have gained such a pair, which is the runs where both numbers went up; every other run
+     * carries the count it already had.
+     *
+     * Null asks the caller to retry: a merged load that failed on the network is the same transport
+     * failure `refreshCounts` retries for. Anything else — a challenge page, a shape we cannot read
+     * — falls back to the carried count and notifies with it, because an over-count is a smaller
+     * failure than a silent one.
+     */
+    private suspend fun withOverlap(
+        previous: NotificationCounts,
+        fetched: NotificationCounts,
+    ): NotificationCounts? {
+        if (!needsMergedLoad(previous, fetched)) {
+            return fetched.copy(overlap = carriedOverlap(previous, fetched))
+        }
+        return try {
+            notificationRepository.interactions()
+            fetched.copy(overlap = notificationRepository.counts.value.overlap)
+        } catch (e: SiteException) {
+            if (e.error is SiteError.Network) null else fetched.copy(overlap = carriedOverlap(previous, fetched))
+        }
     }
 
     @SuppressLint("MissingPermission")
     private fun notify(
-        category: NotificationCategory,
-        fresh: NotificationCounts,
+        tab: NotificationTab,
+        previous: NotificationCounts,
+        counts: NotificationCounts,
     ) {
-        val count = fresh.forCategory(category)
+        val count = newlyUnreadCount(previous, counts, tab)
         if (count <= 0) return
         if (!canPostNotifications()) return
 
@@ -91,7 +119,7 @@ class NotificationPollWorker(
         val openApp =
             PendingIntent.getActivity(
                 context,
-                category.ordinal,
+                tab.ordinal,
                 Intent(context, MainActivity::class.java)
                     .putExtra(MainActivity.EXTRA_OPEN_TAB, MainActivity.TAB_NOTIFICATIONS)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
@@ -99,19 +127,19 @@ class NotificationPollWorker(
             )
         val notification =
             NotificationCompat
-                .Builder(context, NotificationChannels.channelId(category))
+                .Builder(context, NotificationChannels.channelId(tab))
                 .setSmallIcon(R.drawable.ic_stat_notification)
-                .setContentTitle(context.getString(titleRes(category)))
+                .setContentTitle(context.getString(titleRes(tab)))
                 // A quantity string, so English can say "1 new reply" without this file knowing
                 // which languages have a singular. `count` twice on purpose: once to choose the
                 // form, once to fill the `%1$d` inside it.
-                .setContentText(context.resources.getQuantityString(bodyRes(category), count, count))
+                .setContentText(context.resources.getQuantityString(bodyRes(tab), count, count))
                 .setContentIntent(openApp)
                 .setAutoCancel(true)
                 .build()
-        // One notification per group, updated in place — three site groups, at most three entries.
+        // One notification per group, updated in place — two groups, at most two entries.
         try {
-            NotificationManagerCompat.from(context).notify(category.ordinal, notification)
+            NotificationManagerCompat.from(context).notify(tab.ordinal, notification)
         } catch (_: SecurityException) {
             // Permission can be revoked between the explicit check above and this call.
         }
@@ -126,18 +154,16 @@ class NotificationPollWorker(
         return permitted && NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 
-    private fun titleRes(category: NotificationCategory): Int =
-        when (category) {
-            NotificationCategory.MENTIONS -> R.string.notifications_mentions
-            NotificationCategory.REPLIES -> R.string.notifications_replies
-            NotificationCategory.MESSAGES -> R.string.notifications_messages
+    private fun titleRes(tab: NotificationTab): Int =
+        when (tab) {
+            NotificationTab.INTERACTIONS -> R.string.notifications_interactions
+            NotificationTab.MESSAGES -> R.string.notifications_messages
         }
 
     @PluralsRes
-    private fun bodyRes(category: NotificationCategory): Int =
-        when (category) {
-            NotificationCategory.MENTIONS -> R.plurals.notify_body_mentions
-            NotificationCategory.REPLIES -> R.plurals.notify_body_replies
-            NotificationCategory.MESSAGES -> R.plurals.notify_body_messages
+    private fun bodyRes(tab: NotificationTab): Int =
+        when (tab) {
+            NotificationTab.INTERACTIONS -> R.plurals.notify_body_interactions
+            NotificationTab.MESSAGES -> R.plurals.notify_body_messages
         }
 }

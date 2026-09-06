@@ -156,6 +156,36 @@ class MessageRepositoryTest {
             assertEquals(1, conversations.getValue("ZcZiXs").unreadCount)
         }
 
+    /** The row has one line, and a message written in Markdown has to read as its words on it. */
+    @Test
+    fun `flattens the snippet the way a notification row is flattened`() =
+        runTest {
+            val api =
+                FakeJsonApi(
+                    mapOf(
+                        listPath to
+                            """
+                            {"msgArray":[
+                              {"receiver_id":16874,"sender_id":52425,
+                               "content":"![](https://img.example.com/1.png) 看这个",
+                               "created_at":"2026-07-24T16:24:20.000Z","viewed":1,
+                               "sender_name":"ZcZiXs","receiver_name":"我"}
+                            ]}
+                            """.trimIndent(),
+                    ),
+                )
+
+            val snippet = repository(api).conversations().single().snippet
+
+            assertEquals(
+                listOf(
+                    PreviewPart.Placeholder(PreviewPlaceholder.IMAGE),
+                    PreviewPart.Text(" 看这个"),
+                ),
+                snippet,
+            )
+        }
+
     /** The full history lives behind `with/{uid}`; the list only ever holds the latest message. */
     @Test
     fun `thread reads the whole history and the talkTo header`() =

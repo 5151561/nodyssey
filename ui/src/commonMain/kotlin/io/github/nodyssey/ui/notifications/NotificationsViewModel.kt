@@ -11,6 +11,7 @@ import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
 import io.github.nodyssey.data.NotificationRepository
+import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.data.session.SessionRepository
@@ -60,39 +61,41 @@ class NotificationsViewModel(
             .launchIn(viewModelScope)
     }
 
-    fun selectCategory(category: NotificationCategory) {
-        if (_uiState.value.selectedCategory == category) return
+    fun selectTab(tab: NotificationTab) {
+        if (_uiState.value.selectedTab == tab) return
         _uiState.update {
-            it.copy(selectedCategory = category, items = emptyList(), conversations = emptyList())
+            it.copy(selectedTab = tab, items = emptyList(), conversations = emptyList())
         }
         refresh()
     }
 
     /**
-     * Loads the counts plus whichever list the selected group shows.
+     * Loads the counts plus whichever list the selected tab shows.
      *
-     * 私信 is not a list of notifications — it is the conversation list of board 7e — so the group
-     * decides which repository answers, and the counts call is shared because the chips show all
-     * three badges whatever is selected.
+     * 私信 is not a list of notifications — it is the conversation list of board 7e — so the tab
+     * decides which repository answers, and the counts call is shared because the chips show both
+     * badges whatever is selected.
      */
     fun refresh() {
         if (!session.state.value.isSignedIn) return
-        val category = _uiState.value.selectedCategory
+        val tab = _uiState.value.selectedTab
         loadJob?.cancel()
         loadJob =
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true, error = null) }
                 runCatchingExceptCancellation {
-                    val counts = repository.refreshCounts()
-                    if (category == NotificationCategory.MESSAGES) {
-                        Loaded(counts, conversations = messages.conversations())
+                    // The counts land on screen through the repository's own flow, which is also
+                    // what the merged load corrects a moment later — copying the returned value into
+                    // the state here would race that correction and sometimes win.
+                    repository.refreshCounts()
+                    if (tab == NotificationTab.MESSAGES) {
+                        Loaded(conversations = messages.conversations())
                     } else {
-                        Loaded(counts, items = repository.notifications(category))
+                        Loaded(items = repository.interactions())
                     }
                 }.onSuccess { loaded ->
                     _uiState.update {
                         it.copy(
-                            counts = loaded.counts,
                             items = loaded.items,
                             conversations = loaded.conversations,
                             isLoading = false,
@@ -130,27 +133,28 @@ class NotificationsViewModel(
      * than restoring the badges by hand — whatever it says is the truth either way.
      */
     fun markAllRead() {
-        val category = _uiState.value.selectedCategory
+        val tab = _uiState.value.selectedTab
         val state = _uiState.value
-        // Only the group the button belongs to. Zeroing the whole `NotificationCounts` used to wipe
-        // all three badges, so 全部已读 on @我 also claimed the unread 私信 had been read.
-        repository.noteRead(
-            category = category,
-            count = state.counts.forCategory(category),
-        )
+        // Only the groups the button belongs to. Zeroing the whole `NotificationCounts` used to wipe
+        // every badge, so 全部已读 on 通知 also claimed the unread 私信 had been read.
+        tab.categories.forEach { category ->
+            repository.noteRead(category = category, count = state.counts.forCategory(category))
+        }
         _uiState.update {
             it.copy(
-                items = it.items.map { item -> item.copy(isUnread = false) },
+                items = it.items.map(ForumNotification::read),
                 conversations = it.conversations.map { row -> row.copy(unreadCount = 0) },
             )
         }
         viewModelScope.launch {
             runCatchingExceptCancellation {
-                if (category == NotificationCategory.MESSAGES) {
+                if (tab == NotificationTab.MESSAGES) {
                     messages.markAllRead()
                     repository.refreshCounts()
                 } else {
-                    repository.markAllRead(category)
+                    // Both endpoints: the site has no "all groups" call, and the list on screen is
+                    // the two of them.
+                    tab.categories.forEach { repository.markAllRead(it) }
                 }
             }.onFailure { refresh() }
         }
@@ -166,12 +170,13 @@ class NotificationsViewModel(
     fun markOpened(id: String) {
         val item = _uiState.value.items.firstOrNull { it.id == id } ?: return
         _uiState.update { state ->
-            state.copy(items = state.items.map { if (it.id == id) it.copy(isUnread = false) else it })
+            state.copy(items = state.items.map { if (it.id == id) it.read() else it })
         }
         if (!item.isUnread) return
-        val viewedId = item.viewedId ?: return
         viewModelScope.launch {
-            runCatchingExceptCancellation { repository.markViewed(item.category, listOf(viewedId)) }
+            // Every group the row arrived in, not just the one whose sentence it is showing: a
+            // folded row is two unread rows on the server.
+            runCatchingExceptCancellation { repository.markViewed(item.sources) }
         }
     }
 
@@ -241,7 +246,6 @@ class NotificationsViewModel(
     }
 
     private data class Loaded(
-        val counts: NotificationCounts,
         val items: List<ForumNotification> = emptyList(),
         val conversations: List<MessageConversation> = emptyList(),
     )
@@ -281,7 +285,7 @@ data class NewConversationState(
 
 data class NotificationsUiState(
     val isSignedIn: Boolean = false,
-    val selectedCategory: NotificationCategory = NotificationCategory.MENTIONS,
+    val selectedTab: NotificationTab = NotificationTab.INTERACTIONS,
     val counts: NotificationCounts = NotificationCounts(),
     val items: List<ForumNotification> = emptyList(),
     val conversations: List<MessageConversation> = emptyList(),
@@ -296,7 +300,7 @@ data class NotificationsUiState(
 
     val isEmpty: Boolean
         get() =
-            if (selectedCategory == NotificationCategory.MESSAGES) {
+            if (selectedTab == NotificationTab.MESSAGES) {
                 conversations.isEmpty()
             } else {
                 items.isEmpty()

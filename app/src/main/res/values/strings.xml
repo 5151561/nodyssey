@@ -1,10 +1,14 @@
 <!--
-  What is left in `:app`'s Android resources after step D1: the four strings the *platform* reads
-  rather than a screen — the launcher label out of the manifest, and the three notification channel
-  names, which `NotificationManager` stores at channel-creation time — plus the three notification
+  What is left in `:app`'s Android resources after step D1: the three strings the *platform* reads
+  rather than a screen — the launcher label out of the manifest, and the two notification channel
+  names, which `NotificationManager` stores at channel-creation time — plus the two notification
   bodies, which only the poll worker builds.
 
-  The three channel names and `app_name` also exist in `ui/src/commonMain/composeResources`. That is
+  Two channel names and not the site's three: the app posts one notification per group the *screen*
+  shows (`NotificationTab`), because the site files one comment under both @我 and 回复主题 and a
+  channel for each would post it twice.
+
+  The two channel names and `app_name` also exist in `ui/src/commonMain/composeResources`. That is
   a copy, and deliberately so: the settings screen draws the same names, and the alternative is
   `runBlocking { getString(…) }` inside `Application.onCreate` to reach a suspend accessor.
 
@@ -18,19 +22,15 @@
     tools:locale="zh">
     <!-- A name, so it reads the same in every language and has nothing to translate. -->
     <string name="app_name" translatable="false">Nodyssey</string>
-    <string name="notifications_mentions">@我</string>
-    <string name="notifications_replies">回复主题</string>
+    <string name="notifications_interactions">互动</string>
     <string name="notifications_messages">私信</string>
     <!--
       Plurals rather than plain strings because English needs two forms of each and Chinese needs
       one. The count is always in the text, so a language whose singular reads "one new reply" gets
       to say that without the app knowing which languages those are.
     -->
-    <plurals name="notify_body_mentions">
-        <item quantity="other">%1$d 条新的 @ 提醒</item>
-    </plurals>
-    <plurals name="notify_body_replies">
-        <item quantity="other">%1$d 条新回复</item>
+    <plurals name="notify_body_interactions">
+        <item quantity="other">%1$d 条新互动</item>
     </plurals>
     <plurals name="notify_body_messages">
         <item quantity="other">%1$d 条新私信</item>

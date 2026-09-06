@@ -45,7 +45,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.data.NotificationCategory
+import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.account.AccountSettingsRoute
@@ -357,12 +357,12 @@ fun MainNavigation(
                         )
 
                     is NodeSeekSite.InternalRoute.Notifications ->
-                        route.group?.let { notificationsViewModel.selectCategory(it.toCategory()) }
+                        route.group?.let { notificationsViewModel.selectTab(it.toTab()) }
 
                     is NodeSeekSite.InternalRoute.MessageThread -> {
                         // The list behind the conversation, so Back lands on 私信 rather than on
                         // whichever group the tab was last left showing.
-                        notificationsViewModel.selectCategory(NotificationCategory.MESSAGES)
+                        notificationsViewModel.selectTab(NotificationTab.MESSAGES)
                         notificationsStack.openMessageThread(route.uid)
                     }
 
@@ -450,7 +450,7 @@ fun MainNavigation(
                 // stack can hold — 通知 is where it already lives.
                 is NodeSeekSite.InternalRoute.Notifications -> {
                     currentTab = TopLevelDestination.NOTIFICATIONS
-                    route.group?.let { notificationsViewModel.selectCategory(it.toCategory()) }
+                    route.group?.let { notificationsViewModel.selectTab(it.toTab()) }
                 }
 
                 // The conversation goes on the stack that is open, unlike the tab switch above: a
@@ -785,8 +785,14 @@ private fun NavBackStack<NavKey>.openMessageThread(uid: Long) {
     add(MessageThreadKey(uid, userName = ""))
 }
 
-private fun NodeSeekSite.NotificationGroup.toCategory(): NotificationCategory =
+/**
+ * Which list a `/notification` link lands on.
+ *
+ * `#/atMe` and `#/replyToMe` are one tab in the app — see [NotificationTab] — so a link to either
+ * resolves to the same place, and the row the reader came for is in it either way.
+ */
+private fun NodeSeekSite.NotificationGroup.toTab(): NotificationTab =
     when (this) {
-        NodeSeekSite.NotificationGroup.MENTIONS -> NotificationCategory.MENTIONS
-        NodeSeekSite.NotificationGroup.MESSAGES -> NotificationCategory.MESSAGES
+        NodeSeekSite.NotificationGroup.MENTIONS -> NotificationTab.INTERACTIONS
+        NodeSeekSite.NotificationGroup.MESSAGES -> NotificationTab.MESSAGES
     }
