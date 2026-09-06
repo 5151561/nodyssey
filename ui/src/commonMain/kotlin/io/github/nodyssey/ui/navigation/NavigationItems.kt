@@ -4,11 +4,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -19,17 +17,19 @@ import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.NotificationsKey
 import io.github.nodyssey.PostListKey
 import io.github.nodyssey.ProfileKey
-import io.github.nodyssey.SearchKey
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.tab_home
 import io.github.nodyssey.ui.resources.tab_notifications
 import io.github.nodyssey.ui.resources.tab_profile
-import io.github.nodyssey.ui.resources.tab_search
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * The four places the app can be.
+ * The three places the app can be.
+ *
+ * 搜索 used to be a fourth. It is now reached from 首页's own app bar and lives on 首页's stack, which
+ * is where a search started from the feed belongs: Back returns to the list it was started from
+ * instead of to whatever the search tab was last left showing.
  *
  * Selected items switch to the filled icon rather than only changing colour — Material 3's own
  * "expressive" signal, and the one that still reads at a glance on a small dark screen.
@@ -41,7 +41,6 @@ enum class TopLevelDestination(
     val icon: ImageVector,
 ) {
     HOME(PostListKey, Res.string.tab_home, Icons.Filled.Home, Icons.Outlined.Home),
-    SEARCH(SearchKey, Res.string.tab_search, Icons.Filled.Search, Icons.Outlined.Search),
     NOTIFICATIONS(
         NotificationsKey,
         Res.string.tab_notifications,
@@ -57,7 +56,7 @@ enum class TopLevelDestination(
 }
 
 /**
- * The four items, described once for whichever form the window calls for.
+ * The three items, described once for whichever form the window calls for.
  *
  * `NavigationSuiteScaffold` picks the bar, the rail or the drawer from the actual window size, so
  * this deliberately does not build a `NavigationBar` itself — on a tablet or an unfolded foldable a

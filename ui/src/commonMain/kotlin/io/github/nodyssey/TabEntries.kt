@@ -19,7 +19,8 @@ import io.github.nodyssey.ui.search.SearchViewModel
 import io.github.nodyssey.ui.settings.UpdateReminderViewModel
 
 /**
- * The four tab roots and the conversation screen 通知 opens.
+ * The three tab roots, 搜索 — which 首页's app bar opens on top of itself — and the conversation
+ * screen 通知 opens.
  *
  * One of the region files `Navigation.kt`'s `destinationProvider` assembles; see [StackEntryScope]
  * for the capture rules they all share.
@@ -51,6 +52,7 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
                 )
             },
             onCreatePost = { backStack.add(PostComposerKey()) },
+            onSearch = { backStack.add(SearchKey) },
             onSignIn = {
                 backStack.add(SignInKey)
             },
@@ -73,11 +75,11 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
             // A user result now has a screen of its own, so it stays in the app. Finding
             // yourself in search must open the same self-shaped space 我的 opens.
             onUserClick = openSpace,
+            onBack = { backStack.removeLastOrNull() },
             onSignIn = { backStack.add(SignInKey) },
             onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
-            onNavigationBarHiddenChanged = { hidden ->
-                if (!isListDetailExpanded()) onTabBarHiddenByScroll(hidden)
-            },
+            // No `onNavigationBarHiddenChanged`: 搜索 is not a tab root any more, so on a phone the
+            // bar is already gone while it is open and there is nothing for the scroll to hide.
         )
     }
 

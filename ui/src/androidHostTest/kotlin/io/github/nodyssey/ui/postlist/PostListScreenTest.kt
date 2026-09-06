@@ -6,9 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -45,6 +42,7 @@ import io.github.plaza.core.net.SiteException
 import io.github.plaza.designsys.theme.PlazaTheme
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -118,6 +116,7 @@ class PostListScreenTest {
         onBoardClick: (String?) -> Unit = {},
         onSortChange: (FeedSort) -> Unit = {},
         onRecoverInBrowser: () -> Unit = {},
+        onSearch: () -> Unit = {},
         onGoToPage: (Int) -> Unit = {},
         onFindPageRow: suspend (Int) -> Int? = { null },
         listState: LazyListState? = null,
@@ -133,6 +132,7 @@ class PostListScreenTest {
                     onBoardClick = onBoardClick,
                     onSortChange = onSortChange,
                     onRecoverInBrowser = onRecoverInBrowser,
+                    onSearch = onSearch,
                     onGoToPage = onGoToPage,
                     onFindPageRow = onFindPageRow,
                     listState = listState ?: rememberLazyListState(),
@@ -152,6 +152,7 @@ class PostListScreenTest {
         onBoardClick: (String?) -> Unit,
         onSortChange: (FeedSort) -> Unit,
         onRecoverInBrowser: () -> Unit,
+        onSearch: () -> Unit = {},
         reselectRequests: Int = 0,
         onGoToPage: (Int) -> Unit = {},
         onFindPageRow: suspend (Int) -> Int? = { null },
@@ -175,6 +176,7 @@ class PostListScreenTest {
             onSortChange = onSortChange,
             onSignInClick = {},
             onRecoverInBrowser = onRecoverInBrowser,
+            onSearch = onSearch,
             onGoToPage = onGoToPage,
             onFindPageRow = onFindPageRow,
             reselectRequests = reselectRequests,
@@ -470,43 +472,31 @@ class PostListScreenTest {
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
     }
 
-    /** The wordmark is the route that still works while the navigation bar is hidden. */
-    @Test
-    fun `tapping the title returns to the first row`() {
-        setScreen((1..40).map { feedPost(it.toLong(), "post $it") })
-
-        composeRule.onNode(feedList).performScrollToIndex(20)
-        composeRule.onNodeWithText("post 21").assertIsDisplayed()
-
-        composeRule.onNode(scrollToTopAffordance).performClick()
-
-        composeRule.onNodeWithText("post 1").assertIsDisplayed()
-    }
-
     /**
-     * The title folds away with the feed; the board strip does not.
+     * The app bar folds away with the feed; the board strip does not.
      *
      * A real swipe rather than `performScrollToIndex`, which drives the list through its semantics
      * action and dispatches no nested scroll at all — the app bar would stay open however far such a
      * scroll went, and the test would pass without the behaviour existing.
      */
     @Test
-    fun `scrolling the feed folds the title away and keeps the board strip`() {
+    fun `scrolling the feed folds the app bar away and keeps the board strip`() {
         setScreen((1..40).map { feedPost(it.toLong(), "post $it") })
 
         composeRule.onNode(feedList).performTouchInput { swipeUp() }
 
-        composeRule.onNode(scrollToTopAffordance).assertIsNotDisplayed()
+        composeRule.onNodeWithContentDescription("排序方式").assertIsNotDisplayed()
+        composeRule.onNodeWithContentDescription("搜索").assertIsNotDisplayed()
         composeRule.onNodeWithText("综合").assertIsDisplayed()
         composeRule.onNodeWithText("技术").assertIsDisplayed()
     }
 
     /**
-     * Switching boards puts the list back at its first row, and the title has to come back with it:
-     * that scroll is programmatic, so it produces no upward delta for the bar to unfold against.
+     * Switching boards puts the list back at its first row, and the app bar has to come back with
+     * it: that scroll is programmatic, so it produces no upward delta for the bar to unfold against.
      */
     @Test
-    fun `switching boards unfolds the title again`() {
+    fun `switching boards unfolds the app bar again`() {
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var state by mutableStateOf(PostListUiState(boards = boards))
         composeRule.setContent {
@@ -525,21 +515,23 @@ class PostListScreenTest {
         }
 
         composeRule.onNode(feedList).performTouchInput { swipeUp() }
-        composeRule.onNode(scrollToTopAffordance).assertIsNotDisplayed()
+        composeRule.onNodeWithContentDescription("排序方式").assertIsNotDisplayed()
 
         state = state.copy(categorySlug = "tech")
 
-        composeRule.onNode(scrollToTopAffordance).assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("排序方式").assertIsDisplayed()
     }
 
-    /**
-     * The wordmark, found by the label it offers TalkBack rather than by its text: the text is the
-     * app name, which the debug build decorates, and the label is the part worth pinning down.
-     */
-    private val scrollToTopAffordance =
-        SemanticsMatcher("click labelled 回到顶部") { node ->
-            node.config.getOrNull(SemanticsActions.OnClick)?.label == "回到顶部"
-        }
+    /** 搜索 left the navigation bar for this corner, so the feed is the only way to reach it. */
+    @Test
+    fun `the app bar opens search`() {
+        var opened = false
+        setScreen(listOf(feedPost(1, "post")), onSearch = { opened = true })
+
+        composeRule.onNodeWithContentDescription("搜索").performClick()
+
+        assertTrue(opened)
+    }
 
     /** The vertical list of rows, told apart from the board strip that also scrolls. */
     private val feedList = hasScrollAction() and hasAnyDescendant(hasText("post 1"))
