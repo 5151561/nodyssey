@@ -46,7 +46,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -58,8 +57,6 @@ import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
 import io.github.nodyssey.data.NotificationSource
 import io.github.nodyssey.data.NotificationTab
-import io.github.nodyssey.data.PreviewPart
-import io.github.nodyssey.data.PreviewPlaceholder
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.SignedOutState
 import io.github.nodyssey.ui.common.SiteErrorState
@@ -374,19 +371,6 @@ private fun NotificationRow(
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
             )
-            // What was actually said. The whole point of the row: the sentence above says that
-            // somebody wrote something, and until this line was here the only way to find out what
-            // was to open the thread — which, for the half of them that are a 谢谢老哥, is a page
-            // load to learn nothing.
-            previewText(item.preview)?.let { preview ->
-                Text(
-                    text = preview,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = PREVIEW_LINES,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
             timestampLabel(item.createdAtMillis, item.createdAtText, nowMillis)?.let { stamp ->
                 Text(
                     text = stamp,
@@ -488,14 +472,6 @@ private val PLACEHOLDER = Regex("""%(\d)[$]s""")
 private const val MAX_BADGE = 99
 
 /**
- * How much of a comment a row shows.
- *
- * Two lines is the trade the whole change rests on: one is a fragment often enough to send the
- * reader into the thread anyway, and three turns a screenful of notifications into four rows.
- */
-private const val PREVIEW_LINES = 2
-
-/**
  * Drops the avatar onto the sentence's cap line.
  *
  * The twin of the feed's own offset — even with the first line's leading trimmed, the line box still
@@ -530,11 +506,6 @@ private fun NotificationsPreview() {
                         actorUid = 12,
                         actorName = "nssk",
                         avatarUrl = null,
-                        preview =
-                        listOf(
-                            PreviewPart.Text("还没有这个功能，其实可以考虑花费星辰 "),
-                            PreviewPart.Placeholder(PreviewPlaceholder.STICKER),
-                        ),
                         threadTitle = "求教如何改用户名",
                         createdAtMillis = PREVIEW_NOW - 26 * 60_000L,
                         createdAtText = null,
@@ -551,7 +522,6 @@ private fun NotificationsPreview() {
                         actorUid = 13,
                         actorName = "羽落无声",
                         avatarUrl = null,
-                        preview = listOf(PreviewPart.Placeholder(PreviewPlaceholder.IMAGE)),
                         threadTitle = "Debian 13 上用 nftables 做端口转发的坑",
                         createdAtMillis = PREVIEW_NOW - 26 * 60 * 60_000L,
                         createdAtText = null,

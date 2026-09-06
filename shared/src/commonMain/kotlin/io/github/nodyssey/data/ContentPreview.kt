@@ -24,22 +24,20 @@ sealed interface PreviewPart {
 }
 
 /**
- * A comment reduced to the one line a list row can show.
+ * A message reduced to the one line a list row can show — the 私信 list's snippet.
  *
- * Three things happen on the way, and each of them is what makes the line worth showing at all:
+ * Two things happen on the way, and each of them is what makes the line worth showing at all:
  *
- * - **The quotation goes.** A reply written with the site's 引用 button opens with a blockquote of
- *   what it is answering — which, in a notification about my own comment, is *me*. Leading quotes
- *   are dropped, unless dropping them leaves nothing, in which case the quote was the whole reply.
- * - **The address goes.** The site's 回复 button writes `@name [#7](/post-…#7)` at the head of the
- *   body; the row already says who was answered and where, so the preview starts at what was said.
+ * - **The quotation goes.** A message written with the bubble's 引用 action opens with a blockquote
+ *   of what it is answering, which is the message above it in the same conversation. Leading quotes
+ *   are dropped, unless dropping them leaves nothing, in which case the quote was the whole message.
  * - **Pictures are named rather than drawn.** A row that is one sticker tall would push every other
  *   row down the screen, so an image becomes `[图片]` and a sticker `[表情]` — the reader can see
  *   that something was sent without the list turning into a gallery.
  *
  * [raw] is taken as Markdown unless it looks like markup, because the site's JSON is inconsistent
- * about which it sends: 私信 carry Markdown, while a space comment arrives already rendered. Both
- * parsers produce the same tree, so the only difference is which one runs.
+ * about which it sends: 私信 carry Markdown, while a rendered body arrives as HTML. Both parsers
+ * produce the same tree, so the only difference is which one runs.
  */
 fun contentPreview(
     raw: String?,
@@ -50,7 +48,7 @@ fun contentPreview(
     val nodes = if (source.looksLikeMarkup()) parseMarkup(source) else parseMarkdown(source)
     val builder = PreviewBuilder(limit)
     builder.appendBlocks(nodes.withoutLeadingQuotes())
-    return builder.build().withoutLeadingAddress()
+    return builder.build()
 }
 
 /** How many characters of text a preview keeps; the row ellipsizes whatever still does not fit. */
@@ -70,29 +68,6 @@ private fun parseMarkup(html: String): List<RichNode> = RichContentParser.parse(
 private fun String.looksLikeMarkup(): Boolean = MARKUP.containsMatchIn(this)
 
 private val MARKUP = Regex("</[a-zA-Z]|<(img|br|hr)\\b", RegexOption.IGNORE_CASE)
-
-/**
- * `@name #7 `, as the site's own 回复 button writes it, at the very head of the body.
- *
- * Only at the head, and only once: an `@` further in is somebody the writer chose to address, and
- * dropping that would change what the sentence says.
- *
- * The separator after the name is required, not optional, and that is the whole guard against a
- * language that does not space its words: `@某人你好` has no space in it, so the name would be read
- * as the entire sentence and the preview would come out empty. No space, no address, nothing
- * dropped.
- */
-private val LEADING_ADDRESS = Regex("^@\\S+(\\s+#\\d+)?[\\s:：,，]+")
-
-private fun List<PreviewPart>.withoutLeadingAddress(): List<PreviewPart> {
-    val first = firstOrNull() as? PreviewPart.Text ?: return this
-    val trimmed = first.text.replaceFirst(LEADING_ADDRESS, "").trimStart()
-    return when {
-        trimmed == first.text -> this
-        trimmed.isEmpty() -> drop(1)
-        else -> listOf(PreviewPart.Text(trimmed)) + drop(1)
-    }
-}
 
 private fun List<RichNode>.withoutLeadingQuotes(): List<RichNode> {
     val rest = dropWhile { it is RichNode.Quote }

@@ -18,8 +18,6 @@ import io.github.nodyssey.data.NotificationCategory
 import io.github.nodyssey.data.NotificationCounts
 import io.github.nodyssey.data.NotificationSource
 import io.github.nodyssey.data.NotificationTab
-import io.github.nodyssey.data.PreviewPart
-import io.github.nodyssey.data.PreviewPlaceholder
 import io.github.nodyssey.data.contentPreview
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
@@ -61,14 +59,6 @@ class NotificationsScreenTest {
         )
 
         composeRule.onNodeWithText("5").assertIsDisplayed()
-    }
-
-    /** The point of the row: what was written, without opening the thread. */
-    @Test
-    fun `shows the comment itself, with a placeholder for the picture`() {
-        setContent(state(items = listOf(mention(preview = preview()))))
-
-        composeRule.onNodeWithText("还没有这个功能 [图片]").assertIsDisplayed()
     }
 
     /** A comment that replied *and* @-ed is one row, and says so. */
@@ -256,7 +246,6 @@ class NotificationsScreenTest {
     private fun mention(
         id: String = "1",
         threadTitle: String = "求教如何改用户名",
-        preview: List<PreviewPart> = emptyList(),
         sources: List<NotificationSource> = listOf(mentionSource()),
     ) = ForumNotification(
         id = id,
@@ -267,7 +256,6 @@ class NotificationsScreenTest {
         actorUid = 12,
         actorName = "nssk",
         avatarUrl = null,
-        preview = preview,
         threadTitle = threadTitle,
         createdAtMillis = NOW - 26 * 60_000L,
         createdAtText = null,
@@ -279,12 +267,6 @@ class NotificationsScreenTest {
         listOf(
             NotificationSource(NotificationCategory.REPLIES, 7L, isUnread = true),
             mentionSource(),
-        )
-
-    private fun preview() =
-        listOf(
-            PreviewPart.Text("还没有这个功能 "),
-            PreviewPart.Placeholder(PreviewPlaceholder.IMAGE),
         )
 
     private fun conversation(

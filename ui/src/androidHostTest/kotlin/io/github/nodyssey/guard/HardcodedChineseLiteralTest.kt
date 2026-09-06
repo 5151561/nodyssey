@@ -85,7 +85,7 @@ class HardcodedChineseLiteralTest {
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/login/SignInScreen.kt" to 1,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/messages/MessageThreadScreen.kt" to 5,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/notifications/ConversationList.kt" to 3,
-            "ui/src/commonMain/kotlin/io/github/nodyssey/ui/notifications/NotificationsScreen.kt" to 4,
+            "ui/src/commonMain/kotlin/io/github/nodyssey/ui/notifications/NotificationsScreen.kt" to 3,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/postdetail/PostDetailScreen.kt" to 10,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/postlist/PostListScreen.kt" to 34,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/profile/ProfileScreen.kt" to 2,

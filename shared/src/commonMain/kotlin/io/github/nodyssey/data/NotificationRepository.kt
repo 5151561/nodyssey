@@ -108,6 +108,19 @@ data class NotificationSource(
  * resource, and [sources] is what decides whether that sentence says 回复, @, or both.
  * [createdAtMillis] is null when the endpoint pre-rendered the time, in which case [createdAtText]
  * is all we have.
+ *
+ * **What was written is not here, because the endpoint does not send it.** A row off
+ * `at-me/list` / `reply-to-me/list` is exactly these keys, read off a signed-in device on
+ * 2026-09-07:
+ *
+ * ```
+ * id, viewed, comment_id, floor_id, created_at, commenter_id, title, post_id,
+ * first_comment_id, commenter_name
+ * ```
+ *
+ * `title` is the *thread's*. The site's own notification page shows no comment body either, so
+ * there is nothing to parse and no cheaper field name to probe for: the body lives in the post
+ * page, one full HTML load per comment, which is not a thing a list load can do a screenful of.
  */
 data class ForumNotification(
     val id: String,
@@ -126,8 +139,6 @@ data class ForumNotification(
     val actorUid: Long?,
     val actorName: String,
     val avatarUrl: String?,
-    /** What was written, flattened to the one line a row can show — see [contentPreview]. */
-    val preview: List<PreviewPart>,
     val threadTitle: String?,
     val createdAtMillis: Long?,
     val createdAtText: String?,
@@ -335,7 +346,6 @@ private fun ForumNotification.foldIn(other: ForumNotification): ForumNotificatio
         floor = floor ?: other.floor,
         actorUid = actorUid ?: other.actorUid,
         avatarUrl = avatarUrl ?: other.avatarUrl,
-        preview = preview.ifEmpty { other.preview },
         threadTitle = threadTitle ?: other.threadTitle,
         createdAtMillis = createdAtMillis ?: other.createdAtMillis,
         createdAtText = createdAtText ?: other.createdAtText,
@@ -395,7 +405,6 @@ private fun JsonObject.toNotification(
         actorUid = actorUid,
         actorName = actor,
         avatarUrl = actorUid?.let { NodeSeekSite.avatarUrl(it) },
-        preview = contentPreview(text("content", "comment_content", "excerpt", "message")),
         threadTitle = text("post_title", "discussion_title", "title"),
         createdAtMillis = TimeFormat.parseTimestamp(createdAt),
         createdAtText = createdAt?.trim()?.ifBlank { null },

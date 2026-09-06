@@ -5,12 +5,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * The one line a notification row shows instead of sending the reader into the thread.
+ * The one line the 私信 list shows for the message a conversation is sitting on.
  *
- * Each case here is a shape the site actually writes: the 回复 button's address line, the 引用
- * button's blockquote, an emoji panel sticker, and a body whose content is a picture and nothing
- * else. What they have in common is that flattening them naively produces a line that says nothing —
- * `@me #3`, or the reader's own words quoted back at them.
+ * Each case here is a shape the site actually writes: the bubble's 引用 blockquote, an emoji panel
+ * sticker, and a body whose content is a picture and nothing else. What they have in common is that
+ * flattening them naively produces a line that says nothing — a `![](…png)` printed as written, or
+ * the reader's own words quoted back at them.
  */
 class ContentPreviewTest {
     @Test
@@ -24,50 +24,27 @@ class ContentPreviewTest {
         assertEquals(listOf(PreviewPart.Text("还没有这个功能")), contentPreview("还没有这个功能"))
     }
 
-    /** `@name [#7](…)` is what the site's 回复 button writes; the row already says all of that. */
+    /** An `@` is whoever the writer chose to address; nothing about it is worth dropping. */
     @Test
-    fun `drops the address the reply button wrote`() {
-        val parts = contentPreview("@nssk [#7](/post-703863-1#7) 还没有这个功能")
-
-        assertEquals(listOf(PreviewPart.Text("还没有这个功能")), parts)
+    fun `keeps a mention wherever it stands`() {
+        assertEquals(listOf(PreviewPart.Text("@nssk 收到")), contentPreview("@nssk 收到"))
+        assertEquals(
+            listOf(PreviewPart.Text("这个问题 @nssk 应该清楚")),
+            contentPreview("这个问题 @nssk 应该清楚"),
+        )
     }
 
-    /** A reply that only @-s, with no floor behind it, loses the same opening. */
-    @Test
-    fun `drops a bare leading mention`() {
-        assertEquals(listOf(PreviewPart.Text("收到")), contentPreview("@nssk 收到"))
-    }
-
-    /**
-     * …and not a name the writer ran straight into their sentence.
-     *
-     * Chinese does not space its words, so a greedy name would be read as the whole line and the
-     * preview would come out empty — which is why the separator after the name is required.
-     */
-    @Test
-    fun `keeps a leading mention that has no separator after it`() {
-        assertEquals(listOf(PreviewPart.Text("@某人你好")), contentPreview("@某人你好"))
-    }
-
-    /** …but not one in the middle, which is somebody the writer chose to address. */
-    @Test
-    fun `keeps a mention that is not the opening`() {
-        val parts = contentPreview("这个问题 @nssk 应该清楚")
-
-        assertEquals(listOf(PreviewPart.Text("这个问题 @nssk 应该清楚")), parts)
-    }
-
-    /** The 引用 button quotes what it answers — which, in a notification about my comment, is me. */
+    /** The 引用 action quotes what it answers, which is a message the reader has already seen. */
     @Test
     fun `drops the quotation and keeps the answer`() {
-        val parts = contentPreview("> @me [#3](/post-1-1#3)\n> 请问怎么改用户名\n\n设置里就能改")
+        val parts = contentPreview("> 请问怎么改用户名\n\n设置里就能改")
 
         assertEquals(listOf(PreviewPart.Text("设置里就能改")), parts)
     }
 
-    /** Unless the quote was the whole reply, in which case it is all there is to show. */
+    /** Unless the quote was the whole message, in which case it is all there is to show. */
     @Test
-    fun `a reply that is only a quotation still shows it`() {
+    fun `a message that is only a quotation still shows it`() {
         assertEquals(listOf(PreviewPart.Text("请问怎么改用户名")), contentPreview("> 请问怎么改用户名"))
     }
 

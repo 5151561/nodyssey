@@ -225,28 +225,6 @@ class NotificationRepositoryTest {
             assertEquals(2, items.map { it.id }.toSet().size)
         }
 
-    /** The comment itself, which is what the row shows instead of sending the reader to the thread. */
-    @Test
-    fun `flattens the comment into the row's preview`() =
-        runTest {
-            val source =
-                FakeJsonSource(
-                    mapOf(
-                        AT_LIST to
-                            """{"atList":[{"id":1,"content":"@me [#3](/post-1-1#3) 收到 ![](/static/image/sticker/ac/01.png)"}]}""",
-                    ),
-                )
-
-            val item = NotificationRepository(source).notifications(NotificationCategory.MENTIONS).single()
-
-            assertEquals(
-                // The address the 回复 button wrote is gone, the sticker is named, and the space
-                // before it is the one the writer typed.
-                listOf(PreviewPart.Text("收到 "), PreviewPart.Placeholder(PreviewPlaceholder.STICKER)),
-                item.preview,
-            )
-        }
-
     /** The badge has to move in the same frame as the row, not a round trip later. */
     @Test
     fun `noting a read drops the badge before the network answers`() =
