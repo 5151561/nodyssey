@@ -1472,4 +1472,42 @@
     <string name="help_preview_body">编辑器顶部切「内容 / 预览 / 对照」，对照是上下分栏。</string>
     <string name="help_imagehost_title">发图要先连图床</string>
     <string name="help_imagehost_body">论坛不存图。「设置 › 图床」里选一家，六家可选，密钥只留在本机。</string>
+    <!-- 我的 · 分区图标网格（board n1） -->
+    <string name="profile_section_content">我的内容</string>
+    <string name="profile_section_assets">资产</string>
+    <string name="profile_section_community">社区</string>
+    <string name="profile_section_settings">设置与其他</string>
+    <string name="profile_tile_topics">主题帖</string>
+    <string name="profile_tile_comments">我的评论</string>
+    <string name="profile_tile_collections">收藏</string>
+    <string name="profile_tile_history">浏览历史</string>
+    <string name="profile_tile_following">我的关注</string>
+    <string name="profile_tile_followers">我的粉丝</string>
+    <string name="profile_tile_credit">鸡腿流水</string>
+    <string name="profile_tile_stardust">星辰流水</string>
+    <string name="profile_tile_transfer">星辰转账</string>
+    <string name="profile_tile_invite">邀请码</string>
+    <string name="profile_tile_award">推荐阅读</string>
+    <string name="profile_tile_lucky">幸运抽奖</string>
+    <string name="profile_tile_ruling">管理记录</string>
+    <string name="profile_tile_providers">合作商家</string>
+    <string name="profile_tile_friends">友站</string>
+    <string name="profile_tile_block">屏蔽用户</string>
+    <string name="profile_tile_about_community">关于社区</string>
+    <string name="profile_tile_account">账号设置</string>
+    <string name="profile_tile_notifications">通知提醒</string>
+    <string name="profile_tile_theme">主题外观</string>
+    <string name="profile_tile_about">关于反馈</string>
+    <!-- 我的主题帖 / 我的评论（board n2 / n3） -->
+    <string name="my_topics_title">我的主题帖</string>
+    <string name="my_comments_title">我的评论</string>
+    <string name="my_topics_count">共 %1$d 篇</string>
+    <string name="my_comments_count">共 %1$d 条</string>
+    <string name="my_content_all_boards">全部版块</string>
+    <string name="my_content_sort_newest">最新发布</string>
+    <string name="my_content_sort_oldest">最早发布</string>
+    <string name="my_content_end">已经到底了</string>
+    <string name="my_content_empty_action">去看看今日新帖</string>
+    <string name="my_topics_empty_body">发过的主题帖会按时间排在这里，点一行直接进帖。</string>
+    <string name="my_comments_empty_body">在帖子里回复之后，这里会按时间自动归档你的每一条评论，可以直接跳回原楼层。</string>
 </resources>

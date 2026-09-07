@@ -129,12 +129,19 @@ data class StardustUiState(
 class StardustViewModel(
     private val profileRepository: ProfileRepository,
     private val stardustRepository: StardustRepository,
+    /**
+     * Open the 转账 form on arrival — what the 星辰转账 tile in 我的 asks for.
+     *
+     * Held in this state rather than read back off the key on every composition, so dismissing the
+     * form is final: the flag only ever has an effect while the view model is being built.
+     */
+    startTransfer: Boolean = false,
 ) : ViewModel() {
     val amount = TextFieldState()
     val recipientUid = TextFieldState()
     val refId = TextFieldState()
 
-    private val _uiState = MutableStateFlow(StardustUiState())
+    private val _uiState = MutableStateFlow(StardustUiState(transferOpen = startTransfer))
     val uiState: StateFlow<StardustUiState> = _uiState.asStateFlow()
 
     /** Bumped on retry so the pager restarts even when the uid it depends on has not changed. */
@@ -334,12 +341,16 @@ class StardustViewModel(
         /** The cap every field on this form rejects past. */
         const val MAX_FIELD_LENGTH = 12
 
-        fun factory(container: AppContainer): ViewModelProvider.Factory =
+        fun factory(
+            container: AppContainer,
+            startTransfer: Boolean = false,
+        ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
                     StardustViewModel(
                         profileRepository = container.profileRepository,
                         stardustRepository = container.stardustRepository,
+                        startTransfer = startTransfer,
                     )
                 }
             }

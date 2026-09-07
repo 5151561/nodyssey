@@ -233,9 +233,14 @@ data class UserSpaceKey(
     val openCollections: Boolean = false,
 ) : NavKey
 
-/** 我的关注 / 我的粉丝. Only ever the signed-in user's — the site publishes nobody else's. */
+/**
+ * 我的关注 / 我的粉丝. Only ever the signed-in user's — the site publishes nobody else's.
+ *
+ * [showFollowers] is the landing tab, not a filter: 我的 has a grid tile for each of the two lists,
+ * and without it the 我的粉丝 tile would open on 我的关注 like its neighbour.
+ */
 @Serializable
-data object FollowKey : NavKey
+data class FollowKey(val showFollowers: Boolean = false) : NavKey
 
 /**
  * 我的收藏, as its own screen (board i1).
@@ -268,11 +273,33 @@ data object AssetsKey : NavKey
 @Serializable
 data object CreditKey : NavKey
 
+/**
+ * 星辰流水, and the 转账 form that lives on it as a floating action.
+ *
+ * [startTransfer] opens that form on arrival — what the 星辰转账 tile in 我的 means. Unlike the
+ * `openAttendanceChooser` flag [AssetsKey] used to carry, it cannot loop: the form closes onto this
+ * same screen instead of pushing anything, so returning here is only ever a fresh tap on the tile.
+ */
 @Serializable
-data object StardustKey : NavKey
+data class StardustKey(val startTransfer: Boolean = false) : NavKey
 
 @Serializable
 data object CommunityToolsKey : NavKey
+
+/**
+ * 我的主题帖 (board n2) and 我的评论 (board n3).
+ *
+ * Both are the signed-in account's own, so neither carries a uid — the same reason [BookmarksKey]
+ * does not. They exist apart from [UserSpaceKey]'s tabs because 我的 now points a grid tile straight
+ * at each list, and a tile that opens a tabbed page about *a user* and then selects a tab is the
+ * "入口 → 聚合页 → 功能" hop board n1 set out to remove. The space page keeps its own tabs: it is
+ * still the only way to read anyone else's.
+ */
+@Serializable
+data object MyTopicsKey : NavKey
+
+@Serializable
+data object MyCommentsKey : NavKey
 
 @Serializable
 data object AwardKey : NavKey

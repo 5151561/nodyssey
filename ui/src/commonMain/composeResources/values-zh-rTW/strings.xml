@@ -1275,4 +1275,42 @@
     <string name="help_preview_body">編輯器頂部切「內容 / 預覽 / 對照」，對照是上下分欄。</string>
     <string name="help_imagehost_title">發圖要先連圖床</string>
     <string name="help_imagehost_body">論壇不存圖。「設定 › 圖床」裡選一家，六家可選，金鑰只留在本機。</string>
+    <!-- 我的 · 分區圖示網格（board n1） -->
+    <string name="profile_section_content">我的內容</string>
+    <string name="profile_section_assets">資產</string>
+    <string name="profile_section_community">社群</string>
+    <string name="profile_section_settings">設定與其他</string>
+    <string name="profile_tile_topics">主題帖</string>
+    <string name="profile_tile_comments">我的評論</string>
+    <string name="profile_tile_collections">收藏</string>
+    <string name="profile_tile_history">瀏覽紀錄</string>
+    <string name="profile_tile_following">我的關注</string>
+    <string name="profile_tile_followers">我的粉絲</string>
+    <string name="profile_tile_credit">雞腿流水</string>
+    <string name="profile_tile_stardust">星辰流水</string>
+    <string name="profile_tile_transfer">星辰轉帳</string>
+    <string name="profile_tile_invite">邀請碼</string>
+    <string name="profile_tile_award">推薦閱讀</string>
+    <string name="profile_tile_lucky">幸運抽獎</string>
+    <string name="profile_tile_ruling">管理紀錄</string>
+    <string name="profile_tile_providers">合作商家</string>
+    <string name="profile_tile_friends">友站</string>
+    <string name="profile_tile_block">封鎖用戶</string>
+    <string name="profile_tile_about_community">關於社群</string>
+    <string name="profile_tile_account">帳號設定</string>
+    <string name="profile_tile_notifications">通知提醒</string>
+    <string name="profile_tile_theme">主題外觀</string>
+    <string name="profile_tile_about">關於與回報</string>
+    <!-- 我的主題帖 / 我的評論（board n2 / n3） -->
+    <string name="my_topics_title">我的主題帖</string>
+    <string name="my_comments_title">我的評論</string>
+    <string name="my_topics_count">共 %1$d 篇</string>
+    <string name="my_comments_count">共 %1$d 則</string>
+    <string name="my_content_all_boards">全部版塊</string>
+    <string name="my_content_sort_newest">最新發布</string>
+    <string name="my_content_sort_oldest">最早發布</string>
+    <string name="my_content_end">已經到底了</string>
+    <string name="my_content_empty_action">去看看今日新帖</string>
+    <string name="my_topics_empty_body">發過的主題帖會按時間排在這裡，點一行直接進帖。</string>
+    <string name="my_comments_empty_body">在帖子裡回覆之後，這裡會按時間自動歸檔你的每一則評論，可以直接跳回原樓層。</string>
 </resources>

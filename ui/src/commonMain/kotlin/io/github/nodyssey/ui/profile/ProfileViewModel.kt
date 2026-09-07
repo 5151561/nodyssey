@@ -11,7 +11,6 @@ import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.AttendanceStatus
 import io.github.nodyssey.data.ProfileRepository
 import io.github.nodyssey.data.UserProfile
-import io.github.nodyssey.data.session.AccountSignOut
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.postlist.toSiteError
@@ -35,13 +34,16 @@ import kotlinx.coroutines.launch
  * It derives its state from [SessionRepository] rather than keeping a flag of its own, so signing out
  * from here and signing in through the WebView cannot disagree about which one happened last.
  */
+/*
+ * No `signOut` here any more. Board n1 replaced the menu this screen used to end with — 退出登录
+ * included — with the grid, and the one button that signs out now lives on 账号设置, one tile away.
+ * Two entry points into [AccountSignOut] was one more than the screen needed.
+ */
 class ProfileViewModel(
     private val session: SessionRepository,
     private val profileRepository: ProfileRepository,
     private val assetsRepository: AssetsRepository,
-    private val accountSignOut: AccountSignOut,
 ) : ViewModel() {
-    private var signOutJob: Job? = null
     private var loadJob: Job? = null
     private var profileJob: Job? = null
     private var attendanceJob: Job? = null
@@ -285,13 +287,6 @@ class ProfileViewModel(
             }
     }
 
-    fun signOut() {
-        if (signOutJob?.isActive == true) return
-        // The full list of what goes — content, offline copies, drafts, poll bookkeeping, then the
-        // cookies — lives in [AccountSignOut], shared with the account settings screen's button.
-        signOutJob = viewModelScope.launch { accountSignOut.signOut() }
-    }
-
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
@@ -300,7 +295,6 @@ class ProfileViewModel(
                         session = container.sessionRepository,
                         profileRepository = container.profileRepository,
                         assetsRepository = container.assetsRepository,
-                        accountSignOut = container.accountSignOut,
                     )
                 }
             }

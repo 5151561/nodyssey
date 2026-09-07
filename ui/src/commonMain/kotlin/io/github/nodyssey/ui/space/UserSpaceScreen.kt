@@ -735,8 +735,9 @@ private fun <T : Any> SpaceListTab(
     }
 }
 
+/** Shared with 我的主题帖 (board n2), which is the same row without the tabs around it. */
 @Composable
-private fun SpacePostRow(
+internal fun SpacePostRow(
     post: SpacePost,
     onClick: () -> Unit,
 ) {

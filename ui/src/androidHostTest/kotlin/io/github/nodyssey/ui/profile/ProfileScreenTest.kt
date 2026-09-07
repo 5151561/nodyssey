@@ -6,10 +6,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -41,21 +44,13 @@ class ProfileScreenTest {
             PlazaTheme {
                 ProfileScreen(
                     state = ProfileUiState(),
+                    destinations = ProfileDestinations(),
                     onSignIn = { signInOpened = true },
-                    onSignOut = {},
                     onRetry = {},
-                    onSettings = {},
-                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onVerify = {},
-                    onOpenSpace = {},
-                    onCollections = {},
-                    onHistory = {},
-                    onAssets = {},
                     onAttendance = {},
                     onAttendanceBoard = {},
-                    onFollow = {},
-                    onTools = {},
                 )
             }
         }
@@ -77,21 +72,17 @@ class ProfileScreenTest {
             PlazaTheme {
                 ProfileScreen(
                     state = ProfileUiState(),
+                    destinations =
+                    ProfileDestinations(
+                        settings = { settingsOpened = true },
+                        tools = { toolsOpened = true },
+                    ),
                     onSignIn = {},
-                    onSignOut = {},
                     onRetry = {},
-                    onSettings = { settingsOpened = true },
-                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onVerify = {},
-                    onOpenSpace = {},
-                    onCollections = {},
-                    onHistory = {},
-                    onAssets = {},
                     onAttendance = {},
                     onAttendanceBoard = {},
-                    onFollow = {},
-                    onTools = { toolsOpened = true },
                 )
             }
         }
@@ -114,21 +105,13 @@ class ProfileScreenTest {
                         displayName = "NodeSeek 用户",
                         level = null,
                     ),
+                    destinations = ProfileDestinations(),
                     onSignIn = {},
-                    onSignOut = {},
                     onRetry = {},
-                    onSettings = {},
-                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onVerify = {},
-                    onOpenSpace = {},
-                    onCollections = {},
-                    onHistory = {},
-                    onAssets = {},
                     onAttendance = {},
                     onAttendanceBoard = {},
-                    onFollow = {},
-                    onTools = {},
                 )
             }
         }
@@ -148,21 +131,13 @@ class ProfileScreenTest {
                         displayName = "nodyssey_dev",
                         level = "Lv 3",
                     ),
+                    destinations = ProfileDestinations(),
                     onSignIn = {},
-                    onSignOut = {},
                     onRetry = {},
-                    onSettings = {},
-                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onVerify = {},
-                    onOpenSpace = {},
-                    onCollections = {},
-                    onHistory = {},
-                    onAssets = {},
                     onAttendance = {},
                     onAttendanceBoard = {},
-                    onFollow = {},
-                    onTools = {},
                 )
             }
         }
@@ -173,27 +148,87 @@ class ProfileScreenTest {
     }
 
     @Test
+    fun `the grid lays the four sections out and each tile is one jump`() {
+        var commentsOpened = false
+        var transferOpened = false
+        var followersOpened = false
+        composeRule.setContent {
+            PlazaTheme {
+                ProfileScreen(
+                    state = ProfileUiState(isSignedIn = true, uid = 88423, displayName = "nodyssey_dev"),
+                    destinations =
+                    ProfileDestinations(
+                        comments = { commentsOpened = true },
+                        transfer = { transferOpened = true },
+                        followers = { followersOpened = true },
+                    ),
+                    onSignIn = {},
+                    onRetry = {},
+                    onOpenWebsite = {},
+                    onVerify = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("我的内容").assertIsDisplayed()
+        composeRule.onNodeWithText("我的评论").performClick()
+        composeRule.onNodeWithText("我的粉丝").performClick()
+        // Below the fold on a 360x800 screen, and inside a `LazyColumn`, so it is not composed at
+        // all until the list is scrolled to it: the grid is four sections long and only the first
+        // fits.
+        composeRule.onNode(hasScrollAction()).performScrollToNode(hasText("星辰转账"))
+        composeRule.onNodeWithText("星辰转账").performClick()
+
+        check(commentsOpened)
+        check(followersOpened)
+        check(transferOpened)
+    }
+
+    /**
+     * 草稿箱 and 离线下载 are on board n1 and deliberately not here: the app has one draft, restored
+     * by the composer itself, and offline copies are a switch inside 收藏. A tile for either would
+     * promise a screen that does not exist.
+     */
+    @Test
+    fun `the grid draws no tile for a feature the app does not have`() {
+        composeRule.setContent {
+            PlazaTheme {
+                ProfileScreen(
+                    state = ProfileUiState(isSignedIn = true, uid = 88423, displayName = "nodyssey_dev"),
+                    destinations = ProfileDestinations(),
+                    onSignIn = {},
+                    onRetry = {},
+                    onOpenWebsite = {},
+                    onVerify = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("草稿箱").assertDoesNotExist()
+        composeRule.onNodeWithText("离线下载").assertDoesNotExist()
+    }
+
+    @Test
     fun `tapping the header name opens the space page`() {
         var clicked = false
         composeRule.setContent {
             PlazaTheme {
                 ProfileScreen(
                     state = ProfileUiState(isSignedIn = true, displayName = "nodyssey_dev"),
+                    destinations =
+                    ProfileDestinations(
+                        space = { clicked = true },
+                    ),
                     onSignIn = {},
-                    onSignOut = {},
                     onRetry = {},
-                    onSettings = {},
-                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onVerify = {},
-                    onOpenSpace = { clicked = true },
-                    onCollections = {},
-                    onHistory = {},
-                    onAssets = {},
                     onAttendance = {},
                     onAttendanceBoard = {},
-                    onFollow = {},
-                    onTools = {},
                 )
             }
         }
@@ -216,21 +251,13 @@ class ProfileScreenTest {
                         hasSignedInToday = true,
                         attendanceGain = 7,
                     ),
+                    destinations = ProfileDestinations(),
                     onSignIn = {},
-                    onSignOut = {},
                     onRetry = {},
-                    onSettings = {},
-                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onVerify = {},
-                    onOpenSpace = {},
-                    onCollections = {},
-                    onHistory = {},
-                    onAssets = {},
                     onAttendance = {},
                     onAttendanceBoard = { boardOpened = true },
-                    onFollow = {},
-                    onTools = {},
                 )
             }
         }
@@ -247,21 +274,13 @@ class ProfileScreenTest {
             PlazaTheme {
                 ProfileScreen(
                     state = ProfileUiState(isSignedIn = true, displayName = "nodyssey_dev"),
+                    destinations = ProfileDestinations(),
                     onSignIn = {},
-                    onSignOut = {},
                     onRetry = {},
-                    onSettings = {},
-                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onVerify = {},
-                    onOpenSpace = {},
-                    onCollections = {},
-                    onHistory = {},
-                    onAssets = {},
                     onAttendance = { attendanceOpened = true },
                     onAttendanceBoard = {},
-                    onFollow = {},
-                    onTools = {},
                 )
             }
         }
@@ -283,21 +302,13 @@ class ProfileScreenTest {
                         displayName = "nodyssey_dev",
                         choosingAttendanceMode = true,
                     ),
+                    destinations = ProfileDestinations(),
                     onSignIn = {},
-                    onSignOut = {},
                     onRetry = {},
-                    onSettings = {},
-                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onVerify = {},
-                    onOpenSpace = {},
-                    onCollections = {},
-                    onHistory = {},
-                    onAssets = {},
                     onAttendance = {},
                     onAttendanceBoard = {},
-                    onFollow = {},
-                    onTools = {},
                     onSignInForToday = { picked = it },
                 )
             }
@@ -326,21 +337,13 @@ class ProfileScreenTest {
                         attendanceKnown = true,
                         attendanceFailure = SiteError.Cloudflare,
                     ),
+                    destinations = ProfileDestinations(),
                     onSignIn = {},
-                    onSignOut = {},
                     onRetry = {},
-                    onSettings = {},
-                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onVerify = { verified = true },
-                    onOpenSpace = {},
-                    onCollections = {},
-                    onHistory = {},
-                    onAssets = {},
                     onAttendance = {},
                     onAttendanceBoard = {},
-                    onFollow = {},
-                    onTools = {},
                 )
             }
         }
@@ -373,21 +376,13 @@ class ProfileScreenTest {
                             ),
                         ),
                     ),
+                    destinations = ProfileDestinations(),
                     onSignIn = {},
-                    onSignOut = {},
                     onRetry = {},
-                    onSettings = {},
-                    onAccountSettings = {},
                     onOpenWebsite = {},
                     onVerify = {},
-                    onOpenSpace = {},
-                    onCollections = {},
-                    onHistory = {},
-                    onAssets = {},
                     onAttendance = {},
                     onAttendanceBoard = {},
-                    onFollow = {},
-                    onTools = {},
                 )
             }
         }

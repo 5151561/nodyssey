@@ -1284,4 +1284,42 @@
     <string name="help_preview_body">The editor switches between 内容, 预览 and 对照; 对照 splits top and bottom.</string>
     <string name="help_imagehost_title">Images need a host first</string>
     <string name="help_imagehost_body">The forum stores no images. Pick one of six under Settings › 图床; the key stays on this device.</string>
+    <!-- 我的, as the section grid on board n1 -->
+    <string name="profile_section_content">My content</string>
+    <string name="profile_section_assets">Assets</string>
+    <string name="profile_section_community">Community</string>
+    <string name="profile_section_settings">Settings and more</string>
+    <string name="profile_tile_topics">Topics</string>
+    <string name="profile_tile_comments">Comments</string>
+    <string name="profile_tile_collections">Saved</string>
+    <string name="profile_tile_history">History</string>
+    <string name="profile_tile_following">Following</string>
+    <string name="profile_tile_followers">Followers</string>
+    <string name="profile_tile_credit">鸡腿 ledger</string>
+    <string name="profile_tile_stardust">星辰 ledger</string>
+    <string name="profile_tile_transfer">Transfer 星辰</string>
+    <string name="profile_tile_invite">Invite code</string>
+    <string name="profile_tile_award">Editors\' picks</string>
+    <string name="profile_tile_lucky">Lucky draw</string>
+    <string name="profile_tile_ruling">Moderation log</string>
+    <string name="profile_tile_providers">Providers</string>
+    <string name="profile_tile_friends">Friend sites</string>
+    <string name="profile_tile_block">Blocked users</string>
+    <string name="profile_tile_about_community">About the forum</string>
+    <string name="profile_tile_account">Account</string>
+    <string name="profile_tile_notifications">Notifications</string>
+    <string name="profile_tile_theme">Appearance</string>
+    <string name="profile_tile_about">About and feedback</string>
+    <!-- My topics / my comments, boards n2 and n3 -->
+    <string name="my_topics_title">My topics</string>
+    <string name="my_comments_title">My comments</string>
+    <string name="my_topics_count">%1$d topics</string>
+    <string name="my_comments_count">%1$d comments</string>
+    <string name="my_content_all_boards">All boards</string>
+    <string name="my_content_sort_newest">Newest first</string>
+    <string name="my_content_sort_oldest">Oldest first</string>
+    <string name="my_content_end">That\'s everything</string>
+    <string name="my_content_empty_action">Browse today\'s threads</string>
+    <string name="my_topics_empty_body">Threads you post land here in order; tap a row to open one.</string>
+    <string name="my_comments_empty_body">Reply in a thread and it is archived here by time, ready to jump back to the floor you wrote it on.</string>
 </resources>
