@@ -11,7 +11,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -100,6 +99,7 @@ import io.github.nodyssey.ui.resources.proxy_test_failure_tls
 import io.github.nodyssey.ui.resources.proxy_type_http
 import io.github.nodyssey.ui.resources.proxy_type_socks
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -205,10 +205,10 @@ fun NetworkCheckScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (state.running) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
+                        PlazaSpinner(
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.onPrimary,
+                            size = 18.dp,
                         )
                         Text(
                             text = stringResource(Res.string.network_check_running),

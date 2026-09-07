@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.bookmarks
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -86,11 +87,13 @@ import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.textScaledSize
+import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -332,10 +335,11 @@ private fun DownloadProgressRing(
 ) {
     Box(contentAlignment = Alignment.Center) {
         if (progress == null) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(size).describedAsLoading(),
+            PlazaSpinner(
+                modifier = Modifier.describedAsLoading(),
                 strokeWidth = RING_STROKE,
                 strokeCap = StrokeCap.Butt,
+                size = size,
             )
         } else {
             CircularProgressIndicator(
@@ -509,11 +513,13 @@ internal fun SelectionToolbar(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val eink = LocalEinkMode.current
     Surface(
         modifier = modifier.fillMaxWidth().padding(Spacing.lg),
         shape = RoundedCornerShape(26.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shadowElevation = 6.dp,
+        shadowElevation = if (eink) 0.dp else 6.dp,
+        border = if (eink) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
     ) {
         Row(
             modifier =

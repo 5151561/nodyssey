@@ -252,6 +252,9 @@
     <string name="settings_theme_mode">明暗</string>
     <string name="settings_one_hand">單手模式</string>
     <string name="settings_one_hand_hint">二級頁面用可下拉的大標題列，最多佔四成螢幕；關掉是普通標題列</string>
+    <string name="settings_eink">電子紙模式</string>
+    <string name="settings_eink_hint">為電子紙螢幕準備：黑白高對比、沒有動效，並固定為淺色</string>
+    <string name="settings_theme_eink_hint">電子紙模式已接管配色</string>
 
     <string name="settings_language">語言</string>
     <string name="settings_language_system">跟隨系統語言</string>
@@ -689,6 +692,8 @@
     <string name="status_sign_in_title_board">「%1$s」需要登入後檢視</string>
     <string name="status_sign_in_body">登入 NodeSeek 帳號後即可瀏覽本版塊的內容。登入成功會自動返回並重新載入。</string>
     <string name="status_sign_in_secondary">先逛逛別的版塊</string>
+    <string name="status_session_stale_title">登入狀態沒被認出來</string>
+    <string name="status_session_stale_body">應用手上有登入資訊，站點這次卻當作未登入返回。多數情況下重試一次就好；如果一直這樣，說明這份登入已經失效，重新登入即可。</string>
 
     <string name="status_level_required_title">等級不夠，看不了這篇</string>
     <string name="status_level_required_title_level">這篇要 Lv%1$d 才能看</string>

@@ -117,6 +117,82 @@ internal fun stringLiterals(source: String): List<String> {
     return literals
 }
 
+/**
+ * A source file with its comments and string literals blanked out, positions preserved.
+ *
+ * The counterpart to [stringLiterals], for the guards that look for *code* rather than for copy.
+ * Without it a guard against an API call is defeated by its own documentation: this repository's
+ * KDoc names the very things the guards forbid, and naming one would fail the build for describing
+ * it. Blanked rather than deleted so a failure can still report a line number.
+ */
+internal fun codeOnly(source: String): String {
+    val out = StringBuilder(source.length)
+    var i = 0
+    val n = source.length
+
+    fun blank(from: Int, to: Int) {
+        for (k in from until to) out.append(if (source[k] == '\n') '\n' else ' ')
+    }
+
+    while (i < n) {
+        when {
+            source.startsWith("//", i) -> {
+                val end = source.indexOf('\n', i).let { if (it == -1) n else it }
+                blank(i, end)
+                i = end
+            }
+
+            source.startsWith("/*", i) -> {
+                var depth = 1
+                var j = i + 2
+                while (j < n && depth > 0) {
+                    when {
+                        source.startsWith("/*", j) -> {
+                            depth++
+                            j += 2
+                        }
+
+                        source.startsWith("*/", j) -> {
+                            depth--
+                            j += 2
+                        }
+
+                        else -> j++
+                    }
+                }
+                blank(i, j)
+                i = j
+            }
+
+            source.startsWith("\"\"\"", i) -> {
+                val end = source.indexOf("\"\"\"", i + 3).let { if (it == -1) n else it + 3 }
+                blank(i, end)
+                i = end
+            }
+
+            source[i] == '"' -> {
+                var j = i + 1
+                while (j < n && source[j] != '"') {
+                    if (source[j] == '\\') {
+                        j += 2
+                        continue
+                    }
+                    j++
+                }
+                val end = minOf(j + 1, n)
+                blank(i, end)
+                i = end
+            }
+
+            else -> {
+                out.append(source[i])
+                i++
+            }
+        }
+    }
+    return out.toString()
+}
+
 /** CJK Unified Ideographs plus Extension A — the ranges the app's Chinese copy actually uses. */
 internal fun containsCjk(text: String): Boolean =
     text.any { it.code in 0x4E00..0x9FFF || it.code in 0x3400..0x4DBF }

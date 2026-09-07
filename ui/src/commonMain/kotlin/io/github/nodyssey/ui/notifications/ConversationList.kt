@@ -20,7 +20,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Badge
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -58,6 +57,7 @@ import io.github.nodyssey.ui.resources.unread_count_capped
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -314,7 +314,7 @@ private fun NewConversationSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
             when {
-                state.isSearching -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally).describedAsLoading())
+                state.isSearching -> PlazaSpinner(Modifier.align(Alignment.CenterHorizontally).describedAsLoading())
 
                 // Before the empty case: a search that never reached the server has not found
                 // "no such user", and telling the user it did sends them off renaming their query.

@@ -258,6 +258,9 @@
     <string name="settings_theme_mode">Light or dark</string>
     <string name="settings_one_hand">One-handed mode</string>
     <string name="settings_one_hand_hint">Second-level screens get a pull-down title bar taking up to two fifths of the screen; off is an ordinary one</string>
+    <string name="settings_eink">E-ink mode</string>
+    <string name="settings_eink_hint">For electronic paper: black and white, no animation, and always light</string>
+    <string name="settings_theme_eink_hint">E-ink mode has taken over the colours</string>
 
     <string name="settings_language">Language</string>
     <string name="settings_language_system">Follow the system language</string>
@@ -695,6 +698,8 @@
     <string name="status_sign_in_title_board">「%1$s」needs you signed in</string>
     <string name="status_sign_in_body">Sign in to your NodeSeek account to read this board. A successful sign-in comes back here and reloads.</string>
     <string name="status_sign_in_secondary">Look at another board first</string>
+    <string name="status_session_stale_title">Your session was not recognised</string>
+    <string name="status_session_stale_body">The app is holding a session and the site answered this request as though you were signed out. Retrying usually settles it; if it keeps happening, the session has expired and signing in again will fix it.</string>
 
     <string name="status_level_required_title">Your level is not high enough for this post</string>
     <string name="status_level_required_title_level">This post needs Lv%1$d</string>

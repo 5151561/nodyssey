@@ -47,6 +47,18 @@ kotlin {
         // toolchain the Linux runner does not have — a Mac for Apple, a desktop JVM nobody runs on
         // CI — so without a host test compilation the common tests would exist and never run there:
         // the shape of failure where a suite is green because it is empty.
+        // Robolectric's host tests all run in one Gradle test worker, and a worker Gradle was not
+        // told about gets `-Xmx512m`. That is not a lot to hold ninety-odd suites, each of which
+        // loads an Android framework and a Compose runtime into the same JVM — and the way it fails
+        // is not a red test. The worker dies, Gradle finds the pipe to it closed, and the build
+        // reports `java.io.EOFException` after every single test has already passed. It is
+        // intermittent, because whether the last suite fits depends on when a collection ran, so it
+        // reads as flakiness rather than as a limit.
+        //
+        // A number rather than a `forkEvery`: forking per suite would pay Robolectric's several
+        // seconds of sandbox setup on every class, and the memory is the cheaper side of that trade.
+        tasks.withType<Test>().configureEach { maxHeapSize = "2g" }
+
         withHostTest {
             // Robolectric reads the merged manifest and resources through the properties file this
             // switch generates, and a Compose test needs it: `createComposeRule` launches a

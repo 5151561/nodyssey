@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -141,6 +140,7 @@ import io.github.nodyssey.ui.resources.status_network_title
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -647,7 +647,7 @@ private fun ImagesSection(
                 .padding(Spacing.lg),
             horizontalArrangement = Arrangement.Center,
         ) {
-            CircularProgressIndicator(Modifier.size(22.dp).describedAsLoading())
+            PlazaSpinner(Modifier.describedAsLoading(), size = 22.dp)
         }
 
         /*

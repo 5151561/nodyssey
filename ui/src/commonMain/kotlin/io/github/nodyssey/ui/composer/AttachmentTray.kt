@@ -59,6 +59,7 @@ import io.github.nodyssey.ui.resources.composer_upload_not_configured
 import io.github.nodyssey.ui.resources.composer_upload_rejected
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.Spacing
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
@@ -237,7 +238,17 @@ private fun Thumbnail(
         )
     }
     if (dimmed) {
-        Box(Modifier.size(THUMBNAIL).background(Color.Black.copy(alpha = SCRIM_ALPHA)))
+        // A translucent scrim over a photo is two dithered layers on top of each other. On paper the
+        // thumbnail is left alone and outlined instead — "this one is spoken for" without a wash.
+        if (LocalEinkMode.current) {
+            Box(
+                Modifier
+                    .size(THUMBNAIL)
+                    .border(2.dp, MaterialTheme.colorScheme.outline),
+            )
+        } else {
+            Box(Modifier.size(THUMBNAIL).background(Color.Black.copy(alpha = SCRIM_ALPHA)))
+        }
     }
 }
 
@@ -252,7 +263,13 @@ private fun RemoveBadge(
         modifier = modifier
             .size(20.dp)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = BADGE_ALPHA))
+            .background(
+                if (LocalEinkMode.current) {
+                    MaterialTheme.colorScheme.inverseSurface
+                } else {
+                    Color.Black.copy(alpha = BADGE_ALPHA)
+                },
+            )
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,

@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -110,6 +109,7 @@ import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -712,7 +712,7 @@ private fun <T : Any> SpaceListTab(
                 contentAlignment = Alignment.Center,
             ) {
                 when (list.loadState.append) {
-                    LoadState.Loading -> CircularProgressIndicator(Modifier.size(22.dp).describedAsLoading())
+                    LoadState.Loading -> PlazaSpinner(Modifier.describedAsLoading(), size = 22.dp)
 
                     is LoadState.Error ->
                         TextButton(onClick = list::retry) {
@@ -727,7 +727,7 @@ private fun <T : Any> SpaceListTab(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         } else {
-                            CircularProgressIndicator(Modifier.size(22.dp).describedAsLoading())
+                            PlazaSpinner(Modifier.describedAsLoading(), size = 22.dp)
                         }
                 }
             }

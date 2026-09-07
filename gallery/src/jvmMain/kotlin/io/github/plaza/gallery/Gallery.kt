@@ -89,8 +89,9 @@ fun main() = application {
 fun GalleryContent() {
     var dark by remember { mutableStateOf(false) }
     var systemPalette by remember { mutableStateOf(false) }
+    var eink by remember { mutableStateOf(false) }
 
-    PlazaTheme(darkTheme = dark, useSystemPalette = systemPalette) {
+    PlazaTheme(darkTheme = dark, useSystemPalette = systemPalette, einkMode = eink) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(
                 modifier = Modifier
@@ -107,6 +108,16 @@ fun GalleryContent() {
                         selected = systemPalette,
                         onClick = { systemPalette = !systemPalette },
                         label = { Text("使用系统调色板") },
+                    )
+                    // The reason this switch is here rather than only in the app: 墨水屏模式's
+                    // whole design is one grey (`Panel`) sitting 1.22:1 above the ground, which
+                    // is a step or two on a panel and very nearly nothing on the display this
+                    // window is open on. Judging it needs every component in one frame, and this
+                    // is the only place that shows them all without an emulator.
+                    FilterChip(
+                        selected = eink,
+                        onClick = { eink = !eink },
+                        label = { Text("墨水屏") },
                     )
                 }
 

@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -88,6 +87,7 @@ import io.github.nodyssey.ui.resources.vote_voters_collapse
 import io.github.nodyssey.ui.resources.vote_voters_expand
 import io.github.nodyssey.ui.resources.vote_voters_more
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.richtext.VoteCardSurface
@@ -253,7 +253,7 @@ private fun VoteBody(
             modifier = Modifier.padding(top = Spacing.sm).fillMaxWidth(),
         ) {
             if (state.isSubmitting) {
-                CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading(), strokeWidth = 2.dp)
+                PlazaSpinner(Modifier.describedAsLoading(), strokeWidth = 2.dp, size = 18.dp)
             } else {
                 Text(
                     stringResource(
@@ -689,7 +689,7 @@ private fun VoterStrip(
             )
         }
         if (list.isLoading) {
-            CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading(), strokeWidth = 2.dp)
+            PlazaSpinner(Modifier.describedAsLoading(), strokeWidth = 2.dp, size = 18.dp)
         } else if (list.hasMore) {
             TextButton(onClick = onLoadMore) { Text(stringResource(Res.string.vote_voters_more)) }
         }

@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
@@ -71,6 +73,49 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("跟随系统").assertIsSelected()
         composeRule.onNodeWithText("深色").performClick()
         composeRule.onNodeWithText("深色").assertIsSelected()
+    }
+
+    /**
+     * 墨水屏模式 takes 明暗 with it.
+     *
+     * The switch and the segmented button above it are one control between them: with the mode on,
+     * the app is light whatever 明暗 says, and a control that no longer moves anything has to look
+     * like one. Greyed rather than hidden — the same call 色彩风格 makes on 主题's own screen — because
+     * a row that vanished would read as one the app had lost.
+     */
+    @Test
+    fun `墨水屏模式 switches on and takes 明暗 with it`() {
+        composeRule.setContent {
+            var settings by remember { mutableStateOf(UserSettings()) }
+            PlazaTheme {
+                SettingsScreen(
+                    state = SettingsUiState(settings),
+                    onBack = {},
+                    onOpenTheme = {},
+                    onThemeModeChange = {},
+                    onOneHandModeChange = {},
+                    onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = {},
+                    onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
+                    onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
+                    onEinkModeChange = { settings = settings.copy(einkMode = it) },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("跟随系统").assertIsEnabled()
+
+        composeRule.onNodeWithText("墨水屏模式").performScrollTo().assertIsOff().performClick()
+
+        composeRule.onNodeWithText("墨水屏模式").assertIsOn()
+        composeRule.onNodeWithText("跟随系统").assertIsNotEnabled()
     }
 
     @Test

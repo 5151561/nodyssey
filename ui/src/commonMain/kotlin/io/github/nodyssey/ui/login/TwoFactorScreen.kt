@@ -21,7 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +56,7 @@ import io.github.nodyssey.ui.resources.sign_in_2fa_title
 import io.github.nodyssey.ui.resources.sign_in_submitting
 import io.github.nodyssey.ui.resources.sign_in_use_web
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.digitsOnly
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
@@ -180,10 +180,11 @@ fun TwoFactorScreen(
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
                 if (state.isSubmitting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp).describedAsLoading(),
+                    PlazaSpinner(
+                        modifier = Modifier.describedAsLoading(),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary,
+                        size = 18.dp,
                     )
                     Text(
                         stringResource(Res.string.sign_in_submitting),

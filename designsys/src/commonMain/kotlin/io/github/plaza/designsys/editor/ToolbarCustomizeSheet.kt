@@ -51,6 +51,7 @@ import io.github.plaza.designsys.resources.composer_toolbar_enabled
 import io.github.plaza.designsys.resources.composer_toolbar_remove
 import io.github.plaza.designsys.resources.composer_toolbar_reorder
 import io.github.plaza.designsys.resources.composer_toolbar_reset
+import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.Spacing
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
@@ -251,7 +252,9 @@ private fun EnabledRow(
             MaterialTheme.colorScheme.surfaceContainerHigh
         },
         shape = MaterialTheme.shapes.medium,
-        shadowElevation = if (dragging) DRAG_ELEVATION else 0.dp,
+        // Being picked up is said by the shadow on a screen that can draw one, and by nothing
+        // at all on paper — the item has already moved, which is the other half of the message.
+        shadowElevation = if (dragging && !LocalEinkMode.current) DRAG_ELEVATION else 0.dp,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

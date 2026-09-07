@@ -34,7 +34,6 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -120,6 +119,7 @@ import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberClipboardCopy
@@ -128,6 +128,7 @@ import io.github.plaza.designsys.editor.MarkdownEditorBar
 import io.github.plaza.designsys.editor.MarkdownEditorState
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
@@ -559,11 +560,14 @@ private fun BubbleMenu(
             exit = fadeOut(motionScheme.fastEffectsSpec()) +
                 scaleOut(motionScheme.fastSpatialSpec(), targetScale = 0.85f),
         ) {
+            val eink = LocalEinkMode.current
             Surface(
                 shape = RoundedCornerShape(percent = 50),
                 color = MaterialTheme.colorScheme.inverseSurface,
                 contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-                shadowElevation = 3.dp,
+                // The bar is already an inverted pill against the thread; on paper that is the whole
+                // separation, and a shadow under it would only be a band of dither.
+                shadowElevation = if (eink) 0.dp else 3.dp,
             ) {
                 Row(
                     modifier = Modifier.padding(BUBBLE_MENU_INSET),
@@ -654,10 +658,11 @@ private fun MessageStatusLine(
     ) {
         when (message.status) {
             SendStatus.SENDING -> {
-                CircularProgressIndicator(
+                PlazaSpinner(
                     strokeWidth = 1.6.dp,
-                    modifier = Modifier.size(10.dp).describedAsLoading(),
+                    modifier = Modifier.describedAsLoading(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    size = 10.dp,
                 )
                 Text(
                     stringResource(Res.string.message_status_sending),

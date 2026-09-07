@@ -13,7 +13,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,6 +75,7 @@ import io.github.nodyssey.ui.resources.doh_url_placeholder
 import io.github.nodyssey.ui.resources.doh_url_required
 import io.github.nodyssey.ui.resources.doh_webview_hint
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -303,7 +303,7 @@ fun DohSettingsScreen(
                     }
                     TextButton(onClick = onTest, enabled = state.enabled && !state.testing) {
                         if (state.testing) {
-                            CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading())
+                            PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
                         } else {
                             Text(stringResource(Res.string.doh_test))
                         }

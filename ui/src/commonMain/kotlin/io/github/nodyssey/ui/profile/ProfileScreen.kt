@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -124,6 +123,7 @@ import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -372,7 +372,7 @@ private fun AttendanceButton(
     ) {
         when {
             state.isSigningIn -> {
-                CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading())
+                PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
                 Text(
                     stringResource(Res.string.assets_signing_in),
                     modifier = Modifier.padding(start = Spacing.sm),
@@ -380,7 +380,7 @@ private fun AttendanceButton(
             }
 
             state.isAttendanceUnknown -> {
-                CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading())
+                PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
                 Text(
                     stringResource(Res.string.profile_attendance_checking),
                     modifier = Modifier.padding(start = Spacing.sm),

@@ -22,7 +22,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -92,6 +91,7 @@ import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -509,7 +509,7 @@ private fun AttendanceButton(
     ) {
         when {
             state.isSigningIn -> {
-                CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading())
+                PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
                 Text(
                     stringResource(Res.string.assets_signing_in),
                     modifier = Modifier.padding(start = Spacing.sm),

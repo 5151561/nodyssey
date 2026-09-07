@@ -86,6 +86,7 @@ import io.github.nodyssey.ui.resources.board_park
 import io.github.nodyssey.ui.resources.board_parked
 import io.github.nodyssey.ui.resources.board_restore
 import io.github.plaza.designsys.component.PlazaBackHandler
+import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.Spacing
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -453,6 +454,7 @@ private fun ExpandedBoards(
                 key(slot.key) {
                     val active = slot.key == draggedKey
                     val held = active || slot.key == releasingKey
+                    val eink = LocalEinkMode.current
                     val lift = animateFloatAsState(
                         targetValue = if (active) 1f else 0f,
                         animationSpec = liftSpec,
@@ -492,7 +494,10 @@ private fun ExpandedBoards(
                                     val scale = 1f + (DRAG_SCALE - 1f) * raised
                                     scaleX = scale
                                     scaleY = scale
-                                    shadowElevation = DRAG_ELEVATION.toPx() * raised
+                                    // The scale above already says "picked up"; the shadow is
+                                    // what a screen adds to it, and paper has nothing to add.
+                                    shadowElevation =
+                                        if (eink) 0f else DRAG_ELEVATION.toPx() * raised
                                     shape = CircleShape
                                     clip = false
                                 }
@@ -662,7 +667,12 @@ private fun BoardPill(
     val label by animateColorAsState(
         targetValue =
         if (parked) {
-            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = PARKED_ALPHA)
+            // See 页码 for why paper takes a real grey instead of a transparent one.
+            if (LocalEinkMode.current) {
+                MaterialTheme.colorScheme.outlineVariant
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = PARKED_ALPHA)
+            }
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },

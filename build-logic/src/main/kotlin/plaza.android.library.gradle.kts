@@ -29,6 +29,10 @@ android {
         shaders = false
     }
 
+    // See `plaza.kmp.library` for why: a test worker left on Gradle's 512MB default dies
+    // after the suites pass and surfaces as an intermittent `EOFException`.
+    tasks.withType<Test>().configureEach { maxHeapSize = "2g" }
+
     testOptions {
         unitTests {
             // Room and Compose tests run on Robolectric so CI needs no emulator.

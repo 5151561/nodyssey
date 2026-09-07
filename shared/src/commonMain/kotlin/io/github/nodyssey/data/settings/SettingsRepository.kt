@@ -72,6 +72,7 @@ class SettingsRepository(
                 savedThemes = decodeSavedThemes(preferences[KEY_SAVED_THEMES]),
                 fontScale = preferences[KEY_FONT_SCALE] ?: 1f,
                 oneHandMode = preferences[KEY_ONE_HAND_MODE] ?: true,
+                einkMode = preferences[KEY_EINK_MODE] ?: false,
                 stickerUniformSize = preferences[KEY_STICKER_UNIFORM_SIZE] ?: true,
                 stickerSize = (preferences[KEY_STICKER_SIZE] ?: DEFAULT_STICKER_SIZE_SP)
                     .coerceIn(MIN_STICKER_SIZE_SP, MAX_STICKER_SIZE_SP),
@@ -221,6 +222,9 @@ class SettingsRepository(
 
     /** 单手模式; see [UserSettings.oneHandMode] for what switching it off costs and buys. */
     suspend fun setOneHandMode(enabled: Boolean) = edit { it[KEY_ONE_HAND_MODE] = enabled }
+
+    /** 墨水屏模式; see [UserSettings.einkMode] for everything it takes over. */
+    suspend fun setEinkMode(enabled: Boolean) = edit { it[KEY_EINK_MODE] = enabled }
 
     /**
      * 表情统一缩限. On — the default, and what every build before this one did — every inline sticker
@@ -589,6 +593,7 @@ class SettingsRepository(
             }
         private val KEY_FONT_SCALE = floatPreferencesKey("font_scale")
         private val KEY_ONE_HAND_MODE = booleanPreferencesKey("one_hand_mode")
+        private val KEY_EINK_MODE = booleanPreferencesKey("eink_mode")
         private val KEY_STICKER_UNIFORM_SIZE = booleanPreferencesKey("sticker_uniform_size")
         private val KEY_STICKER_SIZE = intPreferencesKey("sticker_size_sp")
         private val KEY_IMAGES_WIFI_ONLY = booleanPreferencesKey("images_on_wifi_only")
@@ -734,6 +739,22 @@ data class UserSettings(
      * screen, because it is a fact about the hand and not about the page — see `LocalOneHandMode`.
      */
     val oneHandMode: Boolean = true,
+    /**
+     * 墨水屏模式 — whether this app is being read on electronic paper.
+     *
+     * Off by default and asked for by hand rather than detected: the manufacturer whitelist that
+     * would answer it automatically is a list somebody has to keep, and it is wrong in both
+     * directions — a reader on a phone may want this, and a reader on a panel nobody has heard of
+     * would not get it.
+     *
+     * On, it takes over three things that are otherwise separate settings. Colour: the whole scheme
+     * becomes four greys and black, which is why 明暗 and 主题 are greyed out while it is on — a
+     * panel has nothing to do with a seed colour. Motion: every animation snaps, the same answer
+     * the OS's 移除动画 gets, because on e-ink each frame is a physical refresh. And light: it is
+     * forced, because white-on-black leaves the heavier ghost and saves nothing on a reflective
+     * screen — which is why paper books are not black.
+     */
+    val einkMode: Boolean = false,
     /**
      * 表情统一缩限. True — the default — draws every inline sticker in the same [stickerSize] square,
      * which at its smallest is the 20sp box that keeps a sticker inside a line of body text. False

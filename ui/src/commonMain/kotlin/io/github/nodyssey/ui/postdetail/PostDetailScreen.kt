@@ -36,7 +36,6 @@ import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -164,6 +163,7 @@ import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
@@ -1733,9 +1733,10 @@ private fun QuietReaction(
         },
     ) {
         if (pending) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(18.dp).describedAsLoading(),
+            PlazaSpinner(
+                modifier = Modifier.describedAsLoading(),
                 strokeWidth = 2.dp,
+                size = 18.dp,
             )
         } else {
             Icon(icon, contentDescription = stringResource(label), modifier = Modifier.size(18.dp))

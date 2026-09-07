@@ -78,6 +78,26 @@ class DesignSystemSnapshotTest {
         )
     }
 
+    /**
+     * 墨水屏模式, which is the golden this file was least able to do without.
+     *
+     * Its whole design is one grey a step or two above the ground, chosen for a reflective panel and
+     * very nearly invisible on the display anybody reviews a diff on. A Material bump that shifted a
+     * container role would be caught here as a pixel diff long before it was noticed as "the sheet
+     * has no edge any more" on somebody's reader.
+     */
+    @Test
+    fun `墨水屏模式 draws what the golden says`() {
+        composeRule.setContent {
+            PlazaTheme(einkMode = true) { Sample() }
+        }
+
+        composeRule.onRoot().captureRoboImage(
+            filePath = "src/androidHostTest/snapshots/design-system-eink.png",
+            roborazziOptions = OPTIONS,
+        )
+    }
+
     @Composable
     private fun Sample() {
         Column(

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,6 +45,7 @@ import io.github.nodyssey.ui.resources.stardust_receive_sign_in_first
 import io.github.nodyssey.ui.resources.stardust_receive_total
 import io.github.nodyssey.ui.resources.stardust_receive_unpaid
 import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.richtext.StardustReceiveCard
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -128,7 +128,7 @@ fun StardustReceiveCard(
                         enabled = !state.isPaying,
                     ) {
                         if (state.isPaying) {
-                            CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading(), strokeWidth = 2.dp)
+                            PlazaSpinner(Modifier.describedAsLoading(), strokeWidth = 2.dp, size = 18.dp)
                         } else {
                             Text(
                                 stringResource(

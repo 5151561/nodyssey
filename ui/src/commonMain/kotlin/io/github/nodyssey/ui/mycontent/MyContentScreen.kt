@@ -18,7 +18,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -54,6 +53,7 @@ import io.github.nodyssey.ui.resources.my_content_sort_newest
 import io.github.nodyssey.ui.resources.my_content_sort_oldest
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -279,7 +279,7 @@ private fun <T : Any> MyContentFooter(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-        else -> CircularProgressIndicator(Modifier.size(22.dp).describedAsLoading())
+        else -> PlazaSpinner(Modifier.describedAsLoading(), size = 22.dp)
     }
 }
 

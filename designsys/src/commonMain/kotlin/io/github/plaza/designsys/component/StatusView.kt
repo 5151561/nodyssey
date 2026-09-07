@@ -15,9 +15,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -147,10 +145,9 @@ fun StatusView(
 }
 
 /** Full-screen spinner. Lists use a skeleton instead — a fixed structure fakes faster than a spinner. */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        LoadingIndicator()
+        PlazaLoadingIndicator()
     }
 }

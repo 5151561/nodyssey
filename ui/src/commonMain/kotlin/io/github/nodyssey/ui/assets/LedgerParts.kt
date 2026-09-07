@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,6 +26,7 @@ import io.github.nodyssey.ui.resources.ledger_amount_gain
 import io.github.nodyssey.ui.resources.ledger_amount_spend
 import io.github.nodyssey.ui.resources.ledger_end
 import io.github.nodyssey.ui.resources.ledger_load_more_failed
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import org.jetbrains.compose.resources.stringResource
@@ -54,7 +54,7 @@ internal fun <T : Any> LazyListScope.ledgerFooter(
                         .padding(Spacing.lg),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(Modifier.size(24.dp).describedAsLoading())
+                    PlazaSpinner(Modifier.describedAsLoading(), size = 24.dp)
                 }
             }
 

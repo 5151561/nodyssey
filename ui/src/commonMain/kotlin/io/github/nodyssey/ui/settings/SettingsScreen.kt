@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -38,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
@@ -75,6 +75,8 @@ import io.github.nodyssey.ui.resources.settings_content
 import io.github.nodyssey.ui.resources.settings_doh_entry
 import io.github.nodyssey.ui.resources.settings_doh_entry_hint_off
 import io.github.nodyssey.ui.resources.settings_doh_entry_hint_on
+import io.github.nodyssey.ui.resources.settings_eink
+import io.github.nodyssey.ui.resources.settings_eink_hint
 import io.github.nodyssey.ui.resources.settings_home_page_bar
 import io.github.nodyssey.ui.resources.settings_home_page_bar_hint
 import io.github.nodyssey.ui.resources.settings_language
@@ -103,6 +105,7 @@ import io.github.nodyssey.ui.resources.settings_sticker_uniform_hint
 import io.github.nodyssey.ui.resources.settings_text_preview
 import io.github.nodyssey.ui.resources.settings_theme
 import io.github.nodyssey.ui.resources.settings_theme_dark
+import io.github.nodyssey.ui.resources.settings_theme_eink_hint
 import io.github.nodyssey.ui.resources.settings_theme_entry_hint
 import io.github.nodyssey.ui.resources.settings_theme_light
 import io.github.nodyssey.ui.resources.settings_theme_mode
@@ -120,6 +123,7 @@ import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.richtext.LocalStickerSizing
 import io.github.plaza.designsys.richtext.StickerSizing
@@ -157,6 +161,7 @@ fun SettingsRoute(
         onThemeModeChange = viewModel::setThemeMode,
         onAppLanguageChange = viewModel::setAppLanguage,
         onOneHandModeChange = viewModel::setOneHandMode,
+        onEinkModeChange = viewModel::setEinkMode,
         onFontScaleChange = viewModel::setFontScale,
         onStickerUniformSizeChange = viewModel::setStickerUniformSize,
         onStickerSizeChange = viewModel::setStickerSize,
@@ -205,6 +210,7 @@ fun SettingsScreen(
     onOpenAbout: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
     onAppLanguageChange: (AppLanguage) -> Unit = {},
+    onEinkModeChange: (Boolean) -> Unit = {},
 ) {
     var bodyFontSize by remember(state.settings.fontScale) {
         mutableFloatStateOf(fontScaleToBodySize(state.settings.fontScale))
@@ -252,19 +258,46 @@ fun SettingsScreen(
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     title = stringResource(Res.string.settings_theme_mode),
                     top = true,
+                    // 墨水屏模式 forces light; see the row below it.
+                    enabled = !state.settings.einkMode,
                 ) {
                     ConnectedThemeButtons(
                         selected = state.settings.themeMode,
                         onSelected = onThemeModeChange,
+                        enabled = !state.settings.einkMode,
                     )
                 }
+                // Between the two rows it takes over rather than at the end of the group: it decides
+                // 明暗 above it and replaces 主题 below it, and a switch that turns its neighbours grey
+                // should be the thing standing between them.
+                SettingsRow(
+                    title = stringResource(Res.string.settings_eink),
+                    subtitle = stringResource(Res.string.settings_eink_hint),
+                    checked = state.settings.einkMode,
+                    onCheckedChange = onEinkModeChange,
+                    trailing = {
+                        Switch(checked = state.settings.einkMode, onCheckedChange = null)
+                    },
+                )
                 // 配色来源, the preset grid, 我的主题 and 色彩风格 are behind this row: four controls
                 // and a live preview card is more than a group of eight can carry, and every one of
                 // them changes the screen it is read on.
                 SettingsRow(
+                    modifier = Modifier.alpha(
+                        if (state.settings.einkMode) DISABLED_ALPHA else 1f,
+                    ),
                     leading = { Icon(PlazaIcons.Palette, contentDescription = null) },
                     title = stringResource(Res.string.settings_theme),
-                    subtitle = stringResource(Res.string.settings_theme_entry_hint),
+                    // Greyed rather than hidden, the same call 色彩风格 makes on 主题's own screen: a
+                    // section that vanished would read as one the app had lost, and every control
+                    // behind this row is still the answer the moment 墨水屏模式 goes off again.
+                    subtitle =
+                    if (state.settings.einkMode) {
+                        stringResource(Res.string.settings_theme_eink_hint)
+                    } else {
+                        stringResource(Res.string.settings_theme_entry_hint)
+                    },
+                    enabled = !state.settings.einkMode,
                     onClick = onOpenTheme,
                 )
                 // One switch for every screen that carries the bar rather than one per screen:
@@ -436,7 +469,7 @@ fun SettingsScreen(
                     leading = { Icon(Icons.Default.Delete, contentDescription = null) },
                     trailing = {
                         if (state.isClearingCache) {
-                            CircularProgressIndicator(Modifier.size(22.dp).describedAsLoading())
+                            PlazaSpinner(Modifier.describedAsLoading(), size = 22.dp)
                         }
                     },
                 )
@@ -632,6 +665,7 @@ private fun appLanguageChoices(): List<Pair<AppLanguage, String>> =
 private fun ConnectedThemeButtons(
     selected: ThemeMode,
     onSelected: (ThemeMode) -> Unit,
+    enabled: Boolean = true,
 ) {
     val choices =
         listOf(
@@ -643,6 +677,7 @@ private fun ConnectedThemeButtons(
         labels = choices.map { it.second },
         selectedIndex = choices.indexOfFirst { it.first == selected },
         onSelect = { onSelected(choices[it].first) },
+        enabled = enabled,
     )
 }
 

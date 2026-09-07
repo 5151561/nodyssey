@@ -1,5 +1,9 @@
 package io.github.nodyssey
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -42,7 +46,11 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigation3.ui.defaultPopTransitionSpec
+import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
+import androidx.navigation3.ui.defaultTransitionSpec
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.data.composer.PostEditTarget
@@ -149,6 +157,7 @@ import io.github.nodyssey.ui.vote.VoteCard
 import io.github.nodyssey.ui.vote.VoteViewModel
 import io.github.plaza.core.runCatchingExceptCancellation
 import io.github.plaza.designsys.component.rememberSilentClipboardCopy
+import io.github.plaza.designsys.theme.LocalEinkMode
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -273,6 +282,7 @@ fun MainNavigation(
     }
     val isListDetailExpanded = paneDirective.maxHorizontalPartitions > 1
     val currentListDetailExpanded by rememberUpdatedState(isListDetailExpanded)
+    val currentEinkMode by rememberUpdatedState(LocalEinkMode.current)
     val listDetailSceneStrategy =
         rememberListDetailSceneStrategy<NavKey>(directive = paneDirective)
 
@@ -477,6 +487,7 @@ fun MainNavigation(
                 homeReselectRequests = { homeReselectRequests },
                 notificationsScrollToTopRequests = { notificationsScrollToTopRequests },
                 isListDetailExpanded = { currentListDetailExpanded },
+                isEinkMode = { currentEinkMode },
                 onTabBarHiddenByScroll = { tabBarHiddenByScroll = it },
                 openExternalUrl = openExternalUrl,
                 openWebUrl = openWebUrl,
@@ -629,10 +640,15 @@ fun MainNavigation(
              * composition local rather than threaded through every screen: the two ends of the
              * flight are a feed row and a thread header, twelve composables apart, and the only
              * thing they need to agree on is that the flight is happening at all.
+             *
+             * Withheld on electronic paper for a different reason: a title flying from a row into a
+             * header is a per-frame redraw of two moving areas, which is the most expensive shape a
+             * transition can have on a panel and the one that ghosts worst.
              */
+            val eink = LocalEinkMode.current
             CompositionLocalProvider(
                 LocalThreadTransition provides
-                    this@SharedTransitionLayout.takeUnless { isListDetailExpanded },
+                    this@SharedTransitionLayout.takeUnless { isListDetailExpanded || eink },
             ) {
                 NavDisplay(
                     entries = entries,
@@ -649,6 +665,19 @@ fun MainNavigation(
                     },
                     sceneStrategies = listOf(listDetailSceneStrategy),
                     sharedTransitionScope = this@SharedTransitionLayout,
+                    // Nav3's own defaults are a 700ms slide built from `tween` and `spring`, written
+                    // out rather than taken from the motion scheme — so `PlazaTheme`'s snapped scheme,
+                    // which silences everything else, does not reach them. On paper a slide is the
+                    // whole screen redrawing for two thirds of a second; a cut is one refresh.
+                    transitionSpec = if (eink) SNAP_TRANSITION else defaultTransitionSpec(),
+                    popTransitionSpec =
+                    if (eink) SNAP_TRANSITION else defaultPopTransitionSpec(),
+                    predictivePopTransitionSpec =
+                    if (eink) {
+                        { _ -> SNAP_CONTENT_TRANSFORM }
+                    } else {
+                        defaultPredictivePopTransitionSpec()
+                    },
                 )
             }
         }
@@ -797,3 +826,16 @@ private fun NodeSeekSite.NotificationGroup.toTab(): NotificationTab =
         NodeSeekSite.NotificationGroup.MENTIONS -> NotificationTab.INTERACTIONS
         NodeSeekSite.NotificationGroup.MESSAGES -> NotificationTab.MESSAGES
     }
+
+/**
+ * The cut 墨水屏模式 uses in place of every navigation transition.
+ *
+ * `EnterTransition.None` rather than a fade with a zero duration: the two look the same on the first
+ * frame, but a fade still composes both destinations for the length of the animation, and on a panel
+ * the cost is the drawing rather than the clock.
+ */
+internal val SNAP_CONTENT_TRANSFORM = EnterTransition.None togetherWith ExitTransition.None
+
+private val SNAP_TRANSITION: AnimatedContentTransitionScope<Scene<NavKey>>.() -> ContentTransform = {
+    SNAP_CONTENT_TRANSFORM
+}

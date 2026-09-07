@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -105,6 +104,7 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.MarkdownEditorBar
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
@@ -307,7 +307,7 @@ fun PostComposerScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(Modifier.describedAsLoading())
+                PlazaSpinner(Modifier.describedAsLoading())
             }
         } else if (loadError != null) {
             SiteErrorState(
@@ -428,10 +428,11 @@ private fun PublishButton(
         modifier = Modifier.padding(end = Spacing.sm).height(40.dp),
     ) {
         if (isPublishing) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(14.dp).describedAsLoading(),
+            PlazaSpinner(
+                modifier = Modifier.describedAsLoading(),
                 strokeWidth = 2.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                size = 14.dp,
             )
             Text(
                 text = stringResource(if (isEditing) Res.string.composer_saving else Res.string.composer_publishing),

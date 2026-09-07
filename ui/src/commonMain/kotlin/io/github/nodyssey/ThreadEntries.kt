@@ -1,5 +1,6 @@
 package io.github.nodyssey
 
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -41,11 +42,9 @@ internal fun EntryProviderScope<NavKey>.threadEntries(nav: StackEntryScope) = wi
          * reads as having left the thread rather than having zoomed into it.
          */
         metadata =
-        NavDisplay.transitionSpec { fadeIn() togetherWith fadeOut() } +
-            NavDisplay.popTransitionSpec { fadeIn() togetherWith fadeOut() } +
-            NavDisplay.predictivePopTransitionSpec { _ ->
-                fadeIn() togetherWith fadeOut()
-            },
+        NavDisplay.transitionSpec { nav.fadeOrCut() } +
+            NavDisplay.popTransitionSpec { nav.fadeOrCut() } +
+            NavDisplay.predictivePopTransitionSpec { _ -> nav.fadeOrCut() },
     ) { key ->
         val saver = rememberImageGallerySaver(container.dispatchers)
         val viewModel: ImageViewerViewModel =
@@ -77,7 +76,7 @@ internal fun EntryProviderScope<NavKey>.threadEntries(nav: StackEntryScope) = wi
          * the honest description of what happened: a page arrived from somewhere else.
          */
         metadata = { key ->
-            if (key.preview == null) emptyMap() else ThreadOpenTransition
+            if (key.preview == null) emptyMap() else threadOpenTransition(nav)
         },
     ) { key ->
         // Keyed so navigating to a different post builds a fresh ViewModel.
@@ -183,10 +182,21 @@ internal fun EntryProviderScope<NavKey>.threadEntries(nav: StackEntryScope) = wi
  * this is not the default slide, and [io.github.nodyssey.ui.common.sharedThreadTitle] for the thing
  * the fade is clearing the way for.
  */
-private val ThreadOpenTransition =
-    NavDisplay.transitionSpec { fadeIn() togetherWith fadeOut() } +
-        NavDisplay.popTransitionSpec { fadeIn() togetherWith fadeOut() } +
-        NavDisplay.predictivePopTransitionSpec { _ -> fadeIn() togetherWith fadeOut() }
+private fun threadOpenTransition(nav: StackEntryScope) =
+    NavDisplay.transitionSpec { nav.fadeOrCut() } +
+        NavDisplay.popTransitionSpec { nav.fadeOrCut() } +
+        NavDisplay.predictivePopTransitionSpec { _ -> nav.fadeOrCut() }
+
+/**
+ * The fade, or nothing at all on electronic paper.
+ *
+ * These two destinations carry their own transition, which means they override the cut `NavDisplay`
+ * is given for 墨水屏模式 — an entry's metadata wins over the display's default. Read inside the spec
+ * lambda rather than when the entry is built, because the provider around it is built once and
+ * outlives any number of visits to the setting.
+ */
+private fun StackEntryScope.fadeOrCut(): ContentTransform =
+    if (isEinkMode()) SNAP_CONTENT_TRANSFORM else fadeIn() togetherWith fadeOut()
 
 private fun imageViewerKeyFor(urls: List<String>, url: String): ImageViewerKey =
     ImageViewerKey(urls = urls, index = urls.indexOf(url).coerceAtLeast(0))

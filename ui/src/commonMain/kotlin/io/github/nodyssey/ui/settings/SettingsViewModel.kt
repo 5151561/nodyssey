@@ -111,6 +111,10 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setOneHandMode(value) }
     }
 
+    fun setEinkMode(value: Boolean) {
+        viewModelScope.launch { settings.setEinkMode(value) }
+    }
+
     fun setFontScale(value: Float) {
         viewModelScope.launch { settings.setFontScale(value) }
     }

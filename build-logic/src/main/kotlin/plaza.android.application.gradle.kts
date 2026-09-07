@@ -144,3 +144,7 @@ android {
 kotlin {
     jvmToolchain(21)
 }
+
+// See `plaza.kmp.library` for why: a test worker left on Gradle's 512MB default dies after the
+// suites pass and surfaces as an intermittent `EOFException`.
+tasks.withType<Test>().configureEach { maxHeapSize = "2g" }

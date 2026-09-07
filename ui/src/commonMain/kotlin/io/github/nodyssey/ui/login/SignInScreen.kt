@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -89,6 +88,7 @@ import io.github.nodyssey.ui.resources.sign_in_verify_not_required
 import io.github.nodyssey.ui.resources.sign_in_verify_not_wired
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
@@ -331,10 +331,11 @@ fun SignInScreen(
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
                 if (state.isSubmitting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp).describedAsLoading(),
+                    PlazaSpinner(
+                        modifier = Modifier.describedAsLoading(),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary,
+                        size = 18.dp,
                     )
                     Spacer(Modifier.width(Spacing.sm))
                     Text(stringResource(Res.string.sign_in_submitting))

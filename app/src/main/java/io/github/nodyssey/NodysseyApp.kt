@@ -14,7 +14,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
-import coil3.request.crossfade
+import coil3.request.transitionFactory
 import coil3.svg.SvgDecoder
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.offline.AndroidOfflineFileStore
@@ -23,6 +23,7 @@ import io.github.nodyssey.data.offline.OfflineWork
 import io.github.nodyssey.di.AndroidAppContainer
 import io.github.nodyssey.di.DefaultAppContainer
 import io.github.nodyssey.image.AvifImageDecoder
+import io.github.nodyssey.image.EinkAwareCrossfade
 import io.github.nodyssey.image.ImageCallRouter
 import io.github.nodyssey.image.ImageNetworkPolicyInterceptor
 import io.github.nodyssey.notifications.NotificationChannels
@@ -127,6 +128,14 @@ open class NodysseyApp :
                 .distinctUntilChanged()
                 .collect { spec -> NotificationPollScheduler.sync(this@NodysseyApp, spec) }
         }
+        // The image loader's fade, for the same reason and by the same route: it is a process-level
+        // object that cannot read the setting itself. See [EinkAwareCrossfade].
+        applicationScope.launch {
+            container.settingsRepository.settings
+                .map { it.einkMode }
+                .distinctUntilChanged()
+                .collect { eink -> EinkAwareCrossfade.crossfading = !eink }
+        }
     }
 
     /**
@@ -223,6 +232,9 @@ open class NodysseyApp :
                 } else {
                     add(GifDecoder.Factory())
                 }
-            }.crossfade(true)
+            }
+            // Not `.crossfade(true)`: 墨水屏模式 has to be able to turn it off, and this loader is
+            // built once per process. See [EinkAwareCrossfade].
+            .transitionFactory(EinkAwareCrossfade)
             .build()
 }

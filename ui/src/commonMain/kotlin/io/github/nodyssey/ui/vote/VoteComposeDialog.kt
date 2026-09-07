@@ -17,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +53,7 @@ import io.github.nodyssey.ui.resources.vote_compose_question
 import io.github.nodyssey.ui.resources.vote_compose_remove_option
 import io.github.nodyssey.ui.resources.vote_compose_title
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
@@ -209,7 +209,7 @@ fun VoteComposeDialog(
         confirmButton = {
             TextButton(onClick = { confirming = true }, enabled = canCreate) {
                 if (state is VoteCreationState.InFlight) {
-                    CircularProgressIndicator(Modifier.size(18.dp).describedAsLoading(), strokeWidth = 2.dp)
+                    PlazaSpinner(Modifier.describedAsLoading(), strokeWidth = 2.dp, size = 18.dp)
                 } else {
                     Text(stringResource(Res.string.vote_compose_create))
                 }

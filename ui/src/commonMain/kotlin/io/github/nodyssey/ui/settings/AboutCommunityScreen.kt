@@ -17,7 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,6 +66,7 @@ import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_retry
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -264,9 +264,10 @@ private fun CommunityStats(
             }
             when (state) {
                 CommunityStatsUiState.Loading ->
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp).describedAsLoading(),
+                    PlazaSpinner(
+                        modifier = Modifier.describedAsLoading(),
                         strokeWidth = 2.dp,
+                        size = 20.dp,
                     )
 
                 CommunityStatsUiState.Error ->

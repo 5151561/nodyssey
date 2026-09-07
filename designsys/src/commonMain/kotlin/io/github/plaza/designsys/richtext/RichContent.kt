@@ -30,7 +30,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -92,6 +92,7 @@ import io.github.plaza.core.richtext.InlineStyle
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SkippedImagePlaceholder
 import io.github.plaza.designsys.component.SpecTable
 import io.github.plaza.designsys.component.TerminalGround
@@ -126,6 +127,7 @@ import io.github.plaza.designsys.resources.richtext_quote_reply
 import io.github.plaza.designsys.resources.richtext_sticker_description
 import io.github.plaza.designsys.resources.richtext_sticker_fallback
 import io.github.plaza.designsys.theme.CodeStyle
+import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Sizes
@@ -370,10 +372,16 @@ private fun RichBlock(
                     Modifier
                         .width(3.dp)
                         .heightIn(min = 20.dp)
-                        // A washed-out primary rather than outlineVariant: the bar is the one mark
+// A washed-out primary rather than outlineVariant: the bar is the one mark
                         // that says "quoted", and at outline contrast it read as a stray divider.
+                        // On paper there is no washing out — 45% of black is a grey the panel has to
+                        // dither — so it goes solid and keeps its width to stay distinct from a rule.
                         .background(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                            if (LocalEinkMode.current) {
+                                MaterialTheme.colorScheme.outline
+                            } else {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                            },
                             RoundedCornerShape(2.dp),
                         ),
                 )
@@ -795,7 +803,7 @@ private fun BlockImage(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                        PlazaSpinner(Modifier, strokeWidth = 2.dp, size = 24.dp)
                         Text(
                             text = stringResource(Res.string.richtext_image_loading),
                             style = MaterialTheme.typography.labelMedium,
@@ -805,23 +813,50 @@ private fun BlockImage(
                 }
             }
             if (cropped) {
+                // The gradient is the worst thing this app draws on electronic paper: a smooth ramp
+                // across thirty rows is exactly what a sixteen-level panel has to dither, and it sits
+                // in the middle of a post rather than off in some settings screen. On paper it becomes
+                // a flat plate with a rule along the top — the same message, one tone.
+                val eink = LocalEinkMode.current
+                // Read out here: the draw lambda below is not a composable scope.
+                val einkRule = MaterialTheme.colorScheme.outline
                 Box(
                     modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .height(30.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f)),
-                            ),
+                        .then(
+                            if (eink) {
+                                Modifier.background(MaterialTheme.colorScheme.surface)
+                            } else {
+                                Modifier.background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f)),
+                                    ),
+                                )
+                            },
+                        ).then(
+                            if (eink) {
+                                Modifier.drawWithContent {
+                                    drawContent()
+                                    drawLine(
+                                        color = einkRule,
+                                        start = Offset.Zero,
+                                        end = Offset(size.width, 0f),
+                                        strokeWidth = 1.dp.toPx(),
+                                    )
+                                }
+                            } else {
+                                Modifier
+                            },
                         ),
                     contentAlignment = Alignment.BottomCenter,
                 ) {
                     Text(
                         text = stringResource(Res.string.richtext_image_view_full),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = Color.White,
+                        color = if (eink) MaterialTheme.colorScheme.onSurface else Color.White,
                         modifier = Modifier.padding(bottom = 6.dp),
                     )
                 }

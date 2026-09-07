@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -64,6 +65,14 @@ internal fun SettingsBlock(
     bottom: Boolean = false,
     icon: (@Composable () -> Unit)? = null,
     subtitle: String? = null,
+    /**
+     * Dims the label, and only the label.
+     *
+     * The control below it is the caller's — every one of them takes its own `enabled`, and dimming
+     * the whole block on top of that would multiply the two and leave a segmented button too faint to
+     * read as anything at all.
+     */
+    enabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(
@@ -74,7 +83,10 @@ internal fun SettingsBlock(
             modifier = Modifier.padding(Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
+            ) {
                 icon?.invoke()
                 Column(
                     modifier = Modifier.weight(1f).padding(start = if (icon == null) 0.dp else Spacing.md),

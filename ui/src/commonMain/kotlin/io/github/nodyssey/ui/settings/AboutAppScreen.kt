@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -105,6 +104,7 @@ import io.github.plaza.core.update.UpdateFailure
 import io.github.plaza.core.update.releaseNotesText
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -334,10 +334,11 @@ private fun AppIdentity(
                 contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
             ) {
                 if (check is UpdateCheck.Checking) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp).describedAsLoading(),
+                    PlazaSpinner(
+                        modifier = Modifier.describedAsLoading(),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary,
+                        size = 18.dp,
                     )
                 } else {
                     Icon(PlazaIcons.History, contentDescription = null, modifier = Modifier.size(18.dp))

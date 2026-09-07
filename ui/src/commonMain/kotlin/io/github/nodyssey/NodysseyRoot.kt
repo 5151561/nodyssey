@@ -81,10 +81,20 @@ fun NodysseyRoot(
     val openAppLinkSettings = rememberAppLinkSettingsLauncher()
     val scope = rememberCoroutineScope()
 
-    val darkTheme = when (settings.themeMode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
+    val darkTheme = when {
+        // 墨水屏模式 decides this rather than 明暗, and it decides it here rather than inside the theme
+        // so that all four readers of the answer agree: the scheme, `LocalPlazaDarkTheme` (the Custom
+        // Tab toolbar), `SystemBarsMatchTheme` (the status bar icons) and the site's own colour-scheme
+        // cookie below. White on black leaves the heavier ghost on a reflective panel and saves
+        // nothing, so an e-ink reader gets paper. 明暗 is greyed out on the settings screen while this
+        // is on rather than left as a control that no longer moves anything.
+        settings.einkMode -> false
+
+        else -> when (settings.themeMode) {
+            ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            ThemeMode.LIGHT -> false
+            ThemeMode.DARK -> true
+        }
     }
 
     // The site's own light/dark cookie, written into the jar every request and the in-app browser
@@ -117,9 +127,12 @@ fun NodysseyRoot(
             // 单手模式 reaches the twenty-odd screens that carry a `OneHandTopAppBar` through a
             // composition local, so none of them has to be told about the setting.
             oneHandMode = settings.oneHandMode,
-            // The OS's remove-animations setting, not an in-app one: whoever asked the system for no
-            // motion asked every app, and this one answers by snapping its motion scheme.
-            reducedMotion = rememberReducedMotionEnabled(),
+            // Two questions with one answer. The OS's remove-animations setting is not an in-app
+            // one — whoever asked the system for no motion asked every app — and 墨水屏模式 is not an
+            // accessibility setting, but on electronic paper every frame is a physical refresh, so
+            // both want the same snapped motion scheme.
+            reducedMotion = rememberReducedMotionEnabled() || settings.einkMode,
+            einkMode = settings.einkMode,
         ) {
             // Inside the theme on purpose: the system bar icons follow the answer PlazaTheme was just
             // given, not the OS's night mode — the same rule the Custom Tab colours already follow.

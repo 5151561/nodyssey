@@ -81,6 +81,7 @@ import io.github.nodyssey.ui.resources.page_jump_previous
 import io.github.nodyssey.ui.resources.page_jump_title
 import io.github.nodyssey.ui.resources.page_jump_total_pages
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -221,6 +222,7 @@ private fun PageKey(
     enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    val eink = LocalEinkMode.current
     Box(modifier = Modifier.size(Sizes.minTouchTarget), contentAlignment = Alignment.Center) {
         Surface(
             onClick = onClick,
@@ -233,9 +235,15 @@ private fun PageKey(
             if (enabled) {
                 MaterialTheme.colorScheme.onSurfaceVariant
             } else {
+                // Half-transparent ink is a grey the panel has to invent; `outlineVariant` is
+                // one it already has, and it is the grey every other muted thing here uses.
                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_KEY_ALPHA)
+                    .takeIf { !eink } ?: MaterialTheme.colorScheme.outlineVariant
             },
-            shadowElevation = PageKeyElevation,
+            // A key is a pale square on a pale ground, and the shadow is what makes it a key.
+            // On paper the shadow cannot be drawn, so the outline takes the job over.
+            shadowElevation = if (eink) 0.dp else PageKeyElevation,
+            border = if (eink) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
             modifier = Modifier.size(PageKeySize),
         ) {
             Box(
@@ -440,7 +448,10 @@ private fun PageScrollerKey(
         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
         contentColor =
         if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-        shadowElevation = if (selected) SelectedPageKeyElevation else 0.dp,
+        // No border for this one: the selected key is filled with `primary`, which on paper is
+        // solid black, and an inverted block needs no help being found.
+        shadowElevation =
+        if (selected && !LocalEinkMode.current) SelectedPageKeyElevation else 0.dp,
         modifier = Modifier
             .size(
                 width = if (selected) SelectedPageKeyWidth else ScrollerPageKeyWidth,

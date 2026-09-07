@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -79,6 +78,7 @@ import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -508,7 +508,7 @@ private fun TelegramBindDialog(
                     )
                     TextButton(onClick = onRefresh, enabled = !isRefreshing) {
                         if (isRefreshing) {
-                            CircularProgressIndicator(Modifier.size(14.dp).describedAsLoading())
+                            PlazaSpinner(Modifier.describedAsLoading(), size = 14.dp)
                         } else {
                             Text(
                                 stringResource(Res.string.account_telegram_refresh),

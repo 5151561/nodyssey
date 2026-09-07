@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -131,6 +130,7 @@ import io.github.nodyssey.ui.resources.sort_by_reply_time
 import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -722,7 +722,7 @@ private fun LazyListScope.appendRow(posts: LazyPagingItems<FeedPost>) {
         LoadState.Loading ->
             item("appending") {
                 Box(Modifier.fillMaxWidth().padding(Spacing.lg), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(24.dp).describedAsLoading())
+                    PlazaSpinner(Modifier.describedAsLoading(), size = 24.dp)
                 }
             }
 

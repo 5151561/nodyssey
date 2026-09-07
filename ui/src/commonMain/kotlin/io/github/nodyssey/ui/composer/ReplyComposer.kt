@@ -28,7 +28,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -90,6 +89,7 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.EditorToolbarDefaults
@@ -639,10 +639,11 @@ private fun PublishReplyButton(
         modifier = modifier.height(40.dp),
     ) {
         if (isPublishing) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(14.dp).describedAsLoading(),
+            PlazaSpinner(
+                modifier = Modifier.describedAsLoading(),
                 strokeWidth = 2.dp,
                 color = MaterialTheme.colorScheme.onPrimary,
+                size = 14.dp,
             )
         } else {
             Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(18.dp))

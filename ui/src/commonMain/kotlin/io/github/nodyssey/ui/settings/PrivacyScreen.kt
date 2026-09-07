@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,7 +60,9 @@ import io.github.nodyssey.ui.resources.privacy_source
 import io.github.nodyssey.ui.resources.privacy_title
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -129,7 +130,7 @@ fun PrivacyScreen(
             PrivacyUiState.Loading -> Box(
                 Modifier.padding(padding).fillMaxSize(),
                 contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator(Modifier.describedAsLoading()) }
+            ) { PlazaSpinner(Modifier.describedAsLoading()) }
 
             PrivacyUiState.Error -> PrivacyError(
                 onRetry = onRetry,
@@ -173,6 +174,7 @@ private fun TermsContent(document: TermsDocument, modifier: Modifier = Modifier)
             item { TermsMetadata(document.effectiveDate) }
             items(document.blocks) { block -> TermsBlockContent(block) }
         }
+        val eink = LocalEinkMode.current
         if (showScrollHint) {
             Box(
                 modifier = Modifier
@@ -180,13 +182,19 @@ private fun TermsContent(document: TermsDocument, modifier: Modifier = Modifier)
                     .fillMaxWidth()
                     .height(76.dp)
                     .drawWithContent {
-                        drawRect(
-                            brush = Brush.linearGradient(
-                                colors = listOf(background.copy(alpha = 0f), background),
-                                start = Offset(0f, 0f),
-                                end = Offset(0f, size.height),
-                            ),
-                        )
+                        // The fade tells the reader there is more below. On paper it is 76 rows of
+                        // ramp for the panel to dither, and the pill it sits behind already says the
+                        // same thing in words — so there it draws nothing and lets the text show
+                        // through.
+                        if (!eink) {
+                            drawRect(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(background.copy(alpha = 0f), background),
+                                    start = Offset(0f, 0f),
+                                    end = Offset(0f, size.height),
+                                ),
+                            )
+                        }
                         drawContent()
                     },
                 contentAlignment = Alignment.BottomCenter,

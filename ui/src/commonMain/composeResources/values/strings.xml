@@ -302,6 +302,11 @@
     <string name="settings_theme_mode">明暗</string>
     <string name="settings_one_hand">单手模式</string>
     <string name="settings_one_hand_hint">二级页面用可下拉的大标题栏，最多占四成屏幕；关掉是普通标题栏</string>
+    <!-- 墨水屏模式的开关。副标题不说「不影响明暗」，因为它恰恰接管了明暗；说的是它接管了什么。 -->
+    <string name="settings_eink">墨水屏模式</string>
+    <string name="settings_eink_hint">为电子墨水屏准备：黑白高对比、没有动效，并固定为浅色</string>
+    <!-- 「主题」那一行在墨水屏模式下的副标题，替换掉平时那句。行本身会一并置灰。 -->
+    <string name="settings_theme_eink_hint">墨水屏模式已接管配色</string>
 
     <!--
       语言. Each entry is written in the language it selects, which is how a reader who has landed on
@@ -803,6 +808,8 @@
     <string name="status_sign_in_title_board">「%1$s」需要登录后查看</string>
     <string name="status_sign_in_body">登录 NodeSeek 账号后即可浏览本版块的内容。登录成功会自动返回并重新加载。</string>
     <string name="status_sign_in_secondary">先逛逛别的版块</string>
+    <string name="status_session_stale_title">登录状态没被认出来</string>
+    <string name="status_session_stale_body">应用手上有登录信息，站点这次却当作未登录返回。多数情况下重试一次就好；如果一直这样，说明这份登录已经失效，重新登录即可。</string>
 
     <string name="status_level_required_title">等级不够，看不了这帖</string>
     <string name="status_level_required_title_level">这帖要 Lv%1$d 才能看</string>

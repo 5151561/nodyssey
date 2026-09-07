@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,6 +29,7 @@ import io.github.nodyssey.ui.resources.assets_board
 import io.github.nodyssey.ui.resources.assets_board_failed
 import io.github.nodyssey.ui.resources.assets_board_gain
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import org.jetbrains.compose.resources.stringResource
@@ -56,7 +56,7 @@ fun AttendanceBoardDialog(
                             .fillMaxWidth()
                             .height(160.dp),
                         contentAlignment = Alignment.Center,
-                    ) { CircularProgressIndicator(Modifier.size(24.dp).describedAsLoading()) }
+                    ) { PlazaSpinner(Modifier.describedAsLoading(), size = 24.dp) }
 
                 error != null ->
                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
