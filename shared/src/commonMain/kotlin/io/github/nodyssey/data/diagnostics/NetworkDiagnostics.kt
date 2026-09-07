@@ -86,6 +86,31 @@ data class NetworkEnvironment(
     val dohProvider: DohProvider?,
     val customTabsProvider: AppIdentity?,
     val defaultBrowser: AppIdentity?,
+    val session: SessionSummary,
+)
+
+/**
+ * What the cookie jar says, for a report about a sign-in that did not take.
+ *
+ * This screen exists because a reader cannot describe what the app is doing from the outside, and
+ * "登录后还是未登录" is the clearest case of that: the sign-in wall and the screen shown when a
+ * session exists but the site answered anonymously are two different states that look alike from a
+ * chair. [signedIn] separates them in one line, and it is the line no amount of asking gets right.
+ *
+ * @property signedIn whether the jar holds a cookie the app reads as a session. Not whether the site
+ *   agrees — nothing here makes a request.
+ * @property hasClearance Cloudflare's, which is the other half of why a request comes back anonymous.
+ * @property cookieNames the names in the jar and **never the values**. A name says which of the two
+ *   the app was guessing at is actually there; a value is the session itself, and this screen's whole
+ *   purpose is to be pasted into a public thread.
+ * @property webView which app provides the store both the browser and the HTTP client read, and at
+ *   which version. Null on a platform with no such package to name.
+ */
+data class SessionSummary(
+    val signedIn: Boolean,
+    val hasClearance: Boolean,
+    val cookieNames: List<String>,
+    val webView: AppIdentity?,
 )
 
 /**

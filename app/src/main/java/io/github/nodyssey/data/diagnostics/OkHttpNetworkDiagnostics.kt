@@ -64,6 +64,8 @@ class OkHttpNetworkDiagnostics(
     private val appVersion: String,
     private val network: () -> NetworkSnapshot,
     private val browsers: () -> BrowserIdentities,
+    /** Read at report time, not held: the jar changes under this screen while it is open. */
+    private val session: () -> SessionSummary,
     private val dispatchers: AppDispatchers,
 ) : NetworkDiagnostics {
     override suspend fun environment(): NetworkEnvironment {
@@ -81,6 +83,7 @@ class OkHttpNetworkDiagnostics(
             dohProvider = doh.provider.takeIf { doh.enabled && doh.isUsable },
             customTabsProvider = installed.customTabs,
             defaultBrowser = installed.default,
+            session = session(),
         )
     }
 

@@ -517,6 +517,16 @@
     <string name="network_check_doh_off">关闭</string>
     <string name="network_check_custom_tab_app">链接打开方式</string>
     <string name="network_check_default_browser">默认浏览器</string>
+    <!--
+      会话那几行：为了「登录后还是未登录」这类报告而存在。登录墙和「有会话但站点当你没登录」
+      两种屏在椅子上分不出来，这里一行就分完了。cookie 只列名字，绝不列值——这一屏是要贴进
+      公开帖子的。
+    -->
+    <string name="network_check_session">本地登录状态</string>
+    <string name="network_check_clearance">人机验证凭据</string>
+    <string name="network_check_cookie_names">Cookie 名称</string>
+    <string name="network_check_cookie_names_none">无</string>
+    <string name="network_check_web_view">WebView 提供者</string>
     <string name="network_check_app_none">没有</string>
     <string name="network_check_yes">是</string>
     <string name="network_check_no">否</string>

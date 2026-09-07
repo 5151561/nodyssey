@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.webkit.WebView
 import androidx.core.net.toUri
 import io.github.nodyssey.data.diagnostics.AppIdentity
 import io.github.nodyssey.data.diagnostics.NetworkTransport
@@ -78,6 +79,24 @@ fun Context.defaultBrowser(): AppIdentity? {
     // The system's own disambiguation activity, which is not a browser and whose label ("打开方式")
     // on this row would read as one.
     return if (resolved.isSystemChooser()) null else appIdentity(packageId)
+}
+
+/**
+ * Which app provides the WebView, and at which version.
+ *
+ * On this screen because it is the store: `CookieManager` belongs to whichever package answers here,
+ * the app's HTTP client and its sign-in browser both read that one jar, and a device whose provider
+ * is disabled, ancient, or an OEM fork is a device where a cookie can be written and not read back.
+ * That is invisible from every other row.
+ *
+ * Null before API 26, and on a device with no provider at all — which is itself the answer worth
+ * seeing.
+ */
+fun Context.webViewProvider(): AppIdentity? {
+    val info = runCatching { WebView.getCurrentWebViewPackage() }.getOrNull() ?: return null
+    val version = info.versionName
+    val identity = appIdentity(info.packageName)
+    return if (version.isNullOrBlank()) identity else identity.copy(label = "${identity.label} $version")
 }
 
 private fun ResolveInfo.isSystemChooser(): Boolean =

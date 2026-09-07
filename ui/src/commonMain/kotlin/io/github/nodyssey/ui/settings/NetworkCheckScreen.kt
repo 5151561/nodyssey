@@ -32,6 +32,7 @@ import io.github.nodyssey.data.diagnostics.NetworkTransport
 import io.github.nodyssey.data.diagnostics.ProbeResult
 import io.github.nodyssey.data.diagnostics.ProbeTiming
 import io.github.nodyssey.data.diagnostics.ProxySummary
+import io.github.nodyssey.data.diagnostics.SessionSummary
 import io.github.nodyssey.data.diagnostics.bodyBytesPerSecond
 import io.github.nodyssey.data.diagnostics.formatBytes
 import io.github.nodyssey.data.diagnostics.formatMillis
@@ -42,7 +43,10 @@ import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.network_check_app_none
 import io.github.nodyssey.ui.resources.network_check_app_version
+import io.github.nodyssey.ui.resources.network_check_clearance
 import io.github.nodyssey.ui.resources.network_check_connect
+import io.github.nodyssey.ui.resources.network_check_cookie_names
+import io.github.nodyssey.ui.resources.network_check_cookie_names_none
 import io.github.nodyssey.ui.resources.network_check_copied
 import io.github.nodyssey.ui.resources.network_check_copy
 import io.github.nodyssey.ui.resources.network_check_custom_tab_app
@@ -76,6 +80,7 @@ import io.github.nodyssey.ui.resources.network_check_running
 import io.github.nodyssey.ui.resources.network_check_section_environment
 import io.github.nodyssey.ui.resources.network_check_section_forum
 import io.github.nodyssey.ui.resources.network_check_section_updates
+import io.github.nodyssey.ui.resources.network_check_session
 import io.github.nodyssey.ui.resources.network_check_status
 import io.github.nodyssey.ui.resources.network_check_status_code
 import io.github.nodyssey.ui.resources.network_check_title
@@ -89,6 +94,7 @@ import io.github.nodyssey.ui.resources.network_check_transport_wifi
 import io.github.nodyssey.ui.resources.network_check_vpn
 import io.github.nodyssey.ui.resources.network_check_vpn_off
 import io.github.nodyssey.ui.resources.network_check_vpn_on
+import io.github.nodyssey.ui.resources.network_check_web_view
 import io.github.nodyssey.ui.resources.network_check_yes
 import io.github.nodyssey.ui.resources.proxy_test_failure_connection
 import io.github.nodyssey.ui.resources.proxy_test_failure_dns
@@ -365,6 +371,27 @@ private fun environmentSection(environment: NetworkEnvironment): CheckSection {
                 value = appIdentityText(browser),
                 alert = browsersDiffer,
             ),
+            // The jar, for the reports this screen cannot otherwise answer. Never flagged: a reader
+            // who is not signed in is not in an error state, and a red row here would say they were.
+            CheckLine(
+                label = stringResource(Res.string.network_check_session),
+                value = yesNo(environment.session.signedIn),
+            ),
+            CheckLine(
+                label = stringResource(Res.string.network_check_clearance),
+                value = yesNo(environment.session.hasClearance),
+            ),
+            CheckLine(
+                label = stringResource(Res.string.network_check_cookie_names),
+                value = environment.session.cookieNames
+                    .takeIf { it.isNotEmpty() }
+                    ?.joinToString(" ")
+                    ?: stringResource(Res.string.network_check_cookie_names_none),
+            ),
+            CheckLine(
+                label = stringResource(Res.string.network_check_web_view),
+                value = appIdentityText(environment.session.webView),
+            ),
         ),
     )
 }
@@ -488,6 +515,12 @@ private fun NetworkCheckScreenPreview() {
                     dohProvider = null,
                     customTabsProvider = AppIdentity("Chrome", "com.android.chrome"),
                     defaultBrowser = AppIdentity("Chrome", "com.android.chrome"),
+                    session = SessionSummary(
+                        signedIn = true,
+                        hasClearance = true,
+                        cookieNames = listOf("session", "cf_clearance", "colorscheme"),
+                        webView = AppIdentity("Android System WebView 131.0.6778.39", "com.google.android.webview"),
+                    ),
                 ),
                 forum = ProbeResult.Answered(
                     statusCode = 200,

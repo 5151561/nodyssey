@@ -235,6 +235,28 @@ class SessionRepositoryTest {
         assertFalse(repository.syncAwaitingSession().isSignedIn)
     }
 
+    /**
+     * 网络自检 puts this list on a screen built to be screenshotted into a public thread. A value
+     * here is the session itself — the one thing on the device worth stealing — so this is a guard,
+     * not a formatting test: it fails the day someone reaches for the pairs instead of the names.
+     */
+    @Test
+    fun `cookie names carry no values`() {
+        setCookie("session=abc123")
+        setCookie("cf_clearance=deadbeef")
+        cookies.setCookie("https://nodeseek.com", "token=secret-value")
+
+        val names = SessionCookies(NodeSeekSite.CONFIG, cookies).cookieNames()
+
+        assertEquals(listOf("session", "cf_clearance", "token"), names)
+        names.forEach { name ->
+            assertFalse("a name may not carry its value: $name", name.contains("="))
+        }
+        listOf("abc123", "deadbeef", "secret-value").forEach { value ->
+            assertFalse("$value reached the report", names.any { it.contains(value) })
+        }
+    }
+
     @Test
     fun `signing out clears the session and reports it`() = runTest {
         setCookie("session=abc123")

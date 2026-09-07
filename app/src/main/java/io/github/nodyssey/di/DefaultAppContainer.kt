@@ -69,6 +69,7 @@ import io.github.nodyssey.data.composer.PostEditor
 import io.github.nodyssey.data.diagnostics.BrowserIdentities
 import io.github.nodyssey.data.diagnostics.NetworkDiagnostics
 import io.github.nodyssey.data.diagnostics.OkHttpNetworkDiagnostics
+import io.github.nodyssey.data.diagnostics.SessionSummary
 import io.github.nodyssey.data.dns.DataStoreDohSettings
 import io.github.nodyssey.data.dns.DohCapabilities
 import io.github.nodyssey.data.dns.DohSettings
@@ -103,6 +104,7 @@ import io.github.nodyssey.platform.customTabsProvider
 import io.github.nodyssey.platform.defaultBrowser
 import io.github.nodyssey.platform.deviceIdentity
 import io.github.nodyssey.platform.networkSnapshot
+import io.github.nodyssey.platform.webViewProvider
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.AppVersion
@@ -323,6 +325,18 @@ class DefaultAppContainer(
                 BrowserIdentities(
                     customTabs = appContext.customTabsProvider(),
                     default = appContext.defaultBrowser(),
+                )
+            },
+            // Names, never values — see [SessionSummary]. `peek` rather than the published state:
+            // this screen reports what the jar says right now, and publishing from a diagnostics
+            // read would invalidate caches and reload the feed behind it.
+            session = {
+                val state = sessionRepository.peek()
+                SessionSummary(
+                    signedIn = state.isSignedIn,
+                    hasClearance = state.hasClearance,
+                    cookieNames = sessionCookies.cookieNames(),
+                    webView = appContext.webViewProvider(),
                 )
             },
             dispatchers = dispatchers,

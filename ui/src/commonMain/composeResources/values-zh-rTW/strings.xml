@@ -429,6 +429,11 @@
     <string name="network_check_doh_off">關閉</string>
     <string name="network_check_custom_tab_app">連結開啟方式</string>
     <string name="network_check_default_browser">預設瀏覽器</string>
+    <string name="network_check_session">本機登入狀態</string>
+    <string name="network_check_clearance">人機驗證憑據</string>
+    <string name="network_check_cookie_names">Cookie 名稱</string>
+    <string name="network_check_cookie_names_none">無</string>
+    <string name="network_check_web_view">WebView 提供者</string>
     <string name="network_check_app_none">沒有</string>
     <string name="network_check_yes">是</string>
     <string name="network_check_no">否</string>

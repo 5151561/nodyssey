@@ -12,6 +12,7 @@ import io.github.nodyssey.data.diagnostics.NetworkEnvironment
 import io.github.nodyssey.data.diagnostics.NetworkTransport
 import io.github.nodyssey.data.diagnostics.ProbeResult
 import io.github.nodyssey.data.diagnostics.ProbeTiming
+import io.github.nodyssey.data.diagnostics.SessionSummary
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Rule
 import org.junit.Test
@@ -94,6 +95,12 @@ class NetworkCheckScreenTest {
                 dohProvider = null,
                 customTabsProvider = AppIdentity("Chrome", "com.android.chrome"),
                 defaultBrowser = AppIdentity("夸克浏览器", "com.quark.browser"),
+                session = SessionSummary(
+                    signedIn = true,
+                    hasClearance = true,
+                    cookieNames = listOf("session", "cf_clearance"),
+                    webView = AppIdentity("Android System WebView 131.0.6778.39", "com.google.android.webview"),
+                ),
             )
 
         val SLOW =

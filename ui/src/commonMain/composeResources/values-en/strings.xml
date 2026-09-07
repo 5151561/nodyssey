@@ -435,6 +435,11 @@
     <string name="network_check_doh_off">Off</string>
     <string name="network_check_custom_tab_app">Links open with</string>
     <string name="network_check_default_browser">Default browser</string>
+    <string name="network_check_session">Session in the jar</string>
+    <string name="network_check_clearance">Cloudflare clearance</string>
+    <string name="network_check_cookie_names">Cookie names</string>
+    <string name="network_check_cookie_names_none">None</string>
+    <string name="network_check_web_view">WebView provider</string>
     <string name="network_check_app_none">None</string>
     <string name="network_check_yes">Yes</string>
     <string name="network_check_no">No</string>

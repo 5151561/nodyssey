@@ -8,6 +8,7 @@ import io.github.nodyssey.data.diagnostics.NetworkTransport
 import io.github.nodyssey.data.diagnostics.ProbeResult
 import io.github.nodyssey.data.diagnostics.ProbeTarget
 import io.github.nodyssey.data.diagnostics.ProbeTiming
+import io.github.nodyssey.data.diagnostics.SessionSummary
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -121,6 +122,12 @@ private class FakeNetworkDiagnostics : NetworkDiagnostics {
             dohProvider = null,
             customTabsProvider = AppIdentity("Chrome", "com.android.chrome"),
             defaultBrowser = AppIdentity("Chrome", "com.android.chrome"),
+            session = SessionSummary(
+                signedIn = true,
+                hasClearance = true,
+                cookieNames = listOf("session", "cf_clearance"),
+                webView = AppIdentity("Android System WebView 131.0.6778.39", "com.google.android.webview"),
+            ),
         )
 
     override suspend fun probe(target: ProbeTarget): ProbeResult {
