@@ -63,7 +63,7 @@ class NotificationsViewModel(
     }
 
     /**
-     * Which group the chips and 全部已读 are about.
+     * Which group the tabs and 全部已读 are about.
      *
      * It no longer empties the other group's list: the two are pages the reader swipes between, so
      * the one being left is still on screen for the length of the gesture, and the one arriving has
@@ -78,7 +78,7 @@ class NotificationsViewModel(
     /**
      * Loads the counts and both groups.
      *
-     * Both, rather than whichever chip is selected: the groups are pages the reader swipes between,
+     * Both, rather than whichever tab is selected: the groups are pages the reader swipes between,
      * and a page that arrives empty and fills in a moment later is the flicker the swipe exists to
      * avoid. They are two endpoints — 私信 is not a list of notifications, it is board 7e's
      * conversation list — so they go out together and are awaited together.

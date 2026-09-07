@@ -38,13 +38,13 @@ class NotificationsScreenTest {
     val composeRule = createComposeRule()
 
     /**
-     * Board 7d's groups, as the App shows them: 回复 and @我 folded into one chip, 私信 beside it.
+     * Board 7d's groups, as the App shows them: 回复 and @我 folded into one tab, 私信 beside it.
      *
      * Still no 「系统」 — the site has never had one, and merging two groups is not an excuse to
      * invent a third.
      */
     @Test
-    fun `offers the merged notification chip and 私信`() {
+    fun `offers the merged notification tab and 私信`() {
         setContent(state(items = listOf(mention())))
 
         composeRule.onNodeWithText("互动").assertIsDisplayed()
@@ -53,9 +53,9 @@ class NotificationsScreenTest {
         assertEquals(0, composeRule.onAllNodesWithText("系统").fetchSemanticsNodes().size)
     }
 
-    /** The badge over the merged chip counts rows, not the two groups' rows added up. */
+    /** The count on the merged tab counts rows, not the two groups' rows added up. */
     @Test
-    fun `the merged chip discounts what both groups counted twice`() {
+    fun `the merged tab discounts what both groups counted twice`() {
         setContent(
             state(items = listOf(mention()), counts = NotificationCounts(replies = 5, mentions = 2, overlap = 2)),
         )

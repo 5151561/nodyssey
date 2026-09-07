@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -26,12 +24,12 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -143,7 +141,7 @@ fun NotificationsRoute(
  * Boards 7d and 7e.
  *
  * One screen rather than two: 私信 is a *group* of the same 通知 tab on the site, so it keeps the
- * title, the 全部已读 action and the group chips and swaps only the list underneath.
+ * title, the 全部已读 action and the group tabs and swaps only the list underneath.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -213,7 +211,7 @@ fun NotificationsScreen(
         }
     }
 
-    // The other direction: a chip tapped, or a group restored with the screen.
+    // The other direction: a tab tapped, or a group restored with the screen.
     LaunchedEffect(selectedIndex) {
         if (pagerState.currentPage != selectedIndex) pagerState.animateScrollToPage(selectedIndex)
     }
@@ -240,33 +238,42 @@ fun NotificationsScreen(
         Column(
             modifier = Modifier.padding(padding).fillMaxSize().readableWidth(),
         ) {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = Spacing.lg),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(NotificationTab.entries, key = { it.name }) { tab ->
-                    FilterChip(
-                        selected = tab == state.selectedTab,
+            /*
+             * Tabs rather than the filter chips this row used to be.
+             *
+             * The groups are pages now, and a tab row is the control that says so: the indicator is
+             * attached to the page underneath and moves with it, which a row of pills has no way to
+             * draw. Fixed rather than scrollable — there are two of them, and a scrollable row would
+             * huddle both at the start with the rest of the width left over.
+             */
+            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
+                tabs.forEachIndexed { index, tab ->
+                    Tab(
+                        // The pager's own page rather than the selected group: the indicator starts
+                        // moving as the swipe passes the halfway point instead of waiting for the
+                        // gesture to end, which is what makes it read as the page's own label. The
+                        // group itself still changes when the gesture comes to rest.
+                        selected = index == pagerState.currentPage,
                         onClick = { onTabChange(tab) },
-                        label = { Text(tab.label()) },
-                        colors =
-                        FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            selectedTrailingIconColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        trailingIcon = {
-                            // A plain tabular numeral, not a Badge: the count belongs to the chip's own
-                            // colour pair, and Badge would drop a red pill into a row of brand chips.
-                            val count = state.counts.forTab(tab)
-                            if (count > 0) {
-                                Text(
-                                    text = unreadLabel(count, MAX_BADGE),
-                                    style =
-                                    MaterialTheme.typography.labelLarge.copy(
-                                        fontFeatureSettings = TABULAR_FIGURES,
-                                    ),
-                                )
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(tab.label())
+                                // A plain tabular numeral, not a Badge: the count belongs to the
+                                // tab's own colour, and a Badge would drop a red pill into a row
+                                // that is otherwise two words and a line.
+                                val count = state.counts.forTab(tab)
+                                if (count > 0) {
+                                    Text(
+                                        text = unreadLabel(count, MAX_BADGE),
+                                        style =
+                                        MaterialTheme.typography.labelMedium.copy(
+                                            fontFeatureSettings = TABULAR_FIGURES,
+                                        ),
+                                    )
+                                }
                             }
                         },
                     )
