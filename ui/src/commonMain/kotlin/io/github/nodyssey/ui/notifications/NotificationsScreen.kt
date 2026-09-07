@@ -4,8 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,21 +13,23 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -35,8 +37,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -137,7 +141,7 @@ fun NotificationsRoute(
  * Boards 7d and 7e.
  *
  * One screen rather than two: 私信 is a *group* of the same 通知 tab on the site, so it keeps the
- * title, the 全部已读 action and the group chips and swaps only the list underneath.
+ * title, the 全部已读 action and the group tabs and swaps only the list underneath.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -182,6 +186,36 @@ fun NotificationsScreen(
             notificationListState.animateScrollToItem(0)
         }
     }
+    /*
+     * 左右滑动切换分组.
+     *
+     * The two groups are pages of one pager, so 私信 arrives with the finger rather than after it —
+     * both lists are loaded together for exactly this reason; see [NotificationsViewModel.refresh].
+     *
+     * The pager also settles the gesture: the list inside claims a drag that crosses its own slop
+     * vertically first, and from then on the pager sees every change as consumed and cannot start.
+     */
+    val tabs = NotificationTab.entries
+    val selectedIndex = tabs.indexOf(state.selectedTab).coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = selectedIndex) { tabs.size }
+
+    // A settled page is a decision; anything before it is a gesture still being made, and switching
+    // group mid-swipe would refresh both lists under a finger that had not chosen yet.
+    val currentTab by rememberUpdatedState(state.selectedTab)
+    val currentOnTabChange by rememberUpdatedState(onTabChange)
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            // Coming to rest on the selected group says nothing — that is every first composition,
+            // and every page this effect was the one to move.
+            tabs.getOrNull(page)?.takeIf { it != currentTab }?.let { currentOnTabChange(it) }
+        }
+    }
+
+    // The other direction: a tab tapped, or a group restored with the screen.
+    LaunchedEffect(selectedIndex) {
+        if (pagerState.currentPage != selectedIndex) pagerState.animateScrollToPage(selectedIndex)
+    }
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -204,111 +238,180 @@ fun NotificationsScreen(
         Column(
             modifier = Modifier.padding(padding).fillMaxSize().readableWidth(),
         ) {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = Spacing.lg),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(NotificationTab.entries, key = { it.name }) { tab ->
-                    FilterChip(
-                        selected = tab == state.selectedTab,
+            /*
+             * Tabs rather than the filter chips this row used to be.
+             *
+             * The groups are pages now, and a tab row is the control that says so: the indicator is
+             * attached to the page underneath and moves with it, which a row of pills has no way to
+             * draw. Fixed rather than scrollable — there are two of them, and a scrollable row would
+             * huddle both at the start with the rest of the width left over.
+             */
+            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
+                tabs.forEachIndexed { index, tab ->
+                    Tab(
+                        // The pager's own page rather than the selected group: the indicator starts
+                        // moving as the swipe passes the halfway point instead of waiting for the
+                        // gesture to end, which is what makes it read as the page's own label. The
+                        // group itself still changes when the gesture comes to rest.
+                        selected = index == pagerState.currentPage,
                         onClick = { onTabChange(tab) },
-                        label = { Text(tab.label()) },
-                        colors =
-                        FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            selectedTrailingIconColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        trailingIcon = {
-                            // A plain tabular numeral, not a Badge: the count belongs to the chip's own
-                            // colour pair, and Badge would drop a red pill into a row of brand chips.
-                            val count = state.counts.forTab(tab)
-                            if (count > 0) {
-                                Text(
-                                    text = unreadLabel(count, MAX_BADGE),
-                                    style =
-                                    MaterialTheme.typography.labelLarge.copy(
-                                        fontFeatureSettings = TABULAR_FIGURES,
-                                    ),
-                                )
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(tab.label())
+                                // A plain tabular numeral, not a Badge: the count belongs to the
+                                // tab's own colour, and a Badge would drop a red pill into a row
+                                // that is otherwise two words and a line.
+                                val count = state.counts.forTab(tab)
+                                if (count > 0) {
+                                    Text(
+                                        text = unreadLabel(count, MAX_BADGE),
+                                        style =
+                                        MaterialTheme.typography.labelMedium.copy(
+                                            fontFeatureSettings = TABULAR_FIGURES,
+                                        ),
+                                    )
+                                }
                             }
                         },
                     )
                 }
             }
 
-            // `isEmpty` keeps the first load out of the indicator: that one already draws
-            // [LoadingState] in the middle of the screen, and a spinner above a spinner reads as two
-            // different loads.
-            PullToRefreshBox(
-                isRefreshing = state.isLoading && !state.isEmpty,
-                onRefresh = onRetry,
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                // Inside the refresh box rather than on the `Scaffold`, which is the whole of the
-                // arbitration: post-scroll runs innermost first, so the deeper of the two gets the
-                // leftover downward drag. In here the bar sinks first and — once full, consuming
-                // nothing — hands the rest of the pull on to the refresh. Out on the `Scaffold` the
-                // refresh would take it all and the big title could never be pulled back.
-                //
-                // The reader gets one gesture with two stages in it: pull to bring the screen down,
-                // keep pulling to refresh. Releasing mid-sink leaves the bar where it is, so the
-                // next pull starts from there and reaches the refresh sooner — and from the top of
-                // the page, where the bar is already full, the very first pull is the refresh.
-                //
-                // The spinner comes down from here rather than from the top of the window, which is
-                // the right place for it and nobody had to arrange it: the refresh wraps the
-                // content, so it starts wherever the bar has left the content standing.
-                Box(Modifier.fillMaxSize().nestedScroll(appBarState.nestedScrollConnection)) {
-                    when {
-                        !state.isSignedIn -> SignedOutState(onSignIn = onSignIn)
+            when {
+                // Signing in is not one of the groups: with no session there is nothing to swipe
+                // between, and a pager over two empty lists would say so twice.
+                !state.isSignedIn -> SignedOutState(onSignIn = onSignIn)
 
-                        state.isLoading && state.isEmpty -> LoadingState()
-
-                        state.error != null && state.isEmpty ->
-                            SiteErrorState(
-                                error = state.error,
-                                onRetry = onRetry,
-                                onOpenBrowser = onVerify,
-                                onVerify = onVerify,
-                                onSignIn = onSignIn,
-                            )
-
-                        state.selectedTab == NotificationTab.MESSAGES ->
-                            ConversationList(
-                                state = state,
-                                listState = conversationListState,
-                                onConversationClick = onConversationClick,
-                                onNewConversation = onNewConversation,
-                                onQueryChange = onNewConversationQueryChange,
-                                onSearch = onNewConversationSearch,
-                                onDismiss = onNewConversationDismiss,
-                                onRecipientClick = onRecipientClick,
-                                onSignIn = onSignIn,
-                                onVerify = onVerify,
-                            )
-
-                        state.items.isEmpty() ->
-                            EmptyNotifications(
-                                modifier = Modifier.align(Alignment.Center),
-                                onRefresh = onRetry,
-                            )
-
-                        else ->
-                            LazyColumn(state = notificationListState) {
-                                items(state.items, key = ForumNotification::id) { item ->
-                                    NotificationRow(
-                                        item = item,
-                                        nowMillis = state.nowMillis,
-                                        onClick = { onNotificationClick(item) },
-                                    )
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                                }
+                else ->
+                    HorizontalPager(
+                        state = pagerState,
+                        key = { index -> tabs[index].name },
+                        modifier = Modifier.fillMaxSize(),
+                    ) { index ->
+                        val tab = tabs[index]
+                        // `isEmpty` keeps the first load out of the indicator: that one already draws
+                        // [LoadingState] in the middle of the screen, and a spinner above a spinner
+                        // reads as two different loads.
+                        PullToRefreshBox(
+                            isRefreshing = state.isLoading && !state.isEmptyOf(tab),
+                            onRefresh = onRetry,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            // Inside the refresh box rather than on the `Scaffold`, which is the
+                            // whole of the arbitration: post-scroll runs innermost first, so the
+                            // deeper of the two gets the leftover downward drag. In here the bar
+                            // sinks first and — once full, consuming nothing — hands the rest of the
+                            // pull on to the refresh. Out on the `Scaffold` the refresh would take
+                            // it all and the big title could never be pulled back.
+                            //
+                            // The reader gets one gesture with two stages in it: pull to bring the
+                            // screen down, keep pulling to refresh. Releasing mid-sink leaves the
+                            // bar where it is, so the next pull starts from there and reaches the
+                            // refresh sooner — and from the top of the page, where the bar is
+                            // already full, the very first pull is the refresh.
+                            //
+                            // The spinner comes down from here rather than from the top of the
+                            // window, which is the right place for it and nobody had to arrange it:
+                            // the refresh wraps the content, so it starts wherever the bar has left
+                            // the content standing.
+                            Box(Modifier.fillMaxSize().nestedScroll(appBarState.nestedScrollConnection)) {
+                                NotificationGroup(
+                                    tab = tab,
+                                    state = state,
+                                    notificationListState = notificationListState,
+                                    conversationListState = conversationListState,
+                                    onSignIn = onSignIn,
+                                    onVerify = onVerify,
+                                    onRetry = onRetry,
+                                    onNotificationClick = onNotificationClick,
+                                    onConversationClick = onConversationClick,
+                                    onNewConversation = onNewConversation,
+                                    onNewConversationQueryChange = onNewConversationQueryChange,
+                                    onNewConversationSearch = onNewConversationSearch,
+                                    onNewConversationDismiss = onNewConversationDismiss,
+                                    onRecipientClick = onRecipientClick,
+                                )
                             }
+                        }
                     }
-                }
             }
         }
+    }
+}
+
+/**
+ * One group, as one page of the pager: its rows, or whatever it has instead of them.
+ *
+ * Loading and failure are asked about per group rather than per screen — the two are different
+ * endpoints, and the page beside the selected one is half on screen for the whole of a swipe, so a
+ * 私信 failure must not draw an error over 通知's rows.
+ */
+@Composable
+private fun BoxScope.NotificationGroup(
+    tab: NotificationTab,
+    state: NotificationsUiState,
+    notificationListState: LazyListState,
+    conversationListState: LazyListState,
+    onSignIn: () -> Unit,
+    onVerify: () -> Unit,
+    onRetry: () -> Unit,
+    onNotificationClick: (ForumNotification) -> Unit,
+    onConversationClick: (MessageConversation) -> Unit,
+    onNewConversation: () -> Unit,
+    onNewConversationQueryChange: (String) -> Unit,
+    onNewConversationSearch: () -> Unit,
+    onNewConversationDismiss: () -> Unit,
+    onRecipientClick: (UserSearchResult) -> Unit,
+) {
+    val isEmpty = state.isEmptyOf(tab)
+    val error = state.errors[tab]
+    when {
+        state.isLoading && isEmpty -> LoadingState()
+
+        error != null && isEmpty ->
+            SiteErrorState(
+                error = error,
+                onRetry = onRetry,
+                onOpenBrowser = onVerify,
+                onVerify = onVerify,
+                onSignIn = onSignIn,
+            )
+
+        // 私信 draws its own empty state, under the 新建私信 button that is the answer to it.
+        tab == NotificationTab.MESSAGES ->
+            ConversationList(
+                state = state,
+                listState = conversationListState,
+                onConversationClick = onConversationClick,
+                onNewConversation = onNewConversation,
+                onQueryChange = onNewConversationQueryChange,
+                onSearch = onNewConversationSearch,
+                onDismiss = onNewConversationDismiss,
+                onRecipientClick = onRecipientClick,
+                onSignIn = onSignIn,
+                onVerify = onVerify,
+            )
+
+        isEmpty ->
+            EmptyNotifications(
+                modifier = Modifier.align(Alignment.Center),
+                onRefresh = onRetry,
+            )
+
+        else ->
+            LazyColumn(state = notificationListState) {
+                items(state.items, key = ForumNotification::id) { item ->
+                    NotificationRow(
+                        item = item,
+                        nowMillis = state.nowMillis,
+                        onClick = { onNotificationClick(item) },
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+            }
     }
 }
 

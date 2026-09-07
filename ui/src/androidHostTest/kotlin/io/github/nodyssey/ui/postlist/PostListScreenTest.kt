@@ -5,6 +5,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -19,11 +22,14 @@ import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
@@ -32,6 +38,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import androidx.paging.cachedIn
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
@@ -119,7 +126,7 @@ class PostListScreenTest {
         onSearch: () -> Unit = {},
         onGoToPage: (Int) -> Unit = {},
         onFindPageRow: suspend (Int) -> Int? = { null },
-        listState: LazyListState? = null,
+        feedStates: HomeFeedStates? = null,
     ) {
         composeRule.setContent {
             PlazaTheme {
@@ -135,7 +142,7 @@ class PostListScreenTest {
                     onSearch = onSearch,
                     onGoToPage = onGoToPage,
                     onFindPageRow = onFindPageRow,
-                    listState = listState ?: rememberLazyListState(),
+                    feedStates = feedStates ?: rememberSaveable(saver = HomeFeedStates.Saver) { HomeFeedStates() },
                 )
             }
         }
@@ -147,7 +154,7 @@ class PostListScreenTest {
         refresh: LoadState,
         append: LoadState,
         state: PostListUiState,
-        listState: LazyListState = rememberLazyListState(),
+        feedStates: HomeFeedStates? = null,
         onPostClick: (FeedPost) -> Unit,
         onBoardClick: (String?) -> Unit,
         onSortChange: (FeedSort) -> Unit,
@@ -157,20 +164,27 @@ class PostListScreenTest {
         onGoToPage: (Int) -> Unit = {},
         onFindPageRow: suspend (Int) -> Int? = { null },
     ) {
-        val pagingData =
-            PagingData.from(
-                data = posts,
-                sourceLoadStates =
-                LoadStates(
-                    refresh = refresh,
-                    prepend = LoadState.NotLoading(true),
-                    append = append,
-                ),
-            )
+        // Remembered rather than rebuilt: the pager asks for a board's rows every time the page
+        // recomposes, and a new flow instance each time would hand back a new presenter each time.
+        val feed =
+            remember(posts, refresh, append) {
+                flowOf(
+                    PagingData.from(
+                        data = posts,
+                        sourceLoadStates =
+                        LoadStates(
+                            refresh = refresh,
+                            prepend = LoadState.NotLoading(true),
+                            append = append,
+                        ),
+                    ),
+                )
+            }
         PostListScreen(
             state = state,
-            posts = flowOf(pagingData).collectAsLazyPagingItems(),
-            listState = listState,
+            // Every board shows the same rows here; which board is selected is what the tests vary.
+            postsFor = { feed.collectAsLazyPagingItems() },
+            feedStates = feedStates ?: rememberSaveable(saver = HomeFeedStates.Saver) { HomeFeedStates() },
             onPostClick = onPostClick,
             onBoardClick = onBoardClick,
             onSortChange = onSortChange,
@@ -214,6 +228,66 @@ class PostListScreenTest {
         composeRule.onNodeWithText("技术").performClick()
 
         assertEquals("tech", slug)
+    }
+
+    /**
+     * 左右滑动切换板块: the boards are pages, in the strip's own order, so 综合 steps to 日常 rather
+     * than to whichever board the site happens to list second.
+     */
+    @Test
+    fun `swiping the feed sideways selects the next board`() {
+        var slug: String? = "unset"
+        setScreen((1..40).map { feedPost(it.toLong(), "post $it") }, onBoardClick = { slug = it })
+
+        feedList().performTouchInput { swipeLeft() }
+        composeRule.waitForIdle()
+
+        assertEquals("daily", slug)
+    }
+
+    /** There is nothing before 综合 to swipe to, and the pager simply springs back. */
+    @Test
+    fun `swiping back from the first board stays put`() {
+        var reported: String? = "unset"
+        setScreen((1..40).map { feedPost(it.toLong(), "post $it") }, onBoardClick = { reported = it })
+
+        feedList().performTouchInput { swipeRight() }
+        composeRule.waitForIdle()
+
+        assertEquals("unset", reported)
+    }
+
+    /**
+     * Each board is a page with a scroll position of its own — the point of the boards being pages
+     * at all. Coming back to one used to mean coming back to the top of it.
+     */
+    @Test
+    fun `a board keeps its own place in the feed`() {
+        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
+        var state by mutableStateOf(PostListUiState(boards = boards))
+        composeRule.setContent {
+            PlazaTheme {
+                ScreenUnderTest(
+                    posts = posts,
+                    refresh = LoadState.NotLoading(false),
+                    append = LoadState.NotLoading(true),
+                    state = state,
+                    onPostClick = {},
+                    onBoardClick = {},
+                    onSortChange = {},
+                    onRecoverInBrowser = {},
+                )
+            }
+        }
+
+        feedList().performScrollToIndex(20)
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
+        composeRule.runOnIdle { state = state.copy(categorySlug = "tech") }
+        composeRule.onNodeWithText("post 1").assertIsDisplayed()
+
+        composeRule.runOnIdle { state = state.copy(categorySlug = null) }
+
+        composeRule.onNodeWithText("post 21").assertIsDisplayed()
     }
 
     @Test
@@ -270,7 +344,7 @@ class PostListScreenTest {
             }
         }
 
-        composeRule.onNode(feedList).performScrollToIndex(20)
+        feedList().performScrollToIndex(20)
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
 
         restorationTester.emulateSavedInstanceStateRestore()
@@ -286,9 +360,9 @@ class PostListScreenTest {
     fun `leaving the list composition and returning keeps the exact position`() {
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var showingList by mutableStateOf(true)
-        lateinit var retainedListState: LazyListState
+        val retainedStates = HomeFeedStates()
+        val retainedListState = retainedStates.listState(null, FeedSort.LAST_REPLY)
         composeRule.setContent {
-            retainedListState = rememberLazyListState()
             PlazaTheme {
                 if (showingList) {
                     ScreenUnderTest(
@@ -296,7 +370,7 @@ class PostListScreenTest {
                         refresh = LoadState.NotLoading(false),
                         append = LoadState.NotLoading(true),
                         state = PostListUiState(boards = boards),
-                        listState = retainedListState,
+                        feedStates = retainedStates,
                         onPostClick = {},
                         onBoardClick = {},
                         onSortChange = {},
@@ -308,7 +382,7 @@ class PostListScreenTest {
             }
         }
 
-        composeRule.onNode(feedList).performScrollToIndex(20)
+        feedList().performScrollToIndex(20)
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
         composeRule.runOnIdle { assertEquals(20, retainedListState.firstVisibleItemIndex) }
 
@@ -340,7 +414,7 @@ class PostListScreenTest {
             }
         }
 
-        composeRule.onNode(feedList).performScrollToIndex(20)
+        feedList().performScrollToIndex(20)
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
 
         state = state.copy(categorySlug = "tech")
@@ -369,7 +443,7 @@ class PostListScreenTest {
             }
         }
 
-        composeRule.onNode(feedList).performScrollToIndex(20)
+        feedList().performScrollToIndex(20)
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
 
         requests++
@@ -401,9 +475,13 @@ class PostListScreenTest {
         var requests by mutableStateOf(0)
         composeRule.setContent {
             PlazaTheme {
+                // `cachedIn` as production has it: the screen reads the selected board's stream
+                // alongside the page drawing it, and one cache is what makes that one source.
+                val scope = rememberCoroutineScope()
+                val feed = remember { pager.flow.cachedIn(scope) }
                 PostListScreen(
                     state = PostListUiState(boards = boards),
-                    posts = pager.flow.collectAsLazyPagingItems(),
+                    postsFor = { feed.collectAsLazyPagingItems() },
                     onPostClick = {},
                     onBoardClick = {},
                     onSortChange = {},
@@ -417,7 +495,7 @@ class PostListScreenTest {
         composeRule.onNodeWithText("post 1").assertIsDisplayed()
         assertEquals(1, loads)
 
-        composeRule.onNode(feedList).performScrollToIndex(20)
+        feedList().performScrollToIndex(20)
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
 
         requests++
@@ -454,7 +532,7 @@ class PostListScreenTest {
         }
 
         requests++
-        composeRule.onNode(feedList).performScrollToIndex(20)
+        feedList().performScrollToIndex(20)
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
 
         restorationTester.emulateSavedInstanceStateRestore()
@@ -467,7 +545,7 @@ class PostListScreenTest {
     fun `no request leaves the scroll position alone`() {
         setScreen((1..40).map { feedPost(it.toLong(), "post $it") })
 
-        composeRule.onNode(feedList).performScrollToIndex(20)
+        feedList().performScrollToIndex(20)
 
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
     }
@@ -483,7 +561,7 @@ class PostListScreenTest {
     fun `scrolling the feed folds the app bar away and keeps the board strip`() {
         setScreen((1..40).map { feedPost(it.toLong(), "post $it") })
 
-        composeRule.onNode(feedList).performTouchInput { swipeUp() }
+        feedList().performTouchInput { swipeUp() }
 
         composeRule.onNodeWithContentDescription("排序方式").assertIsNotDisplayed()
         composeRule.onNodeWithContentDescription("搜索").assertIsNotDisplayed()
@@ -492,11 +570,14 @@ class PostListScreenTest {
     }
 
     /**
-     * Switching boards puts the list back at its first row, and the app bar has to come back with
-     * it: that scroll is programmatic, so it produces no upward delta for the bar to unfold against.
+     * A folded app bar stays folded across a board.
+     *
+     * It used to be unfolded on the way, back when switching boards also put the list at its first
+     * row. Now that every board keeps its own place, that made the bar jump back out over the rows
+     * on every swipe — the reader folded it away, and nothing they did asked for it back.
      */
     @Test
-    fun `switching boards unfolds the app bar again`() {
+    fun `switching boards leaves the app bar folded`() {
         val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
         var state by mutableStateOf(PostListUiState(boards = boards))
         composeRule.setContent {
@@ -514,10 +595,44 @@ class PostListScreenTest {
             }
         }
 
-        composeRule.onNode(feedList).performTouchInput { swipeUp() }
+        feedList().performTouchInput { swipeUp() }
         composeRule.onNodeWithContentDescription("排序方式").assertIsNotDisplayed()
 
-        state = state.copy(categorySlug = "tech")
+        composeRule.runOnIdle { state = state.copy(categorySlug = "tech") }
+
+        composeRule.onNodeWithContentDescription("排序方式").assertIsNotDisplayed()
+        // The strip never folds, so the way back to another board is still on screen.
+        composeRule.onNodeWithText("综合").assertIsDisplayed()
+    }
+
+    /**
+     * 排序 is the arrival that does need it: a different order is a different feed, every board
+     * starts at its top, and that arrival is programmatic — there is no upward delta for the bar to
+     * unfold against, and at the top of a list there is nothing left to scroll back up through.
+     */
+    @Test
+    fun `switching sort unfolds the app bar again`() {
+        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
+        var state by mutableStateOf(PostListUiState(boards = boards))
+        composeRule.setContent {
+            PlazaTheme {
+                ScreenUnderTest(
+                    posts = posts,
+                    refresh = LoadState.NotLoading(false),
+                    append = LoadState.NotLoading(true),
+                    state = state,
+                    onPostClick = {},
+                    onBoardClick = {},
+                    onSortChange = {},
+                    onRecoverInBrowser = {},
+                )
+            }
+        }
+
+        feedList().performTouchInput { swipeUp() }
+        composeRule.onNodeWithContentDescription("排序方式").assertIsNotDisplayed()
+
+        composeRule.runOnIdle { state = state.copy(sort = FeedSort.POST_TIME) }
 
         composeRule.onNodeWithContentDescription("排序方式").assertIsDisplayed()
     }
@@ -533,8 +648,15 @@ class PostListScreenTest {
         assertTrue(opened)
     }
 
-    /** The vertical list of rows, told apart from the board strip that also scrolls. */
+    /**
+     * The vertical list of rows, told apart from the board strip and from the pager that carries it.
+     *
+     * Three things on this screen scroll and two of them contain the rows — 首页 draws its boards as
+     * pages now — so the matcher finds two nodes and the list is the deeper of them.
+     */
     private val feedList = hasScrollAction() and hasAnyDescendant(hasText("post 1"))
+
+    private fun feedList() = composeRule.onAllNodes(feedList).onLast()
 
     // ---------------------------------------------------------------------------------------------
     // Error recovery
@@ -788,7 +910,7 @@ class PostListScreenTest {
         boards = boards,
         pageBarEnabled = pageBarEnabled,
         totalPages = totalPages,
-        startPage = startPage,
+        startPages = mapOf(null to startPage),
     )
 
     /** The feed is a scroll by default; the bar exists only for the reader who asks for it. */
@@ -878,14 +1000,15 @@ class PostListScreenTest {
     @Test
     fun `next page reads on to the foot instead of reloading at the frontier`() {
         var requested: Int? = null
-        val listState = LazyListState()
+        val feedStates = HomeFeedStates()
+        val listState = feedStates.listState(null, FeedSort.LAST_REPLY)
         setScreen(
             posts = List(60) { feedPost(it + 1L, "page one row ${it + 1}", page = 1) },
             state = pagedState(),
             onGoToPage = { requested = it },
             // Page 1 is stored and page 2 is not, which is the frontier.
             onFindPageRow = { page -> 0.takeIf { page == 1 } },
-            listState = listState,
+            feedStates = feedStates,
         )
 
         composeRule.onNodeWithContentDescription("下一页").performClick()

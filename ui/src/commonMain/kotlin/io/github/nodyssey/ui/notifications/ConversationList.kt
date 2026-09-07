@@ -381,7 +381,7 @@ private const val MAX_UNREAD = 99
  * An unread count, capped, with the cap made visible.
  *
  * Clamping alone renders 150 unread as a bare "99", which reads as an exact figure rather than as
- * "more than we will draw". Shared by the conversation badges and the category chips so the two
+ * "more than we will draw". Shared by the conversation badges and the group tabs so the two
  * cannot disagree about what a capped count looks like.
  */
 @Composable

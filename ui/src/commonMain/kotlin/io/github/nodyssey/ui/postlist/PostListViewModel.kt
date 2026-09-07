@@ -79,22 +79,35 @@ class PostListViewModel(
     private val sortRestored = MutableStateFlow(false)
 
     /**
-     * `cachedIn` keeps the loaded pages alive across configuration changes and across navigating into
-     * a post and back. Without it, returning to the list restarts paging at page one and the scroll
-     * position goes with it — the exact regression phase two exists to fix.
+     * One stream per board, built on demand and kept for as long as the screen lives.
+     *
+     * 首页 draws its boards as pages the reader swipes between, so two of them are on screen at once
+     * during the gesture and each needs rows of its own. A board's stream deliberately does not
+     * mention [PostListUiState.categorySlug]: the neighbour keeps paging while it is half on screen,
+     * and settling on it must not rebuild the stream that has just finished loading.
+     *
+     * `cachedIn` keeps the loaded pages alive across configuration changes, across navigating into a
+     * post and back, and now across swiping to the next board and back — the rows are the database's
+     * either way, so what is cached here is the window and the scroll position that goes with it.
+     *
+     * Read and written from the composition only, which is why a plain map is enough.
      */
-    val feed: Flow<PagingData<FeedPost>> =
-        combine(
-            uiState.map { FeedKey(it.categorySlug, it.sort, it.startPage, 0) },
-            feedGeneration,
-            sortRestored,
-        ) { key, generation, restored ->
-            key.copy(sessionGeneration = if (restored) generation else -1)
+    private val feeds = mutableMapOf<String?, Flow<PagingData<FeedPost>>>()
+
+    fun feed(slug: String?): Flow<PagingData<FeedPost>> =
+        feeds.getOrPut(slug) {
+            combine(
+                uiState.map { FeedKey(slug, it.sort, it.startPageOf(slug), 0) },
+                feedGeneration,
+                sortRestored,
+            ) { key, generation, restored ->
+                key.copy(sessionGeneration = if (restored) generation else -1)
+            }
+                .filter { it.sessionGeneration >= 0 }
+                .distinctUntilChanged()
+                .flatMapLatest { key -> repository.feed(key.categorySlug, key.sort, key.startPage) }
+                .cachedIn(viewModelScope)
         }
-            .filter { it.sessionGeneration >= 0 }
-            .distinctUntilChanged()
-            .flatMapLatest { key -> repository.feed(key.categorySlug, key.sort, key.startPage) }
-            .cachedIn(viewModelScope)
 
     init {
         /*
@@ -143,7 +156,7 @@ class PostListViewModel(
                     if (state.sort == sort) {
                         state
                     } else {
-                        state.copy(sort = sort, startPage = FeedRemoteMediator.FIRST_PAGE)
+                        state.copy(sort = sort, startPages = emptyMap())
                     }
                 }
                 sortRestored.value = true
@@ -159,7 +172,7 @@ class PostListViewModel(
                 _uiState.update { state ->
                     state.copy(
                         pageBarEnabled = enabled,
-                        startPage = if (enabled) state.startPage else FeedRemoteMediator.FIRST_PAGE,
+                        startPages = if (enabled) state.startPages else emptyMap(),
                     )
                 }
             }.launchIn(viewModelScope)
@@ -197,10 +210,17 @@ class PostListViewModel(
         viewModelScope.launch { categoryRepository.refreshIfNeeded() }
     }
 
+    /**
+     * Which board the strip and 翻页栏 are about. It no longer decides which rows are on screen —
+     * every board has its own stream — so this moves the selection and nothing else.
+     *
+     * The page a board was left on stays with that board rather than being reset here: swiping away
+     * and back is now an ordinary gesture, and it would be a strange one that threw away the page
+     * the reader had travelled to.
+     */
     fun selectCategory(slug: String?) {
-        // The guard stays: re-emitting the same slug rebuilds the pager and drops the position.
         if (_uiState.value.categorySlug == slug) return
-        _uiState.update { it.copy(categorySlug = slug, startPage = FeedRemoteMediator.FIRST_PAGE) }
+        _uiState.update { it.copy(categorySlug = slug) }
     }
 
     /**
@@ -226,8 +246,9 @@ class PostListViewModel(
      */
     fun goToPage(page: Int) {
         val target = page.coerceIn(FeedRemoteMediator.FIRST_PAGE, _uiState.value.totalPages.coerceAtLeast(1))
-        if (_uiState.value.startPage == target) return
-        _uiState.update { it.copy(startPage = target) }
+        val slug = _uiState.value.categorySlug
+        if (_uiState.value.startPageOf(slug) == target) return
+        _uiState.update { it.copy(startPages = it.startPages + (slug to target)) }
     }
 
     /**
@@ -321,12 +342,14 @@ data class PostListUiState(
      */
     val pageBarEnabled: Boolean = true,
     /**
-     * Where the loaded window starts — 1 unless 翻页栏 has sent the feed somewhere.
+     * Where each board's loaded window starts — absent unless 翻页栏 has sent that board somewhere.
      *
      * Part of the state rather than a field because it selects the pager: changing it is what makes
-     * the mediator replace the stored rows instead of appending to them.
+     * the mediator replace the stored rows instead of appending to them. Keyed by board because the
+     * boards are pages the reader swipes between, and each of them holds its own window; a single
+     * number here would send the neighbour back to page one every time the selection moved.
      */
-    val startPage: Int = FeedRemoteMediator.FIRST_PAGE,
+    val startPages: Map<String?, Int> = emptyMap(),
     /** How many pages the site says this feed has, as of the last page stored. */
     val totalPages: Int = 1,
 ) {
@@ -338,6 +361,13 @@ data class PostListUiState(
      */
     val selectedBoardTitle: String?
         get() = categorySlug?.let { slug -> boards.firstOrNull { it.slug == slug }?.title }
+
+    /** Where [slug]'s window starts; the first page for every board 翻页栏 has not moved. */
+    fun startPageOf(slug: String?): Int = startPages[slug] ?: FeedRemoteMediator.FIRST_PAGE
+
+    /** The selected board's page, which is the only one 翻页栏 is ever about. */
+    val startPage: Int
+        get() = startPageOf(categorySlug)
 }
 
 internal fun Throwable.toSiteError(): SiteError = (this as? SiteException)?.error ?: SiteError.Unknown

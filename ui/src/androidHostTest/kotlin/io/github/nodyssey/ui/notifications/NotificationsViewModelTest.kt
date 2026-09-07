@@ -6,12 +6,16 @@ import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.MessageThread
 import io.github.nodyssey.data.NotificationRepository
+import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.UserSearchResult
+import io.github.nodyssey.data.contentPreview
 import io.github.nodyssey.data.session.FakeSessionCookieStore
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.net.SessionCookies
+import io.github.plaza.core.net.SiteError
+import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -160,19 +164,70 @@ class NotificationsViewModelTest {
             assertEquals(5, viewModel.uiState.value.counts.mentions)
         }
 
+    /**
+     * 通知 and 私信 are pages the reader swipes between, so the group that is not selected has to be
+     * loaded too — a page that arrives empty and fills in a moment later is the flicker the swipe
+     * exists to avoid.
+     */
+    @Test
+    fun `both groups load, not only the selected one`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(FakeApi(counts = """{"atMe":2}"""), messages = FakeMessages())
+            advanceUntilIdle()
+
+            assertEquals(NotificationTab.INTERACTIONS, viewModel.uiState.value.selectedTab)
+            assertTrue(viewModel.uiState.value.items.isNotEmpty())
+            assertEquals(listOf(7L), viewModel.uiState.value.conversations.map { it.uid })
+        }
+
+    /** One endpoint behind a wall must not put an error screen over the group that loaded fine. */
+    @Test
+    fun `a failure in one group leaves the other alone`() =
+        runTest(dispatcher) {
+            val messages = FakeMessages(fails = true)
+            val viewModel = viewModel(FakeApi(counts = """{"atMe":2}"""), messages = messages)
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertTrue(state.items.isNotEmpty())
+            assertEquals(null, state.error)
+            assertTrue(state.errors.containsKey(NotificationTab.MESSAGES))
+        }
+
     private fun viewModel(
         api: FakeApi,
         unread: Boolean = true,
         clock: AppClock = AppClock { 1_785_000_000_000L },
+        messages: MessageRepository = NoMessages,
     ): NotificationsViewModel {
         val notifications = NotificationRepository(api)
         api.mentionUnread = unread
         return NotificationsViewModel(
             repository = notifications,
-            messages = NoMessages,
+            messages = messages,
             search = NoSearch,
             session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
             clock = clock,
+        )
+    }
+}
+
+/** A conversation list that answers, or refuses to. */
+private class FakeMessages(private val fails: Boolean = false) : MessageRepository by NoMessages {
+    override suspend fun conversations(): List<MessageConversation> {
+        if (fails) throw SiteException(SiteError.Network)
+        return listOf(
+            MessageConversation(
+                uid = 7,
+                userName = "nssk",
+                avatarUrl = null,
+                snippet = contentPreview("在的"),
+                isSnippetMine = false,
+                updatedAtMillis = 1_785_000_000_000L,
+                updatedAtText = null,
+                unreadCount = 0,
+                isSystem = false,
+            ),
         )
     }
 }

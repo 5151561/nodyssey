@@ -31,7 +31,7 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
             viewModel(factory = PostListViewModel.factory(container))
         PostListRoute(
             viewModel = viewModel,
-            listState = homeListState,
+            feedStates = homeFeedStates,
             // The whole of what the row is already showing, not just the id: the thread
             // draws these four before the network answers, and they are what the row's own
             // title, avatar, name and board tag fly into.

@@ -223,7 +223,7 @@ class PostListViewModelTest {
                     settingsRepository = SettingsRepository(HeldPreferencesStore(preferences)),
                     session = session,
                 )
-            backgroundScope.launch { vm.feed.collect { } }
+            backgroundScope.launch { vm.feed(null).collect { } }
             advanceUntilIdle()
 
             assertEquals("opened a pager before the sort was read", emptyList<FeedSort>(), repository.feedSorts)
@@ -271,7 +271,7 @@ class PostListViewModelTest {
             val vm = viewModel()
             advanceUntilIdle()
 
-            val titles = vm.feed.asSnapshot().map { it.summary.title }
+            val titles = vm.feed(null).asSnapshot().map { it.summary.title }
 
             assertEquals(listOf("post 10", "post 11", "post 12"), titles)
         }
@@ -289,7 +289,7 @@ class PostListViewModelTest {
             }
             val vm = viewModel()
             advanceUntilIdle()
-            assertEquals(listOf("post 10"), vm.feed.asSnapshot().map { it.summary.title })
+            assertEquals(listOf("post 10"), vm.feed(null).asSnapshot().map { it.summary.title })
             val requestsBefore = remote.listRequests.size
 
             // What the site serves a signed-in reader is a different list.
@@ -299,7 +299,7 @@ class PostListViewModelTest {
             session.value = SessionState(isSignedIn = true, fingerprint = 1, generation = 1)
             advanceUntilIdle()
 
-            assertEquals(listOf("post 99"), vm.feed.asSnapshot().map { it.summary.title })
+            assertEquals(listOf("post 99"), vm.feed(null).asSnapshot().map { it.summary.title })
             assertTrue(
                 "expected a new request, still at $requestsBefore",
                 remote.listRequests.size > requestsBefore,
@@ -335,13 +335,13 @@ class PostListViewModelTest {
         runTest(dispatcher) {
             val vm = viewModel()
             advanceUntilIdle()
-            vm.feed.asSnapshot()
+            vm.feed(null).asSnapshot()
             val requestsBefore = remote.listRequests.size
 
             // Same generation re-emitted: the WebView was opened and nothing changed.
             session.value = SessionState()
             advanceUntilIdle()
-            vm.feed.asSnapshot()
+            vm.feed(null).asSnapshot()
 
             assertEquals(requestsBefore, remote.listRequests.size)
         }
