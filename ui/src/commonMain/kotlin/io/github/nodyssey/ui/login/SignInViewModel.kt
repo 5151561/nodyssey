@@ -102,7 +102,9 @@ class SignInViewModel(
         val token = (_uiState.value.verification as? VerificationState.Passed)?.token
         submitJob =
             viewModelScope.launch {
-                _uiState.update { it.copy(isSubmitting = true, refusal = null, failure = null) }
+                _uiState.update {
+                    it.copy(isSubmitting = true, refusal = null, failure = null, sessionNotStored = false)
+                }
                 runCatchingExceptCancellation {
                     signIn.signIn(
                         SignInCredentials(
@@ -123,7 +125,9 @@ class SignInViewModel(
         val code = codeState.text.toString()
         submitJob =
             viewModelScope.launch {
-                _uiState.update { it.copy(isSubmitting = true, refusal = null, failure = null) }
+                _uiState.update {
+                    it.copy(isSubmitting = true, refusal = null, failure = null, sessionNotStored = false)
+                }
                 runCatchingExceptCancellation { signIn.verifyTwoFactor(challenge, code) }
                     .onSuccess(::applyOutcome)
                     .onFailure(::applyFailure)
@@ -153,8 +157,32 @@ class SignInViewModel(
                 // Publish rather than peek: this is exactly the moment the rest of the app is meant
                 // to notice, and it is the app's own request that changed the jar — no challenge is
                 // half-finished underneath it.
-                session.sync()
-                _uiState.update { it.copy(isSubmitting = false, signedIn = true) }
+                //
+                // Read back rather than assumed. `Signed` is only the endpoint's word that the
+                // credentials were right; whether a session the *app* can read reached the shared
+                // cookie jar is a separate question, and the answer is what every other screen goes
+                // on. Leaving on the endpoint's word alone is how a sign-in that stored nothing
+                // returned the user to a signed-out screen with nothing said — silently, because the
+                // one place that could have noticed threw this value away.
+                if (session.sync().isSignedIn) {
+                    _uiState.update { it.copy(isSubmitting = false, signedIn = true) }
+                } else {
+                    // Back to card 1 whichever leg we are on: card 3 has nothing left to post, and
+                    // 改用网页登录 — the one way forward when the app cannot hold a session of its
+                    // own — is drawn there. The token went with the attempt the site accepted, so it
+                    // is spent either way.
+                    codeState.clearText()
+                    _uiState.update {
+                        it.spend().copy(
+                            isSubmitting = false,
+                            step = SignInStep.Credentials,
+                            code = "",
+                            challenge = null,
+                            refusal = null,
+                            sessionNotStored = true,
+                        )
+                    }
+                }
             }
 
             is SignInOutcome.TwoFactorRequired -> {
@@ -299,6 +327,15 @@ data class SignInUiState(
     /** A failure of the request itself, shown once in a snackbar. */
     val failure: SiteError? = null,
     val failureDetail: String? = null,
+    /**
+     * The site accepted the sign-in and no session came out of it.
+     *
+     * Neither a refusal nor a transport failure, which is why it is not either of those fields: the
+     * request was made, the site answered `success`, and what is missing is a cookie the app can
+     * read back out of the jar it shares with the web view. Nothing the user can retype fixes it, so
+     * the screen says so and points at 改用网页登录 rather than reddening a password that was right.
+     */
+    val sessionNotStored: Boolean = false,
     val signedIn: Boolean = false,
 ) {
     /**

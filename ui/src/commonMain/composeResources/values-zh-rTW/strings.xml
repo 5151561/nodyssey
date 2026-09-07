@@ -1202,6 +1202,7 @@
     <string name="sign_in_terms">登入即表示同意《服務條款》與《隱私協議》</string>
     <string name="sign_in_readonly_hint">按鈕在驗證通過前保持停用；送出後整張表單唯讀，避免重複請求觸發限流。</string>
     <string name="sign_in_use_web">改用網頁登入</string>
+    <string name="sign_in_session_not_stored">論壇已確認帳號密碼，但這台裝置沒能保存登入狀態。請改用網頁登入。</string>
 
     <string name="sign_in_verify_expired">驗證已過期，請重新驗證</string>
     <string name="sign_in_verify_not_wired">人機驗證還沒接進 App，原生登入暫時用不了</string>

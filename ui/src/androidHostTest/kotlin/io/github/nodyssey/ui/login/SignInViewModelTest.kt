@@ -76,7 +76,7 @@ class SignInViewModelTest {
     @Test
     fun `the button stays down until the verification block answers`() =
         runTest(dispatcher) {
-            val repository = FakeSignInRepository()
+            val repository = FakeSignInRepository(jar = cookies)
             val vm = viewModel(repository)
             vm.accountState.typeText("nssk")
             vm.passwordState.typeText("hunter2hunter2")
@@ -103,7 +103,7 @@ class SignInViewModelTest {
     @Test
     fun `the token travels with the credentials`() =
         runTest(dispatcher) {
-            val repository = FakeSignInRepository()
+            val repository = FakeSignInRepository(jar = cookies)
             val vm = readyViewModel(repository)
 
             vm.submitCredentials()
@@ -122,6 +122,7 @@ class SignInViewModelTest {
             val repository =
                 FakeSignInRepository(
                     outcome = SignInOutcome.Refused(SignInRefusal.Credentials, "用户名或密码不正确"),
+                    jar = cookies,
                 )
             val vm = readyViewModel(repository)
 
@@ -144,7 +145,7 @@ class SignInViewModelTest {
     fun `a second factor opens its own step with an empty box`() =
         runTest(dispatcher) {
             val challenge = TwoFactorChallenge(account = "nssk", otpSession = "otp-1")
-            val repository = FakeSignInRepository(outcome = SignInOutcome.TwoFactorRequired(challenge))
+            val repository = FakeSignInRepository(outcome = SignInOutcome.TwoFactorRequired(challenge), jar = cookies)
             val vm = readyViewModel(repository)
 
             vm.submitCredentials()
@@ -165,7 +166,7 @@ class SignInViewModelTest {
     fun `six digits arm the verify button and reach the endpoint`() =
         runTest(dispatcher) {
             val challenge = TwoFactorChallenge(account = "nssk", otpSession = "otp-1")
-            val repository = FakeSignInRepository(outcome = SignInOutcome.TwoFactorRequired(challenge))
+            val repository = FakeSignInRepository(outcome = SignInOutcome.TwoFactorRequired(challenge), jar = cookies)
             val vm = readyViewModel(repository)
             vm.submitCredentials()
             advanceUntilIdle()
@@ -186,11 +187,80 @@ class SignInViewModelTest {
             assertTrue(vm.uiState.value.signedIn)
         }
 
+    /**
+     * The endpoint said yes and the jar came away empty.
+     *
+     * `jar = null` is the whole of the setup: the fake answers [SignInOutcome.Signed] and writes no
+     * cookie, which is what a sign-in that stores nothing looks like from in here. What is asserted
+     * is that the screen does *not* leave — the bug this covers had the user returned to a
+     * signed-out screen with nothing said, because the endpoint's word was taken for the session.
+     */
+    @Test
+    fun `a success that stores no session does not sign in`() =
+        runTest(dispatcher) {
+            val repository = FakeSignInRepository(jar = null)
+            val vm = readyViewModel(repository)
+
+            vm.submitCredentials()
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertFalse("nothing was stored, so nothing was signed in", state.signedIn)
+            assertTrue(state.sessionNotStored)
+            assertNull("the site did not refuse — it accepted", state.refusal)
+            assertEquals("the password was right; it is still there", "hunter2hunter2", vm.passwordState.text.toString())
+            // Spent with the attempt the site accepted, so a second press asks the widget for a new one.
+            assertEquals(1, state.verificationGeneration)
+        }
+
+    /** The same, arrived at from card 3 — which has nothing left to post, so it walks back. */
+    @Test
+    fun `a second factor that stores no session walks back to the password`() =
+        runTest(dispatcher) {
+            val challenge = TwoFactorChallenge(account = "nssk", otpSession = "otp-1")
+            val repository = FakeSignInRepository(outcome = SignInOutcome.TwoFactorRequired(challenge), jar = null)
+            val vm = readyViewModel(repository)
+            vm.submitCredentials()
+            advanceUntilIdle()
+
+            repository.outcome = SignInOutcome.Signed
+            vm.codeState.typeText("491723")
+            runCurrent()
+            vm.submitTwoFactor()
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertFalse(state.signedIn)
+            assertTrue(state.sessionNotStored)
+            assertEquals(SignInStep.Credentials, state.step)
+            assertNull(state.challenge)
+        }
+
+    /** Pressing 登录 again clears the last verdict, this one included. */
+    @Test
+    fun `a fresh submit clears the stored-nothing banner`() =
+        runTest(dispatcher) {
+            val repository = FakeSignInRepository(jar = null)
+            val vm = readyViewModel(repository)
+            vm.submitCredentials()
+            advanceUntilIdle()
+            assertTrue(vm.uiState.value.sessionNotStored)
+
+            repository.jar = cookies
+            vm.onVerified("turnstile-token-2")
+            advanceUntilIdle()
+            vm.submitCredentials()
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.sessionNotStored)
+            assertTrue(vm.uiState.value.signedIn)
+        }
+
     @Test
     fun `an expired otp session walks back to the password`() =
         runTest(dispatcher) {
             val challenge = TwoFactorChallenge(account = "nssk", otpSession = "otp-1")
-            val repository = FakeSignInRepository(outcome = SignInOutcome.TwoFactorRequired(challenge))
+            val repository = FakeSignInRepository(outcome = SignInOutcome.TwoFactorRequired(challenge), jar = cookies)
             val vm = readyViewModel(repository)
             vm.submitCredentials()
             advanceUntilIdle()
@@ -212,7 +282,7 @@ class SignInViewModelTest {
     @Test
     fun `a transport failure is a snackbar, and retry sends the same thing again`() =
         runTest(dispatcher) {
-            val repository = FakeSignInRepository(failure = SiteException(SiteError.Network))
+            val repository = FakeSignInRepository(failure = SiteException(SiteError.Network), jar = cookies)
             val vm = readyViewModel(repository)
 
             vm.submitCredentials()
@@ -236,9 +306,16 @@ class SignInViewModelTest {
     }
 }
 
+/**
+ * @param jar the store the endpoint writes its `Set-Cookie` into, which is the same one the
+ *   [SessionRepository] under test reads. Passing it is what makes [SignInOutcome.Signed] mean what
+ *   it means on the wire — the endpoint's word *plus* a session in the shared jar — and leaving it
+ *   null is the case the ViewModel now has to notice: a `success` that stored nothing.
+ */
 private class FakeSignInRepository(
     var outcome: SignInOutcome = SignInOutcome.Signed,
     var failure: Throwable? = null,
+    var jar: FakeSessionCookieStore? = null,
 ) : SignInRepository {
     var sent: SignInCredentials? = null
         private set
@@ -248,12 +325,16 @@ private class FakeSignInRepository(
     override suspend fun signIn(credentials: SignInCredentials): SignInOutcome {
         sent = credentials
         failure?.let { throw it }
-        return outcome
+        return outcome.alsoStoreSession()
     }
 
     override suspend fun verifyTwoFactor(challenge: TwoFactorChallenge, code: String): SignInOutcome {
         verified = challenge to code
         failure?.let { throw it }
-        return outcome
+        return outcome.alsoStoreSession()
+    }
+
+    private fun SignInOutcome.alsoStoreSession(): SignInOutcome = also {
+        if (it == SignInOutcome.Signed) jar?.setCookie(NodeSeekSite.BASE_URL, "session=granted; Path=/")
     }
 }

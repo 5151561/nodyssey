@@ -1210,6 +1210,7 @@
     <string name="sign_in_terms">Signing in accepts the Terms of Service and the Privacy Policy</string>
     <string name="sign_in_readonly_hint">The button stays disabled until the check passes; once submitted the whole form is read-only, so a repeated request cannot trip the rate limit.</string>
     <string name="sign_in_use_web">Sign in on the web instead</string>
+    <string name="sign_in_session_not_stored">The forum accepted your account and password, but this device could not store the session. Sign in on the web instead.</string>
 
     <string name="sign_in_verify_expired">The check has expired — do it again</string>
     <string name="sign_in_verify_not_wired">The human check is not wired into the app yet, so signing in here is unavailable</string>

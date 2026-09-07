@@ -76,6 +76,7 @@ import io.github.nodyssey.ui.resources.sign_in_password_rejected
 import io.github.nodyssey.ui.resources.sign_in_readonly_hint
 import io.github.nodyssey.ui.resources.sign_in_refused_generic
 import io.github.nodyssey.ui.resources.sign_in_register_hint
+import io.github.nodyssey.ui.resources.sign_in_session_not_stored
 import io.github.nodyssey.ui.resources.sign_in_submit
 import io.github.nodyssey.ui.resources.sign_in_submitting
 import io.github.nodyssey.ui.resources.sign_in_subtitle
@@ -285,6 +286,8 @@ fun SignInScreen(
 
             if (state.hasCredentialRefusal) RefusalBanner(state.refusal)
 
+            if (state.sessionNotStored) SessionNotStoredBanner()
+
             TextField(
                 state = accountState,
                 enabled = state.isFormEnabled,
@@ -313,7 +316,9 @@ fun SignInScreen(
 
             VerificationBlock(state.verification, turnstile)
 
-            if (state.verification is VerificationState.NotWired) {
+            // Also on a sign-in the app could not hold on to: same button, same reason — the form
+            // in front of the user has no move left, and the page next door does.
+            if (state.verification is VerificationState.NotWired || state.sessionNotStored) {
                 TextButton(onClick = onUseWebSignIn, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(Res.string.sign_in_use_web), fontWeight = FontWeight.SemiBold)
                 }
@@ -431,7 +436,24 @@ private fun PasswordSupport(state: SignInUiState, onForgotPassword: () -> Unit) 
  */
 @Composable
 private fun RefusalBanner(refusal: SignInOutcome.Refused?) {
-    val text = refusal?.detail?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.sign_in_refused_generic)
+    ErrorBanner(refusal?.detail?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.sign_in_refused_generic))
+}
+
+/**
+ * The site said yes and the app came away with no session — see [SignInUiState.sessionNotStored].
+ *
+ * Its own wording because the app is the one making the claim: there is no sentence from the forum
+ * to show, the forum having answered `success`. Drawn in the same error colours as a refusal, and
+ * followed by 改用网页登录, which is the only move left — the web view writes into the same jar by a
+ * route that does not depend on what this endpoint sets.
+ */
+@Composable
+private fun SessionNotStoredBanner() {
+    ErrorBanner(stringResource(Res.string.sign_in_session_not_stored))
+}
+
+@Composable
+private fun ErrorBanner(text: String) {
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.errorContainer,
