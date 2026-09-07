@@ -375,6 +375,7 @@ class IosAppContainer(
             jsonSource = jsonClient,
             profileDao = database.profileDao(),
             currentSessionFingerprint = { sessionRepository.state.value.fingerprint },
+            isSignedIn = { sessionRepository.state.value.isSignedIn },
             clock = clock,
         )
     }
