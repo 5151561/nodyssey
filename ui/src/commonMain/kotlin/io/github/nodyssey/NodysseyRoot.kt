@@ -48,10 +48,16 @@ import kotlinx.coroutines.launch
  * Keeping the theme here rather than there is what lets the five theme helpers below stay `internal`
  * to this module — a shell that reaches into `ui.settings.theme` to build a `ColorScheme` is a shell
  * that has opinions about the app.
+ *
+ * @param initialSettings what the store held when the shell asked, before this composition existed,
+ * or null if it could not get an answer. The one thing a shell is asked to fetch itself, because the
+ * store answers asynchronously and the first frame cannot wait for it without going out in the
+ * factory colours. Required rather than defaulted: a shell that forgets it is a shell that flashes.
  */
 @Composable
 fun NodysseyRoot(
     container: AppContainer,
+    initialSettings: UserSettings?,
     initialTab: TopLevelDestination,
     launchRequest: LaunchRequest?,
     onLaunchRequestHandled: () -> Unit,
@@ -60,12 +66,18 @@ fun NodysseyRoot(
     // Theme reads the settings SSOT directly. No copy is kept anywhere, so changing the setting can
     // never leave part of the app on the old value.
     //
-    // Null until the store has been read — the theme is happy to draw the defaults for that one
-    // frame, but 语言 is not: `ApplyAppLanguage` has to be able to tell "the reader chose 跟随系统"
-    // from "nobody has said yet", and a `UserSettings()` placeholder says the first when it means
-    // the second. See the note on `ApplyAppLanguage`.
+    // [initialSettings] is that same store, read once before this composition existed, and it is
+    // what stops a cold start from painting one frame in the factory settings. The store is read
+    // asynchronously, so without it the first frame goes out on `UserSettings()` — 石墨青, and
+    // 字体大小, 单手模式 and 墨水屏模式 at their defaults too — and the app visibly changes
+    // colour a frame later when the disk answers.
+    //
+    // Still nullable, because a shell that could not get an answer in time hands over null rather
+    // than a placeholder: 语言 has to be able to tell "the reader chose 跟随系统" from "nobody has
+    // said yet", and a `UserSettings()` standing in for the second says the first. See the note on
+    // `ApplyAppLanguage`.
     val storedSettings: UserSettings? by container.settingsRepository.settings
-        .collectAsStateWithLifecycle(initialValue = null)
+        .collectAsStateWithLifecycle(initialValue = initialSettings)
     val settings = storedSettings ?: UserSettings()
 
     // 语言, put into the platform's own idea of a locale — the notification bodies `:app` posts,

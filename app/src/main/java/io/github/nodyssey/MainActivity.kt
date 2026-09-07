@@ -9,8 +9,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.settings.AndroidAppLanguage
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : ComponentActivity() {
     /*
@@ -56,10 +61,12 @@ class MainActivity : ComponentActivity() {
         // needs the composition to go somewhere it would not have gone on its own — and only on a
         // start that is not a recreation. See [launchLinkOf].
         launchRequest = launchLinkOf(intent, isRecreation = savedInstanceState != null)
+        val initialSettings = readSettingsForFirstFrame(container.settingsRepository)
 
         setContent {
             NodysseyRoot(
                 container = container,
+                initialSettings = initialSettings,
                 initialTab = initialTab,
                 launchRequest = launchRequest,
                 onLaunchRequestHandled = { launchRequest = null },
@@ -86,6 +93,25 @@ class MainActivity : ComponentActivity() {
         const val TAB_NOTIFICATIONS = "notifications"
     }
 }
+
+/**
+ * The stored settings, fetched before the first frame is composed.
+ *
+ * The store is read off the disk asynchronously, so a composition that starts without an answer
+ * paints its first frame in the factory settings and then swaps to the reader's — visibly, as a
+ * flash of 石墨青 under whatever theme they actually chose. Blocking here rather than letting that
+ * frame out costs nothing on screen: this runs before `setContent`, so what is up during the wait is
+ * the launch window the system has been showing since the icon was tapped.
+ *
+ * [SETTINGS_READ_TIMEOUT_MS] is the promise that this cannot become an ANR on a device where the
+ * read is pathologically slow. Timing out is not a failure case: null is what the composition
+ * already handles, and it puts the app back exactly where it was before this function existed.
+ */
+private fun readSettingsForFirstFrame(repository: SettingsRepository): UserSettings? =
+    runBlocking { withTimeoutOrNull(SETTINGS_READ_TIMEOUT_MS) { repository.settings.first() } }
+
+/** Long enough for a slow disk, far short of the five seconds that make an ANR. */
+private const val SETTINGS_READ_TIMEOUT_MS = 1_000L
 
 /** The screen an intent asks for, or null when it is not asking for one. */
 internal fun deepLinkOf(intent: Intent): LaunchRequest.OpenLink? =
