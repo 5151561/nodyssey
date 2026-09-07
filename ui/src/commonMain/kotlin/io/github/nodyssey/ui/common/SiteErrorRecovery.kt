@@ -50,6 +50,12 @@ fun siteErrorRecovery(
 
         SiteError.LoginRequired -> onSignIn?.let { StatusAction(signIn, it) }
 
+        // 重试 first, and 登录 only when there is nothing to retry with. A session we are holding is
+        // the reason this is not the branch above: pressing 登录 on a sign-in that already worked
+        // repeats it, which is the loop this error exists to break.
+        SiteError.SessionUnrecognised ->
+            onRetry?.let { StatusAction(retry, it) } ?: onSignIn?.let { StatusAction(signIn, it) }
+
         // Both ends of 阅读权限, "nothing was requested" and a term the site would not even search
         // all fail the same test: there is no press that changes the answer. See the matching
         // branches in [SiteErrorState].
@@ -112,6 +118,8 @@ fun SiteErrorSnackbar(
  */
 internal fun snackbarDuration(error: SiteError): SnackbarDuration =
     when (error) {
-        SiteError.Cloudflare, SiteError.LoginRequired -> SnackbarDuration.Indefinite
+        SiteError.Cloudflare, SiteError.LoginRequired, SiteError.SessionUnrecognised ->
+            SnackbarDuration.Indefinite
+
         else -> SnackbarDuration.Short
     }

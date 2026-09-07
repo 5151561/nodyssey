@@ -48,6 +48,10 @@ object NodeSeekSite {
             htmlAccept = HTML_ACCEPT,
             // The site sets `session`; the JWT-style `token` shows up on some deployments.
             sessionCookieNames = listOf("session", "token"),
+            // Both hosts the web view is allowed onto — see TRUSTED_WEBVIEW_HOSTS. A sign-in
+            // finished on the bare domain sets a host-only cookie there, and a jar read at
+            // `www` alone does not see it: the page says signed in, the app says signed out.
+            sessionUrls = listOf(BASE_URL, "https://nodeseek.com"),
             // `light` / `dark` are what the site's own theme switch writes, and `body.dark-layout`
             // is what the page does with the second one. Its other, undocumented job is in
             // [ColorSchemeCookie]: without this cookie the account endpoint returns no readme at all.

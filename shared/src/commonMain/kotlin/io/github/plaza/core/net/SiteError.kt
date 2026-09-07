@@ -15,6 +15,22 @@ sealed interface SiteError {
     data object LoginRequired : SiteError
 
     /**
+     * The app is holding a session and the site answered as though it were nobody.
+     *
+     * Apart from [LoginRequired] because the recovery is different, and because telling these two
+     * apart is the whole point: a reader who has never signed in needs a sign-in button, and a reader
+     * whose session exists but did not reach the site — or reached it and was not honoured — needs a
+     * *retry* first. Rendering both as the sign-in wall is what made a successful sign-in look like
+     * it had silently failed: the user was returned to a screen identical to the one they started
+     * from, with a button that did the same thing again.
+     *
+     * The app cannot narrow it further, and deliberately does not try. From here, a request that went
+     * out without the cookie and a session the site has expired are the same observation — an
+     * anonymous answer — so the screen offers both ways out and lets the reader find which it was.
+     */
+    data object SessionUnrecognised : SiteError
+
+    /**
      * The post is behind a reader-level floor this account has not reached.
      *
      * Apart from [LoginRequired] because the two have nothing in common but the wall: a site that

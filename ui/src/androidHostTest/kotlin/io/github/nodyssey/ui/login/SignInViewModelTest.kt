@@ -14,8 +14,12 @@ import io.github.plaza.core.AppClock
 import io.github.plaza.core.net.SessionCookies
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -236,6 +240,27 @@ class SignInViewModelTest {
             assertNull(state.challenge)
         }
 
+    /**
+     * The cookie was on its way in, not missing.
+     *
+     * The store behind the jar writes on its own schedule, so the read taken the instant the endpoint
+     * answers can miss a session that arrives a beat later. Accusing that sign-in of not having
+     * worked is the one wrong answer this check must not give.
+     */
+    @Test
+    fun `a session that lands a beat late is not reported as missing`() =
+        runTest(dispatcher) {
+            val repository = FakeSignInRepository(jar = cookies, writeDelayMillis = 200)
+            val vm = readyViewModel(repository)
+
+            vm.submitCredentials()
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertTrue(state.signedIn)
+            assertFalse("the cookie was late, not absent", state.sessionNotStored)
+        }
+
     /** Pressing 登录 again clears the last verdict, this one included. */
     @Test
     fun `a fresh submit clears the stored-nothing banner`() =
@@ -316,7 +341,9 @@ private class FakeSignInRepository(
     var outcome: SignInOutcome = SignInOutcome.Signed,
     var failure: Throwable? = null,
     var jar: FakeSessionCookieStore? = null,
+    private val writeDelayMillis: Long = 0L,
 ) : SignInRepository {
+
     var sent: SignInCredentials? = null
         private set
     var verified: Pair<TwoFactorChallenge, String>? = null
@@ -334,7 +361,21 @@ private class FakeSignInRepository(
         return outcome.alsoStoreSession()
     }
 
-    private fun SignInOutcome.alsoStoreSession(): SignInOutcome = also {
-        if (it == SignInOutcome.Signed) jar?.setCookie(NodeSeekSite.BASE_URL, "session=granted; Path=/")
+    private suspend fun SignInOutcome.alsoStoreSession(): SignInOutcome = also {
+        if (it != SignInOutcome.Signed) return@also
+        val jar = jar ?: return@also
+        // A store that takes its time, which is what Android's does: the write is handed over here
+        // and becomes readable later. Zero means "already readable", which is every other test.
+        if (writeDelayMillis == 0L) {
+            jar.setCookie(NodeSeekSite.BASE_URL, "session=granted; Path=/")
+        } else {
+            // Launched, not awaited: the endpoint answers and the write finishes on its own, which
+            // is the whole shape of the race. A child of the caller's job, so the test's scheduler
+            // runs it.
+            CoroutineScope(currentCoroutineContext()).launch {
+                delay(writeDelayMillis)
+                jar.setCookie(NodeSeekSite.BASE_URL, "session=granted; Path=/")
+            }
+        }
     }
 }

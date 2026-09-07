@@ -1,7 +1,10 @@
 package io.github.nodyssey.data.session
 
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.plaza.core.net.SessionCookieStore
 import io.github.plaza.core.net.SessionCookies
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -166,6 +169,72 @@ class SessionRepositoryTest {
         assertFalse(after.isSignedIn)
     }
 
+    /**
+     * The web view is allowed onto both hosts, and a sign-in finished on the bare one leaves a
+     * host-only cookie there. Reading only `www` reported that reader as signed out while the page
+     * in front of them said otherwise.
+     */
+    @Test
+    fun `a session left on the bare domain is still a session`() {
+        cookies.setCookie("https://nodeseek.com", "session=abc123")
+
+        assertTrue(repository.sync().isSignedIn)
+    }
+
+    /**
+     * The fingerprint is deliberately read at one origin only, so this session arrives without
+     * moving it — which is precisely the case the old `if (fingerprint != …)` published nothing for.
+     */
+    @Test
+    fun `a session that does not move the fingerprint is still published`() {
+        val before = repository.state.value
+        cookies.setCookie("https://nodeseek.com", "session=abc123")
+
+        val after = repository.sync()
+
+        assertEquals(before.fingerprint, after.fingerprint)
+        assertTrue(after.isSignedIn)
+        assertEquals(before.generation + 1, after.generation)
+        assertTrue("the published state is what screens read", repository.state.value.isSignedIn)
+    }
+
+    /** `sync` is how callers *ask*, so it must never hand back the state it just failed to update. */
+    @Test
+    fun `sync answers with what the store says, not with what was last published`() {
+        setCookie("session=abc123")
+
+        assertTrue(repository.sync().isSignedIn)
+        assertEquals(repository.state.value, repository.sync())
+    }
+
+    @Test
+    fun `a session that only becomes visible on a later read still counts`() = runTest {
+        val late = InFlightCookieStore(cookies)
+        val repository = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, late))
+        cookies.setCookie(NodeSeekSite.BASE_URL, "session=abc123")
+
+        // The one read a plain `sync` takes lands inside the window the write has not left.
+        assertFalse("still in flight", repository.sync().isSignedIn)
+
+        // Lands after the first settle beat and before the last.
+        launch {
+            delay(150)
+            late.land()
+        }
+
+        assertTrue(repository.syncAwaitingSession().isSignedIn)
+    }
+
+    @Test
+    fun `a session that never arrives is still reported as absent`() = runTest {
+        val repository =
+            SessionRepository(SessionCookies(NodeSeekSite.CONFIG, InFlightCookieStore(cookies)))
+        cookies.setCookie(NodeSeekSite.BASE_URL, "session=abc123")
+
+        // Waiting is a tolerance, not a promise that something will turn up.
+        assertFalse(repository.syncAwaitingSession().isSignedIn)
+    }
+
     @Test
     fun `signing out clears the session and reports it`() = runTest {
         setCookie("session=abc123")
@@ -176,4 +245,28 @@ class SessionRepositoryTest {
         assertFalse(repository.state.value.isSignedIn)
         assertEquals(signedIn.generation + 1, repository.state.value.generation)
     }
+}
+
+/**
+ * A store whose writes take a while to become readable.
+ *
+ * Android's `CookieManager` announces a completed write through a callback the jar does not wait on,
+ * so a read taken on the next line can miss a cookie that is on its way in. This is that window,
+ * held open until the test says otherwise — [land] is the moment the write becomes visible.
+ *
+ * Held open by hand rather than by counting reads: how many times a snapshot consults the store is
+ * an implementation detail of [SessionCookies], and a test that encodes it fails the next time a
+ * second origin is added to the read rather than when the behaviour it is about breaks.
+ */
+private class InFlightCookieStore(
+    private val delegate: SessionCookieStore,
+) : SessionCookieStore by delegate {
+    private var landed = false
+
+    fun land() {
+        landed = true
+    }
+
+    override fun cookieHeader(url: String): String? =
+        if (landed) delegate.cookieHeader(url) else null
 }

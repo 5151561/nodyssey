@@ -29,7 +29,12 @@ class SessionCookies(
      * refreshes.
      */
     fun snapshot(): CookieSnapshot {
-        val pairs = cookiePairs()
+        // The two booleans look everywhere a session can land; the fingerprint stays on the one
+        // origin the app actually fetches from. See [SiteConfig.sessionUrls] for the first half, and
+        // the note below for why mixing the second half's inputs would be a mistake: the fingerprint
+        // is what invalidates caches, and cookies from a host nothing is fetched from would churn it
+        // for content that did not change.
+        val pairs = config.sessionUrls.flatMap(::cookiePairs)
         return CookieSnapshot(
             // A present-but-empty cookie is how a sign-out looks on the wire, so the value has to be
             // checked. Exact name matching for the same reason `contains("session=")` was wrong: it
@@ -37,7 +42,7 @@ class SessionCookies(
             isSignedIn = pairs.any { (name, value) -> name in config.sessionCookieNames && value.isNotBlank() },
             hasClearance = pairs.any { (name, value) -> name == CLEARANCE_COOKIE && value.isNotBlank() },
             fingerprint =
-            pairs
+            cookiePairs(config.baseUrl)
                 .filterNot { (name, _) -> isCloudflareNoise(name) || isOurs(name) }
                 .sortedBy { (name, _) -> name }
                 .joinToString(";") { (name, value) -> "$name=$value" }
@@ -46,7 +51,7 @@ class SessionCookies(
     }
 
     /** Cookie *names* only — used for diagnostics; values are never logged. */
-    fun cookieNames(): List<String> = cookiePairs().map { (name, _) -> name }
+    fun cookieNames(): List<String> = config.sessionUrls.flatMap(::cookiePairs).map { (name, _) -> name }
 
     /** See [SessionCookieStore.flush] for why this is worth calling by hand. */
     fun flush() {
@@ -94,9 +99,9 @@ class SessionCookies(
         name != CLEARANCE_COOKIE &&
             (name.startsWith("__cf") || name.startsWith("_cf") || name.startsWith("cf_"))
 
-    private fun cookiePairs(): List<Pair<String, String>> =
+    private fun cookiePairs(url: String): List<Pair<String, String>> =
         store
-            .cookieHeader(config.baseUrl)
+            .cookieHeader(url)
             .orEmpty()
             .split(';')
             .mapNotNull { raw ->

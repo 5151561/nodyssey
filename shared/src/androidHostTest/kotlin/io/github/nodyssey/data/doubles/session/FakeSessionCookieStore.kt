@@ -10,24 +10,30 @@ import io.github.plaza.core.net.SessionCookieStore
  * right for that is one rule — a cookie written twice keeps only the second value, which is how a
  * sign-out (`session=`) replaces a session rather than adding one — and it is one line here.
  *
- * Single-host on purpose. Every caller reads and writes the same site, so a per-URL store would add
- * a dimension no test varies and quietly hide it if one ever did.
+ * Per-URL, and that *is* a dimension worth having: a cookie set without a `Domain` attribute is
+ * host-only, so a session finished on `nodeseek.com` is invisible to a read at `www.nodeseek.com`.
+ * That is the shape of a real bug — see [io.github.plaza.core.net.SiteConfig.sessionUrls] — and a
+ * single-host map cannot express it. No domain matching beyond that: what is written at a URL is
+ * what is read back at the same URL, which is exactly enough to tell the two hosts apart.
  */
 class FakeSessionCookieStore : SessionCookieStore {
-    private val cookies = LinkedHashMap<String, String>()
+    private val cookies = LinkedHashMap<String, LinkedHashMap<String, String>>()
 
     var flushes: Int = 0
         private set
 
     override fun cookieHeader(url: String): String? =
-        cookies.entries
-            .joinToString("; ") { (name, value) -> "$name=$value" }
-            .ifEmpty { null }
+        cookies[url]
+            ?.entries
+            ?.joinToString("; ") { (name, value) -> "$name=$value" }
+            ?.ifEmpty { null }
 
     override fun setCookie(url: String, cookie: String) {
         // Attributes are the store's business, and this one keeps none of them.
         val pair = cookie.substringBefore(';')
-        cookies[pair.substringBefore('=').trim()] = pair.substringAfter('=', "").trim()
+        cookies
+            .getOrPut(url) { LinkedHashMap() }[pair.substringBefore('=').trim()] =
+            pair.substringAfter('=', "").trim()
     }
 
     override suspend fun removeAll() = cookies.clear()

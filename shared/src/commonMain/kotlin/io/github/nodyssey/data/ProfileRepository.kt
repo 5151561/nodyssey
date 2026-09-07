@@ -117,6 +117,11 @@ class NetworkProfileRepository(
     private val jsonSource: JsonSource,
     private val profileDao: ProfileDao,
     private val currentSessionFingerprint: () -> Int,
+    /**
+     * Whether the app is holding a session at all, which is what separates the two ways the front
+     * page can come back naming nobody. Same shape and same reason as `FollowRepository`'s.
+     */
+    private val isSignedIn: () -> Boolean,
     private val clock: AppClock,
 ) : ProfileRepository {
     private val json = Json { ignoreUnknownKeys = true }
@@ -169,10 +174,22 @@ class NetworkProfileRepository(
         }
 
     private suspend fun fetchProfile(): UserProfile {
-        val bootstrap = parseProfilePage(htmlSource.getHtml("/"))
-        // The page parsed but named no account: the session cookie is missing or stale. Reporting
-        // that as Unparsable sent users to a "站点改版" card whose retry can never succeed.
-        val uid = bootstrap.uid ?: throw SiteException(SiteError.LoginRequired)
+        // Two shapes of the same answer, and both used to end at the sign-in wall. `decode` reports
+        // a page carrying no bootstrap element at all — the signed-out front page — and the line
+        // below catches a blob that parsed and named nobody. Reporting either as Unparsable sent
+        // users to a "站点改版" card whose retry can never succeed; reporting either as
+        // LoginRequired unconditionally sent a user who had *just signed in* back to a sign-in
+        // wall, which is the same dead end wearing the other hat.
+        val bootstrap =
+            try {
+                parseProfilePage(htmlSource.getHtml("/"))
+            } catch (exception: SiteException) {
+                if (exception.error == SiteError.LoginRequired) {
+                    throw SiteException(anonymousAnswer(), exception)
+                }
+                throw exception
+            }
+        val uid = bootstrap.uid ?: throw SiteException(anonymousAnswer())
         selfUidState.value = uid
         val account =
             runCatchingExceptCancellation {
@@ -190,6 +207,16 @@ class NetworkProfileRepository(
 
         return bootstrap.merge(account).toProfile()
     }
+
+    /**
+     * What an anonymous answer means, which only the cookie jar can say.
+     *
+     * No session and the reader really does need to sign in. A session we are holding and this is
+     * either a request that went out without the cookie or one the site declined to honour — and
+     * from here those are the same observation, so the reader gets both ways out with 重试 first.
+     */
+    private fun anonymousAnswer(): SiteError =
+        if (isSignedIn()) SiteError.SessionUnrecognised else SiteError.LoginRequired
 
     override suspend fun profile(uid: Long): UserProfile {
         val body =

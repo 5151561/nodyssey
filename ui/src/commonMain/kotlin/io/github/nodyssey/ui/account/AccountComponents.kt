@@ -28,6 +28,7 @@ import io.github.nodyssey.ui.resources.status_not_wired_title
 import io.github.nodyssey.ui.resources.status_private_post_title
 import io.github.nodyssey.ui.resources.status_query_too_short_title
 import io.github.nodyssey.ui.resources.status_rate_limited_title
+import io.github.nodyssey.ui.resources.status_session_stale_title
 import io.github.nodyssey.ui.resources.status_sign_in_title
 import io.github.nodyssey.ui.resources.status_unknown_title
 import io.github.nodyssey.ui.resources.status_unparsable_title
@@ -110,6 +111,8 @@ private fun SiteError.messageRes(): StringResource =
         SiteError.Cloudflare -> Res.string.status_challenge_title
 
         SiteError.LoginRequired -> Res.string.status_sign_in_title
+
+        SiteError.SessionUnrecognised -> Res.string.status_session_stale_title
 
         // The level, where the page named one, is lost on purpose: this is a snackbar line, and no
         // account setting is behind a reader level anyway.

@@ -1,6 +1,7 @@
 package io.github.nodyssey.data.session
 
 import io.github.plaza.core.net.SessionCookies
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,13 +53,47 @@ class SessionRepository(
     fun sync(): SessionState {
         val snapshot = read()
         val current = _state.value
-        if (snapshot.fingerprint != current.fingerprint) {
-            // Persist immediately: the cookie that just arrived is the entire point of the WebView,
-            // and it usually came from an XHR, so no page load will flush it for us.
-            cookies.flush()
-            _state.value = snapshot.copy(generation = current.generation + 1)
+        // Anything the app can observe, not the fingerprint alone. Keying this on the fingerprint
+        // was a narrower test than the value it guards: a store that starts saying signed in without
+        // otherwise changing — which is what reading a second origin now makes possible, see
+        // [SessionCookies.snapshot] — published nothing, and every screen keyed on `generation` went
+        // on drawing a signed-out app over a signed-in jar. The returned value was stale for the
+        // same reason, which is worse: this function is also how the caller *asks*.
+        if (snapshot.fingerprint == current.fingerprint &&
+            snapshot.isSignedIn == current.isSignedIn &&
+            snapshot.hasClearance == current.hasClearance
+        ) {
+            return current
         }
+        // Persist immediately: the cookie that just arrived is the entire point of the WebView,
+        // and it usually came from an XHR, so no page load will flush it for us.
+        cookies.flush()
+        _state.value = snapshot.copy(generation = current.generation + 1)
         return _state.value
+    }
+
+    /**
+     * [sync], for the one caller that has just been *told* a session exists.
+     *
+     * The store underneath is the platform's, and on Android that is `CookieManager`, whose write
+     * has a completion callback the jar does not wait on — so a read taken on the next line can miss
+     * a cookie that is still on its way in. Everywhere else that costs nothing, because nothing else
+     * asks the question the instant a `Set-Cookie` lands. Here it decides whether the user is told
+     * their sign-in did not take, and being wrong about that sends someone who *is* signed in to go
+     * do it again somewhere else.
+     *
+     * So: ask, and let a write that is merely late catch up before believing it did not happen. A
+     * tolerance, not a guarantee — the platform documents no ordering here, and this deliberately
+     * does not pretend otherwise. What it does promise is that [SESSION_SETTLE_ATTEMPTS] misses in a
+     * row is no longer a plausible slow write.
+     */
+    suspend fun syncAwaitingSession(): SessionState {
+        repeat(SESSION_SETTLE_ATTEMPTS - 1) {
+            val state = sync()
+            if (state.isSignedIn) return state
+            delay(SESSION_SETTLE_MILLIS)
+        }
+        return sync()
     }
 
     // Suspend because [SessionCookies.clearSession] only returns once the store is actually empty —
@@ -76,6 +111,13 @@ class SessionRepository(
             hasClearance = snapshot.hasClearance,
             fingerprint = snapshot.fingerprint,
         )
+    }
+
+    private companion object {
+        /** Enough that a write which is merely slow has landed; few enough to stay imperceptible. */
+        const val SESSION_SETTLE_ATTEMPTS = 4
+
+        const val SESSION_SETTLE_MILLIS = 120L
     }
 }
 

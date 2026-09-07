@@ -32,6 +32,18 @@ data class SiteConfig(
      * content is allowed to depend on it. See [SessionCookies.snapshot].
      */
     val sessionCookieNames: List<String>,
+    /**
+     * Every origin a session for this site can legitimately land on, [baseUrl] included.
+     *
+     * A site is reachable at more than one host — `example.com` and `www.example.com` — and the
+     * in-app web view is allowed to follow the user onto any of them. A cookie set there without a
+     * `Domain` attribute is *host-only*, so a jar read at [baseUrl] alone cannot see it, and the app
+     * concludes the user is signed out while the page in front of them says otherwise.
+     *
+     * Reading, not writing: the app still asks for pages at [baseUrl]. This is only the list of
+     * places to look when answering "are we signed in".
+     */
+    val sessionUrls: List<String> = listOf(baseUrl),
     val markers: PageMarkers,
     /**
      * The cookie the site's own front end writes to remember light or dark, when it has one.

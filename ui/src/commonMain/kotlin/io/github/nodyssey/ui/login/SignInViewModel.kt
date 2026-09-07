@@ -113,7 +113,7 @@ class SignInViewModel(
                             verificationToken = token,
                         ),
                     )
-                }.onSuccess(::applyOutcome).onFailure(::applyFailure)
+                }.onSuccess { applyOutcome(it) }.onFailure(::applyFailure)
             }
     }
 
@@ -129,7 +129,7 @@ class SignInViewModel(
                     it.copy(isSubmitting = true, refusal = null, failure = null, sessionNotStored = false)
                 }
                 runCatchingExceptCancellation { signIn.verifyTwoFactor(challenge, code) }
-                    .onSuccess(::applyOutcome)
+                    .onSuccess { applyOutcome(it) }
                     .onFailure(::applyFailure)
             }
     }
@@ -151,7 +151,7 @@ class SignInViewModel(
         }
     }
 
-    private fun applyOutcome(outcome: SignInOutcome) {
+    private suspend fun applyOutcome(outcome: SignInOutcome) {
         when (outcome) {
             SignInOutcome.Signed -> {
                 // Publish rather than peek: this is exactly the moment the rest of the app is meant
@@ -164,7 +164,12 @@ class SignInViewModel(
                 // on. Leaving on the endpoint's word alone is how a sign-in that stored nothing
                 // returned the user to a signed-out screen with nothing said — silently, because the
                 // one place that could have noticed threw this value away.
-                if (session.sync().isSignedIn) {
+                //
+                // `syncAwaitingSession` rather than `sync`, because a single read here is taken the
+                // instant the `Set-Cookie` was handed to a store that writes it on its own schedule:
+                // accusing a sign-in that worked of not having worked is the one wrong answer this
+                // check must not give.
+                if (session.syncAwaitingSession().isSignedIn) {
                     _uiState.update { it.copy(isSubmitting = false, signedIn = true) }
                 } else {
                     // Back to card 1 whichever leg we are on: card 3 has nothing left to post, and

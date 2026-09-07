@@ -53,6 +53,8 @@ import io.github.nodyssey.ui.resources.status_query_too_short_body
 import io.github.nodyssey.ui.resources.status_query_too_short_title
 import io.github.nodyssey.ui.resources.status_rate_limited_body
 import io.github.nodyssey.ui.resources.status_rate_limited_title
+import io.github.nodyssey.ui.resources.status_session_stale_body
+import io.github.nodyssey.ui.resources.status_session_stale_title
 import io.github.nodyssey.ui.resources.status_sign_in_body
 import io.github.nodyssey.ui.resources.status_sign_in_secondary
 import io.github.nodyssey.ui.resources.status_sign_in_title
@@ -95,6 +97,8 @@ fun SiteError.shortMessage(): String =
         SiteError.Cloudflare -> stringResource(Res.string.status_challenge_title)
 
         SiteError.LoginRequired -> stringResource(Res.string.status_sign_in_title)
+
+        SiteError.SessionUnrecognised -> stringResource(Res.string.status_session_stale_title)
 
         is SiteError.LevelRequired ->
             requiredLevel?.let { stringResource(Res.string.status_level_required_title_level, it) }
@@ -193,6 +197,23 @@ fun SiteErrorState(
                 onBrowseElsewhere?.let {
                     StatusAction(stringResource(Res.string.status_sign_in_secondary), it)
                 } ?: retry,
+                modifier = modifier,
+            )
+
+        // Held a session, answered as nobody. Same lock as the sign-in wall — it is the same door —
+        // but 重试 leads, because the reader has already done the thing 登录 would ask them to do
+        // again. 登录 stays as the second way out for the case where the session really is finished.
+        SiteError.SessionUnrecognised ->
+            StatusView(
+                icon = Icons.Default.Lock,
+                shape = StatusShapes.SignIn,
+                containerColor = scheme.primaryContainer,
+                iconColor = scheme.onPrimaryContainer,
+                title = stringResource(Res.string.status_session_stale_title),
+                description = stringResource(Res.string.status_session_stale_body),
+                primaryAction = StatusAction(stringResource(Res.string.action_retry), onRetry),
+                secondaryAction =
+                onSignIn?.let { StatusAction(stringResource(Res.string.action_sign_in), it) },
                 modifier = modifier,
             )
 

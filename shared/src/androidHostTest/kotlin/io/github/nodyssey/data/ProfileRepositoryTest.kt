@@ -49,6 +49,7 @@ class ProfileRepositoryTest {
                     jsonSource = jsonSource,
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
+                    isSignedIn = { true },
                     clock = AppClock { 0L },
                 )
 
@@ -75,6 +76,7 @@ class ProfileRepositoryTest {
                     ),
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
+                    isSignedIn = { true },
                     clock = AppClock { 0L },
                 )
 
@@ -98,6 +100,7 @@ class ProfileRepositoryTest {
                     jsonSource = FakeProfileJsonSource(error = SiteException(SiteError.Http(500))),
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
+                    isSignedIn = { true },
                     clock = AppClock { 0L },
                 )
 
@@ -119,6 +122,7 @@ class ProfileRepositoryTest {
                     jsonSource = FakeProfileJsonSource(error = SiteException(SiteError.Http(500))),
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
+                    isSignedIn = { true },
                     clock = AppClock { 0L },
                 )
             firstRepository.refreshProfile(sessionFingerprint = 7)
@@ -130,6 +134,7 @@ class ProfileRepositoryTest {
                     jsonSource = FakeProfileJsonSource(error = AssertionError("must not run")),
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
+                    isSignedIn = { true },
                     clock = AppClock { 0L },
                 )
 
@@ -148,6 +153,7 @@ class ProfileRepositoryTest {
                     jsonSource = FakeProfileJsonSource(error = SiteException(SiteError.Http(500))),
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
+                    isSignedIn = { true },
                     clock = AppClock { 0L },
                 )
             repository.refreshProfile(sessionFingerprint = 7)
@@ -172,6 +178,7 @@ class ProfileRepositoryTest {
                     jsonSource = jsonSource,
                     profileDao = database.profileDao(),
                     currentSessionFingerprint = { 7 },
+                    isSignedIn = { true },
                     clock = AppClock { 0L },
                 )
 
@@ -189,9 +196,57 @@ class ProfileRepositoryTest {
                 jsonSource = FakeProfileJsonSource(response = "{}"),
                 profileDao = database.profileDao(),
                 currentSessionFingerprint = { 7 },
+                isSignedIn = { true },
                 clock = AppClock { 0L },
             ).profile()
         }
+
+    /**
+     * The two ways the front page comes back naming nobody, which used to be one.
+     *
+     * A reader with no session needs the sign-in wall. A reader who is *holding* one has already done
+     * that — reporting this to them as 需要登录 returned them to the screen they had just come from,
+     * which is what a successful sign-in looked like when the request behind this went out anonymous.
+     */
+    @Test
+    fun `an anonymous page with no session asks the reader to sign in`() =
+        runTest {
+            val error = anonymousPageError(signedIn = false)
+
+            assertEquals(SiteError.LoginRequired, error)
+        }
+
+    @Test
+    fun `an anonymous page while holding a session is a session the site did not honour`() =
+        runTest {
+            val error = anonymousPageError(signedIn = true)
+
+            assertEquals(SiteError.SessionUnrecognised, error)
+        }
+
+    private suspend fun anonymousPageError(signedIn: Boolean): SiteError {
+        val repository =
+            NetworkProfileRepository(
+                // Parses, and names no account — the signed-out front page, which is also what a
+                // request that went out without the cookie is answered with.
+                htmlSource = FakeProfileHtmlSource(ANONYMOUS_PAGE),
+                jsonSource = FakeProfileJsonSource(response = "{}"),
+                profileDao = database.profileDao(),
+                currentSessionFingerprint = { 7 },
+                isSignedIn = { signedIn },
+                clock = AppClock { 0L },
+            )
+        return runCatching { repository.profile() }
+            .exceptionOrNull()
+            .let { it as SiteException }
+            .error
+    }
+
+    private companion object {
+        /** A front page whose bootstrap blob parses and carries no `uid`. */
+        const val ANONYMOUS_PAGE =
+            """<html><body><script>window.__config__ = {"user":{}}</script></body></html>"""
+    }
 }
 
 private class FakeProfileHtmlSource(
