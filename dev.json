@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "channel": "dev",
-  "versionName": "1.2.18-dev.1",
-  "tag": "v1.2.18-dev.1",
-  "publishedOn": "2026-09-06",
-  "notes": "测试版，由 tag `v1.2.18-dev.1` 构建。不是正式版本，可能不稳定。\n\n### 改进\n\n- 通知里「@我」和「回复主题」合并成「互动」。\n- 同一条评论不再弹出两条系统通知。\n- 私信摘要不再显示 Markdown 原文。\n\n### 变更\n\n- 首页顶栏左边排序、右边搜索，去掉应用名。\n- 底部去掉搜索标签，改从首页顶栏进。\n\n### 修复\n\n- 部分华为机型看不了 AVIF 图片：系统解不开时改用应用自带的软件解码。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.17...v1.2.18-dev.1",
+  "versionName": "1.2.18-dev.2",
+  "tag": "v1.2.18-dev.2",
+  "publishedOn": "2026-09-07",
+  "notes": "测试版，由 tag `v1.2.18-dev.2` 构建。不是正式版本，可能不稳定。\n\n### 新增\n\n- 首页和通知左右滑动切换分类，跟手翻页。\n- 我的主题帖和我的评论各成一页。\n\n### 改进\n\n- 通知里「@我」和「回复主题」合并成「互动」。\n- 同一条评论不再弹出两条系统通知。\n- 私信摘要不再显示 Markdown 原文。\n\n### 变更\n\n- 通知顶部两个分组改成标签页。\n- 搜索从底部标签移到首页顶栏，顶栏左边是排序。\n- 「我的」改成分区图标网格，一格直达。\n- 退出登录移到账号设置。\n\n### 修复\n\n- 部分华为机型看不了 AVIF 图片。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.18-dev.1...v1.2.18-dev.2",
   "apk": {
-    "name": "nodyssey-v1.2.18-dev.1.apk",
-    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.18-dev.1/nodyssey-v1.2.18-dev.1.apk",
-    "sizeBytes": 8885968,
-    "sha256": "3f8722756bda02daafb2ab56b32b0986746cb4af46748b9039052aa7f8c71faf"
+    "name": "nodyssey-v1.2.18-dev.2.apk",
+    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.18-dev.2/nodyssey-v1.2.18-dev.2.apk",
+    "sizeBytes": 8920140,
+    "sha256": "7f4ff40b5560758f57b6b75425449fd6c1f1860e19884d2df8e55ed54d54f2aa"
   },
-  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.18-dev.1"
+  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.18-dev.2"
 }
