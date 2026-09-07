@@ -34,7 +34,7 @@ class UpdateManifestTest {
         assertEquals(true, release.notes.startsWith("### 新增"))
     }
 
-    /** The channel is what marks a test build, and it is what the card puts a 「dev 测试版」 tag on. */
+    /** The `-dev.N` version is what marks a test build, and what the card puts a 「dev 测试版」 tag on. */
     @Test
     fun `a dev manifest is marked as a pre-release`() {
         val release =
@@ -42,6 +42,20 @@ class UpdateManifestTest {
 
         assertEquals("1.3.0-dev.2", release.versionName)
         assertEquals(true, release.preRelease)
+    }
+
+    /**
+     * After a stable release, `dev.json` carries that release verbatim with `channel` still saying
+     * `dev` — the field names the file. Everyone on the dev channel was shown a 「dev 测试版」 tag on
+     * every stable release because the flag used to come from that field.
+     */
+    @Test
+    fun `a stable release served through the dev manifest is not a pre-release`() {
+        val payload = load("update-stable.json").replace("\"channel\": \"stable\"", "\"channel\": \"dev\"")
+        val release = requireNotNull(json.decodeFromString<UpdateManifest>(payload).toRelease())
+
+        assertEquals("1.2.9", release.versionName)
+        assertEquals(false, release.preRelease)
     }
 
     /**

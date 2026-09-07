@@ -23,9 +23,11 @@ data class AppRelease(
     /**
      * True for a GitHub prerelease — a `vX.Y.Z-dev.N` test build.
      *
-     * Only ever set when the user turned the dev channel on, since that is the only check that looks
-     * past `releases/latest`. Carried so the screens can say so before anyone installs one: a build
-     * cut for testing has no CHANGELOG section of its own and no promise that it works.
+     * Decided by the version name, not by which manifest answered: `dev.json` also carries a stable
+     * release once that is the newest build, and that one is not a test build. Only ever true when the
+     * user turned the dev channel on, since `stable.json` never names one. Carried so the screens can
+     * say so before anyone installs one: a build cut for testing has no CHANGELOG section of its own
+     * and no promise that it works.
      */
     val preRelease: Boolean = false,
     /**

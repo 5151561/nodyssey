@@ -281,7 +281,10 @@ internal data class UpdateManifest(
             assetName = apk.name.ifBlank { "$versionName.apk" },
             sizeBytes = apk.sizeBytes,
             htmlUrl = releaseUrl,
-            preRelease = channel == DEV_CHANNEL,
+            // From the version, not from `channel`: that field names the *file*, and `dev.json` carries
+            // the stable build verbatim once that is the newest thing published. Reading it as "this
+            // is a test build" put a 「dev 测试版」 tag on every release offered through the dev channel.
+            preRelease = isPreReleaseVersionName(versionName),
             sha256 = apk.sha256,
         )
     }
@@ -374,4 +377,3 @@ internal fun isSafeAssetName(name: String): Boolean =
     name.isNotBlank() && '/' !in name && '\\' !in name && name != "." && name != ".."
 
 private const val SUPPORTED_SCHEMA = 1
-private const val DEV_CHANNEL = "dev"

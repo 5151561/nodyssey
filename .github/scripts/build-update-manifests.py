@@ -141,7 +141,9 @@ def main() -> int:
         written.append("stable.json")
     for name in written:
         # `channel` names the file, not the build: dev.json carries a stable release verbatim when
-        # that is the newest thing there is, and the app reads the field to decide whether to warn.
+        # that is the newest thing there is. The app decides whether to warn from the version name's
+        # `-dev.N` suffix, never from this field — reading it that way once tagged every stable
+        # release on the dev channel as a test build.
         payload = dict(manifest, channel="dev" if name == "dev.json" else "stable")
         (args.out / name).write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
