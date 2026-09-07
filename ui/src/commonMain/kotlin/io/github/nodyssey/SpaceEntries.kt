@@ -17,6 +17,10 @@ import io.github.nodyssey.ui.bookmarks.BookmarksViewModel
 import io.github.nodyssey.ui.history.ReadHistoryRoute
 import io.github.nodyssey.ui.history.ReadHistoryViewModel
 import io.github.nodyssey.ui.login.WebViewGoal
+import io.github.nodyssey.ui.mycontent.MyCommentsRoute
+import io.github.nodyssey.ui.mycontent.MyCommentsViewModel
+import io.github.nodyssey.ui.mycontent.MyTopicsRoute
+import io.github.nodyssey.ui.mycontent.MyTopicsViewModel
 import io.github.nodyssey.ui.space.FollowRoute
 import io.github.nodyssey.ui.space.FollowViewModel
 import io.github.nodyssey.ui.space.UserSpaceRoute
@@ -82,9 +86,46 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
         )
     }
 
-    entry<FollowKey> {
+    entry<MyTopicsKey> {
+        val viewModel: MyTopicsViewModel =
+            viewModel(factory = MyTopicsViewModel.factory(container))
+        MyTopicsRoute(
+            viewModel = viewModel,
+            onBack = { backStack.removeLastOrNull() },
+            onPostClick = { postId -> backStack.add(PostDetailKey(postId)) },
+            onBrowseFeed = openHomeTab,
+            // `/space` needs the session's cookies, so a wall here is cleared in the app's own web
+            // view rather than in the cookie-less system browser.
+            onOpenBrowser = { backStack.add(WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE)) },
+            onSignIn = { backStack.add(SignInKey) },
+            onVerify = { backStack.add(WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE)) },
+        )
+    }
+
+    entry<MyCommentsKey> {
+        val viewModel: MyCommentsViewModel =
+            viewModel(factory = MyCommentsViewModel.factory(container))
+        MyCommentsRoute(
+            viewModel = viewModel,
+            onBack = { backStack.removeLastOrNull() },
+            // The floor rides along, so the thread opens on the comment rather than at its top.
+            onCommentClick = { postId, floor -> backStack.add(PostDetailKey(postId, floor)) },
+            onBrowseFeed = openHomeTab,
+            onOpenBrowser = { backStack.add(WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE)) },
+            onSignIn = { backStack.add(SignInKey) },
+            onVerify = { backStack.add(WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE)) },
+        )
+    }
+
+    entry<FollowKey> { key ->
         val viewModel: FollowViewModel =
-            viewModel(factory = FollowViewModel.factory(container))
+            viewModel(
+                // The landing tab is part of the identity, as it is for a space page: 我的关注 and
+                // 我的粉丝 are two tiles in 我的 and would otherwise share one view model whose tab
+                // was set by whichever was opened first.
+                key = "follow-${key.showFollowers}",
+                factory = FollowViewModel.factory(container, key.showFollowers),
+            )
         FollowRoute(
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },
@@ -107,7 +148,7 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },
             onChickenLedger = { backStack.add(CreditKey) },
-            onStardust = { backStack.add(StardustKey) },
+            onStardust = { backStack.add(StardustKey()) },
             // In-app, not the system browser: a Cloudflare pass earned out there lands in
             // Chrome's cookie store, and the app's own retry keeps failing forever.
             onOpenBrowser = {
@@ -147,9 +188,12 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
         )
     }
 
-    entry<StardustKey> {
+    entry<StardustKey> { key ->
         val viewModel: StardustViewModel =
-            viewModel(factory = StardustViewModel.factory(container))
+            viewModel(
+                key = "stardust-${key.startTransfer}",
+                factory = StardustViewModel.factory(container, key.startTransfer),
+            )
         val state by viewModel.uiState.collectAsStateWithLifecycle()
         // The ledger URL is per-member, so it exists only once the profile call has said who
         // we are; before that "在网页打开" can only offer the site's front page.

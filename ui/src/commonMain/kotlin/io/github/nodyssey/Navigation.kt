@@ -482,6 +482,7 @@ fun MainNavigation(
                 openWebUrl = openWebUrl,
                 openSpace = openSpace,
                 openContentUrl = openContentUrl,
+                openHomeTab = { currentTab = TopLevelDestination.HOME },
             )
         return entryProvider {
             tabRootEntries(entryScope)

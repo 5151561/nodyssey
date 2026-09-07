@@ -48,14 +48,16 @@ data class FollowUiState(
  */
 class FollowViewModel(
     private val repository: FollowRepository,
+    /** Which tab 我的 asked for — its grid has a tile for each of the two. */
+    startTab: FollowTab = FollowTab.FOLLOWING,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(FollowUiState())
+    private val _uiState = MutableStateFlow(FollowUiState(selectedTab = startTab))
     val uiState: StateFlow<FollowUiState> = _uiState.asStateFlow()
 
     private val jobs = mutableMapOf<FollowTab, Job>()
 
     init {
-        load(FollowTab.FOLLOWING)
+        load(startTab)
     }
 
     fun selectTab(tab: FollowTab) {
@@ -101,9 +103,17 @@ class FollowViewModel(
         }
 
     companion object {
-        fun factory(container: AppContainer): ViewModelProvider.Factory =
+        fun factory(
+            container: AppContainer,
+            showFollowers: Boolean = false,
+        ): ViewModelProvider.Factory =
             viewModelFactory {
-                initializer { FollowViewModel(container.followRepository) }
+                initializer {
+                    FollowViewModel(
+                        repository = container.followRepository,
+                        startTab = if (showFollowers) FollowTab.FOLLOWERS else FollowTab.FOLLOWING,
+                    )
+                }
             }
     }
 }

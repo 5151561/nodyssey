@@ -50,4 +50,12 @@ internal class StackEntryScope(
     val openSpace: (Long) -> Unit,
     /** A content link: post/space/mention URLs get a native screen, the rest go to [openWebUrl]. */
     val openContentUrl: (String) -> Unit,
+    /**
+     * Switches to 首页, for the empty states whose one useful action is "go and read something".
+     *
+     * A tab switch rather than a push, for the reason the notification deep link gives: a tab is
+     * not something a stack can hold, and pushing a second feed onto 我的's stack would leave Back
+     * walking out of the feed into a profile.
+     */
+    val openHomeTab: () -> Unit,
 )
