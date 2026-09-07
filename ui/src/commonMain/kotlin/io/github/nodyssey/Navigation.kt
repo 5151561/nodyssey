@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -90,6 +89,7 @@ import io.github.nodyssey.ui.notifications.NotificationsRoute
 import io.github.nodyssey.ui.notifications.NotificationsViewModel
 import io.github.nodyssey.ui.postdetail.PostDetailRoute
 import io.github.nodyssey.ui.postdetail.PostDetailViewModel
+import io.github.nodyssey.ui.postlist.HomeFeedStates
 import io.github.nodyssey.ui.postlist.PostListRoute
 import io.github.nodyssey.ui.postlist.PostListViewModel
 import io.github.nodyssey.ui.profile.ProfileRoute
@@ -230,7 +230,7 @@ fun MainNavigation(
      * This stays because holding the state here is still the clearer ownership, and it survives a tab
      * switch without depending on SaveableStateHolder timing.
      */
-    val homeListState = rememberLazyListState()
+    val homeFeedStates = rememberSaveable(saver = HomeFeedStates.Saver) { HomeFeedStates() }
 
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
 
@@ -473,7 +473,7 @@ fun MainNavigation(
                 signInUrl = signInUrl,
                 uriHandler = uriHandler,
                 notificationsViewModel = notificationsViewModel,
-                homeListState = homeListState,
+                homeFeedStates = homeFeedStates,
                 homeReselectRequests = { homeReselectRequests },
                 notificationsScrollToTopRequests = { notificationsScrollToTopRequests },
                 isListDetailExpanded = { currentListDetailExpanded },

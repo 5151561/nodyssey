@@ -1,11 +1,11 @@
 package io.github.nodyssey
 
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.platform.UriHandler
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.notifications.NotificationsViewModel
+import io.github.nodyssey.ui.postlist.HomeFeedStates
 
 /**
  * Everything an entry file needs from `MainNavigation`, bound to one tab's stack.
@@ -36,8 +36,8 @@ internal class StackEntryScope(
     val uriHandler: UriHandler,
     /** Shared with the tab badge and the 通知 root — one instance for the whole app. */
     val notificationsViewModel: NotificationsViewModel,
-    /** 首页's list state, owned by `MainNavigation` so Back reveals the same list object. */
-    val homeListState: LazyListState,
+    /** 首页's per-board list states, owned by `MainNavigation` so Back reveals the same lists. */
+    val homeFeedStates: HomeFeedStates,
     val homeReselectRequests: () -> Int,
     val notificationsScrollToTopRequests: () -> Int,
     val isListDetailExpanded: () -> Boolean,

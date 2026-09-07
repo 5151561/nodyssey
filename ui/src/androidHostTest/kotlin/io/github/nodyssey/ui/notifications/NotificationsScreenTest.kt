@@ -12,6 +12,8 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
@@ -205,16 +207,55 @@ class NotificationsScreenTest {
         composeRule.onNodeWithText(sentence("第0帖")).assertIsDisplayed()
     }
 
+    /**
+     * 左右滑动切换分组, over the list rather than over the chips: the chip row is a sideways scroll of
+     * its own, and the swipe is for the finger that is already on the notifications.
+     */
+    @Test
+    fun `swiping the list sideways selects the next group`() {
+        var picked: NotificationTab? = null
+        setContent(
+            state(items = List(20) { mention(id = "$it", threadTitle = "第${it}帖") }),
+            onTabChange = { picked = it },
+        )
+
+        composeRule.onAllNodes(hasScrollToIndexAction()).onLast().performTouchInput { swipeLeft() }
+        composeRule.waitForIdle()
+
+        assertEquals(NotificationTab.MESSAGES, picked)
+    }
+
+    /** 私信 is the last group, so a swipe on past it has nowhere to go. */
+    @Test
+    fun `swiping past the last group stays put`() {
+        var picked: NotificationTab? = null
+        setContent(
+            state(
+                conversations = List(20) { conversation(uid = it.toLong(), name = "用户$it", stamp = NOW) },
+                tab = NotificationTab.MESSAGES,
+            ),
+            onTabChange = { picked = it },
+        )
+
+        composeRule.onAllNodes(hasScrollToIndexAction()).onLast().performTouchInput { swipeLeft() }
+        composeRule.waitForIdle()
+
+        assertEquals(null, picked)
+    }
+
     private fun sentence(threadTitle: String) = "nssk 在帖子 $threadTitle 中@了我"
 
-    private fun setContent(state: NotificationsUiState) {
+    private fun setContent(
+        state: NotificationsUiState,
+        onTabChange: (NotificationTab) -> Unit = {},
+    ) {
         composeRule.setContent {
             PlazaTheme {
                 NotificationsScreen(
                     state = state,
                     onSignIn = {},
                     onVerify = {},
-                    onTabChange = {},
+                    onTabChange = onTabChange,
                     onRetry = {},
                     onMarkAllRead = {},
                     onNotificationClick = {},

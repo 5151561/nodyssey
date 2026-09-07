@@ -21,6 +21,7 @@ import io.github.plaza.core.AppClock
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -61,50 +62,68 @@ class NotificationsViewModel(
             .launchIn(viewModelScope)
     }
 
+    /**
+     * Which group the chips and 全部已读 are about.
+     *
+     * It no longer empties the other group's list: the two are pages the reader swipes between, so
+     * the one being left is still on screen for the length of the gesture, and the one arriving has
+     * to arrive with its rows rather than after them.
+     */
     fun selectTab(tab: NotificationTab) {
         if (_uiState.value.selectedTab == tab) return
-        _uiState.update {
-            it.copy(selectedTab = tab, items = emptyList(), conversations = emptyList())
-        }
+        _uiState.update { it.copy(selectedTab = tab) }
         refresh()
     }
 
     /**
-     * Loads the counts plus whichever list the selected tab shows.
+     * Loads the counts and both groups.
      *
-     * 私信 is not a list of notifications — it is the conversation list of board 7e — so the tab
-     * decides which repository answers, and the counts call is shared because the chips show both
-     * badges whatever is selected.
+     * Both, rather than whichever chip is selected: the groups are pages the reader swipes between,
+     * and a page that arrives empty and fills in a moment later is the flicker the swipe exists to
+     * avoid. They are two endpoints — 私信 is not a list of notifications, it is board 7e's
+     * conversation list — so they go out together and are awaited together.
+     *
+     * A failure belongs to the group whose request failed. One endpoint walled off behind Cloudflare
+     * must not replace the other group's rows with an error screen about a list that loaded fine.
      */
     fun refresh() {
         if (!session.state.value.isSignedIn) return
-        val tab = _uiState.value.selectedTab
         loadJob?.cancel()
         loadJob =
             viewModelScope.launch {
-                _uiState.update { it.copy(isLoading = true, error = null) }
-                runCatchingExceptCancellation {
-                    // The counts land on screen through the repository's own flow, which is also
-                    // what the merged load corrects a moment later — copying the returned value into
-                    // the state here would race that correction and sometimes win.
-                    repository.refreshCounts()
-                    if (tab == NotificationTab.MESSAGES) {
-                        Loaded(conversations = messages.conversations())
-                    } else {
-                        Loaded(items = repository.interactions())
-                    }
-                }.onSuccess { loaded ->
-                    _uiState.update {
-                        it.copy(
-                            items = loaded.items,
-                            conversations = loaded.conversations,
-                            isLoading = false,
-                            error = null,
-                            nowMillis = clock.nowMillis(),
-                        )
-                    }
-                }.onFailure { throwable ->
-                    _uiState.update { it.copy(isLoading = false, error = throwable.toSiteError()) }
+                _uiState.update { it.copy(isLoading = true, errors = emptyMap()) }
+                // The counts land on screen through the repository's own flow, which is also what
+                // the merged load corrects a moment later — copying the returned value into the
+                // state here would race that correction and sometimes win.
+                val counts = async { runCatchingExceptCancellation { repository.refreshCounts() } }
+                val interactions = async { runCatchingExceptCancellation { repository.interactions() } }
+                val conversations = async { runCatchingExceptCancellation { messages.conversations() } }
+                counts.await()
+                val loadedItems = interactions.await()
+                val loadedConversations = conversations.await()
+                _uiState.update { state ->
+                    state.copy(
+                        items = loadedItems.getOrElse { state.items },
+                        conversations = loadedConversations.getOrElse { state.conversations },
+                        isLoading = false,
+                        errors =
+                        buildMap {
+                            loadedItems.exceptionOrNull()?.let {
+                                put(NotificationTab.INTERACTIONS, it.toSiteError())
+                            }
+                            loadedConversations.exceptionOrNull()?.let {
+                                put(NotificationTab.MESSAGES, it.toSiteError())
+                            }
+                        },
+                        // Only a load with nothing left to retry stamps the throttle; see
+                        // [refreshIfStale].
+                        nowMillis =
+                        if (loadedItems.isSuccess && loadedConversations.isSuccess) {
+                            clock.nowMillis()
+                        } else {
+                            state.nowMillis
+                        },
+                    )
                 }
             }
     }
@@ -245,11 +264,6 @@ class NotificationsViewModel(
             }
     }
 
-    private data class Loaded(
-        val items: List<ForumNotification> = emptyList(),
-        val conversations: List<MessageConversation> = emptyList(),
-    )
-
     companion object {
         /** How recent "recent enough" is; see [refreshIfStale]. */
         private const val REFRESH_THROTTLE_MILLIS = 30_000L
@@ -290,7 +304,8 @@ data class NotificationsUiState(
     val items: List<ForumNotification> = emptyList(),
     val conversations: List<MessageConversation> = emptyList(),
     val isLoading: Boolean = false,
-    val error: SiteError? = null,
+    /** What each group's last load failed with, if it did. Absent groups loaded, or never ran. */
+    val errors: Map<NotificationTab, SiteError> = emptyMap(),
     /** Stamped when the list loaded, so relative labels stay stable across recomposition. */
     val nowMillis: Long = 0L,
     val newConversation: NewConversationState = NewConversationState(),
@@ -299,10 +314,12 @@ data class NotificationsUiState(
         get() = items.any(ForumNotification::isUnread) || conversations.any { it.unreadCount > 0 }
 
     val isEmpty: Boolean
-        get() =
-            if (selectedTab == NotificationTab.MESSAGES) {
-                conversations.isEmpty()
-            } else {
-                items.isEmpty()
-            }
+        get() = isEmptyOf(selectedTab)
+
+    /** The selected group's failure, which is the one the screen's own error state is about. */
+    val error: SiteError?
+        get() = errors[selectedTab]
+
+    fun isEmptyOf(tab: NotificationTab): Boolean =
+        if (tab == NotificationTab.MESSAGES) conversations.isEmpty() else items.isEmpty()
 }

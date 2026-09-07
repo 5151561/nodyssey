@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -149,6 +151,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.abs
 
 /**
  * Stateful entry point. It only wires the ViewModel to the stateless [PostListScreen] below, which is
@@ -157,7 +160,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun PostListRoute(
     viewModel: PostListViewModel,
-    listState: LazyListState,
+    feedStates: HomeFeedStates,
     onPostClick: (FeedPost) -> Unit,
     onCreatePost: () -> Unit,
     onSearch: () -> Unit,
@@ -170,8 +173,9 @@ fun PostListRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     PostListScreen(
         state = state,
-        posts = viewModel.feed.collectAsLazyPagingItems(),
-        listState = listState,
+        // One stream per board, so the page sliding in beside the selected one has rows of its own.
+        postsFor = { slug -> viewModel.feed(slug).collectAsLazyPagingItems() },
+        feedStates = feedStates,
         onPostClick = onPostClick,
         onCreatePost = onCreatePost,
         onSearch = onSearch,
@@ -201,7 +205,13 @@ fun PostListRoute(
 @Composable
 fun PostListScreen(
     state: PostListUiState,
-    posts: LazyPagingItems<FeedPost>,
+    /**
+     * One board's rows.
+     *
+     * A function rather than a list because the pager decides how many boards are on screen: the
+     * selected one always, and the one coming in beside it for as long as a swipe is in flight.
+     */
+    postsFor: @Composable (String?) -> LazyPagingItems<FeedPost>,
     onPostClick: (FeedPost) -> Unit,
     onBoardClick: (String?) -> Unit,
     onSortChange: (FeedSort) -> Unit,
@@ -215,10 +225,12 @@ fun PostListScreen(
     onGoToPage: (Int) -> Unit = {},
     /**
      * Where a page starts among the rows already stored, or null when none of it is. Answered by the
-     * database rather than by [posts], which holds one window and calls everything outside it absent.
+     * database rather than by [postsFor], which holds one window and calls everything outside it
+     * absent.
      */
     onFindPageRow: suspend (Int) -> Int? = { null },
-    listState: LazyListState = rememberLazyListState(),
+    /** Where each board was last left off; see [HomeFeedStates] for who owns it and why. */
+    feedStates: HomeFeedStates = rememberSaveable(saver = HomeFeedStates.Saver) { HomeFeedStates() },
     /** Commits an edit made on the board strip itself: the pill order, and which boards are parked. */
     onArrangementChange: (order: List<String>, parked: Set<String>) -> Unit = { _, _ -> },
     onCreatePost: () -> Unit = {},
@@ -233,6 +245,73 @@ fun PostListScreen(
      */
     reselectRequests: Int = 0,
 ) {
+    /*
+     * 左右滑动切换板块.
+     *
+     * The boards are pages of one pager, in the order the strip draws them, so a board arrives with
+     * the finger rather than after it: the neighbour is composed and paging while the gesture is
+     * still in flight, and a swipe that changes its mind halfway simply slides back.
+     *
+     * The pager is also what decides the gesture, and it is worth being explicit that this is *not*
+     * hand-rolled: a `LazyColumn` inside claims a drag that crosses its own slop vertically first,
+     * and from that moment the pager sees every change as consumed and cannot start. Scrolling and
+     * paging therefore cannot both happen in one gesture, whichever way the thumb curves afterwards.
+     */
+    val boards = state.boards
+    val selectedIndex = boards.indexOfFirst { it.slug == state.categorySlug }.coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = selectedIndex) { boards.size }
+
+    /*
+     * The selected board's rows and its place in them: what the chrome around the pager is about —
+     * 翻页栏, the stale-refresh snackbar, the 首页 tab's own "back to the top".
+     *
+     * The list state is the very object the selected page draws with; the rows are a second reader
+     * of the same cached stream, and deliberately so. A page keeps the one presenter it was composed
+     * with for as long as it exists, rather than being handed this one whenever the selection lands
+     * on it: swapping a presenter under a live `LazyColumn` empties it for a frame, and an empty
+     * list is a list whose scroll position has been clamped to the top. This copy reads the same
+     * pages out of the same cache — `cachedIn` seeds a new presenter with them — and asks the
+     * network for nothing; see [PostListViewModel.feed].
+     */
+    val posts = postsFor(state.categorySlug)
+    val listState = feedStates.listState(state.categorySlug, state.sort)
+
+    /*
+     * The swipe reports its answer once, when the gesture comes to rest. Everything before that is a
+     * gesture still being made, and a board selected halfway through one would reload the strip, the
+     * page count and 翻页栏 under a finger that had not decided anything yet.
+     *
+     * Read through [rememberUpdatedState] rather than keyed on the boards: the strip commits a
+     * reorder while the finger is still down, and restarting this collector would re-answer a
+     * settled page whose index now names a different board.
+     */
+    val currentBoards by rememberUpdatedState(boards)
+    val currentSlug by rememberUpdatedState(state.categorySlug)
+    val currentOnBoardClick by rememberUpdatedState(onBoardClick)
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            // Coming to rest where the selection already is says nothing — that is every first
+            // composition, and every page this effect was the one to move.
+            currentBoards.getOrNull(page)?.takeIf { it.slug != currentSlug }?.let {
+                currentOnBoardClick(it.slug)
+            }
+        }
+    }
+
+    /*
+     * The other direction: a pill tapped, a board that stopped being selectable, a selection restored
+     * with the screen. Only a step to the immediate neighbour is animated — a tap on a distant pill
+     * would otherwise fly through every board between the two, fetching each on the way past.
+     */
+    LaunchedEffect(selectedIndex) {
+        if (pagerState.currentPage == selectedIndex) return@LaunchedEffect
+        if (abs(pagerState.currentPage - selectedIndex) == 1) {
+            pagerState.animateScrollToPage(selectedIndex)
+        } else {
+            pagerState.scrollToPage(selectedIndex)
+        }
+    }
+
     val directionThresholdPx = with(LocalDensity.current) { NavigationDirectionThreshold.toPx() }
     val currentOnNavigationBarHiddenChanged by
         rememberUpdatedState(onNavigationBarHiddenChanged)
@@ -267,22 +346,38 @@ fun PostListScreen(
     }
 
     /*
-     * Switching boards or sort order is the one case where the previous scroll offset is meaningless.
+     * Arriving somewhere the reader did not scroll to unfolds the app bar, and a jump also throws the
+     * offset away.
      *
-     * Coming back from a thread is not a switch, but it looks like one from inside a `LaunchedEffect`:
-     * the screen left the composition while the thread was open, so the effect starts again on the
-     * same board and used to throw away the offset the list had just restored. Remembering which feed
-     * the list was last reset for — saved alongside that offset, so it survives the same trips — is
-     * what tells a real switch apart from a return.
+     * Two arrivals qualify. A new 排序 is a different feed drawn on a fresh set of list states, so
+     * every board starts at its top. A jump is 翻页栏 sending *this* board somewhere: the rows are
+     * replaced under the very list state that is holding an offset into the old ones. Both land the
+     * reader at the head of a list without a gesture, and the bar folds only against deltas it has
+     * consumed — a programmatic arrival produces none, so it would sit folded over a list with
+     * nothing left to scroll back up through.
+     *
+     * A board is not one of those. It keeps its own place in its own list, so switching to one is an
+     * arrival at exactly where that board was left — the app bar the reader had folded away included.
+     * Unfolding it there made every swipe throw the bar back out over the rows.
+     *
+     * Remembered across leaving the composition, because opening a thread takes this screen out of it
+     * and a plain `LaunchedEffect` would otherwise re-run on the way back and throw away the offset
+     * the list had just restored.
      */
-    var lastResetFeed by rememberSaveable { mutableStateOf(feedIdentity(state)) }
+    var lastSlug by rememberSaveable { mutableStateOf(state.categorySlug.orEmpty()) }
+    var lastSort by rememberSaveable { mutableStateOf(state.sort.name) }
+    var lastStartPage by rememberSaveable { mutableIntStateOf(state.startPage) }
     LaunchedEffect(state.categorySlug, state.sort, state.startPage) {
-        val feed = feedIdentity(state)
-        if (feed != lastResetFeed) {
-            lastResetFeed = feed
-            revealTopBar()
-            listState.scrollToItem(0)
-        }
+        val slug = state.categorySlug.orEmpty()
+        val sortChanged = state.sort.name != lastSort
+        // A jump moves the board the reader is on; a different board arrives with a page of its own.
+        val jumped = !sortChanged && slug == lastSlug && state.startPage != lastStartPage
+        lastSlug = slug
+        lastSort = state.sort.name
+        lastStartPage = state.startPage
+        if (!sortChanged && !jumped) return@LaunchedEffect
+        revealTopBar()
+        if (jumped) listState.scrollToItem(0)
     }
 
     // The host must not stay stuck bar-less if this screen leaves the composition.
@@ -329,7 +424,6 @@ fun PostListScreen(
     }
 
     val refreshState = posts.loadState.refresh
-    val appendState = posts.loadState.append
 
     /*
      * A refresh that failed onto rows already on screen.
@@ -496,99 +590,25 @@ fun PostListScreen(
                 .padding(padding)
                 .fillMaxSize(),
         ) {
-            val showSkeleton = posts.itemCount == 0 && refreshState is LoadState.Loading
-
-            // Crossfade rather than a hard swap: a skeleton that snaps to content flashes, and the
-            // structure underneath is identical anyway, so there is nothing to animate but opacity.
-            Crossfade(targetState = showSkeleton, label = "feed-skeleton") { skeleton ->
-                when {
-                    skeleton -> FeedSkeleton()
-
-                    // An error only takes over the screen when there is nothing cached to show. With
-                    // rows on screen the failure is not worth losing the content over.
-                    posts.itemCount == 0 && refreshState is LoadState.Error -> {
-                        val error = refreshState.error.toSiteError()
-                        SiteErrorState(
-                            error = error,
-                            onRetry = posts::refresh,
-                            // Both recoveries open a browser, but not the same page: a challenge is
-                            // cleared on the list URL, a locked board on the sign-in page.
-                            //
-                            // 去验证 is named rather than left to fall back on [onOpenBrowser]. They
-                            // happen to be the same closure here, and the fallback is what let other
-                            // screens hand a challenge to a plain reading web view without anything
-                            // saying so.
-                            onOpenBrowser = onRecoverInBrowser,
-                            onVerify = onRecoverInBrowser,
-                            onSignIn = onSignInClick,
-                            boardTitle = state.selectedBoardTitle,
-                            onBrowseElsewhere = { onBoardClick(null) }.takeIf { state.categorySlug != null },
-                        )
-                    }
-
-                    posts.itemCount == 0 && refreshState is LoadState.NotLoading ->
-                        EmptyFeedState(
-                            onBrowseElsewhere = { onBoardClick(null) }.takeIf { state.categorySlug != null },
-                        )
-
-                    else -> {
-                        // The rows carry their author's face, and one HTML page hands over fifty
-                        // addresses at once — but not fifty pictures. Without this the reader
-                        // scrolls onto a row and then waits for it; see [PrefetchAvatars].
-                        //
-                        // `peek` rather than `get`: asking for a row this far ahead must not be
-                        // read as the reader arriving there and pull the next page in early.
-                        PrefetchAvatars(
-                            listState = listState,
-                            itemCount = posts.itemCount,
-                            size = listAvatarSize(),
-                            urlAt = { index -> posts.peek(index)?.summary?.avatarUrl },
-                        )
-                        PullToRefreshBox(
-                            isRefreshing = refreshState is LoadState.Loading,
-                            onRefresh = posts::refresh,
-                        ) {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    // The direction detector goes outside the app bar's connection so
-                                    // it reads the raw gesture. Nested first, the app bar would eat
-                                    // the first 64dp of every downward scroll into its own collapse
-                                    // and the navigation bar would only start hiding afterwards.
-                                    .nestedScroll(navigationBarScrollConnection)
-                                    .nestedScroll(topBarScrollBehavior.nestedScrollConnection)
-                                    .readableWidth(),
-                            ) {
-                                items(
-                                    count = posts.itemCount,
-                                    key = posts.itemKey { it.summary.postId },
-                                ) { index ->
-                                    // Null is a counted row outside the loaded window, not a missing
-                                    // one. Skipping it would collapse the space it is holding and
-                                    // undo the stable indices placeholders were turned on for.
-                                    when (val post = posts[index]) {
-                                        null -> FeedRowPlaceholder()
-
-                                        else -> {
-                                            PostRow(
-                                                post = post,
-                                                onClick = { onPostClick(post) },
-                                                sharedWithThread = true,
-                                            )
-                                            HorizontalDivider(
-                                                color = MaterialTheme.colorScheme.outlineVariant,
-                                            )
-                                        }
-                                    }
-                                }
-                                if (appendState is LoadState.Loading) {
-                                    item(key = "append-spinner") { AppendSpinner() }
-                                }
-                            }
-                        }
-                    }
-                }
+            HorizontalPager(
+                state = pagerState,
+                // Keyed by board, so parking one or dragging it up the strip moves its page with it
+                // rather than handing its rows to whichever board inherited the index.
+                key = { index -> boards.getOrNull(index)?.slug ?: FRONT_PAGE_KEY },
+                modifier = Modifier.fillMaxSize(),
+            ) { index ->
+                val board = boards.getOrNull(index) ?: return@HorizontalPager
+                BoardFeed(
+                    board = board,
+                    posts = postsFor(board.slug),
+                    listState = feedStates.listState(board.slug, state.sort),
+                    onPostClick = onPostClick,
+                    onSignInClick = onSignInClick,
+                    onRecoverInBrowser = onRecoverInBrowser,
+                    onBrowseElsewhere = { onBoardClick(null) },
+                    navigationBarScrollConnection = navigationBarScrollConnection,
+                    topBarScrollBehavior = topBarScrollBehavior,
+                )
             }
 
             if (showPageBar) {
@@ -640,6 +660,125 @@ fun PostListScreen(
 }
 
 /**
+ * One board, as one page of the pager: its rows, or whatever it has instead of them.
+ *
+ * Every state a feed can be in lives here rather than around the pager, because they are all about
+ * one board — a board that is still loading, one that answered with a Cloudflare wall, one that is
+ * empty — and the neighbour on screen beside it may be in a different one.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BoardFeed(
+    board: Board,
+    posts: LazyPagingItems<FeedPost>,
+    listState: LazyListState,
+    onPostClick: (FeedPost) -> Unit,
+    onSignInClick: () -> Unit,
+    onRecoverInBrowser: () -> Unit,
+    onBrowseElsewhere: () -> Unit,
+    navigationBarScrollConnection: NavigationBarScrollConnection,
+    topBarScrollBehavior: TopAppBarScrollBehavior,
+) {
+    val refreshState = posts.loadState.refresh
+    val appendState = posts.loadState.append
+    val showSkeleton = posts.itemCount == 0 && refreshState is LoadState.Loading
+    // 综合 is the front page rather than a board, so it is the one place "read something else"
+    // cannot point at.
+    val elsewhere = onBrowseElsewhere.takeIf { board.slug != null }
+
+    // Crossfade rather than a hard swap: a skeleton that snaps to content flashes, and the
+    // structure underneath is identical anyway, so there is nothing to animate but opacity.
+    Crossfade(targetState = showSkeleton, label = "feed-skeleton") { skeleton ->
+        when {
+            skeleton -> FeedSkeleton()
+
+            // An error only takes over the screen when there is nothing cached to show. With
+            // rows on screen the failure is not worth losing the content over.
+            posts.itemCount == 0 && refreshState is LoadState.Error -> {
+                val error = refreshState.error.toSiteError()
+                SiteErrorState(
+                    error = error,
+                    onRetry = posts::refresh,
+                    // Both recoveries open a browser, but not the same page: a challenge is
+                    // cleared on the list URL, a locked board on the sign-in page.
+                    //
+                    // 去验证 is named rather than left to fall back on [onOpenBrowser]. They
+                    // happen to be the same closure here, and the fallback is what let other
+                    // screens hand a challenge to a plain reading web view without anything
+                    // saying so.
+                    onOpenBrowser = onRecoverInBrowser,
+                    onVerify = onRecoverInBrowser,
+                    onSignIn = onSignInClick,
+                    boardTitle = board.title.takeIf { board.slug != null },
+                    onBrowseElsewhere = elsewhere,
+                )
+            }
+
+            posts.itemCount == 0 && refreshState is LoadState.NotLoading ->
+                EmptyFeedState(onBrowseElsewhere = elsewhere)
+
+            else -> {
+                // The rows carry their author's face, and one HTML page hands over fifty
+                // addresses at once — but not fifty pictures. Without this the reader
+                // scrolls onto a row and then waits for it; see [PrefetchAvatars].
+                //
+                // `peek` rather than `get`: asking for a row this far ahead must not be
+                // read as the reader arriving there and pull the next page in early.
+                PrefetchAvatars(
+                    listState = listState,
+                    itemCount = posts.itemCount,
+                    size = listAvatarSize(),
+                    urlAt = { index -> posts.peek(index)?.summary?.avatarUrl },
+                )
+                PullToRefreshBox(
+                    isRefreshing = refreshState is LoadState.Loading,
+                    onRefresh = posts::refresh,
+                ) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            // The direction detector goes outside the app bar's connection so
+                            // it reads the raw gesture. Nested first, the app bar would eat
+                            // the first 64dp of every downward scroll into its own collapse
+                            // and the navigation bar would only start hiding afterwards.
+                            .nestedScroll(navigationBarScrollConnection)
+                            .nestedScroll(topBarScrollBehavior.nestedScrollConnection)
+                            .readableWidth(),
+                    ) {
+                        items(
+                            count = posts.itemCount,
+                            key = posts.itemKey { it.summary.postId },
+                        ) { index ->
+                            // Null is a counted row outside the loaded window, not a missing
+                            // one. Skipping it would collapse the space it is holding and
+                            // undo the stable indices placeholders were turned on for.
+                            when (val post = posts[index]) {
+                                null -> FeedRowPlaceholder()
+
+                                else -> {
+                                    PostRow(
+                                        post = post,
+                                        onClick = { onPostClick(post) },
+                                        sharedWithThread = true,
+                                    )
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.outlineVariant,
+                                    )
+                                }
+                            }
+                        }
+                        if (appendState is LoadState.Loading) {
+                            item(key = "append-spinner") { AppendSpinner() }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * 首页翻页栏: the page keys stacked over 发帖, in the corner the thumb is already in.
  *
  * The rail itself is [PageJumpRail], shared with the comment thread and 管理记录 so the wording and
@@ -685,19 +824,6 @@ private fun FeedPageBar(
         )
     }
 }
-
-/**
- * Which feed the rows on screen belong to — the board, the order and the page it starts at, as one
- * saveable value.
- *
- * The start page counts because a jump replaces every row: the offset that was restored belonged to
- * a window that no longer exists, so keeping it would land the reader in the middle of page 40.
- *
- * A plain string rather than the pair itself so it goes into a `Bundle` unchanged, and so comparing
- * "the same feed as before" cannot depend on how a null slug or an enum happens to be stored.
- */
-private fun feedIdentity(state: PostListUiState): String =
-    "${state.categorySlug.orEmpty()}/${state.sort.name}/${state.startPage}"
 
 /** How much of the feed a "back to the top" actually animates past; anything beyond it is a jump. */
 private const val SCROLL_TO_TOP_ANIMATED_ITEMS = 12
@@ -1231,7 +1357,7 @@ private fun PostListScreenPreview() {
     PlazaTheme {
         PostListScreen(
             state = previewState,
-            posts = previewFeed().collectAsLazyPagingItems(),
+            postsFor = { previewFeed().collectAsLazyPagingItems() },
             onPostClick = {},
             onBoardClick = {},
             onSortChange = {},
@@ -1250,7 +1376,7 @@ private fun PostListScreenWidePreview() {
     PlazaTheme {
         PostListScreen(
             state = previewState,
-            posts = previewFeed().collectAsLazyPagingItems(),
+            postsFor = { previewFeed().collectAsLazyPagingItems() },
             onPostClick = {},
             onBoardClick = {},
             onSortChange = {},
@@ -1266,7 +1392,7 @@ private fun PostListScreenDarkPreview() {
     PlazaTheme(darkTheme = true) {
         PostListScreen(
             state = previewState,
-            posts = previewFeed().collectAsLazyPagingItems(),
+            postsFor = { previewFeed().collectAsLazyPagingItems() },
             onPostClick = {},
             onBoardClick = {},
             onSortChange = {},
