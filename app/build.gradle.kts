@@ -56,6 +56,30 @@ android {
             // `plaza.android.application` because the config it names is declared just above, which
             // is after the convention plugin has already run.
             signingConfig = signingConfigs.findByName("release")
+
+            /*
+             * The two ABIs a phone can actually be. Everything else in this file ships on every
+             * architecture; this build type does not, because since `libavif` arrived the native
+             * libraries are the largest thing in the APK and three quarters of them are dead weight
+             * on any given device.
+             *
+             * Measured on v1.2.18-dev.4: `libavif_android.so` is 1.74 MB for x86_64, 1.08 MB for
+             * x86, 0.83 MB for arm64-v8a and 0.63 MB for armeabi-v7a, and AGP packages `.so` files
+             * STORED, so each one costs its full size in the download. Dropping the two x86 slices
+             * takes the release APK from 8.35 MB to 5.51 MB without removing a single feature: no
+             * phone this app installs on is x86, and the only x86_64 target in the project is the CI
+             * emulator.
+             *
+             * Which is why this is on `release` and not in `plaza.android.application`. The emulator
+             * gates run the `minified` and `nonMinified` build types, and those are created with
+             * `initWith(release)` inside that convention plugin — before this block runs, so they
+             * copy the ABI-complete configuration and keep installing on x86_64. Moving these three
+             * lines into the plugin's own `release { }` would silently take x86_64 away from
+             * `:smoke` and `:benchmark` and leave nothing to install.
+             */
+            ndk {
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            }
         }
     }
 

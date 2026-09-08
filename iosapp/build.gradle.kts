@@ -37,6 +37,45 @@ kotlin {
             // Static, which is what the CMP template ships and what avoids a second signing step for
             // an embedded dynamic framework. The cost is link time, paid once per build.
             isStatic = true
+
+            /*
+             * Optimize the generated code for size rather than speed. This is a trade, not a free
+             * win — see the numbers and the cost below before removing or keeping it.
+             *
+             * The reason it is the only knob worth having here is what the link map says the binary
+             * is made of. Asking the linker for a map (`LD_GENERATE_MAP_FILE=YES`) and adding up
+             * the symbols by the object they came from, the 59.5 MB Release binary is:
+             *
+             *   45.4 MB  72%  this framework's own object — Kotlin, Compose, the K/N runtime
+             *    7.0 MB  11%  ICU, of which 6.0 MB is `libicu.icudtl_dat.o`
+             *    4.7 MB   8%  Skia proper, plus its Metal and GL backends
+             *    1.8 MB   3%  the image codecs — png, jpeg, webp, gif, dng
+             *    1.5 MB   2%  SQLite, which Room brings
+             *    1.2 MB   2%  HarfBuzz
+             *    0.1 MB   0%  expat, which the SVG renderer parses with
+             *
+             * So the C++ that gets blamed for a Compose binary is 8 MB of it, and the ICU blob is a
+             * single object file a linker cannot split. Everything else is Kotlin, which is what
+             * this option acts on: `smallBinary` sets LLVM's size level to AGGRESSIVE (`-Oz`, from
+             * a baseline of none) and turns off `inlineForPerformance`, Kotlin's own pre-codegen
+             * inlining pass.
+             *
+             * Measured on this machine, same commit, only this line differing:
+             *
+             *   binary     62,369,024 B → 53,063,360 B   (−14.9%)
+             *   .ipa       download −2.50 MB — the CI build's 20.89 MB becomes about 18.4
+             *   installed  59.5 MB → 50.6 MB
+             *
+             * The cost is runtime speed, and it is not measured. `-Oz` and no inlining is exactly
+             * the trade its name implies, and Compose's hot paths — recomposition, layout, scroll —
+             * are the code it applies to. Nothing here says the trade is bad; it says it was made
+             * deliberately and can be unmade by deleting this line.
+             *
+             * Only Release is affected: the compiler ignores this for a debug binary and says so,
+             * so a local debug build compiles the way it always did. The Release simulator build
+             * with this on was installed and launched, and drew its first screen.
+             */
+            binaryOption("smallBinary", "true")
         }
     }
 
