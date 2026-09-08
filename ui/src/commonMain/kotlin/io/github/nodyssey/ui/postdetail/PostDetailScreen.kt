@@ -75,6 +75,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -348,6 +349,28 @@ fun PostDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showPageSheet by remember { mutableStateOf(false) }
     var pageToolbarExpanded by rememberSaveable { mutableStateOf(true) }
+    val density = LocalDensity.current
+
+    /**
+     * The room the thread keeps below itself: the tallest [DetailBottomActions] has measured to.
+     *
+     * Not a written-down number, because there is no single right one to write. The rail stands two
+     * keys taller expanded than retracted, and the reply FAB grows with the reader's text scale, so
+     * the controls are anywhere between roughly 140dp and 240dp tall depending on the state and the
+     * phone. Keyed on the density so a change of text scale measures again from scratch rather than
+     * keeping a mark set at the old one.
+     *
+     * The tallest rather than the current height, and that is the part that matters on a thread
+     * short enough to fit one screen. Retracting the rail is a scroll gesture, and this room is what
+     * makes such a thread scrollable at all — so following the height back down would shorten the
+     * list mid-drag, bounce the reader to a top they never left, and unfold the rail again over the
+     * floor it had just moved off. The high-water mark keeps that loop from existing: a long thread
+     * ends a rail's-worth of air above a retracted rail, which is the same air the reader sees the
+     * moment they scroll back up and it unfolds.
+     *
+     * [ThreadBottomBarRoom] is the first frame's answer, before there is anything to measure.
+     */
+    var bottomActionsHeight by remember(density) { mutableStateOf(ThreadBottomBarRoom) }
     val collapsedTitleThreshold = with(LocalDensity.current) { 72.dp.roundToPx() }
     val showCollapsedTitle by remember {
         derivedStateOf {
@@ -592,12 +615,13 @@ fun PostDetailScreen(
                             enabled = state.hasContent && !state.hasNextPage && !state.isAppending,
                             // Clear of the floating controls rather than under them: the same room
                             // the list's last floor keeps puts the spinner where it can be seen.
-                            indicatorBottomPadding = ThreadBottomBarRoom,
+                            indicatorBottomPadding = bottomActionsHeight,
                             modifier = Modifier.fillMaxSize(),
                         ) {
                             ThreadList(
                                 state = state,
                                 listState = listState,
+                                bottomRoom = bottomActionsHeight,
                                 onOpenOriginalPost = openOriginalPost,
                                 onOpenBrowser = onLinkClick,
                                 onImageClick = onImageClick,
@@ -672,7 +696,12 @@ fun PostDetailScreen(
                     onNext = { goToPage((visiblePage + 1).coerceAtMost(state.totalPages)) },
                     onPageClick = { showPageSheet = true },
                     onReply = { onReply(null) },
-                    modifier = Modifier.align(Alignment.BottomEnd),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .onSizeChanged { size ->
+                            val measured = with(density) { size.height.toDp() }
+                            if (measured > bottomActionsHeight) bottomActionsHeight = measured
+                        },
                 )
             }
         }
@@ -926,14 +955,12 @@ private fun DetailTopBar(
 private val ReplyFabHeight = 56.dp
 
 /**
- * The room the floating controls take at the foot of the thread, reserved by everything under them.
+ * The room to keep below the thread until the floating controls have been measured — one frame.
  *
- * Measured against the *retracted* rail, which is what a reader scrolling to the last floor has:
- * the group's own 16dp of bottom padding, the FAB, the 4dp gap above it, and the single page key
- * the rail keeps when its two arrows are away — plus a line of air, so the last floor ends clear of
- * the keys instead of flush against them. Expanded the rail is two keys taller and does overlap,
- * but that is a state the reader taps into and out of, and resizing the list under a thumb
- * mid-scroll is worse than the overlap.
+ * The retracted rail's own arithmetic: the group's 16dp of bottom padding, the FAB, the 4dp gap
+ * above it, and the single page key the rail keeps when its arrows are away, plus a line of air. An
+ * underestimate on the frame it is used for is invisible; the measurement replaces it before
+ * anything is scrolled.
  */
 private val ThreadBottomBarRoom =
     Spacing.lg + ReplyFabHeight + Spacing.xs + Sizes.minTouchTarget + Spacing.sm
@@ -948,6 +975,8 @@ private val ThreadBottomBarRoom =
 private fun ThreadList(
     state: PostDetailUiState,
     listState: LazyListState,
+    /** What the floating controls measured to — see the property that holds it in [PostDetailScreen]. */
+    bottomRoom: Dp,
     /** See [PostDetailScreen]'s own — null when the opening post is already in the list. */
     onOpenOriginalPost: (() -> Unit)?,
     onOpenBrowser: (String) -> Unit,
@@ -965,7 +994,7 @@ private fun ThreadList(
 ) {
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(bottom = ThreadBottomBarRoom),
+        contentPadding = PaddingValues(bottom = bottomRoom),
         modifier = modifier
             .fillMaxHeight()
             .readableWidth(),
