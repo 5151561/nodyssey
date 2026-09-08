@@ -23,4 +23,13 @@
     <issue id="RestrictedApi">
         <ignore regexp="build/generated/ksp/" />
     </issue>
+
+    <!--
+      x86 and x86_64 were dropped from the release `abiFilters` on purpose — see the note above the
+      `ndk { }` block in `app/build.gradle.kts` for the measured numbers. This check exists because
+      an x86_64 Chromebook cannot install an ARM-only build, which is the known and accepted cost:
+      this is a NodeSeek client for phones, and the only x86_64 target left in the project is the CI
+      emulator, which runs the `minified`/`nonMinified` build types that still carry every ABI.
+    -->
+    <issue id="ChromeOsAbiSupport" severity="ignore" />
 </lint>
