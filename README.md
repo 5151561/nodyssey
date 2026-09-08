@@ -3,12 +3,11 @@
 [![Telegram Channel](https://img.shields.io/badge/Telegram-Channel-26A5E4?logo=telegram&logoColor=white)](https://t.me/nodyssey_official)
 [![Telegram Group](https://img.shields.io/badge/Telegram-Group-26A5E4?logo=telegram&logoColor=white)](https://t.me/+97ANIwVaCYk1MjQ1)
 
-Nodyssey is an unofficial, open-source Android client for
-[NodeSeek](https://www.nodeseek.com/), built with Kotlin and Jetpack Compose.
+Nodyssey 是 [NodeSeek](https://www.nodeseek.com/) 的非官方开源 Android 客户端，用 Kotlin 和 Jetpack
+Compose 写成。
 
-NodeSeek has an iOS client but no official Android client. Nodyssey renders posts and comments as
-**native Compose content**—there is no WebView in the normal reading path—so text is selectable,
-scrolling stays in one list, and the UI follows the system theme.
+NodeSeek 有 iOS 客户端，但没有官方 Android 客户端。Nodyssey 把帖子和评论渲染成**原生 Compose 内容**
+——正常阅读路径上没有 WebView——所以文字可选中、滚动只有一条列表、界面跟随系统主题。
 
 源码、问题反馈与版本发布：[GitHub](https://github.com/5151561/nodyssey) ·
 [Issues](https://github.com/5151561/nodyssey/issues) ·
@@ -16,154 +15,30 @@ scrolling stays in one list, and the UI follows the system theme.
 
 Telegram：[频道](https://t.me/nodyssey_official) · [群组](https://t.me/+97ANIwVaCYk1MjQ1)
 
-各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，文档导航见 [docs/README.md](docs/README.md)。
+各版本的用户可见变化见 [CHANGELOG.md](CHANGELOG.md)，文档导航见 [docs/README.md](docs/README.md)，
+界面截图在 [docs/screenshots/](docs/screenshots/)。
 
-> 中文说明见下方。
+## 功能
 
-## Architecture
+浏览、发帖、评论、编辑自己的帖子与回复；点赞 / 反对 / 投喂鸡腿、收藏、每日签到；帖子与用户搜索；
+消息通知、未读数与私信会话；关注 / 粉丝；用户空间与账号设置；鸡腿与星辰流水、星辰转账与收款码；
+投票帖的阅读、投票与管理；管理记录；等级进度与今日额度；六选一的图床上传。
 
-NodeSeek has no public API. A few JSON endpoints exist (`/api/statistics/*`, `/api/notification/*`,
-`/api/vote/*`, `/api/content/list-comments`, `/api/content/new-comment`, and the `/setting` writes), but list, detail,
-search and terms pages also depend on server-rendered HTML. Everything sits behind Cloudflare, so requests have to look like a real mobile browser and
-carry cookies obtained from a WebView.
+阅读侧另有 Room 离线缓存与已读标记、本机浏览历史与每帖阅读位置、图片全屏预览 / 保存 / 分享、
+WorkManager 通知轮询，以及应用内检查更新与安装。
 
-Three Gradle modules:
-
-```text
-:app        NodeSeek itself — Compose screens, view models, and the Android shells
-:shared     everything below the screens — the domain model, the parsers, the network layer,
-            the Room schema and the repositories — as Kotlin Multiplatform: Android, the
-            desktop JVM, iOS and macOS. What a site knows about itself arrives as
-            `SiteConfig`, not as a constant in here
-:designsys  theme, components and the rich-text renderer, with no knowledge of any forum
-```
-
-`:shared` is the one module that does not know it is running on Android. Only the Android half of it
-is built in CI; the Apple targets build on a Mac. See [docs/kmp-migration-plan.md](docs/kmp-migration-plan.md).
-
-There used to be a fourth, `:core`, holding the Android network shell — OkHttp and the WebView
-cookie bridge. Step A5 of the migration moved it into `:shared`: the contract everything above the
-network is written against is `commonMain`, and OkHttp is one of its two implementations. The other
-is `NSURLSession`.
-
-`:core` and `:designsys` were extracted when a second client shared this repository. That app now
-lives in [5151561/plaza](https://github.com/5151561/plaza) carrying a *copy* of both modules as they
-then were, so edits here do not reach it; the boundary stays because it is what makes the
-site-specific half of this app visible as a thing with edges.
-
-```text
-shared/src/commonMain/kotlin/          the half that does not know what it is running on
-├── io/github/nodyssey/
-│   ├── core/
-│   │   ├── NodeSeekSite.kt          URL vocabulary and route parsing
-│   │   ├── VoteMarkup.kt            poll markup, read and written
-│   │   ├── StardustReceiveMarkup.kt the `nsapp://stardust-receive` payment marker
-│   │   ├── html/
-│   │   │   ├── Selectors.kt         shared site selectors
-│   │   │   ├── SiteBootstrap.kt     the base64 `__config__` every page carries
-│   │   │   ├── PostConfigParser.kt  that blob → reaction tallies, by comment id
-│   │   │   ├── PostListParser.kt    topic list → PostListPage
-│   │   │   ├── PostDetailParser.kt  post page → PostDetail
-│   │   │   ├── PostSourceParser.kt  edit page → the Markdown the author actually typed
-│   │   │   ├── SearchParser.kt      search results → the same list model
-│   │   │   ├── RichContentParser.kt post HTML → block/inline tree
-│   │   │   └── TermsParser.kt       terms article → native reading blocks
-│   │   └── report/                  NodeQuality report parsing
-│   ├── model/                       the domain types
-│   ├── core/net/                    the JSON client, written against `HttpTransport`
-│   ├── data/                        every repository, and the offline download engine
-│   └── data/local/                  Room: the schema, the DAOs and every migration
-└── io/github/plaza/core/
-    ├── net/                         `SiteConfig`, `SiteError`, `WebUrl`, `HttpTransport`,
-    │                                `SiteHtmlClient`, the Cloudflare challenge detector and
-    │                                the session read model over the shared cookie store
-    ├── update/                      the update manifests and version comparison
-    ├── richtext/                    the block/inline tree and the Markdown that produces one
-    ├── ansi/                        ANSI colour decoding for pasted terminal output
-    └── TerminalColumns.kt           column widths for monospaced report tables
-
-shared/src/androidMain/kotlin/         OkHttp, `CookieManager`, `WebSettings`, `PackageManager`,
-                                       and where the database file is opened
-shared/src/appleMain/kotlin/           `NSURLSession`, `NSHTTPCookieStorage`, and the same two
-                                       files opened under Application Support
-shared/src/jvmCommonMain/kotlin/       what Android and the desktop JVM answer identically
-
-app/src/main/java/io/github/nodyssey/
-├── core/
-│   ├── NodeImageSite.kt         nodeimage.com's own vocabulary (off-site, user API key)
-│   ├── LuckyDraw.kt             the 抽奖 vocabulary, still on `java.time`
-│   └── net/                     vote request signing and the proxy routing OkHttp is given
-├── data/                        what a repository needs a platform for: the offline
-│                                files, WorkManager, Coil's caches, six upload protocols
-├── platform/                    the Android shells behind `data`'s interfaces
-├── di/                          `AppContainer`: constructor injection, no global singletons
-├── notifications/               WorkManager polling and Android notifications
-└── ui/                          Compose routes, screens and native renderers
-
-core/src/main/java/io/github/plaza/core/
-├── net/                         OkHttp, cookies shared with the WebView, rate gate, challenge detection
-├── update/                      version-name comparison, release-note trimming
-└── image/                       the Wi-Fi-only image network policy
-```
-
-Two rules keep scraping maintainable when NodeSeek changes its templates:
-
-1. Shared markup knowledge belongs in `:shared`'s `core/html`; avoid spreading selectors through UI or data code.
-2. Parsers are covered by tests using committed fixtures or focused inline HTML samples, and those tests run on both the JVM and Kotlin/Native. Tests never hit the live site.
-
-Detailed architecture rules are in [docs/architecture.md](docs/architecture.md).
-
-## Build
-
-Requires JDK 21 and the Android SDK (compileSdk 37, minSdk 26).
-
-```bash
-./gradlew :app:assembleDebug
-./gradlew --stop
-```
-
-Debug and release builds use different application IDs and labels, so both can sit on one device.
-
-Full verification matches CI:
-
-```bash
-./gradlew spotlessCheck testDebugUnitTest :app:lintDebug :app:assembleDebug
-./gradlew --stop
-```
+界面是 M3 Expressive：4 个 tab，宽窗口由 `NavigationSuiteScaffold` 换成侧边 rail，每个 tab 各有返回栈；
+正文一律贪心折行并补汉字 / 西文间隙，NodeQuality 报告与投票各成卡片，跑分表保留钉住首列的横向滚动。
 
 ## 数据来源
 
-NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口，其余页面需要解析服务端 HTML；站点整体在
-Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cookie。请求频率保持克制，测试不访问线上站点。
+NodeSeek 没有面向第三方的公开 API。少数功能有 JSON 接口（`/api/statistics/*`、`/api/notification/*`、
+`/api/vote/*`、`/api/content/list-comments`、`/api/content/new-comment` 以及 `/setting` 的写入），
+但列表、详情、搜索和条款页仍要解析服务端渲染的 HTML；站点整体在 Cloudflare 后面，请求必须带上浏览器
+特征和来自 WebView 的 Cookie。
 
 具体调用地址以 `:shared` 的 `core/NodeSeekSite.kt`、`core/html/` 和 `core/net/` 为准。
-本仓库不发布账号 Cookie、抓取凭据或已登录页面样本。
-
-## Roadmap
-
-- [x] 原生发帖、Markdown 编辑 / 预览、表情与草稿
-- [x] 评论发布（`/api/content/new-comment`）与六选一的图床上传
-- [x] 点赞 / 反对 / 投喂鸡腿（`/api/statistics/{upvote,like,dislike}`）
-- [x] 消息通知、未读数、私信列表 / 会话 / 发送
-- [x] 每日签到（`/api/attendance`）
-- [x] 帖子 / 用户搜索，与论坛列表共用管线
-- [x] 用户空间与账号设置二级页（`/setting` 契约全量接入）
-- [x] 鸡腿流水与星辰流水的真实分页数据
-- [x] Room 离线缓存 + 已读标记
-- [x] 图片全屏预览、保存与分享
-- [x] WorkManager 通知轮询与系统渠道
-- [x] f1 关于与社区、f2 隐私协议原生阅读
-- [x] 关注 / 粉丝列表与关注 / 取关（`/api/fans/{follow,fans,add,del}`）
-- [x] 等级进度与今日四项额度（`/api/progress/today`）
-- [x] 管理记录（`/api/admin/ruling/page-N`）
-- [x] 应用内检查更新、下载与安装（GitHub `releases/latest` + `PackageInstaller`）
-- [x] 星辰转账原生化（`payment-prepare` 回显收款人 + `send` 提交）
-- [x] 投票帖阅读、投票、创建、锁定 / 解锁 / 删除与投票人列表（`/api/vote/*`）
-- [x] 星辰收款码渲染、付款与生成（`nsapp://stardust-receive` 标记 + `/api/stardust/list` 统计）
-- [x] 帖子收藏（`/api/statistics/collection`）与「我的收藏」入口
-- [x] 本机浏览历史与每帖阅读位置（Room，保留条数可调）
-- [x] 编辑自己的帖子与回复（先取站点 Markdown 原文，再提交）
-- [x] 折叠 `<details>` 渲染成可展开卡片，表格按内容在换行与钉住首列之间二选一
+请求频率保持克制，测试不访问线上站点，本仓库也不发布账号 Cookie、抓取凭据或已登录页面样本。
 
 ## 架构
 
@@ -174,31 +49,107 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 3. **依赖显式**：构造器注入 + `AppContainer`，没有全局单例
 4. **数据层不产生用户文案**：`SiteError` 密封接口 + `strings.xml`
 
-## 设计
+三个 Gradle 模块：
 
-完整文档导航见 [docs/README.md](docs/README.md)。
+```text
+:app        NodeSeek 本身 —— Compose 界面、ViewModel 和 Android 外壳
+:designsys  主题、组件与富文本渲染器，不知道任何论坛的存在
+:shared     界面以下的全部 —— 领域模型、解析器、网络层、Room schema 和仓库 —— 以 Kotlin
+            Multiplatform 形式提供：Android、桌面 JVM、iOS 和 macOS。站点自身的信息由
+            `SiteConfig` 传入，不写死在这里
+```
 
-当前设计总纲在 [docs/design-requirements.md](docs/design-requirements.md)，站点实测词典在
-[docs/design-requirements-remaining.md](docs/design-requirements-remaining.md)，补遗在
-[docs/design-requirements-additions.md](docs/design-requirements-additions.md)。旧版
-[design-brief.md](docs/design-brief.md) 只保留为历史输入；实现与设计差异看
-[docs/implementation-status.md](docs/implementation-status.md)，已核对画板到代码的映射见
-[docs/design-implementation.md](docs/design-implementation.md)。
+`:shared` 是唯一不知道自己跑在 Android 上的模块。CI 只构建它的 Android 那一半，Apple 目标在 Mac 上
+构建，见 [docs/kmp-migration-plan.md](docs/kmp-migration-plan.md)。
 
-> “Expressive”指 M3 Expressive 的完整主题方向：配色、字阶、形状、tonal 色块和状态变化。
-> 根主题使用 `MaterialExpressiveTheme` 与 `MotionScheme.expressive()`；Material 3 仍固定在提供这些
-> 新 API 的 1.5 Alpha，因此每次升级都必须跑完整 UI、Lint 与 release 构建门禁。
+曾经还有第四个模块 `:core`，装着 Android 的网络外壳 —— OkHttp 和 WebView 的 Cookie 桥。迁移的 A5 步
+把它并进了 `:shared`：网络之上所有代码面对的契约写在 `commonMain`，OkHttp 是它两个实现之一，另一个是
+`NSURLSession`。
 
-- **Token**：`:designsys` 的 `theme/` 中的 light / dark M3 配色、字阶、形状与间距；品牌色为「石墨青」。
-- **首页 / 详情**：密集分割线列表、就地展开且可长按拖动重排的版块栏、已读态、连续评论与原生富文本；
-  正文一律贪心折行（标题也不例外）并补汉字 / 西文间隙，文字多的表格换行压进屏宽、跑分表保留钉住
-  首列的横向滚动，NodeQuality 报告与投票各为独立卡片，列表底栏收纳跳页与「上次阅读」。
-- **搜索 / 通知 / 我的 / 设置**：常驻输入框的单页搜索（类型 Tab、版块单选 chip、站点真有的两档排序、
-  未提交时显示历史）、私信、账号二级页、浏览历史（分组吸顶、左滑删除）、后台通知设置和 M3E 分组列表。
-- **关于 / 隐私**：f1 的两屏滚动节奏；f2 的原生协议排版和失败降级。
-- **自适应导航**：4 个 tab；宽窗口由 `NavigationSuiteScaffold` 切换为侧边 rail，每个 tab 保留独立返回栈。
+`:core` 和 `:designsys` 是当年本仓库还放着第二个客户端时拆出来的。那个 App 现在住在
+[5151561/plaza](https://github.com/5151561/plaza)，带走的是两个模块当时的*副本*，所以这边的改动不会
+传过去；边界留着，是因为它让这个 App 里站点相关的那一半仍然看得见轮廓。
 
-当前截图在 [docs/screenshots/](docs/screenshots/)，完整画板在 `design/`。
+```text
+shared/src/commonMain/kotlin/          不知道自己跑在什么平台上的那一半
+├── io/github/nodyssey/
+│   ├── core/
+│   │   ├── NodeSeekSite.kt          URL 词典与路由解析
+│   │   ├── VoteMarkup.kt            投票标记的读与写
+│   │   ├── StardustReceiveMarkup.kt `nsapp://stardust-receive` 收款标记
+│   │   ├── html/
+│   │   │   ├── Selectors.kt         共用的站点选择器
+│   │   │   ├── SiteBootstrap.kt     每个页面都带的 base64 `__config__`
+│   │   │   ├── PostConfigParser.kt  那段 blob → 按评论 id 的表情统计
+│   │   │   ├── PostListParser.kt    帖子列表 → PostListPage
+│   │   │   ├── PostDetailParser.kt  帖子页 → PostDetail
+│   │   │   ├── PostSourceParser.kt  编辑页 → 作者实际写下的 Markdown
+│   │   │   ├── SearchParser.kt      搜索结果 → 与列表相同的模型
+│   │   │   ├── RichContentParser.kt 帖子 HTML → 块 / 行内树
+│   │   │   └── TermsParser.kt       条款文章 → 原生阅读块
+│   │   └── report/                  NodeQuality 报告解析
+│   ├── model/                       领域类型
+│   ├── core/net/                    JSON 客户端，写在 `HttpTransport` 之上
+│   ├── data/                        全部仓库，以及离线下载引擎
+│   └── data/local/                  Room：schema、DAO 和每一次迁移
+└── io/github/plaza/core/
+    ├── net/                         `SiteConfig`、`SiteError`、`WebUrl`、`HttpTransport`、
+    │                                `SiteHtmlClient`、Cloudflare 挑战检测，以及共享 Cookie
+    │                                存储之上的会话读模型
+    ├── update/                      更新清单与版本比较
+    ├── richtext/                    块 / 行内树，以及产出它的 Markdown
+    ├── ansi/                        粘贴终端输出时的 ANSI 颜色解码
+    └── TerminalColumns.kt           等宽报告表格的列宽
+
+shared/src/androidMain/kotlin/         OkHttp、`CookieManager`、`WebSettings`、`PackageManager`，
+                                       以及数据库文件在哪里打开
+shared/src/appleMain/kotlin/           `NSURLSession`、`NSHTTPCookieStorage`，以及在 Application
+                                       Support 下打开的同样两个文件
+shared/src/jvmCommonMain/kotlin/       Android 与桌面 JVM 答案相同的部分
+
+app/src/main/java/io/github/nodyssey/
+├── core/
+│   ├── NodeImageSite.kt         nodeimage.com 自己的词典（站外，用户自带 API key）
+│   ├── LuckyDraw.kt             抽奖词典，仍在 `java.time` 上
+│   └── net/                     投票请求签名，以及交给 OkHttp 的代理路由
+├── data/                        仓库需要平台支持的部分：离线文件、WorkManager、Coil 缓存、
+│                                六种上传协议
+├── platform/                    `data` 那些接口背后的 Android 外壳
+├── di/                          `AppContainer`：构造器注入，没有全局单例
+├── notifications/               WorkManager 轮询与 Android 通知
+└── ui/                          Compose 路由、界面与原生渲染器
+
+core/src/main/java/io/github/plaza/core/
+├── net/                         OkHttp、与 WebView 共享的 Cookie、限速闸、挑战检测
+├── update/                      版本号比较、发布说明裁剪
+└── image/                       仅 Wi-Fi 加载图片的网络策略
+```
+
+NodeSeek 改模板时，靠两条规则维持抓取的可维护性：
+
+1. 共用的标记知识放在 `:shared` 的 `core/html`，不要把选择器散进 UI 或数据层代码。
+2. 解析器都有测试覆盖，用提交进仓库的 fixture 或聚焦的内联 HTML 样本，并且在 JVM 和 Kotlin/Native 上
+   都跑。测试永不访问线上站点。
+
+详细的架构规则见 [docs/architecture.md](docs/architecture.md)。
+
+## 构建
+
+需要 JDK 21 和 Android SDK（compileSdk 37，minSdk 26）。
+
+```bash
+./gradlew :app:assembleDebug
+./gradlew --stop
+```
+
+debug 与 release 用不同的 applicationId 和名称，可以同时装在一台设备上。
+
+与 CI 一致的完整验证：
+
+```bash
+./gradlew spotlessCheck testDebugUnitTest :app:lintDebug :app:assembleDebug
+./gradlew --stop
+```
 
 ## 致谢
 
@@ -213,6 +164,6 @@ Cloudflare 后面，请求必须携带浏览器特征和来自 WebView 的 Cooki
 - 请求频率保持克制，不做任何自动化刷分行为。
 - 应用不在仓库中保存 Cookie 或凭据；登录态由系统 `CookieManager` 持有。
 
-## License
+## 许可
 
-GPL-3.0. See [LICENSE](LICENSE).
+GPL-3.0，见 [LICENSE](LICENSE)。
