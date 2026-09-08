@@ -402,7 +402,10 @@ private fun BoxScope.NotificationGroup(
             )
 
         else ->
-            LazyColumn(state = notificationListState) {
+            // fillMaxSize for the same reason 私信's list has it: a list shorter than the screen
+            // leaves the rest of the page dispatching nothing, and the gesture that reopens the
+            // one-hand title is a pull on the page.
+            LazyColumn(Modifier.fillMaxSize(), state = notificationListState) {
                 items(state.items, key = ForumNotification::id) { item ->
                     NotificationRow(
                         item = item,

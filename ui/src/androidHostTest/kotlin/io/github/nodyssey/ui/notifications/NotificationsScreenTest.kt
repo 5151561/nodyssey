@@ -10,10 +10,13 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeUp
 import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
@@ -23,6 +26,7 @@ import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.data.contentPreview
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -241,6 +245,42 @@ class NotificationsScreenTest {
         composeRule.waitForIdle()
 
         assertEquals(null, picked)
+    }
+
+    /**
+     * 私信 is a short list — a handful of conversations, often fewer than fill a phone — and the page
+     * below its last row is still part of the gesture that works 单手模式: fold the title away, pull
+     * down anywhere on the page, and it comes back.
+     *
+     * It did not. The list was only as tall as its own rows, so everything under the last one was a
+     * strip that dispatched no scroll at all: the title folded on the way up and then could not be
+     * pulled back, because the finger was landing outside the only thing on the page that reports a
+     * drag. 通知 hid it by always having rows enough to reach the bottom of the screen.
+     */
+    @Test
+    fun `pulling below a short 私信 list brings the one-hand title back`() {
+        setContent(
+            state(
+                conversations = List(3) { conversation(uid = it.toLong(), name = "用户$it", stamp = NOW) },
+                tab = NotificationTab.MESSAGES,
+            ),
+        )
+        // Where the rows start stands in for how far the title is open: the blank above the toolbar
+        // pushes the whole page down by exactly its own height.
+        val rowTop = { composeRule.onNodeWithText("用户0").fetchSemanticsNode().positionInRoot.y }
+        val expanded = rowTop()
+
+        composeRule.onAllNodes(hasScrollToIndexAction()).onLast().performTouchInput { swipeUp() }
+        composeRule.waitForIdle()
+        assertTrue("the title should fold away on the way up", rowTop() < expanded)
+
+        // Low on the screen, which for three rows is past the last of them.
+        composeRule.onRoot().performTouchInput {
+            swipeDown(startY = height * 0.75f, endY = height * 0.95f)
+        }
+        composeRule.waitForIdle()
+
+        assertEquals(expanded, rowTop(), 1f)
     }
 
     private fun sentence(threadTitle: String) = "nssk 在帖子 $threadTitle 中@了我"

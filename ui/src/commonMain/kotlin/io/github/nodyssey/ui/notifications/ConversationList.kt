@@ -95,7 +95,11 @@ internal fun ConversationList(
                 modifier = Modifier.align(Alignment.Center),
             )
         } else {
+            // fillMaxSize, or the list is only as tall as the rows in it — and 私信 is a short list.
+            // Everything below the last row would then be a dead strip that dispatches no scroll,
+            // so a pull down there could neither bring 单手模式's title back nor reach the refresh.
             LazyColumn(
+                modifier = Modifier.fillMaxSize(),
                 state = listState,
                 contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
             ) {
