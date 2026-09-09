@@ -6,8 +6,7 @@
 Nodyssey 是 [NodeSeek](https://www.nodeseek.com/) 的非官方开源 Android 客户端，用 Kotlin 和 Jetpack
 Compose 写成。
 
-NodeSeek 有 iOS 客户端，但没有官方 Android 客户端。Nodyssey 把帖子和评论渲染成**原生 Compose 内容**
-——正常阅读路径上没有 WebView——所以文字可选中、滚动只有一条列表、界面跟随系统主题。
+Nodyssey 把帖子和评论渲染成**原生 Compose 内容**
 
 源码、问题反馈与版本发布：[GitHub](https://github.com/5151561/nodyssey) ·
 [Issues](https://github.com/5151561/nodyssey/issues) ·
