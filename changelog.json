@@ -2,6 +2,14 @@
   "schema": 1,
   "versions": [
     {
+      "versionName": "1.2.19",
+      "tag": "v1.2.19",
+      "publishedOn": "2026-09-11",
+      "preRelease": false,
+      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.19",
+      "notes": "### 新增\n\n- 支持 DeepFlood，首页顶栏切换站点。"
+    },
+    {
       "versionName": "1.2.18",
       "tag": "v1.2.18",
       "publishedOn": "2026-09-08",

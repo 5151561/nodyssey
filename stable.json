@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "channel": "stable",
-  "versionName": "1.2.18",
-  "tag": "v1.2.18",
-  "publishedOn": "2026-09-08",
-  "notes": "### 新增\n\n- 首页和通知左右滑动切换分类，跟手翻页。\n- 墨水屏模式：黑白高对比，无动效。\n- 网络自检增加本地登录状态与 Cookie 名称。\n\n### 改进\n\n- 同一条评论不再弹出两条系统通知。\n- 私信摘要不再显示 Markdown 原文。\n- iOS 测试包从 21MB 减到 18MB。\n\n### 变更\n\n- 通知顶部改成标签页，@我和回复合并成「互动」。\n- 搜索从底部标签移到首页顶栏，左边是排序。\n- 「我的」改成图标网格，主题帖和评论各成一页。\n- 退出登录移到账号设置。\n\n### 修复\n\n- 部分华为机型看不了 AVIF 图片。\n- 登录没能保存会话时不再静默跳回。\n- 登录后被当成未登录时可直接重试。\n- 正式版更新不再被标成 dev 测试版。\n- 开屏不再先闪一下默认配色。\n- 短帖最后一层不再被翻页栏挡住。\n- 通知和私信下拉能拉回单手模式标题。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.18-dev.4...v1.2.18",
+  "versionName": "1.2.19",
+  "tag": "v1.2.19",
+  "publishedOn": "2026-09-10",
+  "notes": "### 新增\n\n- 支持 DeepFlood，首页顶栏切换站点。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.18-dev.4...v1.2.19",
   "apk": {
-    "name": "nodyssey-v1.2.18.apk",
-    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.18/nodyssey-v1.2.18.apk",
-    "sizeBytes": 5871883,
-    "sha256": "4a1b2e8e693d8da58f328de131f5d966fa79c57e679e7abf2f33f0dfd338b06a"
+    "name": "nodyssey-v1.2.19.apk",
+    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.19/nodyssey-v1.2.19.apk",
+    "sizeBytes": 5888627,
+    "sha256": "c676e94958645d1b32a1fee887b5a0f50ce8522e9d6c7a09f24c251334d2c86d"
   },
-  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.18"
+  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.19"
 }
