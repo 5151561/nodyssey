@@ -7,6 +7,7 @@ import coil3.SingletonImageLoader
 import io.github.nodyssey.NodysseyRoot
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.ui.navigation.TopLevelDestination
+import io.github.nodyssey.ui.settings.IosActiveSite
 import io.github.plaza.core.net.resolveWebKitUserAgent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -46,6 +47,14 @@ import platform.UIKit.UIViewController
  * @param onReady called on the main thread with the controller to install as the window's root.
  */
 object NodysseyApp {
+    init {
+        // 站点 first, and in an initialiser rather than in `start`: which site is active decides the
+        // name of the database file and of the two composer stores, so it has to be settled before
+        // anything in this object can reach the graph — and `registerBackgroundTasks` can run in a
+        // process where `start` never does. See [IosActiveSite].
+        IosActiveSite.install()
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /**

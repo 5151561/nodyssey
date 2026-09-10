@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import io.github.nodyssey.core.ActiveSite
 import io.github.nodyssey.data.imagehost.ImageHostSecretEncryptionMigration
 import io.github.nodyssey.data.imagehost.LEGACY_NODE_IMAGE_KEY
 import io.github.nodyssey.data.imagehost.LegacyNodeImageKeyMigration
@@ -40,12 +41,27 @@ internal val Context.dnsDataStore: DataStore<Preferences> by preferencesDataStor
     name = "dns",
 )
 
+/*
+ * The two draft stores are per-site; everything else on this page is not.
+ *
+ * A draft is keyed by the post it belongs to — `draft-$postId` in `CommentComposerRepository` — and
+ * post ids are per-site and overlap, exactly as they do in the database (see `databaseFileName`).
+ * One file for both sites would offer a reader the wrong site's half-written reply under the right
+ * thread's title.
+ *
+ * 主题, 语言, 代理, DNS and the image host stay shared on purpose: none of them is a fact about a
+ * forum, and a reader who set 字体大小 once should not have to set it again on the other site.
+ *
+ * The suffix is empty for NodeSeek, so these are still the files already on every installed device —
+ * see the note above about names being load-bearing, and `Site.storageSuffix`. `ActiveSite` is
+ * installed in `attachBaseContext`, which is before anything can touch this file.
+ */
 internal val Context.postComposerDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "post-composer",
+    name = "post-composer${ActiveSite.current.storageSuffix}",
 )
 
 internal val Context.commentComposerDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "comment-composer",
+    name = "comment-composer${ActiveSite.current.storageSuffix}",
 )
 
 internal val Context.offlineDataStore: DataStore<Preferences> by preferencesDataStore(

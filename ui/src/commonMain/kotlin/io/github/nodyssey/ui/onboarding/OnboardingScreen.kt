@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.onboarding_app_links_action
 import io.github.nodyssey.ui.resources.onboarding_app_links_body
@@ -256,7 +257,8 @@ private fun OnboardingPageBody(
             }
         } else {
             Text(
-                text = stringResource(body),
+                // Only the welcome page's body names the forum; a string without a placeholder ignores it.
+                text = stringResource(body, siteName),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

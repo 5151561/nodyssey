@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberGroupedNumber
+import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.about_community
 import io.github.nodyssey.ui.resources.about_community_title
@@ -256,7 +257,7 @@ private fun CommunityStats(
                 )
                 if (state is CommunityStatsUiState.Content) {
                     Text(
-                        stringResource(Res.string.about_forum_stats_snapshot),
+                        stringResource(Res.string.about_forum_stats_snapshot, siteName),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

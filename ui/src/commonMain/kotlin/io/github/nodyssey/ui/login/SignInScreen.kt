@@ -29,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.SnackbarHost
@@ -58,17 +59,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.core.ActiveSite
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.session.SignInOutcome
 import io.github.nodyssey.data.session.SignInRefusal
 import io.github.nodyssey.data.session.TwoFactorChallenge
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.siteMark
+import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_close
 import io.github.nodyssey.ui.resources.sign_in_account
 import io.github.nodyssey.ui.resources.sign_in_forgot
-import io.github.nodyssey.ui.resources.sign_in_mark
+import io.github.nodyssey.ui.resources.sign_in_one_tap
+import io.github.nodyssey.ui.resources.sign_in_one_tap_hint
 import io.github.nodyssey.ui.resources.sign_in_password
 import io.github.nodyssey.ui.resources.sign_in_password_hint
 import io.github.nodyssey.ui.resources.sign_in_password_rejected
@@ -107,15 +112,21 @@ import org.jetbrains.compose.resources.stringResource
  * @param onOpenSiteSignInPage where 忘记密码 and 还没有账号 lead. Both go to the site's sign-in page
  *   rather than to a reset or a registration URL of their own: those paths have not been verified
  *   from the site, and a guessed URL is a dead end wearing a working button.
+ * @param sitekey the active site's Turnstile sitekey — [io.github.nodyssey.core.Site.turnstileSitekey].
+ *   A parameter rather than a global read, because which site is active is a fact this screen
+ *   should be handed rather than look up: the widget is validated against the hostname it renders
+ *   on, so a screen built for one site and shown under another fails as a widget that never solves.
  */
 @Composable
 fun SignInRoute(
     viewModel: SignInViewModel,
     userAgent: UserAgent,
+    sitekey: String,
     onClose: () -> Unit,
     onSignedIn: () -> Unit,
     onUseWebSignIn: () -> Unit,
     onOpenSiteSignInPage: () -> Unit,
+    onOneTapSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -189,10 +200,11 @@ fun SignInRoute(
                 onSubmit = viewModel::submitCredentials,
                 onOpenSiteSignInPage = onOpenSiteSignInPage,
                 onUseWebSignIn = onUseWebSignIn,
+                onOneTapSignIn = onOneTapSignIn,
                 modifier = modifier,
                 turnstile = {
                     TurnstileWidget(
-                        sitekey = NodeSeekSite.TURNSTILE_SITEKEY,
+                        sitekey = sitekey,
                         // From the app's own scheme rather than the system setting: the user may have
                         // put Nodyssey in a theme the OS is not in, and a light widget on a dark form
                         // is a white brick.
@@ -247,6 +259,8 @@ fun SignInScreen(
      * door still works — is the worst thing this screen could do.
      */
     onUseWebSignIn: () -> Unit,
+    /** 一键登录: opens the site's own page for it. Never called for a site that has none. */
+    onOneTapSignIn: () -> Unit,
     modifier: Modifier = Modifier,
     /**
      * h1's 人机验证 widget.
@@ -344,6 +358,37 @@ fun SignInScreen(
                 }
             }
 
+            /*
+             * 一键登录, for a site that lets another forum's account in — DeepFlood's 「使用 NodeSeek
+             * 账号登录」. See [Site.oneTapSignIn].
+             *
+             * Under 登录 rather than above the fields: it is the *other* way in, not the primary one,
+             * and a reader who came here to type a password should not have to step over it. Outlined
+             * rather than a third text button, because it does something the two text buttons below
+             * do not — it signs you in, where they open a page to read.
+             *
+             * Drawn only when the site has one, so NodeSeek's own card is untouched.
+             */
+            ActiveSite.current.oneTapSignIn?.let { oneTap ->
+                OutlinedButton(
+                    onClick = onOneTapSignIn,
+                    shape = RoundedCornerShape(26.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                ) {
+                    Text(
+                        stringResource(Res.string.sign_in_one_tap, oneTap.providerName),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Text(
+                    stringResource(Res.string.sign_in_one_tap_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.sm),
+                )
+            }
+
             // The board puts this line under card 2's button, where it explains a control that is
             // deliberately dead. Shown whenever the button is down, which is the state that ships.
             if (!state.canSubmitCredentials) {
@@ -385,14 +430,14 @@ private fun SignInHeader() {
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
-                    stringResource(Res.string.sign_in_mark),
+                    siteMark,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                 )
             }
         }
         Text(
-            stringResource(Res.string.sign_in_title),
+            stringResource(Res.string.sign_in_title, siteName),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.ExtraBold,
         )
@@ -565,6 +610,7 @@ private fun SignInFormPreview() {
             onSubmit = {},
             onOpenSiteSignInPage = {},
             onUseWebSignIn = {},
+            onOneTapSignIn = {},
         )
     }
 }
@@ -589,6 +635,7 @@ private fun SignInRefusedPreview() {
             onSubmit = {},
             onOpenSiteSignInPage = {},
             onUseWebSignIn = {},
+            onOneTapSignIn = {},
         )
     }
 }

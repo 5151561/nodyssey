@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_open_in_browser
@@ -172,7 +173,7 @@ fun SiteErrorState(
                 containerColor = scheme.tertiaryContainer,
                 iconColor = scheme.onTertiaryContainer,
                 title = stringResource(Res.string.status_challenge_title),
-                description = stringResource(Res.string.status_challenge_body),
+                description = stringResource(Res.string.status_challenge_body, siteName),
                 footnote = stringResource(Res.string.status_challenge_footnote),
                 primaryAction = StatusAction(stringResource(Res.string.action_verify), onVerify),
                 secondaryAction = retry,
@@ -191,7 +192,7 @@ fun SiteErrorState(
                 } else {
                     stringResource(Res.string.status_sign_in_title_board, boardTitle)
                 },
-                description = stringResource(Res.string.status_sign_in_body),
+                description = stringResource(Res.string.status_sign_in_body, siteName),
                 primaryAction = StatusAction(stringResource(Res.string.action_sign_in), onSignIn ?: onOpenBrowser),
                 secondaryAction =
                 onBrowseElsewhere?.let {
@@ -232,8 +233,8 @@ fun SiteErrorState(
                 } ?: stringResource(Res.string.status_level_required_title),
                 description =
                 error.requiredLevel?.let {
-                    stringResource(Res.string.status_level_required_body, it)
-                } ?: stringResource(Res.string.status_level_required_body_unknown),
+                    stringResource(Res.string.status_level_required_body, it, siteName)
+                } ?: stringResource(Res.string.status_level_required_body_unknown, siteName),
                 primaryAction =
                 onBack?.let { StatusAction(stringResource(Res.string.status_level_required_action), it) },
                 modifier = modifier,
@@ -264,7 +265,7 @@ fun SiteErrorState(
                 containerColor = extra.warningContainer,
                 iconColor = extra.onWarningContainer,
                 title = stringResource(Res.string.status_query_too_short_title),
-                description = stringResource(Res.string.status_query_too_short_body),
+                description = stringResource(Res.string.status_query_too_short_body, siteName),
                 modifier = modifier,
             )
 
@@ -275,7 +276,7 @@ fun SiteErrorState(
                 containerColor = scheme.errorContainer,
                 iconColor = scheme.onErrorContainer,
                 title = stringResource(Res.string.status_network_title),
-                description = stringResource(Res.string.status_network_body),
+                description = stringResource(Res.string.status_network_body, siteName),
                 primaryAction = retry,
                 modifier = modifier,
             )
@@ -305,7 +306,7 @@ fun SiteErrorState(
                 containerColor = extra.warningContainer,
                 iconColor = extra.onWarningContainer,
                 title = stringResource(Res.string.status_rate_limited_title),
-                description = stringResource(Res.string.status_rate_limited_body),
+                description = stringResource(Res.string.status_rate_limited_body, siteName),
                 primaryAction = retry,
                 modifier = modifier,
             )
@@ -449,7 +450,7 @@ fun SignedInState(
         shape = StatusShapes.Welcome,
         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
         iconColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        title = stringResource(Res.string.status_signed_in_title),
+        title = stringResource(Res.string.status_signed_in_title, siteName),
         description = stringResource(Res.string.status_signed_in_body),
         secondaryAction = StatusAction(stringResource(Res.string.action_sign_out), onSignOut),
         modifier = modifier,
@@ -475,7 +476,7 @@ fun NotWiredState(
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
         title = stringResource(Res.string.status_not_wired_title),
-        description = description ?: stringResource(Res.string.status_not_wired_body),
+        description = description ?: stringResource(Res.string.status_not_wired_body, siteName),
         primaryAction =
         StatusAction(stringResource(Res.string.action_open_in_browser), onOpenBrowser),
         modifier = modifier,

@@ -494,7 +494,9 @@ class NetworkAccountSettingsRepository(
 
     private companion object {
         const val SETTINGS_PATH = "/setting"
-        const val SETTINGS_REFERER = NodeSeekSite.BASE_URL + SETTINGS_PATH
+
+        // Not `const`: the origin follows the active site — see [NodeSeekSite.BASE_URL].
+        val SETTINGS_REFERER get() = NodeSeekSite.BASE_URL + SETTINGS_PATH
         const val REMOTE_HOLIDAY_THEME_KEY = "enable_festivous_style"
         const val HTTP_UNAUTHORIZED = 401
         const val HTTP_FORBIDDEN = 403

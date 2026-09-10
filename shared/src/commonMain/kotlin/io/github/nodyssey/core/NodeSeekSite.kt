@@ -8,15 +8,34 @@ import io.github.plaza.core.net.SiteConfig
 import io.github.plaza.core.net.WebUrl
 
 /**
- * Everything we know about the shape of nodeseek.com lives here.
+ * Everything we know about the shape of this forum's software lives here.
  *
- * NodeSeek has no public API. List and detail pages are server-rendered HTML that we scrape;
- * a handful of JSON endpoints exist for statistics and notifications but they do not cover
- * browsing. Keeping the URL vocabulary in one place means the parsers never build URLs.
+ * There is no public API. List and detail pages are server-rendered HTML that we scrape; a handful
+ * of JSON endpoints exist for statistics and notifications but they do not cover browsing. Keeping
+ * the URL vocabulary in one place means the parsers never build URLs.
+ *
+ * **Two sites run this software, and everything below is shared between them.** NodeSeek and
+ * DeepFlood were probed side by side through one signed-in browser on 2026-09-10 and answered
+ * identically on every endpoint tried, down to which ones refuse a `GET`: `/api/notification/
+ * message/list` 200 on both, `atMe/list` and `reply/list` 404 on both, `/api/preference/list`
+ * 422 `"keys" is required` on both. So only [BASE_URL], [CONFIG], [categories],
+ * [TURNSTILE_SITEKEY] and the trusted-host set vary — all five read [ActiveSite] — and the six
+ * hundred lines of paths, markers and parsing rules do not.
+ *
+ * One difference is known and is *not* handled here: [memberMentionPath] resolves through a 302 on
+ * NodeSeek and 404s on DeepFlood.
  */
 object NodeSeekSite {
 
-    const val BASE_URL = "https://www.nodeseek.com"
+    /**
+     * The origin every path in this file is joined to.
+     *
+     * A getter over [ActiveSite], not a constant: this app talks to one of two deployments of the
+     * same forum software — see [Site] — and which one is a process-level answer installed by the
+     * shell at startup. Every `BASE_URL + somePath()` call site below and across the repositories
+     * reads it at call time, so none of them had to change.
+     */
+    val BASE_URL: String get() = ActiveSite.current.origin
 
     /**
      * Last resort only. The real UA is read off the WebView — see `resolveUserAgent`.
@@ -41,9 +60,19 @@ object NodeSeekSite {
      * them — the fallback UA's warning is three lines up, and the marker lists carry the measurements
      * that produced them over in [Selectors].
      */
-    val CONFIG =
+    val CONFIG: SiteConfig get() = CONFIGS.getValue(ActiveSite.current)
+
+    /**
+     * One [SiteConfig] per site, built once.
+     *
+     * Eager and cached rather than assembled on each read: [CONFIG] is read on every request the
+     * HTML client makes, and a `SiteConfig` carries the marker lists whole.
+     */
+    private val CONFIGS: Map<Site, SiteConfig> = Site.entries.associateWith(::configFor)
+
+    private fun configFor(site: Site) =
         SiteConfig(
-            baseUrl = BASE_URL,
+            baseUrl = site.origin,
             fallbackUserAgent = FALLBACK_USER_AGENT,
             htmlAccept = HTML_ACCEPT,
             // The site sets `session`; the JWT-style `token` shows up on some deployments.
@@ -51,7 +80,7 @@ object NodeSeekSite {
             // Both hosts the web view is allowed onto — see TRUSTED_WEBVIEW_HOSTS. A sign-in
             // finished on the bare domain sets a host-only cookie there, and a jar read at
             // `www` alone does not see it: the page says signed in, the app says signed out.
-            sessionUrls = listOf(BASE_URL, "https://nodeseek.com"),
+            sessionUrls = site.sessionUrls,
             // `light` / `dark` are what the site's own theme switch writes, and `body.dark-layout`
             // is what the page does with the second one. Its other, undocumented job is in
             // [ColorSchemeCookie]: without this cookie the account endpoint returns no readme at all.
@@ -66,22 +95,51 @@ object NodeSeekSite {
             ),
         )
 
-    val categories: List<Category> = listOf(
-        Category(slug = null, title = "综合"),
-        Category(slug = "daily", title = "日常"),
-        Category(slug = "tech", title = "技术"),
-        Category(slug = "info", title = "情报"),
-        Category(slug = "review", title = "测评"),
-        Category(slug = "trade", title = "交易"),
-        Category(slug = "carpool", title = "拼车"),
-        Category(slug = "promotion", title = "推广"),
-        Category(slug = "life", title = "生活"),
-        Category(slug = "dev", title = "Dev"),
-        Category(slug = "photo-share", title = "贴图"),
-        Category(slug = "expose", title = "曝光"),
-        Category(slug = "inside", title = "内版"),
-        Category(slug = "meaningless", title = "无意义"),
-        Category(slug = "sandbox", title = "沙盒"),
+    /**
+     * The board strip's first-run fallback, per site.
+     *
+     * Not authoritative and not meant to be: [io.github.nodyssey.data.CategoryRepository] replaces
+     * the whole list with `/api/content/list-categories` on the first successful load, and this one
+     * had already drifted on NodeSeek before a second site existed (`meaningless` is gone). It is
+     * here so that a cold start with no network draws a strip rather than a blank bar.
+     */
+    val categories: List<Category> get() = FALLBACK_CATEGORIES.getValue(ActiveSite.current)
+
+    private val FALLBACK_CATEGORIES: Map<Site, List<Category>> = mapOf(
+        Site.NODESEEK to listOf(
+            Category(slug = null, title = "综合"),
+            Category(slug = "daily", title = "日常"),
+            Category(slug = "tech", title = "技术"),
+            Category(slug = "info", title = "情报"),
+            Category(slug = "review", title = "测评"),
+            Category(slug = "trade", title = "交易"),
+            Category(slug = "carpool", title = "拼车"),
+            Category(slug = "promotion", title = "推广"),
+            Category(slug = "life", title = "生活"),
+            Category(slug = "dev", title = "Dev"),
+            Category(slug = "photo-share", title = "贴图"),
+            Category(slug = "expose", title = "曝光"),
+            Category(slug = "inside", title = "内版"),
+            Category(slug = "meaningless", title = "无意义"),
+            Category(slug = "sandbox", title = "沙盒"),
+        ),
+        // Read off deepflood.com's own navigation on 2026-09-10. Same shape, different forum: the
+        // slugs do not overlap NodeSeek's beyond `promotion` and `sandbox`.
+        Site.DEEPFLOOD to listOf(
+            Category(slug = null, title = "综合"),
+            Category(slug = "ai", title = "人工智能"),
+            Category(slug = "daily", title = "摸鱼闲聊"),
+            Category(slug = "emotion", title = "情感八卦"),
+            Category(slug = "stream", title = "影音图文"),
+            Category(slug = "sports", title = "运动赛事"),
+            Category(slug = "game", title = "游戏同好"),
+            Category(slug = "coupon", title = "羊毛福利"),
+            Category(slug = "promotion", title = "服务推广"),
+            Category(slug = "financial", title = "投资理财"),
+            Category(slug = "device", title = "电子设备"),
+            Category(slug = "feedback", title = "运营反馈"),
+            Category(slug = "sandbox", title = "沙盒测试"),
+        ),
     )
 
     data class Category(val slug: String?, val title: String)
@@ -400,7 +458,7 @@ object NodeSeekSite {
      * `localhost` or `127.0.0.1`. A sitekey is public by design; it is checked against the hostname
      * the widget is rendered on, which is why the app's own widget loads with [BASE_URL] as its base.
      */
-    const val TURNSTILE_SITEKEY = "0x4AAAAAAAaNy7leGjewpVyR"
+    val TURNSTILE_SITEKEY: String get() = ActiveSite.current.turnstileSitekey
 
     /** Resolves site-relative URLs (`/avatar/1.png`) against the base URL; leaves absolute ones alone. */
     fun absoluteUrl(url: String?): String? {
@@ -465,7 +523,7 @@ object NodeSeekSite {
     private fun isOwnSiteUrl(url: String): Boolean =
         parseWebUrl(url)?.let { parsed ->
             (parsed.scheme == "https" || parsed.scheme == "http") &&
-                parsed.host?.lowercase() in TRUSTED_WEBVIEW_HOSTS
+                parsed.host?.lowercase() in OWN_SITE_HOSTS
         } == true
 
     /** Ordinary links leave the app and are accepted only when they are normal web URLs. */
@@ -504,7 +562,25 @@ object NodeSeekSite {
 
     private val POST_PATH = Regex("""/post-(\d+)(?:-(\d+))?""")
     private val SPACE_PATH = Regex("""/space/(\d+)""")
-    private val TRUSTED_WEBVIEW_HOSTS = setOf("www.nodeseek.com", "nodeseek.com")
+
+    /**
+     * Where the authenticated web view may go: the active site, plus whoever it hands sign-in to.
+     *
+     * The second half is not a courtesy. DeepFlood's 一键登录 is a `window.open` onto
+     * `nodeseek.com/connect`, so for that site the OAuth hop *is* the sign-in — see
+     * [Site.signInProviderHosts], which is empty for every site that signs its own readers in.
+     */
+    private val TRUSTED_WEBVIEW_HOSTS: Set<String>
+        get() = ActiveSite.current.let { it.hosts + it.signInProviderHosts }
+
+    /**
+     * The active site's own hosts, and nothing else.
+     *
+     * Separate from [TRUSTED_WEBVIEW_HOSTS] on purpose: this is what decides whether a link resolves
+     * to a *native route*, and a nodeseek.com link inside a DeepFlood post is a link to a different
+     * forum whose post ids mean something else. It opens in a browser, like any other outside link.
+     */
+    private val OWN_SITE_HOSTS: Set<String> get() = ActiveSite.current.hosts
     private val TELEGRAM_OAUTH_HOSTS = setOf("oauth.telegram.org")
 
     /** Extracts the post id (and page, when present) from `/post-703863-2`. */

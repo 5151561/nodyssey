@@ -2,6 +2,7 @@ package io.github.nodyssey.data.local
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import io.github.nodyssey.core.ActiveSite
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSFileManager
@@ -13,8 +14,8 @@ import platform.Foundation.NSUserDomainMask
  *
  * Application Support rather than Documents: this file is the app's cache and bookkeeping, not
  * something the person using it produced, and Documents is the directory a file-browsing user is
- * shown. The file name is the one Android already uses, which costs nothing and makes a store
- * recognisable across the two.
+ * shown. The file name is the one Android already uses — see [databaseFileName] — which costs
+ * nothing and makes a store recognisable across the two.
  *
  * [BundledSQLiteDriver] rather than the platform's own: Apple ships a system SQLite but Room's
  * driver for it is Android's, and a bundled copy is also the only way both targets are known to be
@@ -43,5 +44,6 @@ private fun nodeSeekDatabasePath(): String {
             create = true,
             error = null,
         )
-    return requireNotNull(directory?.path) { "no Application Support directory" } + "/nodeseek.db"
+    return requireNotNull(directory?.path) { "no Application Support directory" } +
+        "/" + databaseFileName(ActiveSite.current)
 }

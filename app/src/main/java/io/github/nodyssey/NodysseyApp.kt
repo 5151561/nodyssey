@@ -30,6 +30,7 @@ import io.github.nodyssey.notifications.NotificationChannels
 import io.github.nodyssey.notifications.NotificationPollScheduler
 import io.github.nodyssey.platform.CompatSvgParser
 import io.github.nodyssey.platform.hasValidatedUnmeteredNetwork
+import io.github.nodyssey.ui.settings.AndroidActiveSite
 import io.github.nodyssey.ui.settings.AndroidAppLanguage
 import io.github.plaza.designsys.image.LongLivedImageCacheStrategy
 import kotlinx.coroutines.CoroutineScope
@@ -80,6 +81,11 @@ open class NodysseyApp :
      * mirror exists — see the note on it.
      */
     override fun attachBaseContext(base: Context) {
+        // 站点 before anything else, and before the graph exists: which site is active decides which
+        // *files* the graph opens — the Room database's name and the two composer stores' — so an
+        // answer that arrived any later would be an answer to a question already asked. Same reason
+        // 语言 is read here, and by the same kind of synchronous mirror. See [AndroidActiveSite].
+        AndroidActiveSite.install(base)
         super.attachBaseContext(AndroidAppLanguage.wrap(base))
     }
 

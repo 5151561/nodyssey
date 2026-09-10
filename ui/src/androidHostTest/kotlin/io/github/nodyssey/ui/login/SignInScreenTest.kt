@@ -41,6 +41,7 @@ class SignInScreenTest {
                     onSubmit = {},
                     onOpenSiteSignInPage = {},
                     onUseWebSignIn = {},
+                    onOneTapSignIn = {},
                 )
             }
         }

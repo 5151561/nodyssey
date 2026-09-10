@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberFileSizeLabel
 import io.github.nodyssey.ui.common.rememberShareText
+import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.about_app_channel
 import io.github.nodyssey.ui.resources.about_app_channel_hint
@@ -575,7 +576,7 @@ private fun UnofficialNotice() {
         ) {
             Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                stringResource(Res.string.about_unofficial_notice),
+                stringResource(Res.string.about_unofficial_notice, siteName),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),

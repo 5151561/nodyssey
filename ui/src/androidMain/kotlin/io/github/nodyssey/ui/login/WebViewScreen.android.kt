@@ -94,6 +94,7 @@ actual fun WebViewRoute(
         pollIntervalMillis = policy.pollIntervalMillis,
         isInScope = policy.isInScope,
         canLeaveToBrowser = policy.canLeaveToBrowser,
+        onPageReadyScript = policy.onPageReadyScript,
         modifier = modifier,
     )
 }
@@ -133,6 +134,14 @@ private fun WebViewScreen(
      * followed out, and is handed to the browser.
      */
     isInScope: (String) -> Boolean = NodeSeekSite::isTrustedWebViewUrl,
+    /**
+     * Run against every page this screen loads, once it has finished.
+     *
+     * The one caller is 一键登录, which uses it to press the site's own button — see
+     * [io.github.nodyssey.core.OneTapSignIn.triggerScript], which is also where the guard against
+     * running twice lives, because `onPageFinished` fires more than once per errand.
+     */
+    onPageReadyScript: String? = null,
     /** Whether the toolbar offers a way out to a real browser; see the caller for why it is not always. */
     canLeaveToBrowser: Boolean = false,
 ) {
@@ -149,6 +158,9 @@ private fun WebViewScreen(
     PlazaBackHandler(enabled = popup != null) { popup = null }
     PlazaBackHandler(enabled = popup == null && canGoBack) { webView?.goBack() }
 
+    // Held the way [checkGoal] is: the `AndroidView` factory below runs once, so a value read
+    // directly would be the one this screen was first composed with.
+    val readyScript by rememberUpdatedState(onPageReadyScript)
     val autoReturn = onCheckGoal != null
     val checkGoal by rememberUpdatedState(onCheckGoal)
     val close by rememberUpdatedState(onClose)
@@ -214,6 +226,7 @@ private fun WebViewScreen(
                                 loading = false
                                 canGoBack = view.canGoBack()
                                 view.url?.let { currentUrl = it }
+                                readyScript?.let { view.evaluateJavascript(it, null) }
                             },
                             onOpenPopup = { child -> popup = child },
                             onClosePopup = { popup = null },

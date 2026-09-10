@@ -50,6 +50,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -88,6 +89,8 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import io.github.nodyssey.core.ActiveSite
+import io.github.nodyssey.core.Site
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.data.OfflineFirstPostRepository
@@ -117,6 +120,7 @@ import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_create_post
 import io.github.nodyssey.ui.resources.action_search
 import io.github.nodyssey.ui.resources.action_sort
+import io.github.nodyssey.ui.resources.action_switch_site
 import io.github.nodyssey.ui.resources.feed_page_size_note
 import io.github.nodyssey.ui.resources.page_jump_newest
 import io.github.nodyssey.ui.resources.post_badge_awarded
@@ -124,8 +128,11 @@ import io.github.nodyssey.ui.resources.post_badge_pinned
 import io.github.nodyssey.ui.resources.post_new_reply_count
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.post_view_count
+import io.github.nodyssey.ui.resources.site_switch_next_launch
 import io.github.nodyssey.ui.resources.sort_by_post_time
 import io.github.nodyssey.ui.resources.sort_by_reply_time
+import io.github.nodyssey.ui.settings.rememberSiteSwitch
+import io.github.nodyssey.ui.settings.siteSwitchRestartsApp
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.AvatarShape
@@ -842,13 +849,16 @@ private const val FIRST_PAGE = 1
 private const val APPEND_WAIT_MILLIS = 15_000L
 
 /**
- * The home app bar: 排序 at the start, 搜索 at the end, and nothing between them.
+ * The home app bar: 排序 at the start, 站点 in the middle, 搜索 at the end.
  *
- * The wordmark used to fill the middle. It named a screen the reader had just arrived at from the
- * navigation bar, which is the one thing an app bar title does not need to say, and it doubled as
- * 回到顶部 — a target nothing on screen described. Both went, and the width they held now belongs to
- * the two things this feed is actually operated with. 首页 still answers a second tap with the same
- * jump back to the first row.
+ * The wordmark used to fill the middle and was removed: it named a screen the reader had just
+ * arrived at from the navigation bar, which is the one thing an app bar title does not need to say,
+ * and it doubled as 回到顶部 — a target nothing on screen described. What sits there now is not that
+ * back. A second forum runs the same software ([Site]) and the app can be pointed at either, so
+ * *which* one these rows came from is the one thing about this screen a reader cannot work out by
+ * looking: the boards below differ, but 综合 looks like 综合 either way. It is also the control that
+ * changes it, which is what earns a slot rather than a caption. 首页 still answers a second tap with
+ * the same jump back to the first row.
  *
  * `navigationIcon` rather than a second action: 排序 changes what the list below *is*, 搜索 leaves it
  * for another list, and putting the two in one corner would make them look like a pair of filters.
@@ -867,9 +877,7 @@ private fun HomeTopBar(
     var menuOpen by remember { mutableStateOf(false) }
 
     TopAppBar(
-        // Empty rather than absent: the slot is what holds the bar to its own height, and the board
-        // strip below already says which list this is.
-        title = {},
+        title = { SiteSwitcher() },
         navigationIcon = {
             Box {
                 IconButton(onClick = { menuOpen = true }) {
@@ -912,6 +920,82 @@ private fun HomeTopBar(
         ),
         scrollBehavior = scrollBehavior,
     )
+}
+
+/**
+ * 站点: which forum the feed below came from, and the way to the other one.
+ *
+ * A text button rather than a title, because it is one. The site's own wordmark rather than a
+ * translated label — NodeSeek and DeepFlood are what the sites call themselves in every language the
+ * app ships.
+ *
+ * The menu is anchored to the button and centred with it. Both entries are always listed, the
+ * current one ticked, which is the same shape 排序 uses two slots to the left; a reader who opens it
+ * to check where they are should not have to change anything to find out.
+ *
+ * Switching restarts the app on Android — see [rememberSiteSwitch] for why nothing cheaper is
+ * correct — and on a platform where it cannot, the menu says so instead of letting the reader
+ * discover that nothing happened.
+ */
+@Composable
+private fun SiteSwitcher() {
+    var menuOpen by remember { mutableStateOf(false) }
+    val active = ActiveSite.current
+    val switchSite = rememberSiteSwitch()
+
+    Box {
+        TextButton(onClick = { menuOpen = true }) {
+            Text(
+                text = active.displayName,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                // The button already reads out the site's name; the arrow only says it opens.
+                contentDescription = stringResource(Res.string.action_switch_site),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            Site.entries.forEach { site ->
+                val isCurrent = site == active
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(site.displayName)
+                            // 下次启动生效 under the name it applies to rather than as a note
+                            // elsewhere on the screen: the sentence is only true of this entry, and
+                            // only on a platform that cannot restart itself.
+                            if (!isCurrent && !siteSwitchRestartsApp) {
+                                Text(
+                                    text = stringResource(Res.string.site_switch_next_launch),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        menuOpen = false
+                        switchSite(site)
+                    },
+                    // Same reason as [SortMenuItem]: without this the two entries are announced
+                    // identically and the tick is decoration TalkBack cannot see.
+                    modifier = Modifier.semantics { selected = isCurrent },
+                    trailingIcon = {
+                        if (isCurrent) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable

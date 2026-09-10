@@ -257,7 +257,8 @@ class NetworkStardustRepository(
          * `false`. Every one of them still returns `receiver_name`, which is why the wrong value was
          * invisible: `allowedOrigin` gates the site's own popup flow, and this app has no popup.
          */
-        internal const val TRANSFER_ORIGIN = NodeSeekSite.BASE_URL
+        // Not `const`: the origin follows the active site — see [NodeSeekSite.BASE_URL].
+        internal val TRANSFER_ORIGIN get() = NodeSeekSite.BASE_URL
     }
 }
 

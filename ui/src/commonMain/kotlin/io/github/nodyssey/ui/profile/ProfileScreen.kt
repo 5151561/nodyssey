@@ -63,6 +63,7 @@ import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot
 import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.assets_signed_in
 import io.github.nodyssey.ui.resources.assets_signing_in
@@ -597,7 +598,7 @@ private fun SignedOutProfile(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Text(
-                    text = stringResource(Res.string.profile_signed_out_title),
+                    text = stringResource(Res.string.profile_signed_out_title, siteName),
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.semantics { heading() },
@@ -652,7 +653,7 @@ private fun SignedOutProfile(
             ) {
                 Icon(PlazaIcons.Login, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
-                    text = stringResource(Res.string.profile_sign_in),
+                    text = stringResource(Res.string.profile_sign_in, siteName),
                     modifier = Modifier.padding(start = Spacing.sm),
                 )
             }
@@ -798,7 +799,7 @@ private fun ProfileHeader(
                 text = when {
                     // uid is only ever set from a loaded profile, so its absence is the
                     // signed-in-but-still-loading window the session line covers.
-                    state.uid == null -> stringResource(Res.string.profile_session_active)
+                    state.uid == null -> stringResource(Res.string.profile_session_active, siteName)
 
                     state.registeredYear != null && state.registeredMonth != null ->
                         stringResource(

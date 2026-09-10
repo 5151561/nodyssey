@@ -37,6 +37,8 @@
     <string name="action_done">確定</string>
     <string name="action_sort">排序方式</string>
     <string name="action_search">搜尋</string>
+    <string name="action_switch_site">切換站點</string>
+    <string name="site_switch_next_launch">下次啟動生效</string>
     <string name="action_show_all_boards">全部版塊</string>
     <string name="action_hide_all_boards">收合版塊</string>
     <string name="action_create_post">發文</string>
@@ -231,7 +233,7 @@
     <string name="message_quote_action">引用</string>
     <string name="message_copied">訊息已複製</string>
 
-    <string name="profile_session_active">NodeSeek 登入工作階段有效</string>
+    <string name="profile_session_active">%1$s 登入工作階段有效</string>
     <string name="profile_member_since">%1$d年%2$d月 註冊 · UID %3$d</string>
     <string name="profile_edit">編輯個人主頁</string>
     <string name="profile_chicken">雞腿</string>
@@ -505,7 +507,7 @@
     <string name="about_theme_signature">Material 3 Expressive · 主題色「石墨青」</string>
     <string name="about_community">社群</string>
     <string name="about_forum_stats_value">%1$s 位 seeker</string>
-    <string name="about_forum_stats_snapshot">論壇註冊使用者總數 · 來自 NodeSeek</string>
+    <string name="about_forum_stats_snapshot">論壇註冊使用者總數 · 來自 %1$s</string>
     <string name="about_forum_stats_loading">正在讀取論壇人數…</string>
     <string name="about_forum_stats_error">論壇人數載入失敗</string>
     <string name="about_site">關於本站</string>
@@ -524,7 +526,7 @@
     <string name="about_crash_export">匯出當機日誌</string>
     <string name="about_crash_export_hint">上次當機：%1$s · v%2$s。日誌只存在本機，要不要傳給開發者由你決定</string>
     <string name="about_crash_clear">清除當機記錄</string>
-    <string name="about_unofficial_notice">本應用程式是 NodeSeek 論壇的非官方開源用戶端，與站台營運方無隸屬關係；文章與評論內容的著作權歸論壇及原作者所有。</string>
+    <string name="about_unofficial_notice">本應用程式是 %1$s 論壇的非官方開源用戶端，與站台營運方無隸屬關係；文章與評論內容的著作權歸論壇及原作者所有。</string>
 
     <string name="privacy_title">隱私協議</string>
     <string name="privacy_open_original">在瀏覽器中開啟原文</string>
@@ -628,7 +630,7 @@
     <string name="account_email_current">目前信箱</string>
     <string name="account_email_change">在網頁中修改</string>
     <string name="account_email_verified">已驗證</string>
-    <string name="account_email_change_on_site">修改信箱需要通過站台的人機驗證後才能收到驗證碼，因此這一步在 NodeSeek 網頁上完成。</string>
+    <string name="account_email_change_on_site">修改信箱需要通過站台的人機驗證後才能收到驗證碼，因此這一步在 %1$s 網頁上完成。</string>
     <string name="account_phone_section">手機</string>
     <string name="account_phone_add">新增手機</string>
     <string name="account_phone_disabled_reason">手機簡訊驗證 API 暫不可用</string>
@@ -642,7 +644,7 @@
     <string name="account_telegram_bound_hint">未讀的 @我、回覆與私訊會轉發到你的 Telegram；已讀訊息不重複提醒。</string>
     <string name="account_telegram_unbind">解除綁定</string>
     <string name="account_telegram_dialog_title">在網頁中完成綁定</string>
-    <string name="account_telegram_dialog_body">即將開啟 NodeSeek 的聯絡方式設定頁。綁定要用 Telegram 官方的登入元件完成，只能在網頁裡進行；確認後 @我、回覆與私訊的未讀提醒將轉發到你的 Telegram。</string>
+    <string name="account_telegram_dialog_body">即將開啟 %1$s 的聯絡方式設定頁。綁定要用 Telegram 官方的登入元件完成，只能在網頁裡進行；確認後 @我、回覆與私訊的未讀提醒將轉發到你的 Telegram。</string>
     <string name="account_telegram_dialog_note">網頁會跳轉到 Telegram 授權，返回本頁後綁定狀態會自動重新整理。</string>
     <string name="account_telegram_open">開啟網頁</string>
     <string name="account_telegram_done_question">已在網頁完成綁定？</string>
@@ -687,23 +689,23 @@
     <string name="status_empty_ledger_body">等有了收支，這裡就會依時間列出來</string>
 
     <string name="status_network_title">網路出了點問題</string>
-    <string name="status_network_body">連不上 NodeSeek，檢查一下網路後再試一次。</string>
+    <string name="status_network_body">連不上 %1$s，檢查一下網路後再試一次。</string>
 
     <string name="status_challenge_title">需要確認一下你不是機器人</string>
-    <string name="status_challenge_body">NodeSeek 開啟了存取保護。在瀏覽器裡點一下驗證，馬上就能回來繼續逛。</string>
+    <string name="status_challenge_body">%1$s 開啟了存取保護。在瀏覽器裡點一下驗證，馬上就能回來繼續逛。</string>
     <string name="status_challenge_footnote">驗證在應用程式內建瀏覽器中完成，通過後自動返回清單</string>
 
     <string name="status_sign_in_title">需要登入後檢視</string>
     <string name="status_sign_in_title_board">「%1$s」需要登入後檢視</string>
-    <string name="status_sign_in_body">登入 NodeSeek 帳號後即可瀏覽本版塊的內容。登入成功會自動返回並重新載入。</string>
+    <string name="status_sign_in_body">登入 %1$s 帳號後即可瀏覽本版塊的內容。登入成功會自動返回並重新載入。</string>
     <string name="status_sign_in_secondary">先逛逛別的版塊</string>
     <string name="status_session_stale_title">登入狀態沒被認出來</string>
     <string name="status_session_stale_body">應用手上有登入資訊，站點這次卻當作未登入返回。多數情況下重試一次就好；如果一直這樣，說明這份登入已經失效，重新登入即可。</string>
 
     <string name="status_level_required_title">等級不夠，看不了這篇</string>
     <string name="status_level_required_title_level">這篇要 Lv%1$d 才能看</string>
-    <string name="status_level_required_body">作者把本文的閱讀權限設成了 Lv%1$d，你的等級還差一截。NodeSeek 靠雞腿升級，攢夠了再回來。</string>
-    <string name="status_level_required_body_unknown">本文設了閱讀等級門檻，你的等級還沒到。NodeSeek 靠雞腿升級，攢夠了再回來。</string>
+    <string name="status_level_required_body">作者把本文的閱讀權限設成了 Lv%1$d，你的等級還差一截。%2$s 靠雞腿升級，攢夠了再回來。</string>
+    <string name="status_level_required_body_unknown">本文設了閱讀等級門檻，你的等級還沒到。%1$s 靠雞腿升級，攢夠了再回來。</string>
     <string name="status_level_required_action">返回</string>
     <string name="status_private_post_title">這是私有文，只有作者能看</string>
     <string name="status_private_post_body">作者把本文的閱讀權限設成了私有，除了他自己誰都進不來。這道牆跟等級無關，攢雞腿也打不開。</string>
@@ -713,7 +715,7 @@
     <string name="status_deleted_action">返回清單</string>
 
     <string name="status_query_too_short_title">關鍵字太短了</string>
-    <string name="status_query_too_short_body">NodeSeek 的搜尋至少要兩個字，一個字它不查。補一個字再搜。</string>
+    <string name="status_query_too_short_body">%1$s 的搜尋至少要兩個字，一個字它不查。補一個字再搜。</string>
 
     <string name="status_no_results_title">沒搜到相關文章</string>
     <string name="status_no_results_body">換個關鍵字，或者去版塊裡翻翻。</string>
@@ -722,7 +724,7 @@
     <string name="status_signed_out_title">登入後解鎖完整體驗</string>
     <string name="status_signed_out_body">收藏、通知、簽到都在登入之後。</string>
 
-    <string name="profile_signed_out_title">登入 NodeSeek，解鎖完整體驗</string>
+    <string name="profile_signed_out_title">登入 %1$s，解鎖完整體驗</string>
     <string name="profile_signed_out_body">訪客只能看文，登入後才能參與社群。</string>
     <string name="profile_guest_benefit_post">發文回覆</string>
     <string name="profile_guest_benefit_post_hint">參與討論</string>
@@ -730,27 +732,27 @@
     <string name="profile_guest_benefit_messages_hint">@我即時達</string>
     <string name="profile_guest_benefit_attendance">簽到雞腿</string>
     <string name="profile_guest_benefit_attendance_hint">每日 6–7 支</string>
-    <string name="profile_sign_in">登入 NodeSeek</string>
+    <string name="profile_sign_in">登入 %1$s</string>
     <string name="profile_sign_in_hint">在內建瀏覽器中完成，應用程式不保存你的密碼</string>
     <string name="profile_guest_section">訪客也可以用</string>
     <string name="profile_guest_settings_hint">主題模式、字級、瀏覽偏好</string>
     <string name="profile_guest_tools_hint">推薦閱讀、合作商家、友站</string>
 
-    <string name="status_signed_in_title">已登入 NodeSeek</string>
+    <string name="status_signed_in_title">已登入 %1$s</string>
     <string name="status_signed_in_body">應用程式現在會帶著你的登入狀態請求內容，內版這類版塊可以直接看了。收藏、通知和簽到都能用了。</string>
 
     <string name="status_unparsable_title">這個頁面讀不出來</string>
     <string name="status_unparsable_body">頁面結構和預期不一致，多半是站台改版了。先去網頁裡看看。</string>
 
     <string name="status_rate_limited_title">請求太頻繁了</string>
-    <string name="status_rate_limited_body">NodeSeek 的搜尋每 2 秒只接受一次請求。等一下再試就好，不用去網頁驗證。</string>
+    <string name="status_rate_limited_body">%1$s 的搜尋每 2 秒只接受一次請求。等一下再試就好，不用去網頁驗證。</string>
 
     <string name="status_http_title">伺服器回傳了 HTTP %1$d</string>
     <string name="status_unknown_title">載入失敗</string>
     <string name="status_generic_body">再試一次，或者到網頁裡看看。</string>
 
     <string name="status_not_wired_title">這一頁還沒接進 App</string>
-    <string name="status_not_wired_body">NodeSeek 這一頁是網頁端算繪的，沒有可讀的介面，App 不會拿猜出來的資料糊弄你。先到網頁裡看，介面對上就會補進來。</string>
+    <string name="status_not_wired_body">%1$s 這一頁是網頁端算繪的，沒有可讀的介面，App 不會拿猜出來的資料糊弄你。先到網頁裡看，介面對上就會補進來。</string>
 
     <string name="home_pane_empty">選一篇文章，內文會顯示在這裡</string>
     <string name="search_pane_empty">選一則結果，內文會顯示在這裡</string>
@@ -904,7 +906,7 @@
     <string name="lucky_needs_post_id">先填文章 ID 才能產生連結</string>
 
     <string name="invite_title">邀請好友</string>
-    <string name="invite_body">NodeSeek 註冊需要邀請碼。購買後會產生一個邀請碼，發給朋友即可註冊。</string>
+    <string name="invite_body">%1$s 註冊需要邀請碼。購買後會產生一個邀請碼，發給朋友即可註冊。</string>
     <string name="invite_buy">花費 1000 雞腿購買一個邀請碼</string>
     <string name="invite_confirm_title">確認花費 1000 雞腿？</string>
     <string name="invite_cost">花費</string>
@@ -1198,7 +1200,7 @@
     <string name="offline_clear_confirm">清空</string>
     <string name="offline_done">完成</string>
 
-    <string name="sign_in_title">登入 NodeSeek</string>
+    <string name="sign_in_title">登入 %1$s</string>
     <string name="sign_in_subtitle">使用論壇帳號直接登入，密碼只發往官方介面，不經過第三方。</string>
     <string name="sign_in_account">使用者名稱 / 信箱</string>
     <string name="sign_in_password">密碼</string>
@@ -1212,6 +1214,8 @@
     <string name="sign_in_terms">登入即表示同意《服務條款》與《隱私協議》</string>
     <string name="sign_in_readonly_hint">按鈕在驗證通過前保持停用；送出後整張表單唯讀，避免重複請求觸發限流。</string>
     <string name="sign_in_use_web">改用網頁登入</string>
+    <string name="sign_in_one_tap">使用 %1$s 帳號登入</string>
+    <string name="sign_in_one_tap_hint">在站點頁面上完成授權，回來即為登入狀態。</string>
     <string name="sign_in_session_not_stored">論壇已確認帳號密碼，但這台裝置沒能保存登入狀態。請改用網頁登入。</string>
 
     <string name="sign_in_verify_expired">驗證已過期，請重新驗證</string>
@@ -1234,7 +1238,7 @@
     <string name="onboarding_progress">第 %1$d 屏，共 %2$d 屏</string>
 
     <string name="onboarding_welcome_title">歡迎使用 Nodyssey</string>
-    <string name="onboarding_welcome_body">NodeSeek 的第三方用戶端</string>
+    <string name="onboarding_welcome_body">%1$s 的第三方用戶端</string>
 
     <string name="onboarding_one_hand_title">單手模式</string>
     <string name="onboarding_one_hand_body">標題下移方便單手操作，可在設定關閉</string>

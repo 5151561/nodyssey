@@ -34,6 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.ui.assets.InviteConfirmDialog
+import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.invite_body
@@ -132,7 +133,7 @@ fun InviteScreen(
                             modifier = Modifier.size(26.dp),
                         )
                         Text(
-                            text = stringResource(Res.string.invite_body),
+                            text = stringResource(Res.string.invite_body, siteName),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

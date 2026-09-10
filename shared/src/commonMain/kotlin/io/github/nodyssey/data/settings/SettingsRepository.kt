@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import io.github.nodyssey.core.ActiveSite
 import io.github.nodyssey.data.NotificationCounts
 import io.github.nodyssey.data.update.UpdateCheckStore
 import io.github.nodyssey.model.FeedSort
@@ -601,9 +602,24 @@ class SettingsRepository(
         private val KEY_RECENT_SEARCHES = stringPreferencesKey("recent_searches")
         private val KEY_SEARCH_HISTORY = stringPreferencesKey("search_history_v3")
         private val KEY_RECENT_BOARDS = stringPreferencesKey("recent_boards")
-        private val KEY_HIDDEN_HOME_BOARDS = stringPreferencesKey("hidden_home_boards")
-        private val KEY_HOME_BOARD_ORDER = stringPreferencesKey("home_board_order")
-        private val KEY_DISABLED_HOME_BOARDS = stringPreferencesKey("disabled_home_boards")
+
+        /*
+         * The three board keys are per-site; every other key in this store is shared.
+         *
+         * They hold slugs, and the two sites' slugs are different vocabularies that happen to
+         * overlap in two places — `promotion` and `sandbox`. A shared arrangement would carry
+         * NodeSeek's 交易 and 拼车 into DeepFlood's strip as boards it does not have, park
+         * DeepFlood's 人工智能 on NodeSeek, and let a reader's careful ordering on one site quietly
+         * rewrite the other's.
+         *
+         * The suffix is empty for NodeSeek, so an existing reader's arrangement is untouched — see
+         * `Site.storageSuffix`. Read once at class init, which is after the shell has installed
+         * `ActiveSite` and long before a switch, which restarts the process.
+         */
+        private val boardKeySuffix = ActiveSite.current.storageSuffix
+        private val KEY_HIDDEN_HOME_BOARDS = stringPreferencesKey("hidden_home_boards$boardKeySuffix")
+        private val KEY_HOME_BOARD_ORDER = stringPreferencesKey("home_board_order$boardKeySuffix")
+        private val KEY_DISABLED_HOME_BOARDS = stringPreferencesKey("disabled_home_boards$boardKeySuffix")
         private val KEY_POST_TOOLBAR = stringPreferencesKey("post_toolbar_actions")
         private val KEY_REPLY_TOOLBAR = stringPreferencesKey("reply_toolbar_actions")
         private val KEY_MESSAGE_TOOLBAR = stringPreferencesKey("message_toolbar_actions")

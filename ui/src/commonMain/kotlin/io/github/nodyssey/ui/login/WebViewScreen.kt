@@ -2,6 +2,7 @@ package io.github.nodyssey.ui.login
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import io.github.nodyssey.core.ActiveSite
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.session.SessionState
@@ -9,8 +10,18 @@ import io.github.plaza.core.net.UserAgent
 
 /** Why the WebView was opened, which is also the condition for closing it again. */
 enum class WebViewGoal {
-    /** Close once NodeSeek has issued a session cookie. */
+    /** Close once the site has issued a session cookie. */
     SIGN_IN,
+
+    /**
+     * [SIGN_IN], plus it presses the site's own 一键登录 button on arrival.
+     *
+     * A goal rather than a parameter because it is one: this screen is opened to *complete* a
+     * sign-in the reader has already asked for, and the page it lands on is a step in that errand
+     * rather than a destination. What it closes on is unchanged — a session, however it arrived.
+     * See [io.github.nodyssey.core.OneTapSignIn.triggerScript] for why the page cannot be skipped.
+     */
+    ONE_TAP_SIGN_IN,
 
     /** Close once Cloudflare has issued a clearance cookie. */
     CHALLENGE,
@@ -86,6 +97,8 @@ internal class WebViewPolicy(
     val isInScope: (String) -> Boolean,
     /** Whether the toolbar offers a way out to a real browser. */
     val canLeaveToBrowser: Boolean,
+    /** JavaScript to run once the page has loaded, or null for the screens that only display one. */
+    val onPageReadyScript: String? = null,
 )
 
 /**
@@ -105,7 +118,7 @@ internal fun webViewPolicy(
         // `peek` rather than `sync`: this runs twice a second, and it must observe without announcing.
         onCheckGoal =
         when (goal) {
-            WebViewGoal.SIGN_IN -> {
+            WebViewGoal.SIGN_IN, WebViewGoal.ONE_TAP_SIGN_IN -> {
                 {
                     val state = session.peek()
                     state.isSignedIn && state.fingerprint != baseline.fingerprint
@@ -138,7 +151,11 @@ internal fun webViewPolicy(
                 }
             }
 
-            WebViewGoal.SIGN_IN, WebViewGoal.CHALLENGE -> NodeSeekSite::isTrustedWebViewUrl
+            // 一键登录 sits here rather than with the two above: the hop it needs — the provider's
+            // own origin — is already inside `isTrustedWebViewUrl`, because the active site declares
+            // it (`Site.signInProviderHosts`). Nothing about Telegram applies.
+            WebViewGoal.SIGN_IN, WebViewGoal.ONE_TAP_SIGN_IN, WebViewGoal.CHALLENGE ->
+                NodeSeekSite::isTrustedWebViewUrl
         },
         // 管理 pages only. Now that every nodeseek.com link opens here rather than in a Custom Tab, a
         // page this view renders badly — or that the user would rather read with their browser's own
@@ -146,6 +163,9 @@ internal fun webViewPolicy(
         // exists to put a cookie in *this* jar, and finishing the errand in the browser would write it
         // somewhere the app cannot read, which is the failure this screen was built to avoid.
         canLeaveToBrowser = goal == WebViewGoal.MANAGE,
+        // Only the one-tap errand carries a script, and only the active site's own.
+        onPageReadyScript =
+        if (goal == WebViewGoal.ONE_TAP_SIGN_IN) ActiveSite.current.oneTapSignIn?.triggerScript else null,
     )
 
 /** Fast enough that the return feels immediate, slow enough to be free at 60fps. */

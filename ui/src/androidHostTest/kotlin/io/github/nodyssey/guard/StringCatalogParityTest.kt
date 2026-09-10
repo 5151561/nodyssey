@@ -159,7 +159,6 @@ class StringCatalogParityTest {
             "settings_language_zh_hant",
             "settings_sticker_size_value",
             "settings_version",
-            "sign_in_mark",
             "sign_in_verify_brand",
             "space_bio",
             "space_readme",

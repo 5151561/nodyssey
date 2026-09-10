@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.account.TelegramBinding
 import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.account_contact_title
 import io.github.nodyssey.ui.resources.account_email_change
@@ -208,7 +209,7 @@ fun ContactScreen(
                 verified = state.emailVerified,
                 onChange = onChangeEmail,
             )
-            AccountFieldHelper(stringResource(Res.string.account_email_change_on_site))
+            AccountFieldHelper(stringResource(Res.string.account_email_change_on_site, siteName))
 
             AccountSectionLabel(
                 stringResource(Res.string.account_phone_section),
@@ -470,7 +471,7 @@ private fun TelegramBindDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 Text(
-                    stringResource(Res.string.account_telegram_dialog_body),
+                    stringResource(Res.string.account_telegram_dialog_body, siteName),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Surface(
