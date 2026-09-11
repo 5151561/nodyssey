@@ -16,7 +16,7 @@ class NetworkCommunityRepository(
     private val dispatchers: AppDispatchers,
 ) : CommunityRepository {
     override suspend fun memberCount(): Long {
-        val html = htmlSource.getHtml(NodeSeekSite.listPath(categorySlug = null, page = 1))
+        val html = htmlSource.getHtml(NodeSeekSite.FRONT_PAGE_PATH)
         return withContext(dispatchers.default) {
             CommunityStatsParser.parseMemberCount(html)
         }

@@ -1,5 +1,6 @@
 package io.github.nodyssey.core
 
+import io.github.nodyssey.model.FeedSort
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -8,10 +9,29 @@ import kotlin.test.assertTrue
 
 class NodeSeekSiteTest {
     @Test
+    fun `feed paths name both orders so the site's sortBy cookie never decides`() {
+        // The bare URL is answered in whatever order the `sortBy` cookie last named, so 最新回复
+        // spelling itself out is the whole reason switching back from 最新发帖 works.
+        assertEquals("/?sortBy=replyTime", NodeSeekSite.listPath(null, page = 1, sort = FeedSort.LAST_REPLY))
+        assertEquals("/?sortBy=postTime", NodeSeekSite.listPath(null, page = 1, sort = FeedSort.POST_TIME))
+        assertEquals("/page-2?sortBy=replyTime", NodeSeekSite.listPath(null, page = 2, sort = FeedSort.LAST_REPLY))
+        assertEquals(
+            "/categories/daily/page-3?sortBy=postTime",
+            NodeSeekSite.listPath("daily", page = 3, sort = FeedSort.POST_TIME),
+        )
+        assertEquals("/categories/daily?sortBy=replyTime", NodeSeekSite.listPath("daily", page = 0))
+    }
+
+    @Test
     fun `search paths encode query range page and sort`() {
         assertEquals(
             "/search?q=Android%20TV&page=2&category=tech&sortBy=postTime",
-            NodeSeekSite.postSearchPath("Android TV", page = 2, categorySlug = "tech", sort = io.github.nodyssey.model.FeedSort.POST_TIME),
+            NodeSeekSite.postSearchPath("Android TV", page = 2, categorySlug = "tech", sort = FeedSort.POST_TIME),
+        )
+        // Same reason as the feed: bare `sortBy` hands the order to the site's cookie.
+        assertEquals(
+            "/search?q=Android%20TV&sortBy=replyTime",
+            NodeSeekSite.postSearchPath("Android TV"),
         )
         assertEquals("/member?q=%E8%8A%B1%E7%94%B0", NodeSeekSite.userSearchPath("花田"))
         assertEquals("/api/account/find/%E8%8A%B1%E7%94%B0", NodeSeekSite.userSearchApiPath("花田"))

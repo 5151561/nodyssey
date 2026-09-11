@@ -144,6 +144,16 @@ object NodeSeekSite {
 
     data class Category(val slug: String?, val title: String)
 
+    /**
+     * The front page with no opinion about order.
+     *
+     * [listPath] now spells out `sortBy` on both orders, and the site answers such a request with a
+     * two-year `Set-Cookie: sortBy=<value>`. A fetch that only wants what the page renders around
+     * the list — the footer's member total — must not go through it, or reading that number would
+     * quietly rewrite the reader's chosen order.
+     */
+    const val FRONT_PAGE_PATH = "/"
+
     /** `null` slug means the mixed front page, which pages as `/page-2` rather than `/categories/…`. */
     fun listPath(
         categorySlug: String?,
@@ -153,13 +163,25 @@ object NodeSeekSite {
         val safePage = page.coerceAtLeast(1)
         val base = if (categorySlug == null) "" else "/categories/$categorySlug"
         val path = if (safePage == 1) base.ifEmpty { "/" } else "$base/page-$safePage"
-        // The site's default order carries no parameter, so the URL stays byte-identical to what it
-        // was before sorting existed — which is what keeps every cached feed key valid.
-        return when (sort) {
-            FeedSort.LAST_REPLY -> path
-            FeedSort.POST_TIME -> "$path?sortBy=postTime"
-        }
+        // Both orders name themselves, the site's own default included. Verified against the live
+        // site on 2026-09-11: a request carrying `sortBy` is answered in that order *and* answers
+        // with `Set-Cookie: sortBy=<value>; Max-Age=63072000`, while a request carrying none is
+        // answered in whatever order that cookie last named — `?sortBy=` wins over the cookie, and
+        // an unrecognised value falls back to the cookie too.
+        //
+        // Leaving 最新回复 as the bare URL therefore broke the switch permanently: one trip through
+        // 最新发帖 parked `sortBy=postTime` in the cookie jar for two years, and every later bare
+        // request came back in post order, so both menu entries served the same list.
+        return "$path?sortBy=${sort.parameter}"
     }
+
+    /** The site's own names for the two orders — what `sortBy` takes, in a URL and in its cookie. */
+    private val FeedSort.parameter: String
+        get() =
+            when (this) {
+                FeedSort.LAST_REPLY -> "replyTime"
+                FeedSort.POST_TIME -> "postTime"
+            }
 
     fun postPath(postId: Long, page: Int = 1): String = "/post-$postId-${page.coerceAtLeast(1)}"
 
@@ -415,11 +437,22 @@ object NodeSeekSite {
      *   `.post-list-item` **fifty to a page** and the ordinary `pager-next`, so [listPath]'s parser
      *   reads it unchanged;
      * - `category` is honoured **server-side**, and exactly one is accepted;
-     * - `sortBy=postTime` is honoured; its absence is the site's own relevance-ish ordering;
+     * - `sortBy=postTime` is honoured; its absence *was* the site's own relevance-ish ordering;
      * - asking for a page past the end returns zero rows **but still renders `pager-next` as a
      *   link**, so "are there more pages" cannot be read from the pager alone here — see
      *   [io.github.nodyssey.core.html.SearchParser];
      * - the route is throttled to one request per two seconds, answering 429 beyond that.
+     *
+     * Both orders name themselves here too, for [listPath]'s reason: the site's `sortBy` cookie
+     * decides any request that does not carry the parameter, so 最新回复 sent bare came back in
+     * whatever order the last 最新发帖 trip had parked there. Handing the menu's two entries the
+     * same list is worse than losing relevance ordering — which the menu never offered as a choice
+     * anyway; its entries have always read 按回复时间 and 按发帖时间.
+     *
+     * Unverified on this route, unlike on [listPath]: `/search` answers a signed-out request with a
+     * 302 to Google, so whether it honours `sortBy=replyTime` and whether the cookie reaches it at
+     * all could not be checked from here. What is verified is the cookie behaviour on the board
+     * lists, and that this route shares their renderer.
      */
     fun postSearchPath(
         query: String,
@@ -432,7 +465,7 @@ object NodeSeekSite {
                 add("q=${query.urlEncode()}")
                 if (page > 1) add("page=${page.coerceAtLeast(1)}")
                 categorySlug?.takeIf(String::isNotBlank)?.let { add("category=${it.urlEncode()}") }
-                if (sort == FeedSort.POST_TIME) add("sortBy=postTime")
+                add("sortBy=${sort.parameter}")
             }
         return "/search?${parameters.joinToString("&")}"
     }
