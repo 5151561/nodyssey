@@ -51,7 +51,14 @@ class MinifiedStartupSmokeTest {
         // no class with the app, so unlike `:app`'s own journeys it cannot pre-write the "seen" flag.
         // The guide's first frame is as much proof of a survived startup as the tab bar's; skipping it
         // then also puts the settings write and the recomposition it triggers under the R8 build.
-        val firstFrame = device.wait(Until.findObject(By.pkg(APP).text(HOME_TAB_OR_SKIP)), STARTUP_TIMEOUT_MS)
+        // A system ANR dialog left over from whatever ran before this — the `:app` journeys share the
+        // emulator with it — would hide the app before the wait below ever starts. See
+        // [dismissForeignAnrDialog].
+        dismissForeignAnrDialog(device)
+        var firstFrame = device.wait(Until.findObject(By.pkg(APP).text(HOME_TAB_OR_SKIP)), STARTUP_TIMEOUT_MS)
+        if (firstFrame == null && dismissForeignAnrDialog(device)) {
+            firstFrame = device.wait(Until.findObject(By.pkg(APP).text(HOME_TAB_OR_SKIP)), STARTUP_TIMEOUT_MS)
+        }
         if (firstFrame == null) dumpDiagnostics(device, "startup-timeout")
         assertNotNull(
             "the app did not draw its bottom navigation within ${STARTUP_TIMEOUT_MS / 1000}s of launch",
@@ -81,6 +88,31 @@ class MinifiedStartupSmokeTest {
             "the app stopped drawing after opening 搜索",
             device.wait(Until.hasObject(By.pkg(APP).text(BOARD_SECTION)), UI_TIMEOUT_MS),
         )
+    }
+
+    /**
+     * Clears a system "isn't responding" dialog belonging to some *other* app, and says whether one
+     * was there.
+     *
+     * That dialog is modal at the window level: while it is up `UiDevice` sees its window and
+     * nothing else, so the app underneath is absent from the hierarchy even when logcat records a
+     * drawn first frame. CI failed exactly that way on 2026-09-11 — the emulator's own launcher
+     * (Quickstep) ANRed during the `:app` journeys that run before this on the same emulator, its
+     * dialog stayed on screen, and the artifacts show 新手引导 fully drawn behind it while this test
+     * timed out looking for 跳过.
+     *
+     * 等 rather than 关闭应用: it dismisses the dialog and leaves whatever ANRed to recover on its
+     * own, which is all this test needs — the app under test is already the window behind it.
+     *
+     * A dialog naming the app under test is the app's own ANR, and startup hanging is precisely
+     * what this test exists to catch: that one is left alone, so the wait still times out and dumps
+     * the diagnostics that say so.
+     */
+    private fun dismissForeignAnrDialog(device: UiDevice): Boolean {
+        val wait = device.findObject(By.res(ANR_WAIT_BUTTON)) ?: return false
+        if (device.findObject(By.res(ANR_DIALOG_TITLE))?.text.orEmpty().contains(APP_LABEL)) return false
+        wait.click()
+        return true
     }
 
     /**
@@ -122,6 +154,13 @@ class MinifiedStartupSmokeTest {
         val HOME_TAB: Pattern = Pattern.compile("首页|首頁|Home")
         val SKIP_GUIDE: Pattern = Pattern.compile("跳过|略過|Skip")
         val HOME_TAB_OR_SKIP: Pattern = Pattern.compile("${HOME_TAB.pattern()}|${SKIP_GUIDE.pattern()}")
+
+        /** The system ANR dialog — `android`'s own views, not the wedged app's. */
+        const val ANR_WAIT_BUTTON = "android:id/aerr_wait"
+        const val ANR_DIALOG_TITLE = "android:id/alertTitle"
+
+        /** `app_name`, which is `translatable="false"` — what the system puts in "X isn't responding". */
+        const val APP_LABEL = "Nodyssey"
 
         /** The app bar action's content description, not a tab label — see where it is used. */
         val SEARCH_ACTION: Pattern = Pattern.compile("搜索|搜尋|Search")
