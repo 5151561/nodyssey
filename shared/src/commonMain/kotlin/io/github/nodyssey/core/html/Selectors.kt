@@ -125,7 +125,15 @@ object Selectors {
         "id=\"temp-script\"",
     )
 
-    val LOGIN_REQUIRED_MARKERS = listOf("需要注册用户才能查看", "权限不足")
+    /**
+     * The third entry is a board's refusal, not a post's, and it is JSON rather than a page: a
+     * signed-out request for 内版 — a board whose threads are members-only — is answered
+     * `400 {"success":false,"message":"Wrong category"}` (measured 2026-09-13, with and without the
+     * `?sortBy=` the app sends). A slug that does not exist at all answers 404 with an empty body,
+     * so the sentence is specific to "exists, and not for you", which for a reader is 需要登录.
+     * Without it the board showed HTTP 400, which names nothing the reader can do.
+     */
+    val LOGIN_REQUIRED_MARKERS = listOf("需要注册用户才能查看", "权限不足", "Wrong category")
 
     /**
      * 阅读权限 refused: 「查看本帖需要Lv5，您的权限不足😑，请赚取🍗升级您的用户等级」.

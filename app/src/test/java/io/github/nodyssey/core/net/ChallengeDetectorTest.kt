@@ -99,6 +99,15 @@ class ChallengeDetectorTest {
         )
     }
 
+    /** 内版, signed out: JSON on an HTML route, and the one sentence that separates it from a 404. */
+    @Test
+    fun `a members-only board refused as JSON is a login wall`() {
+        assertEquals(
+            SiteError.LoginRequired,
+            detector.detect("""{"success":false,"message":"Wrong category"}""", 400, emptyMap(), URL),
+        )
+    }
+
     @Test
     fun `a login wall is reported separately so the UI can offer sign-in`() {
         assertEquals(

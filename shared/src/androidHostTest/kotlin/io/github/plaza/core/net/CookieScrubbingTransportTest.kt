@@ -41,14 +41,27 @@ class CookieScrubbingTransportTest {
     }
 
     @Test
-    fun `an answer that sets nothing leaves the store alone`() = runTest {
-        store.setCookie(config.baseUrl, "sortBy=replyTime")
+    fun `an answer that sets nothing leaves a clean store alone`() = runTest {
+        store.setCookie(config.baseUrl, "session=abc")
         val flushesBefore = store.flushes
         val transport = CookieScrubbingTransport(RecordingTransport(httpResponse("<html/>")), cookies)
 
         transport.execute(get)
 
         assertEquals(flushesBefore, store.flushes, "nothing to expire, nothing to flush")
+    }
+
+    /** An install that held the cookie from before: it must go before the first request, not after. */
+    @Test
+    fun `a cookie already in the store is expired before the request goes out`() = runTest {
+        store.setCookie(config.baseUrl, "sortBy=replyTime")
+        val inner = RecordingTransport(httpResponse("<html/>"))
+        val transport = CookieScrubbingTransport(inner, cookies)
+
+        transport.execute(get)
+
+        assertFalse("sortBy=replyTime" in header())
+        assertEquals(1, inner.requests.size)
     }
 
     @Test
