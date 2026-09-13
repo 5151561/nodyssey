@@ -97,6 +97,7 @@ import io.github.plaza.core.net.NSUrlSessionTransport
 import io.github.plaza.core.net.ProxiedUrlSession
 import io.github.plaza.core.net.ProxyRoute
 import io.github.plaza.core.net.ProxyRouteType
+import io.github.plaza.core.net.RetryingTransport
 import io.github.plaza.core.net.SessionCookies
 import io.github.plaza.core.net.SiteHtmlClient
 import io.github.plaza.core.net.UserAgent
@@ -255,7 +256,7 @@ class IosAppContainer(
      * the image hosts are six other people's.
      */
     private val transport by lazy {
-        DynamicSignTransport(NSUrlSessionTransport { forumSession.current }, userAgent.value)
+        RetryingTransport(DynamicSignTransport(NSUrlSessionTransport { forumSession.current }, userAgent.value))
     }
 
     private val htmlClient by lazy { SiteHtmlClient(transport, dispatchers, NodeSeekSite.CONFIG) }

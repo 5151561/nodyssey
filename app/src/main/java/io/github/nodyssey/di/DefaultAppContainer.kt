@@ -113,6 +113,7 @@ import io.github.plaza.core.crash.FileCrashReportStore
 import io.github.plaza.core.net.BrowserHeadersInterceptor
 import io.github.plaza.core.net.CrossOriginRefererInterceptor
 import io.github.plaza.core.net.OkHttpTransport
+import io.github.plaza.core.net.RetryingTransport
 import io.github.plaza.core.net.SessionCookies
 import io.github.plaza.core.net.SiteHtmlClient
 import io.github.plaza.core.net.UserAgent
@@ -421,7 +422,11 @@ class DefaultAppContainer(
      * `User-Agent` off the chain; as a decorator it writes that header itself, which is what lets the
      * same code sign a request on a platform with no interceptors — see [DynamicSignTransport].
      */
-    private val transport by lazy { DynamicSignTransport(OkHttpTransport(okHttpClient), userAgent.value) }
+    private val transport by lazy {
+        // Retry sits outside the signature: a retried vote is signed once and sent once, because
+        // [RetryingTransport] never repeats a write.
+        RetryingTransport(DynamicSignTransport(OkHttpTransport(okHttpClient), userAgent.value))
+    }
 
     private val htmlClient by lazy { SiteHtmlClient(transport, dispatchers, NodeSeekSite.CONFIG) }
 
