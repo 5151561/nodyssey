@@ -248,19 +248,6 @@ class PostListViewModelTest {
             assertTrue(before === vm.uiState.value)
         }
 
-    @Test
-    fun `the challenge url follows the selected board`() =
-        runTest(dispatcher) {
-            val vm = viewModel()
-            advanceUntilIdle()
-            assertTrue(vm.challengeUrl().startsWith("https://www.nodeseek.com"))
-
-            vm.selectCategory("tech")
-            advanceUntilIdle()
-
-            assertTrue("got ${vm.challengeUrl()}", vm.challengeUrl().contains("tech"))
-        }
-
     /** End to end through Room: the network writes, the pager reads, the rows come out in order. */
     @Test
     fun `posts reach the ui through the database`() =

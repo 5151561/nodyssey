@@ -82,7 +82,7 @@ internal fun ConversationList(
     onRecipientClick: (UserSearchResult) -> Unit,
     onSignIn: () -> Unit,
     /** Clears a Cloudflare challenge; the sheet's search is the one thing here that can hit one. */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -289,7 +289,7 @@ private fun NewConversationSheet(
     onDismiss: () -> Unit,
     onRecipientClick: (UserSearchResult) -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,

@@ -10,8 +10,14 @@ package io.github.plaza.core.net
  */
 class ChallengeDetector(private val markers: PageMarkers) {
 
-    /** Returns the reason this response is unusable, or `null` when it carries real content. */
-    fun detect(html: String, statusCode: Int, headers: Map<String, String>): SiteError? {
+    /**
+     * Returns the reason this response is unusable, or `null` when it carries real content.
+     *
+     * [url] is the address that was requested, and it is here for one case: a challenge is cleared
+     * by opening the refused address in a web view, and only the caller knows what that was. See
+     * [SiteError.Cloudflare].
+     */
+    fun detect(html: String, statusCode: Int, headers: Map<String, String>, url: String): SiteError? {
         // Before the login markers, not after: see [PageMarkers.levelRequired] — the two refusals
         // can share a phrase, and only the more specific one carries a level to show.
         markers.levelRequired.firstNotNullOfOrNull { it.find(html) }?.let { match ->
@@ -30,8 +36,8 @@ class ChallengeDetector(private val markers: PageMarkers) {
         if (markers.usablePage.any { html.contains(it) }) return null
 
         val normalized = headers.mapKeys { it.key.lowercase() }
-        if (normalized["cf-mitigated"]?.lowercase() == "challenge") return SiteError.Cloudflare
-        if (markers.challenge.any { html.contains(it) }) return SiteError.Cloudflare
+        if (normalized["cf-mitigated"]?.lowercase() == "challenge") return SiteError.Cloudflare(url)
+        if (markers.challenge.any { html.contains(it) }) return SiteError.Cloudflare(url)
 
         // After the Cloudflare checks, before the generic status handling: a 429 that carried a
         // challenge is Cloudflare's, everything else is the site's own throttle, and "HTTP 429" as a

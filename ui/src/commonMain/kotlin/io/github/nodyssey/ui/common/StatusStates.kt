@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -95,7 +96,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun SiteError.shortMessage(): String =
     when (this) {
-        SiteError.Cloudflare -> stringResource(Res.string.status_challenge_title)
+        is SiteError.Cloudflare -> stringResource(Res.string.status_challenge_title)
 
         SiteError.LoginRequired -> stringResource(Res.string.status_sign_in_title)
 
@@ -148,8 +149,12 @@ fun SiteErrorState(
      * MANAGE one, which waits for no cookie, so it sat there after the wall came down and offered a
      * way out to a real browser, where a pass earned lands in a jar this app cannot read. Nine
      * screens were doing that, and nothing in the code said so. Now forgetting it does not compile.
+     *
+     * Takes the address to open, and takes it from the error rather than from the screen: the screen
+     * knows what it was reading, not what Cloudflare refused, and on NodeSeek those are not the same
+     * — see [SiteError.Cloudflare].
      */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
     boardTitle: String? = null,
     onBrowseElsewhere: (() -> Unit)? = null,
@@ -166,7 +171,7 @@ fun SiteErrorState(
     val retry = StatusAction(stringResource(Res.string.action_retry), onRetry)
 
     when (error) {
-        SiteError.Cloudflare ->
+        is SiteError.Cloudflare ->
             StatusView(
                 icon = Icons.Default.CheckCircle,
                 shape = StatusShapes.Challenge,
@@ -175,7 +180,8 @@ fun SiteErrorState(
                 title = stringResource(Res.string.status_challenge_title),
                 description = stringResource(Res.string.status_challenge_body, siteName),
                 footnote = stringResource(Res.string.status_challenge_footnote),
-                primaryAction = StatusAction(stringResource(Res.string.action_verify), onVerify),
+                primaryAction =
+                StatusAction(stringResource(Res.string.action_verify)) { onVerify(error.url) },
                 secondaryAction = retry,
                 modifier = modifier,
             )
@@ -489,7 +495,12 @@ fun NotWiredState(
 @Composable
 private fun ChallengeStatePreview() {
     PlazaTheme {
-        SiteErrorState(error = SiteError.Cloudflare, onRetry = {}, onOpenBrowser = {}, onVerify = {})
+        SiteErrorState(
+            error = SiteError.Cloudflare(NodeSeekSite.BASE_URL),
+            onRetry = {},
+            onOpenBrowser = {},
+            onVerify = {},
+        )
     }
 }
 

@@ -537,7 +537,7 @@ class PostDetailScreenTest {
 
     @Test
     fun `an error with nothing cached takes over the screen`() {
-        setScreen(PostDetailUiState(body = null, error = SiteError.Cloudflare))
+        setScreen(PostDetailUiState(body = null, error = SiteError.Cloudflare("https://www.nodeseek.com/page-2")))
 
         composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
         composeRule.onNodeWithText("去验证").assertIsDisplayed()

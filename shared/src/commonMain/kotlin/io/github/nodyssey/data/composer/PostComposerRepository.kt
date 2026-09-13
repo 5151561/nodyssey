@@ -6,7 +6,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.html.PostListParser
-import io.github.nodyssey.core.html.Selectors
+import io.github.nodyssey.core.net.throwIfChallenge
+import io.github.nodyssey.core.net.throwIfNotJson
 import io.github.nodyssey.model.FeedSort
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
@@ -196,13 +197,7 @@ class DefaultPostComposerRepository(
                 ),
             )
         val body = response.body
-        // Cloudflare answers a blocked request with 403 plus challenge HTML, so the challenge
-        // check must run before the status check — "please verify" and "please sign in" send the
-        // user down entirely different recovery paths.
-        val isChallenge =
-            response.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
-                Selectors.CLOUDFLARE_MARKERS.any(body::contains)
-        if (isChallenge) throw SiteException(SiteError.Cloudflare)
+        throwIfChallenge(NodeSeekSite.NEW_DISCUSSION_API_PATH, body, response.header("cf-mitigated"))
         if (response.code == 401 || response.code == 403) {
             throw SiteException(SiteError.LoginRequired)
         }
@@ -212,7 +207,7 @@ class DefaultPostComposerRepository(
                 detail = parseErrorDetail(body),
             )
         }
-        if (body.trimStart().startsWith("<")) throw SiteException(SiteError.Cloudflare)
+        throwIfNotJson(NodeSeekSite.NEW_DISCUSSION_API_PATH, body)
         parsePublishResponse(body, response.header("Location")) ?: findPublishedPostId(submission)
     }
 
@@ -250,15 +245,12 @@ class DefaultPostComposerRepository(
         val body = response.body
         // Challenge first, then status, then the body's own verdict — the same order and the
         // same reasons as [publish].
-        val isChallenge =
-            response.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
-                Selectors.CLOUDFLARE_MARKERS.any(body::contains) ||
-                body.trimStart().startsWith("<")
-        if (isChallenge) throw SiteException(SiteError.Cloudflare)
+        throwIfChallenge(NodeSeekSite.EDIT_DISCUSSION_API_PATH, body, response.header("cf-mitigated"))
         if (response.code == 401 || response.code == 403) throw SiteException(SiteError.LoginRequired)
         if (!response.isSuccessful) {
             throw SiteException(error = SiteError.Http(response.code), detail = parseErrorDetail(body))
         }
+        throwIfNotJson(NodeSeekSite.EDIT_DISCUSSION_API_PATH, body)
         throwIfRefused(body)
     }
 

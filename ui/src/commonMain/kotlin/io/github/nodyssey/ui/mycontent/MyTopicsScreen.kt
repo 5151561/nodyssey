@@ -31,7 +31,7 @@ fun MyTopicsRoute(
     onBrowseFeed: () -> Unit,
     onOpenBrowser: () -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

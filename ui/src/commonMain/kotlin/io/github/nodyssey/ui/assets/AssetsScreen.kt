@@ -43,6 +43,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.DailyQuota
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
@@ -52,6 +53,7 @@ import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
 import io.github.nodyssey.ui.common.SpendDetail
 import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.assets_board
@@ -108,7 +110,7 @@ fun AssetsRoute(
     onBack: () -> Unit,
     onChickenLedger: () -> Unit,
     onStardust: () -> Unit,
-    onOpenBrowser: () -> Unit,
+    onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -145,7 +147,7 @@ fun AssetsScreen(
     onRetryBoard: () -> Unit,
     onChickenLedger: () -> Unit,
     onStardust: () -> Unit,
-    onOpenBrowser: () -> Unit,
+    onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -179,7 +181,7 @@ fun AssetsScreen(
                 // web view in one place only, so the two are the same closure — and a challenge
                 // reaching it by fallback is exactly how other screens ended up handing one to a
                 // plain reading view without anything in the code saying so.
-                onOpenBrowser = onOpenBrowser,
+                onOpenBrowser = { onOpenBrowser(state.error.webViewUrl(NodeSeekSite.BASE_URL)) },
                 onVerify = onOpenBrowser,
                 onSignIn = onSignIn,
                 modifier = Modifier.padding(padding),

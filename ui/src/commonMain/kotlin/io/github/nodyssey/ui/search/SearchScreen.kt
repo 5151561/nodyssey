@@ -79,6 +79,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.data.UserSearchResult
@@ -91,6 +92,7 @@ import io.github.nodyssey.ui.common.NavigationDirectionThreshold
 import io.github.nodyssey.ui.common.NoSearchResultsState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.postlist.FeedRowPlaceholder
 import io.github.nodyssey.ui.postlist.PostRow
 import io.github.nodyssey.ui.postlist.toSiteError
@@ -168,7 +170,8 @@ fun SearchRoute(
         onBack = onBack,
         onRetry = viewModel::retryUsers,
         onSignIn = onSignIn,
-        onVerify = { onVerify(viewModel.challengeUrl()) },
+        // The address comes off the failure now, not from a rebuilt search URL.
+        onVerify = onVerify,
         modifier = modifier,
         onNavigationBarHiddenChanged = onNavigationBarHiddenChanged,
     )
@@ -197,7 +200,7 @@ fun SearchScreen(
     onUserClick: (Long) -> Unit,
     onRetry: () -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
     /**
      * Leaves 搜索 for whatever it was opened from — 首页, in every case the app can reach today.
@@ -626,7 +629,7 @@ private fun SearchResults(
     postResults: LazyPagingItems<FeedPost>?,
     onRetry: () -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
 ) {
     if (state.target == SearchTarget.USERS) {
         when (val loadState = state.userLoadState) {
@@ -638,7 +641,7 @@ private fun SearchResults(
                 SiteErrorState(
                     error = loadState.error,
                     onRetry = onRetry,
-                    onOpenBrowser = onVerify,
+                    onOpenBrowser = { onVerify(loadState.error.webViewUrl(NodeSeekSite.BASE_URL)) },
                     onSignIn = onSignIn,
                     onVerify = onVerify,
                 )
@@ -662,7 +665,7 @@ private fun SearchResults(
             SiteErrorState(
                 error = refresh.error.toSiteError(),
                 onRetry = posts::retry,
-                onOpenBrowser = onVerify,
+                onOpenBrowser = { onVerify(refresh.error.toSiteError().webViewUrl(NodeSeekSite.BASE_URL)) },
                 onSignIn = onSignIn,
                 onVerify = onVerify,
             )

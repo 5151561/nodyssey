@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
-import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.NodeSeekStickers
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.composer_emoji_group_acn
 import io.github.nodyssey.ui.resources.composer_emoji_group_chick
@@ -41,13 +41,17 @@ import org.jetbrains.compose.resources.stringResource
  * downloading anyway the moment a post used one. Fetching them means one Coil-cached copy serves
  * both the panel and the thread, at the price of a first open that needs the network.
  *
+ * Which stickers exist is [NodeSeekStickers]'s, not this file's: the renderer needs the same list to
+ * turn a received `:ac01:` back into a picture, and a catalogue kept here would have been a
+ * catalogue only the composer could see.
+ *
  * The panel that draws all this is `:designsys`'s [io.github.plaza.designsys.editor.EmojiPanel] and
  * knows none of it.
  */
 val NodeSeekEmojiGroups = listOf(
-    EmojiGroup({ stringResource(Res.string.composer_emoji_group_acn) }, acStickers()),
-    EmojiGroup({ stringResource(Res.string.composer_emoji_group_onion) }, yctStickers()),
-    EmojiGroup({ stringResource(Res.string.composer_emoji_group_chick) }, xhjStickers()),
+    EmojiGroup({ stringResource(Res.string.composer_emoji_group_acn) }, stickers(NodeSeekStickers.AC)),
+    EmojiGroup({ stringResource(Res.string.composer_emoji_group_onion) }, stickers(NodeSeekStickers.YCT)),
+    EmojiGroup({ stringResource(Res.string.composer_emoji_group_chick) }, stickers(NodeSeekStickers.XHJ)),
     EmojiGroup(
         { stringResource(Res.string.composer_emoji_group_fluent) },
         listOf(
@@ -58,38 +62,14 @@ val NodeSeekEmojiGroups = listOf(
     ),
 )
 
-private fun acStickers(): List<EmojiEntry.Sticker> =
-    (
-        (1..54).map { it.toString().padStart(2, '0') } +
-            (1001..1040).map(Int::toString) +
-            (2001..2055).map(Int::toString)
+private fun stickers(names: List<String>): List<EmojiEntry.Sticker> =
+    names.map { name ->
+        EmojiEntry.Sticker(
+            name = name,
+            shortcode = " :$name: ",
+            url = requireNotNull(NodeSeekStickers.urlFor(name)),
         )
-        .map { siteSticker(group = "ac", code = it, extension = "png") }
-
-private fun yctStickers(): List<EmojiEntry.Sticker> =
-    (1..22)
-        .map { it.toString().padStart(3, '0') }
-        .map { siteSticker(group = "yct", code = it, extension = "gif") }
-
-private fun xhjStickers(): List<EmojiEntry.Sticker> =
-    (1..32).map { number ->
-        val code = number.toString().padStart(3, '0')
-        val extension = when (number) {
-            1, 2, 3, 5, 6, 7, 11, 22, 24, 25, 31, 32 -> "png"
-            else -> "gif"
-        }
-        siteSticker(group = "xhj", code = code, extension = extension)
     }
-
-private fun siteSticker(
-    group: String,
-    code: String,
-    extension: String,
-) = EmojiEntry.Sticker(
-    name = group + code,
-    shortcode = " :$group$code: ",
-    url = NodeSeekSite.stickerUrl(group = group, code = code, extension = extension),
-)
 
 /**
  * A sticker preview, fetched from the site.

@@ -9,6 +9,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -104,11 +105,13 @@ class OfflineReadFallbackTest {
     @Test
     fun `a Cloudflare challenge is not answered from storage`() =
         runTest {
-            remote.detailError = SiteException(SiteError.Cloudflare)
+            remote.detailError = SiteException(SiteError.Cloudflare("https://www.nodeseek.com/page-2"))
             stored.pages[7L to 1] =
                 StoredThreadPage(FakePostRemoteDataSource.detail(postId = 7, page = 1), downloadedAtMillis = 500L)
 
-            assertEquals(SiteError.Cloudflare, refusalOf { repository().refreshThread(postId = 7, page = 1) })
+            assertTrue(
+                refusalOf { repository().refreshThread(postId = 7, page = 1) } is SiteError.Cloudflare,
+            )
         }
 
     @Test

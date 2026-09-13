@@ -310,7 +310,7 @@ fun PostDetailScreen(
     /** Opens the sign-in page. Separate from [onOpenBrowser] because "登录" is not "看看网页版". */
     onSignIn: () -> Unit = { onOpenBrowser(postUrl) },
     /** Clears a Cloudflare challenge on this thread's own URL. */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     /** `null` opens an empty reply; a floor addresses one (6d). The editor itself is hosted by the route. */
     onReply: (FloorReference?) -> Unit = {},
     /** Appends one more 引用 block to whatever the editor already holds. */

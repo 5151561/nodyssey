@@ -28,6 +28,16 @@ import org.jetbrains.compose.resources.stringResource
  */
 
 /**
+ * Where to send a web view for this failure.
+ *
+ * A challenge names the address it refused, and that address is the only one worth opening: NodeSeek
+ * exempts its home page from the challenge, so the reconstructed "page the reader was on" was
+ * routinely a page with nothing to solve — see [SiteError.Cloudflare]. Everything else has no such
+ * address, so the caller's own page stands.
+ */
+fun SiteError.webViewUrl(fallback: String): String = (this as? SiteError.Cloudflare)?.url ?: fallback
+
+/**
  * Which button this failure deserves, or none when the reader cannot do anything about it.
  *
  * Null in four cases, and each is a button that would lie: a level wall no press can raise, a 私有
@@ -38,7 +48,8 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun siteErrorRecovery(
     error: SiteError,
-    onVerify: (() -> Unit)? = null,
+    /** Handed the address Cloudflare refused — see [SiteError.Cloudflare]. */
+    onVerify: ((String) -> Unit)? = null,
     onSignIn: (() -> Unit)? = null,
     onRetry: (() -> Unit)? = null,
 ): StatusAction? {
@@ -46,7 +57,7 @@ fun siteErrorRecovery(
     val signIn = stringResource(Res.string.action_sign_in)
     val retry = stringResource(Res.string.action_retry)
     return when (error) {
-        SiteError.Cloudflare -> onVerify?.let { StatusAction(verify, it) }
+        is SiteError.Cloudflare -> onVerify?.let { open -> StatusAction(verify) { open(error.url) } }
 
         SiteError.LoginRequired -> onSignIn?.let { StatusAction(signIn, it) }
 
@@ -90,7 +101,7 @@ fun SiteErrorSnackbar(
     snackbarHostState: SnackbarHostState,
     onShown: () -> Unit,
     detail: String? = null,
-    onVerify: (() -> Unit)? = null,
+    onVerify: ((String) -> Unit)? = null,
     onSignIn: (() -> Unit)? = null,
     onRetry: (() -> Unit)? = null,
 ) {
@@ -118,7 +129,7 @@ fun SiteErrorSnackbar(
  */
 internal fun snackbarDuration(error: SiteError): SnackbarDuration =
     when (error) {
-        SiteError.Cloudflare, SiteError.LoginRequired, SiteError.SessionUnrecognised ->
+        is SiteError.Cloudflare, SiteError.LoginRequired, SiteError.SessionUnrecognised ->
             SnackbarDuration.Indefinite
 
         else -> SnackbarDuration.Short

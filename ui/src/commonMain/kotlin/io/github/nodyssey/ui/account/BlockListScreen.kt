@@ -78,7 +78,7 @@ fun BlockListRoute(
     onBack: () -> Unit,
     onSignIn: () -> Unit,
     /** Clears a Cloudflare challenge, then comes back to this page. */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onOpenUser: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {

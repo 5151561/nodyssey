@@ -425,7 +425,7 @@ internal fun BookmarkStaleBanner(
     error: SiteError,
     onRetry: () -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val recovery = siteErrorRecovery(error, onVerify = onVerify, onSignIn = onSignIn, onRetry = onRetry)

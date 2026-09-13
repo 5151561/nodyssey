@@ -154,7 +154,7 @@ class OfflineLibraryTest {
     @Test
     fun `a challenge stops the drain without asking the scheduler to retry`() =
         runTest {
-            remote.detailError = SiteException(SiteError.Cloudflare)
+            remote.detailError = SiteException(SiteError.Cloudflare("https://www.nodeseek.com/page-2"))
             val library = library(testPreferenceStore(backgroundScope))
 
             library.download(listOf(1L, 2L))

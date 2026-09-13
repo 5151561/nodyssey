@@ -124,7 +124,7 @@ class CategoryRepositoryTest {
             var fail = false
             val client =
                 RecordingJsonSource {
-                    if (fail) throw SiteException(SiteError.Cloudflare) else successBody("daily", "tech")
+                    if (fail) throw SiteException(SiteError.Cloudflare("https://www.nodeseek.com/page-2")) else successBody("daily", "tech")
                 }
             val repository = repository(client)
             repository.refreshIfNeeded()

@@ -123,7 +123,7 @@ fun BookmarksRoute(
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     /** Clears a Cloudflare challenge and returns; 收藏 hits one like any other authenticated list. */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -181,7 +181,7 @@ fun BookmarksScreen(
     onRetry: () -> Unit,
     onSignIn: () -> Unit,
     /** Clears a Cloudflare challenge on the site's own page, then comes back here. */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onFilter: (BookmarkFilter) -> Unit,
     onSort: (BookmarkSort) -> Unit,
     onSearching: (Boolean) -> Unit,
@@ -393,7 +393,7 @@ private fun BookmarkList(
     onPostClick: (Long) -> Unit,
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onRetry: () -> Unit,
     onStartSelection: (Long) -> Unit,
     onToggleSelection: (Long) -> Unit,

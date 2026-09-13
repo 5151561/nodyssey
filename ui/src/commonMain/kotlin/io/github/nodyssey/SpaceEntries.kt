@@ -68,10 +68,8 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
             onPostClick = { postId -> backStack.add(PostDetailKey(postId)) },
             onOpenBrowser = openWebUrl,
             onSignIn = { backStack.add(SignInKey) },
-            onVerify = {
-                backStack.add(
-                    WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
-                )
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
         )
     }
@@ -98,7 +96,7 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
             // view rather than in the cookie-less system browser.
             onOpenBrowser = { backStack.add(WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE)) },
             onSignIn = { backStack.add(SignInKey) },
-            onVerify = { backStack.add(WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE)) },
+            onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
         )
     }
 
@@ -113,7 +111,7 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
             onBrowseFeed = openHomeTab,
             onOpenBrowser = { backStack.add(WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE)) },
             onSignIn = { backStack.add(SignInKey) },
-            onVerify = { backStack.add(WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE)) },
+            onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },
         )
     }
 
@@ -151,10 +149,8 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
             onStardust = { backStack.add(StardustKey()) },
             // In-app, not the system browser: a Cloudflare pass earned out there lands in
             // Chrome's cookie store, and the app's own retry keeps failing forever.
-            onOpenBrowser = {
-                backStack.add(
-                    WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
-                )
+            onOpenBrowser = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
             onSignIn = { backStack.add(SignInKey) },
         )
@@ -175,14 +171,8 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
             // MANAGE waits for no cookie, so it sat there after the wall came down and left
             // the reader to work out they were done — with a way out to a real browser on
             // the toolbar, which is where a pass earned lands somewhere the app cannot read.
-            onOpenBrowser = {
-                backStack.add(
-                    WebKey(
-                        NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH,
-                        siteTitle,
-                        WebViewGoal.CHALLENGE,
-                    ),
-                )
+            onOpenBrowser = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
             onSignIn = { backStack.add(SignInKey) },
         )
@@ -209,14 +199,8 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
                 )
             },
             onSignIn = { backStack.add(SignInKey) },
-            onVerify = {
-                backStack.add(
-                    WebKey(
-                        ledgerUrl ?: NodeSeekSite.BASE_URL,
-                        siteTitle,
-                        WebViewGoal.CHALLENGE,
-                    ),
-                )
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
         )
     }

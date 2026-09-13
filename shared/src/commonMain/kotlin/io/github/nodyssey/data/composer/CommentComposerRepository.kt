@@ -5,7 +5,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.html.Selectors
+import io.github.nodyssey.core.net.throwIfChallenge
+import io.github.nodyssey.core.net.throwIfNotJson
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.HttpBody
@@ -132,7 +133,7 @@ class DefaultCommentComposerRepository(
             ),
         )
         val response = transport.execute(requestTo(NodeSeekSite.NEW_COMMENT_API_PATH, submission.postId, payload))
-        throwIfChallenge(response.header("cf-mitigated"), response.body)
+        throwIfChallenge(NodeSeekSite.NEW_COMMENT_API_PATH, response.body, response.header("cf-mitigated"))
         if (response.code == 401 || response.code == 403) {
             throw SiteException(SiteError.LoginRequired)
         }
@@ -142,6 +143,7 @@ class DefaultCommentComposerRepository(
                 detail = parseMessage(response.body),
             )
         }
+        throwIfNotJson(NodeSeekSite.NEW_COMMENT_API_PATH, response.body)
         val floor = parsePublishResponse(response.body)
         // The server has already accepted the reply. Local bookkeeping must not turn that into
         // a reported publish failure and invite a duplicate retry if Room ever refuses a write.
@@ -158,13 +160,14 @@ class DefaultCommentComposerRepository(
             ),
         )
         val response = transport.execute(requestTo(NodeSeekSite.EDIT_COMMENT_API_PATH, postId, payload))
-        throwIfChallenge(response.header("cf-mitigated"), response.body)
+        throwIfChallenge(NodeSeekSite.EDIT_COMMENT_API_PATH, response.body, response.header("cf-mitigated"))
         if (response.code == 401 || response.code == 403) {
             throw SiteException(SiteError.LoginRequired)
         }
         if (!response.isSuccessful) {
             throw SiteException(error = SiteError.Http(response.code), detail = parseMessage(response.body))
         }
+        throwIfNotJson(NodeSeekSite.EDIT_COMMENT_API_PATH, response.body)
         // Same reason [parsePublishResponse] re-reads a 200: a refusal the board makes rather
         // than the router arrives as `success:false` with the sentence to show.
         val root = runCatching { json.parseToJsonElement(response.body).jsonObject }
@@ -197,18 +200,6 @@ class DefaultCommentComposerRepository(
             ),
             body = HttpBody.Text(payload),
         )
-
-    /**
-     * Cloudflare answers a blocked write with 403 plus challenge HTML, so this runs before any
-     * status handling: "please verify" and "please sign in" are different recoveries.
-     */
-    private fun throwIfChallenge(cfMitigated: String?, body: String) {
-        val isChallenge =
-            cfMitigated?.equals("challenge", ignoreCase = true) == true ||
-                Selectors.CLOUDFLARE_MARKERS.any(body::contains) ||
-                body.trimStart().startsWith("<")
-        if (isChallenge) throw SiteException(SiteError.Cloudflare)
-    }
 
     @Serializable
     private data class EditPayload(

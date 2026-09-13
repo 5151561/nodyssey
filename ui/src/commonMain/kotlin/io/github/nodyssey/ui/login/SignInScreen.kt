@@ -138,8 +138,9 @@ fun SignInRoute(
         onShown = viewModel::consumeFailure,
         detail = state.failureDetail,
         // No 去登录 recovery: this *is* the sign-in screen. A challenge is the one failure the web
-        // view can clear, and it lands on the same page 改用网页登录 would have opened anyway.
-        onVerify = onUseWebSignIn,
+        // view can clear, and it lands on the same page 改用网页登录 would have opened anyway — so
+        // the address the failure names is deliberately dropped here, unlike everywhere else.
+        onVerify = { onUseWebSignIn() },
         onRetry = viewModel::retry,
     )
 

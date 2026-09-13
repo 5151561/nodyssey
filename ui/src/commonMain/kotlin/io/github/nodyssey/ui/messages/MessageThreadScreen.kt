@@ -81,10 +81,12 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.NodeSeekStickers
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.composer.AttachmentTray
 import io.github.nodyssey.ui.composer.NodeSeekEmojiPanel
 import io.github.nodyssey.ui.composer.rememberImagePicker
@@ -139,7 +141,7 @@ fun MessageThreadRoute(
     viewModel: MessageThreadViewModel,
     onBack: () -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onOpenBrowser: (String) -> Unit,
     onOpenSpace: () -> Unit,
     modifier: Modifier = Modifier,
@@ -180,7 +182,7 @@ fun MessageThreadScreen(
     draftState: TextFieldState,
     onBack: () -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onOpenBrowser: (String) -> Unit,
     /** The other side's space. The title block is the handle onto it; see the top bar. */
     onOpenSpace: () -> Unit,
@@ -290,7 +292,7 @@ fun MessageThreadScreen(
                             onRetry = onRetryLoad,
                             // The hand-written `if (LoginRequired)` is gone: SiteErrorState picks the
                             // recovery per error now, which is the whole reason it takes all three.
-                            onOpenBrowser = onVerify,
+                            onOpenBrowser = { onVerify(state.error.webViewUrl(NodeSeekSite.BASE_URL)) },
                             onVerify = onVerify,
                             onSignIn = onSignIn,
                         )
@@ -487,7 +489,11 @@ private fun MessageBubbleRow(
                 )
             if (message.isMarkdown) {
                 PostRichContent(
-                    nodes = parseMarkdown(message.content),
+                    // With the resolver, because 私信 arrive as the source that was typed: the
+                    // server expands `:ac01:` in its own renderer and hands the API the shortcode
+                    // untouched. Without it the emoji panel could send a sticker the thread then
+                    // showed back as six characters of punctuation.
+                    nodes = parseMarkdown(message.content, NodeSeekStickers::urlFor),
                     onLinkClick = onOpenBrowser,
                     onImageClick = onOpenBrowser,
                     textStyle = textStyle,

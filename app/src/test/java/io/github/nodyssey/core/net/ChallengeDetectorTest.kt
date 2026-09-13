@@ -13,13 +13,21 @@ import org.junit.Test
  * [NodeSeekSite.CONFIG]'s markers against pages captured from the site they were read off.
  */
 class ChallengeDetectorTest {
+    /**
+     * The address the request was for. A challenge carries it back so the web view can be sent
+     * somewhere that will actually ask — see [SiteError.Cloudflare]. Not the home page on purpose:
+     * that is the one path NodeSeek's zone exempts, which is the bug this parameter exists for.
+     */
+    private companion object {
+        const val URL = "https://www.nodeseek.com/categories/daily"
+    }
 
     private val detector = ChallengeDetector(NodeSeekSite.CONFIG.markers)
 
     @Test
     fun `a real page is not a challenge`() {
-        assertNull(detector.detect(Fixtures.load("page-1.html"), 200, emptyMap()))
-        assertNull(detector.detect(Fixtures.load("post-703863-1.html"), 200, emptyMap()))
+        assertNull(detector.detect(Fixtures.load("page-1.html"), 200, emptyMap(), URL))
+        assertNull(detector.detect(Fixtures.load("post-703863-1.html"), 200, emptyMap(), URL))
     }
 
     /**
@@ -37,22 +45,45 @@ class ChallengeDetectorTest {
             <script id="temp-script" type="text/json">eyJ1c2VyIjp7fX0=</script>
             </body></html>
             """.trimIndent()
-        assertNull(detector.detect(html, 200, emptyMap()))
+        assertNull(detector.detect(html, 200, emptyMap(), URL))
     }
 
     @Test
     fun `a cloudflare interstitial is detected`() {
         assertEquals(
-            SiteError.Cloudflare,
-            detector.detect(Fixtures.load("cloudflare-challenge.html"), 403, emptyMap()),
+            SiteError.Cloudflare(URL),
+            detector.detect(Fixtures.load("cloudflare-challenge.html"), 403, emptyMap(), URL),
         )
+    }
+
+    /**
+     * The origin's own error page, captured off the live site on 2026-09-13 (`/categories/carpool`,
+     * trimmed of nginx's padding comments): nothing of NodeSeek's in it, and Cloudflare's detection
+     * script injected into it the way it is into every body Cloudflare proxies. It used to read as a
+     * challenge, which put 去验证 over a board that a retry would have opened — and the web view it
+     * opened had nothing to solve, so the wall never came down.
+     */
+    @Test
+    fun `an origin 503 carrying the detection script is the 503 it is, not a challenge`() {
+        val html =
+            """
+            <html>
+            <head><title>503 Service Temporarily Unavailable</title></head>
+            <body>
+            <center><h1>503 Service Temporarily Unavailable</h1></center>
+            <hr><center>nginx</center>
+            <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF${'$'}cv${'$'}params={r:'a3a7c40d19b2fd32',t:'MTc4OTMwODk0NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" crossorigin="anonymous"></script>
+            </body>
+            </html>
+            """.trimIndent()
+        assertEquals(SiteError.Http(503), detector.detect(html, 503, emptyMap(), URL))
     }
 
     @Test
     fun `the cf-mitigated header alone is enough`() {
         assertEquals(
-            SiteError.Cloudflare,
-            detector.detect("<html></html>", 200, mapOf("CF-Mitigated" to "challenge")),
+            SiteError.Cloudflare(URL),
+            detector.detect("<html></html>", 200, mapOf("CF-Mitigated" to "challenge"), URL),
         )
     }
 
@@ -63,6 +94,7 @@ class ChallengeDetectorTest {
                 Fixtures.load("page-1.html"),
                 200,
                 mapOf("server" to "cloudflare"),
+                URL,
             ),
         )
     }
@@ -71,7 +103,7 @@ class ChallengeDetectorTest {
     fun `a login wall is reported separately so the UI can offer sign-in`() {
         assertEquals(
             SiteError.LoginRequired,
-            detector.detect(Fixtures.load("post-login-required.html"), 200, emptyMap()),
+            detector.detect(Fixtures.load("post-login-required.html"), 200, emptyMap(), URL),
         )
     }
 
@@ -83,7 +115,7 @@ class ChallengeDetectorTest {
     fun `a level wall is its own state and carries the level`() {
         assertEquals(
             SiteError.LevelRequired(requiredLevel = 5),
-            detector.detect(Fixtures.load("post-level-required.html"), 200, emptyMap()),
+            detector.detect(Fixtures.load("post-level-required.html"), 200, emptyMap(), URL),
         )
     }
 
@@ -99,7 +131,7 @@ class ChallengeDetectorTest {
             <html><body><div id="nsk-body"><h1>查看本帖需要<b>Lv5</b>，您的权限不足😑，
             请赚取🍗升级您的用户等级</h1></div></body></html>
             """.trimIndent()
-        assertEquals(SiteError.LevelRequired(requiredLevel = null), detector.detect(html, 200, emptyMap()))
+        assertEquals(SiteError.LevelRequired(requiredLevel = null), detector.detect(html, 200, emptyMap(), URL))
     }
 
     /**
@@ -114,7 +146,7 @@ class ChallengeDetectorTest {
     fun `a private thread is its own state rather than an empty page`() {
         assertEquals(
             SiteError.PrivatePost,
-            detector.detect(Fixtures.load("post-private.html"), 404, emptyMap()),
+            detector.detect(Fixtures.load("post-private.html"), 404, emptyMap(), URL),
         )
     }
 
@@ -127,14 +159,14 @@ class ChallengeDetectorTest {
             发帖的时候可以把阅读权限设为私有，只有自己能看
             </div></div></body></html>
             """.trimIndent()
-        assertNull(detector.detect(html, 200, emptyMap()))
+        assertNull(detector.detect(html, 200, emptyMap(), URL))
     }
 
     @Test
     fun `an unexpected status is reported as blocked`() {
         assertEquals(
             SiteError.Http(500),
-            detector.detect("<html>oops</html>", 500, emptyMap()),
+            detector.detect("<html>oops</html>", 500, emptyMap(), URL),
         )
     }
 }

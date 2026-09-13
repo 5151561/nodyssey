@@ -85,9 +85,10 @@ data class PageMarkers(
     /**
      * Proof that this *is* the site rather than something served instead of it.
      *
-     * Checked before the challenge markers and wins over them: Cloudflare inlines its
-     * `/cdn-cgi/challenge-platform/` script into every page it proxies, challenge or not, so a real
-     * page carries a challenge marker too. Content beats suspicion.
+     * Checked before the challenge markers and wins over them: Cloudflare inlines a script from
+     * under `/cdn-cgi/challenge-platform/` into every page it proxies, challenge or not, so a marker
+     * list that ever grows loose enough to match it must still lose to real content. Content beats
+     * suspicion. See [CLOUDFLARE_CHALLENGE_MARKERS] for the page that had no content to win with.
      */
     val usablePage: List<String>,
     /** The site's own wording for "this needs an account". */
@@ -121,10 +122,21 @@ data class PageMarkers(
 /**
  * Cloudflare's, not any one site's — which is why they are a default here rather than something each
  * site repeats in its own selector file.
+ *
+ * The interstitial's own markup only, never the bare `/cdn-cgi/challenge-platform/` prefix. Cloudflare
+ * injects its JS-detection script, `/cdn-cgi/challenge-platform/scripts/jsd/main.js`, into **every**
+ * HTML body it proxies — and that includes the origin's own error pages. Measured on 2026-09-13:
+ * NodeSeek's nginx answered `/categories/carpool`, `/categories/life`, `/categories/photo-share` and
+ * `/categories/sandbox` with its stock `503 Service Temporarily Unavailable` page, carrying nothing
+ * of the site's and that one injected script. The prefix matched it, the board was declared a
+ * challenge, and 去验证 opened a web view on a page with nothing to solve — so no `cf_clearance` was
+ * ever issued and the next request hit the same 503. The challenge page proper loads its
+ * orchestrator from under `/cdn-cgi/challenge-platform/h/`, which the detection script never is.
  */
 val CLOUDFLARE_CHALLENGE_MARKERS =
     listOf(
-        "/cdn-cgi/challenge-platform/",
+        "/cdn-cgi/challenge-platform/h/",
+        "_cf_chl_opt",
         "cf-browser-verification",
         "Just a moment...",
         "Checking your browser before accessing",

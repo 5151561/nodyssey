@@ -32,8 +32,9 @@ class SiteHtmlClient(
     /** Returns the page body, or throws [SiteException] describing why it is unusable. */
     override suspend fun getHtml(path: String): String = withContext(dispatchers.io) {
         val response = transport.execute(pageRequest(path))
-        challengeDetector.detect(response.body, response.code, response.headers)?.let { error ->
-            throw SiteException(error)
+        val url = absoluteUrl(path) ?: error("Invalid path: $path")
+        challengeDetector.detect(response.body, response.code, response.headers, url)?.let { failure ->
+            throw SiteException(failure)
         }
         response.body
     }

@@ -65,7 +65,7 @@ class AccountMessageSnackbarTest {
 
     @Test
     fun `a Cloudflare wall offers the verify button`() {
-        setMessage(AccountMessage.Failure(SiteError.Cloudflare))
+        setMessage(AccountMessage.Failure(SiteError.Cloudflare("https://www.nodeseek.com/page-2")))
 
         composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
         composeRule.onNodeWithText("去验证").performClick()

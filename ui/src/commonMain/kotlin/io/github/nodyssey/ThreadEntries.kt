@@ -161,8 +161,8 @@ internal fun EntryProviderScope<NavKey>.threadEntries(nav: StackEntryScope) = wi
             onSignIn = {
                 backStack.add(SignInKey)
             },
-            onVerify = {
-                backStack.add(WebKey(webUrl, siteTitle, WebViewGoal.CHALLENGE))
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
             onOpenBrowser = {
                 backStack.add(WebKey(webUrl, siteTitle, WebViewGoal.MANAGE))

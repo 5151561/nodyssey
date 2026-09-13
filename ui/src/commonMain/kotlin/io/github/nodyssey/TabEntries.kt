@@ -88,10 +88,8 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
         NotificationsRoute(
             viewModel = notificationsViewModel,
             onSignIn = { backStack.add(SignInKey) },
-            onVerify = {
-                backStack.add(
-                    WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
-                )
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
             onNotificationClick = { notification ->
                 notification.postId?.let {
@@ -117,14 +115,8 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
             showBackButton = !(isListDetailExpanded() && backStack.showsListPane()),
             onBack = { backStack.removeLastOrNull() },
             onSignIn = { backStack.add(SignInKey) },
-            onVerify = {
-                backStack.add(
-                    WebKey(
-                        NodeSeekSite.BASE_URL + NodeSeekSite.NOTIFICATION_PATH,
-                        siteTitle,
-                        WebViewGoal.CHALLENGE,
-                    ),
-                )
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
             onOpenBrowser = openWebUrl,
             // Pushed rather than swapped in: on a wide window the space lands in the list
@@ -194,10 +186,8 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
             onSignIn = { backStack.add(SignInKey) },
             hasAppUpdate = hasUpdate,
             onOpenWebsite = { openWebUrl(NodeSeekSite.BASE_URL) },
-            onVerify = {
-                backStack.add(
-                    WebKey(NodeSeekSite.BASE_URL, siteTitle, WebViewGoal.CHALLENGE),
-                )
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
         )
     }

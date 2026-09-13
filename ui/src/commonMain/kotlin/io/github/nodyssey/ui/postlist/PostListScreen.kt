@@ -90,6 +90,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import io.github.nodyssey.core.ActiveSite
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.Site
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
@@ -116,6 +117,7 @@ import io.github.nodyssey.ui.common.sharedThreadTitle
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.common.snackbarDuration
+import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_create_post
 import io.github.nodyssey.ui.resources.action_search
@@ -192,9 +194,11 @@ fun PostListRoute(
         onGoToPage = viewModel::goToPage,
         onFindPageRow = viewModel::rowIndexOfPage,
         onSignInClick = onSignIn,
-        // The challenge is cleared on the URL that failed, so the WebView loads the same list page the
-        // request did — a different page can be served without a challenge and prove nothing.
-        onRecoverInBrowser = { onVerify(viewModel.challengeUrl()) },
+        // Straight through: the address to open comes off the failure itself now. It used to be
+        // rebuilt here as "the list page the request used", which is right in principle and was
+        // wrong in fact — for 综合 that URL is `/`, the one path NodeSeek does not challenge, so
+        // 去验证 opened an ordinary home page and no pass was ever issued.
+        onRecoverInBrowser = onVerify,
         modifier = modifier,
         onNavigationBarHiddenChanged = onNavigationBarHiddenChanged,
         reselectRequests = reselectRequests,
@@ -223,7 +227,7 @@ fun PostListScreen(
     onBoardClick: (String?) -> Unit,
     onSortChange: (FeedSort) -> Unit,
     onSignInClick: () -> Unit,
-    onRecoverInBrowser: () -> Unit,
+    onRecoverInBrowser: (String) -> Unit,
     modifier: Modifier = Modifier,
     /**
      * Reloads the feed from a page it is not currently holding. Only 首页翻页栏 calls it, and only
@@ -681,7 +685,7 @@ private fun BoardFeed(
     listState: LazyListState,
     onPostClick: (FeedPost) -> Unit,
     onSignInClick: () -> Unit,
-    onRecoverInBrowser: () -> Unit,
+    onRecoverInBrowser: (String) -> Unit,
     onBrowseElsewhere: () -> Unit,
     navigationBarScrollConnection: NavigationBarScrollConnection,
     topBarScrollBehavior: TopAppBarScrollBehavior,
@@ -713,7 +717,7 @@ private fun BoardFeed(
                     // happen to be the same closure here, and the fallback is what let other
                     // screens hand a challenge to a plain reading web view without anything
                     // saying so.
-                    onOpenBrowser = onRecoverInBrowser,
+                    onOpenBrowser = { onRecoverInBrowser(error.webViewUrl(NodeSeekSite.BASE_URL)) },
                     onVerify = onRecoverInBrowser,
                     onSignIn = onSignInClick,
                     boardTitle = board.title.takeIf { board.slug != null },

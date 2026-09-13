@@ -94,7 +94,7 @@ fun ContactRoute(
     onOpenSite: (String, Boolean) -> Unit,
     onSignIn: () -> Unit,
     /** Clears a Cloudflare challenge, then comes back to this page. */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

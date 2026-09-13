@@ -57,6 +57,7 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.NodeSeekStickers
 import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.data.composer.PostPermission
@@ -315,7 +316,7 @@ private fun FollowFailureEffect(
     failure: FollowFailure?,
     snackbarHostState: SnackbarHostState,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onRetry: () -> Unit,
     onShown: () -> Unit,
 ) {
@@ -590,10 +591,14 @@ private fun GeneralTab(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
+                // Readmes arrive as source, the same as 私信 do, so a `:ac01:` in one reaches the
+                // renderer unexpanded. Whether the site's own space page draws it as a sticker has
+                // not been checked against a logged-in session — this is the app answering the way
+                // it answers everywhere else rather than a match confirmed field by field.
                 val nodes = remember(readme, readmeExpanded) {
                     val markdown =
                         if (readmeExpanded) readme else collapseMarkdown(readme, README_COLLAPSED_LINES)
-                    parseMarkdown(markdown)
+                    parseMarkdown(markdown, NodeSeekStickers::urlFor)
                 }
                 PostRichContent(
                     nodes = nodes,

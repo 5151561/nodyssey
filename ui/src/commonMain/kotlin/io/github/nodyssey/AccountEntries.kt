@@ -62,14 +62,8 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },
             onSignIn = { backStack.add(SignInKey) },
-            onVerify = {
-                backStack.add(
-                    WebKey(
-                        NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_INTRODUCTION),
-                        siteTitle,
-                        WebViewGoal.CHALLENGE,
-                    ),
-                )
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
         )
     }
@@ -88,14 +82,8 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
                 runCatching { uriHandler.openUri(uri) }.isSuccess
             },
             onSignIn = { backStack.add(SignInKey) },
-            onVerify = {
-                backStack.add(
-                    WebKey(
-                        NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_SECURITY),
-                        siteTitle,
-                        WebViewGoal.CHALLENGE,
-                    ),
-                )
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
         )
     }
@@ -119,14 +107,8 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
                 )
             },
             onSignIn = { backStack.add(SignInKey) },
-            onVerify = {
-                backStack.add(
-                    WebKey(
-                        NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_CONTACT),
-                        siteTitle,
-                        WebViewGoal.CHALLENGE,
-                    ),
-                )
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
         )
     }
@@ -139,14 +121,8 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
             onBack = { backStack.removeLastOrNull() },
             onSignIn = { backStack.add(SignInKey) },
             onOpenUser = openSpace,
-            onVerify = {
-                backStack.add(
-                    WebKey(
-                        NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_BLOCK),
-                        siteTitle,
-                        WebViewGoal.CHALLENGE,
-                    ),
-                )
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
         )
     }
@@ -158,14 +134,8 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },
             onSignIn = { backStack.add(SignInKey) },
-            onVerify = {
-                backStack.add(
-                    WebKey(
-                        NodeSeekSite.BASE_URL + NodeSeekSite.settingPath(NodeSeekSite.SETTING_PREFERENCE),
-                        siteTitle,
-                        WebViewGoal.CHALLENGE,
-                    ),
-                )
+            onVerify = { url ->
+                backStack.add(WebKey(url, siteTitle, WebViewGoal.CHALLENGE))
             },
         )
     }

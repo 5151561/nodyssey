@@ -29,6 +29,7 @@ import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.common.NumericPager
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.postlist.PostRow
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -59,7 +60,7 @@ fun AwardRoute(
         onPostClick = onPostClick,
         onPageSelected = viewModel::load,
         onRetry = viewModel::retry,
-        onOpenBrowser = { onOpenBrowser(NodeSeekSite.BASE_URL + NodeSeekSite.awardPath(state.page)) },
+        onOpenBrowser = onOpenBrowser,
         onSignIn = onSignIn,
         modifier = modifier,
     )
@@ -79,7 +80,7 @@ fun AwardScreen(
     onPostClick: (Long) -> Unit,
     onPageSelected: (Int) -> Unit,
     onRetry: () -> Unit,
-    onOpenBrowser: () -> Unit,
+    onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -121,7 +122,11 @@ fun AwardScreen(
                         error = state.error,
                         onRetry = onRetry,
                         // Named rather than reached by fallback; see the same note in `AssetsScreen`.
-                        onOpenBrowser = onOpenBrowser,
+                        onOpenBrowser = {
+                            onOpenBrowser(
+                                state.error.webViewUrl(NodeSeekSite.BASE_URL + NodeSeekSite.awardPath(state.page)),
+                            )
+                        },
                         onVerify = onOpenBrowser,
                         onSignIn = onSignIn,
                         modifier = Modifier.fillMaxSize(),

@@ -182,4 +182,72 @@ class MarkdownTest {
         assertEquals(4, heading.level)
         assertEquals("支持ipv6转发", (heading.inlines.single() as InlineNode.Text).text)
     }
+
+    // --- Shortcodes ------------------------------------------------------------------------------
+
+    /** What the forum's own catalogue does: `ac01` is a sticker, everything else is not. */
+    private val stickers: (String) -> String? = { name ->
+        "https://example.com/sticker/ac/01.png".takeIf { name == "ac01" }
+    }
+
+    @Test
+    fun `expands a shortcode the caller recognises`() {
+        val paragraph = parseMarkdown("收到 :ac01: 了", stickers).single() as RichNode.Paragraph
+
+        val sticker = paragraph.inlines[1] as InlineNode.Sticker
+        assertEquals("https://example.com/sticker/ac/01.png", sticker.url)
+        assertEquals(":ac01:", sticker.alt)
+        assertEquals("收到 ", (paragraph.inlines[0] as InlineNode.Text).text)
+        assertEquals(" 了", (paragraph.inlines[2] as InlineNode.Text).text)
+    }
+
+    /** A sticker on its own line stays inline — it is emoji-sized, not a picture to promote. */
+    @Test
+    fun `keeps a lone sticker in its paragraph`() {
+        val paragraph = parseMarkdown(":ac01:", stickers).single() as RichNode.Paragraph
+
+        assertTrue(paragraph.inlines.single() is InlineNode.Sticker)
+    }
+
+    @Test
+    fun `leaves a name the caller does not know as text`() {
+        val paragraph = parseMarkdown("八点 :ac99: 见", stickers).single() as RichNode.Paragraph
+
+        assertEquals("八点 :ac99: 见", paragraph.inlines.filterIsInstance<InlineNode.Text>().joinToString("") { it.text })
+    }
+
+    /** Colons are punctuation far more often than they are shortcodes. */
+    @Test
+    fun `leaves ordinary colons alone`() {
+        val source = "21:30 到 https://example.com/a :) C:/tmp"
+
+        val paragraph = parseMarkdown(source, stickers).single() as RichNode.Paragraph
+
+        assertEquals(source, paragraph.inlines.filterIsInstance<InlineNode.Text>().joinToString("") { it.text })
+    }
+
+    /** No resolver means no stickers: a readme that mentions `:ac01:` in prose is left as written. */
+    @Test
+    fun `leaves shortcodes alone without a resolver`() {
+        val paragraph = parseMarkdown("收到 :ac01: 了").single() as RichNode.Paragraph
+
+        assertEquals("收到 :ac01: 了", paragraph.inlines.filterIsInstance<InlineNode.Text>().joinToString("") { it.text })
+    }
+
+    /** Inline rules run inside code spans on no parser worth the name — the site's included. */
+    @Test
+    fun `leaves a shortcode inside a code span as text`() {
+        val paragraph = parseMarkdown("输入 `:ac01:` 就行", stickers).single() as RichNode.Paragraph
+
+        assertTrue(paragraph.inlines.none { it is InlineNode.Sticker })
+        assertEquals(":ac01:", paragraph.inlines.filterIsInstance<InlineNode.Text>().single { it.style.code }.text)
+    }
+
+    @Test
+    fun `expands a shortcode inside a quote`() {
+        val quote = parseMarkdown("> :ac01:", stickers).single() as RichNode.Quote
+
+        val paragraph = quote.children.single() as RichNode.Paragraph
+        assertTrue(paragraph.inlines.single() is InlineNode.Sticker)
+    }
 }

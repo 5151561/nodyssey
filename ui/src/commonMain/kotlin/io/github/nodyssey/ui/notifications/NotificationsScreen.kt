@@ -55,6 +55,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
@@ -64,6 +65,7 @@ import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.SignedOutState
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.notification_sentence_mention
@@ -95,7 +97,7 @@ import org.jetbrains.compose.resources.stringResource
 fun NotificationsRoute(
     viewModel: NotificationsViewModel,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onNotificationClick: (ForumNotification) -> Unit,
     onOpenThread: (Long, String) -> Unit,
     modifier: Modifier = Modifier,
@@ -148,7 +150,7 @@ fun NotificationsRoute(
 fun NotificationsScreen(
     state: NotificationsUiState,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onTabChange: (NotificationTab) -> Unit,
     onRetry: () -> Unit,
     onMarkAllRead: () -> Unit,
@@ -356,7 +358,7 @@ private fun BoxScope.NotificationGroup(
     notificationListState: LazyListState,
     conversationListState: LazyListState,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onRetry: () -> Unit,
     onNotificationClick: (ForumNotification) -> Unit,
     onConversationClick: (MessageConversation) -> Unit,
@@ -375,7 +377,7 @@ private fun BoxScope.NotificationGroup(
             SiteErrorState(
                 error = error,
                 onRetry = onRetry,
-                onOpenBrowser = onVerify,
+                onOpenBrowser = { onVerify(error.webViewUrl(NodeSeekSite.BASE_URL)) },
                 onVerify = onVerify,
                 onSignIn = onSignIn,
             )

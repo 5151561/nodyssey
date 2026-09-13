@@ -86,7 +86,7 @@ internal fun AccountMessageSnackbar(
     snackbarHostState: SnackbarHostState,
     onShown: () -> Unit,
     onSignIn: (() -> Unit)? = null,
-    onVerify: (() -> Unit)? = null,
+    onVerify: ((String) -> Unit)? = null,
     onRetry: (() -> Unit)? = null,
 ) {
     val text = message?.let { accountMessageText(it) }
@@ -108,7 +108,7 @@ internal fun AccountMessageSnackbar(
 @Composable
 private fun SiteError.messageRes(): StringResource =
     when (this) {
-        SiteError.Cloudflare -> Res.string.status_challenge_title
+        is SiteError.Cloudflare -> Res.string.status_challenge_title
 
         SiteError.LoginRequired -> Res.string.status_sign_in_title
 

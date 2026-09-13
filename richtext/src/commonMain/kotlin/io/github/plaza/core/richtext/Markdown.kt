@@ -8,8 +8,17 @@ package io.github.plaza.core.richtext
  * against run: the default preset, so tables and strikethrough are in, `linkify` is **off** — a bare
  * URL stays text on the site, so it stays text here — and a single newline is a line break rather
  * than a space.
+ *
+ * [shortcode] is how a site's own stickers get in. The forums write them as `:ac01:` and expand them
+ * in their renderer, so the source a body arrives as carries the name and nothing else; the caller
+ * says what a name points at, and anything it does not recognise stays the text it was. Defaulting
+ * to "no stickers here" keeps this module free of any one forum's catalogue — the resolver lives
+ * next to the site that owns the pictures.
  */
-fun parseMarkdown(markdown: String): List<RichNode> {
+fun parseMarkdown(
+    markdown: String,
+    shortcode: (String) -> String? = { null },
+): List<RichNode> {
     val lines = markdown.lines()
     val result = mutableListOf<RichNode>()
     var index = 0
@@ -32,7 +41,7 @@ fun parseMarkdown(markdown: String): List<RichNode> {
             HEADING.matches(line) -> {
                 val match = requireNotNull(HEADING.matchEntire(line))
                 val level = match.groupValues[1].length
-                result += splitImages(parseInlines(match.groupValues[2])) { RichNode.Heading(level, it) }
+                result += splitImages(parseInlines(match.groupValues[2], shortcode)) { RichNode.Heading(level, it) }
                 index++
             }
 
@@ -46,7 +55,7 @@ fun parseMarkdown(markdown: String): List<RichNode> {
                 while (index < lines.size && lines[index].startsWith(">")) {
                     quoted += lines[index++].removePrefix(">").removePrefix(" ")
                 }
-                result += RichNode.Quote(parseMarkdown(quoted.joinToString("\n")))
+                result += RichNode.Quote(parseMarkdown(quoted.joinToString("\n"), shortcode))
             }
 
             UNORDERED_LIST.matches(line) || ORDERED_LIST.matches(line) -> {
@@ -58,18 +67,18 @@ fun parseMarkdown(markdown: String): List<RichNode> {
                     // Parsed as a document rather than as a paragraph: the site's own readmes write
                     // `- #### 支持ipv6转发`, and a list item that only ever holds inlines shows the
                     // hashes.
-                    items += parseMarkdown(text)
+                    items += parseMarkdown(text, shortcode)
                     index++
                 }
                 result += RichNode.ListBlock(ordered = ordered, items = items)
             }
 
             isTableStart(lines, index) -> {
-                val cells = mutableListOf(tableCells(line).map { parseInlines(it) })
+                val cells = mutableListOf(tableCells(line).map { parseInlines(it, shortcode) })
                 // The header's underline carries only the alignment, which this table does not draw.
                 index += 2
                 while (index < lines.size && lines[index].isNotBlank() && lines[index].contains('|')) {
-                    cells += tableCells(lines[index]).map { parseInlines(it) }
+                    cells += tableCells(lines[index]).map { parseInlines(it, shortcode) }
                     index++
                 }
                 result += RichNode.Table(cells)
@@ -89,7 +98,7 @@ fun parseMarkdown(markdown: String): List<RichNode> {
                 val inlines = mutableListOf<InlineNode>()
                 paragraph.forEachIndexed { lineIndex, value ->
                     if (lineIndex > 0) inlines += InlineNode.LineBreak
-                    inlines += parseInlines(value)
+                    inlines += parseInlines(value, shortcode)
                 }
                 result += splitImages(inlines, RichNode::Paragraph)
             }
@@ -195,6 +204,37 @@ private fun startsBlock(
         blockImage(line.trim()) != null
 }
 
+/** A `:name:` that resolved: the sticker it stands for, and the index just past its closing colon. */
+private class ShortcodeSpan(
+    val node: InlineNode.Sticker,
+    val end: Int,
+)
+
+/**
+ * The sticker written at [start], or null when what is there is not one.
+ *
+ * The name has to close on the same line, stay inside [MAX_SHORTCODE_LENGTH] and be ASCII word
+ * characters throughout — the charset `markdown-it-emoji` accepts — and then the caller still has to
+ * recognise it. Four tests in a row, because everything that fails any of them is ordinary text that
+ * happens to contain a colon: `21:30`, `C:\Users`, a `:)` nobody closed, and the `https://` at the
+ * front of every link on the forum.
+ */
+private fun shortcodeAt(
+    text: String,
+    start: Int,
+    shortcode: (String) -> String?,
+): ShortcodeSpan? {
+    val close = text.indexOf(':', start + 1)
+    if (close < 0 || close == start + 1 || close - start - 1 > MAX_SHORTCODE_LENGTH) return null
+    val name = text.substring(start + 1, close)
+    if (!name.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it in "_-+" }) return null
+    val url = shortcode(name) ?: return null
+    return ShortcodeSpan(InlineNode.Sticker(url = url, alt = ":$name:"), close + 1)
+}
+
+/** Longer than any shortcode a forum ships, and short enough that the scan never runs off a line. */
+private const val MAX_SHORTCODE_LENGTH = 32
+
 // --- Tables -------------------------------------------------------------------------------------
 
 /**
@@ -260,6 +300,7 @@ private fun tableCells(line: String): List<String> {
  */
 private fun parseInlines(
     text: String,
+    shortcode: (String) -> String?,
     style: InlineStyle = InlineStyle(),
 ): List<InlineNode> {
     val result = mutableListOf<InlineNode>()
@@ -299,6 +340,21 @@ private fun parseInlines(
                 }
             }
 
+            // Before emphasis rather than after: `:*:` is not a sticker either way, but the scan
+            // that decides it is cheap and a shortcode never contains a delimiter, so the earlier
+            // it is ruled out the less of the line each rule has to consider.
+            char == ':' -> {
+                val sticker = shortcodeAt(text, index, shortcode)
+                if (sticker == null) {
+                    pending.append(char)
+                    index++
+                } else {
+                    flush()
+                    result += sticker.node
+                    index = sticker.end
+                }
+            }
+
             char == '!' && escaped == '[' -> {
                 val span = linkSpan(text, index + 1)
                 if (span == null) {
@@ -320,7 +376,7 @@ private fun parseInlines(
                     index++
                 } else {
                     flush()
-                    result += link(span, style)
+                    result += link(span, style, shortcode)
                     index = span.end
                 }
             }
@@ -335,6 +391,7 @@ private fun parseInlines(
                     result +=
                         parseInlines(
                             text.substring(index + emphasis.delimiter.length, emphasis.close),
+                            shortcode,
                             emphasis.style(style),
                         )
                     index = emphasis.close + emphasis.delimiter.length
@@ -378,13 +435,20 @@ private fun linkSpan(
 private fun link(
     span: LinkSpan,
     style: InlineStyle,
+    shortcode: (String) -> String?,
 ): InlineNode.Link {
-    val label = parseInlines(span.label, style)
+    val label = parseInlines(span.label, shortcode, style)
     val text =
         label.joinToString("") {
             when (it) {
                 is InlineNode.Text -> it.text
+
                 is InlineNode.Link -> it.text
+
+                // A label that is only a sticker would otherwise flatten to nothing and fall back
+                // to showing the URL, which is how `[:ac01:](/post-1-1)` would become a raw address.
+                is InlineNode.Sticker -> it.alt.orEmpty()
+
                 else -> ""
             }
         }

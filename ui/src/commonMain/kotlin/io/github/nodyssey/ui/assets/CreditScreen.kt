@@ -31,9 +31,11 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.CreditEntry
 import io.github.nodyssey.ui.common.NoLedgerEntriesState
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -60,7 +62,7 @@ import org.jetbrains.compose.resources.stringResource
 fun CreditRoute(
     viewModel: CreditViewModel,
     onBack: () -> Unit,
-    onOpenBrowser: () -> Unit,
+    onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -94,7 +96,7 @@ fun CreditScreen(
     entries: Flow<PagingData<CreditEntry>>,
     onBack: () -> Unit,
     onRetry: () -> Unit,
-    onOpenBrowser: () -> Unit,
+    onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -198,7 +200,7 @@ private fun levelProgressText(state: CreditUiState): String? {
 private fun CreditLedger(
     rows: LazyPagingItems<CreditEntry>,
     onRetry: () -> Unit,
-    onOpenBrowser: () -> Unit,
+    onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -217,7 +219,12 @@ private fun CreditLedger(
                 // web view in one place only, so the two are the same closure — and a challenge
                 // reaching it by fallback is exactly how other screens ended up handing one to a
                 // plain reading view without anything in the code saying so.
-                onOpenBrowser = onOpenBrowser,
+                onOpenBrowser = {
+                    onOpenBrowser(
+                        refresh.error.toSiteError()
+                            .webViewUrl(NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH),
+                    )
+                },
                 onVerify = onOpenBrowser,
                 onSignIn = onSignIn,
                 modifier = modifier,

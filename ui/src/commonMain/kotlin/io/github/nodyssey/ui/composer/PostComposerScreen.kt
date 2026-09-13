@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
@@ -64,6 +65,7 @@ import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.data.composer.UploadFailure
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_cancel
 import io.github.nodyssey.ui.resources.action_publish
@@ -122,11 +124,11 @@ fun PostComposerRoute(
     viewModel: PostComposerViewModel,
     onClose: () -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onPublished: (Long?) -> Unit,
     modifier: Modifier = Modifier,
     /** Opens whatever this editor is about in the web view — the thread, or the new-post page. */
-    onOpenBrowser: () -> Unit = onVerify,
+    onOpenBrowser: (String) -> Unit = onVerify,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -191,7 +193,7 @@ private fun PublishErrorSnackbar(
     snackbarHostState: SnackbarHostState,
     onDismissed: () -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onRetry: () -> Unit,
 ) {
     val message = state.publishError?.let { publishErrorMessage(it, state.publishErrorDetail) }
@@ -199,7 +201,7 @@ private fun PublishErrorSnackbar(
         stringResource(
             when (error) {
                 SiteError.LoginRequired -> Res.string.action_sign_in
-                SiteError.Cloudflare -> Res.string.action_verify
+                is SiteError.Cloudflare -> Res.string.action_verify
                 else -> Res.string.action_retry
             },
         )
@@ -215,7 +217,7 @@ private fun PublishErrorSnackbar(
         if (result == SnackbarResult.ActionPerformed) {
             when (error) {
                 SiteError.LoginRequired -> onSignIn()
-                SiteError.Cloudflare -> onVerify()
+                is SiteError.Cloudflare -> onVerify(error.url)
                 else -> onRetry()
             }
         }
@@ -264,9 +266,9 @@ fun PostComposerScreen(
     modifier: Modifier = Modifier,
     /** Re-reads the floor being edited. Only reachable from the load-failure state. */
     onRetryLoad: () -> Unit = {},
-    onOpenBrowser: () -> Unit = {},
+    onOpenBrowser: (String) -> Unit = {},
     onSignIn: () -> Unit = {},
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     /**
      * Creates a vote and, on success only, runs the callback so the dialog can close.
      *
@@ -313,7 +315,7 @@ fun PostComposerScreen(
             SiteErrorState(
                 error = loadError,
                 onRetry = onRetryLoad,
-                onOpenBrowser = onOpenBrowser,
+                onOpenBrowser = { onOpenBrowser(loadError.webViewUrl(NodeSeekSite.BASE_URL)) },
                 onSignIn = onSignIn,
                 onVerify = onVerify,
                 modifier = Modifier.padding(padding),
@@ -840,7 +842,7 @@ private fun publishErrorMessage(error: SiteError, detail: String?): String {
 
         SiteError.LoginRequired -> stringResource(Res.string.composer_publish_login_required)
 
-        SiteError.Cloudflare -> stringResource(Res.string.composer_publish_challenge)
+        is SiteError.Cloudflare -> stringResource(Res.string.composer_publish_challenge)
 
         is SiteError.Http -> {
             val status = stringResource(Res.string.composer_publish_http, error.statusCode)

@@ -525,7 +525,7 @@ private fun Throwable.toOfflineFailure(): OfflineFailure {
     val error = (this as? SiteException)?.error ?: return OfflineFailure.Network
     return when (error) {
         SiteError.Network, SiteError.Unknown -> OfflineFailure.Network
-        SiteError.Cloudflare -> OfflineFailure.Challenge
+        is SiteError.Cloudflare -> OfflineFailure.Challenge
         SiteError.RateLimited -> OfflineFailure.RateLimited
         is SiteError.Http -> if (error.statusCode >= 500) OfflineFailure.Network else OfflineFailure.Unavailable
         else -> OfflineFailure.Unavailable

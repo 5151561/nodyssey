@@ -281,11 +281,6 @@ class PostListViewModel(
         viewModelScope.launch { settingsRepository.setHomeBoardArrangement(order, parked) }
     }
 
-    /** The URL a WebView should open to clear the current error. */
-    fun challengeUrl(): String =
-        NodeSeekSite.BASE_URL +
-            NodeSeekSite.listPath(_uiState.value.categorySlug, 1, _uiState.value.sort)
-
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {

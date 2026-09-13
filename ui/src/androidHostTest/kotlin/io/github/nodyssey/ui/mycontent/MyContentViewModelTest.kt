@@ -126,7 +126,7 @@ class MyContentViewModelTest {
             val vm = MyTopicsViewModel(FakeProfileRepository(), FailingSpaceRepository)
             advanceUntilIdle()
 
-            assertEquals(SiteError.Cloudflare, vm.uiState.value.error)
+            assertTrue(vm.uiState.value.error is SiteError.Cloudflare)
             assertFalse(vm.uiState.value.isEmpty)
         }
 }
@@ -190,13 +190,13 @@ private class PagedSpaceRepository : UserSpaceRepository {
 
 private object FailingSpaceRepository : UserSpaceRepository {
     override suspend fun topics(uid: Long, page: Int): SpacePage<SpacePost> =
-        throw SiteException(SiteError.Cloudflare)
+        throw SiteException(SiteError.Cloudflare("https://www.nodeseek.com/page-2"))
 
     override suspend fun comments(uid: Long, page: Int): SpacePage<SpaceComment> =
-        throw SiteException(SiteError.Cloudflare)
+        throw SiteException(SiteError.Cloudflare("https://www.nodeseek.com/page-2"))
 
     override suspend fun collections(page: Int): SpacePage<SpacePost> =
-        throw SiteException(SiteError.Cloudflare)
+        throw SiteException(SiteError.Cloudflare("https://www.nodeseek.com/page-2"))
 }
 
 private const val UID = 88423L

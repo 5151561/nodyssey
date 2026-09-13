@@ -128,7 +128,7 @@ fun StardustRoute(
     onOpenBrowser: () -> Unit,
     onSignIn: () -> Unit,
     /** Clears a Cloudflare challenge on the ledger, then comes back to the transfer form. */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -193,7 +193,7 @@ private fun stardustMessageText(message: StardustMessage): String =
         is StardustMessage.Failed ->
             message.detail ?: stringResource(
                 when (message.error) {
-                    SiteError.Cloudflare -> Res.string.status_challenge_title
+                    is SiteError.Cloudflare -> Res.string.status_challenge_title
                     SiteError.LoginRequired -> Res.string.status_sign_in_title
                     SiteError.Network -> Res.string.status_network_title
                     SiteError.RateLimited -> Res.string.status_rate_limited_title
@@ -216,7 +216,7 @@ fun StardustScreen(
     onOpenBrowser: () -> Unit,
     onSignIn: () -> Unit,
     /** Clears a Cloudflare challenge on the ledger; see [StardustRoute] for why it is its own. */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onOpenTransfer: () -> Unit,
     onDismissTransfer: () -> Unit,
     onRequestConfirm: () -> Unit,
@@ -335,7 +335,7 @@ private fun StardustLedger(
     onRetry: () -> Unit,
     onOpenBrowser: () -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val refresh = rows.loadState.refresh

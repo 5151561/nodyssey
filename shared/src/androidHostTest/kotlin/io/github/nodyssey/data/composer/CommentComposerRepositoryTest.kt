@@ -24,6 +24,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Buffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -147,7 +148,26 @@ class CommentComposerRepositoryTest {
             ),
         )
 
-        assertEquals(SiteError.Cloudflare, exception.error)
+        assertTrue(exception.error is SiteError.Cloudflare)
+    }
+
+    /**
+     * The regression this file exists to hold: every HTML body used to be read as a challenge, and
+     * NodeSeek's front end is a single-page app — an `/api` path its router does not know answers
+     * with `index.html`, the home page. Readers got 需要验证 over a site that had nothing to verify,
+     * and tapping it opened a web view on the home page and left them there.
+     */
+    @Test
+    fun `the site's own page is not a challenge`() = runTest {
+        val exception = publishExpecting(
+            RecordingCommentInterceptor(
+                body = """<!DOCTYPE html><html><body><div id="nsk-body"></div></body></html>""",
+                mediaType = "text/html",
+            ),
+        )
+
+        assertEquals(SiteError.Unparsable, exception.error)
+        assertEquals("/api/content/new-comment 返回了网页而不是数据", exception.detail)
     }
 
     @Test

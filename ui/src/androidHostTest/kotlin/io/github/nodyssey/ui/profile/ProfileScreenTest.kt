@@ -335,7 +335,7 @@ class ProfileScreenTest {
                         isSignedIn = true,
                         displayName = "nodyssey_dev",
                         attendanceKnown = true,
-                        attendanceFailure = SiteError.Cloudflare,
+                        attendanceFailure = SiteError.Cloudflare("https://www.nodeseek.com/page-2"),
                     ),
                     destinations = ProfileDestinations(),
                     onSignIn = {},

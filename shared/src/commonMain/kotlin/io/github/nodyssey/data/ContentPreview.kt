@@ -2,6 +2,7 @@ package io.github.nodyssey.data
 
 import com.fleeksoft.ksoup.Ksoup
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.NodeSeekStickers
 import io.github.nodyssey.core.html.RichContentParser
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
@@ -45,7 +46,12 @@ fun contentPreview(
 ): List<PreviewPart> {
     val source = raw?.trim().orEmpty()
     if (source.isEmpty()) return emptyList()
-    val nodes = if (source.looksLikeMarkup()) parseMarkup(source) else parseMarkdown(source)
+    val nodes =
+        if (source.looksLikeMarkup()) {
+            parseMarkup(source)
+        } else {
+            parseMarkdown(source, NodeSeekStickers::urlFor)
+        }
     val builder = PreviewBuilder(limit)
     builder.appendBlocks(nodes.withoutLeadingQuotes())
     return builder.build()

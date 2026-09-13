@@ -370,14 +370,14 @@ class FeedRemoteMediatorTest {
     @Test
     fun `a network failure is reported as an error, not a crash`() =
         runTest {
-            remote.listError = SiteException(SiteError.Cloudflare)
+            remote.listError = SiteException(SiteError.Cloudflare("https://www.nodeseek.com/page-2"))
 
             val result = load(LoadType.REFRESH)
 
             assertTrue(result is RemoteMediator.MediatorResult.Error)
-            assertEquals(
-                SiteError.Cloudflare,
-                ((result as RemoteMediator.MediatorResult.Error).throwable as SiteException).error,
+            assertTrue(
+                ((result as RemoteMediator.MediatorResult.Error).throwable as SiteException).error
+                    is SiteError.Cloudflare,
             )
         }
 

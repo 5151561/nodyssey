@@ -122,7 +122,7 @@ class PostListScreenTest {
         onPostClick: (FeedPost) -> Unit = {},
         onBoardClick: (String?) -> Unit = {},
         onSortChange: (FeedSort) -> Unit = {},
-        onRecoverInBrowser: () -> Unit = {},
+        onRecoverInBrowser: (String) -> Unit = {},
         onSearch: () -> Unit = {},
         onGoToPage: (Int) -> Unit = {},
         onFindPageRow: suspend (Int) -> Int? = { null },
@@ -158,7 +158,7 @@ class PostListScreenTest {
         onPostClick: (FeedPost) -> Unit,
         onBoardClick: (String?) -> Unit,
         onSortChange: (FeedSort) -> Unit,
-        onRecoverInBrowser: () -> Unit,
+        onRecoverInBrowser: (String) -> Unit,
         onSearch: () -> Unit = {},
         reselectRequests: Int = 0,
         onGoToPage: (Int) -> Unit = {},
@@ -666,7 +666,7 @@ class PostListScreenTest {
     fun `a refresh failure with nothing cached shows the typed error and its recovery action`() {
         setScreen(
             posts = emptyList(),
-            refresh = LoadState.Error(SiteException(SiteError.Cloudflare)),
+            refresh = LoadState.Error(SiteException(SiteError.Cloudflare(REFUSED))),
         )
 
         composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
@@ -694,18 +694,26 @@ class PostListScreenTest {
         composeRule.onNodeWithText("加载失败").assertIsDisplayed()
     }
 
+    /**
+     * 去验证 opens the address the *failure* names, not one the screen rebuilds.
+     *
+     * The bug: 综合 rebuilt it as `BASE_URL + listPath(null, 1, sort)`, which is `/?sortBy=…`, and
+     * that is the one path NodeSeek's zone does not challenge. The web view opened an ordinary home
+     * page, there was nothing to solve, Cloudflare issued no pass, and the next request hit the same
+     * wall — with the jar still empty to prove it had never once been cleared.
+     */
     @Test
-    fun `the recovery button reports the intent to open a browser`() {
-        var opened = false
+    fun `the recovery button opens the address that was refused`() {
+        var opened: String? = null
         setScreen(
             posts = emptyList(),
-            refresh = LoadState.Error(SiteException(SiteError.Cloudflare)),
-            onRecoverInBrowser = { opened = true },
+            refresh = LoadState.Error(SiteException(SiteError.Cloudflare(REFUSED))),
+            onRecoverInBrowser = { opened = it },
         )
 
         composeRule.onNodeWithText("去验证").performClick()
 
-        assert(opened)
+        assertEquals(REFUSED, opened)
     }
 
     /**
@@ -740,7 +748,7 @@ class PostListScreenTest {
     fun `a Cloudflare wall over cached rows offers the verify button, not a retry that cannot work`() {
         setScreen(
             posts = listOf(feedPost(1, "cached post")),
-            refresh = LoadState.Error(SiteException(SiteError.Cloudflare)),
+            refresh = LoadState.Error(SiteException(SiteError.Cloudflare(REFUSED))),
         )
 
         composeRule.onNodeWithText("cached post").assertIsDisplayed()
@@ -754,7 +762,7 @@ class PostListScreenTest {
         var opened = false
         setScreen(
             posts = listOf(feedPost(1, "cached post")),
-            refresh = LoadState.Error(SiteException(SiteError.Cloudflare)),
+            refresh = LoadState.Error(SiteException(SiteError.Cloudflare(REFUSED))),
             onRecoverInBrowser = { opened = true },
         )
 
@@ -1067,5 +1075,9 @@ class PostListScreenTest {
         composeRule.onNodeWithText("最新").performClick()
 
         assertEquals(1, requested)
+    }
+    private companion object {
+        /** A path the zone actually challenges — deliberately not the exempt home page. */
+        const val REFUSED = "https://www.nodeseek.com/page-2?sortBy=replyTime"
     }
 }

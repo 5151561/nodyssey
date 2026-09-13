@@ -57,6 +57,19 @@ class ContentPreviewTest {
         assertEquals(listOf(PreviewPart.Placeholder(PreviewPlaceholder.IMAGE)), photo)
     }
 
+    /**
+     * A 私信 carries the shortcode, not the `<img>` the site renders it into, so the row has to read
+     * it the same way the bubble does — otherwise the list says `:ac01:` about a sticker.
+     */
+    @Test
+    fun `names a sticker written as a shortcode`() {
+        assertEquals(
+            listOf(PreviewPart.Text("收到 "), PreviewPart.Placeholder(PreviewPlaceholder.STICKER)),
+            contentPreview("收到 :ac01:"),
+        )
+        assertEquals(listOf(PreviewPart.Text("八点 :ac99: 见")), contentPreview("八点 :ac99: 见"))
+    }
+
     @Test
     fun `names a code block and a table too`() {
         assertEquals(

@@ -151,7 +151,7 @@ fun ProfileRoute(
      * callback served both, so 去验证 opened the reading web view — which never closes itself and
      * carries a way out to a real browser, where a pass earned is a pass the app cannot see.
      */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -221,7 +221,7 @@ fun ProfileScreen(
     onRetry: () -> Unit,
     onOpenWebsite: () -> Unit,
     /** Clears a Cloudflare challenge; see [ProfileRoute] for why it is not [onOpenWebsite]. */
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     onAttendance: () -> Unit,
     onAttendanceBoard: () -> Unit,
     modifier: Modifier = Modifier,

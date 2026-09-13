@@ -8,8 +8,22 @@ package io.github.plaza.core.net
  */
 sealed interface SiteError {
 
-    /** Cloudflare wants a browser to run its JS. Recoverable by opening the page in a WebView. */
-    data object Cloudflare : SiteError
+    /**
+     * Cloudflare wants a browser to run its JS. Cleared by opening [url] in a WebView.
+     *
+     * [url] is the address that was actually refused, and it is carried rather than reconstructed
+     * because the screen cannot work it out. NodeSeek's zone (measured 2026-09-13) challenges every
+     * path *except* the bare home page: `/` and `/?sortBy=…` answer 200, while `/categories/daily`,
+     * `/page-2` and every `/api/…` answer 403 with `cf-mitigated: challenge`. 首页 was sending the
+     * web view to `BASE_URL + listPath(null, 1, sort)` — which is `/?sortBy=replyTime`, the one
+     * address on the site with no challenge in it — so the reader was handed an ordinary home page,
+     * nothing was there to solve, Cloudflare issued no `cf_clearance`, and the next request hit the
+     * same wall. Forever, and with no cookie in the jar to show for it.
+     *
+     * The pass is issued for the whole zone (`Path=/`), so solving it anywhere clears everything;
+     * what matters is only that the web view lands somewhere that actually asks.
+     */
+    data class Cloudflare(val url: String) : SiteError
 
     /** The board or post requires a signed-in account. */
     data object LoginRequired : SiteError

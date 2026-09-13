@@ -1,11 +1,9 @@
 package io.github.nodyssey.core.net
 
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.core.html.Selectors
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.HttpBody
 import io.github.plaza.core.net.HttpRequest
-import io.github.plaza.core.net.HttpResponse
 import io.github.plaza.core.net.HttpTransport
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
@@ -117,13 +115,14 @@ class NodeSeekJsonClient(
     override suspend fun getJson(path: String, referer: String): String =
         withContext(dispatchers.io) {
             val response = transport.execute(xhrRequest(path, referer))
-            throwIfChallenge(response)
+            throwIfChallenge(path, response.body, response.header("cf-mitigated"))
             // Session-scoped endpoints answer 500, not 401, when the cookie is missing or stale.
             // "服务器错误" with a retry button would hide the one action that fixes it: signing in.
             if (response.code == 500 && isSessionScoped(path)) {
                 throw SiteException(SiteError.LoginRequired)
             }
             if (!response.isSuccessful) throw SiteException(SiteError.Http(response.code))
+            throwIfNotJson(path, response.body)
             response.body
         }
 
@@ -133,7 +132,10 @@ class NodeSeekJsonClient(
                 transport.execute(
                     xhrRequest(path, referer, method = "POST", body = HttpBody.Empty, origin = true),
                 )
-            throwIfChallenge(response)
+            throwIfChallenge(path, response.body, response.header("cf-mitigated"))
+            // A page is no more an answer from the site than a challenge is, so the caller's
+            // status-versus-body contract never sees one.
+            throwIfNotJson(path, response.body)
             JsonPostResponse(code = response.code, body = response.body)
         }
 
@@ -143,11 +145,12 @@ class NodeSeekJsonClient(
                 transport.execute(
                     xhrRequest(path, referer, method = "POST", body = HttpBody.Text(body), origin = true),
                 )
-            throwIfChallenge(response)
+            throwIfChallenge(path, response.body, response.header("cf-mitigated"))
             if (response.code == 401 || response.code == 403) {
                 throw SiteException(SiteError.LoginRequired)
             }
             if (!response.isSuccessful) throw SiteException(SiteError.Http(response.code))
+            throwIfNotJson(path, response.body)
             response.body
         }
 
@@ -172,7 +175,8 @@ class NodeSeekJsonClient(
                 )
             // Still thrown, and still before the status: a challenge is not an answer from the
             // site, so there is no site sentence for the caller to read.
-            throwIfChallenge(response)
+            throwIfChallenge(path, response.body, response.header("cf-mitigated"))
+            throwIfNotJson(path, response.body)
             JsonPostResponse(code = response.code, body = response.body)
         }
 
@@ -205,11 +209,12 @@ class NodeSeekJsonClient(
                         extraHeaders = headers,
                     ),
                 )
-            throwIfChallenge(response)
+            throwIfChallenge(path, response.body, response.header("cf-mitigated"))
             if (response.code == 401 || response.code == 403) {
                 throw SiteException(SiteError.LoginRequired)
             }
             if (!response.isSuccessful) throw SiteException(SiteError.Http(response.code))
+            throwIfNotJson(path, response.body)
             response.body
         }
 
@@ -243,20 +248,6 @@ class NodeSeekJsonClient(
             },
             body = body,
         )
-
-    /**
-     * Cloudflare intercepts a JSON call as challenge HTML, as a tagged `cf-mitigated: challenge`
-     * header on non-HTML shapes, or as a 403 wrapping either — so this runs before any status
-     * handling: "please verify" and "please sign in" send the user down different recovery paths.
-     */
-    private fun throwIfChallenge(response: HttpResponse) {
-        val isChallenge =
-            response.header("cf-mitigated")?.equals("challenge", ignoreCase = true) == true ||
-                Selectors.CLOUDFLARE_MARKERS.any(response.body::contains) ||
-                // An HTML body on a JSON endpoint means Cloudflare intercepted the call.
-                response.body.trimStart().startsWith("<")
-        if (isChallenge) throw SiteException(SiteError.Cloudflare)
-    }
 
     /** The endpoint families that only answer for a signed-in session — see the interface KDoc. */
     private fun isSessionScoped(path: String): Boolean =

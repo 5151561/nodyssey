@@ -112,7 +112,7 @@ class PostComposerRepositoryTest {
                         headers = mapOf("cf-mitigated" to "challenge"),
                     ),
                 )
-            assertEquals(SiteError.Cloudflare, error)
+            assertTrue(error is SiteError.Cloudflare)
         }
 
     @Test

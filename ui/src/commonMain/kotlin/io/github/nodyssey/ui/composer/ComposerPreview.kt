@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.NodeSeekStickers
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.composer_just_now
 import io.github.nodyssey.ui.resources.composer_preview_empty
@@ -70,6 +71,11 @@ fun RuleReminderCard(modifier: Modifier = Modifier) {
  * The point of a preview is to be wrong in none of the ways that matter, so it goes through the
  * same [RichContent] the detail screen uses rather than a lighter-weight renderer — a code block
  * that wraps differently here than after publishing is a preview that cannot be trusted.
+ *
+ * Stickers are one of those ways. The emoji panel sits on this very editor and inserts `:ac01:`,
+ * which the site expands when the post is published — so a preview without the resolver shows six
+ * characters of punctuation where the published post will show a picture, on the one screen whose
+ * whole job is to say what the post will look like.
  */
 @Composable
 fun MarkdownPreviewBody(
@@ -78,7 +84,7 @@ fun MarkdownPreviewBody(
     textStyle: TextStyle = PostBody,
 ) {
     val uriHandler = LocalUriHandler.current
-    val nodes = remember(markdown) { parseMarkdown(markdown) }
+    val nodes = remember(markdown) { parseMarkdown(markdown, NodeSeekStickers::urlFor) }
     if (nodes.isEmpty()) {
         Text(
             text = stringResource(Res.string.composer_preview_empty),

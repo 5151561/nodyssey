@@ -132,7 +132,7 @@ fun ReplyComposerHost(
      */
     onSignIn: (() -> Unit)?,
     /** Clears a Cloudflare challenge on the thread being replied to. */
-    onVerify: (() -> Unit)?,
+    onVerify: ((String) -> Unit)?,
     onToolbarChange: (List<EditorAction>) -> Unit,
     onToolbarReset: () -> Unit,
     onCreateVote: (String, Boolean, Boolean, List<String>, () -> Unit) -> Unit,
@@ -257,7 +257,7 @@ private fun ReplyEditorSheet(
     onPublish: () -> Unit,
     onClearError: () -> Unit,
     onSignIn: (() -> Unit)?,
-    onVerify: (() -> Unit)?,
+    onVerify: ((String) -> Unit)?,
     editorState: MarkdownEditorState,
     onCustomize: () -> Unit,
     onInsertVote: () -> Unit,
@@ -411,7 +411,7 @@ private fun ReplyPreviewScreen(
     onPublish: () -> Unit,
     onClearError: () -> Unit,
     onSignIn: (() -> Unit)?,
-    onVerify: (() -> Unit)?,
+    onVerify: ((String) -> Unit)?,
 ) {
     PlazaBackHandler(enabled = !state.isPublishing, onBack = onBack)
     Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
@@ -567,7 +567,7 @@ private fun ComposerErrorStrip(
     onRetryUploads: () -> Unit,
     onDismiss: () -> Unit,
     onSignIn: (() -> Unit)?,
-    onVerify: (() -> Unit)?,
+    onVerify: ((String) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val message = when {
@@ -594,9 +594,9 @@ private fun ComposerErrorStrip(
                     siteErrorRecovery(
                         error = error,
                         onVerify = onVerify?.let { verify ->
-                            {
+                            { url: String ->
                                 onDismiss()
-                                verify()
+                                verify(url)
                             }
                         },
                         onSignIn = onSignIn?.let { signIn ->
@@ -662,7 +662,7 @@ private fun replyErrorReason(error: SiteError, detail: String?): String = when (
 
     SiteError.LoginRequired -> stringResource(Res.string.composer_publish_login_required)
 
-    SiteError.Cloudflare -> stringResource(Res.string.composer_publish_challenge)
+    is SiteError.Cloudflare -> stringResource(Res.string.composer_publish_challenge)
 
     // The site's own sentence beats a status code whenever it sent one: a rejected reply comes back
     // as a 400 carrying "内容不能为空" or the duplicate-post refusal, and "服务器返回 HTTP 400"

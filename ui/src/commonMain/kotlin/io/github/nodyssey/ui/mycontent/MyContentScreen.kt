@@ -88,7 +88,7 @@ internal fun <T : Any> MyContentScreen(
     onRetry: () -> Unit,
     onOpenBrowser: () -> Unit,
     onSignIn: () -> Unit,
-    onVerify: () -> Unit,
+    onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
     row: @Composable (T) -> Unit,
 ) {

@@ -193,16 +193,6 @@ class SearchViewModel(
         startUserSearch(state.submittedQuery ?: query.text.toString())
     }
 
-    fun challengeUrl(): String {
-        val state = _uiState.value
-        return NodeSeekSite.BASE_URL +
-            NodeSeekSite.postSearchPath(
-                query = state.submittedQuery ?: query.text.toString(),
-                categorySlug = state.selectedBoard,
-                sort = state.sort,
-            )
-    }
-
     private fun rerunSubmittedSearch() {
         val state = _uiState.value
         if (state.submittedQuery == null) return
