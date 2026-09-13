@@ -63,7 +63,7 @@ class NodeSeekJsonClientTest {
 
     /** The regression: the site's own shell, on a 200, with nothing of Cloudflare's about it. */
     @Test
-    fun `the single-page shell is reported as itself, not as a wall`() = runTest {
+    fun `the single-page shell is reported as itself rather than as a wall`() = runTest {
         val error = errorFrom(
             httpResponse("""<!DOCTYPE html><html><body><div id="nsk-body"></div></body></html>"""),
         )
@@ -101,7 +101,7 @@ class NodeSeekJsonClientTest {
      * the status the caller should hear, with a 重试 that can actually work.
      */
     @Test
-    fun `an origin 503 carrying the detection script is a 503, not a challenge`() = runTest {
+    fun `an origin 503 carrying the detection script is a 503 and not a challenge`() = runTest {
         val error = errorFrom(
             httpResponse(
                 body = """<html><head><title>503 Service Temporarily Unavailable</title></head>
