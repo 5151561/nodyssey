@@ -21,6 +21,7 @@ import kotlinx.serialization.json.longOrNull
 internal data class PostConfig(
     val reactions: Map<Long, PostReactions> = emptyMap(),
     val blockedCommentIds: Set<Long> = emptySet(),
+    val pinnedCommentIds: Set<Long> = emptySet(),
     /**
      * The floors this account wrote, as the *server* labelled them (`comments[].poster.isMe`).
      *
@@ -88,6 +89,7 @@ internal object PostConfigParser {
 
         val reactions = mutableMapOf<Long, PostReactions>()
         val blocked = mutableSetOf<Long>()
+        val pinned = mutableSetOf<Long>()
         val own = mutableSetOf<Long>()
         val edited = mutableMapOf<Long, FloorEditTime>()
         // Absent on a reshaped page, which costs the tallies but must not cost the thread-level
@@ -105,6 +107,8 @@ internal object PostConfigParser {
                     upvoted = comment.bool("upvoted"),
                 )
             if (comment.bool("blocked")) blocked += commentId
+            val pin = comment["pined"] as? JsonPrimitive
+            if (pin?.booleanOrNull == true || pin?.contentOrNull == "1") pinned += commentId
             // Safe cast, not `jsonObject`: that accessor throws on a reshaped `poster`, and this
             // loop is inside the pass that must not cost the page its tallies.
             if ((comment["poster"] as? JsonObject)?.bool("isMe") == true) own += commentId
@@ -113,6 +117,7 @@ internal object PostConfigParser {
         return PostConfig(
             reactions = reactions,
             blockedCommentIds = blocked,
+            pinnedCommentIds = pinned,
             ownCommentIds = own,
             editedTimes = edited,
             // Thread-level, so they sit on `postData` itself rather than inside `comments`.

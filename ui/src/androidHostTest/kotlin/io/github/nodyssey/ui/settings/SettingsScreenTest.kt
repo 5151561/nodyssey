@@ -38,6 +38,38 @@ class SettingsScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    @Test
+    fun `内容设置不再提供评论模式开关`() {
+        composeRule.setContent {
+            PlazaTheme {
+                SettingsScreen(
+                    state = SettingsUiState(UserSettings()),
+                    onBack = {},
+                    onOpenTheme = {},
+                    onThemeModeChange = {},
+                    onOneHandModeChange = {},
+                    onFontScaleChange = {},
+                    onStickerUniformSizeChange = {},
+                    onStickerSizeChange = {},
+                    onImagesOnWifiOnlyChange = {},
+                    onReportFormatChange = {},
+                    onHomePageBarChange = {},
+                    onUpdateCheckOnLaunchChange = {},
+                    onUpdateDevChannelChange = {},
+                    onClearCache = {},
+                    appLinkHandlingEnabled = null,
+                    onOpenAppLinkSettings = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("内容").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("默认评论模式").assertDoesNotExist()
+        composeRule.onNodeWithText("普通").assertDoesNotExist()
+        composeRule.onNodeWithText("树形").assertDoesNotExist()
+        composeRule.onNodeWithText("默认使用树形视图").assertDoesNotExist()
+    }
+
     /**
      * 明暗 stayed on this screen when the rest of 主题 moved to its own.
      *

@@ -216,6 +216,20 @@ object NodeSeekSite {
     /** `"#127"` → 127. Null for a floor the site did not number, which is nothing to jump to. */
     fun parseFloorNumber(floor: String?): Int? = floor?.trim()?.removePrefix("#")?.trim()?.toIntOrNull()
 
+    /** 只接受当前站点、当前帖子中的楼层链接，防止同号楼层被错误归入另一段对话。 */
+    fun referencedFloor(postId: Long, href: String): Int? {
+        val value = href.trim()
+        val absolute = if (value.startsWith('#')) BASE_URL + postPath(postId) + value else absoluteUrl(value)
+        val parsed = absolute?.let(::parseWebUrl) ?: return null
+        if (parsed.scheme !in setOf("http", "https") || parsed.host?.lowercase() !in OWN_SITE_HOSTS) return null
+        if (parsed.port != -1 && parsed.port != if (parsed.scheme == "https") 443 else 80) return null
+        val path = parsed.path?.trimEnd('/') ?: return null
+        val route = POST_PATH.matchEntire(path) ?: return null
+        if (route.groupValues[1].toLongOrNull() != postId) return null
+        val fragment = parsed.fragment?.takeIf { it.isNotEmpty() && it.all(Char::isDigit) } ?: return null
+        return fragment.toIntOrNull()
+    }
+
     fun spacePath(uid: Long): String = "/space/$uid"
 
     /**

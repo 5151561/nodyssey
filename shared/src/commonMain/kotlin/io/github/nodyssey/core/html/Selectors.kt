@@ -85,6 +85,7 @@ object Selectors {
     const val CONTENT_INFO = "div.content-info"
     const val CONTENT_CATEGORY = "span.content-category a"
     const val CONTENT_FLOOR = "a.floor-link"
+    const val CONTENT_PINNED_BADGE = ".nsk-content-meta-info .pined-comment-badge, .nsk-content-meta-info .floor-link-wrapper use[href=\"#pin\"]"
     const val CONTENT_ARTICLE = "article.post-content"
     const val CONTENT_SIGNATURE = "div.signature"
 

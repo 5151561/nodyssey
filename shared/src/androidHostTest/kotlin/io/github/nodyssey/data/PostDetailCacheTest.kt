@@ -4,6 +4,7 @@ import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.RichContentJson
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.data.local.toSnapshot
+import io.github.nodyssey.model.PostContent
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import kotlinx.coroutines.flow.first
@@ -36,6 +37,14 @@ class PostDetailCacheTest {
     @After
     fun tearDown() {
         database.close()
+    }
+
+    @Test
+    fun `旧缓存没有置顶字段时仍能读取评论`() {
+        val stored = """{"commentId":1,"floor":"#1","authorName":"reader","authorUid":1,"avatarUrl":null,"isOriginalPoster":false,"badges":[],"createdAtText":null,"createdAtTitle":null,"categoryTitle":null,"nodes":[]}"""
+        val content = RichContentJson.format.decodeFromString<PostContent>(stored)
+        assertFalse(content.isPinned)
+        assertEquals("#1", content.floor)
     }
 
     @Test

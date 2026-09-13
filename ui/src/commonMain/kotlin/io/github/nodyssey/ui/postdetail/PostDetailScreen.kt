@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
@@ -46,10 +48,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -57,7 +57,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -77,6 +76,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -89,6 +89,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.ThreadPreview
+import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.core.buildCommentReplies
 import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.model.PostContent
@@ -118,7 +120,9 @@ import io.github.nodyssey.ui.composer.ReplyComposerViewModel
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.action_collapse
 import io.github.nodyssey.ui.resources.action_copy_link
+import io.github.nodyssey.ui.resources.action_expand
 import io.github.nodyssey.ui.resources.action_more
 import io.github.nodyssey.ui.resources.action_open_in_browser
 import io.github.nodyssey.ui.resources.action_refresh
@@ -127,13 +131,13 @@ import io.github.nodyssey.ui.resources.chicken_dialog_body
 import io.github.nodyssey.ui.resources.chicken_dialog_body_free
 import io.github.nodyssey.ui.resources.chicken_dialog_confirm
 import io.github.nodyssey.ui.resources.chicken_dialog_title
+import io.github.nodyssey.ui.resources.comment_replies_count
 import io.github.nodyssey.ui.resources.dislike_dialog_body
 import io.github.nodyssey.ui.resources.dislike_dialog_confirm
 import io.github.nodyssey.ui.resources.dislike_dialog_title
 import io.github.nodyssey.ui.resources.page_jump_latest
 import io.github.nodyssey.ui.resources.page_jump_latest_read
 import io.github.nodyssey.ui.resources.page_jump_latest_read_floor
-import io.github.nodyssey.ui.resources.post_auto_paging
 import io.github.nodyssey.ui.resources.post_badge_awarded
 import io.github.nodyssey.ui.resources.post_badge_original_poster
 import io.github.nodyssey.ui.resources.post_body_empty
@@ -350,6 +354,42 @@ fun PostDetailScreen(
     var showPageSheet by remember { mutableStateOf(false) }
     var pageToolbarExpanded by rememberSaveable { mutableStateOf(true) }
     val density = LocalDensity.current
+    val commentReplies = remember(state.postId, state.comments) {
+        buildCommentReplies(state.postId, state.comments)
+    }
+    val commentKeys = remember(state.comments) { state.comments.commentKeys() }
+    var expandedReplies by rememberSaveable(state.postId) { mutableStateOf(emptyList<String>()) }
+    val latestCommentKeys by rememberUpdatedState(commentKeys)
+
+    fun revealComment(index: Int, animate: Boolean = false) {
+        if (index !in state.comments.indices) return
+        val key = commentKeys[index]
+        scope.launch {
+            val target = latestCommentKeys.indexOf(key)
+            if (target >= 0) {
+                if (animate) {
+                    listState.animateScrollToItem(target + state.headerItemCount)
+                } else {
+                    listState.scrollToItem(target + state.headerItemCount)
+                }
+            }
+        }
+    }
+
+    fun jumpToFloor(floor: String) {
+        if (NodeSeekSite.parseFloorNumber(floor) == 0 && state.body != null) {
+            scope.launch { listState.animateScrollToItem(0) }
+            return
+        }
+        val index = state.comments.indexOfFirst { it.floor == floor }
+        if (index >= 0) {
+            revealComment(index, animate = true)
+        } else {
+            onJumpToFloor(floor)
+        }
+    }
+
+    val revealLatestComment by rememberUpdatedState { index: Int, animate: Boolean -> revealComment(index, animate) }
 
     /**
      * The room the thread keeps below itself: the tallest [DetailBottomActions] has measured to.
@@ -394,13 +434,13 @@ fun PostDetailScreen(
 
     // The page the reader is looking at, not the furthest page fetched. Pages already in the list
     // are navigated by scrolling; only pages outside the loaded slice involve the network.
-    val visiblePage by remember(state.commentPages, state.body != null, state.firstLoadedPage) {
+    val visiblePage by remember(state.commentPages, state.firstLoadedPage) {
         derivedStateOf {
-            val commentIndex = listState.firstVisibleItemIndex - state.headerItemCount
-            if (commentIndex < 0) {
+            val rowIndex = listState.firstVisibleItemIndex - state.headerItemCount
+            if (rowIndex < 0) {
                 state.firstLoadedPage
             } else {
-                state.commentPages.getOrNull(commentIndex)
+                state.commentPages.getOrNull(rowIndex)
                     ?: state.commentPages.lastOrNull()
                     ?: state.firstLoadedPage
             }
@@ -409,10 +449,9 @@ fun PostDetailScreen(
 
     // The topmost floor on screen, which is what makes a return exact rather than page-accurate. Null
     // above the first comment — the title and the opening post belong to no page's floors.
-    val visibleFloor by remember(state.comments, state.body != null) {
+    val visibleFloor by remember(state.comments) {
         derivedStateOf {
-            state.comments
-                .getOrNull(listState.firstVisibleItemIndex - state.headerItemCount)
+            state.comments.getOrNull(listState.firstVisibleItemIndex - state.headerItemCount)
                 ?.floor
         }
     }
@@ -444,9 +483,13 @@ fun PostDetailScreen(
      */
     fun goToPage(target: Int) {
         scope.launch {
-            val index = state.firstIndexOfPage(target)
-            if (index != null && target in state.firstLoadedPage..state.lastLoadedPage) {
-                listState.animateScrollToItem(index)
+            if (target in state.firstLoadedPage..state.lastLoadedPage) {
+                if (target == 1) {
+                    listState.animateScrollToItem(0)
+                } else {
+                    val index = state.commentPages.indexOfFirst { it >= target }
+                    if (index >= 0) revealComment(index, animate = true)
+                }
                 return@launch
             }
             val adjoins = target == state.lastLoadedPage + 1 || target == state.firstLoadedPage - 1
@@ -455,16 +498,20 @@ fun PostDetailScreen(
                 // will join are the same half-second, and ordering them the other way spends the
                 // animation before the request has left.
                 onExtendToPage(target)
-                listState.animateScrollToItem(if (target > state.lastLoadedPage) state.lastItemIndex else 0)
+                listState.animateScrollToItem(if (target > state.lastLoadedPage) state.headerItemCount + state.comments.size - 1 else 0)
                 val arrived =
                     withTimeoutOrNull(PAGE_WAIT_MILLIS) {
                         snapshotFlow {
-                            latestState.firstIndexOfPage(target)
-                                ?.takeIf { target in latestState.firstLoadedPage..latestState.lastLoadedPage }
+                            target.takeIf { it in latestState.firstLoadedPage..latestState.lastLoadedPage }
                         }.filterNotNull().first()
                     }
                 if (arrived != null) {
-                    listState.animateScrollToItem(arrived)
+                    if (arrived == 1) {
+                        listState.animateScrollToItem(0)
+                    } else {
+                        val index = latestState.commentPages.indexOfFirst { it >= arrived }
+                        if (index >= 0) revealLatestComment(index, true)
+                    }
                     return@launch
                 }
             }
@@ -483,7 +530,7 @@ fun PostDetailScreen(
     fun goToLatest() {
         val last = state.totalPages.coerceAtLeast(1)
         if (last in state.firstLoadedPage..state.lastLoadedPage) {
-            scope.launch { listState.animateScrollToItem(state.lastItemIndex) }
+            revealComment(state.comments.lastIndex, animate = true)
         } else {
             pendingBottom = true
             onLoadPage(last)
@@ -492,7 +539,7 @@ fun PostDetailScreen(
     LaunchedEffect(pendingBottom, state.lastLoadedPage, state.comments.size) {
         if (!pendingBottom) return@LaunchedEffect
         if (state.lastLoadedPage < state.totalPages || state.comments.isEmpty()) return@LaunchedEffect
-        listState.scrollToItem(state.lastItemIndex)
+        revealComment(state.comments.lastIndex)
         pendingBottom = false
     }
 
@@ -501,7 +548,7 @@ fun PostDetailScreen(
      *
      * Offered only when the body is genuinely absent, which is a thread opened straight onto a later
      * page and never cached before: NodeSeek serves the opening post on page 1 alone. Page 1 is then
-     * fetched like any other page, and [firstIndexOfPage] lands the scroll on the top of the list
+     * fetched like any other page, and the scroll lands on the top of the list
      * rather than on that page's first floor, because the post is what was asked for.
      *
      * "Genuinely absent" means floors arrived and the post was not among them — not merely that
@@ -520,7 +567,7 @@ fun PostDetailScreen(
     // Keyed on the pages themselves rather than on how many comments there are: a jump swaps one page
     // of ten floors for another page of ten floors, so a count would not change and the effect would
     // never re-run against the content it was waiting for.
-    LaunchedEffect(state.pendingScroll, state.commentPages) {
+    LaunchedEffect(state.pendingScroll, state.comments, state.commentPages) {
         val target = state.pendingScroll ?: return@LaunchedEffect
         // The fetch has finished but the new comments may not have flowed out of Room yet; wait for
         // the emission that carries them rather than scrolling to a stale end-of-list.
@@ -530,15 +577,89 @@ fun PostDetailScreen(
         // about a floor on page 1 used to be answered against a list with nothing in it — scrolled to
         // the top, marked handled, and gone by the time the floors arrived. Waiting for a comment
         // from that page or later covers the deleted-page case too, where its own never turn up.
-        if (state.commentPages.none { it >= target.page }) return@LaunchedEffect
+        if (!state.hasContent || state.isLoading) return@LaunchedEffect
         // The floor when the site named one and it is on the page; otherwise the page's own start.
         // A floor can be missing from the page it was computed for — it was deleted, or the thread
         // was renumbered under it — and landing on the right page beats not moving at all.
-        val index = target.floor?.let { state.indexOfFloor(it) }
-            ?: state.firstIndexOfPage(target.page)
-            ?: (state.headerItemCount + state.comments.size - 1).coerceAtLeast(0)
-        listState.scrollToItem(index)
+        val index = target.floor?.let { floor -> state.comments.indexOfFirst { it.floor == floor }.takeIf { it >= 0 } }
+            ?: state.commentPages.indexOfFirst { it >= target.page }.takeIf { it >= 0 }
+        if (target.floor == "#0" || (target.floor == null && target.page == 1)) {
+            listState.scrollToItem(0)
+        } else if (index != null) {
+            revealComment(index)
+        } else {
+            listState.scrollToItem((state.headerItemCount + state.comments.size - 1).coerceAtLeast(0))
+        }
         onScrollHandled()
+    }
+
+    fun reactToContent(content: PostContent, action: ReactionAction) {
+        val id = content.commentId
+        when {
+            !state.isSignedIn -> onSignIn()
+
+            id == null -> Unit
+
+            action == ReactionAction.Upvote -> onReact(id, action)
+
+            else -> {
+                confirmTarget = ReactionConfirm(content, id, action)
+                if (action == ReactionAction.ChickenLeg) onLoadFreeChickenLegs()
+            }
+        }
+    }
+
+    val renderComment: @Composable (Int) -> Unit = { index ->
+        val comment = state.comments[index]
+        val key = commentKeys[index]
+        val replies = remember(commentReplies, index) {
+            commentReplies.directRepliesOf(index).map { state.comments[it] }
+        }
+        val repliesExpanded = key in expandedReplies
+        fun changeRepliesExpanded(expanded: Boolean) {
+            expandedReplies = if (expanded) (expandedReplies + key).distinct() else expandedReplies - key
+            if (!expanded) revealComment(index)
+        }
+        BlockAware(content = comment, revealed = state.showBlockedContent) {
+            CommentRow(
+                comment = comment,
+                postId = state.postId,
+                onOpenBrowser = onLinkClick,
+                onImageClick = onImageClick,
+                onJumpToFloor = ::jumpToFloor,
+                pendingReaction = state.pendingReactionFor(comment),
+                onReact = { action -> reactToContent(comment, action) },
+                onReply = { onReply(comment.toFloorReference()) },
+                onQuote = { comment.toFloorReference()?.let(onQuote) },
+                onEdit = comment.commentId?.takeIf { comment.isMine }?.let { id ->
+                    {
+                        if (state.isSignedIn) {
+                            onEdit(PostEditTarget(state.postId, id, state.commentPages.getOrNull(index) ?: state.lastLoadedPage, false))
+                        } else {
+                            onSignIn()
+                        }
+                    }
+                },
+                onAuthorClick = onAuthorClick,
+                replyCount = replies.size,
+                repliesExpanded = repliesExpanded,
+                onToggleReplies = { changeRepliesExpanded(!repliesExpanded) },
+                voteContent = voteContent,
+                stardustContent = stardustContent,
+                modifier = Modifier.testTag(key),
+                repliesContent = {
+                    if (repliesExpanded && replies.isNotEmpty()) {
+                        CommentRepliesList(
+                            replies = replies,
+                            onCollapse = { changeRepliesExpanded(false) },
+                            showBlockedContent = state.showBlockedContent,
+                            onJumpToFloor = ::jumpToFloor,
+                            modifier = Modifier.padding(top = Spacing.sm).testTag("comment-replies-$key"),
+                        )
+                    }
+                },
+            )
+        }
     }
     /*
      * The nested-scroll state drives the toolbar; only the top pins it open. The foot of the thread
@@ -621,40 +742,14 @@ fun PostDetailScreen(
                             ThreadList(
                                 state = state,
                                 listState = listState,
+                                commentKeys = commentKeys,
+                                commentContent = renderComment,
                                 bottomRoom = bottomActionsHeight,
                                 onOpenOriginalPost = openOriginalPost,
                                 onOpenBrowser = onLinkClick,
                                 onImageClick = onImageClick,
-                                onJumpToFloor = { floor ->
-                                    // A quote can point anywhere in the thread, including pages nobody
-                                    // has opened. Scroll when it is here, fetch its page when it is not.
-                                    val index = state.indexOfFloor(floor)
-                                    if (index != null) {
-                                        scope.launch { listState.animateScrollToItem(index) }
-                                    } else {
-                                        onJumpToFloor(floor)
-                                    }
-                                },
-                                onReact = { content, action ->
-                                    val commentId = content.commentId
-                                    when {
-                                        // Same rule as the editor: the account has to exist before the
-                                        // action, not after a rejection that also spent the tap.
-                                        !state.isSignedIn -> onSignIn()
-
-                                        commentId == null -> Unit
-
-                                        // 点赞 costs nothing and the site does not confirm it either.
-                                        action == ReactionAction.Upvote -> onReact(commentId, action)
-
-                                        else -> {
-                                            confirmTarget = ReactionConfirm(content, commentId, action)
-                                            if (action == ReactionAction.ChickenLeg) onLoadFreeChickenLegs()
-                                        }
-                                    }
-                                },
-                                onReplyToFloor = onReply,
-                                onQuoteFloor = onQuote,
+                                onJumpToFloor = ::jumpToFloor,
+                                onReact = ::reactToContent,
                                 onEditFloor = { target ->
                                     // Same gate as everything else that writes: an expired session is
                                     // discovered before the editor opens, not after a save is refused.
@@ -975,6 +1070,8 @@ private val ThreadBottomBarRoom =
 private fun ThreadList(
     state: PostDetailUiState,
     listState: LazyListState,
+    commentKeys: List<String>,
+    commentContent: @Composable (Int) -> Unit,
     /** What the floating controls measured to — see the property that holds it in [PostDetailScreen]. */
     bottomRoom: Dp,
     /** See [PostDetailScreen]'s own — null when the opening post is already in the list. */
@@ -983,8 +1080,6 @@ private fun ThreadList(
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
     onReact: (PostContent, ReactionAction) -> Unit,
-    onReplyToFloor: (FloorReference?) -> Unit,
-    onQuoteFloor: (FloorReference) -> Unit,
     onEditFloor: (PostEditTarget) -> Unit,
     onAuthorClick: (Long) -> Unit,
     onCollect: () -> Unit,
@@ -997,6 +1092,7 @@ private fun ThreadList(
         contentPadding = PaddingValues(bottom = bottomRoom),
         modifier = modifier
             .fillMaxHeight()
+            .testTag("post-comments")
             .readableWidth(),
     ) {
         item(key = "title") {
@@ -1060,7 +1156,7 @@ private fun ThreadList(
 
         if (state.hasContent) {
             item(key = "comments-header") {
-                CommentsHeader(count = state.comments.size)
+                CommentsHeader(state.comments.size)
             }
         } else {
             // "共 0 条回复" would be a claim, and nobody has counted yet.
@@ -1069,41 +1165,9 @@ private fun ThreadList(
 
         itemsIndexed(
             items = state.comments,
-            key = { index, comment -> comment.commentId ?: -index.toLong() - 1 },
-        ) { index, comment ->
-            BlockAware(content = comment, revealed = state.showBlockedContent) {
-                CommentRow(
-                    comment = comment,
-                    onOpenBrowser = onOpenBrowser,
-                    onImageClick = onImageClick,
-                    onJumpToFloor = onJumpToFloor,
-                    pendingReaction = state.pendingReactionFor(comment),
-                    onReact = { action -> onReact(comment, action) },
-                    onReply = { onReplyToFloor(comment.toFloorReference()) },
-                    onQuote = { comment.toFloorReference()?.let(onQuoteFloor) },
-                    // The site page this floor came from, which is the only page whose `__config__`
-                    // carries its Markdown. Read from the index rather than derived from the floor
-                    // number: the list is one scroll over several pages, and the two disagree as
-                    // soon as a floor above has been deleted.
-                    onEdit = comment.commentId
-                        ?.takeIf { comment.isMine }
-                        ?.let { id ->
-                            {
-                                onEditFloor(
-                                    PostEditTarget(
-                                        postId = state.postId,
-                                        commentId = id,
-                                        page = state.commentPages.getOrNull(index) ?: state.lastLoadedPage,
-                                        isOpeningPost = false,
-                                    ),
-                                )
-                            }
-                        },
-                    onAuthorClick = onAuthorClick,
-                    voteContent = voteContent,
-                    stardustContent = stardustContent,
-                )
-            }
+            key = { index, _ -> commentKeys[index] },
+        ) { index, _ ->
+            commentContent(index)
         }
 
         if (state.isAppending) {
@@ -1124,7 +1188,7 @@ private fun ThreadList(
  * to answer "what did they actually say".
  */
 @Composable
-private fun BlockAware(
+internal fun BlockAware(
     content: PostContent,
     revealed: Boolean,
     floor: @Composable () -> Unit,
@@ -1412,7 +1476,7 @@ private fun ThreadOpeningPost(
                 nodes = body.nodes,
                 onLinkClick = onOpenBrowser,
                 onImageClick = onImageClick,
-                onQuoteRefClick = { onJumpToFloor(it.floor) },
+                onQuoteRefClick = { it.openFrom(postId, onJumpToFloor, onOpenBrowser) },
                 textStyle = MaterialTheme.typography.bodyLarge,
                 voteContent = voteContent,
                 stardustContent = stardustContent,
@@ -1421,6 +1485,7 @@ private fun ThreadOpeningPost(
         }
         UserSignature(
             nodes = body.signatureNodes,
+            postId = postId,
             bodyStyle = MaterialTheme.typography.bodyLarge,
             onOpenBrowser = onOpenBrowser,
             onImageClick = onImageClick,
@@ -1460,11 +1525,6 @@ private fun CommentsHeader(count: Int) {
             ),
             modifier = Modifier.weight(1f),
         )
-        Text(
-            text = stringResource(Res.string.post_auto_paging),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
     if (count == 0) {
         Column(
@@ -1498,6 +1558,7 @@ private fun CommentsHeader(count: Int) {
 @Composable
 private fun CommentRow(
     comment: PostContent,
+    postId: Long,
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
@@ -1507,11 +1568,16 @@ private fun CommentRow(
     onQuote: () -> Unit,
     onEdit: (() -> Unit)?,
     onAuthorClick: (Long) -> Unit,
+    replyCount: Int,
+    repliesExpanded: Boolean,
+    onToggleReplies: () -> Unit,
     voteContent: @Composable (Long) -> Unit,
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
+    modifier: Modifier = Modifier,
+    repliesContent: @Composable () -> Unit = {},
 ) {
     Column(
-        modifier = Modifier.padding(
+        modifier = modifier.padding(
             start = Spacing.lg,
             end = Spacing.lg,
             top = Spacing.lg,
@@ -1562,7 +1628,7 @@ private fun CommentRow(
             nodes = comment.nodes,
             onLinkClick = onOpenBrowser,
             onImageClick = onImageClick,
-            onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
+            onQuoteRefClick = { it.openFrom(postId, onJumpToFloor, onOpenBrowser) },
             textStyle = MaterialTheme.typography.bodyMedium,
             voteContent = voteContent,
             stardustContent = stardustContent,
@@ -1570,6 +1636,7 @@ private fun CommentRow(
         )
         UserSignature(
             nodes = comment.signatureNodes,
+            postId = postId,
             bodyStyle = MaterialTheme.typography.bodyMedium,
             onOpenBrowser = onOpenBrowser,
             onImageClick = onImageClick,
@@ -1579,12 +1646,15 @@ private fun CommentRow(
             reactions = comment.reactions,
             pending = pendingReaction,
             onReact = onReact,
-            // 回复 gives way to 编辑 on this account's own floor, which is what the site does — and
-            // what keeps the row at five buttons instead of a sixth that does not fit on a phone.
+            // 自己的楼层用编辑替代回复，沿用站点的操作顺序。
             onReply = onReply.takeIf { onEdit == null },
             onQuote = onQuote,
             onEdit = onEdit,
+            replyCount = replyCount,
+            repliesExpanded = repliesExpanded,
+            onToggleReplies = onToggleReplies,
         )
+        repliesContent()
     }
 }
 
@@ -1598,6 +1668,7 @@ private fun CommentRow(
 @Composable
 private fun UserSignature(
     nodes: List<RichNode>,
+    postId: Long,
     bodyStyle: TextStyle,
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
@@ -1613,11 +1684,21 @@ private fun UserSignature(
         nodes = nodes,
         onLinkClick = onOpenBrowser,
         onImageClick = onImageClick,
-        onQuoteRefClick = { onJumpToFloor(it.floor) },
+        onQuoteRefClick = { it.openFrom(postId, onJumpToFloor, onOpenBrowser) },
         textStyle = bodyStyle.asSignature().copy(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
     )
+}
+
+/** 同帖引用按实际链接定位楼层；跨帖或外站引用交回正常链接导航。 */
+private fun InlineNode.QuoteRef.openFrom(
+    postId: Long,
+    onJumpToFloor: (String) -> Unit,
+    onLinkClick: (String) -> Unit,
+) {
+    val referenced = NodeSeekSite.referencedFloor(postId, url)
+    if (referenced == null) onLinkClick(url) else onJumpToFloor("#$referenced")
 }
 
 /** Tappable only when the uid was actually parsed; a dead ripple would promise a screen we cannot open. */
@@ -1627,6 +1708,7 @@ private fun Modifier.authorClickable(uid: Long?, onAuthorClick: (Long) -> Unit):
 /** `ButtonDefaults.TextButtonContentPadding`'s horizontal inset. */
 private val TEXT_BUTTON_CONTENT_INSET = 12.dp
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReactionRow(
     reactions: PostReactions?,
@@ -1637,6 +1719,9 @@ private fun ReactionRow(
     onQuote: (() -> Unit)? = null,
     /** 编辑 — null on every floor this account did not write. */
     onEdit: (() -> Unit)? = null,
+    replyCount: Int = 0,
+    repliesExpanded: Boolean = false,
+    onToggleReplies: (() -> Unit)? = null,
     /*
      * Collection is whole-thread on NodeSeek, so only the opening post passes these; every comment
      * row leaves them at their defaults and the star simply is not drawn. Null [collected] is the
@@ -1648,68 +1733,85 @@ private fun ReactionRow(
     onCollect: (() -> Unit)? = null,
 ) {
     Row(
-        // Every reaction is a TextButton, which keeps 12dp of content padding inside its own bounds.
-        // Laid out honestly the last icon stops 12dp short of the margin the floor label and the
-        // body text sit on; shifting the row out by exactly that much lines the ink up instead.
         modifier = modifier
             .fillMaxWidth()
-            .offset(x = TEXT_BUTTON_CONTENT_INSET)
             .padding(top = Spacing.sm),
-        horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically,
+        // 回复按钮整体左移后，把腾出的宽度留给右侧操作，避免新增留白把按钮挤到下一行。
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm - TEXT_BUTTON_CONTENT_INSET),
+        verticalAlignment = Alignment.Top,
     ) {
-        // First in an End-arranged row, so it draws leftmost and the three marks keep their places.
-        if (collected != null && onCollect != null) {
+        if (replyCount > 0 && onToggleReplies != null) {
             QuietReaction(
-                icon = if (collected) Icons.Default.Star else PlazaIcons.StarBorder,
-                label = if (collected) Res.string.post_collected_action else Res.string.post_collect_action,
-                count = collectionCount?.toString().orEmpty(),
-                selected = collected,
-                pending = collectPending,
-                onClick = onCollect.takeUnless { collectPending },
+                icon = PlazaIcons.ModeComment,
+                label = stringResource(Res.string.comment_replies_count, replyCount),
+                count = replyCount.toString(),
+                onClick = onToggleReplies,
+                // 整体左移以对齐正文，保留两侧内边距，让点击反馈居中包住全部内容。
+                modifier = Modifier.offset(x = -TEXT_BUTTON_CONTENT_INSET),
+                trailingIcon = if (repliesExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                trailingIconDescription = stringResource(if (repliesExpanded) Res.string.action_collapse else Res.string.action_expand),
             )
         }
-        REACTION_ORDER.forEach { (action, icon) ->
-            QuietReaction(
-                icon = icon,
-                label = action.labelRes(),
-                // No count at all rather than a zero when the page did not carry the tallies: an
-                // unread number and "nobody has done this" are different claims.
-                count = reactions?.countOf(action)?.toString().orEmpty(),
-                spent = reactions?.hasSpent(action) == true,
-                pending = pending == action,
-                // A floor whose tallies we never read is a floor we cannot say is unspent — offering
-                // the button there invites a round trip that ends in "已经进行过".
-                onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
-            )
-        }
-        // Not reactions, but they have always lived on this row: they carry the floor into the
-        // editor, which is what 6d's "回复 #12 · nssk" header is showing. Two buttons rather than
-        // one because the site has two — 回复 addresses the author, 引用 reproduces the floor — and
-        // collapsing them into a single action is what made every answer from here read as a quote.
-        onQuote?.let {
-            QuietReaction(
-                icon = PlazaIcons.FormatQuote,
-                label = Res.string.post_quote_action,
-                count = "",
-                onClick = it,
-            )
-        }
-        onReply?.let {
-            QuietReaction(
-                icon = PlazaIcons.Reply,
-                label = Res.string.post_reply_action,
-                count = "",
-                onClick = it,
-            )
-        }
-        onEdit?.let {
-            QuietReaction(
-                icon = Icons.Default.Edit,
-                label = Res.string.post_edit_action,
-                count = "",
-                onClick = it,
-            )
+        // 右侧操作独立排列并占用剩余空间，换行时也与左侧回复入口顶部对齐。
+        // 抵消按钮末端的内边距，让最后一个图标与正文右边缘对齐。
+        FlowRow(
+            modifier = Modifier.weight(1f).offset(x = TEXT_BUTTON_CONTENT_INSET),
+            horizontalArrangement = Arrangement.End,
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
+            // First in an End-arranged row, so it draws leftmost and the three marks keep their places.
+            if (collected != null && onCollect != null) {
+                QuietReaction(
+                    icon = if (collected) Icons.Default.Star else PlazaIcons.StarBorder,
+                    label = stringResource(if (collected) Res.string.post_collected_action else Res.string.post_collect_action),
+                    count = collectionCount?.toString().orEmpty(),
+                    selected = collected,
+                    pending = collectPending,
+                    onClick = onCollect.takeUnless { collectPending },
+                )
+            }
+            REACTION_ORDER.forEach { (action, icon) ->
+                QuietReaction(
+                    icon = icon,
+                    label = stringResource(action.labelRes()),
+                    // No count at all rather than a zero when the page did not carry the tallies: an
+                    // unread number and "nobody has done this" are different claims.
+                    count = reactions?.countOf(action)?.toString().orEmpty(),
+                    spent = reactions?.hasSpent(action) == true,
+                    pending = pending == action,
+                    // A floor whose tallies we never read is a floor we cannot say is unspent — offering
+                    // the button there invites a round trip that ends in "已经进行过".
+                    onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
+                )
+            }
+            // Not reactions, but they have always lived on this row: they carry the floor into the
+            // editor, which is what 6d's "回复 #12 · nssk" header is showing. Two buttons rather than
+            // one because the site has two — 回复 addresses the author, 引用 reproduces the floor — and
+            // collapsing them into a single action is what made every answer from here read as a quote.
+            onQuote?.let {
+                QuietReaction(
+                    icon = PlazaIcons.FormatQuote,
+                    label = stringResource(Res.string.post_quote_action),
+                    count = "",
+                    onClick = it,
+                )
+            }
+            onReply?.let {
+                QuietReaction(
+                    icon = PlazaIcons.Reply,
+                    label = stringResource(Res.string.post_reply_action),
+                    count = "",
+                    onClick = it,
+                )
+            }
+            onEdit?.let {
+                QuietReaction(
+                    icon = Icons.Default.Edit,
+                    label = stringResource(Res.string.post_edit_action),
+                    count = "",
+                    onClick = it,
+                )
+            }
         }
     }
 }
@@ -1732,8 +1834,9 @@ private fun ReactionAction.labelRes(): StringResource =
 @Composable
 private fun QuietReaction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: StringResource,
+    label: String,
     count: String,
+    modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     spent: Boolean = false,
     pending: Boolean = false,
@@ -1745,6 +1848,8 @@ private fun QuietReaction(
      * collected a thread unable to un-collect it.
      */
     selected: Boolean = false,
+    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    trailingIconDescription: String? = null,
 ) {
     /*
      * Spent is drawn, not merely disabled. These three cannot be undone, so the row has to answer
@@ -1754,6 +1859,8 @@ private fun QuietReaction(
     TextButton(
         onClick = onClick ?: {},
         enabled = onClick != null && !spent && !pending,
+        modifier = modifier.widthIn(min = Sizes.minTouchTarget),
+        contentPadding = ButtonDefaults.TextButtonContentPadding,
         colors =
         when {
             spent -> ButtonDefaults.textButtonColors(disabledContentColor = MaterialTheme.colorScheme.primary)
@@ -1768,13 +1875,20 @@ private fun QuietReaction(
                 size = 18.dp,
             )
         } else {
-            Icon(icon, contentDescription = stringResource(label), modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = label, modifier = Modifier.size(18.dp))
         }
         if (count.isNotEmpty()) {
             Text(
                 text = count,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(start = Spacing.xs),
+            )
+        }
+        if (trailingIcon != null) {
+            Icon(
+                imageVector = trailingIcon,
+                contentDescription = trailingIconDescription,
+                modifier = Modifier.padding(start = Spacing.xs).size(14.dp),
             )
         }
     }
@@ -1984,39 +2098,13 @@ private fun FloorLabel(floor: String) {
  */
 private const val PAGE_WAIT_MILLIS = 15_000L
 
-/** Items in [ThreadList] before the first comment: title, comments header, and the body when present. */
+/** 列表始终保留标题、正文占位和评论标题三个条目，后续页没有正文时也不改变偏移。 */
 private val PostDetailUiState.headerItemCount: Int
-    get() = 2 + (if (body != null) 1 else 0)
+    get() = 3
 
 /** The mark in flight on [content], if any — only one floor at a time can have one. */
 private fun PostDetailUiState.pendingReactionFor(content: PostContent): ReactionAction? =
     pendingReaction?.takeIf { it.commentId == content.commentId }?.action
-
-/** The last row of the list — the newest floor when the last page is loaded. */
-private val PostDetailUiState.lastItemIndex: Int
-    get() = (headerItemCount + comments.size - 1).coerceAtLeast(0)
-
-/** Mirrors [ThreadList]'s item order so a quote reference can scroll to the floor it points at. */
-private fun PostDetailUiState.indexOfFloor(floor: String): Int? {
-    val position = comments.indexOfFirst { it.floor == floor }
-    if (position < 0) return null
-    return headerItemCount + position
-}
-
-/**
- * The list index where [page] starts, or null when no loaded comment belongs to it yet. `>=` rather
- * than `==` so a page whose comments were all deleted resolves to the next page instead of nowhere.
- *
- * The slice's first page resolves to the first comment rather than to the top of the list: the title
- * and the opening post sit above every page, and a reader who asked for page 12 asked for its floors,
- * not for the post they have already read. Page 1 keeps the whole top, which is where it begins.
- */
-private fun PostDetailUiState.firstIndexOfPage(page: Int): Int? {
-    if (page <= firstLoadedPage) return if (firstLoadedPage > 1) headerItemCount else 0
-    val position = commentPages.indexOfFirst { it >= page }
-    if (position < 0) return null
-    return headerItemCount + position
-}
 
 /**
  * A bar standing in for the posting time, in a box exactly as tall as the line it replaces.
