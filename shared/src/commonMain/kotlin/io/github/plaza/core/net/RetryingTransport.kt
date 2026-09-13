@@ -6,14 +6,13 @@ import kotlinx.coroutines.delay
  * Repeats a read that the edge refused with a gateway status, the way a reader who sees 503
  * presses reload.
  *
- * Why this exists, measured against NodeSeek on 2026-09-13: the site's edge answers a fraction of
- * this client's page and API reads with the origin's stock `503 Service Temporarily Unavailable`,
- * while a real browser on the same exit IP, same second, same URL, gets 200 — a browser's TLS and
- * HTTP/2 fingerprint scores as human, an HTTP library's does not, and the borderline verdict comes
- * out differently from one request to the next. A second try a moment later usually passes: 12
- * probes of the same board in a row ran 503, 200, 200, 503, 200 …, never two 503s from the same
- * URL more than a few seconds apart. So the reader was being handed a 重试 button for something
- * the app could have done itself before saying anything.
+ * Why this exists, measured against NodeSeek on 2026-09-13: with the site's `sortBy` cookie kept off
+ * the request (see [SiteConfig.unreplayableCookies], which was the deterministic 503), a signed-out
+ * read of a board still came back as the origin's stock `503 Service Temporarily Unavailable` now
+ * and then — the same URL answered 503, then 200 three seconds later, on both `/categories/daily`
+ * and `/categories/photo-share`, from a Mac probe and from the phone alike. Whatever the origin's
+ * reason, a second try a moment later passes, and the reader was being handed a 重试 button for
+ * something the app could have done itself before saying anything.
  *
  * Only `GET`s, and only [GATEWAY_STATUSES]. A write that came back 503 may well have been applied,
  * and sending it again is how a comment gets posted twice; a 4xx is the site's answer, not the

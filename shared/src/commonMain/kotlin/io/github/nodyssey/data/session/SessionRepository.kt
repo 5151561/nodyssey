@@ -51,6 +51,9 @@ class SessionRepository(
 
     /** Re-reads the cookie store, publishes what it says, and persists it. */
     fun sync(): SessionState {
+        // Before the read, because the in-app browser shares the store and deposits the site's
+        // list-order cookie whenever it opens a list page — see [SiteConfig.unreplayableCookies].
+        cookies.dropUnreplayable()
         val snapshot = read()
         val current = _state.value
         // Anything the app can observe, not the fingerprint alone. Keying this on the fingerprint

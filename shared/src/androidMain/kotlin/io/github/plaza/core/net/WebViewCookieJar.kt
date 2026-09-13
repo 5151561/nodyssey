@@ -18,18 +18,22 @@ import okhttp3.HttpUrl
  */
 class WebViewCookieJar(
     private val store: SessionCookieStore,
+    /** See [SiteConfig.unreplayableCookies]: never sent, never stored, whichever side wrote them. */
+    private val unreplayable: Set<String> = emptySet(),
 ) : CookieJar {
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val header = store.cookieHeader(url.toString()) ?: return emptyList()
         return header.split(';')
             .mapNotNull { Cookie.parse(url, it.trim()) }
+            .filterNot { it.name in unreplayable }
     }
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        if (cookies.isEmpty()) return
+        val kept = cookies.filterNot { it.name in unreplayable }
+        if (kept.isEmpty()) return
         val target = url.toString()
-        cookies.forEach { store.setCookie(target, it.toString()) }
+        kept.forEach { store.setCookie(target, it.toString()) }
         store.flush()
     }
 }

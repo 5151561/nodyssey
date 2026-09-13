@@ -85,6 +85,16 @@ object NodeSeekSite {
             // is what the page does with the second one. Its other, undocumented job is in
             // [ColorSchemeCookie]: without this cookie the account endpoint returns no readme at all.
             colorSchemeCookie = ColorSchemeCookie(name = "colorscheme", light = "light", dark = "dark"),
+            // Measured on 2026-09-13, signed out, from the same exit IP a browser was fine on. A
+            // request carrying the site's own `sortBy` cookie — which every `?sortBy=` list answer
+            // sets for two years — came back as nginx's stock 503: `/` with `sortBy=replyTime` or
+            // `sortBy=postTime` 503'd every time and answered 200 the moment the cookie was left off
+            // (a value the site does not recognise, `sortBy=bogus`, also passed); a level-locked post
+            // 503'd with `replyTime` and served its login wall without it. Signed in, the same cookie
+            // is harmless, which is why a browser never sees this and why it took a signed-out
+            // debug install to find. The URL parameter alone selects the order — see [listPath] —
+            // so the app loses nothing by never sending it.
+            unreplayableCookies = setOf("sortBy"),
             markers =
             PageMarkers(
                 usablePage = Selectors.USABLE_PAGE_MARKERS,

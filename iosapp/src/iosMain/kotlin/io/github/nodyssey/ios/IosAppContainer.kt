@@ -91,6 +91,7 @@ import io.github.plaza.core.AppVersion
 import io.github.plaza.core.crash.CrashReportStore
 import io.github.plaza.core.crash.NoCrashReports
 import io.github.plaza.core.net.AppleCookieStore
+import io.github.plaza.core.net.CookieScrubbingTransport
 import io.github.plaza.core.net.EncryptedNameResolution
 import io.github.plaza.core.net.EncryptedResolver
 import io.github.plaza.core.net.NSUrlSessionTransport
@@ -256,7 +257,12 @@ class IosAppContainer(
      * the image hosts are six other people's.
      */
     private val transport by lazy {
-        RetryingTransport(DynamicSignTransport(NSUrlSessionTransport { forumSession.current }, userAgent.value))
+        RetryingTransport(
+            DynamicSignTransport(
+                CookieScrubbingTransport(NSUrlSessionTransport { forumSession.current }, sessionCookies),
+                userAgent.value,
+            ),
+        )
     }
 
     private val htmlClient by lazy { SiteHtmlClient(transport, dispatchers, NodeSeekSite.CONFIG) }

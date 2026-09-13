@@ -80,6 +80,27 @@ class SessionCookies(
         store.flush()
     }
 
+    /**
+     * Expires every [SiteConfig.unreplayableCookies] entry the store holds for the site.
+     *
+     * Written as an expired cookie rather than removed by name because [SessionCookieStore] has no
+     * per-name removal — `CookieManager` offers none — and an overwrite with `Max-Age=0` is how a
+     * browser is told the same thing. Host-only and `Path=/`, which is how the site writes it.
+     */
+    fun dropUnreplayable() {
+        if (config.unreplayableCookies.isEmpty()) return
+        val held = cookiePairs(config.baseUrl).map { (name, _) -> name }.toSet()
+        val present = config.unreplayableCookies.filter { it in held }
+        if (present.isEmpty()) return
+        present.forEach { name -> store.setCookie(config.baseUrl, "$name=; Path=/; Max-Age=0") }
+        store.flush()
+    }
+
+    /** Whether a `Set-Cookie` header value names one of the cookies this app must not replay. */
+    fun setsUnreplayable(setCookie: String?): Boolean =
+        setCookie != null &&
+            config.unreplayableCookies.any { name -> Regex("(^|[,;\\s])$name=").containsMatchIn(setCookie) }
+
     suspend fun clearSession() {
         store.removeAll()
         store.flush()

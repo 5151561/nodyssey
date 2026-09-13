@@ -60,6 +60,17 @@ data class SiteConfig(
      * reader in dark mode should not be handed a white page. See [SessionCookies.applyColorScheme].
      */
     val colorSchemeCookie: ColorSchemeCookie? = null,
+    /**
+     * Cookies the site sets that this app must never send back.
+     *
+     * A site remembers a reader's choices in cookies its own pages know how to read. This app is not
+     * one of its pages: it states every choice in the URL, so replaying the cookie adds nothing —
+     * and on NodeSeek it subtracts everything, see the entry in `NodeSeekSite`. Dropped on the way
+     * in by the platform jar where one exists, expired from the store after any answer that set one,
+     * and expired again on every session sync, because the in-app browser shares the store and will
+     * deposit one whenever it opens a list page.
+     */
+    val unreplayableCookies: Set<String> = emptySet(),
 )
 
 /**

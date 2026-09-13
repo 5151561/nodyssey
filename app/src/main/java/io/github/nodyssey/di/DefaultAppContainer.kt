@@ -111,6 +111,7 @@ import io.github.plaza.core.AppVersion
 import io.github.plaza.core.crash.CrashReportStore
 import io.github.plaza.core.crash.FileCrashReportStore
 import io.github.plaza.core.net.BrowserHeadersInterceptor
+import io.github.plaza.core.net.CookieScrubbingTransport
 import io.github.plaza.core.net.CrossOriginRefererInterceptor
 import io.github.plaza.core.net.OkHttpTransport
 import io.github.plaza.core.net.RetryingTransport
@@ -349,7 +350,7 @@ class DefaultAppContainer(
         java.net.Authenticator.setDefault(AppSocksAuthenticator(liveProxyConfig))
         OkHttpClient
             .Builder()
-            .cookieJar(WebViewCookieJar(cookieStore))
+            .cookieJar(WebViewCookieJar(cookieStore, NodeSeekSite.CONFIG.unreplayableCookies))
             .connectionPool(connectionPool)
             // 加密 DNS, or the platform resolver while it is off — see [AppDns].
             .dns(appDns)
@@ -425,7 +426,12 @@ class DefaultAppContainer(
     private val transport by lazy {
         // Retry sits outside the signature: a retried vote is signed once and sent once, because
         // [RetryingTransport] never repeats a write.
-        RetryingTransport(DynamicSignTransport(OkHttpTransport(okHttpClient), userAgent.value))
+        RetryingTransport(
+            DynamicSignTransport(
+                CookieScrubbingTransport(OkHttpTransport(okHttpClient), sessionCookies),
+                userAgent.value,
+            ),
+        )
     }
 
     private val htmlClient by lazy { SiteHtmlClient(transport, dispatchers, NodeSeekSite.CONFIG) }
