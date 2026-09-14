@@ -5,6 +5,7 @@ import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CommentRepliesTest {
@@ -15,6 +16,9 @@ class CommentRepliesTest {
 
         assertEquals(listOf(2, 3), replies.directRepliesOf(0))
         assertEquals(listOf(4), replies.directRepliesOf(2))
+        assertEquals(CommentReplyTarget(1, 0), replies.replyTargetOf(2))
+        assertEquals(CommentReplyTarget(3, 2), replies.replyTargetOf(4))
+        assertNull(replies.replyTargetOf(0))
         assertTrue(replies.directRepliesOf(1).isEmpty())
         assertEquals(listOf("#1", "#2", "#3", "#4", "#5", "#6"), comments.map { it.floor })
     }
@@ -24,9 +28,21 @@ class CommentRepliesTest {
         val reply = comment(11, 2)
         val partial = buildCommentReplies(42, listOf(reply))
         assertTrue(partial.directRepliesOf(0).isEmpty())
+        assertEquals(CommentReplyTarget(2, null), partial.replyTargetOf(0))
 
         val complete = buildCommentReplies(42, listOf(comment(2), reply))
         assertEquals(listOf(1), complete.directRepliesOf(0))
+        assertEquals(CommentReplyTarget(2, 0), complete.replyTargetOf(1))
+    }
+
+    @Test
+    fun `中间评论同时保留回复目标和自己的直接回复`() {
+        val replies = buildCommentReplies(42, listOf(comment(1), comment(2, 1), comment(3, 2)))
+
+        assertEquals(CommentReplyTarget(1, 0), replies.replyTargetOf(1))
+        assertEquals(listOf(2), replies.directRepliesOf(1))
+        assertEquals(listOf(1), replies.directRepliesOf(0))
+        assertEquals(CommentReplyTarget(2, 1), replies.replyTargetOf(2))
     }
 
     @Test
@@ -53,6 +69,7 @@ class CommentRepliesTest {
         val replies = buildCommentReplies(42, listOf(comment(1), comment(2, 1), quoted, spaced))
 
         assertEquals(listOf(1, 2, 3), replies.directRepliesOf(0))
+        assertTrue((1..3).all { replies.replyTargetOf(it) == CommentReplyTarget(1, 0) })
     }
 
     @Test
@@ -83,8 +100,16 @@ class CommentRepliesTest {
     }
 
     @Test
-    fun `自引用向后引用和引用楼主都不形成评论环`() {
-        assertNoReplies(listOf(comment(1, 2), comment(2, 2), comment(3, 0)))
+    fun `自引用和向后引用不形成评论环`() {
+        assertNoReplies(listOf(comment(1, 2), comment(2, 2)))
+    }
+
+    @Test
+    fun `引用楼主保留目标而不计入其他评论的回复`() {
+        val replies = buildCommentReplies(42, listOf(comment(1, 0)))
+
+        assertEquals(CommentReplyTarget(0, null), replies.replyTargetOf(0))
+        assertTrue(replies.directRepliesOf(0).isEmpty())
     }
 
     @Test
@@ -98,6 +123,7 @@ class CommentRepliesTest {
         val replies = buildCommentReplies(42, listOf(comment(1), comment(2, 1).copy(isPinned = true), comment(3, 2)))
         assertTrue(replies.directRepliesOf(0).isEmpty())
         assertEquals(listOf(2), replies.directRepliesOf(1))
+        assertEquals(CommentReplyTarget(1, 0), replies.replyTargetOf(1))
     }
 
     @Test
@@ -106,6 +132,7 @@ class CommentRepliesTest {
         val replies = buildCommentReplies(42, (1..count).map { floor -> comment(floor, (floor - 1).takeIf { it > 0 }) })
         for (index in 0 until count - 1) {
             assertEquals(listOf(index + 1), replies.directRepliesOf(index))
+            assertEquals(CommentReplyTarget(index + 1, index), replies.replyTargetOf(index + 1))
         }
         assertTrue(replies.directRepliesOf(count - 1).isEmpty())
     }
@@ -115,11 +142,14 @@ class CommentRepliesTest {
         val replies = buildCommentReplies(42, emptyList())
         assertTrue(replies.directRepliesOf(1).isEmpty())
         assertTrue(replies.directRepliesOf(-1).isEmpty())
+        assertNull(replies.replyTargetOf(1))
+        assertNull(replies.replyTargetOf(-1))
     }
 
     private fun assertNoReplies(comments: List<PostContent>) {
         val replies = buildCommentReplies(42, comments)
         assertTrue(comments.indices.all { replies.directRepliesOf(it).isEmpty() })
+        assertTrue(comments.indices.all { replies.replyTargetOf(it) == null })
     }
 
     private fun reference(floor: Int) = InlineNode.QuoteRef("reader", "#$floor", "/post-42-1#$floor")

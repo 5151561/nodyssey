@@ -359,6 +359,7 @@ fun PostDetailScreen(
     }
     val commentKeys = remember(state.comments) { state.comments.commentKeys() }
     var expandedReplies by rememberSaveable(state.postId) { mutableStateOf(emptyList<String>()) }
+    var expandedReplyTargets by rememberSaveable(state.postId) { mutableStateOf(emptyList<String>()) }
     val latestCommentKeys by rememberUpdatedState(commentKeys)
 
     fun revealComment(index: Int, animate: Boolean = false) {
@@ -612,6 +613,9 @@ fun PostDetailScreen(
     val renderComment: @Composable (Int) -> Unit = { index ->
         val comment = state.comments[index]
         val key = commentKeys[index]
+        val replyTarget = commentReplies.replyTargetOf(index)
+        val replyTargetContent = if (replyTarget?.floor == 0) state.body else replyTarget?.commentIndex?.let { state.comments[it] }
+        val replyTargetExpanded = replyTargetContent != null && key in expandedReplyTargets
         val replies = remember(commentReplies, index) {
             commentReplies.directRepliesOf(index).map { state.comments[it] }
         }
@@ -647,11 +651,42 @@ fun PostDetailScreen(
                 voteContent = voteContent,
                 stardustContent = stardustContent,
                 modifier = Modifier.testTag(key),
+                replyTargetAction = {
+                    if (replyTarget != null) {
+                        CommentReplyTargetButton(
+                            floor = "#${replyTarget.floor}",
+                            target = replyTargetContent?.takeIf { state.showBlockedContent || !it.isBlocked },
+                            expanded = replyTargetExpanded,
+                            onClick = {
+                                if (replyTargetContent == null) {
+                                    jumpToFloor("#${replyTarget.floor}")
+                                } else {
+                                    expandedReplyTargets = if (replyTargetExpanded) {
+                                        expandedReplyTargets - key
+                                    } else {
+                                        (expandedReplyTargets + key).distinct()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.testTag("reply-target-button-$key"),
+                        )
+                    }
+                },
+                replyTargetPreview = {
+                    if (replyTargetExpanded) {
+                        CommentReplyTargetPreview(
+                            target = replyTargetContent,
+                            showBlockedContent = state.showBlockedContent,
+                            onCollapse = { expandedReplyTargets = expandedReplyTargets - key },
+                            onJumpToTarget = { replyTarget?.let { jumpToFloor("#${it.floor}") } },
+                            modifier = Modifier.padding(top = Spacing.sm).testTag("reply-target-preview-$key"),
+                        )
+                    }
+                },
                 repliesContent = {
                     if (repliesExpanded && replies.isNotEmpty()) {
                         CommentRepliesList(
                             replies = replies,
-                            onCollapse = { changeRepliesExpanded(false) },
                             showBlockedContent = state.showBlockedContent,
                             onJumpToFloor = ::jumpToFloor,
                             modifier = Modifier.padding(top = Spacing.sm).testTag("comment-replies-$key"),
@@ -1574,6 +1609,8 @@ private fun CommentRow(
     voteContent: @Composable (Long) -> Unit,
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
     modifier: Modifier = Modifier,
+    replyTargetAction: @Composable () -> Unit = {},
+    replyTargetPreview: @Composable () -> Unit = {},
     repliesContent: @Composable () -> Unit = {},
 ) {
     Column(
@@ -1622,8 +1659,10 @@ private fun CommentRow(
                     FloorTimeLine(comment)
                 }
             }
+            replyTargetAction()
             comment.floor?.let { FloorLabel(it) }
         }
+        replyTargetPreview()
         PostRichContent(
             nodes = comment.nodes,
             onLinkClick = onOpenBrowser,

@@ -1,5 +1,6 @@
 package io.github.nodyssey.core.html
 
+import io.github.nodyssey.core.CommentReplyTarget
 import io.github.nodyssey.core.buildCommentReplies
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -14,6 +15,8 @@ class CommentRepliesParserTest {
         assertEquals((1..10).map { "#$it" }, detail.comments.map { it.floor })
         assertEquals(listOf(2), replies.directRepliesOf(0))
         assertEquals(listOf(3), replies.directRepliesOf(2))
+        assertEquals(CommentReplyTarget(1, 0), replies.replyTargetOf(2))
+        assertEquals(CommentReplyTarget(3, 2), replies.replyTargetOf(3))
         assertTrue(replies.directRepliesOf(1).isEmpty())
     }
 

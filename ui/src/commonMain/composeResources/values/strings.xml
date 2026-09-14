@@ -132,7 +132,9 @@
     <string name="post_comments_header">评论 · %1$d</string>
     <!-- 直接回复数量随已载入分页更新，楼层号沿用站点原值。 -->
     <string name="comment_replies_count">%1$d 条回复</string>
-    <string name="comment_replies_collapse">收起回复</string>
+    <string name="comment_reply_target_title">回复给</string>
+    <string name="comment_reply_target">回复给 %1$s</string>
+    <string name="comment_reply_target_collapse">收起引用</string>
     <string name="post_body_empty">这个帖子没有正文</string>
     <string name="post_open_original">查看正文</string>
     <string name="post_comments_empty">还没有人回复</string>

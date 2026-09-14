@@ -75,7 +75,7 @@ class CommentRepliesScreenTest {
     }
 
     @Test
-    fun `展开只展示直接回复的作者楼层和内容并可从底部收起`() {
+    fun `展开只展示直接回复并通过同一图标按钮收起`() {
         setScreen(listOf(replyComment(1), replyComment(2), replyComment(3, 1), replyComment(4, 3), replyComment(5, 1)))
         composeRule.onNodeWithContentDescription("2 条回复").performClick()
 
@@ -86,14 +86,153 @@ class CommentRepliesScreenTest {
             .assertTextContains("comment 3", substring = true)
         composeRule.onNodeWithTag("reply-preview-comment-5").assertExists()
         composeRule.onNodeWithTag("reply-preview-comment-4").assertDoesNotExist()
+        composeRule.onNodeWithText("收起回复").assertDoesNotExist()
         capture("normal-expanded")
 
-        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasText("收起回复"))
-        composeRule.onNodeWithText("收起回复").performClick()
+        toggleReplies(1, count = 2)
         composeRule.onNodeWithTag("reply-preview-comment-3").assertDoesNotExist()
         composeRule.onNodeWithTag("reply-preview-comment-5").assertDoesNotExist()
         composeRule.onNodeWithText("comment 1").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("2 条回复").assertIsDisplayed()
+    }
+
+    @Test
+    fun `中间评论同时展示回复目标和直接回复并独立收起`() {
+        setScreen(listOf(replyComment(1), replyComment(2, 1), replyComment(3, 2)))
+        composeRule.onNodeWithTag("reply-target-preview-comment-2").assertDoesNotExist()
+        openReplyTarget(2)
+        toggleReplies(2)
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag("comment-2"))
+
+        val target = composeRule.onNodeWithTag("reply-target-preview-comment-2")
+        target.assertIsDisplayed()
+            .assertTextContains("回复给")
+            .assertTextContains("reader1")
+            .assertTextContains("#1")
+            .assertTextContains("comment 1", substring = true)
+        val reply = composeRule.onNodeWithTag("reply-preview-comment-3")
+        reply.assertIsDisplayed().assertTextContains("comment 3", substring = true)
+        val body = composeRule.onNode(
+            hasText("comment 2", substring = true) and hasAnyAncestor(hasTestTag("comment-2")),
+            useUnmergedTree = true,
+        ).getUnclippedBoundsInRoot()
+        assertTrue(target.getUnclippedBoundsInRoot().bottom <= body.top)
+        assertTrue(body.bottom <= reply.getUnclippedBoundsInRoot().top)
+        capture("reply-both-directions")
+
+        composeRule.onNodeWithContentDescription("收起引用").performClick()
+        target.assertDoesNotExist()
+        reply.assertIsDisplayed()
+        openReplyTarget(2)
+        toggleReplies(2)
+        reply.assertDoesNotExist()
+        target.assertIsDisplayed()
+    }
+
+    @Test
+    fun `回复目标不在已加载分页时仍保留楼层跳转入口`() {
+        var requestedFloor: String? = null
+        setScreen(listOf(replyComment(11, 2), replyComment(12, 11)), onJumpToFloor = { requestedFloor = it })
+        toggleReplies(11)
+        openReplyTarget(11)
+
+        assertEquals("#2", requestedFloor)
+        composeRule.onNodeWithTag("reply-target-preview-comment-11").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-preview-comment-12").assertIsDisplayed()
+    }
+
+    @Test
+    fun `补入前页后两个方向的展开状态都留在原评论`() {
+        val page = listOf(replyComment(11), replyComment(12, 11), replyComment(13, 12))
+        val state = setScreen(page)
+        openReplyTarget(12)
+        toggleReplies(12)
+        state.value = screenState((1..10).map { replyComment(it) } + page)
+
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag("comment-12"))
+        composeRule.onNodeWithTag("reply-target-preview-comment-12").assertIsDisplayed().assertTextContains("reader11")
+        composeRule.onNodeWithTag("reply-preview-comment-13").assertIsDisplayed()
+        composeRule.onNodeWithTag("reply-target-preview-comment-2").assertDoesNotExist()
+    }
+
+    @Test
+    fun `屏蔽的回复目标须主动显示才能看到作者和正文`() {
+        setScreen(listOf(replyComment(1).copy(isBlocked = true), replyComment(2, 1)))
+        openReplyTarget(2)
+        val preview = hasTestTag("reply-target-preview-comment-2")
+        composeRule.onNode(hasText("reader1") and hasAnyAncestor(preview), useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNode(hasText("comment 1") and hasAnyAncestor(preview), useUnmergedTree = true).assertDoesNotExist()
+
+        composeRule.onNode(hasText("显示") and hasAnyAncestor(preview)).performClick()
+        composeRule.onNodeWithTag("reply-target-preview-comment-2")
+            .assertTextContains("reader1")
+            .assertTextContains("comment 1", substring = true)
+    }
+
+    @Test
+    fun `回复目标预览里的链接点击也只跳到目标原楼层`() {
+        var openedLink: String? = null
+        var requestedFloor: String? = null
+        var recorded: Pair<Int, String?>? = null
+        val comments = (1..25).map { floor ->
+            val comment = replyComment(floor, if (floor == 14) 2 else null)
+            if (floor == 2) {
+                comment.copy(nodes = listOf(RichNode.Paragraph(listOf(InlineNode.Link("original link", "https://example.com")))))
+            } else {
+                comment
+            }
+        }
+        setScreen(
+            comments,
+            pendingScroll = PendingScroll(2, "#14"),
+            onLinkClick = { openedLink = it },
+            onJumpToFloor = { requestedFloor = it },
+            onReadingPositionChange = { page, floor -> recorded = page to floor },
+        )
+        openReplyTarget(14)
+        composeRule.onNode(
+            hasText("original link") and hasAnyAncestor(hasTestTag("reply-target-preview-comment-14")),
+            useUnmergedTree = true,
+        ).performTouchInput { click(Offset(6f, centerY)) }
+
+        composeRule.onNodeWithTag("comment-2").assertIsDisplayed()
+        composeRule.waitForIdle()
+        assertEquals(1 to "#2", recorded)
+        assertNull(openedLink)
+        assertNull(requestedFloor)
+    }
+
+    @Test
+    fun `回复楼主可以预览正文且正文更新后引用同步更新`() {
+        val state = setScreen(listOf(replyComment(1, 0)))
+        openReplyTarget(1)
+        composeRule.onNodeWithTag("reply-target-preview-comment-1").assertTextContains("comment 0", substring = true)
+        state.value = state.value.copy(body = replyComment(0).copy(nodes = listOf(RichNode.Paragraph(listOf(InlineNode.Text("updated original post"))))))
+
+        composeRule.onNodeWithTag("reply-target-preview-comment-1").assertTextContains("updated original post", substring = true)
+        state.value = PostDetailUiState(postId = 42)
+        composeRule.onNodeWithTag("reply-target-preview-comment-1").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h800dp")
+    fun `窄屏大字仍能同时查看原消息和后续回复`() {
+        val parent = replyComment(1).copy(
+            authorName = "这是一个需要省略显示的很长的作者名字",
+            nodes = List(12) { RichNode.Paragraph(listOf(InlineNode.Text("这是一条用来检查引用摘要高度的原始消息。"))) },
+        )
+        setScreen(listOf(parent, replyComment(2, 1), replyComment(3, 2)), fontScale = 1.5f)
+        openReplyTarget(2)
+        toggleReplies(2)
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag("comment-2"))
+
+        val card = composeRule.onNodeWithTag("reply-target-preview-comment-2").getUnclippedBoundsInRoot()
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertTrue(card.left >= root.left && card.right <= root.right)
+        assertTrue("原消息摘要不应挤满屏幕", card.bottom - card.top < (root.bottom - root.top) / 2)
+        composeRule.onNodeWithContentDescription("收起引用").assertIsDisplayed()
+        composeRule.onNodeWithTag("reply-preview-comment-3").assertIsDisplayed()
+        capture("reply-both-directions-large-font")
     }
 
     @Test
@@ -188,7 +327,7 @@ class CommentRepliesScreenTest {
 
     @Test
     @Config(qualifiers = "w320dp-h800dp")
-    fun `窄屏大字的长回复收起后回到原评论`() {
+    fun `窄屏大字的长回复通过图标收起后回到原评论`() {
         val reply = replyComment(2, 1)
         val paragraphs = List(12) { RichNode.Paragraph(listOf(InlineNode.Text("这是一段用于检查长回复阅读位置的内容。"))) }
         setScreen(listOf(replyComment(1), reply.copy(nodes = reply.nodes + paragraphs)), fontScale = 1.5f)
@@ -199,8 +338,8 @@ class CommentRepliesScreenTest {
         val root = composeRule.onRoot().getUnclippedBoundsInRoot()
         assertTrue(card.left >= root.left && card.right <= root.right)
         capture("normal-large-font")
-        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasText("收起回复"))
-        composeRule.onNodeWithText("收起回复").performClick()
+        toggleReplies(1)
+        composeRule.onNodeWithTag("reply-preview-comment-2").assertDoesNotExist()
         composeRule.onNodeWithText("comment 1").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("1 条回复").assertIsDisplayed()
     }
@@ -235,6 +374,19 @@ class CommentRepliesScreenTest {
             click(Offset(6f, centerY))
         }
         assertEquals("/post-99-1#1", opened)
+        composeRule.onNodeWithTag("reply-target-button-comment-2").assertDoesNotExist()
+    }
+
+    private fun openReplyTarget(floor: Int) {
+        val tag = "reply-target-button-comment-$floor"
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag(tag))
+        composeRule.onNodeWithTag(tag).performClick()
+    }
+
+    private fun toggleReplies(floor: Int, count: Int = 1) {
+        val button = hasContentDescription("$count 条回复") and hasAnyAncestor(hasTestTag("comment-$floor"))
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(button)
+        composeRule.onNode(button).performClick()
     }
 
     private fun screenState(comments: List<PostContent>): PostDetailUiState {
