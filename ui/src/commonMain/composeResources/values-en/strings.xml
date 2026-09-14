@@ -122,6 +122,10 @@
     <string name="composer_emoji_stickers_pending">The forum stickers are not wired up yet — the two emoji groups below are what there is</string>
 
     <string name="post_comments_header">Comments · %1$d</string>
+    <string name="comment_replies_count">Replies · %1$d</string>
+    <string name="comment_reply_target_title">In reply to</string>
+    <string name="comment_reply_target">In reply to %1$s</string>
+    <string name="comment_reply_target_collapse">Collapse quoted post</string>
     <string name="post_body_empty">This post has no body</string>
     <string name="post_open_original">See the body</string>
     <string name="post_comments_empty">Nobody has replied yet</string>

@@ -26,6 +26,7 @@ WorkerFactory 构造注入）、CI 门禁（含 R8 minified 冒烟与依赖锁�
 | 版块列表 | `boards` 表 → `CategoryRepository.boards`（Flow） | ViewModel `onEach` 镜像进 UiState |
 | 帖子列表 | `posts` + `feed_positions` 表 → `PostRepository.feed()` | `collectAsLazyPagingItems()` |
 | 帖子详情 | `post_details` + `post_comments` 表 → `PostRepository.thread()` | ViewModel `onEach` 镜像进 UiState |
+| 评论关系 | 从详情流中的 `PostContent` 派生 `CommentReplies` | 按原评论索引保存回复目标和直接回复，供上下两处独立展开预览，不复制正文 |
 | 已读状态 | `post_read_marks` 表 | 在 SQL 里 join 进列表行，UI 不再单独查 |
 | 帖子读到哪一楼 | `post_reading_positions` 表 → `ReadingPositionStore` | `PostDetailViewModel` 开屏读一次，滚动时防抖写回 |
 | 我的资料 | `self_profile` 表 → `ProfileRepository.observeProfile()` | 先回放同会话缓存，再后台刷新写回 Room |
@@ -41,6 +42,15 @@ WorkerFactory 构造注入）、CI 门禁（含 R8 minified 冒烟与依赖锁�
 阶段二再改成 Room 表。
 
 > 设置类数据尤其要守死这条。设置被复制进 ViewModel 字段或 `object` 单例，是"改了设置有的地方生效有的地方不生效"的唯一成因。
+
+评论固定使用普通模式，设置中没有模式开关；旧的 `default_comment_tree` 偏好不再读取。
+回复目标与直接回复的展开状态分别保存在 Compose 中，使用稳定评论键关联，分页追加或前插不改变它们的归属。
+`CommentReplies` 同时记录直接回复和 `CommentReplyTarget`，不计算嵌套深度或后代数量。
+目标尚未载入时只保留楼层跳转入口，载入后从当前详情流读取预览正文；引用 `#0` 时由楼主正文提供预览。
+主列表按原评论顺序显示正文，数量仅统计
+已加载分页中的明确关系；预览复用 `UserAvatar`、`PostRichContent` 和屏蔽展示规则，点击通过现有楼层定位流程跳转。
+分页沿用详情页的加载流程和 Room 缓存。`PostContent.isPinned` 使用默认值 `false`，旧序列化缓存可直接读取，
+不改变 `RichNode` 类型标识或 Room 表结构。
 
 ### 1.2 单向数据流（UDF）
 
