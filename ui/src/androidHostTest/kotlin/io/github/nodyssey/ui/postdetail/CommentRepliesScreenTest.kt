@@ -406,6 +406,61 @@ class CommentRepliesScreenTest {
     }
 
     /**
+     * A 发 #1，B 回 #1 发了 #2，A 回 #2 发了 #3。#1 底下只列 #2，但 #2 那张卡自己带「1 条回复」，
+     * 点开才是 #3 —— 整段对话一层一层往下走，而不是在 #1 那里一次拉平。
+     */
+    @Test
+    fun `回复卡可以再展开它自己的回复`() {
+        setScreen(listOf(replyComment(1), replyComment(2, 1), replyComment(3, 2)))
+        // 限定到 #1：#2 那一行自己也有一条回复，不限定就撞上两个同名节点。
+        toggleReplies(1)
+
+        val nested = "reply-preview-${commentTag(2)}"
+        composeRule.onNodeWithTag(nested).assertIsDisplayed()
+        // #3 是 #2 的回复，不是 #1 的，所以这一层看不到它。
+        composeRule.onNodeWithTag("reply-preview-${commentTag(3)}").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag("reply-expand-${commentTag(2)}"))
+        composeRule.onNodeWithTag("reply-expand-${commentTag(2)}").performClick()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(3)}")
+            .assertIsDisplayed()
+            .assertTextContains("comment 3", substring = true)
+        capture("normal-nested-expanded")
+
+        composeRule.onNodeWithTag("reply-expand-${commentTag(2)}").performClick()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(3)}").assertDoesNotExist()
+        composeRule.onNodeWithTag(nested).assertIsDisplayed()
+    }
+
+    /**
+     * 嵌套到上限后不再往里套：那一层的「N 条回复」改成跳到原楼层，在主列表里它自己又是第 0 层。
+     * 没有这个闸，一条长对话会把卡片套到正文只剩几个字宽。
+     */
+    @Test
+    fun `嵌套到上限后改为跳到原楼层`() {
+        var jumped: String? = null
+        setScreen(replyChain(6), onJumpToFloor = { jumped = it })
+        composeRule.onNode(
+            hasContentDescription("1 条回复") and hasAnyAncestor(hasTestTag(commentTag(1))),
+        ).performClick()
+        listOf(2, 3).forEach { floor ->
+            val tag = "reply-expand-${commentTag(floor)}"
+            composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag(tag))
+            composeRule.onNodeWithTag(tag).performClick()
+        }
+
+        capture("normal-nested-deepest")
+
+        // 第三层的卡片是 #4，它的「1 条回复」不再展开 #5，而是把人送到 #4 那一楼。
+        val deepest = "reply-expand-${commentTag(4)}"
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag(deepest))
+        composeRule.onNodeWithTag(deepest).performClick()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(5)}").assertDoesNotExist()
+        composeRule.onNodeWithTag(commentTag(4)).assertIsDisplayed()
+        assertNull("楼层在已加载列表里，应该滚过去而不是请求它那一页", jumped)
+    }
+
+    /**
      * 表头项数是 `ThreadList` 在第一条评论之前发出的项数，写死过一次就漂过一次：正文那一项为了
      * 共享元素动画改成无条件发出后，`2 + (body != null)` 还留在原地，于是每一次「从通知打开后面
      * 页的帖子」都落在目标楼层的上一楼 —— 恰好是整套定位机制唯一存在的理由。

@@ -117,6 +117,7 @@
 
     <string name="post_comments_header">評論 · %1$d</string>
     <string name="comment_replies_count">%1$d 則回覆</string>
+    <string name="comment_replies_open_floor">前往該樓層</string>
     <string name="comment_reply_target_title">回覆給</string>
     <string name="comment_reply_target">回覆給 %1$s</string>
     <string name="comment_reply_target_collapse">收起引用</string>

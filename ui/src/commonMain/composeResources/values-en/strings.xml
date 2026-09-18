@@ -123,6 +123,7 @@
 
     <string name="post_comments_header">Comments · %1$d</string>
     <string name="comment_replies_count">Replies · %1$d</string>
+    <string name="comment_replies_open_floor">Go to that floor</string>
     <string name="comment_reply_target_title">In reply to</string>
     <string name="comment_reply_target">In reply to %1$s</string>
     <string name="comment_reply_target_collapse">Collapse quoted post</string>

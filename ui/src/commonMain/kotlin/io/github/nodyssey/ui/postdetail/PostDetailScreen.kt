@@ -1256,13 +1256,7 @@ private fun CommentItem(
     var replyTargetExpanded by rememberSaveable(key) { mutableStateOf(false) }
     var repliesExpanded by rememberSaveable(key) { mutableStateOf(false) }
 
-    val replies = remember(commentReplies, index, state.comments) {
-        commentReplies.directRepliesOf(index).mapNotNull { state.comments.getOrNull(it) }
-    }
-    // The preview cards carry the same identity as the rows they mirror, so the two cannot drift.
-    val replyKeys = remember(commentReplies, index, commentKeys) {
-        commentReplies.directRepliesOf(index).mapNotNull { commentKeys.getOrNull(it) }
-    }
+    val replies = commentReplies.directRepliesOf(index)
     val targetVisible = replyTargetContent != null && (state.showBlockedContent || !replyTargetContent.isBlocked)
 
     BlockAware(content = comment, revealed = state.showBlockedContent) {
@@ -1336,8 +1330,10 @@ private fun CommentItem(
             repliesContent = {
                 if (repliesExpanded && replies.isNotEmpty()) {
                     CommentRepliesList(
-                        replies = replies,
-                        replyKeys = replyKeys,
+                        indices = replies,
+                        comments = state.comments,
+                        commentKeys = commentKeys,
+                        commentReplies = commentReplies,
                         showBlockedContent = state.showBlockedContent,
                         onJumpToFloor = onJumpToFloor,
                         modifier = Modifier.padding(top = Spacing.sm).testTag("comment-replies-$key"),
@@ -1904,7 +1900,7 @@ private fun Modifier.authorClickable(uid: Long?, onAuthorClick: (Long) -> Unit):
  * row apart by the difference, in opposite directions, with nothing failing.
  */
 @Composable
-private fun PaddingValues.horizontalInset(): Dp = calculateStartPadding(LocalLayoutDirection.current)
+internal fun PaddingValues.horizontalInset(): Dp = calculateStartPadding(LocalLayoutDirection.current)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -2033,7 +2029,7 @@ private fun ReactionAction.labelRes(): StringResource =
     }
 
 @Composable
-private fun QuietReaction(
+internal fun QuietReaction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     count: String,
