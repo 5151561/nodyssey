@@ -164,7 +164,7 @@ fun ReportSourceBlock(
     source: String,
     spans: List<AnsiSpan>,
     columns: Int,
-    onExpand: () -> Unit,
+    onExpand: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     var zoom by rememberSaveable(source) { mutableFloatStateOf(1f) }
@@ -230,7 +230,7 @@ fun ReportSourceBlock(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onExpand)
+                .then(if (onExpand == null) Modifier else Modifier.clickable(onClick = onExpand))
                 .defaultMinSize(minHeight = Sizes.minTouchTarget)
                 .padding(horizontal = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,

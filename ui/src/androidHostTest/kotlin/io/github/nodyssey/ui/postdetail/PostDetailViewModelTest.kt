@@ -200,6 +200,7 @@ class PostDetailViewModelTest {
             val vm = viewModel()
             advanceUntilIdle()
             assertEquals(2, vm.uiState.value.comments.size)
+            assertEquals(listOf(42L to 1), remote.detailRequests)
 
             vm.loadNextPage()
             advanceUntilIdle()

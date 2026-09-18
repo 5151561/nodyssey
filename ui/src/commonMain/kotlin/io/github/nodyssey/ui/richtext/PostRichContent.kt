@@ -14,6 +14,7 @@ import io.github.nodyssey.data.settings.ReportFormat
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.richtext.CodeBlockView
+import io.github.plaza.designsys.richtext.LocalRichContentInteractive
 import io.github.plaza.designsys.richtext.RichContent
 import io.github.plaza.designsys.richtext.StardustReceiveCard
 import io.github.plaza.designsys.richtext.VotePlaceholderCard
@@ -55,6 +56,10 @@ fun PostRichContent(
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)? = null,
     /** Passed straight through; see [RichContent]. The message thread is the one caller that says no. */
     selectable: Boolean = true,
+    /** Passed straight through; see [RichContent]. The reply previews are what say no. */
+    interactive: Boolean = true,
+    /** Passed straight through; see [RichContent]. */
+    maxBlocks: Int? = null,
 ) {
     RichContent(
         nodes = nodes,
@@ -67,6 +72,8 @@ fun PostRichContent(
         codeBlockContent = { CodeOrReport(it) },
         stardustContent = stardustContent ?: { StardustReceiveCard(it, avatarUrl = NodeSeekSite.avatarUrl(it.memberId)) },
         selectable = selectable,
+        interactive = interactive,
+        maxBlocks = maxBlocks,
     )
 }
 
@@ -91,9 +98,12 @@ private fun CodeOrReport(node: RichNode.CodeBlock) {
     }
 
     var showingSource by rememberSaveable(node.code) { mutableStateOf(false) }
+    // A preview hands every touch to whatever is showing it, so 查看原文 is left out rather than
+    // drawn over a card that will scroll away under the tap. See [RichContent]'s `interactive`.
+    val showSource = { showingSource = true }.takeIf { LocalRichContentInteractive.current }
 
     when (LocalReportFormat.current) {
-        ReportFormat.ADAPTED -> ReportCard(report = report, onShowSource = { showingSource = true })
+        ReportFormat.ADAPTED -> ReportCard(report = report, onShowSource = showSource)
 
         ReportFormat.SOURCE ->
             ReportSourceBlock(
@@ -101,7 +111,7 @@ private fun CodeOrReport(node: RichNode.CodeBlock) {
                 source = node.code,
                 spans = node.spans,
                 columns = node.columns,
-                onExpand = { showingSource = true },
+                onExpand = showSource,
             )
     }
 

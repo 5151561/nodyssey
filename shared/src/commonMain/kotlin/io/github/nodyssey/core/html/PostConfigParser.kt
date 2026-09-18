@@ -22,6 +22,15 @@ internal data class PostConfig(
     val reactions: Map<Long, PostReactions> = emptyMap(),
     val blockedCommentIds: Set<Long> = emptySet(),
     /**
+     * 站点置顶的楼层，`comments[].pined`。
+     *
+     * Blob only, with no markup fallback: the key is in every captured page (`post-703863-1`,
+     * `post-705039-1`) but false in all of them, so what a pinned floor *renders* as has never been
+     * seen. A selector guessed from the list page's `use[href=#pin]` would fail silently on the one
+     * page it was meant to cover. Capture a thread with a pinned comment before adding one.
+     */
+    val pinnedCommentIds: Set<Long> = emptySet(),
+    /**
      * The floors this account wrote, as the *server* labelled them (`comments[].poster.isMe`).
      *
      * Empty when the page carried no blob, which for this one is the right answer rather than a lost
@@ -88,6 +97,7 @@ internal object PostConfigParser {
 
         val reactions = mutableMapOf<Long, PostReactions>()
         val blocked = mutableSetOf<Long>()
+        val pinned = mutableSetOf<Long>()
         val own = mutableSetOf<Long>()
         val edited = mutableMapOf<Long, FloorEditTime>()
         // Absent on a reshaped page, which costs the tallies but must not cost the thread-level
@@ -105,6 +115,7 @@ internal object PostConfigParser {
                     upvoted = comment.bool("upvoted"),
                 )
             if (comment.bool("blocked")) blocked += commentId
+            if (comment.bool("pined")) pinned += commentId
             // Safe cast, not `jsonObject`: that accessor throws on a reshaped `poster`, and this
             // loop is inside the pass that must not cost the page its tallies.
             if ((comment["poster"] as? JsonObject)?.bool("isMe") == true) own += commentId
@@ -113,6 +124,7 @@ internal object PostConfigParser {
         return PostConfig(
             reactions = reactions,
             blockedCommentIds = blocked,
+            pinnedCommentIds = pinned,
             ownCommentIds = own,
             editedTimes = edited,
             // Thread-level, so they sit on `postData` itself rather than inside `comments`.

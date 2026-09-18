@@ -168,6 +168,8 @@ data class PostContent(
      * has quietly expired, whose only feedback would be a refusal after they had finished typing.
      */
     val isMine: Boolean = false,
+    /** 站点置顶的评论不作为其他楼层的回复预览，旧缓存默认未置顶。 */
+    val isPinned: Boolean = false,
 )
 
 /**

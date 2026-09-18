@@ -16,6 +16,21 @@ class NodeSeekSiteRouteTest {
         )
     }
 
+    /**
+     * `PostDetailKey` has always had a floor slot and the site's own links carry one; dropping it
+     * here landed every shared or quoted floor on the top of its page instead.
+     */
+    @Test fun `a post link carries the floor it names`() {
+        assertEquals(
+            NodeSeekSite.InternalRoute.Post(832584L, 4, "#37"),
+            NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/post-832584-4#37"),
+        )
+        assertEquals(
+            NodeSeekSite.InternalRoute.Post(832584L, 4),
+            NodeSeekSite.parseInternalRoute("https://www.nodeseek.com/post-832584-4#reply-37"),
+        )
+    }
+
     @Test fun external() {
         assertEquals(null, NodeSeekSite.parseInternalRoute("https://ilatency.com/"))
     }

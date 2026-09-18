@@ -354,7 +354,7 @@ fun MainNavigation(
                 }
                 when (route) {
                     is NodeSeekSite.InternalRoute.Post ->
-                        homeStack.add(PostDetailKey(route.postId, page = route.page))
+                        homeStack.add(PostDetailKey(route.postId, floor = route.floor, page = route.page))
 
                     is NodeSeekSite.InternalRoute.Space -> openSpaceOnHome(route.uid)
 
@@ -439,7 +439,7 @@ fun MainNavigation(
         val openContentUrl: (String) -> Unit = { url ->
             when (val route = NodeSeekSite.parseInternalRoute(url)) {
                 is NodeSeekSite.InternalRoute.Post ->
-                    backStack.add(PostDetailKey(route.postId, page = route.page))
+                    backStack.add(PostDetailKey(route.postId, floor = route.floor, page = route.page))
 
                 is NodeSeekSite.InternalRoute.Space -> openSpace(route.uid)
 

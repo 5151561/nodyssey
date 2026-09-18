@@ -116,13 +116,17 @@
     <string name="composer_emoji_stickers_pending">站內貼圖素材尚未接入，先用下面兩組 emoji</string>
 
     <string name="post_comments_header">評論 · %1$d</string>
+    <string name="comment_replies_count">%1$d 則回覆</string>
+    <string name="comment_replies_open_floor">前往該樓層</string>
+    <string name="comment_reply_target_title">回覆給</string>
+    <string name="comment_reply_target">回覆給 %1$s</string>
+    <string name="comment_reply_target_collapse">收起引用</string>
     <string name="post_body_empty">這篇文章沒有內文</string>
     <string name="post_open_original">檢視內文</string>
     <string name="post_comments_empty">還沒有人回覆</string>
     <string name="post_comments_empty_hint">來當第一個吧——不過 v1 還是唯讀的</string>
     <string name="post_link_copied">連結已複製</string>
     <string name="post_code_copied">程式碼已複製</string>
-    <string name="post_auto_paging">自動續頁</string>
     <string name="post_reply_action">回覆</string>
     <string name="post_edit_action">編輯</string>
     <string name="post_quote_action">引用</string>
