@@ -1,0 +1,123 @@
+name: 问题反馈
+description: 闪退、显示不对、功能用不了
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **版本、手机型号、Android 版本**这三项是必填的 —— 同一个毛病在不同机型和系统上表现经常不一样，
+        少了这三项基本查不动。
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 提交前
+      options:
+        - label: 我搜过已有的 issue（含已关闭的），没有重复
+          required: true
+        - label: 我装的是最新版本，问题仍然在
+          required: true
+        - label: 这是 Nodyssey 的问题，不是 NodeSeek 站点本身的问题（网页端也这样的话，不归这里管）
+          required: false
+
+  - type: input
+    id: app-version
+    attributes:
+      label: App 版本
+      description: 设置 → 关于 Nodyssey 里那行「版本 1.2.21 (43)」，整行抄过来。
+      placeholder: 1.2.21 (43)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-source
+    attributes:
+      label: 安装来源
+      options:
+        - GitHub Release 正式版
+        - dev 测试版（预发布）
+        - App 内检查更新装的
+        - 自己编译的
+        - 其他 / 记不清了
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: 手机型号
+      placeholder: Pixel 8 / 小米 14 / 一加 Ace 3
+    validations:
+      required: true
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android 版本
+      description: 设置 → 关于手机 里的 Android 版本号；用定制系统的话把系统版本也写上。
+      placeholder: Android 15（HyperOS 2.0.1）
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 出了什么问题
+      description: 实际发生了什么，你以为会发生什么。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 怎么复现
+      description: |
+        一步一步写。和具体帖子有关的话，请把帖子链接贴上 —— 首页置顶帖会轮换，只写「第一个帖子」的话，照着复现打开的多半是另一个。
+      placeholder: |
+        1. 打开…
+        2. 点…
+        3. 看到…
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: 出现频率
+      options:
+        - 每次都这样
+        - 偶尔，能说清什么情况下出
+        - 偶尔，说不清
+        - 只遇到过一次
+    validations:
+      required: false
+
+  - type: textarea
+    id: media
+    attributes:
+      label: 截图或录屏
+      description: 把图直接拖进输入框就行。界面问题请务必附图。
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: environment
+    attributes:
+      label: 出问题的时候（能想起来就勾）
+      options:
+        - label: 已登录
+        - label: 开着代理或 VPN（Clash 之类）
+        - label: 走的移动数据，不是 Wi-Fi
+        - label: 深色模式
+        - label: 界面语言不是简体中文
+        - label: 平板、折叠屏展开，或者分屏 / 小窗
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 崩溃日志
+      description: 有就贴，没有可以留空。会自动按代码块显示，不用加反引号。
+      render: text
+    validations:
+      required: false

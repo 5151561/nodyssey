@@ -1,0 +1,43 @@
+name: 功能建议
+description: 希望 App 多做点什么，或者某个地方换个做法
+title: "[建议] "
+labels: ["enhancement"]
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 提交前
+      options:
+        - label: 我搜过已有的 issue（含已关闭的），没有重复
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题
+      description: 先说场景，不用先说方案 —— 你在做什么的时候被卡住了，现在只能怎么绕。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 希望 App 怎么做
+      description: 有具体想法就写；想不清楚也没关系，上一栏写明白就够了。
+    validations:
+      required: false
+
+  - type: textarea
+    id: web-behavior
+    attributes:
+      label: 网页端是怎么做的
+      description: 如果 NodeSeek 网页端已经有这个功能，贴一下入口或截图 —— 能省掉一轮来回。
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 其他补充
+    validations:
+      required: false

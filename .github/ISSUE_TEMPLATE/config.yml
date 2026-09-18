@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Telegram 群组
+    url: https://t.me/+97ANIwVaCYk1MjQ1
+    about: 用法提问、闲聊，以及不确定是不是 bug 的时候，先来这里问
+  - name: Telegram 频道
+    url: https://t.me/nodyssey_official
+    about: 版本发布与更新公告
+  - name: 更新记录
+    url: https://github.com/5151561/nodyssey/blob/main/CHANGELOG.md
+    about: 提问题之前先看一眼，你遇到的可能已经修了

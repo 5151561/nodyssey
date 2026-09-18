@@ -150,6 +150,15 @@ debug 与 release 用不同的 applicationId 和名称，可以同时装在一�
 ./gradlew --stop
 ```
 
+## 参与
+
+反馈问题走 [Issues](https://github.com/5151561/nodyssey/issues/new/choose)，请按模板带上 App 版本、手机
+型号和 Android 版本 —— 同一个毛病在不同机型和系统上表现经常不一样。用法提问可以先去
+[Telegram 群组](https://t.me/+97ANIwVaCYk1MjQ1)。
+
+提 PR 之前请先读 [CONTRIBUTING.md](CONTRIBUTING.md)：里面写了构建命令、架构约定、三种语言的文案怎么
+加、CHANGELOG 怎么写，以及提交前要自己 review 一遍哪些东西。
+
 ## 致谢
 
 - [tyrad/nodeseek](https://github.com/tyrad/nodeseek)（iOS 客户端，MIT）——站点结构的逆向参考
