@@ -79,7 +79,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ReportCard(
     report: QualityReport,
-    onShowSource: () -> Unit,
+    onShowSource: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     var expanded by rememberSaveable(report.title, report.target) { mutableStateOf(true) }
@@ -114,7 +114,7 @@ fun ReportCard(
                     report.sections.forEach { ReportSection(it) }
                     if (report.footnotes.isNotEmpty()) Footnotes(report.footnotes)
                 }
-                SourceAction(onShowSource)
+                onShowSource?.let { SourceAction(it) }
             }
         }
     }

@@ -34,9 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -65,6 +62,7 @@ import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.fadeToBackground
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.stringResource
 
@@ -180,23 +178,11 @@ private fun TermsContent(document: TermsDocument, modifier: Modifier = Modifier)
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .height(76.dp)
-                    .drawWithContent {
-                        // The fade tells the reader there is more below. On paper it is 76 rows of
-                        // ramp for the panel to dither, and the pill it sits behind already says the
-                        // same thing in words — so there it draws nothing and lets the text show
-                        // through.
-                        if (!eink) {
-                            drawRect(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(background.copy(alpha = 0f), background),
-                                    start = Offset(0f, 0f),
-                                    end = Offset(0f, size.height),
-                                ),
-                            )
-                        }
-                        drawContent()
-                    },
+                    .height(SCROLL_HINT_HEIGHT)
+                    // The fade tells the reader there is more below. On paper it is 76 rows of ramp
+                    // for the panel to dither, and the pill it sits behind already says the same
+                    // thing in words — so there it draws nothing and lets the text show through.
+                    .fadeToBackground(color = background, height = SCROLL_HINT_HEIGHT, eink = eink),
                 contentAlignment = Alignment.BottomCenter,
             ) {
                 Surface(
@@ -337,3 +323,6 @@ private fun PrivacyPreview() {
         )
     }
 }
+
+/** How far up the list the 还有更多 hint fades, tall enough to read as a soft edge. */
+private val SCROLL_HINT_HEIGHT = 76.dp
