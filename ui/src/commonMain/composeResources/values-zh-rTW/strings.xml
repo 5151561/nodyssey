@@ -126,7 +126,6 @@
     <string name="post_comments_empty_hint">來當第一個吧——不過 v1 還是唯讀的</string>
     <string name="post_link_copied">連結已複製</string>
     <string name="post_code_copied">程式碼已複製</string>
-    <string name="post_auto_paging">自動續頁</string>
     <string name="post_reply_action">回覆</string>
     <string name="post_edit_action">編輯</string>
     <string name="post_quote_action">引用</string>

@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.postdetail
 
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +19,6 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -75,13 +73,11 @@ internal fun CommentReplyTargetPreview(
     onJumpToTarget: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
     val previewHeight = with(LocalDensity.current) { MaterialTheme.typography.bodySmall.lineHeight.toDp() * 3 }
     OutlinedCard(
         onClick = onJumpToTarget,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        interactionSource = interactionSource,
     ) {
         Row(
             modifier = Modifier.padding(start = Spacing.md, end = Spacing.xs),
@@ -104,7 +100,6 @@ internal fun CommentReplyTargetPreview(
             CommentPreviewContent(
                 content = target,
                 onClick = onJumpToTarget,
-                interactionSource = interactionSource,
                 maxContentHeight = previewHeight,
             )
         }

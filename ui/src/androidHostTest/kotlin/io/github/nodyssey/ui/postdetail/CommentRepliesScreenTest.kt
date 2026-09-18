@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
@@ -63,13 +64,29 @@ class CommentRepliesScreenTest {
         assertEquals("消息图标应垂直居中", (icon.top - button.top).value, (button.bottom - icon.bottom).value, 1f)
         assertEquals("箭头应垂直居中", (arrow.top - button.top).value, (button.bottom - arrow.bottom).value, 1f)
         val replyAction = composeRule.onNode(
-            hasContentDescription("回复") and hasAnyAncestor(hasTestTag("comment-1")),
+            hasContentDescription("回复") and hasAnyAncestor(hasTestTag(commentTag(1))),
         ).getUnclippedBoundsInRoot()
         assertEquals("普通屏宽下回复操作应与消息按钮保持同一行", button.top.value, replyAction.top.value, 1f)
-        composeRule.onNodeWithTag("reply-preview-comment-3").assertDoesNotExist()
-        composeRule.onNodeWithTag("comment-replies-comment-2").assertDoesNotExist()
-        composeRule.onNodeWithTag("comment-replies-comment-3").assertDoesNotExist()
-        val positions = (1..3).map { composeRule.onNodeWithTag("comment-$it").getUnclippedBoundsInRoot().top }
+        // 这一行的对齐靠两个必须互相抵消的偏移量，之前没有任何断言看着它。
+        val body = composeRule.onNode(
+            hasText("comment 1", substring = true) and hasAnyAncestor(hasTestTag(commentTag(1))),
+            useUnmergedTree = true,
+        ).getUnclippedBoundsInRoot()
+        assertEquals("回复图标左缘应与正文左缘对齐", body.left.value, icon.left.value, 1f)
+        // 右缘的基准是楼层号而不是正文那行字：正文的右缘是文字宽度，不是页边距。
+        // 量的是按钮边界减去这一行自己的内边距，不是图标 —— 窄到 48dp 触达区以下的按钮会把内容
+        // 居中，图标因此可能落在边距内侧几个点。这里要证的是三个偏移量互相抵消，
+        // 内边距从左侧按钮量出来，不写死 12dp，M3 换一版就会跟着动。
+        val inset = icon.left - button.left
+        val floorLabel = composeRule.onNode(
+            hasText("#1") and hasAnyAncestor(hasTestTag(commentTag(1))),
+            useUnmergedTree = true,
+        ).getUnclippedBoundsInRoot()
+        assertEquals("最后一个按钮的墨水应落在楼层号那条边上", floorLabel.right.value, (replyAction.right - inset).value, 1f)
+        composeRule.onNodeWithTag("reply-preview-${commentTag(3)}").assertDoesNotExist()
+        composeRule.onNodeWithTag("comment-replies-${commentTag(2)}").assertDoesNotExist()
+        composeRule.onNodeWithTag("comment-replies-${commentTag(3)}").assertDoesNotExist()
+        val positions = (1..3).map { composeRule.onNodeWithTag(commentTag(it)).getUnclippedBoundsInRoot().top }
         assertTrue(positions.zipWithNext().all { (earlier, later) -> earlier < later })
         capture("normal-collapsed")
     }
@@ -79,19 +96,19 @@ class CommentRepliesScreenTest {
         setScreen(listOf(replyComment(1), replyComment(2), replyComment(3, 1), replyComment(4, 3), replyComment(5, 1)))
         composeRule.onNodeWithContentDescription("2 条回复").performClick()
 
-        composeRule.onNodeWithTag("reply-preview-comment-3")
+        composeRule.onNodeWithTag("reply-preview-${commentTag(3)}")
             .assertIsDisplayed()
             .assertTextContains("reader3")
             .assertTextContains("#3")
             .assertTextContains("comment 3", substring = true)
-        composeRule.onNodeWithTag("reply-preview-comment-5").assertExists()
-        composeRule.onNodeWithTag("reply-preview-comment-4").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(5)}").assertExists()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(4)}").assertDoesNotExist()
         composeRule.onNodeWithText("收起回复").assertDoesNotExist()
         capture("normal-expanded")
 
         toggleReplies(1, count = 2)
-        composeRule.onNodeWithTag("reply-preview-comment-3").assertDoesNotExist()
-        composeRule.onNodeWithTag("reply-preview-comment-5").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(3)}").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(5)}").assertDoesNotExist()
         composeRule.onNodeWithText("comment 1").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("2 条回复").assertIsDisplayed()
     }
@@ -99,21 +116,21 @@ class CommentRepliesScreenTest {
     @Test
     fun `中间评论同时展示回复目标和直接回复并独立收起`() {
         setScreen(listOf(replyComment(1), replyComment(2, 1), replyComment(3, 2)))
-        composeRule.onNodeWithTag("reply-target-preview-comment-2").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-target-preview-${commentTag(2)}").assertDoesNotExist()
         openReplyTarget(2)
         toggleReplies(2)
-        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag("comment-2"))
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag(commentTag(2)))
 
-        val target = composeRule.onNodeWithTag("reply-target-preview-comment-2")
+        val target = composeRule.onNodeWithTag("reply-target-preview-${commentTag(2)}")
         target.assertIsDisplayed()
             .assertTextContains("回复给")
             .assertTextContains("reader1")
             .assertTextContains("#1")
             .assertTextContains("comment 1", substring = true)
-        val reply = composeRule.onNodeWithTag("reply-preview-comment-3")
+        val reply = composeRule.onNodeWithTag("reply-preview-${commentTag(3)}")
         reply.assertIsDisplayed().assertTextContains("comment 3", substring = true)
         val body = composeRule.onNode(
-            hasText("comment 2", substring = true) and hasAnyAncestor(hasTestTag("comment-2")),
+            hasText("comment 2", substring = true) and hasAnyAncestor(hasTestTag(commentTag(2))),
             useUnmergedTree = true,
         ).getUnclippedBoundsInRoot()
         assertTrue(target.getUnclippedBoundsInRoot().bottom <= body.top)
@@ -137,8 +154,8 @@ class CommentRepliesScreenTest {
         openReplyTarget(11)
 
         assertEquals("#2", requestedFloor)
-        composeRule.onNodeWithTag("reply-target-preview-comment-11").assertDoesNotExist()
-        composeRule.onNodeWithTag("reply-preview-comment-12").assertIsDisplayed()
+        composeRule.onNodeWithTag("reply-target-preview-${commentTag(11)}").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(12)}").assertIsDisplayed()
     }
 
     @Test
@@ -149,22 +166,22 @@ class CommentRepliesScreenTest {
         toggleReplies(12)
         state.value = screenState((1..10).map { replyComment(it) } + page)
 
-        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag("comment-12"))
-        composeRule.onNodeWithTag("reply-target-preview-comment-12").assertIsDisplayed().assertTextContains("reader11")
-        composeRule.onNodeWithTag("reply-preview-comment-13").assertIsDisplayed()
-        composeRule.onNodeWithTag("reply-target-preview-comment-2").assertDoesNotExist()
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag(commentTag(12)))
+        composeRule.onNodeWithTag("reply-target-preview-${commentTag(12)}").assertIsDisplayed().assertTextContains("reader11")
+        composeRule.onNodeWithTag("reply-preview-${commentTag(13)}").assertIsDisplayed()
+        composeRule.onNodeWithTag("reply-target-preview-${commentTag(2)}").assertDoesNotExist()
     }
 
     @Test
     fun `屏蔽的回复目标须主动显示才能看到作者和正文`() {
         setScreen(listOf(replyComment(1).copy(isBlocked = true), replyComment(2, 1)))
         openReplyTarget(2)
-        val preview = hasTestTag("reply-target-preview-comment-2")
+        val preview = hasTestTag("reply-target-preview-${commentTag(2)}")
         composeRule.onNode(hasText("reader1") and hasAnyAncestor(preview), useUnmergedTree = true).assertDoesNotExist()
         composeRule.onNode(hasText("comment 1") and hasAnyAncestor(preview), useUnmergedTree = true).assertDoesNotExist()
 
         composeRule.onNode(hasText("显示") and hasAnyAncestor(preview)).performClick()
-        composeRule.onNodeWithTag("reply-target-preview-comment-2")
+        composeRule.onNodeWithTag("reply-target-preview-${commentTag(2)}")
             .assertTextContains("reader1")
             .assertTextContains("comment 1", substring = true)
     }
@@ -191,11 +208,11 @@ class CommentRepliesScreenTest {
         )
         openReplyTarget(14)
         composeRule.onNode(
-            hasText("original link") and hasAnyAncestor(hasTestTag("reply-target-preview-comment-14")),
+            hasText("original link") and hasAnyAncestor(hasTestTag("reply-target-preview-${commentTag(14)}")),
             useUnmergedTree = true,
         ).performTouchInput { click(Offset(6f, centerY)) }
 
-        composeRule.onNodeWithTag("comment-2").assertIsDisplayed()
+        composeRule.onNodeWithTag(commentTag(2)).assertIsDisplayed()
         composeRule.waitForIdle()
         assertEquals(1 to "#2", recorded)
         assertNull(openedLink)
@@ -206,12 +223,12 @@ class CommentRepliesScreenTest {
     fun `回复楼主可以预览正文且正文更新后引用同步更新`() {
         val state = setScreen(listOf(replyComment(1, 0)))
         openReplyTarget(1)
-        composeRule.onNodeWithTag("reply-target-preview-comment-1").assertTextContains("comment 0", substring = true)
+        composeRule.onNodeWithTag("reply-target-preview-${commentTag(1)}").assertTextContains("comment 0", substring = true)
         state.value = state.value.copy(body = replyComment(0).copy(nodes = listOf(RichNode.Paragraph(listOf(InlineNode.Text("updated original post"))))))
 
-        composeRule.onNodeWithTag("reply-target-preview-comment-1").assertTextContains("updated original post", substring = true)
+        composeRule.onNodeWithTag("reply-target-preview-${commentTag(1)}").assertTextContains("updated original post", substring = true)
         state.value = PostDetailUiState(postId = 42)
-        composeRule.onNodeWithTag("reply-target-preview-comment-1").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-target-preview-${commentTag(1)}").assertDoesNotExist()
     }
 
     @Test
@@ -224,14 +241,14 @@ class CommentRepliesScreenTest {
         setScreen(listOf(parent, replyComment(2, 1), replyComment(3, 2)), fontScale = 1.5f)
         openReplyTarget(2)
         toggleReplies(2)
-        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag("comment-2"))
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag(commentTag(2)))
 
-        val card = composeRule.onNodeWithTag("reply-target-preview-comment-2").getUnclippedBoundsInRoot()
+        val card = composeRule.onNodeWithTag("reply-target-preview-${commentTag(2)}").getUnclippedBoundsInRoot()
         val root = composeRule.onRoot().getUnclippedBoundsInRoot()
         assertTrue(card.left >= root.left && card.right <= root.right)
         assertTrue("原消息摘要不应挤满屏幕", card.bottom - card.top < (root.bottom - root.top) / 2)
         composeRule.onNodeWithContentDescription("收起引用").assertIsDisplayed()
-        composeRule.onNodeWithTag("reply-preview-comment-3").assertIsDisplayed()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(3)}").assertIsDisplayed()
         capture("reply-both-directions-large-font")
     }
 
@@ -248,11 +265,11 @@ class CommentRepliesScreenTest {
         )
         composeRule.onNodeWithContentDescription("1 条回复").performClick()
         composeRule.onNode(
-            hasText("comment 12", substring = true) and hasAnyAncestor(hasTestTag("reply-preview-comment-12")),
+            hasText("comment 12", substring = true) and hasAnyAncestor(hasTestTag("reply-preview-${commentTag(12)}")),
             useUnmergedTree = true,
         ).performTouchInput { click(Offset(6f, centerY)) }
 
-        composeRule.onNodeWithTag("comment-12").assertIsDisplayed()
+        composeRule.onNodeWithTag(commentTag(12)).assertIsDisplayed()
         composeRule.waitForIdle()
         assertEquals(2 to "#12", recorded)
         assertNull(openedLink)
@@ -260,8 +277,12 @@ class CommentRepliesScreenTest {
         capture("normal-reply-jump")
     }
 
+    /**
+     * 预览里的代码块不再画「复制」—— 一个复制不到东西的按钮比没有更糟。之前它画着、按下去
+     * 的结果却是跳楼层，因为覆盖层把整片触摸都收走了。现在它根本不在，整片触摸落到卡片上。
+     */
     @Test
-    fun `预览代码块内的点击也跳转到回复原楼层`() {
+    fun `预览里的代码块不提供复制并把点击交给卡片`() {
         val comments = (1..12).map { floor ->
             val comment = replyComment(floor, if (floor == 12) 1 else null)
             if (floor == 12) {
@@ -272,11 +293,18 @@ class CommentRepliesScreenTest {
         }
         setScreen(comments)
         composeRule.onNodeWithContentDescription("1 条回复").performClick()
+
+        val preview = hasTestTag("reply-preview-${commentTag(12)}")
+        composeRule.onNode(hasContentDescription("复制") and hasAnyAncestor(preview)).assertDoesNotExist()
+
         composeRule.onNode(
-            hasContentDescription("复制") and hasAnyAncestor(hasTestTag("reply-preview-comment-12")),
+            hasText("val answer = 42", substring = true) and hasAnyAncestor(preview),
+            useUnmergedTree = true,
         ).performTouchInput { click() }
 
-        composeRule.onNodeWithTag("comment-12").assertIsDisplayed()
+        // 跳到了原楼层，而那里的同一个代码块照常可以复制。
+        composeRule.onNodeWithTag(commentTag(12)).assertIsDisplayed()
+        composeRule.onNode(hasContentDescription("复制") and hasAnyAncestor(hasTestTag(commentTag(12)))).assertExists()
     }
 
     @Test
@@ -287,9 +315,9 @@ class CommentRepliesScreenTest {
         state.value = screenState(initial + listOf(replyComment(11, 1), replyComment(12, 3)))
 
         composeRule.onNodeWithContentDescription("2 条回复").assertIsDisplayed()
-        composeRule.onNodeWithTag("reply-preview-comment-3").assertIsDisplayed()
-        composeRule.onNodeWithTag("reply-preview-comment-11").assertExists()
-        composeRule.onNodeWithTag("reply-preview-comment-12").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(3)}").assertIsDisplayed()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(11)}").assertExists()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(12)}").assertDoesNotExist()
     }
 
     @Test
@@ -299,20 +327,20 @@ class CommentRepliesScreenTest {
         composeRule.onNodeWithContentDescription("1 条回复").performClick()
         state.value = screenState((1..10).map { replyComment(it) } + page)
 
-        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag("comment-11"))
-        composeRule.onNodeWithTag("reply-preview-comment-12").assertIsDisplayed()
+        composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag(commentTag(11)))
+        composeRule.onNodeWithTag("reply-preview-${commentTag(12)}").assertIsDisplayed()
     }
 
     @Test
     fun `被屏蔽回复的预览沿用原来的显示规则`() {
         setScreen(listOf(replyComment(1), replyComment(2, 1).copy(isBlocked = true)))
         composeRule.onNodeWithContentDescription("1 条回复").performClick()
-        composeRule.onNodeWithTag("reply-preview-comment-2").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(2)}").assertDoesNotExist()
         composeRule.onNodeWithText("reader2").assertDoesNotExist()
         composeRule.onNode(
-            hasText("显示") and hasAnyAncestor(hasTestTag("comment-replies-comment-1")),
+            hasText("显示") and hasAnyAncestor(hasTestTag("comment-replies-${commentTag(1)}")),
         ).performClick()
-        composeRule.onNodeWithTag("reply-preview-comment-2").assertIsDisplayed()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(2)}").assertIsDisplayed()
     }
 
     @Test
@@ -321,7 +349,7 @@ class CommentRepliesScreenTest {
         composeRule.onNodeWithContentDescription("1 条回复").performClick()
         state.value = PostDetailUiState(postId = 42)
 
-        composeRule.onNodeWithTag("reply-preview-comment-2").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(2)}").assertDoesNotExist()
         composeRule.onNodeWithText("收起回复").assertDoesNotExist()
     }
 
@@ -334,12 +362,12 @@ class CommentRepliesScreenTest {
         composeRule.onNodeWithTag("post-comments").performScrollToNode(hasContentDescription("1 条回复"))
         composeRule.onNodeWithContentDescription("1 条回复").performClick()
 
-        val card = composeRule.onNodeWithTag("reply-preview-comment-2").getUnclippedBoundsInRoot()
+        val card = composeRule.onNodeWithTag("reply-preview-${commentTag(2)}").getUnclippedBoundsInRoot()
         val root = composeRule.onRoot().getUnclippedBoundsInRoot()
         assertTrue(card.left >= root.left && card.right <= root.right)
         capture("normal-large-font")
         toggleReplies(1)
-        composeRule.onNodeWithTag("reply-preview-comment-2").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(2)}").assertDoesNotExist()
         composeRule.onNodeWithText("comment 1").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("1 条回复").assertIsDisplayed()
     }
@@ -354,9 +382,9 @@ class CommentRepliesScreenTest {
             onReadingPositionChange = { page, floor -> recorded = page to floor },
         )
 
-        composeRule.onNodeWithTag("comment-14").assertIsDisplayed()
+        composeRule.onNodeWithTag(commentTag(14)).assertIsDisplayed()
         composeRule.onNodeWithTag("comment-conversation").assertDoesNotExist()
-        composeRule.onNodeWithTag("reply-preview-comment-15").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-preview-${commentTag(15)}").assertDoesNotExist()
         composeRule.waitForIdle()
         assertEquals(2 to "#14", recorded)
         capture("normal-long-chain-jump")
@@ -374,27 +402,55 @@ class CommentRepliesScreenTest {
             click(Offset(6f, centerY))
         }
         assertEquals("/post-99-1#1", opened)
-        composeRule.onNodeWithTag("reply-target-button-comment-2").assertDoesNotExist()
+        composeRule.onNodeWithTag("reply-target-button-${commentTag(2)}").assertDoesNotExist()
     }
 
+    /**
+     * 表头项数是 `ThreadList` 在第一条评论之前发出的项数，写死过一次就漂过一次：正文那一项为了
+     * 共享元素动画改成无条件发出后，`2 + (body != null)` 还留在原地，于是每一次「从通知打开后面
+     * 页的帖子」都落在目标楼层的上一楼 —— 恰好是整套定位机制唯一存在的理由。
+     *
+     * 断言落点而不是数字：以后在评论前加一项（锁帖横幅、加载前页提示）而忘了登记，这里会红。
+     */
+    @Test
+    fun `没有正文时通知的楼层落在它自己身上`() {
+        setScreen(
+            comments = (11..20).map { replyComment(it) },
+            pendingScroll = PendingScroll(page = 2, floor = "#14"),
+            withBody = false,
+        )
+        composeRule.waitForIdle()
+
+        val list = composeRule.onNodeWithTag("post-comments").getUnclippedBoundsInRoot()
+        val target = composeRule.onNodeWithTag(commentTag(14)).getUnclippedBoundsInRoot()
+        assertEquals("目标楼层应停在列表顶部", list.top.value, target.top.value, 1f)
+        composeRule.onNodeWithTag(commentTag(13)).assertIsNotDisplayed()
+    }
+
+    /**
+     * 主列表的键带着页码（见 [commentKeys]）：一条楼层可以同时存在于两个已加载页，而一行的身份
+     * 不能因为别处出现了重复就改名。测试用同一条规则算出来，不在五十处各写一遍。
+     */
+    private fun commentTag(floor: Int): String = "comment-$floor-p${NodeSeekSite.pageOfFloor(floor)}"
+
     private fun openReplyTarget(floor: Int) {
-        val tag = "reply-target-button-comment-$floor"
+        val tag = "reply-target-button-${commentTag(floor)}"
         composeRule.onNodeWithTag("post-comments").performScrollToNode(hasTestTag(tag))
         composeRule.onNodeWithTag(tag).performClick()
     }
 
     private fun toggleReplies(floor: Int, count: Int = 1) {
-        val button = hasContentDescription("$count 条回复") and hasAnyAncestor(hasTestTag("comment-$floor"))
+        val button = hasContentDescription("$count 条回复") and hasAnyAncestor(hasTestTag(commentTag(floor)))
         composeRule.onNodeWithTag("post-comments").performScrollToNode(button)
         composeRule.onNode(button).performClick()
     }
 
-    private fun screenState(comments: List<PostContent>): PostDetailUiState {
+    private fun screenState(comments: List<PostContent>, withBody: Boolean = true): PostDetailUiState {
         val pages = comments.map { NodeSeekSite.pageOfFloor(requireNotNull(NodeSeekSite.parseFloorNumber(it.floor))) }
         return PostDetailUiState(
             postId = 42,
             title = "普通评论模式",
-            body = replyComment(0),
+            body = replyComment(0).takeIf { withBody },
             comments = comments.map { it.copy(reactions = PostReactions(upvoteCount = 4, likeCount = 1)) },
             commentPages = pages,
             firstLoadedPage = pages.minOrNull() ?: 1,
@@ -410,8 +466,9 @@ class CommentRepliesScreenTest {
         onReadingPositionChange: (Int, String?) -> Unit = { _, _ -> },
         fontScale: Float = 1f,
         pendingScroll: PendingScroll? = null,
+        withBody: Boolean = true,
     ): MutableState<PostDetailUiState> {
-        val state = mutableStateOf(screenState(comments).copy(pendingScroll = pendingScroll))
+        val state = mutableStateOf(screenState(comments, withBody).copy(pendingScroll = pendingScroll))
         composeRule.setContent {
             PlazaTheme(fontScale = fontScale) {
                 PostDetailScreen(

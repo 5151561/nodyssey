@@ -132,7 +132,6 @@
     <string name="post_comments_empty_hint">Be the first — though v1 is still read-only</string>
     <string name="post_link_copied">Link copied</string>
     <string name="post_code_copied">Code copied</string>
-    <string name="post_auto_paging">Keep loading pages</string>
     <string name="post_reply_action">Reply</string>
     <string name="post_edit_action">Edit</string>
     <string name="post_quote_action">Quote</string>

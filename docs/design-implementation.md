@@ -8,10 +8,11 @@ App 的总体真实状态以 [`implementation-status.md`](implementation-status.
 
 ## 评论双向回复预览（参考 Fluxdo）
 
-评论统一采用普通模式，无需设置开关。参考 Fluxdo 的 `lib/widgets/post/post_item/widgets/post_reply_history.dart` 和 `post_replies_list.dart`：
+评论按原楼层顺序显示。参考 Fluxdo 的 `lib/widgets/post/post_item/widgets/post_reply_history.dart` 和 `post_replies_list.dart`：
 当 B 回复 A、C 回复 B 时，B 的上方可展开 A 的原消息，下方可展开 C 的回复，两处互不替代。
 回复目标入口位于作者栏右侧，使用透明底色的 Material 3 `TextButton` 承载现有回复图标和目标头像，图标和楼层文字沿用按钮默认的主题主色，与下方评论操作栏一致，保留触摸反馈与点击范围；点击后在正文前显示「回复给」卡片，包含作者、楼层和约三行高度的正文开头。
-摘要高度随字号变化，长消息不会占满屏幕，截断处淡出；墨水屏模式不加渐变。点卡片可跳到 A 的原楼层，点关闭按钮只收起该引用。
+摘要高度随字号变化，长消息不会占满屏幕，截断处淡出；墨水屏不加渐变（渐变、阴影、半透明这类不走 color role 的画法统一由 `Modifier.fadeToBackground` 决定）。
+预览是只读的：整片触摸都属于卡片，跳到 A 的原楼层；折叠、复制、报告标签在预览里不画，而不是画出来再被盖住。点关闭按钮只收起该引用。
 目标被屏蔽时，入口只显示楼层，卡片沿用「显示」操作，主动展开前不展示作者和正文。明确引用楼主 `#0` 时可预览楼主正文。
 
 按原楼层顺序阅读，
