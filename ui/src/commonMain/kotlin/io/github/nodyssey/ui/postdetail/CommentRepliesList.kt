@@ -203,48 +203,48 @@ internal fun CommentPreviewContent(
                 },
             )
     }
-    Row(
+    // 头像只占它自己那一行，正文和下一层回复走满卡片宽度 —— 和 `CommentRow` 同一个形状。
+    // 把正文整列缩进到头像右边，头像下面就空出一条白带，越往里嵌越窄。
+    Column(
         modifier = modifier.padding(Spacing.md),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        UserAvatar(url = content.avatarUrl, name = content.authorName, size = Sizes.avatarComment)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Text(
-                    text = content.authorName,
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                content.floor?.let { FloorLabel(it) }
-            }
-            Box(bodyModifier) {
-                PostRichContent(
-                    nodes = content.nodes,
-                    onLinkClick = { onClick() },
-                    onImageClick = { onClick() },
-                    onQuoteRefClick = { onClick() },
-                    textStyle = MaterialTheme.typography.bodySmall,
-                    selectable = false,
-                    interactive = false,
-                    // 三行里放不下更多，而一个块一旦进入组合，它的图片就已经在下载了：
-                    // 一条带大图的楼层被十条回复引用过，展开就是十次请求，只为显示三行。
-                    maxBlocks = maxContentHeight?.let { PREVIEW_MAX_BLOCKS },
-                    modifier = if (maxContentHeight == null) {
-                        Modifier
-                    } else {
-                        Modifier
-                            .wrapContentHeight(Alignment.Top, unbounded = true)
-                            .onSizeChanged { contentHeight = it.height }
-                    },
-                )
-            }
-            footer()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            UserAvatar(url = content.avatarUrl, name = content.authorName, size = Sizes.avatarComment)
+            Text(
+                text = content.authorName,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            content.floor?.let { FloorLabel(it) }
         }
+        Box(bodyModifier) {
+            PostRichContent(
+                nodes = content.nodes,
+                onLinkClick = { onClick() },
+                onImageClick = { onClick() },
+                onQuoteRefClick = { onClick() },
+                textStyle = MaterialTheme.typography.bodySmall,
+                selectable = false,
+                interactive = false,
+                // 三行里放不下更多，而一个块一旦进入组合，它的图片就已经在下载了：
+                // 一条带大图的楼层被十条回复引用过，展开就是十次请求，只为显示三行。
+                maxBlocks = maxContentHeight?.let { PREVIEW_MAX_BLOCKS },
+                modifier = if (maxContentHeight == null) {
+                    Modifier
+                } else {
+                    Modifier
+                        .wrapContentHeight(Alignment.Top, unbounded = true)
+                        .onSizeChanged { contentHeight = it.height }
+                },
+            )
+        }
+        footer()
     }
 }
 
