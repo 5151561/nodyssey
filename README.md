@@ -1,5 +1,6 @@
 # Nodyssey
 
+[![Website](https://img.shields.io/badge/宣传页-nodyssey-2C6E7F?logo=githubpages&logoColor=white)](https://5151561.github.io/nodyssey/)
 [![Telegram Channel](https://img.shields.io/badge/Telegram-Channel-26A5E4?logo=telegram&logoColor=white)](https://t.me/nodyssey_official)
 [![Telegram Group](https://img.shields.io/badge/Telegram-Group-26A5E4?logo=telegram&logoColor=white)](https://t.me/+97ANIwVaCYk1MjQ1)
 
@@ -7,6 +8,8 @@ Nodyssey 是 [NodeSeek](https://www.nodeseek.com/) 的非官方开源 Android �
 Compose 写成。
 
 Nodyssey 把帖子和评论渲染成**原生 Compose 内容**
+
+宣传页：[nodyssey](https://5151561.github.io/nodyssey/)（GitHub Pages 托管）
 
 源码、问题反馈与版本发布：[GitHub](https://github.com/5151561/nodyssey) ·
 [Issues](https://github.com/5151561/nodyssey/issues) ·
