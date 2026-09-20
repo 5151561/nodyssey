@@ -141,34 +141,50 @@
   @keyframes nd-blob { 0%, 100% { clip-path: var(--m3e-shape-clover-8); } 50% { clip-path: var(--m3e-shape-cookie-12); } }
 
   .nd-track { animation: nd-scroll 72s linear infinite; }
-  .nd-marquee:hover .nd-track, .nd-marquee:focus-within .nd-track { animation-play-state: paused; }
   .nd-track figure { transition: scale .45s var(--sp); transform-origin: center; }
-  .nd-track figure:hover { scale: 1.08; position: relative; z-index: 3; }
   .nd-mark { animation: nd-mark 16s var(--sp) infinite; }
   .nd-phone { animation: nd-float 8s ease-in-out infinite; animation-delay: var(--d, 0s); transition: scale .5s var(--sp); }
-  .nd-phone:hover { scale: 1.04; }
   .nd-ico { transition: clip-path .55s var(--sp), rotate .55s var(--sp), scale .55s var(--sp); }
   .nd-card { transition: translate .5s var(--sp), background-color .3s ease; }
-  .nd-card:hover { translate: 0 -8px; }
-  .nd-card:hover .nd-ico { clip-path: var(--s2) !important; rotate: -14deg; scale: 1.1; }
   .nd-rise { opacity: 0; translate: 0 26px; transition: opacity .45s ease, translate .7s var(--sp); }
   .nd-rise.nd-in { opacity: 1; translate: 0 0; }
-  .nd-card.nd-rise.nd-in:hover { translate: 0 -8px; }
   .nd-press { transition: border-radius var(--md-sys-motion-spring-standard-default-spatial-duration, 260ms) var(--md-sys-motion-spring-standard-default-spatial, cubic-bezier(.2,0,0,1)), scale .25s var(--spf), translate .35s var(--sp); }
-  .nd-press:active { scale: .96; }
   .nd-fab { opacity: 0; translate: 0 26px; scale: .8; pointer-events: none; transition: opacity .35s ease, translate .5s var(--sp), scale .5s var(--sp), border-radius var(--md-sys-motion-spring-standard-default-spatial-duration, 260ms) var(--md-sys-motion-spring-standard-default-spatial, cubic-bezier(.2,0,0,1)); }
   html.nd-scrolled .nd-fab { opacity: 1; translate: 0 0; scale: 1; pointer-events: auto; }
-  .nd-fab:hover { border-radius: 20px !important; }
 
-  /* ===== hover states (converted from the canvas style-hover attrs) ===== */
-  .nd-nav:hover { background: var(--md-sys-color-surface-container-high) !important; }
-  .nd-outline-btn:hover { background: var(--md-sys-color-surface-container-high) !important; }
-  .nd-theme-btn:hover { background: var(--md-sys-color-primary-container) !important; }
-  .nd a.nd-cta-primary:hover { border-radius: 20px !important; translate: 0 -3px; }
-  .nd a.nd-cta-ghost:hover { border-radius: 20px !important; background: var(--md-sys-color-surface-container-high); }
-  .nd a.nd-rel-primary:hover { border-radius: 16px !important; }
-  .nd a.nd-rel-ghost:hover { border-radius: 16px !important; background: var(--md-sys-color-surface-container-high); }
-  .nd-band-link:hover { transform: translateY(-3px); }
+  /* ===== hover states — 仅在真正有指针悬停的设备上生效，触屏点按不会残留（converted from the canvas style-hover attrs） ===== */
+  @media (hover: hover) and (pointer: fine) {
+    .nd-marquee:hover .nd-track, .nd-marquee:focus-within .nd-track { animation-play-state: paused; }
+    .nd-track figure:hover { scale: 1.08; position: relative; z-index: 3; }
+    .nd-phone:hover { scale: 1.04; }
+    .nd-card:hover, .nd-card.nd-rise.nd-in:hover { translate: 0 -8px; }
+    .nd-card:hover .nd-ico { clip-path: var(--s2) !important; rotate: -14deg; scale: 1.1; }
+    .nd-fab:hover { border-radius: 20px !important; }
+    .nd-nav:hover { background: var(--md-sys-color-surface-container-high) !important; }
+    .nd-outline-btn:hover { background: var(--md-sys-color-surface-container-high) !important; }
+    .nd-theme-btn:hover { background: var(--md-sys-color-primary-container) !important; }
+    .nd a.nd-cta-primary:hover { border-radius: 20px !important; translate: 0 -3px; }
+    .nd a.nd-cta-ghost:hover { border-radius: 20px !important; background: var(--md-sys-color-surface-container-high); }
+    .nd a.nd-rel-primary:hover { border-radius: 16px !important; }
+    .nd a.nd-rel-ghost:hover { border-radius: 16px !important; background: var(--md-sys-color-surface-container-high); }
+    .nd-band-link:hover { transform: translateY(-3px); }
+  }
+
+  /* ===== press states — 鼠标按下与移动端点按共用，点一下就有形变反馈 ===== */
+  .nd-press:active { scale: .96; }
+  .nd-nav:active, .nd-outline-btn:active, .nd-theme-btn:active { scale: .93; }
+  .nd-card:active { translate: 0 -6px; }
+  .nd-card:active .nd-ico { clip-path: var(--s2) !important; rotate: -14deg; scale: 1.1; }
+  .nd-phone:active { scale: 1.03; }
+  .nd-band-link:active { transform: translateY(-3px); }
+  .nd a.nd-cta-primary:active, .nd a.nd-cta-ghost:active,
+  .nd a.nd-rel-primary:active, .nd a.nd-rel-ghost:active { border-radius: 20px !important; }
+  .nd-fab:active { border-radius: 20px !important; scale: .96; }
+  /* 触屏去掉灰色点按高亮，改用上面的形变反馈；点按不再有 300ms 延迟 */
+  .nd-nav, .nd-outline-btn, .nd-theme-btn, .nd-press, .nd-card, .nd-phone, .nd-band-link, .nd-track figure {
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .nd-nav, .nd-band-link { transition: background .2s, transform .25s var(--spf), scale .2s var(--spf); }
 
   @media (prefers-reduced-motion: reduce) {
     .nd-track, .nd-mark, .nd-phone { animation: none !important; }
@@ -212,11 +228,11 @@
         <a class="nd-nav" href="#release" style="padding:10px 14px;border-radius:999px;font-size:15px;font-weight:500;color:var(--md-sys-color-on-surface-variant)"><span data-lang="zh">更新</span><span data-lang="en">Releases</span></a>
       </nav>
       <span style="flex:1"></span>
-      <button class="nd-outline-btn" onclick="toggleLang()" aria-label="Language" style="display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--md-sys-color-outline);background:transparent;color:var(--md-sys-color-on-surface);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s">
+      <button class="nd-outline-btn" onclick="toggleLang()" aria-label="Language" style="display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--md-sys-color-outline);background:transparent;color:var(--md-sys-color-on-surface);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s,scale .2s var(--spf)">
         <span class="material-symbols-outlined" style="font-size:20px">translate</span>
         <span data-lang="zh">EN</span><span data-lang="en">中文</span>
       </button>
-      <button class="nd-theme-btn" onclick="toggleTheme()" aria-label="Theme" style="width:44px;height:44px;display:grid;place-items:center;border-radius:999px;border:none;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);cursor:pointer;transition:background .2s">
+      <button class="nd-theme-btn" onclick="toggleTheme()" aria-label="Theme" style="width:44px;height:44px;display:grid;place-items:center;border-radius:999px;border:none;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);cursor:pointer;transition:background .2s,scale .2s var(--spf)">
         <span class="material-symbols-outlined" data-shot="light" style="font-size:22px">dark_mode</span>
         <span class="material-symbols-outlined" data-shot="dark" style="font-size:22px">light_mode</span>
       </button>
@@ -715,6 +731,9 @@
     var on = document.documentElement.classList.toggle('nde');
     try { localStorage.setItem('nodyssey-site-lang', on ? 'en' : 'zh'); } catch (e) {}
   }
+
+  // iOS Safari 只有在存在 touch 监听时才会对点按触发 :active，补一个空监听让按钮/卡片的按下形变生效
+  document.addEventListener('touchstart', function () {}, { passive: true });
 
   // ===== 入场动画 + 悬浮下载按钮 + 装饰视差 =====
   (function () {
