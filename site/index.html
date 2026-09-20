@@ -1,295 +1,752 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="light">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nodyssey · NodeSeek 的开源 Android 客户端</title>
-<meta name="description" content="Nodyssey 是 NodeSeek 的非官方开源 Android 客户端，用 Kotlin 和 Jetpack Compose 写成，把帖子和评论渲染成原生内容。">
+<meta name="description" content="Nodyssey 是 NodeSeek 的非官方开源 Android 客户端，用 Kotlin 和 Jetpack Compose 写成，把帖子、评论、投票和跑分表渲染成原生内容。">
 <meta property="og:title" content="Nodyssey · NodeSeek 的开源 Android 客户端">
-<meta property="og:description" content="把帖子和评论渲染成原生 Compose 内容的 NodeSeek 第三方客户端。离线缓存、M3 主题、消息通知，开源可审计。">
+<meta property="og:description" content="用 Kotlin 和 Jetpack Compose 写成的 NodeSeek 第三方客户端。原生渲染、离线缓存、Material 3 主题、消息通知，开源可审计。">
 <meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;900&family=Roboto:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
 <style>
+  /* ===== Material Symbols ===== */
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal; font-style: normal; line-height: 1;
+    letter-spacing: normal; text-transform: none; display: inline-block;
+    white-space: nowrap; word-wrap: normal; direction: ltr;
+    -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+
+  /* ===== M3 Expressive spring motion (subset) ===== */
   :root {
-    --bg: #f6f8f9;
-    --surface: #ffffff;
-    --surface-2: #eef2f4;
-    --text: #16212a;
-    --text-dim: #5a6b76;
-    --accent: #2c6e7f;
-    --accent-strong: #1d5261;
-    --border: #dde5e9;
-    --shadow: 0 10px 40px rgba(28, 60, 72, 0.12);
-    --shadow-sm: 0 2px 12px rgba(28, 60, 72, 0.08);
-    --phone-bezel: #0e1519;
-    --hero-glow: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(44, 110, 127, 0.18), transparent 70%);
-  }
-  html[data-theme="dark"] {
-    --bg: #0e1417;
-    --surface: #161f24;
-    --surface-2: #1e2a30;
-    --text: #e6edf1;
-    --text-dim: #9fb1bb;
-    --accent: #6fc2d6;
-    --accent-strong: #8ad2e3;
-    --border: #26333a;
-    --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.35);
-    --phone-bezel: #05090b;
-    --hero-glow: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(111, 194, 214, 0.14), transparent 70%);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-      "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    transition: background 0.3s, color 0.3s;
-  }
-  a { color: var(--accent); text-decoration: none; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
-
-  /* nav */
-  nav {
-    position: sticky; top: 0; z-index: 50;
-    backdrop-filter: saturate(180%) blur(12px);
-    background: color-mix(in srgb, var(--bg) 82%, transparent);
-    border-bottom: 1px solid var(--border);
-  }
-  .nav-inner { display: flex; align-items: center; gap: 14px; height: 60px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
-  .brand .dot { width: 26px; height: 26px; border-radius: 8px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-strong)); }
-  .nav-spacer { flex: 1; }
-  .nav-link { color: var(--text-dim); font-size: 15px; font-weight: 500; }
-  .nav-link:hover { color: var(--text); }
-  .theme-toggle {
-    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
-    width: 38px; height: 38px; border-radius: 10px; cursor: pointer; font-size: 17px;
-    display: inline-flex; align-items: center; justify-content: center; transition: background 0.2s;
-  }
-  .theme-toggle:hover { background: var(--border); }
-  @media (max-width: 640px) { .nav-link.hide-sm { display: none; } }
-
-  /* hero */
-  .hero { position: relative; padding: 72px 0 40px; text-align: center; background: var(--hero-glow); }
-  .hero h1 { font-size: clamp(38px, 8vw, 68px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
-  .hero .tag { color: var(--accent); font-weight: 700; }
-  .hero p.lead { max-width: 620px; margin: 20px auto 0; font-size: clamp(16px, 2.6vw, 19px); color: var(--text-dim); }
-  .badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 22px; }
-  .badge { font-size: 13px; color: var(--text-dim); background: var(--surface); border: 1px solid var(--border);
-    padding: 5px 12px; border-radius: 999px; }
-  .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 30px; }
-  .btn { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600;
-    padding: 13px 24px; border-radius: 12px; border: 1px solid var(--border); transition: transform 0.15s, box-shadow 0.2s; }
-  .btn:hover { transform: translateY(-2px); }
-  .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-strong)); color: #fff; border-color: transparent; box-shadow: var(--shadow-sm); }
-  .btn-ghost { background: var(--surface); color: var(--text); }
-
-  /* hero screenshots */
-  .hero-shots { display: flex; gap: 18px; justify-content: center; align-items: flex-end;
-    margin: 48px auto 0; max-width: 900px; }
-  .phone { border-radius: 26px; background: var(--phone-bezel); padding: 8px;
-    box-shadow: var(--shadow); flex: 0 0 auto; }
-  .phone img { display: block; width: 100%; border-radius: 20px; }
-  .hero-shots .phone { width: 224px; }
-  .hero-shots .phone.side { width: 190px; margin-bottom: 26px; opacity: 0.96; }
-  @media (max-width: 720px) {
-    .hero-shots .phone.side { display: none; }
-    .hero-shots .phone { width: min(72vw, 260px); }
+    --md-sys-motion-spring-standard-default-spatial: linear(0.0000,0.0137,0.0493,0.1001,0.1606,0.2267,0.2951,0.3634,0.4298,0.4932,0.5528,0.6079,0.6583,0.7041,0.7453,0.7819,0.8144,0.8430,0.8679,0.8896,0.9083,0.9244,0.9381,0.9497,0.9595,0.9677,0.9745,0.9802,0.9849,0.9886,0.9917,0.9942,0.9961,0.9976,0.9988);
+    --md-sys-motion-spring-standard-default-spatial-duration: 224ms;
+    --md-sys-motion-spring-expressive-fast-spatial: linear(0.0000,0.0380,0.1338,0.2634,0.4075,0.5514,0.6849,0.8014,0.8977,0.9728,1.0276,1.0642,1.0853,1.0941,1.0935,1.0863,1.0751,1.0618,1.0480,1.0349,1.0231,1.0132,1.0053,0.9993,0.9951,0.9926,0.9913,0.9910,0.9915,0.9924,0.9936,0.9949,0.9962,0.9974,0.9984);
+    --md-sys-motion-spring-expressive-default-spatial: linear(0.0000,0.0250,0.0880,0.1739,0.2715,0.3724,0.4708,0.5629,0.6464,0.7200,0.7834,0.8370,0.8812,0.9169,0.9453,0.9672,0.9837,0.9958,1.0042,1.0097,1.0131,1.0147,1.0152,1.0148,1.0138,1.0125,1.0110,1.0094,1.0080,1.0066,1.0053,1.0042,1.0032,1.0024,1.0018);
   }
 
-  /* sections */
-  section { padding: 64px 0; }
-  .section-head { text-align: center; max-width: 640px; margin: 0 auto 44px; }
-  .section-head h2 { font-size: clamp(26px, 5vw, 38px); font-weight: 800; letter-spacing: -0.02em; }
-  .section-head p { color: var(--text-dim); margin-top: 10px; font-size: 16px; }
+  /* ===== M3 Expressive shapes (subset used on this page) ===== */
+  :root {
+    --m3e-shape-circle: polygon(100.00% 50.00%,99.44% 57.45%,97.77% 64.74%,95.05% 71.69%,91.31% 78.16%,86.65% 84.01%,81.17% 89.09%,75.00% 93.30%,68.27% 96.54%,61.13% 98.74%,53.74% 99.86%,46.26% 99.86%,38.87% 98.74%,31.73% 96.54%,25.00% 93.30%,18.83% 89.09%,13.35% 84.01%,8.69% 78.16%,4.95% 71.69%,2.23% 64.74%,0.56% 57.45%,0.00% 50.00%,0.56% 42.55%,2.23% 35.26%,4.95% 28.31%,8.69% 21.84%,13.35% 15.99%,18.83% 10.91%,25.00% 6.70%,31.73% 3.46%,38.87% 1.26%,46.26% 0.14%,53.74% 0.14%,61.13% 1.26%,68.27% 3.46%,75.00% 6.70%,81.17% 10.91%,86.65% 15.99%,91.31% 21.84%,95.05% 28.31%,97.77% 35.26%,99.44% 42.55%);
+    --m3e-shape-cookie-4: polygon(25.29% 14.16%,29.72% 8.52%,35.38% 4.13%,41.93% 1.25%,48.99% 0.04%,56.13% 0.61%,62.86% 3.10%,68.77% 7.13%,73.53% 12.48%,77.59% 18.41%,82.81% 23.33%,88.76% 27.37%,93.89% 32.37%,97.65% 38.47%,99.60% 45.37%,99.81% 52.53%,98.29% 59.52%,95.11% 65.94%,90.42% 71.37%,84.54% 75.50%,78.99% 80.04%,74.74% 85.83%,70.31% 91.47%,64.66% 95.86%,58.11% 98.75%,51.05% 99.96%,43.90% 99.39%,37.18% 96.90%,31.27% 92.86%,26.52% 87.50%,22.42% 81.60%,17.22% 76.66%,11.28% 72.60%,6.14% 67.61%,2.36% 61.52%,0.41% 54.62%,0.19% 47.46%,1.71% 40.47%,4.88% 34.05%,9.57% 28.62%,15.44% 24.48%,20.97% 19.89%);
+    --m3e-shape-cookie-6: polygon(34.29% 7.00%,40.07% 2.46%,47.05% 0.19%,54.37% 0.45%,61.16% 3.22%,66.68% 8.06%,72.37% 12.69%,79.38% 14.86%,86.21% 17.57%,91.67% 22.48%,95.09% 28.96%,96.07% 36.22%,94.60% 43.42%,93.55% 50.68%,95.08% 57.87%,96.18% 65.13%,94.68% 72.31%,90.77% 78.52%,84.96% 82.97%,77.98% 85.27%,71.17% 88.00%,65.69% 92.89%,59.97% 97.50%,53.00% 99.81%,45.67% 99.54%,38.90% 96.75%,33.42% 91.86%,27.66% 87.31%,20.69% 84.99%,13.83% 82.37%,8.34% 77.50%,4.88% 71.03%,3.90% 63.77%,5.38% 56.57%,6.45% 49.31%,4.99% 42.11%,3.82% 34.86%,5.27% 27.66%,9.13% 21.43%,14.92% 16.93%,21.88% 14.57%,28.64% 11.70%);
+    --m3e-shape-cookie-7: polygon(37.26% 6.60%,43.42% 2.26%,50.83% 0.96%,58.09% 2.95%,63.84% 7.85%,69.84% 12.39%,77.29% 13.58%,84.54% 15.65%,90.18% 20.61%,93.13% 27.55%,92.81% 35.10%,93.16% 42.62%,96.74% 49.27%,99.70% 56.20%,99.35% 63.70%,95.75% 70.32%,89.62% 74.74%,83.95% 79.70%,80.95% 86.63%,77.41% 93.28%,71.34% 97.72%,63.93% 99.04%,56.64% 97.02%,49.23% 95.66%,41.94% 97.61%,34.54% 99.01%,27.28% 97.07%,21.60% 92.11%,18.62% 85.17%,15.09% 78.51%,9.04% 74.01%,3.31% 69.12%,0.27% 62.24%,0.57% 54.72%,4.12% 48.04%,7.15% 41.15%,6.92% 33.60%,7.14% 26.07%,10.59% 19.39%,16.65% 14.92%,24.07% 13.45%,31.29% 11.23%);
+    --m3e-shape-cookie-9: polygon(40.99% 4.69%,47.65% 0.95%,55.22% 1.89%,61.08% 6.88%,67.86% 10.22%,75.58% 9.59%,82.65% 12.46%,86.48% 19.06%,87.37% 26.75%,92.04% 32.76%,97.98% 37.65%,100.00% 44.98%,97.08% 52.03%,93.58% 58.84%,94.70% 66.44%,94.86% 74.06%,90.27% 80.13%,82.96% 82.58%,76.65% 86.84%,73.23% 93.79%,67.31% 98.60%,59.69% 98.65%,52.59% 95.53%,45.02% 96.40%,37.84% 99.19%,30.44% 97.42%,25.71% 91.44%,21.65% 84.93%,14.57% 82.00%,7.82% 78.45%,4.71% 71.51%,6.16% 63.95%,5.79% 56.34%,1.51% 49.89%,0.14% 42.39%,3.76% 35.68%,10.02% 31.11%,13.20% 24.20%,14.29% 16.56%,19.40% 10.92%,26.93% 9.67%,34.58% 8.94%);
+    --m3e-shape-cookie-12: polygon(43.38% 2.80%,50.46% 0.12%,57.28% 3.42%,64.08% 6.59%,71.74% 5.54%,78.08% 9.62%,81.04% 16.77%,87.58% 20.62%,93.51% 25.28%,93.90% 32.84%,94.64% 40.35%,99.33% 46.49%,99.00% 54.01%,94.25% 60.13%,94.11% 67.72%,93.12% 75.19%,86.79% 79.34%,80.62% 83.69%,77.66% 90.83%,71.01% 94.37%,63.33% 93.31%,56.67% 96.93%,49.72% 99.88%,42.94% 96.52%,36.11% 93.29%,28.45% 94.31%,22.02% 90.38%,19.11% 83.20%,12.67% 79.19%,6.60% 74.70%,6.06% 67.16%,5.51% 59.62%,0.78% 53.49%,0.90% 45.96%,5.67% 39.85%,5.98% 32.28%,6.76% 24.77%,12.98% 20.47%,19.28% 16.28%,22.21% 9.12%,28.76% 5.40%,36.47% 6.07%);
+    --m3e-shape-clover-4: polygon(21.76% 18.69%,25.36% 12.39%,30.34% 7.12%,36.42% 3.17%,43.25% 0.75%,50.45% 0.01%,57.63% 0.98%,64.38% 3.61%,70.32% 7.75%,75.12% 13.16%,78.61% 19.52%,84.42% 23.50%,90.22% 27.78%,94.85% 33.29%,98.06% 39.75%,99.67% 46.77%,99.58% 53.98%,97.79% 60.96%,94.42% 67.33%,89.64% 72.73%,83.73% 76.86%,78.28% 81.23%,74.70% 87.54%,69.74% 92.83%,63.67% 96.80%,56.84% 99.23%,49.63% 99.99%,42.45% 99.04%,35.70% 96.42%,29.75% 92.29%,24.94% 86.89%,21.44% 80.53%,15.63% 76.48%,9.82% 72.22%,5.17% 66.71%,1.95% 60.26%,0.34% 53.24%,0.42% 46.03%,2.20% 39.05%,5.56% 32.67%,10.33% 27.27%,16.24% 23.14%);
+    --m3e-shape-clover-8: polygon(34.67% 7.92%,40.23% 2.74%,47.38% 0.19%,54.94% 0.69%,61.68% 4.15%,66.93% 9.62%,74.53% 9.35%,81.70% 11.80%,87.31% 16.91%,90.44% 23.84%,90.52% 31.45%,94.90% 37.10%,98.89% 43.56%,99.97% 51.07%,97.99% 58.39%,93.26% 64.31%,90.73% 70.70%,89.80% 78.22%,85.95% 84.75%,79.81% 89.22%,72.39% 90.85%,65.40% 91.96%,59.89% 97.20%,52.76% 99.81%,45.19% 99.36%,38.43% 95.94%,33.11% 90.53%,25.52% 90.65%,18.34% 88.22%,12.71% 83.13%,9.56% 76.21%,9.46% 68.61%,5.14% 62.94%,1.13% 56.48%,0.01% 48.98%,1.97% 41.66%,6.68% 35.72%,9.27% 29.35%,10.18% 21.83%,14.00% 15.28%,20.12% 10.79%,27.53% 9.12%);
+    --m3e-shape-sunny: polygon(37.97% 3.43%,44.78% 0.60%,52.14% 0.10%,59.26% 1.98%,65.68% 5.66%,72.62% 8.15%,79.62% 10.48%,85.56% 14.85%,89.79% 20.89%,91.98% 27.94%,94.62% 34.83%,98.23% 41.27%,99.93% 48.44%,99.24% 55.77%,96.26% 62.52%,92.83% 69.05%,90.92% 76.20%,87.57% 82.76%,82.29% 87.90%,75.65% 91.08%,68.51% 93.02%,62.03% 96.57%,55.22% 99.40%,47.86% 99.90%,40.74% 98.02%,34.32% 94.34%,27.38% 91.85%,20.38% 89.52%,14.44% 85.15%,10.21% 79.11%,8.02% 72.06%,5.38% 65.17%,1.77% 58.73%,0.07% 51.56%,0.76% 44.23%,3.74% 37.48%,7.17% 30.95%,9.08% 23.80%,12.43% 17.24%,17.71% 12.10%,24.35% 8.92%,31.49% 6.98%);
+    --m3e-shape-puffy: polygon(34.45% 3.92%,41.28% 1.20%,48.53% 0.05%,55.86% 0.54%,62.90% 2.65%,69.44% 6.02%,75.86% 9.63%,82.13% 13.49%,87.90% 18.05%,92.52% 23.76%,95.77% 30.35%,97.46% 37.50%,97.81% 44.85%,97.89% 52.21%,97.68% 59.58%,96.62% 66.85%,93.99% 73.70%,89.91% 79.81%,84.56% 84.85%,78.36% 88.83%,72.03% 92.58%,65.55% 96.08%,58.72% 98.80%,51.47% 99.95%,44.14% 99.46%,37.10% 97.35%,30.56% 93.98%,24.14% 90.37%,17.87% 86.51%,12.10% 81.95%,7.48% 76.24%,4.23% 69.65%,2.54% 62.50%,2.19% 55.15%,2.11% 47.79%,2.32% 40.42%,3.38% 33.15%,6.01% 26.30%,10.09% 20.19%,15.44% 15.15%,21.64% 11.17%,27.97% 7.42%);
+    --m3e-shape-flower: polygon(40.03% 8.08%,45.80% 1.52%,54.51% 1.64%,60.07% 8.39%,62.55% 17.07%,70.37% 14.07%,78.78% 11.27%,86.33% 15.58%,87.62% 24.18%,83.45% 32.18%,86.99% 38.13%,95.51% 41.01%,100.00% 48.46%,96.87% 56.56%,88.65% 60.04%,82.68% 65.00%,87.05% 72.90%,87.49% 81.60%,80.94% 87.32%,72.33% 85.66%,64.27% 81.82%,60.33% 89.35%,56.20% 97.16%,47.73% 99.15%,41.07% 93.57%,38.43% 84.94%,31.57% 83.49%,23.48% 87.41%,15.08% 85.16%,11.76% 77.14%,15.20% 68.90%,15.63% 61.27%,6.95% 58.77%,0.61% 52.82%,1.38% 44.17%,8.72% 39.36%,17.06% 36.27%,14.30% 28.14%,11.82% 19.68%,16.54% 12.36%,25.22% 11.79%,33.75% 13.97%);
+    --m3e-shape-gem: polygon(66.64% 0.00%,73.49% 3.19%,79.05% 8.65%,84.61% 14.12%,90.17% 19.58%,95.73% 25.04%,99.64% 31.56%,99.76% 39.35%,99.83% 47.15%,99.90% 54.95%,99.97% 62.74%,99.16% 70.41%,94.08% 76.27%,88.62% 81.83%,83.15% 87.39%,77.69% 92.95%,72.08% 98.34%,64.54% 99.73%,56.75% 99.80%,48.95% 99.86%,41.16% 99.93%,33.36% 100.00%,26.51% 96.81%,20.95% 91.35%,15.39% 85.88%,9.83% 80.42%,4.27% 74.96%,0.36% 68.44%,0.24% 60.65%,0.17% 52.85%,0.10% 45.05%,0.03% 37.26%,0.84% 29.59%,5.92% 23.73%,11.38% 18.17%,16.85% 12.61%,22.31% 7.05%,27.92% 1.66%,35.46% 0.27%,43.25% 0.20%,51.05% 0.14%,58.84% 0.07%);
+    --m3e-shape-burst: polygon(46.88% 1.85%,54.06% 4.21%,58.36% 13.72%,67.25% 9.99%,76.07% 7.32%,75.66% 17.57%,79.74% 24.72%,90.14% 23.23%,91.69% 30.62%,85.60% 39.09%,93.27% 44.93%,100.00% 51.23%,90.92% 56.01%,86.76% 63.12%,93.26% 71.38%,87.63% 76.41%,77.24% 75.38%,76.02% 84.94%,73.93% 93.92%,65.25% 88.44%,57.02% 88.39%,53.12% 98.15%,45.94% 95.79%,41.64% 86.28%,32.75% 90.01%,23.93% 92.68%,24.34% 82.43%,20.26% 75.28%,9.86% 76.77%,8.31% 69.38%,14.40% 60.91%,6.73% 55.07%,0.00% 48.77%,9.08% 43.99%,13.24% 36.88%,6.74% 28.62%,12.37% 23.59%,22.76% 24.62%,23.98% 15.06%,26.07% 6.08%,34.75% 11.56%,42.98% 11.61%);
+    --m3e-shape-boom: polygon(46.87% 2.46%,53.85% 6.82%,60.57% 13.62%,68.81% 4.16%,70.74% 14.71%,76.85% 19.89%,87.85% 17.52%,81.98% 28.37%,89.49% 33.25%,96.96% 38.08%,86.39% 45.07%,95.49% 51.66%,95.39% 58.67%,84.41% 62.65%,92.94% 71.83%,85.68% 75.70%,76.43% 78.12%,80.50% 89.99%,70.40% 86.38%,62.86% 89.09%,59.41% 99.79%,52.95% 89.29%,44.96% 93.35%,37.05% 97.41%,36.28% 84.76%,26.02% 89.34%,20.00% 85.75%,22.05% 74.25%,9.83% 77.05%,10.11% 68.82%,12.64% 59.60%,0.32% 57.20%,8.50% 50.25%,9.93% 42.37%,2.38% 34.03%,14.71% 33.69%,15.18% 24.74%,15.63% 15.86%,26.97% 21.52%,28.12% 10.34%,34.24% 6.92%,43.18% 14.44%);
+  }
 
-  /* features */
-  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-    padding: 24px; box-shadow: var(--shadow-sm); }
-  .card .ico { width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center;
-    font-size: 21px; background: color-mix(in srgb, var(--accent) 15%, var(--surface)); margin-bottom: 14px; }
-  .card h3 { font-size: 17px; font-weight: 700; }
-  .card p { color: var(--text-dim); font-size: 14.5px; margin-top: 7px; }
+  /* ===== Palette (Nodyssey graphite-teal, light) ===== */
+  html, body { margin: 0; padding: 0; background: #F4F8FA; }
+  html.ndk, html.ndk body { background: #10181C; }
+  .nd {
+    --md-sys-color-primary: oklch(.44 .088 223);
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: oklch(.88 .062 223);
+    --md-sys-color-on-primary-container: oklch(.28 .075 223);
+    --md-sys-color-secondary: oklch(.48 .040 223);
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-secondary-container: oklch(.905 .032 223);
+    --md-sys-color-on-secondary-container: oklch(.30 .035 223);
+    --md-sys-color-tertiary: oklch(.47 .090 285);
+    --md-sys-color-on-tertiary: #ffffff;
+    --md-sys-color-tertiary-container: oklch(.89 .060 285);
+    --md-sys-color-on-tertiary-container: oklch(.30 .075 285);
+    --md-sys-color-error: oklch(.505 .19 26);
+    --md-sys-color-error-container: oklch(.90 .055 26);
+    --md-sys-color-on-error-container: oklch(.31 .12 26);
+    --md-sys-color-surface: oklch(.985 .006 223);
+    --md-sys-color-surface-dim: oklch(.905 .012 223);
+    --md-sys-color-surface-bright: oklch(.99 .005 223);
+    --md-sys-color-surface-container-lowest: #ffffff;
+    --md-sys-color-surface-container-low: oklch(.972 .008 223);
+    --md-sys-color-surface-container: oklch(.955 .010 223);
+    --md-sys-color-surface-container-high: oklch(.932 .012 223);
+    --md-sys-color-surface-container-highest: oklch(.912 .014 223);
+    --md-sys-color-on-surface: oklch(.225 .020 223);
+    --md-sys-color-on-surface-variant: oklch(.445 .022 223);
+    --md-sys-color-outline: oklch(.585 .020 223);
+    --md-sys-color-outline-variant: oklch(.835 .016 223);
+    --md-sys-color-inverse-surface: oklch(.30 .018 223);
+    --md-sys-color-inverse-on-surface: oklch(.96 .008 223);
+    --nd-shadow: 0 8px 28px -6px oklch(.44 .05 223 / .28);
+    --sp: var(--md-sys-motion-spring-expressive-default-spatial, cubic-bezier(.2,0,0,1));
+    --spf: var(--md-sys-motion-spring-expressive-fast-spatial, cubic-bezier(.2,0,0,1));
+  }
+  html.ndk .nd {
+    --md-sys-color-primary: oklch(.815 .082 223);
+    --md-sys-color-on-primary: oklch(.30 .070 223);
+    --md-sys-color-primary-container: oklch(.40 .080 223);
+    --md-sys-color-on-primary-container: oklch(.90 .055 223);
+    --md-sys-color-secondary: oklch(.83 .035 223);
+    --md-sys-color-on-secondary: oklch(.31 .030 223);
+    --md-sys-color-secondary-container: oklch(.40 .032 223);
+    --md-sys-color-on-secondary-container: oklch(.905 .030 223);
+    --md-sys-color-tertiary: oklch(.82 .080 285);
+    --md-sys-color-on-tertiary: oklch(.31 .070 285);
+    --md-sys-color-tertiary-container: oklch(.41 .080 285);
+    --md-sys-color-on-tertiary-container: oklch(.90 .055 285);
+    --md-sys-color-error: oklch(.75 .14 26);
+    --md-sys-color-error-container: oklch(.40 .14 26);
+    --md-sys-color-on-error-container: oklch(.92 .05 26);
+    --md-sys-color-surface: oklch(.195 .013 223);
+    --md-sys-color-surface-dim: oklch(.175 .013 223);
+    --md-sys-color-surface-bright: oklch(.36 .015 223);
+    --md-sys-color-surface-container-lowest: oklch(.145 .013 223);
+    --md-sys-color-surface-container-low: oklch(.225 .013 223);
+    --md-sys-color-surface-container: oklch(.25 .014 223);
+    --md-sys-color-surface-container-high: oklch(.295 .015 223);
+    --md-sys-color-surface-container-highest: oklch(.345 .016 223);
+    --md-sys-color-on-surface: oklch(.925 .010 223);
+    --md-sys-color-on-surface-variant: oklch(.79 .017 223);
+    --md-sys-color-outline: oklch(.615 .017 223);
+    --md-sys-color-outline-variant: oklch(.39 .017 223);
+    --md-sys-color-inverse-surface: oklch(.92 .010 223);
+    --md-sys-color-inverse-on-surface: oklch(.28 .015 223);
+    --nd-shadow: 0 8px 28px -6px rgba(0,0,0,.55);
+  }
 
-  /* gallery */
-  .gallery-tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 32px; }
-  .tab { font-size: 14px; font-weight: 600; padding: 8px 16px; border-radius: 999px; cursor: pointer;
-    background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); transition: all 0.18s; }
-  .tab.active { background: var(--accent); color: #fff; border-color: transparent; }
-  .gallery { display: flex; justify-content: center; }
-  .gallery .phone { width: min(300px, 78vw); }
-  .gallery-caption { text-align: center; color: var(--text-dim); margin-top: 18px; font-size: 15px; }
+  /* ===== language / theme swaps ===== */
+  [data-lang="en"] { display: none; }
+  html.nde [data-lang="zh"] { display: none; }
+  html.nde [data-lang="en"] { display: revert; }
+  img[data-shot="light"] { display: block; }
+  [data-shot="dark"] { display: none; }
+  html.ndk [data-shot="light"] { display: none; }
+  html.ndk [data-shot="dark"] { display: revert; }
+  html.ndk img[data-shot="dark"] { display: block; }
 
-  /* opensource */
-  .os { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 40px;
-    text-align: center; box-shadow: var(--shadow-sm); }
-  .os h2 { font-size: clamp(24px, 4vw, 32px); font-weight: 800; }
-  .os p { color: var(--text-dim); max-width: 640px; margin: 14px auto 0; }
-  .os .cta { margin-top: 26px; }
+  .nd a { color: var(--md-sys-color-primary); text-decoration: none; }
+  .nd a:hover { color: var(--md-sys-color-on-primary-container); }
 
-  /* footer */
-  footer { border-top: 1px solid var(--border); padding: 34px 0; color: var(--text-dim); font-size: 14px; }
-  .foot-inner { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between; }
-  .foot-links { display: flex; flex-wrap: wrap; gap: 18px; }
+  /* ===== keyframes ===== */
+  @keyframes nd-spin { to { transform: rotate(360deg); } }
+  @keyframes nd-spin-r { to { transform: rotate(-360deg); } }
+  @keyframes nd-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes nd-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -14px; } }
+  @keyframes nd-mark { 0%, 100% { clip-path: var(--m3e-shape-cookie-9); } 25% { clip-path: var(--m3e-shape-clover-4); } 50% { clip-path: var(--m3e-shape-sunny); } 75% { clip-path: var(--m3e-shape-puffy); } }
+  @keyframes nd-blob { 0%, 100% { clip-path: var(--m3e-shape-clover-8); } 50% { clip-path: var(--m3e-shape-cookie-12); } }
+
+  .nd-track { animation: nd-scroll 72s linear infinite; }
+  .nd-marquee:hover .nd-track, .nd-marquee:focus-within .nd-track { animation-play-state: paused; }
+  .nd-track figure { transition: scale .45s var(--sp); transform-origin: center; }
+  .nd-track figure:hover { scale: 1.08; position: relative; z-index: 3; }
+  .nd-mark { animation: nd-mark 16s var(--sp) infinite; }
+  .nd-phone { animation: nd-float 8s ease-in-out infinite; animation-delay: var(--d, 0s); transition: scale .5s var(--sp); }
+  .nd-phone:hover { scale: 1.04; }
+  .nd-ico { transition: clip-path .55s var(--sp), rotate .55s var(--sp), scale .55s var(--sp); }
+  .nd-card { transition: translate .5s var(--sp), background-color .3s ease; }
+  .nd-card:hover { translate: 0 -8px; }
+  .nd-card:hover .nd-ico { clip-path: var(--s2) !important; rotate: -14deg; scale: 1.1; }
+  .nd-rise { opacity: 0; translate: 0 26px; transition: opacity .45s ease, translate .7s var(--sp); }
+  .nd-rise.nd-in { opacity: 1; translate: 0 0; }
+  .nd-card.nd-rise.nd-in:hover { translate: 0 -8px; }
+  .nd-press { transition: border-radius var(--md-sys-motion-spring-standard-default-spatial-duration, 260ms) var(--md-sys-motion-spring-standard-default-spatial, cubic-bezier(.2,0,0,1)), scale .25s var(--spf), translate .35s var(--sp); }
+  .nd-press:active { scale: .96; }
+  .nd-fab { opacity: 0; translate: 0 26px; scale: .8; pointer-events: none; transition: opacity .35s ease, translate .5s var(--sp), scale .5s var(--sp), border-radius var(--md-sys-motion-spring-standard-default-spatial-duration, 260ms) var(--md-sys-motion-spring-standard-default-spatial, cubic-bezier(.2,0,0,1)); }
+  html.nd-scrolled .nd-fab { opacity: 1; translate: 0 0; scale: 1; pointer-events: auto; }
+  .nd-fab:hover { border-radius: 20px !important; }
+
+  /* ===== hover states (converted from the canvas style-hover attrs) ===== */
+  .nd-nav:hover { background: var(--md-sys-color-surface-container-high) !important; }
+  .nd-outline-btn:hover { background: var(--md-sys-color-surface-container-high) !important; }
+  .nd-theme-btn:hover { background: var(--md-sys-color-primary-container) !important; }
+  .nd a.nd-cta-primary:hover { border-radius: 20px !important; translate: 0 -3px; }
+  .nd a.nd-cta-ghost:hover { border-radius: 20px !important; background: var(--md-sys-color-surface-container-high); }
+  .nd a.nd-rel-primary:hover { border-radius: 16px !important; }
+  .nd a.nd-rel-ghost:hover { border-radius: 16px !important; background: var(--md-sys-color-surface-container-high); }
+  .nd-band-link:hover { transform: translateY(-3px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nd-track, .nd-mark, .nd-phone { animation: none !important; }
+    .nd-rise { opacity: 1 !important; translate: 0 0 !important; }
+    .nd *, .nd *::before { transition-duration: .01ms !important; }
+  }
+  @media (max-width: 900px) {
+    .nd-hero { grid-template-columns: 1fr !important; }
+    .nd-hero-art { height: 460px !important; }
+    .nd-bento > * { grid-column: span 6 !important; }
+    .nd-rel { grid-template-columns: 1fr !important; }
+    .nd-rel-side { position: static !important; }
+    .nd-hide-sm { display: none !important; }
+  }
 </style>
 </head>
 <body>
+<script>
+  // 尽早套用主题 / 语言，避免首屏闪烁
+  try {
+    var r = document.documentElement;
+    var t = localStorage.getItem('nodyssey-site-theme');
+    var l = localStorage.getItem('nodyssey-site-lang');
+    var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    r.classList.toggle('ndk', dark);
+    r.classList.toggle('nde', l === 'en');
+  } catch (e) {}
+</script>
 
-<nav>
-  <div class="wrap nav-inner">
-    <span class="brand"><span class="dot"></span>Nodyssey</span>
-    <span class="nav-spacer"></span>
-    <a class="nav-link hide-sm" href="#features">功能</a>
-    <a class="nav-link hide-sm" href="#gallery">截图</a>
-    <a class="nav-link" href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener">GitHub</a>
-    <button class="theme-toggle" id="themeToggle" aria-label="切换主题">🌙</button>
-  </div>
-</nav>
+<div class="nd" style="min-height:100vh;background:var(--md-sys-color-surface);color:var(--md-sys-color-on-surface);font-family:'Google Sans','Noto Sans SC','Roboto',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden">
 
-<header class="hero">
-  <div class="wrap">
-    <h1><span class="tag">NodeSeek</span> 的<br>开源 Android 客户端</h1>
-    <p class="lead">Nodyssey 用 Kotlin 和 Jetpack Compose 写成，把帖子和评论渲染成<strong>原生内容</strong>——不是网页套壳。离线缓存、M3 主题、消息通知，一应俱全，全部开源可审计。</p>
-    <div class="badges">
-      <span class="badge">Kotlin · Jetpack Compose</span>
-      <span class="badge">Material 3 Expressive</span>
-      <span class="badge">Android 8.0+</span>
-      <span class="badge">GPL-3.0</span>
+  <header style="position:sticky;top:0;z-index:60;background:color-mix(in srgb, var(--md-sys-color-surface) 86%, transparent);backdrop-filter:blur(16px) saturate(160%);border-bottom:1px solid var(--md-sys-color-outline-variant)">
+    <div style="max-width:1200px;margin:0 auto;padding:0 24px;height:72px;display:flex;align-items:center;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px;margin-right:8px">
+        <div class="nd-mark" style="width:40px;height:40px;clip-path:var(--m3e-shape-cookie-9);overflow:hidden"><svg viewBox="18 18 72 72" role="img" aria-label="Nodyssey" style="width:100%;height:100%;display:block"><path fill="#BFBFBF" d="M0,0h108v108H0z"></path><path fill="#0D0D0D" d="M54,31.5C66.43,31.5 76.5,41.57 76.5,54C76.5,66.43 66.43,76.5 54,76.5C41.57,76.5 31.5,66.43 31.5,54C31.5,41.57 41.57,31.5 54,31.5z"></path><path fill="#FFFFFF" d="M44.7,43.7C46.44,43.7 47.85,45.11 47.85,46.85V51.75C47.85,53.49 46.44,54.9 44.7,54.9C42.96,54.9 41.55,53.49 41.55,51.75V46.85C41.55,45.11 42.96,43.7 44.7,43.7zM62.1,43.7C63.84,43.7 65.25,45.11 65.25,46.85V51.75C65.25,53.49 63.84,54.9 62.1,54.9C60.36,54.9 58.95,53.49 58.95,51.75V46.85C58.95,45.11 60.36,43.7 62.1,43.7z"></path></svg></div>
+        <span style="font-size:22px;font-weight:600;letter-spacing:-.01em">Nodyssey</span>
+      </div>
+      <nav class="nd-hide-sm" style="display:flex;gap:4px;margin-left:12px">
+        <a class="nd-nav" href="#features" style="padding:10px 14px;border-radius:999px;font-size:15px;font-weight:500;color:var(--md-sys-color-on-surface-variant)"><span data-lang="zh">功能</span><span data-lang="en">Features</span></a>
+        <a class="nd-nav" href="#gallery" style="padding:10px 14px;border-radius:999px;font-size:15px;font-weight:500;color:var(--md-sys-color-on-surface-variant)"><span data-lang="zh">截图</span><span data-lang="en">Screens</span></a>
+        <a class="nd-nav" href="#release" style="padding:10px 14px;border-radius:999px;font-size:15px;font-weight:500;color:var(--md-sys-color-on-surface-variant)"><span data-lang="zh">更新</span><span data-lang="en">Releases</span></a>
+      </nav>
+      <span style="flex:1"></span>
+      <button class="nd-outline-btn" onclick="toggleLang()" aria-label="Language" style="display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--md-sys-color-outline);background:transparent;color:var(--md-sys-color-on-surface);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s">
+        <span class="material-symbols-outlined" style="font-size:20px">translate</span>
+        <span data-lang="zh">EN</span><span data-lang="en">中文</span>
+      </button>
+      <button class="nd-theme-btn" onclick="toggleTheme()" aria-label="Theme" style="width:44px;height:44px;display:grid;place-items:center;border-radius:999px;border:none;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);cursor:pointer;transition:background .2s">
+        <span class="material-symbols-outlined" data-shot="light" style="font-size:22px">dark_mode</span>
+        <span class="material-symbols-outlined" data-shot="dark" style="font-size:22px">light_mode</span>
+      </button>
     </div>
-    <div class="cta">
-      <a class="btn btn-primary" href="https://github.com/5151561/nodyssey/releases/latest" target="_blank" rel="noopener">⬇ 下载最新版</a>
-      <a class="btn btn-ghost" href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener">★ GitHub 源码</a>
-      <a class="btn btn-ghost" href="https://t.me/nodyssey_official" target="_blank" rel="noopener">✈ Telegram 频道</a>
-    </div>
+  </header>
 
-    <div class="hero-shots">
-      <div class="phone side"><img data-shot="profile" alt="我的"></div>
-      <div class="phone"><img data-shot="post-list" alt="首页帖子流"></div>
-      <div class="phone side"><img data-shot="post-detail" alt="帖子详情"></div>
-    </div>
-  </div>
-</header>
+  <section style="position:relative;max-width:1200px;margin:0 auto;padding:64px 24px 40px">
+    <div class="nd-blob" style="position:absolute;top:-80px;right:-120px;width:420px;height:420px;background:var(--md-sys-color-primary-container);clip-path:var(--m3e-shape-clover-8);opacity:.5;animation:nd-spin 46s linear infinite, nd-blob 14s ease-in-out infinite;pointer-events:none"></div>
+    <div class="nd-blob" style="position:absolute;top:340px;left:-90px;width:200px;height:200px;background:var(--md-sys-color-tertiary-container);clip-path:var(--m3e-shape-cookie-6);opacity:.55;animation:nd-spin-r 34s linear infinite;pointer-events:none"></div>
+    <div class="nd-hero" style="position:relative;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center">
+      <div>
+        <a href="https://github.com/5151561/nodyssey/releases/latest" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 8px 0 14px;border-radius:999px;background:var(--md-sys-color-tertiary-container);color:var(--md-sys-color-on-tertiary-container);font-size:14px;font-weight:600">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--md-sys-color-tertiary)"></span>
+          v1.2.21 · 2026-09-13
+          <span class="material-symbols-outlined" style="font-size:18px">chevron_right</span>
+        </a>
+        <h1 style="margin:20px 0 0;font-size:clamp(44px,6.4vw,78px);line-height:1.02;letter-spacing:-.035em;font-weight:700;text-wrap:balance">Nodyssey</h1>
+        <p style="margin:24px 0 0;max-width:520px;font-size:18px;line-height:1.65;color:var(--md-sys-color-on-surface-variant);text-wrap:pretty">
+          <span data-lang="zh">用 Kotlin 和 Jetpack Compose 写成的第三方 Android 客户端。帖子、评论、投票、跑分表都渲染成原生内容，不是把网页塞进 WebView。</span>
+          <span data-lang="en">A third-party Android client written in Kotlin and Jetpack Compose. Posts, comments, polls and benchmark tables are rendered as native content — not a web page in a WebView.</span>
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:32px">
+          <a class="nd-press nd-cta-primary" href="https://github.com/5151561/nodyssey/releases/latest" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:10px;height:64px;padding:0 32px;border-radius:32px;background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-size:18px;font-weight:600;box-shadow:var(--nd-shadow)">
+            <span class="material-symbols-outlined" style="font-size:24px">download</span>
+            <span data-lang="zh">下载最新版 APK</span><span data-lang="en">Download the APK</span>
+          </a>
+          <a class="nd-press nd-cta-ghost" href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:10px;height:64px;padding:0 28px;border-radius:32px;border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);font-size:17px;font-weight:600">
+            <span class="material-symbols-outlined" style="font-size:22px">code</span>
+            <span data-lang="zh">GitHub 源码</span><span data-lang="en">Source on GitHub</span>
+          </a>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:28px">
+          <span style="padding:7px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:500">Kotlin · Compose Multiplatform</span>
+          <span style="padding:7px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:500">Material 3 Expressive</span>
+          <span style="padding:7px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:500">Android 8.0+</span>
+          <span style="padding:7px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:500">GPL-3.0</span>
+        </div>
+      </div>
 
-<section id="features">
-  <div class="wrap">
-    <div class="section-head">
-      <h2>该有的都有</h2>
-      <p>浏览、发帖、互动、离线阅读，一个完整的 NodeSeek 客户端。</p>
-    </div>
-    <div class="features">
-      <div class="card"><div class="ico">🎨</div><h3>原生渲染</h3><p>帖子、评论、投票、跑分表都渲染成原生 Compose 内容，正文贪心折行并补中西文间隙，不是把网页塞进 WebView。</p></div>
-      <div class="card"><div class="ico">📥</div><h3>离线优先</h3><p>Room 离线缓存与已读标记、本机浏览历史、每帖记住阅读位置，地铁里没信号也能接着读。</p></div>
-      <div class="card"><div class="ico">🌗</div><h3>M3 主题</h3><p>Material 3 Expressive，动态取色跟随壁纸，也可选预设调色板或自定义种子色，明暗自适应。</p></div>
-      <div class="card"><div class="ico">💬</div><h3>完整互动</h3><p>发帖、评论、编辑自己的内容，点赞 / 反对 / 投喂鸡腿、收藏、每日签到、投票帖阅读与管理。</p></div>
-      <div class="card"><div class="ico">🔔</div><h3>消息通知</h3><p>WorkManager 通知轮询、未读数、@提及与回复、私信会话、关注与粉丝，一处收齐。</p></div>
-      <div class="card"><div class="ico">🖼️</div><h3>图片体验</h3><p>图片全屏预览 / 保存 / 分享，六选一的图床上传，看图发图都顺手。</p></div>
-      <div class="card"><div class="ico">📐</div><h3>自适应布局</h3><p>4 个 tab，宽窗口自动换成侧边 rail，每个 tab 各有独立返回栈，平板折叠屏都合身。</p></div>
-      <div class="card"><div class="ico">🔒</div><h3>隐私克制</h3><p>请求频率克制，不发布账号 Cookie 与抓取凭据，代码全部开源，做了什么一目了然。</p></div>
-    </div>
-  </div>
-</section>
-
-<section id="gallery" style="background: var(--surface-2);">
-  <div class="wrap">
-    <div class="section-head">
-      <h2>界面一览</h2>
-      <p>点上方按钮切换明暗主题，截图会跟着变。</p>
-    </div>
-    <div class="gallery-tabs" id="galleryTabs"></div>
-    <div class="gallery"><div class="phone"><img id="galleryImg" alt="界面截图"></div></div>
-    <p class="gallery-caption" id="galleryCaption"></p>
-  </div>
-</section>
-
-<section>
-  <div class="wrap">
-    <div class="os">
-      <h2>自由软件，欢迎共建</h2>
-      <p>Nodyssey 以 GPL-3.0 协议开源。NodeSeek 没有面向第三方的公开 API，列表、详情与搜索靠解析服务端渲染的页面得来；欢迎在 GitHub 提 Issue、发 PR，或来 Telegram 群一起折腾。</p>
-      <div class="cta">
-        <a class="btn btn-primary" href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener">★ 去 GitHub</a>
-        <a class="btn btn-ghost" href="https://github.com/5151561/nodyssey/issues" target="_blank" rel="noopener">🐛 反馈问题</a>
-        <a class="btn btn-ghost" href="https://t.me/+97ANIwVaCYk1MjQ1" target="_blank" rel="noopener">✈ Telegram 群组</a>
+      <div class="nd-hero-art" style="position:relative;height:620px">
+        <div style="position:absolute;top:30px;left:6%;width:88%;height:88%;background:var(--md-sys-color-primary-container);clip-path:var(--m3e-shape-cookie-12);opacity:.7"></div>
+        <div class="nd-phone" style="--d:0s;position:absolute;top:96px;left:2%;width:190px;padding:7px;border-radius:30px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow);transform:rotate(-7deg)">
+          <img data-shot="light" src="screenshots/profile-light.png" alt="我的" style="width:100%;border-radius:24px">
+          <img data-shot="dark" src="screenshots/profile-dark.png" alt="我的" style="width:100%;border-radius:24px">
+        </div>
+        <div class="nd-phone" style="--d:1.4s;position:absolute;top:24px;left:30%;width:250px;padding:8px;border-radius:38px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow);transform:rotate(3deg);z-index:2">
+          <img data-shot="light" src="screenshots/post-list-light.png" alt="首页帖子流" style="width:100%;border-radius:31px">
+          <img data-shot="dark" src="screenshots/post-list-dark.png" alt="首页帖子流" style="width:100%;border-radius:31px">
+        </div>
+        <div class="nd-phone" style="--d:2.8s;position:absolute;bottom:-6px;right:-2%;width:170px;padding:7px;border-radius:28px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow);transform:rotate(8deg)">
+          <img data-shot="light" src="screenshots/theme-light.png" alt="主题取色" style="width:100%;border-radius:22px">
+          <img data-shot="dark" src="screenshots/theme-dark.png" alt="主题取色" style="width:100%;border-radius:22px">
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<footer>
-  <div class="wrap foot-inner">
-    <span>Nodyssey · NodeSeek 的非官方开源客户端。与 NodeSeek 官方无关。</span>
-    <span class="foot-links">
-      <a href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/5151561/nodyssey/releases" target="_blank" rel="noopener">下载</a>
-      <a href="https://t.me/nodyssey_official" target="_blank" rel="noopener">频道</a>
-      <a href="https://www.nodeseek.com/" target="_blank" rel="noopener">NodeSeek</a>
-    </span>
-  </div>
-</footer>
+  <section id="features" style="max-width:1200px;margin:0 auto;padding:72px 24px 24px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:36px">
+      <h2 class="nd-rise" style="margin:0;font-size:clamp(32px,4.4vw,48px);line-height:1.08;letter-spacing:-.025em;font-weight:700;max-width:20ch">
+        <span data-lang="zh">浏览、发帖、互动、离线阅读 —— 一个完整的 NodeSeek 客户端</span>
+        <span data-lang="en">Read, post, interact, and keep reading offline — a complete NodeSeek client</span>
+      </h2>
+    </div>
+
+    <div class="nd-bento" style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
+      <article class="nd-card nd-rise" style="grid-column:span 4;display:flex;gap:28px;align-items:flex-end;padding:32px;border-radius:36px;background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);overflow:hidden">
+        <div style="flex:1;min-width:0">
+          <div class="nd-ico" style="--s2:var(--m3e-shape-clover-4);width:52px;height:52px;display:grid;place-items:center;background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);clip-path:var(--m3e-shape-clover-4)">
+            <span class="material-symbols-outlined" style="font-size:26px">draw</span>
+          </div>
+          <h3 style="margin:20px 0 0;font-size:26px;font-weight:600;letter-spacing:-.015em"><span data-lang="zh">原生渲染</span><span data-lang="en">Native rendering</span></h3>
+          <p style="margin:10px 0 0;font-size:15.5px;line-height:1.6;opacity:.86">
+            <span data-lang="zh">帖子、评论、投票和 NodeQuality 跑分表都是 Compose 组件。正文一律贪心折行并补汉字 / 西文间隙，跑分表保留钉住首列的横向滚动。</span>
+            <span data-lang="en">Posts, comments, polls and NodeQuality reports are Compose components. Body text greedily wraps with CJK / Latin spacing, and benchmark tables keep a pinned first column.</span>
+          </p>
+        </div>
+        <div class="nd-phone nd-hide-sm" style="--d:0s;flex:0 0 150px;margin-bottom:-88px;padding:6px;border-radius:26px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+          <img data-shot="light" src="screenshots/post-detail-light.png" alt="帖子详情" style="width:100%;border-radius:21px">
+          <img data-shot="dark" src="screenshots/post-detail-dark.png" alt="帖子详情" style="width:100%;border-radius:21px">
+        </div>
+      </article>
+
+      <article class="nd-card nd-rise" style="grid-column:span 2;padding:32px;border-radius:36px;background:var(--md-sys-color-tertiary-container);color:var(--md-sys-color-on-tertiary-container)">
+        <div class="nd-ico" style="--s2:var(--m3e-shape-cookie-12);width:52px;height:52px;display:grid;place-items:center;background:var(--md-sys-color-tertiary);color:var(--md-sys-color-on-tertiary);clip-path:var(--m3e-shape-sunny)">
+          <span class="material-symbols-outlined" style="font-size:26px">cloud_off</span>
+        </div>
+        <h3 style="margin:20px 0 0;font-size:22px;font-weight:600;letter-spacing:-.015em"><span data-lang="zh">离线优先</span><span data-lang="en">Offline first</span></h3>
+        <p style="margin:10px 0 0;font-size:15px;line-height:1.6;opacity:.86">
+          <span data-lang="zh">Room 离线缓存与已读标记、本机浏览历史、每帖记住阅读位置。地铁里没信号也能接着读。</span>
+          <span data-lang="en">Room offline cache, read marks, local history and a remembered scroll position per post. Keep reading with no signal.</span>
+        </p>
+      </article>
+
+      <article class="nd-card nd-rise" style="grid-column:span 2;padding:32px;border-radius:36px;background:var(--md-sys-color-surface-container-high)">
+        <div class="nd-ico" style="--s2:var(--m3e-shape-sunny);width:52px;height:52px;display:grid;place-items:center;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);clip-path:var(--m3e-shape-cookie-7)">
+          <span class="material-symbols-outlined" style="font-size:26px">palette</span>
+        </div>
+        <h3 style="margin:20px 0 0;font-size:22px;font-weight:600;letter-spacing:-.015em"><span data-lang="zh">M3 主题</span><span data-lang="en">Material You</span></h3>
+        <p style="margin:10px 0 0;font-size:15px;line-height:1.6;color:var(--md-sys-color-on-surface-variant)">
+          <span data-lang="zh">动态取色跟随壁纸，也可选角色预设或自定义种子色。默认是石墨青 #35606E。</span>
+          <span data-lang="en">Dynamic colour from your wallpaper, character palettes, or your own seed. Ships with 石墨青 #35606E.</span>
+        </p>
+      </article>
+
+      <article class="nd-card nd-rise" style="grid-column:span 2;padding:32px;border-radius:36px;background:var(--md-sys-color-surface-container-high)">
+        <div class="nd-ico" style="--s2:var(--m3e-shape-puffy);width:52px;height:52px;display:grid;place-items:center;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);clip-path:var(--m3e-shape-puffy)">
+          <span class="material-symbols-outlined" style="font-size:26px">notifications_active</span>
+        </div>
+        <h3 style="margin:20px 0 0;font-size:22px;font-weight:600;letter-spacing:-.015em"><span data-lang="zh">消息通知</span><span data-lang="en">Notifications</span></h3>
+        <p style="margin:10px 0 0;font-size:15px;line-height:1.6;color:var(--md-sys-color-on-surface-variant)">
+          <span data-lang="zh">WorkManager 轮询、未读数、互动与私信会话、关注与粉丝，一处收齐。</span>
+          <span data-lang="en">WorkManager polling, unread counts, mentions and replies, DMs, follows — all in one tab.</span>
+        </p>
+      </article>
+
+      <article class="nd-card nd-rise" style="grid-column:span 2;padding:32px;border-radius:36px;background:var(--md-sys-color-surface-container-high)">
+        <div class="nd-ico" style="--s2:var(--m3e-shape-flower);width:52px;height:52px;display:grid;place-items:center;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);clip-path:var(--m3e-shape-clover-8)">
+          <span class="material-symbols-outlined" style="font-size:26px">devices</span>
+        </div>
+        <h3 style="margin:20px 0 0;font-size:22px;font-weight:600;letter-spacing:-.015em"><span data-lang="zh">自适应布局</span><span data-lang="en">Adaptive layout</span></h3>
+        <p style="margin:10px 0 0;font-size:15px;line-height:1.6;color:var(--md-sys-color-on-surface-variant)">
+          <span data-lang="zh">4 个 tab，宽窗口由 NavigationSuiteScaffold 换成侧边 rail，每个 tab 各有返回栈。</span>
+          <span data-lang="en">Four tabs; wide windows swap the bar for a side rail via NavigationSuiteScaffold, each tab keeping its own back stack.</span>
+        </p>
+      </article>
+
+      <article class="nd-card nd-rise" style="grid-column:span 2;padding:32px;border-radius:36px;background:var(--md-sys-color-surface-container-high)">
+        <div class="nd-ico" style="--s2:var(--m3e-shape-burst);width:52px;height:52px;display:grid;place-items:center;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);clip-path:var(--m3e-shape-cookie-4)">
+          <span class="material-symbols-outlined" style="font-size:26px">forum</span>
+        </div>
+        <h3 style="margin:20px 0 0;font-size:22px;font-weight:600;letter-spacing:-.015em"><span data-lang="zh">完整互动</span><span data-lang="en">Full interaction</span></h3>
+        <p style="margin:10px 0 0;font-size:15px;line-height:1.6;color:var(--md-sys-color-on-surface-variant)">
+          <span data-lang="zh">发帖、评论、编辑自己的内容，点赞 / 反对 / 投喂鸡腿、收藏、每日签到、投票帖管理。</span>
+          <span data-lang="en">Post, comment and edit your own content; like, dislike, tip, bookmark, sign in daily, and run polls.</span>
+        </p>
+      </article>
+
+      <article class="nd-card nd-rise" style="grid-column:span 2;padding:32px;border-radius:36px;background:var(--md-sys-color-surface-container-high)">
+        <div class="nd-ico" style="--s2:var(--m3e-shape-cookie-6);width:52px;height:52px;display:grid;place-items:center;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);clip-path:var(--m3e-shape-flower)">
+          <span class="material-symbols-outlined" style="font-size:26px">image</span>
+        </div>
+        <h3 style="margin:20px 0 0;font-size:22px;font-weight:600;letter-spacing:-.015em"><span data-lang="zh">图片体验</span><span data-lang="en">Images</span></h3>
+        <p style="margin:10px 0 0;font-size:15px;line-height:1.6;color:var(--md-sys-color-on-surface-variant)">
+          <span data-lang="zh">全屏预览、保存、分享，六选一的图床上传，看图发图都顺手。</span>
+          <span data-lang="en">Full-screen preview, save and share, plus six image hosts to upload to.</span>
+        </p>
+      </article>
+
+      <article class="nd-card nd-rise" style="grid-column:span 2;padding:32px;border-radius:36px;background:var(--md-sys-color-surface-container-high)">
+        <div class="nd-ico" style="--s2:var(--m3e-shape-gem);width:52px;height:52px;display:grid;place-items:center;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);clip-path:var(--m3e-shape-gem)">
+          <span class="material-symbols-outlined" style="font-size:26px">shield_lock</span>
+        </div>
+        <h3 style="margin:20px 0 0;font-size:22px;font-weight:600;letter-spacing:-.015em"><span data-lang="zh">隐私克制</span><span data-lang="en">Restrained by design</span></h3>
+        <p style="margin:10px 0 0;font-size:15px;line-height:1.6;color:var(--md-sys-color-on-surface-variant)">
+          <span data-lang="zh">请求频率克制，不做自动化刷分；仓库不保存 Cookie 或凭据，代码全部开源可审计。</span>
+          <span data-lang="en">Polite request rates, no automation. No cookies or credentials in the repo — all code is auditable.</span>
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section id="gallery" style="margin-top:80px;padding:56px 0 40px;background:var(--md-sys-color-surface-container-low);border-top:1px solid var(--md-sys-color-outline-variant);border-bottom:1px solid var(--md-sys-color-outline-variant)">
+    <div style="max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:8px">
+      <h2 class="nd-rise" style="margin:0;font-size:clamp(32px,4.4vw,48px);line-height:1.08;letter-spacing:-.025em;font-weight:700">
+        <span data-lang="zh">界面一览</span><span data-lang="en">Every screen</span>
+      </h2>
+    </div>
+    <div class="nd-marquee" style="overflow:hidden;padding:52px 0;margin:0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)">
+      <div class="nd-track" style="display:flex;gap:28px;width:max-content;padding:0 14px">
+<figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/post-list-light.png" alt="首页帖子流" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/post-list-dark.png" alt="首页帖子流" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">首页帖子流</span><span data-lang="en">Home feed</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:1.4s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/post-detail-light.png" alt="帖子详情" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/post-detail-dark.png" alt="帖子详情" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">帖子详情</span><span data-lang="en">Post detail</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:2.8s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/notifications-light.png" alt="消息通知" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/notifications-dark.png" alt="消息通知" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">消息通知</span><span data-lang="en">Notifications</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/profile-light.png" alt="我的" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/profile-dark.png" alt="我的" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">我的</span><span data-lang="en">Profile</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:1.4s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/theme-light.png" alt="主题取色" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/theme-dark.png" alt="主题取色" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">主题取色</span><span data-lang="en">Theming</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:2.8s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/tools-light.png" alt="社区工具" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/tools-dark.png" alt="社区工具" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">社区工具</span><span data-lang="en">Community tools</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/settings-light.png" alt="设置" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/settings-dark.png" alt="设置" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">设置</span><span data-lang="en">Settings</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:1.4s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/network-check-light.png" alt="网络自检" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/network-check-dark.png" alt="网络自检" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">网络自检</span><span data-lang="en">Network check</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:2.8s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/post-list-light.png" alt="首页帖子流" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/post-list-dark.png" alt="首页帖子流" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">首页帖子流</span><span data-lang="en">Home feed</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/post-detail-light.png" alt="帖子详情" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/post-detail-dark.png" alt="帖子详情" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">帖子详情</span><span data-lang="en">Post detail</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:1.4s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/notifications-light.png" alt="消息通知" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/notifications-dark.png" alt="消息通知" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">消息通知</span><span data-lang="en">Notifications</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:2.8s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/profile-light.png" alt="我的" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/profile-dark.png" alt="我的" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">我的</span><span data-lang="en">Profile</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/theme-light.png" alt="主题取色" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/theme-dark.png" alt="主题取色" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">主题取色</span><span data-lang="en">Theming</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:1.4s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/tools-light.png" alt="社区工具" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/tools-dark.png" alt="社区工具" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">社区工具</span><span data-lang="en">Community tools</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:2.8s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/settings-light.png" alt="设置" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/settings-dark.png" alt="设置" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">设置</span><span data-lang="en">Settings</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure style="margin:0;flex:0 0 auto;width:214px">
+          <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
+            <img data-shot="light" src="screenshots/network-check-light.png" alt="网络自检" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/network-check-dark.png" alt="网络自检" loading="lazy" style="width:100%;border-radius:26px">
+          </div>
+          <figcaption style="margin-top:14px;display:flex;justify-content:center">
+            <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
+              <span data-lang="zh">网络自检</span><span data-lang="en">Network check</span>
+            </span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="release" style="max-width:1200px;margin:0 auto;padding:80px 24px 24px">
+    <div class="nd-rel" style="display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:48px;align-items:start">
+      <div class="nd-rel-side" style="position:sticky;top:104px">
+        <p style="margin:0;font-size:14px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--md-sys-color-on-surface-variant)">
+          <span data-lang="zh">最新版本</span><span data-lang="en">Latest release</span>
+        </p>
+        <div style="margin:12px 0 0;font-size:clamp(52px,7vw,80px);line-height:1;letter-spacing:-.04em;font-weight:700;color:var(--md-sys-color-primary)">1.2.21</div>
+        <p style="margin:12px 0 0;font-size:16px;color:var(--md-sys-color-on-surface-variant)">2026-09-13 · Android 8.0+</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:24px">
+          <a class="nd-press nd-rel-primary" href="https://github.com/5151561/nodyssey/releases/latest" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;height:52px;padding:0 24px;border-radius:26px;background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-size:16px;font-weight:600">
+            <span class="material-symbols-outlined" style="font-size:22px">download</span>
+            <span data-lang="zh">下载</span><span data-lang="en">Download</span>
+          </a>
+          <a class="nd-press nd-rel-ghost" href="https://github.com/5151561/nodyssey/blob/main/CHANGELOG.md" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;height:52px;padding:0 24px;border-radius:26px;border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);font-size:16px;font-weight:600">
+            <span data-lang="zh">全部更新记录</span><span data-lang="en">Full changelog</span>
+          </a>
+        </div>
+        <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:var(--md-sys-color-on-surface-variant)">
+          <span data-lang="zh">应用内也能检查更新并直接安装。</span>
+          <span data-lang="en">The app can also check for updates and install them itself.</span>
+        </p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <article class="nd-rise" style="padding:28px 32px;border-radius:32px;background:var(--md-sys-color-surface-container-high)">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font-size:20px;font-weight:600">1.2.21</span>
+            <span style="padding:5px 12px;border-radius:999px;background:var(--md-sys-color-error-container);color:var(--md-sys-color-on-error-container);font-size:12px;font-weight:700"><span data-lang="zh">修复</span><span data-lang="en">Fixed</span></span>
+            <span style="margin-left:auto;font-size:14px;color:var(--md-sys-color-on-surface-variant)">2026-09-13</span>
+          </div>
+          <ul style="margin:16px 0 0;padding-left:20px;font-size:15px;line-height:1.85;color:var(--md-sys-color-on-surface-variant)">
+            <li><span data-lang="zh">私信、发帖预览、个人空间的表情显示成文本。</span><span data-lang="en">Emoji showed as raw text in DMs, post previews and profiles.</span></li>
+            <li><span data-lang="zh">去验证打开的页面没有验证，永远验不过。</span><span data-lang="en">The challenge page opened without a challenge and could never pass.</span></li>
+            <li><span data-lang="zh">接口返回网页、或站点报 503 时，误报成需要 Cloudflare 验证。</span><span data-lang="en">HTML responses and 503s were misreported as a Cloudflare challenge.</span></li>
+            <li><span data-lang="zh">游客看列表和帖子一直 503，打开内版提示需要登录。</span><span data-lang="en">Guests hit endless 503s on lists and posts.</span></li>
+          </ul>
+        </article>
+
+        <article class="nd-rise" style="padding:28px 32px;border-radius:32px;background:var(--md-sys-color-surface-container)">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font-size:20px;font-weight:600">1.2.19 – 1.2.20</span>
+            <span style="padding:5px 12px;border-radius:999px;background:var(--md-sys-color-tertiary-container);color:var(--md-sys-color-on-tertiary-container);font-size:12px;font-weight:700"><span data-lang="zh">新增</span><span data-lang="en">Added</span></span>
+            <span style="margin-left:auto;font-size:14px;color:var(--md-sys-color-on-surface-variant)">2026-09-11</span>
+          </div>
+          <ul style="margin:16px 0 0;padding-left:20px;font-size:15px;line-height:1.85;color:var(--md-sys-color-on-surface-variant)">
+            <li><span data-lang="zh">支持 DeepFlood，首页顶栏切换站点。</span><span data-lang="en">DeepFlood support — switch sites from the home app bar.</span></li>
+            <li><span data-lang="zh">修复首页和搜索排序切不回按回复时间。</span><span data-lang="en">Sorting on home and search could not switch back to reply time.</span></li>
+          </ul>
+        </article>
+
+        <article class="nd-rise" style="padding:28px 32px;border-radius:32px;background:var(--md-sys-color-surface-container)">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font-size:20px;font-weight:600">1.2.18</span>
+            <span style="padding:5px 12px;border-radius:999px;background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);font-size:12px;font-weight:700"><span data-lang="zh">变更</span><span data-lang="en">Changed</span></span>
+            <span style="margin-left:auto;font-size:14px;color:var(--md-sys-color-on-surface-variant)">2026-09-08</span>
+          </div>
+          <ul style="margin:16px 0 0;padding-left:20px;font-size:15px;line-height:1.85;color:var(--md-sys-color-on-surface-variant)">
+            <li><span data-lang="zh">首页和通知左右滑动切换分类，跟手翻页。</span><span data-lang="en">Swipe between categories on home and notifications.</span></li>
+            <li><span data-lang="zh">墨水屏模式：黑白高对比，无动效。</span><span data-lang="en">E-ink mode: high-contrast black and white, no motion.</span></li>
+            <li><span data-lang="zh">通知顶部改成标签页，@我和回复合并成「互动」。</span><span data-lang="en">Notifications moved to tabs; mentions and replies merged into one.</span></li>
+            <li><span data-lang="zh">「我的」改成图标网格，主题帖和评论各成一页。</span><span data-lang="en">Profile became an icon grid, with threads and comments on their own pages.</span></li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:1200px;margin:0 auto;padding:80px 24px 24px">
+    <div class="nd-band nd-rise" style="position:relative;overflow:hidden;padding:56px;border-radius:44px;background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container)">
+      <div style="position:absolute;top:-70px;right:-70px;width:280px;height:280px;background:var(--md-sys-color-primary);opacity:.16;clip-path:var(--m3e-shape-boom);animation:nd-spin 60s linear infinite"></div>
+      <div style="position:relative;max-width:640px">
+        <h2 style="margin:0;font-size:clamp(30px,4vw,44px);line-height:1.1;letter-spacing:-.025em;font-weight:700">
+          <span data-lang="zh">自由软件，欢迎共建</span><span data-lang="en">Free software, built in the open</span>
+        </h2>
+        <p style="margin:16px 0 0;font-size:16.5px;line-height:1.7;opacity:.88">
+          <span data-lang="zh">Nodyssey 以 GPL-3.0 开源。NodeSeek 没有面向第三方的公开 API，列表、详情与搜索靠解析服务端渲染的页面得来；解析器都有测试覆盖，测试永不访问线上站点。欢迎提 Issue、发 PR，或来 Telegram 群一起折腾。</span>
+          <span data-lang="en">Nodyssey is GPL-3.0. NodeSeek has no public third-party API, so lists, details and search come from parsing server-rendered HTML; every parser is test-covered and the tests never touch the live site. Issues, PRs and Telegram chatter all welcome.</span>
+        </p>
+      </div>
+      <div style="position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:36px">
+        <a class="nd-band-link" href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:14px;padding:20px 24px;border-radius:26px;background:var(--md-sys-color-surface);color:var(--md-sys-color-on-surface);transition:transform .25s var(--sp)">
+          <span class="material-symbols-outlined" style="font-size:26px;color:var(--md-sys-color-primary)">code</span>
+          <span style="flex:1"><span style="display:block;font-size:16px;font-weight:600">GitHub</span><span style="display:block;font-size:13.5px;color:var(--md-sys-color-on-surface-variant)"><span data-lang="zh">源码与 Releases</span><span data-lang="en">Source and releases</span></span></span>
+          <span class="material-symbols-outlined" style="font-size:20px;color:var(--md-sys-color-on-surface-variant)">north_east</span>
+        </a>
+        <a class="nd-band-link" href="https://t.me/nodyssey_official" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:14px;padding:20px 24px;border-radius:26px;background:var(--md-sys-color-surface);color:var(--md-sys-color-on-surface);transition:transform .25s var(--sp)">
+          <span class="material-symbols-outlined" style="font-size:26px;color:var(--md-sys-color-primary)">campaign</span>
+          <span style="flex:1"><span style="display:block;font-size:16px;font-weight:600"><span data-lang="zh">Telegram 频道</span><span data-lang="en">Telegram channel</span></span><span style="display:block;font-size:13.5px;color:var(--md-sys-color-on-surface-variant)">@nodyssey_official</span></span>
+          <span class="material-symbols-outlined" style="font-size:20px;color:var(--md-sys-color-on-surface-variant)">north_east</span>
+        </a>
+        <a class="nd-band-link" href="https://t.me/+97ANIwVaCYk1MjQ1" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:14px;padding:20px 24px;border-radius:26px;background:var(--md-sys-color-surface);color:var(--md-sys-color-on-surface);transition:transform .25s var(--sp)">
+          <span class="material-symbols-outlined" style="font-size:26px;color:var(--md-sys-color-primary)">group</span>
+          <span style="flex:1"><span style="display:block;font-size:16px;font-weight:600"><span data-lang="zh">Telegram 群组</span><span data-lang="en">Telegram group</span></span><span style="display:block;font-size:13.5px;color:var(--md-sys-color-on-surface-variant)"><span data-lang="zh">用法提问先来这里</span><span data-lang="en">Usage questions first</span></span></span>
+          <span class="material-symbols-outlined" style="font-size:20px;color:var(--md-sys-color-on-surface-variant)">north_east</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:1200px;margin:0 auto;padding:64px 24px 0">
+    <div class="nd-notes" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+      <div class="nd-rise" style="padding:26px 28px;border-radius:28px;border:1px solid var(--md-sys-color-outline-variant)">
+        <h3 style="margin:0;font-size:16px;font-weight:600"><span data-lang="zh">与官方无关</span><span data-lang="en">Unofficial</span></h3>
+        <p style="margin:8px 0 0;font-size:14.5px;line-height:1.65;color:var(--md-sys-color-on-surface-variant)"><span data-lang="zh">本项目与 NodeSeek 官方无关，是社区自制客户端。</span><span data-lang="en">This project is not affiliated with NodeSeek. It is a community-built client.</span></p>
+      </div>
+      <div class="nd-rise" style="padding:26px 28px;border-radius:28px;border:1px solid var(--md-sys-color-outline-variant)">
+        <h3 style="margin:0;font-size:16px;font-weight:600"><span data-lang="zh">不保存凭据</span><span data-lang="en">No credentials stored</span></h3>
+        <p style="margin:8px 0 0;font-size:14.5px;line-height:1.65;color:var(--md-sys-color-on-surface-variant)"><span data-lang="zh">应用不在仓库中保存 Cookie 或凭据；登录态由系统 CookieManager 持有。</span><span data-lang="en">No cookies or credentials live in the repo; the session is held by the system CookieManager.</span></p>
+      </div>
+      <div class="nd-rise" style="padding:26px 28px;border-radius:28px;border:1px solid var(--md-sys-color-outline-variant)">
+        <h3 style="margin:0;font-size:16px;font-weight:600"><span data-lang="zh">请求克制</span><span data-lang="en">Polite by default</span></h3>
+        <p style="margin:8px 0 0;font-size:14.5px;line-height:1.65;color:var(--md-sys-color-on-surface-variant)"><span data-lang="zh">请求频率保持克制，不做任何自动化刷分行为。</span><span data-lang="en">Request rates stay restrained, and the app never farms activity automatically.</span></p>
+      </div>
+    </div>
+  </section>
+
+  <a class="nd-fab" href="https://github.com/5151561/nodyssey/releases/latest" target="_blank" rel="noopener" style="position:fixed;right:24px;bottom:24px;z-index:70;display:inline-flex;align-items:center;gap:10px;height:60px;padding:0 24px;border-radius:30px;background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-size:16px;font-weight:600;box-shadow:0 10px 30px -6px rgba(0,0,0,.35)">
+    <span class="material-symbols-outlined" style="font-size:24px">download</span>
+    <span data-lang="zh">下载</span><span data-lang="en">Download</span>
+  </a>
+
+  <footer style="margin-top:72px;border-top:1px solid var(--md-sys-color-outline-variant)">
+    <div style="max-width:1200px;margin:0 auto;padding:36px 24px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:28px;height:28px;clip-path:var(--m3e-shape-cookie-9);overflow:hidden"><svg viewBox="18 18 72 72" role="img" aria-label="Nodyssey" style="width:100%;height:100%;display:block"><path fill="#BFBFBF" d="M0,0h108v108H0z"></path><path fill="#0D0D0D" d="M54,31.5C66.43,31.5 76.5,41.57 76.5,54C76.5,66.43 66.43,76.5 54,76.5C41.57,76.5 31.5,66.43 31.5,54C31.5,41.57 41.57,31.5 54,31.5z"></path><path fill="#FFFFFF" d="M44.7,43.7C46.44,43.7 47.85,45.11 47.85,46.85V51.75C47.85,53.49 46.44,54.9 44.7,54.9C42.96,54.9 41.55,53.49 41.55,51.75V46.85C41.55,45.11 42.96,43.7 44.7,43.7zM62.1,43.7C63.84,43.7 65.25,45.11 65.25,46.85V51.75C65.25,53.49 63.84,54.9 62.1,54.9C60.36,54.9 58.95,53.49 58.95,51.75V46.85C58.95,45.11 60.36,43.7 62.1,43.7z"></path></svg></div>
+        <span style="font-size:14px;color:var(--md-sys-color-on-surface-variant)"><span data-lang="zh">Nodyssey · GPL-3.0 · 与 NodeSeek 官方无关</span><span data-lang="en">Nodyssey · GPL-3.0 · not affiliated with NodeSeek</span></span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:20px;font-size:14px">
+        <a href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/5151561/nodyssey/releases" target="_blank" rel="noopener"><span data-lang="zh">下载</span><span data-lang="en">Releases</span></a>
+        <a href="https://github.com/5151561/nodyssey/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://t.me/nodyssey_official" target="_blank" rel="noopener"><span data-lang="zh">频道</span><span data-lang="en">Channel</span></a>
+        <a href="https://www.nodeseek.com/" target="_blank" rel="noopener">NodeSeek</a>
+      </div>
+    </div>
+  </footer>
+</div>
 
 <script>
-  // ---- 主题 ----
-  const root = document.documentElement;
-  const toggle = document.getElementById('themeToggle');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-  function currentTheme() { return root.getAttribute('data-theme'); }
-  function applyTheme(t) {
-    root.setAttribute('data-theme', t);
-    toggle.textContent = t === 'dark' ? '☀️' : '🌙';
-    refreshShots();
-    try { localStorage.setItem('nodyssey-theme', t); } catch (e) {}
+  // ===== 主题 / 语言切换 =====
+  function toggleTheme() {
+    var on = document.documentElement.classList.toggle('ndk');
+    try { localStorage.setItem('nodyssey-site-theme', on ? 'dark' : 'light'); } catch (e) {}
   }
-  let saved = null;
-  try { saved = localStorage.getItem('nodyssey-theme'); } catch (e) {}
-  applyTheme(saved || (prefersDark.matches ? 'dark' : 'light'));
-  toggle.addEventListener('click', () => applyTheme(currentTheme() === 'dark' ? 'light' : 'dark'));
-
-  // ---- 截图（明暗两套，跟随主题）----
-  const SHOTS = [
-    { key: 'post-list',      label: '首页' },
-    { key: 'post-detail',    label: '帖子详情' },
-    { key: 'profile',        label: '我的' },
-    { key: 'notifications',  label: '消息通知' },
-    { key: 'theme',          label: '主题取色' },
-    { key: 'tools',          label: '社区工具' },
-    { key: 'settings',       label: '设置' },
-    { key: 'network-check',  label: '网络自检' },
-  ];
-  function srcFor(key) { return 'screenshots/' + key + '-' + currentTheme() + '.png'; }
-  function refreshShots() {
-    document.querySelectorAll('img[data-shot]').forEach(img => { img.src = srcFor(img.dataset.shot); });
-    const g = document.getElementById('galleryImg');
-    if (g && g.dataset.shot) g.src = srcFor(g.dataset.shot);
+  function toggleLang() {
+    var on = document.documentElement.classList.toggle('nde');
+    try { localStorage.setItem('nodyssey-site-lang', on ? 'en' : 'zh'); } catch (e) {}
   }
 
-  // 画廊 tabs
-  const tabsEl = document.getElementById('galleryTabs');
-  const galleryImg = document.getElementById('galleryImg');
-  const galleryCaption = document.getElementById('galleryCaption');
-  let activeIdx = 0;
-  function selectShot(i) {
-    activeIdx = i;
-    const s = SHOTS[i];
-    galleryImg.dataset.shot = s.key;
-    galleryImg.src = srcFor(s.key);
-    galleryImg.alt = s.label;
-    galleryCaption.textContent = s.label;
-    [...tabsEl.children].forEach((el, idx) => el.classList.toggle('active', idx === i));
-  }
-  SHOTS.forEach((s, i) => {
-    const b = document.createElement('button');
-    b.className = 'tab';
-    b.textContent = s.label;
-    b.addEventListener('click', () => selectShot(i));
-    tabsEl.appendChild(b);
-  });
-  selectShot(0);
-  refreshShots();
+  // ===== 入场动画 + 悬浮下载按钮 + 装饰视差 =====
+  (function () {
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce) {
+      var io = new IntersectionObserver(function (es) {
+        es.forEach(function (e) {
+          if (e.isIntersecting) { e.target.classList.add('nd-in'); io.unobserve(e.target); }
+        });
+      }, { rootMargin: '0px 0px -10% 0px' });
+      document.querySelectorAll('.nd-rise').forEach(function (el) {
+        var sibs = Array.prototype.indexOf.call(el.parentElement.children, el);
+        el.style.transitionDelay = Math.min(sibs, 4) * 70 + 'ms';
+        io.observe(el);
+      });
+    } else {
+      document.querySelectorAll('.nd-rise').forEach(function (el) { el.classList.add('nd-in'); });
+    }
+
+    var blobs = Array.prototype.slice.call(document.querySelectorAll('.nd-blob'));
+    function onScroll() {
+      var y = window.scrollY;
+      document.documentElement.classList.toggle('nd-scrolled', y > 720);
+      if (!reduce) {
+        blobs.forEach(function (b, i) {
+          b.style.translate = '0 ' + (y * (i % 2 ? -0.06 : 0.1)).toFixed(1) + 'px';
+        });
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
 </script>
 </body>
 </html>
