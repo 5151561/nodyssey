@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nodyssey · NodeSeek 的开源 Android 客户端</title>
+<meta name="description" content="Nodyssey 是 NodeSeek 的非官方开源 Android 客户端，用 Kotlin 和 Jetpack Compose 写成，把帖子和评论渲染成原生内容。">
+<meta property="og:title" content="Nodyssey · NodeSeek 的开源 Android 客户端">
+<meta property="og:description" content="把帖子和评论渲染成原生 Compose 内容的 NodeSeek 第三方客户端。离线缓存、M3 主题、消息通知，开源可审计。">
+<meta property="og:type" content="website">
+<style>
+  :root {
+    --bg: #f6f8f9;
+    --surface: #ffffff;
+    --surface-2: #eef2f4;
+    --text: #16212a;
+    --text-dim: #5a6b76;
+    --accent: #2c6e7f;
+    --accent-strong: #1d5261;
+    --border: #dde5e9;
+    --shadow: 0 10px 40px rgba(28, 60, 72, 0.12);
+    --shadow-sm: 0 2px 12px rgba(28, 60, 72, 0.08);
+    --phone-bezel: #0e1519;
+    --hero-glow: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(44, 110, 127, 0.18), transparent 70%);
+  }
+  html[data-theme="dark"] {
+    --bg: #0e1417;
+    --surface: #161f24;
+    --surface-2: #1e2a30;
+    --text: #e6edf1;
+    --text-dim: #9fb1bb;
+    --accent: #6fc2d6;
+    --accent-strong: #8ad2e3;
+    --border: #26333a;
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.35);
+    --phone-bezel: #05090b;
+    --hero-glow: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(111, 194, 214, 0.14), transparent 70%);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.3s, color 0.3s;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+  /* nav */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: saturate(180%) blur(12px);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner { display: flex; align-items: center; gap: 14px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+  .brand .dot { width: 26px; height: 26px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong)); }
+  .nav-spacer { flex: 1; }
+  .nav-link { color: var(--text-dim); font-size: 15px; font-weight: 500; }
+  .nav-link:hover { color: var(--text); }
+  .theme-toggle {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    width: 38px; height: 38px; border-radius: 10px; cursor: pointer; font-size: 17px;
+    display: inline-flex; align-items: center; justify-content: center; transition: background 0.2s;
+  }
+  .theme-toggle:hover { background: var(--border); }
+  @media (max-width: 640px) { .nav-link.hide-sm { display: none; } }
+
+  /* hero */
+  .hero { position: relative; padding: 72px 0 40px; text-align: center; background: var(--hero-glow); }
+  .hero h1 { font-size: clamp(38px, 8vw, 68px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
+  .hero .tag { color: var(--accent); font-weight: 700; }
+  .hero p.lead { max-width: 620px; margin: 20px auto 0; font-size: clamp(16px, 2.6vw, 19px); color: var(--text-dim); }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 22px; }
+  .badge { font-size: 13px; color: var(--text-dim); background: var(--surface); border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 999px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 30px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600;
+    padding: 13px 24px; border-radius: 12px; border: 1px solid var(--border); transition: transform 0.15s, box-shadow 0.2s; }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-strong)); color: #fff; border-color: transparent; box-shadow: var(--shadow-sm); }
+  .btn-ghost { background: var(--surface); color: var(--text); }
+
+  /* hero screenshots */
+  .hero-shots { display: flex; gap: 18px; justify-content: center; align-items: flex-end;
+    margin: 48px auto 0; max-width: 900px; }
+  .phone { border-radius: 26px; background: var(--phone-bezel); padding: 8px;
+    box-shadow: var(--shadow); flex: 0 0 auto; }
+  .phone img { display: block; width: 100%; border-radius: 20px; }
+  .hero-shots .phone { width: 224px; }
+  .hero-shots .phone.side { width: 190px; margin-bottom: 26px; opacity: 0.96; }
+  @media (max-width: 720px) {
+    .hero-shots .phone.side { display: none; }
+    .hero-shots .phone { width: min(72vw, 260px); }
+  }
+
+  /* sections */
+  section { padding: 64px 0; }
+  .section-head { text-align: center; max-width: 640px; margin: 0 auto 44px; }
+  .section-head h2 { font-size: clamp(26px, 5vw, 38px); font-weight: 800; letter-spacing: -0.02em; }
+  .section-head p { color: var(--text-dim); margin-top: 10px; font-size: 16px; }
+
+  /* features */
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 24px; box-shadow: var(--shadow-sm); }
+  .card .ico { width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center;
+    font-size: 21px; background: color-mix(in srgb, var(--accent) 15%, var(--surface)); margin-bottom: 14px; }
+  .card h3 { font-size: 17px; font-weight: 700; }
+  .card p { color: var(--text-dim); font-size: 14.5px; margin-top: 7px; }
+
+  /* gallery */
+  .gallery-tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 32px; }
+  .tab { font-size: 14px; font-weight: 600; padding: 8px 16px; border-radius: 999px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); transition: all 0.18s; }
+  .tab.active { background: var(--accent); color: #fff; border-color: transparent; }
+  .gallery { display: flex; justify-content: center; }
+  .gallery .phone { width: min(300px, 78vw); }
+  .gallery-caption { text-align: center; color: var(--text-dim); margin-top: 18px; font-size: 15px; }
+
+  /* opensource */
+  .os { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 40px;
+    text-align: center; box-shadow: var(--shadow-sm); }
+  .os h2 { font-size: clamp(24px, 4vw, 32px); font-weight: 800; }
+  .os p { color: var(--text-dim); max-width: 640px; margin: 14px auto 0; }
+  .os .cta { margin-top: 26px; }
+
+  /* footer */
+  footer { border-top: 1px solid var(--border); padding: 34px 0; color: var(--text-dim); font-size: 14px; }
+  .foot-inner { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between; }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 18px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <span class="brand"><span class="dot"></span>Nodyssey</span>
+    <span class="nav-spacer"></span>
+    <a class="nav-link hide-sm" href="#features">功能</a>
+    <a class="nav-link hide-sm" href="#gallery">截图</a>
+    <a class="nav-link" href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="themeToggle" aria-label="切换主题">🌙</button>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <h1><span class="tag">NodeSeek</span> 的<br>开源 Android 客户端</h1>
+    <p class="lead">Nodyssey 用 Kotlin 和 Jetpack Compose 写成，把帖子和评论渲染成<strong>原生内容</strong>——不是网页套壳。离线缓存、M3 主题、消息通知，一应俱全，全部开源可审计。</p>
+    <div class="badges">
+      <span class="badge">Kotlin · Jetpack Compose</span>
+      <span class="badge">Material 3 Expressive</span>
+      <span class="badge">Android 8.0+</span>
+      <span class="badge">GPL-3.0</span>
+    </div>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/5151561/nodyssey/releases/latest" target="_blank" rel="noopener">⬇ 下载最新版</a>
+      <a class="btn btn-ghost" href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener">★ GitHub 源码</a>
+      <a class="btn btn-ghost" href="https://t.me/nodyssey_official" target="_blank" rel="noopener">✈ Telegram 频道</a>
+    </div>
+
+    <div class="hero-shots">
+      <div class="phone side"><img data-shot="profile" alt="我的"></div>
+      <div class="phone"><img data-shot="post-list" alt="首页帖子流"></div>
+      <div class="phone side"><img data-shot="post-detail" alt="帖子详情"></div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>该有的都有</h2>
+      <p>浏览、发帖、互动、离线阅读，一个完整的 NodeSeek 客户端。</p>
+    </div>
+    <div class="features">
+      <div class="card"><div class="ico">🎨</div><h3>原生渲染</h3><p>帖子、评论、投票、跑分表都渲染成原生 Compose 内容，正文贪心折行并补中西文间隙，不是把网页塞进 WebView。</p></div>
+      <div class="card"><div class="ico">📥</div><h3>离线优先</h3><p>Room 离线缓存与已读标记、本机浏览历史、每帖记住阅读位置，地铁里没信号也能接着读。</p></div>
+      <div class="card"><div class="ico">🌗</div><h3>M3 主题</h3><p>Material 3 Expressive，动态取色跟随壁纸，也可选预设调色板或自定义种子色，明暗自适应。</p></div>
+      <div class="card"><div class="ico">💬</div><h3>完整互动</h3><p>发帖、评论、编辑自己的内容，点赞 / 反对 / 投喂鸡腿、收藏、每日签到、投票帖阅读与管理。</p></div>
+      <div class="card"><div class="ico">🔔</div><h3>消息通知</h3><p>WorkManager 通知轮询、未读数、@提及与回复、私信会话、关注与粉丝，一处收齐。</p></div>
+      <div class="card"><div class="ico">🖼️</div><h3>图片体验</h3><p>图片全屏预览 / 保存 / 分享，六选一的图床上传，看图发图都顺手。</p></div>
+      <div class="card"><div class="ico">📐</div><h3>自适应布局</h3><p>4 个 tab，宽窗口自动换成侧边 rail，每个 tab 各有独立返回栈，平板折叠屏都合身。</p></div>
+      <div class="card"><div class="ico">🔒</div><h3>隐私克制</h3><p>请求频率克制，不发布账号 Cookie 与抓取凭据，代码全部开源，做了什么一目了然。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="gallery" style="background: var(--surface-2);">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>界面一览</h2>
+      <p>点上方按钮切换明暗主题，截图会跟着变。</p>
+    </div>
+    <div class="gallery-tabs" id="galleryTabs"></div>
+    <div class="gallery"><div class="phone"><img id="galleryImg" alt="界面截图"></div></div>
+    <p class="gallery-caption" id="galleryCaption"></p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="os">
+      <h2>自由软件，欢迎共建</h2>
+      <p>Nodyssey 以 GPL-3.0 协议开源。NodeSeek 没有面向第三方的公开 API，列表、详情与搜索靠解析服务端渲染的页面得来；欢迎在 GitHub 提 Issue、发 PR，或来 Telegram 群一起折腾。</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener">★ 去 GitHub</a>
+        <a class="btn btn-ghost" href="https://github.com/5151561/nodyssey/issues" target="_blank" rel="noopener">🐛 反馈问题</a>
+        <a class="btn btn-ghost" href="https://t.me/+97ANIwVaCYk1MjQ1" target="_blank" rel="noopener">✈ Telegram 群组</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-inner">
+    <span>Nodyssey · NodeSeek 的非官方开源客户端。与 NodeSeek 官方无关。</span>
+    <span class="foot-links">
+      <a href="https://github.com/5151561/nodyssey" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/5151561/nodyssey/releases" target="_blank" rel="noopener">下载</a>
+      <a href="https://t.me/nodyssey_official" target="_blank" rel="noopener">频道</a>
+      <a href="https://www.nodeseek.com/" target="_blank" rel="noopener">NodeSeek</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  // ---- 主题 ----
+  const root = document.documentElement;
+  const toggle = document.getElementById('themeToggle');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+  function currentTheme() { return root.getAttribute('data-theme'); }
+  function applyTheme(t) {
+    root.setAttribute('data-theme', t);
+    toggle.textContent = t === 'dark' ? '☀️' : '🌙';
+    refreshShots();
+    try { localStorage.setItem('nodyssey-theme', t); } catch (e) {}
+  }
+  let saved = null;
+  try { saved = localStorage.getItem('nodyssey-theme'); } catch (e) {}
+  applyTheme(saved || (prefersDark.matches ? 'dark' : 'light'));
+  toggle.addEventListener('click', () => applyTheme(currentTheme() === 'dark' ? 'light' : 'dark'));
+
+  // ---- 截图（明暗两套，跟随主题）----
+  const SHOTS = [
+    { key: 'post-list',      label: '首页' },
+    { key: 'post-detail',    label: '帖子详情' },
+    { key: 'profile',        label: '我的' },
+    { key: 'notifications',  label: '消息通知' },
+    { key: 'theme',          label: '主题取色' },
+    { key: 'tools',          label: '社区工具' },
+    { key: 'settings',       label: '设置' },
+    { key: 'network-check',  label: '网络自检' },
+  ];
+  function srcFor(key) { return 'screenshots/' + key + '-' + currentTheme() + '.png'; }
+  function refreshShots() {
+    document.querySelectorAll('img[data-shot]').forEach(img => { img.src = srcFor(img.dataset.shot); });
+    const g = document.getElementById('galleryImg');
+    if (g && g.dataset.shot) g.src = srcFor(g.dataset.shot);
+  }
+
+  // 画廊 tabs
+  const tabsEl = document.getElementById('galleryTabs');
+  const galleryImg = document.getElementById('galleryImg');
+  const galleryCaption = document.getElementById('galleryCaption');
+  let activeIdx = 0;
+  function selectShot(i) {
+    activeIdx = i;
+    const s = SHOTS[i];
+    galleryImg.dataset.shot = s.key;
+    galleryImg.src = srcFor(s.key);
+    galleryImg.alt = s.label;
+    galleryCaption.textContent = s.label;
+    [...tabsEl.children].forEach((el, idx) => el.classList.toggle('active', idx === i));
+  }
+  SHOTS.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.className = 'tab';
+    b.textContent = s.label;
+    b.addEventListener('click', () => selectShot(i));
+    tabsEl.appendChild(b);
+  });
+  selectShot(0);
+  refreshShots();
+</script>
+</body>
+</html>
