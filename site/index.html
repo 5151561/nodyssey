@@ -141,6 +141,8 @@
   @keyframes nd-blob { 0%, 100% { clip-path: var(--m3e-shape-clover-8); } 50% { clip-path: var(--m3e-shape-cookie-12); } }
 
   .nd-track { animation: nd-scroll 72s linear infinite; }
+  /* 点按切换的暂停态：触屏靠它停住，不依赖会残留的 hover */
+  .nd-marquee.nd-paused .nd-track { animation-play-state: paused; }
   .nd-track figure { transition: scale .45s var(--sp); transform-origin: center; }
   .nd-mark { animation: nd-mark 16s var(--sp) infinite; }
   .nd-phone { animation: nd-float 8s ease-in-out infinite; animation-delay: var(--d, 0s); transition: scale .5s var(--sp); }
@@ -405,8 +407,8 @@
       <div class="nd-track" style="display:flex;gap:28px;width:max-content;padding:0 14px">
 <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/post-list-light.png" alt="首页帖子流" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/post-list-dark.png" alt="首页帖子流" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/post-list-light.png" alt="首页帖子流" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/post-list-dark.png" alt="首页帖子流" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -416,8 +418,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:1.4s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/post-detail-light.png" alt="帖子详情" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/post-detail-dark.png" alt="帖子详情" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/post-detail-light.png" alt="帖子详情" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/post-detail-dark.png" alt="帖子详情" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -427,8 +429,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:2.8s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/notifications-light.png" alt="消息通知" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/notifications-dark.png" alt="消息通知" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/notifications-light.png" alt="消息通知" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/notifications-dark.png" alt="消息通知" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -438,8 +440,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/profile-light.png" alt="我的" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/profile-dark.png" alt="我的" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/profile-light.png" alt="我的" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/profile-dark.png" alt="我的" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -449,8 +451,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:1.4s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/theme-light.png" alt="主题取色" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/theme-dark.png" alt="主题取色" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/theme-light.png" alt="主题取色" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/theme-dark.png" alt="主题取色" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -460,8 +462,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:2.8s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/tools-light.png" alt="社区工具" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/tools-dark.png" alt="社区工具" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/tools-light.png" alt="社区工具" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/tools-dark.png" alt="社区工具" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -471,8 +473,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/settings-light.png" alt="设置" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/settings-dark.png" alt="设置" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/settings-light.png" alt="设置" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/settings-dark.png" alt="设置" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -482,8 +484,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:1.4s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/network-check-light.png" alt="网络自检" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/network-check-dark.png" alt="网络自检" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/network-check-light.png" alt="网络自检" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/network-check-dark.png" alt="网络自检" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -493,8 +495,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:2.8s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/post-list-light.png" alt="首页帖子流" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/post-list-dark.png" alt="首页帖子流" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/post-list-light.png" alt="首页帖子流" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/post-list-dark.png" alt="首页帖子流" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -504,8 +506,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/post-detail-light.png" alt="帖子详情" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/post-detail-dark.png" alt="帖子详情" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/post-detail-light.png" alt="帖子详情" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/post-detail-dark.png" alt="帖子详情" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -515,8 +517,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:1.4s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/notifications-light.png" alt="消息通知" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/notifications-dark.png" alt="消息通知" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/notifications-light.png" alt="消息通知" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/notifications-dark.png" alt="消息通知" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -526,8 +528,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:2.8s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/profile-light.png" alt="我的" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/profile-dark.png" alt="我的" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/profile-light.png" alt="我的" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/profile-dark.png" alt="我的" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -537,8 +539,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/theme-light.png" alt="主题取色" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/theme-dark.png" alt="主题取色" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/theme-light.png" alt="主题取色" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/theme-dark.png" alt="主题取色" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -548,8 +550,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:1.4s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/tools-light.png" alt="社区工具" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/tools-dark.png" alt="社区工具" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/tools-light.png" alt="社区工具" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/tools-dark.png" alt="社区工具" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -559,8 +561,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:2.8s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/settings-light.png" alt="设置" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/settings-dark.png" alt="设置" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/settings-light.png" alt="设置" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/settings-dark.png" alt="设置" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -570,8 +572,8 @@
         </figure>
         <figure style="margin:0;flex:0 0 auto;width:214px">
           <div class="nd-phone" style="--d:0.0s;padding:7px;border-radius:32px;background:var(--md-sys-color-surface-container-highest);box-shadow:var(--nd-shadow)">
-            <img data-shot="light" src="screenshots/network-check-light.png" alt="网络自检" loading="lazy" style="width:100%;border-radius:26px">
-            <img data-shot="dark" src="screenshots/network-check-dark.png" alt="网络自检" loading="lazy" style="width:100%;border-radius:26px">
+            <img data-shot="light" src="screenshots/network-check-light.png" alt="网络自检" style="width:100%;border-radius:26px">
+            <img data-shot="dark" src="screenshots/network-check-dark.png" alt="网络自检" style="width:100%;border-radius:26px">
           </div>
           <figcaption style="margin-top:14px;display:flex;justify-content:center">
             <span style="padding:6px 14px;border-radius:999px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);font-size:13px;font-weight:600">
@@ -734,6 +736,26 @@
 
   // iOS Safari 只有在存在 touch 监听时才会对点按触发 :active，补一个空监听让按钮/卡片的按下形变生效
   document.addEventListener('touchstart', function () {}, { passive: true });
+
+  // ===== 滚播图点一下暂停、再点一下继续 =====
+  (function () {
+    var mq = document.querySelector('.nd-marquee');
+    if (!mq) return;
+    mq.style.cursor = 'pointer';
+    mq.setAttribute('role', 'button');
+    mq.setAttribute('tabindex', '0');
+    function sync() {
+      var paused = mq.classList.contains('nd-paused');
+      mq.setAttribute('aria-pressed', paused ? 'true' : 'false');
+      mq.setAttribute('aria-label', paused ? '继续滚动截图 / Resume screenshots' : '暂停滚动截图 / Pause screenshots');
+    }
+    function toggle() { mq.classList.toggle('nd-paused'); sync(); }
+    mq.addEventListener('click', toggle);
+    mq.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+    sync();
+  })();
 
   // ===== 入场动画 + 悬浮下载按钮 + 装饰视差 =====
   (function () {
