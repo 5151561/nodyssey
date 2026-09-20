@@ -19,6 +19,7 @@
 - [ ] 新增或改动的用户可见文案，简中 / 繁中 / 英文三份都更新了
 - [ ] 站点选择器的改动集中在 `:shared` 的 `core/html/Selectors.kt`，没有散进 UI 或数据层
 - [ ] 改了行为就补了测试；修 bug 就补了能挂在旧代码上的回归测试
+- [ ] 改了界面就附了渲染图（见下面「截图」一节）
 - [ ] 用户能感觉到的变化写进了 CHANGELOG 的 Unreleased（一个功能一条，一条不超过 20 个汉字）
 - [ ] 没有提交 cookie、凭据、本机 SDK 路径，或任何已登录页面的抓取样本
 
@@ -34,7 +35,33 @@
 
 ## 截图
 
-<!-- 改了界面就必须有；改之前 / 改之后并排。 -->
+改了界面就必须有，而且要 **Robolectric 渲染图** —— 手机截图受机型、字体缩放、系统主题影响，同一段代码
+换台机器就不一样；渲染图是固定窗口、固定字号跑出来的，两张图的差别只会是这个 PR 造成的。
+
+- 改屏幕（`:ui`）：照着 `ui/src/androidHostTest/.../render/NetworkCheckScreenRenderTest.kt` 给你改的屏幕写个
+  render 测试，然后出图，PNG 在 `ui/build/outputs/renders/`：
+
+  ```
+  ./gradlew :ui:testAndroidHostTest -PrenderUi --tests '*XxxScreenRenderTest'
+  ```
+
+  改前那张这样拿（只回退屏幕，留着刚写的 render 测试）：
+
+  ```
+  git stash push -- ui/src/commonMain/kotlin/.../XxxScreen.kt
+  ./gradlew :ui:testAndroidHostTest -PrenderUi --tests '*XxxScreenRenderTest'
+  git stash pop
+  ```
+
+- 改设计系统（`:designsys`）：goldens 本来就在仓库里，重录后 PR 的 diff 自带前后对比，不用另外贴图：
+
+  ```
+  ./gradlew :designsys:testAndroidHostTest -ProborazziRecord --rerun-tasks
+  ```
+
+- 真机截图可以补充，但不能替代渲染图 —— 只有真机能看的东西（输入法、系统分享面板、手势）除外。
+
+<!-- 改前 / 改后两张图放这里 -->
 
 ## 需要特别说明
 

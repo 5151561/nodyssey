@@ -126,6 +126,14 @@ kotlin {
 
             // `inMemoryDatabase` in the shared test doubles below opens a real Room database.
             implementation(libs.androidx.room.testing)
+
+            // Pictures for a pull request, not a baseline. `:designsys` carries the same two lines
+            // to guard goldens; this module commits none, and `captureRoboImage` only writes a file
+            // when `-PrenderUi` is passed. Screens outnumber components by a wide margin, and a
+            // golden per screen would put a batch of PNGs in front of a reviewer on every UI
+            // change — a cost this module does not pay. See `render/ScreenRender.kt`.
+            implementation(libs.roborazzi)
+            implementation(libs.roborazzi.compose)
         }
 
         androidMain.dependencies {
@@ -188,4 +196,32 @@ compose.resources {
     // `:app` reads these too — `MainActivity` and the notification worker are Android shells around
     // screens that live here — so the generated class cannot be internal to this module.
     publicResClass = true
+}
+
+// Rendering mode, off by default: an ordinary `testAndroidHostTest` writes no image, and the
+// `assumeTrue` in every `*RenderTest` skips the class outright, so CI never pays for pictures
+// nobody asked for. Asking is explicit:
+//
+//     ./gradlew :ui:testAndroidHostTest -PrenderUi --tests '*NetworkCheckScreenRenderTest'
+//
+// The PNGs land in `ui/build/outputs/renders/`. They are build output rather than repository
+// content — what goes in the pull request is the image itself, and nothing is committed.
+//
+// Roborazzi's Gradle plugin is not applied — it expects a plain Android test variant, not a KMP
+// `androidHostTest` — so these system properties are set by hand, the same way `:designsys` sets
+// its own pair.
+tasks.withType<Test>().configureEach {
+    val render = providers.gradleProperty("renderUi").isPresent
+    systemProperty("nodyssey.render", render.toString())
+    systemProperty("roborazzi.test.record", render.toString())
+    systemProperty("roborazzi.test.verify", "false")
+
+    // A picture is not a declared output of this task, so an up-to-date check or a build-cache hit
+    // would report success and write nothing — the one outcome somebody who asked for pictures
+    // cannot use, and the reason `:designsys` documents `--rerun-tasks` beside its record command.
+    // Rendering runs are rare and explicit, so they simply always execute.
+    if (render) {
+        outputs.upToDateWhen { false }
+        outputs.cacheIf { false }
+    }
 }

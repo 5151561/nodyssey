@@ -17,6 +17,7 @@
 | [`design-brief.md`](design-brief.md) | 第一轮设计输入 | 否，仅供历史追溯 |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | 各版本的用户可见变化，未发布的先记在「Unreleased」 | 是，发布记录 |
 | [`../README.md`](../README.md) | 项目介绍、可用能力概览、构建与 roadmap | 是，对外入口 |
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | 怎么提 issue、怎么提 PR：构建门禁、三种语言、渲染图、CHANGELOG 规矩 | 是，贡献者入口 |
 
 `design/` 是本地画板工作区，当前由仓库 `.gitignore` 排除；其中 `boards.json.status` 只代表出稿状态，
 不能代替实现状态。涉及 UI 的代码提交必须同步更新实现状态和设计对照，不能只修改画板或只修改代码。

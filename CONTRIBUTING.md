@@ -102,6 +102,53 @@ app/src/main/res/values{,-en,-zh-rTW}/                          启动器名称�
 - 改了 Room 实体或迁移，要把生成的 schema JSON 一起提交，并补迁移测试。
 - 没有覆盖率指标，但改了的行为要有对着它写的测试。
 
+## 界面改动的渲染图
+
+**改了界面的 PR 要附 Robolectric 渲染图。** 手机截图受机型、字体缩放、系统主题、输入法的影响，同一段
+代码换台机器就不一样；渲染图跑在固定窗口和固定字号上，两张图的差别只会是这个 PR 造成的。
+
+### 改屏幕（`:ui`）
+
+照着 [`NetworkCheckScreenRenderTest`](ui/src/androidHostTest/kotlin/io/github/nodyssey/render/NetworkCheckScreenRenderTest.kt)
+给你改的屏幕写一个 render 测试 —— 和普通的屏幕测试一样组合界面，最后一步不是断言而是
+`onRoot().captureRender("名字")`。有几个值得看的状态就写几个测试，一个 compose rule 只能 `setContent`
+一次。
+
+```bash
+./gradlew :ui:testAndroidHostTest -PrenderUi --tests '*XxxScreenRenderTest'
+```
+
+PNG 落在 `ui/build/outputs/renders/`。**渲染图不进仓库** —— 它是构建产物，贴进 PR 就行。
+
+改前那张这样拿，只回退屏幕代码，留着刚写的 render 测试：
+
+```bash
+git stash push -- ui/src/commonMain/kotlin/.../XxxScreen.kt
+./gradlew :ui:testAndroidHostTest -PrenderUi --tests '*XxxScreenRenderTest'
+git stash pop
+```
+
+出图默认是关的：不带 `-PrenderUi` 的普通测试运行会把 render 测试整类跳过，一张图都不写，CI 因此不为
+出图付时间。
+
+### 改设计系统（`:designsys`）
+
+这个模块的组件钉着 golden 基线（`designsys/src/androidHostTest/snapshots/`），每次 `testAndroidHostTest`
+都会比对，画面漂移就是红的。改动是有意的话，重录基线：
+
+```bash
+./gradlew :designsys:testAndroidHostTest -ProborazziRecord --rerun-tasks
+```
+
+基线 PNG 本来就在仓库里，重录后 PR 的 diff 自带前后对比，不用再额外贴图。
+
+### 两条补充
+
+- 屏幕不设 golden 门禁是有意的：屏幕比组件多得多、改得也勤，钉基线会让每次界面改动都要 review 一批
+  PNG。这里要的是让人看的图，不是判定。
+- 真机截图可以补充，但不能替代渲染图。只有真机才看得到的东西 —— 输入法、系统分享面板、手势返回、
+  折叠屏铰链 —— 是例外。
+
 ## 提交信息与 CHANGELOG
 
 提交信息沿用历史风格：短的祈使句，中英文都行。
