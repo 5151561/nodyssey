@@ -1,7 +1,9 @@
 name: Pages
 
-# 把 site/ 里的宣传页部署到 GitHub Pages。
-# 首次使用需在仓库 Settings › Pages 把 Source 设为 "GitHub Actions"。
+# 把 main 上的 site/ 宣传页同步到 updates 分支根目录——GitHub Pages 正从
+# updates 分支（旧版“从分支部署”）服务，同一分支还托管应用内更新清单
+# （stable.json / dev.json / changelog.json），所以这里只覆盖宣传页文件，
+# 不动那些清单，也不切换 Pages 的部署方式。
 
 on:
   push:
@@ -12,26 +14,33 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# 只保留最新一次部署，正在跑的旧任务不打断。
 concurrency:
-  group: pages
+  group: pages-sync
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  sync:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          fetch-depth: 0
+      - name: 同步 site/ 到 updates 分支
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cp -r site/. "$tmp/"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch updates
+          # 只覆盖宣传页文件，保留更新清单
+          cp -r "$tmp"/. .
+          git add index.html screenshots
+          if git diff --cached --quiet; then
+            echo "宣传页无变化，跳过"
+            exit 0
+          fi
+          git commit -m "宣传页发布到 Pages 根目录（来自 ${GITHUB_SHA::7}）"
+          git push origin updates
