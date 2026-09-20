@@ -216,6 +216,31 @@ object NodeSeekSite {
     /** `"#127"` → 127. Null for a floor the site did not number, which is nothing to jump to. */
     fun parseFloorNumber(floor: String?): Int? = floor?.trim()?.removePrefix("#")?.trim()?.toIntOrNull()
 
+    /**
+     * The floor a quote link points at, but only when the link is a floor of *this* thread.
+     *
+     * Floor numbers restart in every thread, so a `#4` belonging to another post names a different
+     * conversation and must not be resolved against this one.
+     *
+     * Whether the link is ours at all is [isOwnSiteUrl]'s question and is not re-answered here —
+     * rewriting those rules is how a fourth set of scheme and port conditions gets into the file.
+     * [unwrapJumpUrl] first, for the same reason [parseInternalRoute] does it: the site wraps links
+     * as `/jump?to=…`, and the wrapper is not the destination.
+     *
+     * [POST_PATH] is matched whole rather than found, which is the one place this is deliberately
+     * stricter than [parsePostRoute]: `/post-123/extra` is some other page under a post's path, and
+     * a fragment on it is not a floor of the post.
+     */
+    fun referencedFloor(postId: Long, href: String): Int? {
+        val absolute = absoluteUrl(href)?.let(::unwrapJumpUrl)?.let(::absoluteUrl) ?: return null
+        if (!isOwnSiteUrl(absolute)) return null
+        val parsed = parseWebUrl(absolute) ?: return null
+        val path = parsed.path?.trimEnd('/') ?: return null
+        val route = POST_PATH.matchEntire(path) ?: return null
+        if (route.groupValues[1].toLongOrNull() != postId) return null
+        return parsed.fragment?.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }?.toIntOrNull()
+    }
+
     fun spacePath(uid: Long): String = "/space/$uid"
 
     /**
@@ -626,6 +651,10 @@ object NodeSeekSite {
     private val OWN_SITE_HOSTS: Set<String> get() = ActiveSite.current.hosts
     private val TELEGRAM_OAUTH_HOSTS = setOf("oauth.telegram.org")
 
+    /** The `#37` on a post link, as the floor string the rest of the app addresses floors by. */
+    private fun floorFragment(url: String): String? =
+        parseWebUrl(url)?.fragment?.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }?.let { "#$it" }
+
     /** Extracts the post id (and page, when present) from `/post-703863-2`. */
     fun parsePostRoute(href: String?): PostRoute? {
         val match = POST_PATH.find(href.orEmpty()) ?: return null
@@ -641,7 +670,12 @@ object NodeSeekSite {
 
     /** A link into the site that the app can open on a screen of its own. */
     sealed interface InternalRoute {
-        data class Post(val postId: Long, val page: Int) : InternalRoute
+        /**
+         * [floor] is the `#37` a quote or a shared link carries — the site labels floors and leaves
+         * their page implicit, so it is the more precise of the two and `PostDetailKey` prefers it.
+         * Null when the link named no floor, which is most of them.
+         */
+        data class Post(val postId: Long, val page: Int, val floor: String? = null) : InternalRoute
         data class Space(val uid: Long) : InternalRoute
 
         /** An `@mention` links `/member?t=<name>`, so only the name is known until it is resolved. */
@@ -675,7 +709,7 @@ object NodeSeekSite {
         if (!isOwnSiteUrl(url)) return null
         val unwrapped = unwrapJumpUrl(url)
         if (unwrapped != url) return parseInternalRoute(unwrapped)
-        parsePostRoute(url)?.let { return InternalRoute.Post(it.postId, it.page) }
+        parsePostRoute(url)?.let { return InternalRoute.Post(it.postId, it.page, floorFragment(url)) }
         parseUid(url)?.let { return InternalRoute.Space(it) }
         parseMemberName(url)?.let { return InternalRoute.Member(it) }
         return parseNotificationRoute(url)

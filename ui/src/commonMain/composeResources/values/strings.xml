@@ -130,6 +130,12 @@
 
     <!-- Post detail -->
     <string name="post_comments_header">评论 · %1$d</string>
+    <!-- 直接回复数量随已载入分页更新，楼层号沿用站点原值。 -->
+    <string name="comment_replies_count">%1$d 条回复</string>
+    <string name="comment_replies_open_floor">前往该楼层</string>
+    <string name="comment_reply_target_title">回复给</string>
+    <string name="comment_reply_target">回复给 %1$s</string>
+    <string name="comment_reply_target_collapse">收起引用</string>
     <string name="post_body_empty">这个帖子没有正文</string>
     <string name="post_open_original">查看正文</string>
     <string name="post_comments_empty">还没有人回复</string>
@@ -137,7 +143,6 @@
     <string name="post_link_copied">链接已复制</string>
     <string name="post_code_copied">代码已复制</string>
     <string name="post_quote_reply">@%1$s %2$s</string>
-    <string name="post_auto_paging">自动续页</string>
     <string name="post_reply_action">回复</string>
     <!-- Own floors only. Takes 回复's place on them, as it does on the site — there is no replying
          to yourself there either. -->

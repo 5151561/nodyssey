@@ -37,6 +37,7 @@ import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -44,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -134,6 +136,7 @@ import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.asProse
+import io.github.plaza.designsys.theme.fadeToBackground
 import org.jetbrains.compose.resources.stringResource
 import coil3.size.Size as CoilSize
 
@@ -195,13 +198,32 @@ fun RichContent(
      * bubbles while the plain ones did nothing was exactly the asymmetry that menu exists to end.
      */
     selectable: Boolean = true,
+    /**
+     * Whether the body answers taps of its own.
+     *
+     * Off where the body is a *preview* of something else and the tap belongs to whatever is
+     * showing it — a quoted floor, a reply card. The controls inside are not merely inert then:
+     * they are not drawn, because a 复制 button that copies nothing and a fold that will not open
+     * are worse than their absence. [selectable] is separate and narrower; it only decides whether
+     * a long press starts a selection.
+     */
+    interactive: Boolean = true,
+    /**
+     * How many top-level blocks to compose at all, or null for the whole body.
+     *
+     * A preview clipped to three lines still *composed* every block behind the clip, and a block
+     * image issues its request the moment it enters composition — so one floor with a photo, quoted
+     * by ten replies, was ten full layouts and ten downloads to show three lines of text.
+     */
+    maxBlocks: Int? = null,
 ) {
     // Reading upgrades happen here, at the display seam, so the same styles stay safe to reuse in
     // editors — see `TextStyle.asProse` for why an editor must never inherit them.
     val prose = remember(textStyle) { textStyle.asProse() }
+    val shown = remember(nodes, maxBlocks) { maxBlocks?.let(nodes::take) ?: nodes }
     val blocks: @Composable (Modifier) -> Unit = { blockModifier ->
         RichBlockColumn(
-            nodes = nodes,
+            nodes = shown,
             onLinkClick = onLinkClick,
             onImageClick = onImageClick,
             onQuoteRefClick = onQuoteRefClick,
@@ -212,14 +234,27 @@ fun RichContent(
             modifier = blockModifier,
         )
     }
-    // The container is what a selection needs, so it goes away entirely rather than being told to
-    // select nothing — `DisableSelection` inside one would still leave the gesture detector there.
-    if (selectable) {
-        SelectionContainer(modifier = modifier) { blocks(Modifier) }
-    } else {
-        blocks(modifier)
+    CompositionLocalProvider(LocalRichContentInteractive provides interactive) {
+        // The container is what a selection needs, so it goes away entirely rather than being told
+        // to select nothing — `DisableSelection` inside one would still leave the gesture detector
+        // there.
+        if (selectable) {
+            SelectionContainer(modifier = modifier) { blocks(Modifier) }
+        } else {
+            blocks(modifier)
+        }
     }
 }
+
+/**
+ * Whether the body being drawn answers taps of its own — see [RichContent]'s `interactive`.
+ *
+ * Ambient rather than a parameter because the blocks that read it sit three and four levels down a
+ * recursion that already carries eight, and every one of those levels would have to forward it
+ * unchanged. Unlike the slots above it there is nothing to forget: `true` is what a body has always
+ * done, so a caller that never heard of it behaves exactly as before.
+ */
+val LocalRichContentInteractive = staticCompositionLocalOf { true }
 
 /**
  * The block sequence with its vertical rhythm.
@@ -499,6 +534,7 @@ private fun TabGroup(
 ) {
     if (node.tabs.isEmpty()) return
 
+    val interactive = LocalRichContentInteractive.current
     var selected by rememberSaveable { mutableIntStateOf(0) }
     // Re-parsing a thread can change the tab count, and the saved index outlives the old node.
     val index = selected.coerceIn(0, node.tabs.lastIndex)
@@ -510,25 +546,37 @@ private fun TabGroup(
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        SecondaryScrollableTabRow(
-            selectedTabIndex = index,
-            containerColor = Color.Transparent,
-            edgePadding = Spacing.sm,
-            divider = {},
-        ) {
-            node.tabs.forEachIndexed { position, tab ->
-                Tab(
-                    selected = position == index,
-                    onClick = { selected = position },
-                    text = {
-                        Text(
-                            text = tab.title,
-                            style = MaterialTheme.typography.labelLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                )
+        // A tab strip that cannot switch tabs is a promise the preview will not keep, so the first
+        // tab's title is drawn as a label instead and the strip is left out.
+        if (!interactive) {
+            Text(
+                text = node.tabs[index].title,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            )
+        } else {
+            SecondaryScrollableTabRow(
+                selectedTabIndex = index,
+                containerColor = Color.Transparent,
+                edgePadding = Spacing.sm,
+                divider = {},
+            ) {
+                node.tabs.forEachIndexed { position, tab ->
+                    Tab(
+                        selected = position == index,
+                        onClick = { selected = position },
+                        text = {
+                            Text(
+                                text = tab.title,
+                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                    )
+                }
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -570,6 +618,7 @@ private fun FoldBlock(
     codeBlockContent: @Composable (RichNode.CodeBlock) -> Unit,
     stardustContent: @Composable (RichNode.StardustReceive) -> Unit,
 ) {
+    val interactive = LocalRichContentInteractive.current
     var expanded by rememberSaveable(node.title) { mutableStateOf(node.open) }
     // The chevron turns rather than flipping, for the reason `ReportCard` gives: an indicator that
     // snaps while the block below it slides reads as two separate events.
@@ -590,7 +639,7 @@ private fun FoldBlock(
             modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
+                .then(if (interactive) Modifier.clickable { expanded = !expanded } else Modifier)
                 .defaultMinSize(minHeight = Sizes.minTouchTarget)
                 .padding(start = Spacing.md, end = Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
@@ -745,12 +794,13 @@ private fun BlockImage(
                         }
                     }.build()
             }
+        val interactive = LocalRichContentInteractive.current
         Box(
             modifier =
             Modifier
                 .width(displayWidth)
                 .clip(MaterialTheme.shapes.medium)
-                .clickable { onImageClick(node.url) },
+                .then(if (interactive) Modifier.clickable { onImageClick(node.url) } else Modifier),
         ) {
             key(request) {
                 AsyncImage(
@@ -818,38 +868,20 @@ private fun BlockImage(
                 // in the middle of a post rather than off in some settings screen. On paper it becomes
                 // a flat plate with a rule along the top — the same message, one tone.
                 val eink = LocalEinkMode.current
-                // Read out here: the draw lambda below is not a composable scope.
-                val einkRule = MaterialTheme.colorScheme.outline
                 Box(
                     modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .height(30.dp)
-                        .then(
-                            if (eink) {
-                                Modifier.background(MaterialTheme.colorScheme.surface)
-                            } else {
-                                Modifier.background(
-                                    Brush.verticalGradient(
-                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f)),
-                                    ),
-                                )
-                            },
-                        ).then(
-                            if (eink) {
-                                Modifier.drawWithContent {
-                                    drawContent()
-                                    drawLine(
-                                        color = einkRule,
-                                        start = Offset.Zero,
-                                        end = Offset(size.width, 0f),
-                                        strokeWidth = 1.dp.toPx(),
-                                    )
-                                }
-                            } else {
-                                Modifier
-                            },
+                        .height(CROP_FADE_HEIGHT)
+                        .fadeToBackground(
+                            // Not the background: this one is over an image, and the label on it
+                            // has to stay readable whatever the photo underneath is doing.
+                            color = if (eink) MaterialTheme.colorScheme.surface else Color.Black.copy(alpha = 0.45f),
+                            height = CROP_FADE_HEIGHT,
+                            eink = eink,
+                            above = true,
+                            einkRule = MaterialTheme.colorScheme.outline,
                         ),
                     contentAlignment = Alignment.BottomCenter,
                 ) {
@@ -951,6 +983,9 @@ private fun String.isSvgUrl(): Boolean = substringBefore('#').substringBefore('?
 
 private val INLINE_IMAGE_LOADING_HEIGHT = 132.dp
 
+/** How far up a cropped image the 查看完整图片 overlay reaches. */
+private val CROP_FADE_HEIGHT = 30.dp
+
 /** The language tag and the copy button on a terminal ground: present, but not competing with it. */
 private const val TERMINAL_CHROME_ALPHA = 0.7f
 
@@ -1030,23 +1065,25 @@ fun CodeBlockView(node: RichNode.CodeBlock) {
          * none of the padding a Material component applies for it, and `Sizes.minTouchTarget` is what
          * the brief calls a hard requirement — see `RichContentTest`.
          */
-        Box(
-            modifier =
-            Modifier
-                .align(Alignment.TopEnd)
-                .size(Sizes.minTouchTarget)
-                .clip(CircleShape)
-                .clickable(onClickLabel = copyLabel) { copy("code", node.code, confirmation) },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = PlazaIcons.ContentCopy,
-                contentDescription = copyLabel,
-                // Full strength rather than the [chrome] the language tag uses: with no plate behind
-                // it, the glyph has code text to stand out from rather than empty ground.
-                tint = ink,
-                modifier = Modifier.size(18.dp),
-            )
+        if (LocalRichContentInteractive.current) {
+            Box(
+                modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .size(Sizes.minTouchTarget)
+                    .clip(CircleShape)
+                    .clickable(onClickLabel = copyLabel) { copy("code", node.code, confirmation) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = PlazaIcons.ContentCopy,
+                    contentDescription = copyLabel,
+                    // Full strength rather than the [chrome] the language tag uses: with no plate
+                    // behind it, the glyph has code text to stand out from rather than empty ground.
+                    tint = ink,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
     }
 }
