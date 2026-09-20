@@ -172,19 +172,31 @@
     .nd-band-link:hover { transform: translateY(-3px); }
   }
 
-  /* ===== press states — 鼠标按下与移动端点按共用，点一下就有形变反馈 ===== */
-  .nd-press:active { scale: .96; }
-  .nd-nav:active, .nd-outline-btn:active, .nd-theme-btn:active { scale: .93; }
-  .nd-card:active { translate: 0 -6px; }
-  .nd-card:active .nd-ico { clip-path: var(--s2) !important; rotate: -14deg; scale: 1.1; }
-  .nd-phone:active { scale: 1.03; }
-  .nd-band-link:active { transform: translateY(-3px); }
+  /* ===== press states — 鼠标按下与移动端点按共用，点一下就有形变反馈。
+     :active 在移动端对 div 这类非按钮元素不可靠（滑一下、长按起菜单都会被撤销），
+     所以由 pointerdown/pointerup 显式挂 .nd-pressed，两者并列写。 ===== */
+  .nd-press:active, .nd-press.nd-pressed { scale: .96; }
+  .nd-nav:active, .nd-outline-btn:active, .nd-theme-btn:active,
+  .nd-nav.nd-pressed, .nd-outline-btn.nd-pressed, .nd-theme-btn.nd-pressed { scale: .93; }
+  .nd-card:active, .nd-card.nd-pressed { translate: 0 -6px; }
+  .nd-card:active .nd-ico,
+  .nd-card.nd-pressed .nd-ico { clip-path: var(--s2) !important; rotate: -14deg; scale: 1.1; }
+  .nd-phone:active, .nd-phone.nd-pressed { scale: 1.03; }
+  .nd-band-link:active, .nd-band-link.nd-pressed { transform: translateY(-3px); }
   .nd a.nd-cta-primary:active, .nd a.nd-cta-ghost:active,
-  .nd a.nd-rel-primary:active, .nd a.nd-rel-ghost:active { border-radius: 20px !important; }
-  .nd-fab:active { border-radius: 20px !important; scale: .96; }
-  /* 触屏去掉灰色点按高亮，改用上面的形变反馈；点按不再有 300ms 延迟 */
-  .nd-nav, .nd-outline-btn, .nd-theme-btn, .nd-press, .nd-card, .nd-phone, .nd-band-link, .nd-track figure {
+  .nd a.nd-rel-primary:active, .nd a.nd-rel-ghost:active,
+  .nd a.nd-cta-primary.nd-pressed, .nd a.nd-cta-ghost.nd-pressed,
+  .nd a.nd-rel-primary.nd-pressed, .nd a.nd-rel-ghost.nd-pressed { border-radius: 20px !important; }
+  /* scale 要 !important：html.nd-scrolled .nd-fab 的 scale:1 特异性更高，会把按下缩放压掉 */
+  .nd-fab:active, .nd-fab.nd-pressed { border-radius: 20px !important; scale: .96 !important; }
+  /* 触屏去掉灰色点按高亮，改用上面的形变反馈；点按不再有 300ms 延迟。
+     另外必须禁掉文字选中：长按一旦起选区，浏览器会撤销 :active，按下形变就只走一半；
+     选中高亮本身也是一层多余的变色。tap-highlight 管不到选中，得靠 user-select。 */
+  .nd-nav, .nd-outline-btn, .nd-theme-btn, .nd-press, .nd-card, .nd-phone, .nd-band-link,
+  .nd-marquee, .nd-track figure, .nd-fab {
     -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
   }
   .nd-nav, .nd-band-link { transition: background .2s, transform .25s var(--spf), scale .2s var(--spf); }
 
@@ -736,6 +748,34 @@
 
   // iOS Safari 只有在存在 touch 监听时才会对点按触发 :active，补一个空监听让按钮/卡片的按下形变生效
   document.addEventListener('touchstart', function () {}, { passive: true });
+
+  // ===== 按下形变：显式挂 .nd-pressed，不指望移动端的 :active =====
+  (function () {
+    var SEL = '.nd-press, .nd-nav, .nd-outline-btn, .nd-theme-btn, .nd-card, .nd-phone,' +
+              '.nd-band-link, .nd-fab, .nd a.nd-cta-primary, .nd a.nd-cta-ghost,' +
+              '.nd a.nd-rel-primary, .nd a.nd-rel-ghost';
+    var held = [];
+    function release() {
+      for (var i = 0; i < held.length; i++) held[i].classList.remove('nd-pressed');
+      held = [];
+    }
+    document.addEventListener('pointerdown', function (e) {
+      release();
+      // 逐级向上：卡片和它内部的图标可能都要形变
+      var el = e.target.closest ? e.target.closest(SEL) : null;
+      while (el) {
+        el.classList.add('nd-pressed');
+        held.push(el);
+        el = el.parentElement && el.parentElement.closest(SEL);
+      }
+    }, { passive: true });
+    ['pointerup', 'pointercancel', 'dragstart'].forEach(function (t) {
+      document.addEventListener(t, release, { passive: true });
+    });
+    // 按住后滑动页面视为取消，别把形变留在屏幕上
+    window.addEventListener('scroll', release, { passive: true });
+    window.addEventListener('blur', release);
+  })();
 
   // ===== 滚播图点一下暂停、再点一下继续 =====
   (function () {
