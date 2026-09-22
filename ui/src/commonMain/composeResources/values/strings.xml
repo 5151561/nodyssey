@@ -1294,9 +1294,13 @@
     <string name="imagehost_key_replace">保存</string>
     <string name="imagehost_key_saved">已保存</string>
     <string name="imagehost_key_cleared">已断开连接</string>
+    <!-- 本机的密钥库（Android Keystore / iOS 钥匙串）拒绝写入时的结果：密钥没存下来，界面也不能说已保存。 -->
+    <string name="imagehost_key_not_stored">没保存成功：本机的密钥库拒绝写入，密钥没有存下来</string>
     <string name="imagehost_clear_key">断开</string>
     <string name="imagehost_clear_key_title">断开%1$s？</string>
     <string name="imagehost_clear_key_body">本机保存的密钥会被删除，之后发帖和回复将无法插入图片。已上传的图片不受影响。</string>
+    <!-- 自定义图床断开的是整份配置，不只是密钥：它可能本来就不需要密钥，只清密钥等于没断开。 -->
+    <string name="imagehost_clear_custom_body">这家自定义图床的地址、字段和密钥都会从本机删除，之后发帖和回复将无法插入图片。已上传的图片不受影响。</string>
     <string name="imagehost_clear_key_action">断开</string>
     <string name="imagehost_open_site">打开图床网站</string>
 

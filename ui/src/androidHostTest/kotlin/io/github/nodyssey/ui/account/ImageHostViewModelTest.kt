@@ -1,6 +1,7 @@
 package io.github.nodyssey.ui.account
 
 import io.github.nodyssey.data.imagehost.ConfigProblem
+import io.github.nodyssey.data.imagehost.CustomHostFields
 import io.github.nodyssey.data.imagehost.HostedImage
 import io.github.nodyssey.data.imagehost.ImageHostConfig
 import io.github.nodyssey.data.imagehost.ImageHostError
@@ -8,6 +9,8 @@ import io.github.nodyssey.data.imagehost.ImageHostException
 import io.github.nodyssey.data.imagehost.ImageHostProvider
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostUpload
+import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.imagehost_key_not_stored
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -210,6 +213,61 @@ class ImageHostViewModelTest {
         assertEquals(ImageHostError.NotConfigured, state.imagesError)
     }
 
+    /**
+     * The one host whose credential may legitimately be empty is also the one whose 断开 could not
+     * work: clearing only the secret left an address, field names and a path — a configuration that
+     * is still complete, so the next visit said 已连接 and every attachment still went to that
+     * server. There was no other way to remove it either, because an empty address is refused by
+     * the validator before it can be saved over the old one.
+     */
+    @Test
+    fun `disconnecting a custom host removes the whole configuration, fields on screen included`() =
+        runTest(dispatcher) {
+            repository.store(
+                ImageHostConfig(
+                    provider = ImageHostProvider.CUSTOM,
+                    siteUrl = "https://img.example.com/api/upload",
+                    custom = CustomHostFields(fileField = "smfile", headerValue = "secret", urlPath = "data.url"),
+                ),
+            )
+            repository.select(ImageHostProvider.CUSTOM)
+            val viewModel = ImageHostViewModel(repository)
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.connected)
+
+            viewModel.requestDisconnect()
+            viewModel.confirmDisconnect()
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertFalse(state.connected)
+            assertEquals("", state.siteUrlInput)
+            assertEquals(CustomHostFields(), state.custom)
+            assertFalse(repository.config(ImageHostProvider.CUSTOM).first().isConfigured)
+        }
+
+    /**
+     * A credential is stored through the platform's key store, and a device that refuses to encrypt
+     * stores nothing rather than the credential in the clear. Announcing 已保存 over that is how a
+     * refused write becomes a save button that appears to do nothing: the fingerprint on screen is
+     * of a credential that never landed, and the next visit says 未连接 with an empty field.
+     */
+    @Test
+    fun `a credential the key store refused is reported rather than announced as saved`() = runTest(dispatcher) {
+        repository.keyStoreRefuses = true
+        val viewModel = ImageHostViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.updateToken(KEY)
+        viewModel.save()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse("a credential that was not stored is not a connection", state.connected)
+        assertNull(state.credentialMask)
+        assertEquals(AccountMessage.Info(Res.string.imagehost_key_not_stored), state.message)
+    }
+
     private fun item(id: String) = HostedImage(
         id = id,
         fileName = "$id.webp",
@@ -227,6 +285,9 @@ private class FakeImageHostRepository : ImageHostRepository {
 
     var images: List<HostedImage> = emptyList()
     var failure: ImageHostException? = null
+
+    /** A device whose Keystore or Keychain turns every write down. See [save]. */
+    var keyStoreRefuses = false
     val deleted = mutableListOf<String>()
     val saved = mutableListOf<ImageHostConfig>()
     var imagesCalls = 0
@@ -249,11 +310,33 @@ private class FakeImageHostRepository : ImageHostRepository {
 
     override suspend fun save(config: ImageHostConfig) {
         saved += config
-        store(config)
+        // A platform key store that refuses to encrypt keeps nothing rather than storing the
+        // credential in the clear, which is what `DataStoreImageHostSettings.putSecret` does with a
+        // null from the cipher. The screen has no other way of hearing about it.
+        store(
+            if (keyStoreRefuses) {
+                config.copy(token = "", custom = config.custom.copy(headerValue = "", formFields = ""))
+            } else {
+                config
+            },
+        )
     }
 
+    /**
+     * What `DataStoreImageHostSettings.disconnect` does, host for host.
+     *
+     * Modelled rather than simplified to a blanket reset: the difference between the two — a custom
+     * host keeping an address that still counts as configured — is the bug this fake used to hide.
+     */
     override suspend fun disconnect(provider: ImageHostProvider) {
-        store(ImageHostConfig(provider))
+        val existing = configs.value[provider] ?: ImageHostConfig(provider)
+        store(
+            if (provider == ImageHostProvider.CUSTOM) {
+                ImageHostConfig(provider)
+            } else {
+                existing.copy(token = "")
+            },
+        )
     }
 
     override suspend fun upload(
