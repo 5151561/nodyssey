@@ -130,6 +130,7 @@ import io.github.plaza.designsys.editor.MarkdownEditorBar
 import io.github.plaza.designsys.editor.MarkdownEditorState
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.editor.rememberMarkdownHighlight
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -799,6 +800,11 @@ private fun MessageDraftField(
         // would grow it before anything has been typed.
         hintMaxLines = 1,
         lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = MAX_INPUT_LINES),
+        // Only while MD is on, and for the same reason the formatting strip below is absent rather
+        // than disabled when it is off: with the switch off the server takes the draft verbatim, so
+        // a `**` in it is two asterisks the recipient will read, and weight here would promise a
+        // bubble they are never going to get.
+        outputTransformation = if (isMarkdown) rememberMarkdownHighlight() else null,
         modifier = modifier,
         container = { content ->
             Surface(

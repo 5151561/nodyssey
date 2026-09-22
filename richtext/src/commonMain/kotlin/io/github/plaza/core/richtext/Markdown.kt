@@ -404,14 +404,18 @@ private fun parseInlines(
 }
 
 /** `[label](url "title")` as read off the source: where it ends, and what it points at. */
-private class LinkSpan(
+internal class LinkSpan(
     val label: String,
     val url: String,
     val end: Int,
 )
 
-/** Reads a link starting at its `[`, or returns null when what follows is not one. */
-private fun linkSpan(
+/**
+ * Reads a link starting at its `[`, or returns null when what follows is not one.
+ *
+ * Internal rather than private: [markdownSpans] scans the same dialect and must not re-decide it.
+ */
+internal fun linkSpan(
     text: String,
     start: Int,
 ): LinkSpan? {
@@ -502,7 +506,7 @@ private fun matchingDelimiter(
 }
 
 /** An emphasis run: its delimiter, where the closing one starts, and what it does to the style. */
-private class Emphasis(
+internal class Emphasis(
     val delimiter: String,
     val close: Int,
     val style: (InlineStyle) -> InlineStyle,
@@ -520,8 +524,12 @@ private val EMPHASIS_DELIMITERS: List<Pair<String, (InlineStyle) -> InlineStyle>
         "_" to { it: InlineStyle -> it.copy(italic = true) },
     )
 
-/** The emphasis run opening at [start], or null when nothing there opens one. */
-private fun emphasisAt(
+/**
+ * The emphasis run opening at [start], or null when nothing there opens one.
+ *
+ * Internal rather than private: [markdownSpans] scans the same dialect and must not re-decide it.
+ */
+internal fun emphasisAt(
     text: String,
     start: Int,
 ): Emphasis? {
@@ -558,8 +566,12 @@ private fun closingDelimiter(
     }
 }
 
-/** How many of the character at [start] run consecutively — a code span's fence length. */
-private fun String.runLengthAt(start: Int): Int {
+/**
+ * How many of the character at [start] run consecutively — a code span's fence length.
+ *
+ * Internal rather than private: [markdownSpans] scans the same dialect and must not re-decide it.
+ */
+internal fun String.runLengthAt(start: Int): Int {
     var end = start
     while (end < length && this[end] == this[start]) end++
     return end - start
@@ -582,10 +594,11 @@ private fun blockImage(line: String): RichNode.BlockImage? {
 
 // Up to three leading spaces still open a block, which is the rule the site's parser follows — and
 // the reason ` #### **[TG机器人](…)**` was a paragraph showing its own hashes.
-private val HEADING = Regex("^ {0,3}(#{1,6})\\s+(.+)$")
-private val DIVIDER = Regex("^(-{3,}|\\*{3,})$")
-private val UNORDERED_LIST = Regex("^\\s*[-*+]\\s+(.+)$")
-private val ORDERED_LIST = Regex("^\\s*\\d+[.)]\\s+(.+)$")
+// Internal rather than private: [markdownSpans] scans the same dialect and must not re-decide it.
+internal val HEADING = Regex("^ {0,3}(#{1,6})\\s+(.+)$")
+internal val DIVIDER = Regex("^(-{3,}|\\*{3,})$")
+internal val UNORDERED_LIST = Regex("^\\s*[-*+]\\s+(.+)$")
+internal val ORDERED_LIST = Regex("^\\s*\\d+[.)]\\s+(.+)$")
 private val BLOCK_IMAGE = Regex("^!\\[([^]]*)]\\(([^)]+)\\)$")
 private val LINKED_BLOCK_IMAGE = Regex("^\\[!\\[([^]]*)]\\(([^)]+)\\)]\\([^)]+\\)$")
 private val TABLE_UNDERLINE = Regex("^\\|?\\s*:?-+:?\\s*(\\|\\s*:?-+:?\\s*)*\\|?$")

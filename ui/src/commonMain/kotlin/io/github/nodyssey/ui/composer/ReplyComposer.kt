@@ -97,6 +97,7 @@ import io.github.plaza.designsys.editor.MarkdownEditorBar
 import io.github.plaza.designsys.editor.MarkdownEditorState
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.editor.rememberMarkdownHighlight
 import io.github.plaza.designsys.theme.CommentBody
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -342,6 +343,7 @@ private fun ReplyEditorSheet(
                     color = MaterialTheme.colorScheme.onSurface,
                 ),
                 hintStyle = CommentBody.copy(fontSize = 16.sp, lineHeight = 26.sp),
+                outputTransformation = rememberMarkdownHighlight(),
                 modifier = Modifier
                     .readableWidth()
                     .heightIn(min = MIN_EDITOR_HEIGHT, max = MAX_EDITOR_HEIGHT)

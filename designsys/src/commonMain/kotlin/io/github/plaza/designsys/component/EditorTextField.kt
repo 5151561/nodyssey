@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,10 @@ fun EditorTextField(
     hintMaxLines: Int = Int.MAX_VALUE,
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.MultiLine(),
     inputTransformation: InputTransformation? = null,
+    // Null by default because two of the four editors are not Markdown: a post's title is one line of
+    // plain text, and a 私信 draft is Markdown only when the thread's own switch says so. Highlighting
+    // is something a surface asks for — see `rememberMarkdownHighlight`.
+    outputTransformation: OutputTransformation? = null,
     container: @Composable (content: @Composable () -> Unit) -> Unit = { content ->
         Box(Modifier.fillMaxWidth()) { content() }
     },
@@ -46,6 +51,7 @@ fun EditorTextField(
         state = state,
         lineLimits = lineLimits,
         inputTransformation = inputTransformation,
+        outputTransformation = outputTransformation,
         textStyle = textStyle,
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         modifier = modifier,

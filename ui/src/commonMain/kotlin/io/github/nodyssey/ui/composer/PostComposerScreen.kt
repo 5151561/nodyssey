@@ -112,6 +112,7 @@ import io.github.plaza.designsys.editor.MarkdownEditorBar
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.ViewModeSwitch
 import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.editor.rememberMarkdownHighlight
 import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
@@ -593,6 +594,7 @@ private fun BodyField(
         hint = stringResource(Res.string.composer_body_hint),
         textStyle = PostBody.copy(color = MaterialTheme.colorScheme.onSurface),
         hintStyle = PostBody,
+        outputTransformation = rememberMarkdownHighlight(),
         modifier = modifier
             .readableWidth()
             .focusRequester(focusRequester)
