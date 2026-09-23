@@ -34,7 +34,6 @@ import io.github.plaza.core.ansi.AnsiDecoder
 import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.BadgeChip
 import io.github.plaza.designsys.component.BadgeTone
-import io.github.plaza.designsys.component.GroupedColumn
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.MetaText
@@ -160,7 +159,7 @@ fun GalleryContent() {
                 }
 
                 Section("设置行") {
-                    GroupedColumn {
+                    Column {
                         GroupedRow(title = "外观", value = if (dark) "深色" else "浅色", first = true, onClick = {})
                         GroupedRow(title = "字号", value = "标准", onClick = {})
                         GroupedRow(title = "仅 Wi-Fi 加载图片", subtitle = "省流量", last = true, onClick = {})
