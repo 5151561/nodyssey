@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -152,6 +153,8 @@ import io.github.nodyssey.ui.resources.post_read_marker
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.post_view_count
 import io.github.nodyssey.ui.resources.site_switch_next_launch
+import io.github.nodyssey.ui.resources.site_switch_separate_sessions
+import io.github.nodyssey.ui.resources.site_switch_signed_in_as
 import io.github.nodyssey.ui.resources.sort_by_post_time
 import io.github.nodyssey.ui.resources.sort_by_reply_time
 import io.github.nodyssey.ui.resources.tab_profile
@@ -940,7 +943,7 @@ private fun HomeHeader(
                         .padding(start = Spacing.md, end = Spacing.lg, top = Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SiteSwitcher(Modifier.weight(1f))
+                    SiteSwitcher(account = account, modifier = Modifier.weight(1f))
                     AccountButton(account = account, onClick = onAccountClick)
                 }
                 Row(
@@ -1089,7 +1092,10 @@ private fun SortButton(
  * discover that nothing happened.
  */
 @Composable
-private fun SiteSwitcher(modifier: Modifier = Modifier) {
+private fun SiteSwitcher(
+    account: HomeAccount?,
+    modifier: Modifier = Modifier,
+) {
     var menuOpen by remember { mutableStateOf(false) }
     val active = ActiveSite.current
     val switchSite = rememberSiteSwitch()
@@ -1109,20 +1115,46 @@ private fun SiteSwitcher(modifier: Modifier = Modifier) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            Site.entries.forEach { site ->
+        DropdownMenu(
+            expanded = menuOpen,
+            onDismissRequest = { menuOpen = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = LocalPlazaLayers.current.card,
+            modifier = Modifier.widthIn(min = 280.dp),
+        ) {
+            Site.entries.forEachIndexed { index, site ->
                 val isCurrent = site == active
                 DropdownMenuItem(
                     text = {
-                        Column {
-                            Text(site.displayName)
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    site.displayName,
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                )
+                                Text(
+                                    site.domain,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            // Who is signed in, for the site that can say: the other one's cookies are
+                            // not read until it is switched to, so its line stays silent rather than
+                            // guessing.
+                            if (isCurrent && account != null) {
+                                Text(
+                                    text = stringResource(Res.string.site_switch_signed_in_as, account.name),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                             // 下次启动生效 under the name it applies to rather than as a note
                             // elsewhere on the screen: the sentence is only true of this entry, and
                             // only on a platform that cannot restart itself.
                             if (!isCurrent && !siteSwitchRestartsApp) {
                                 Text(
                                     text = stringResource(Res.string.site_switch_next_launch),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -1132,23 +1164,73 @@ private fun SiteSwitcher(modifier: Modifier = Modifier) {
                         menuOpen = false
                         switchSite(site)
                     },
+                    leadingIcon = { SiteMonogram(site, index) },
                     // Same reason as [SortMenuItem]: without this the two entries are announced
                     // identically and the tick is decoration TalkBack cannot see.
-                    modifier = Modifier.semantics { selected = isCurrent },
+                    modifier = Modifier
+                        .padding(horizontal = 6.dp, vertical = 1.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (isCurrent) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                        .heightIn(min = 64.dp)
+                        .semantics { selected = isCurrent },
                     trailingIcon = {
                         if (isCurrent) {
                             Icon(
                                 Icons.Default.Check,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
                         }
                     },
                 )
             }
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = Spacing.xs),
+            )
+            Text(
+                text = stringResource(Res.string.site_switch_separate_sessions),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .widthIn(max = 280.dp)
+                    .padding(start = 18.dp, end = 18.dp, top = Spacing.xs, bottom = Spacing.sm),
+            )
         }
     }
 }
+
+/** A site's initial on a tonal tile — the two sites told apart by colour family, first by primary. */
+@Composable
+private fun SiteMonogram(
+    site: Site,
+    index: Int,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val (container, content) =
+        if (index % 2 == 0) {
+            scheme.primaryContainer to scheme.onPrimaryContainer
+        } else {
+            scheme.tertiaryContainer to scheme.onTertiaryContainer
+        }
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(container),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = site.displayName.take(1),
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = content,
+        )
+    }
+}
+
+/** The site's host as a reader would type it: no scheme, no `www.`. */
+private val Site.domain: String
+    get() = origin.substringAfter("://").removePrefix("www.")
 
 @Composable
 private fun SortMenuItem(

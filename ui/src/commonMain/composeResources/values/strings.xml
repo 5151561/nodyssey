@@ -30,6 +30,10 @@
     <string name="action_search">搜索</string>
     <string name="action_switch_site">切换站点</string>
     <string name="site_switch_next_launch">下次启动生效</string>
+    <!-- 站点切换菜单：当前站点下的登录状态，%1$s 是用户名。 -->
+    <string name="site_switch_signed_in_as">已登录 · %1$s</string>
+    <!-- 站点切换菜单底部的说明。 -->
+    <string name="site_switch_separate_sessions">两个站点分开登录，通知和私信跟随当前站点</string>
     <string name="action_show_all_boards">全部版块</string>
     <string name="action_hide_all_boards">收起版块</string>
     <string name="action_create_post">发帖</string>

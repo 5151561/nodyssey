@@ -39,6 +39,8 @@
     <string name="action_search">搜尋</string>
     <string name="action_switch_site">切換站點</string>
     <string name="site_switch_next_launch">下次啟動生效</string>
+    <string name="site_switch_signed_in_as">已登入 · %1$s</string>
+    <string name="site_switch_separate_sessions">兩個站點分開登入，通知和私訊跟隨目前站點</string>
     <string name="action_show_all_boards">全部版塊</string>
     <string name="action_hide_all_boards">收合版塊</string>
     <string name="action_create_post">發文</string>
