@@ -80,6 +80,8 @@
     <string name="composer_body_hint">写下正文，支持 Markdown…</string>
     <string name="composer_title_count">%1$d/%2$d</string>
     <string name="composer_select_board">选择版块</string>
+    <!-- The board pill once a board is chosen: where the topic is going, 1d -->
+    <string name="composer_board_target">发到 %1$s</string>
     <string name="composer_permission_public">公开</string>
     <string name="composer_permission_level">Lv%1$d</string>
     <string name="composer_permission_private">私有</string>
@@ -168,7 +170,8 @@
     <!-- The "what is loaded" line each list words in its own noun -->
     <string name="post_page_progress">已载入 %1$d 楼</string>
     <string name="post_reply_editor_title">回复</string>
-    <string name="post_reply_editor_title_floor">回复 #%1$d · %2$s</string>
+    <!-- The reply sheet's header once the author has moved into the target chip below it (2c) -->
+    <string name="post_reply_editor_title_to_floor">回复 #%1$d</string>
     <string name="post_reply_editor_hint">写下你的回复…</string>
     <string name="post_reply_preview_title">预览 · 回复</string>
     <string name="post_reply_preview_title_floor">预览 · 回复 #%1$d</string>

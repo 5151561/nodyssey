@@ -1,6 +1,7 @@
 package io.github.nodyssey.ui.composer
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,8 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.maxLength
@@ -21,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,6 +33,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -53,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,6 +79,7 @@ import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.action_save
 import io.github.nodyssey.ui.resources.action_sign_in
 import io.github.nodyssey.ui.resources.action_verify
+import io.github.nodyssey.ui.resources.composer_board_target
 import io.github.nodyssey.ui.resources.composer_body_hint
 import io.github.nodyssey.ui.resources.composer_draft_saved
 import io.github.nodyssey.ui.resources.composer_draft_saving
@@ -107,11 +114,12 @@ import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.editor.ComposerEditorBar
 import io.github.plaza.designsys.editor.EditorAction
-import io.github.plaza.designsys.editor.MarkdownEditorBar
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
-import io.github.plaza.designsys.editor.ViewModeSwitch
 import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
@@ -288,6 +296,9 @@ fun PostComposerScreen(
     }
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        // A sheet of paper rather than the grey page: the editor is one card the writer is inside,
+        // so the whole screen takes the card colour and only the bar at the bottom recedes (1d).
+        containerColor = LocalPlazaLayers.current.card,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             ComposerTopBar(
@@ -295,6 +306,14 @@ fun PostComposerScreen(
                 isPublishing = state.isPublishing,
                 canPublish = state.canPublish,
                 isEditing = state.isEditing,
+                // No draft line on an edit: nothing is being autosaved, and "草稿已保存" beside a
+                // post that is already published would claim the opposite of what is true.
+                draftStatus = if (state.isEditing) {
+                    null
+                } else {
+                    state.savedAtMillis?.let { stringResource(Res.string.composer_draft_saved, formatTime(it)) }
+                        ?: stringResource(Res.string.composer_draft_saving)
+                },
                 onClose = onClose,
                 onViewModeChange = onViewModeChange,
                 onPublish = onPublish,
@@ -349,17 +368,16 @@ fun PostComposerScreen(
 }
 
 /**
- * Close, the view switch, publish.
+ * Close, the draft line, the two views, publish (1d).
  *
- * The switch is here rather than in the formatting strip because 内容/预览/对照 is not a formatting
- * action — it changes what the whole screen shows, the way the close and publish buttons beside it do.
- * It sat in the toolbar's trailing slot until users called the keys "蚂蚁一样": three of the strip's
- * seven slots went to a view switch, which is what forced the remaining keys down to 32dp.
+ * The title slot carries the draft status: "发布帖子" told you where you were on a screen that could
+ * not be anywhere else, and "草稿 09:44" is the thing a writer actually glances up for.
  *
- * It also replaces the title. "发布帖子" told you where you were on a screen that could not be
- * anywhere else, and the switch says the same thing better by showing which of the three views is
- * live. With the switch always reachable there is no back arrow either — tapping 内容 is the way out
- * of a preview, and 关闭 stays 关闭 in every mode instead of turning into something else.
+ * 预览 and 对照 are here rather than on the editor's bar because neither is a formatting action —
+ * each changes what the whole screen shows, the way 关闭 and 发布 beside them do. They are two
+ * toggles rather than the 内容/预览/对照 segmented switch this bar used to carry: the board keeps
+ * one eye and nothing else, and 内容 is simply what is left when neither is lit, so tapping a lit
+ * one is the way back. 关闭 stays 关闭 in every mode instead of turning into a back arrow.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -368,18 +386,21 @@ private fun ComposerTopBar(
     isPublishing: Boolean,
     canPublish: Boolean,
     isEditing: Boolean,
+    draftStatus: String?,
     onClose: () -> Unit,
     onViewModeChange: (ComposerViewMode) -> Unit,
     onPublish: () -> Unit,
 ) {
     TopAppBar(
         title = {
-            ViewModeSwitch(
-                options = ComposerViewMode.entries,
-                selected = viewMode,
-                label = { mode -> stringResource(mode.labelRes) },
-                onSelect = onViewModeChange,
-            )
+            draftStatus?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
         },
         navigationIcon = {
             IconButton(onClick = onClose, enabled = !isPublishing) {
@@ -390,6 +411,8 @@ private fun ComposerTopBar(
             }
         },
         actions = {
+            ViewModeToggle(ComposerViewMode.COMPARE, PlazaIcons.VerticalSplit, viewMode, onViewModeChange)
+            ViewModeToggle(ComposerViewMode.PREVIEW, PlazaIcons.Visibility, viewMode, onViewModeChange)
             PublishButton(
                 isPublishing = isPublishing,
                 enabled = canPublish,
@@ -397,8 +420,29 @@ private fun ComposerTopBar(
                 onClick = onPublish,
             )
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = LocalPlazaLayers.current.card),
     )
+}
+
+/** A view the screen can switch to; lit while it is showing, and tapping it lit goes back to 内容. */
+@Composable
+private fun ViewModeToggle(
+    mode: ComposerViewMode,
+    icon: ImageVector,
+    current: ComposerViewMode,
+    onViewModeChange: (ComposerViewMode) -> Unit,
+) {
+    IconToggleButton(
+        checked = current == mode,
+        onCheckedChange = { checked -> onViewModeChange(if (checked) mode else ComposerViewMode.CONTENT) },
+        colors = IconButtonDefaults.iconToggleButtonColors(
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+    ) {
+        Icon(icon, contentDescription = stringResource(mode.labelRes))
+    }
 }
 
 /**
@@ -418,7 +462,7 @@ private fun PublishButton(
     Button(
         onClick = onClick,
         enabled = enabled && !isPublishing,
-        contentPadding = PaddingValues(horizontal = 18.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp),
         colors = if (isPublishing) {
             ButtonDefaults.buttonColors(
                 disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -492,13 +536,13 @@ private fun EditorContent(
             onRemove = onRemoveAttachment,
             onRetry = onRetryAttachment,
         )
-        MarkdownEditorBar(
+        ComposerEditorBar(
             actions = state.toolbar.enabled,
             bodyState = bodyState,
             editorState = editorState,
             onPickImages = onPickImages,
             onCustomize = { customizing = true },
-            // The toolbar takes focus when it is tapped, and a caret the user cannot see is a caret
+            // The bar takes focus when it is tapped, and a caret the user cannot see is a caret
             // they have lost track of.
             onFormatted = { focusRequester.requestFocus() },
             emojiPanel = { panel ->
@@ -509,7 +553,7 @@ private fun EditorContent(
                     onRecentChange = panel.onRecentChange,
                 )
             },
-            // The strip's own APP slot rather than an [EditorAction]: that enum is the shared pool
+            // The bar's own APP slot rather than an [EditorAction]: that enum is the shared pool
             // every editor draws from, and adding to it would put 插入投票 in the message, signature
             // and readme editors too — none of which can carry a vote or a 收款码.
             appMenu = {
@@ -596,7 +640,7 @@ private fun BodyField(
         modifier = modifier
             .readableWidth()
             .focusRequester(focusRequester)
-            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+            .padding(horizontal = PageMargin, vertical = Spacing.md),
         // The body owns the rest of the screen, so the placeholder is drawn against all of it rather
         // than against one line's worth.
         container = { content -> Box(Modifier.fillMaxSize()) { content() } },
@@ -608,42 +652,50 @@ private fun TitleField(
     titleState: TextFieldState,
     length: Int,
 ) {
+    // Borderless and large (1d): the title is the first line of the page rather than a form field,
+    // and at 22sp it already reads as the heading the thread will show. It wraps instead of
+    // scrolling sideways, because a 60-character title on one line is a title nobody can proofread.
     EditorTextField(
         state = titleState,
         hint = stringResource(Res.string.composer_title_hint),
-        textStyle = MaterialTheme.typography.titleMedium.copy(
-            fontSize = 19.sp,
-            lineHeight = 26.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-        ),
+        textStyle = TitleStyle.copy(color = MaterialTheme.colorScheme.onSurface),
         // The placeholder is not bold: the weight belongs to a title that exists.
-        hintStyle = MaterialTheme.typography.titleMedium.copy(fontSize = 19.sp),
-        lineLimits = TextFieldLineLimits.SingleLine,
+        hintStyle = TitleStyle.copy(fontWeight = FontWeight.Normal),
+        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = TITLE_MAX_LINES),
         // Enforced at the input layer rather than trimmed afterwards: truncating in the ViewModel
         // cut composing text out from under the IME, which made the field stutter mid-word.
-        inputTransformation = InputTransformation.maxLength(PostComposerViewModel.MAX_TITLE_LENGTH),
-        modifier = Modifier.readableWidth().padding(horizontal = Spacing.lg),
+        // Wrapping is the only reason this is MultiLine; a title is still one line to the site, so a
+        // pasted or typed line break is dropped rather than published.
+        inputTransformation = NoLineBreaks.maxLength(PostComposerViewModel.MAX_TITLE_LENGTH),
+        modifier = Modifier.readableWidth().padding(start = PageMargin, end = PageMargin, top = Spacing.lg),
         container = { content ->
-            Column {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Box(Modifier.weight(1f).padding(bottom = Spacing.sm)) { content() }
-                    Text(
-                        text = stringResource(
-                            Res.string.composer_title_count,
-                            length,
-                            PostComposerViewModel.MAX_TITLE_LENGTH,
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = Spacing.sm, bottom = Spacing.md),
-                    )
-                }
-                HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.primary)
+            Row(verticalAlignment = Alignment.Bottom) {
+                Box(Modifier.weight(1f)) { content() }
+                Text(
+                    text = stringResource(
+                        Res.string.composer_title_count,
+                        length,
+                        PostComposerViewModel.MAX_TITLE_LENGTH,
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = Spacing.sm, bottom = Spacing.xs),
+                )
             }
         },
     )
+}
+
+private val TitleStyle = TextStyle(fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold)
+private const val TITLE_MAX_LINES = 3
+
+private object NoLineBreaks : InputTransformation {
+    override fun TextFieldBuffer.transformInput() {
+        val text = asCharSequence()
+        if (text.none { it == '\n' || it == '\r' }) return
+        replace(0, length, text.filterNot { it == '\n' || it == '\r' })
+    }
 }
 
 @Composable
@@ -661,19 +713,26 @@ private fun ComposerOptions(
     // being saved. An empty strip of padding above the body is worse than no strip.
     if (!state.isThreadLevelEdit) return
 
+    // Who is posting, where, and to whom (1d) — one line that reads as a sentence: 我 · 发到 技术 · 公开.
     Row(
         modifier = Modifier
             .readableWidth()
-            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = PageMargin, vertical = Spacing.xs),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        state.authorName?.let { name ->
+            UserAvatar(url = state.authorAvatarUrl, name = name, size = 36.dp)
+        }
         // Not offered on an edit: `edit-discussion` takes no board, and moving a thread between
         // boards is a moderator action rather than something its author can do here.
         if (!state.isEditing) {
             Box {
                 ComposerChip(
-                    label = state.boardTitle ?: stringResource(Res.string.composer_select_board),
+                    label = state.boardTitle?.let { stringResource(Res.string.composer_board_target, it) }
+                        ?: stringResource(Res.string.composer_select_board),
                     filled = state.boardTitle != null,
                     error = boardMissing,
                     onClick = { boardMenuOpen = true },
@@ -696,7 +755,7 @@ private fun ComposerOptions(
                 label = permissionLabel(state.permission),
                 filled = false,
                 error = false,
-                leading = PlazaIcons.Visibility,
+                leading = if (state.permission == PostPermission.PUBLIC) PlazaIcons.Public else Icons.Default.Lock,
                 onClick = { permissionMenuOpen = true },
             )
             DropdownMenu(expanded = permissionMenuOpen, onDismissRequest = { permissionMenuOpen = false }) {
@@ -711,22 +770,16 @@ private fun ComposerOptions(
                 }
             }
         }
-        Box(Modifier.weight(1f))
-        // No draft line on an edit: nothing is being autosaved, and "草稿已保存" beside a post that is
-        // already published would claim the opposite of what is true.
-        if (!state.isEditing) {
-            Text(
-                text = state.savedAtMillis?.let { stringResource(Res.string.composer_draft_saved, formatTime(it)) }
-                    ?: stringResource(Res.string.composer_draft_saving),
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-            )
-        }
     }
 }
 
+/**
+ * The board and 阅读权限 pills (1d).
+ *
+ * A chosen board is tonal primary — it is the one choice the writer has to make, and once made it
+ * should read as done. Everything else is the recessed page tone. The border is there only to say
+ * something: the missing-board error, or the card outline on paper where tone alone cannot.
+ */
 @Composable
 private fun ComposerChip(
     label: String,
@@ -735,32 +788,30 @@ private fun ComposerChip(
     onClick: () -> Unit,
     leading: ImageVector? = null,
 ) {
-    val shape = RoundedCornerShape(8.dp)
+    val layers = LocalPlazaLayers.current
     Surface(
         onClick = onClick,
-        shape = shape,
-        color = if (filled) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-        contentColor = if (filled) {
-            MaterialTheme.colorScheme.onSecondaryContainer
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
+        shape = CircleShape,
+        color = if (filled) MaterialTheme.colorScheme.primaryContainer else layers.inset,
+        contentColor = if (filled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+        border = when {
+            error -> BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+            else -> layers.cardBorder?.let { BorderStroke(1.dp, it) }
         },
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant,
-        ),
         modifier = Modifier.height(32.dp),
     ) {
         Row(
-            modifier = Modifier.padding(start = Spacing.md, end = Spacing.xs),
+            modifier = Modifier.padding(start = if (leading != null) 10.dp else Spacing.md, end = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            leading?.let { Icon(it, contentDescription = null, modifier = Modifier.size(16.dp)) }
+            leading?.let { Icon(it, contentDescription = null, modifier = Modifier.size(18.dp)) }
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelLarge,
+                fontSize = 13.sp,
                 fontWeight = if (filled) FontWeight.SemiBold else FontWeight.Medium,
+                maxLines = 1,
             )
             Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
         }
@@ -882,3 +933,6 @@ private fun formatTime(timestamp: Long): String = TimeFormat.clock(timestamp)
 private val IMAGE_MARKDOWN = Regex("""!\[[^]]*]\([^)]+\)""")
 
 private const val MAX_IMAGES_PER_PICK = 9
+
+/** The page's text margin in 1d — wider than the 16dp list margin, because this is a page, not a list. */
+private val PageMargin = 20.dp

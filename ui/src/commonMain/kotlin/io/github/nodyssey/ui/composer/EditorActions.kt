@@ -9,8 +9,12 @@ import io.github.plaza.designsys.editor.EditorAction
  * comparison — every entry is an argument about what that surface is for, and those arguments are only
  * checkable next to each other:
  *
- * - [Post] leads with a list and a link; a topic is written, not spoken.
- * - [Reply] trades those for a quote and an @, the two things a reply does that a topic does not.
+ * - [Post] and [Reply] are the same three, and none of them formats: since "先写，后排版" (boards 1d
+ *   and 2c) these two editors keep the formatting keys on a 格式 card that opens on demand, so what
+ *   is left on their bar is what gets *inserted* — a picture, a sticker, an @. Anyone who wants
+ *   加粗 one tap away can still pin it there with the wrench; that is what the arrangement is for
+ *   now. (They used to differ — a topic led with a list and a link, a reply with a quote — and that
+ *   argument moved to the card, which offers all of them to both.)
  * - [Message] is the shortest, and only that: every key is available through its wrench, images
  *   included — `message/send` carries `content` as Markdown and the thread renders images in it.
  *   No preview, because a message renders into a bubble the moment it is sent; getting it wrong
@@ -24,23 +28,12 @@ import io.github.plaza.designsys.editor.EditorAction
 object EditorActions {
     val Post =
         listOf(
-            EditorAction.BOLD,
-            EditorAction.CODE,
-            EditorAction.LIST,
-            EditorAction.LINK,
             EditorAction.IMAGE,
             EditorAction.EMOJI,
+            EditorAction.MENTION,
         )
 
-    val Reply =
-        listOf(
-            EditorAction.BOLD,
-            EditorAction.CODE,
-            EditorAction.QUOTE,
-            EditorAction.MENTION,
-            EditorAction.IMAGE,
-            EditorAction.EMOJI,
-        )
+    val Reply = Post
 
     val Message =
         listOf(

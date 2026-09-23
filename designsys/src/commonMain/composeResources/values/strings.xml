@@ -28,9 +28,15 @@
     <string name="composer_toolbar_add">加入工具栏</string>
     <string name="composer_toolbar_reset">恢复默认</string>
 
+    <!-- The 格式 pill on the post and reply editors, and the card it opens in the quick bar's place -->
+    <string name="composer_format_open">格式</string>
+    <string name="composer_format_hint">支持 Markdown，也可以直接手打</string>
+    <string name="composer_format_close">收起</string>
+
     <!-- The emoji panel's own chrome. Which stickers it shows belongs to the app that has them, and
          so does the sentence shown when a group is empty — that one is a parameter. -->
     <string name="composer_emoji_recent">最近使用</string>
+    <string name="composer_emoji_recent_empty">用过的表情会出现在这里</string>
     <string name="composer_emoji_backspace">删除</string>
     <!-- The post renderer: images, code blocks, quote-reply chips, the poll placeholder. Nothing here
          names a site, a board or a currency; that copy stays in the app module.

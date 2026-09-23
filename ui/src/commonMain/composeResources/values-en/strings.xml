@@ -82,6 +82,7 @@
     <string name="composer_title_hint">One line that says what this is about</string>
     <string name="composer_body_hint">Write the body — Markdown works…</string>
     <string name="composer_select_board">Choose a board</string>
+    <string name="composer_board_target">Post to %1$s</string>
     <string name="composer_permission_public">Public</string>
     <string name="composer_permission_private">Private</string>
     <string name="composer_draft_saved">Draft %1$s</string>
@@ -148,7 +149,7 @@
     <string name="feed_page_size_note">%1$d per page</string>
     <string name="post_page_progress">%1$d floors loaded</string>
     <string name="post_reply_editor_title">Reply</string>
-    <string name="post_reply_editor_title_floor">Reply to #%1$d · %2$s</string>
+    <string name="post_reply_editor_title_to_floor">Reply to #%1$d</string>
     <string name="post_reply_editor_hint">Write your reply…</string>
     <string name="post_reply_preview_title">Preview · reply</string>
     <string name="post_reply_preview_title_floor">Preview · reply to #%1$d</string>

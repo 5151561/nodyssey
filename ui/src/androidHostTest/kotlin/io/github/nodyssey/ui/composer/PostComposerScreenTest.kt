@@ -3,6 +3,7 @@ package io.github.nodyssey.ui.composer
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -19,7 +20,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Screen-level tests for the post editor (boards 7a–7c and C5). */
+/** Screen-level tests for the post editor (boards 1d / 1e, and 7a–7c and C5 before them). */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w360dp-h800dp")
@@ -72,20 +73,52 @@ class PostComposerScreenTest {
     fun `the editor shows the board, the reading limit and the title counter`() {
         setScreen(draftState())
 
-        composeRule.onNodeWithText("技术").assertIsDisplayed()
+        composeRule.onNodeWithText("发到 技术").assertIsDisplayed()
         composeRule.onNodeWithText("公开").assertIsDisplayed()
         composeRule.onNodeWithText("29/60").assertIsDisplayed()
     }
 
     @Test
-    fun `the view switch offers all three site views`() {
+    fun `the top bar still reaches all three site views`() {
         setScreen(draftState())
 
-        composeRule.onNodeWithText("内容").assertIsDisplayed()
-        composeRule.onNodeWithText("对照").assertIsDisplayed()
-        composeRule.onNodeWithText("预览").performClick()
+        composeRule.onNodeWithContentDescription("对照").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("预览").performClick()
 
         assertEquals(ComposerViewMode.PREVIEW, viewMode)
+    }
+
+    @Test
+    fun `tapping the lit view goes back to the text`() {
+        setScreen(draftState().copy(viewMode = ComposerViewMode.COMPARE))
+
+        // 内容 has no button of its own: it is what is left when neither view is lit.
+        composeRule.onNodeWithContentDescription("对照").assertIsOn().performClick()
+
+        assertEquals(ComposerViewMode.CONTENT, viewMode)
+    }
+
+    @Test
+    fun `formatting waits behind the 格式 pill and the wrench rides with it`() {
+        setScreen(draftState())
+
+        // 先写，后排版: the bar carries what is inserted, not what is formatted.
+        listOf("图片", "表情", "提到某人", "APP").forEach { key ->
+            composeRule.onNodeWithContentDescription(key).assertIsDisplayed()
+        }
+        composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
+
+        composeRule.onNodeWithText("格式").performClick()
+
+        listOf("加粗", "删除线", "二级标题", "链接", "引用", "无序列表", "行内代码", "斜体").forEach { key ->
+            composeRule.onNodeWithContentDescription(key).assertIsDisplayed()
+        }
+        composeRule.onNodeWithContentDescription("自定义工具栏").assertIsDisplayed()
+
+        composeRule.onNodeWithText("收起").performClick()
+
+        composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
+        composeRule.onNodeWithText("格式").assertIsDisplayed()
     }
 
     @Test
@@ -102,11 +135,10 @@ class PostComposerScreenTest {
         setScreen(draftState().copy(isPublishing = true))
 
         composeRule.onNodeWithText("发布中").assertIsDisplayed()
-        // 发布中… is the top bar's widest state, and the view switch shares the bar with it. Both
-        // have to survive 360dp together or the switch is the one the Row measures to nothing.
-        composeRule.onNodeWithText("内容").assertIsDisplayed()
-        composeRule.onNodeWithText("对照").assertIsDisplayed()
-        composeRule.onNodeWithText("预览").assertIsDisplayed()
+        // 发布中… is the top bar's widest state, and the view toggles share the bar with it. Both
+        // have to survive 360dp together or the toggles are what the Row measures to nothing.
+        composeRule.onNodeWithContentDescription("对照").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("预览").assertIsDisplayed()
     }
 
     @Test
@@ -124,7 +156,8 @@ class PostComposerScreenTest {
         )
 
         composeRule.onNodeWithText("上传中 45%").assertIsDisplayed()
-        composeRule.onNodeWithText("已上传").assertIsDisplayed()
+        // A finished upload says so only to a screen reader: its check mark carries it on screen.
+        composeRule.onNodeWithContentDescription("已上传").assertIsDisplayed()
         composeRule.onNodeWithText("失败 · 重试").assertIsDisplayed()
         composeRule.onNodeWithText("等待中").assertIsDisplayed()
 

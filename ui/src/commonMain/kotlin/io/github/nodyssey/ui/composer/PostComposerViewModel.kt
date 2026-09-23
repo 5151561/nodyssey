@@ -338,7 +338,9 @@ class PostComposerViewModel(
             runCatchingExceptCancellation { repository.profile() }
                 .onSuccess { profile ->
                     profileLoaded = true
-                    _uiState.update { it.copy(authorName = profile.name, selfRank = profile.rank) }
+                    _uiState.update {
+                        it.copy(authorName = profile.name, authorAvatarUrl = profile.avatarUrl, selfRank = profile.rank)
+                    }
                 }
         }
     }
@@ -510,6 +512,8 @@ data class PostComposerUiState(
     val draftDecisionMade: Boolean = false,
     val attachments: List<ImageAttachment> = emptyList(),
     val authorName: String? = null,
+    /** The option row's avatar (1d); null until the profile lands, and the monogram stands in. */
+    val authorAvatarUrl: String? = null,
     /** The signed-in account's level; null until the profile lands, or if it never does. */
     val selfRank: Int? = null,
     /** How 插入投票 is going. Idle whenever the dialog is closed or has nothing to report. */

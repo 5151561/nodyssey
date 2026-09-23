@@ -44,9 +44,19 @@ class EmojiPanelScope internal constructor(
 class MarkdownEditorState(
     emojiOpen: Boolean = false,
     recentEmoji: List<String> = emptyList(),
+    formatOpen: Boolean = false,
 ) {
     /** The emoji panel replaces the keyboard rather than stacking on it, so only one is ever true. */
     var emojiOpen by mutableStateOf(emojiOpen)
+        private set
+
+    /**
+     * Whether [ComposerEditorBar] is showing its 格式 card in place of the quick bar.
+     *
+     * Hoisted with the rest for the same reason: a rotation mid-edit should come back to the card the
+     * writer had open. [MarkdownEditorBar] has no such card and never sets it.
+     */
+    var formatOpen by mutableStateOf(formatOpen)
         private set
 
     /** Most recently inserted emoji, newest first. */
@@ -55,10 +65,24 @@ class MarkdownEditorState(
 
     internal fun toggleEmoji() {
         emojiOpen = !emojiOpen
+        // The two panels are alternatives: a sticker grid under a format card is two drawers open at
+        // once over a field the writer can no longer see.
+        if (emojiOpen) formatOpen = false
+    }
+
+    internal fun toggleFormat() {
+        formatOpen = !formatOpen
+        if (formatOpen) emojiOpen = false
     }
 
     fun closeEmoji() {
         emojiOpen = false
+    }
+
+    /** Puts away whichever panel is open — what back does, and what dismissing a sheet does. */
+    fun closePanels() {
+        emojiOpen = false
+        formatOpen = false
     }
 
     companion object {
@@ -66,10 +90,10 @@ class MarkdownEditorState(
             listSaver(
                 // An ArrayList, not whatever `List` the recents happen to be: the saved-state bundle
                 // takes Serializable, and the empty-list singleton is not a reliable one to bet on.
-                save = { listOf(it.emojiOpen, ArrayList(it.recentEmoji)) },
+                save = { listOf(it.emojiOpen, ArrayList(it.recentEmoji), it.formatOpen) },
                 restore = {
                     @Suppress("UNCHECKED_CAST")
-                    MarkdownEditorState(it[0] as Boolean, it[1] as List<String>)
+                    MarkdownEditorState(it[0] as Boolean, it[1] as List<String>, it[2] as Boolean)
                 },
             )
     }
@@ -128,33 +152,48 @@ fun MarkdownEditorBar(
             onCustomize = onCustomize,
             appMenu = appMenu,
             onAction = { action ->
-                when (action) {
-                    EditorAction.EMOJI -> {
-                        editorState.toggleEmoji()
-                        if (editorState.emojiOpen) keyboard?.hide()
-                    }
-
-                    EditorAction.IMAGE -> onPickImages()
-
-                    else -> {
-                        editorState.closeEmoji()
-                        bodyState.edit { applyMarkdown(action) }
-                        onFormatted()
-                    }
-                }
+                editorState.dispatch(action, bodyState, onPickImages, onFormatted) { keyboard?.hide() }
             },
             trailing = trailing,
         )
         content()
-        if (editorState.emojiOpen) {
-            emojiPanel(
-                EmojiPanelScope(
-                    onInsert = { text -> bodyState.edit { insertText(text) } },
-                    onBackspace = { bodyState.edit { deleteBackwards() } },
-                    recent = editorState.recentEmoji,
-                    onRecentChange = { editorState.recentEmoji = it },
-                ),
-            )
+        if (editorState.emojiOpen) emojiPanel(editorState.emojiPanelScope(bodyState))
+    }
+}
+
+/**
+ * What a key does, for both bars: toggle the panel, hand the picker back, or rewrite the text.
+ *
+ * [hideKeyboard] runs only when the emoji panel has just opened — the panel takes the keyboard's
+ * place, and the two stacked leave two lines of the text visible.
+ */
+internal fun MarkdownEditorState.dispatch(
+    action: EditorAction,
+    bodyState: TextFieldState,
+    onPickImages: () -> Unit,
+    onFormatted: () -> Unit,
+    hideKeyboard: () -> Unit,
+) {
+    when (action) {
+        EditorAction.EMOJI -> {
+            toggleEmoji()
+            if (emojiOpen) hideKeyboard()
+        }
+
+        EditorAction.IMAGE -> onPickImages()
+
+        else -> {
+            closeEmoji()
+            bodyState.edit { applyMarkdown(action) }
+            onFormatted()
         }
     }
 }
+
+internal fun MarkdownEditorState.emojiPanelScope(bodyState: TextFieldState) =
+    EmojiPanelScope(
+        onInsert = { text -> bodyState.edit { insertText(text) } },
+        onBackspace = { bodyState.edit { deleteBackwards() } },
+        recent = recentEmoji,
+        onRecentChange = { recentEmoji = it },
+    )

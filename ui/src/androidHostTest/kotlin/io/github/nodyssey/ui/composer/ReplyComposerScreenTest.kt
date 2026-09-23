@@ -8,7 +8,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
-import io.github.plaza.designsys.editor.EditorToolbarDefaults
 import io.github.plaza.designsys.editor.toolbarLayout
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Rule
@@ -19,12 +18,12 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The reply sheet's editor chrome (6d / C6).
+ * The reply sheet's editor chrome (2c).
  *
- * This is the surface the toolbar geometry was decided on: it is the only one that keeps 发布 pinned
- * inside the strip, so it is the only one where the keys and the trailing button compete for the same
- * 360dp. The size and the no-scroll claim are asserted here rather than in a comment, because both
- * silently stop being true the moment an action is added to the list.
+ * The sheet used to be where the toolbar geometry was decided, because it kept 发布 pinned inside the
+ * strip and had to squeeze six keys to 42dp beside it. 2c moved 发布 into the header and the
+ * formatting keys onto the 格式 card; what is asserted here is that both moves held — full-size keys,
+ * the formatting still one tap away, and nothing the old strip offered lost on the way.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -69,39 +68,54 @@ class ReplyComposerScreenTest {
         )
 
     @Test
-    fun `every formatting key fits beside the pinned publish button`() {
+    fun `the bar carries the inserts, and 发布 sits in the header`() {
         setSheet(draft())
 
-        listOf("加粗", "行内代码", "引用", "提到某人", "图片", "表情").forEach { key ->
+        listOf("图片", "表情", "提到某人").forEach { key ->
             composeRule.onNodeWithContentDescription(key).assertIsDisplayed()
         }
+        // 先写，后排版: formatting waits behind the 格式 pill rather than on the bar.
+        composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
+        composeRule.onNodeWithText("格式").assertIsDisplayed()
         composeRule.onNodeWithText("发布").assertIsDisplayed()
     }
 
     @Test
-    fun `the keys are the compact size the sheet was measured for`() {
+    fun `the keys are full size now that 发布 left the strip`() {
         setSheet(draft())
 
-        // 42dp, not the 48dp every other strip gets: see EditorToolbarDefaults.CompactKeySize.
-        composeRule.onNodeWithContentDescription("加粗").assertWidthIsEqualTo(42.dp)
-        composeRule.onNodeWithContentDescription("表情").assertWidthIsEqualTo(42.dp)
+        // 42dp for as long as 发布 was pinned at the strip's end; the header took it, and the keys
+        // went back to Material's 48dp minimum.
+        composeRule.onNodeWithContentDescription("图片").assertWidthIsEqualTo(48.dp)
+        composeRule.onNodeWithContentDescription("表情").assertWidthIsEqualTo(48.dp)
     }
 
     @Test
-    fun `the wrench rides at the end of the keys, not in the pinned slot`() {
+    fun `the 格式 card offers every formatting key and the wrench`() {
         setSheet(draft())
 
-        // Reachable, but only by scrolling past the six formatting keys — 发布 keeps the one pinned
-        // slot, and the wrench is the key nobody reaches for mid-sentence.
-        composeRule.onNodeWithContentDescription("自定义工具栏").assertExists()
+        composeRule.onNodeWithText("格式").performClick()
+
+        listOf("加粗", "删除线", "二级标题", "链接", "引用", "无序列表", "行内代码", "斜体").forEach { key ->
+            composeRule.onNodeWithContentDescription(key).assertIsDisplayed()
+        }
+        composeRule.onNodeWithContentDescription("自定义工具栏").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the header names the floor and the chip names the author`() {
+        setSheet(draft().copy(replyTo = FloorReference(floor = 7, author = "轻舟", excerpt = "电源那条深有体会")))
+
+        composeRule.onNodeWithText("回复 #7").assertIsDisplayed()
+        composeRule.onNodeWithText("@轻舟 #7").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("移除回复对象").assertIsDisplayed()
     }
 
     /**
-     * The reply box carries the APP menu, and it sits with the wrench rather than in the pinned slot.
+     * The reply box carries the APP menu on its bar, beside the inserts.
      *
      * The site's own reply editor has always offered 投票 and 收款码; this app only grew the entry with
-     * the 收款码, and the reply sheet is the half that is easy to forget because 发布 owns its one
-     * pinned slot and the menu had to go behind the swipe instead.
+     * the 收款码, and the reply sheet is the half that is easy to forget.
      */
     @Test
     fun `the APP menu is offered in the reply sheet and opens both entries`() {
@@ -124,7 +138,7 @@ class ReplyComposerScreenTest {
 
         composeRule.onNodeWithContentDescription("表情").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("加粗").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("引用").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("提到某人").assertDoesNotExist()
     }
 
     @Test
