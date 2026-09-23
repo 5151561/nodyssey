@@ -13,11 +13,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -30,16 +37,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.plaza.designsys.component.GroupRowDivider
 import io.github.plaza.designsys.component.LayerGroup
 import io.github.plaza.designsys.component.LayerPageGutter
+import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.groupShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
@@ -187,6 +202,8 @@ internal fun SettingsRow(
      * promises a screen that never comes.
      */
     chevron: Boolean = false,
+    /** For a subtitle that is an address or a value to be read character by character — a URL. */
+    subtitleMonospace: Boolean = false,
     leading: (@Composable () -> Unit)? = null,
     trailing: @Composable () -> Unit = {},
 ) {
@@ -234,7 +251,10 @@ internal fun SettingsRow(
                     subtitle?.let {
                         Text(
                             it,
-                            style = MaterialTheme.typography.labelSmall,
+                            style =
+                            MaterialTheme.typography.labelSmall.let { style ->
+                                if (subtitleMonospace) style.copy(fontFamily = FontFamily.Monospace) else style
+                            },
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -336,3 +356,131 @@ internal fun ConnectedChoiceButtons(
 }
 
 private val SegmentShape = RoundedCornerShape(8.dp)
+
+/**
+ * A text field on a settings card: Material's outlined field, filled with the inset tone so it reads
+ * as a well in the white card, with 6e's 14dp corners.
+ */
+@Composable
+internal fun SettingsTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    enabled: Boolean = true,
+    isError: Boolean = false,
+    supportingText: String? = null,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    textStyle: TextStyle = LocalTextStyle.current,
+) {
+    val inset = LocalPlazaLayers.current.inset
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
+        singleLine = true,
+        isError = isError,
+        textStyle = textStyle,
+        label = { Text(label) },
+        placeholder = placeholder?.let { { Text(it) } },
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        visualTransformation = visualTransformation,
+        supportingText = supportingText?.let { { Text(it) } },
+        shape = RoundedCornerShape(14.dp),
+        colors =
+        OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = inset,
+            unfocusedContainerColor = inset,
+            disabledContainerColor = inset,
+            errorContainerColor = inset,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+        ),
+    )
+}
+
+/**
+ * 测试 and 保存, side by side as two pills: the tonal one checks, the filled one commits. Shared by
+ * 代理 and 加密 DNS, whose two actions are the same pair.
+ */
+@Composable
+internal fun SettingsTestSaveButtons(
+    testLabel: String,
+    saveLabel: String,
+    testing: Boolean,
+    enabled: Boolean,
+    onTest: () -> Unit,
+    onSave: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        FilledTonalButton(
+            onClick = onTest,
+            enabled = enabled && !testing,
+            modifier = Modifier.weight(1f).heightIn(min = ActionButtonHeight),
+        ) {
+            if (testing) {
+                PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
+            } else {
+                Text(testLabel, style = MaterialTheme.typography.titleMedium)
+            }
+        }
+        Button(
+            onClick = onSave,
+            enabled = enabled,
+            modifier = Modifier.weight(1f).heightIn(min = ActionButtonHeight),
+        ) {
+            Text(saveLabel, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+private val ActionButtonHeight = 52.dp
+
+/**
+ * The outcome of a test, as a tinted strip under the fields: [error] in the error container,
+ * otherwise in the tertiary one. Announced politely, because it arrives after a wait the reader did
+ * not have to watch.
+ */
+@Composable
+internal fun SettingsResultBanner(
+    text: String,
+    error: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        color = if (error) scheme.errorContainer else scheme.tertiaryContainer,
+        contentColor = if (error) scheme.onErrorContainer else scheme.onTertiaryContainer,
+        shape = RoundedCornerShape(18.dp),
+        modifier = modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            Icon(
+                if (error) PlazaIcons.ErrorCircle else Icons.Default.CheckCircle,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+/** Small print under a page's cards — what a setting cannot do, said before anyone types. */
+@Composable
+internal fun SettingsNote(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.padding(horizontal = Spacing.md),
+    )
+}

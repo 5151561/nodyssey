@@ -8,30 +8,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,7 +35,6 @@ import io.github.nodyssey.data.dns.DnsResolution
 import io.github.nodyssey.data.dns.DohConfigProblem
 import io.github.nodyssey.data.dns.DohProvider
 import io.github.nodyssey.ui.account.AccountMessageSnackbar
-import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.doh_bootstrap_invalid
@@ -74,8 +67,8 @@ import io.github.nodyssey.ui.resources.doh_url_label
 import io.github.nodyssey.ui.resources.doh_url_placeholder
 import io.github.nodyssey.ui.resources.doh_url_required
 import io.github.nodyssey.ui.resources.doh_webview_hint
+import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
-import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -163,24 +156,25 @@ fun DohSettingsScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(SettingsPagePadding),
+            verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
             SettingsGroup {
                 SettingsRow(
+                    leading = { Icon(SettingsIcons.Dns, contentDescription = null) },
                     title = stringResource(Res.string.doh_master_title),
                     subtitle = stringResource(Res.string.doh_master_hint),
                     top = true,
                     bottom = true,
                     checked = state.enabled,
                     onCheckedChange = onEnabledChange,
-                    trailing = { Switch(checked = state.enabled, onCheckedChange = null) },
+                    trailing = { SettingsSwitch(checked = state.enabled) },
                 )
             }
 
             Column(
                 modifier = Modifier.alpha(if (state.enabled) 1f else DISABLED_ALPHA),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
             ) {
                 SettingsSectionTitle(stringResource(Res.string.doh_provider_title))
                 SettingsGroup {
@@ -193,12 +187,15 @@ fun DohSettingsScreen(
                             subtitle = provider.url.ifEmpty {
                                 stringResource(Res.string.doh_provider_custom_hint)
                             },
+                            subtitleMonospace = provider.url.isNotEmpty(),
                             top = index == 0,
                             bottom = index == DohProvider.entries.lastIndex,
                             enabled = state.enabled,
                             selected = provider == state.provider,
                             onClick = { onProviderChange(provider) },
-                            trailing = {
+                            // Leading, where 6f puts its markers: the column of choices reads down
+                            // the left edge, and the answer is the one that is filled.
+                            leading = {
                                 RadioButton(
                                     selected = provider == state.provider,
                                     onClick = null,
@@ -210,45 +207,41 @@ fun DohSettingsScreen(
                 }
 
                 if (state.provider == DohProvider.CUSTOM) {
-                    OutlinedTextField(
-                        value = state.urlInput,
-                        onValueChange = onUrlChange,
+                    LayerCard(
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = state.enabled,
-                        singleLine = true,
-                        isError = state.problem == DohConfigProblem.MISSING_URL ||
-                            state.problem == DohConfigProblem.INVALID_URL,
-                        label = { Text(stringResource(Res.string.doh_url_label)) },
-                        placeholder = { Text(stringResource(Res.string.doh_url_placeholder)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        supportingText = when (state.problem) {
-                            DohConfigProblem.MISSING_URL -> {
-                                { Text(stringResource(Res.string.doh_url_required)) }
-                            }
-
-                            DohConfigProblem.INVALID_URL -> {
-                                { Text(stringResource(Res.string.doh_url_invalid)) }
-                            }
-
-                            else -> null
-                        },
-                    )
-                    OutlinedTextField(
-                        value = state.bootstrapInput,
-                        onValueChange = onBootstrapChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = state.enabled,
-                        singleLine = true,
-                        isError = state.problem == DohConfigProblem.INVALID_BOOTSTRAP,
-                        label = { Text(stringResource(Res.string.doh_bootstrap_label)) },
-                        placeholder = { Text(stringResource(Res.string.doh_bootstrap_placeholder)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        supportingText = if (state.problem == DohConfigProblem.INVALID_BOOTSTRAP) {
-                            { Text(stringResource(Res.string.doh_bootstrap_invalid)) }
-                        } else {
-                            null
-                        },
-                    )
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                    ) {
+                        SettingsTextField(
+                            value = state.urlInput,
+                            onValueChange = onUrlChange,
+                            label = stringResource(Res.string.doh_url_label),
+                            placeholder = stringResource(Res.string.doh_url_placeholder),
+                            enabled = state.enabled,
+                            isError = state.problem == DohConfigProblem.MISSING_URL ||
+                                state.problem == DohConfigProblem.INVALID_URL,
+                            supportingText = when (state.problem) {
+                                DohConfigProblem.MISSING_URL -> stringResource(Res.string.doh_url_required)
+                                DohConfigProblem.INVALID_URL -> stringResource(Res.string.doh_url_invalid)
+                                else -> null
+                            },
+                            keyboardType = KeyboardType.Uri,
+                        )
+                        SettingsTextField(
+                            value = state.bootstrapInput,
+                            onValueChange = onBootstrapChange,
+                            label = stringResource(Res.string.doh_bootstrap_label),
+                            placeholder = stringResource(Res.string.doh_bootstrap_placeholder),
+                            enabled = state.enabled,
+                            isError = state.problem == DohConfigProblem.INVALID_BOOTSTRAP,
+                            supportingText =
+                            if (state.problem == DohConfigProblem.INVALID_BOOTSTRAP) {
+                                stringResource(Res.string.doh_bootstrap_invalid)
+                            } else {
+                                null
+                            },
+                            keyboardType = KeyboardType.Uri,
+                        )
+                    }
                 }
 
                 // Both rows are about what the *resolver* can be asked, and on a platform where the
@@ -267,13 +260,7 @@ fun DohSettingsScreen(
                                 enabled = state.enabled,
                                 checked = state.includeIPv6,
                                 onCheckedChange = onIncludeIPv6Change,
-                                trailing = {
-                                    Switch(
-                                        checked = state.includeIPv6,
-                                        onCheckedChange = null,
-                                        enabled = state.enabled,
-                                    )
-                                },
+                                trailing = { SettingsSwitch(checked = state.includeIPv6, enabled = state.enabled) },
                             )
                         }
                         if (canFallBack) {
@@ -286,56 +273,47 @@ fun DohSettingsScreen(
                                 checked = state.fallbackToSystem,
                                 onCheckedChange = onFallbackChange,
                                 trailing = {
-                                    Switch(
-                                        checked = state.fallbackToSystem,
-                                        onCheckedChange = null,
-                                        enabled = state.enabled,
-                                    )
+                                    SettingsSwitch(checked = state.fallbackToSystem, enabled = state.enabled)
                                 },
                             )
                         }
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    Button(onClick = onSave, enabled = state.enabled) {
-                        Text(stringResource(Res.string.doh_save))
-                    }
-                    TextButton(onClick = onTest, enabled = state.enabled && !state.testing) {
-                        if (state.testing) {
-                            PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
-                        } else {
-                            Text(stringResource(Res.string.doh_test))
-                        }
-                    }
-                }
-                state.resolution?.let { resolution -> DohResolutionText(resolution) }
+                state.resolution?.let { resolution -> DohResolutionBanner(resolution) }
                 state.testFailure?.let { failure ->
-                    Text(
+                    SettingsResultBanner(
                         text = stringResource(Res.string.doh_test_failure, failure),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        error = true,
                     )
                 }
+                SettingsTestSaveButtons(
+                    testLabel = stringResource(Res.string.doh_test),
+                    saveLabel = stringResource(Res.string.doh_save),
+                    testing = state.testing,
+                    enabled = state.enabled,
+                    onTest = onTest,
+                    onSave = onSave,
+                )
             }
 
-            SettingsGroup {
-                SettingsBlock(
-                    title = stringResource(Res.string.doh_limits_title),
-                    top = true,
-                    bottom = true,
-                ) {
-                    DohNote(stringResource(Res.string.doh_limits_hint))
-                    // Where there is no fallback switch, there is no fallback — the platform blocks
-                    // cleartext resolution outright while this is on, and defers to an encrypted
-                    // resolver the system already has. Someone about to turn it on should know both.
-                    if (!state.capabilities.canFallBackToSystem) {
-                        DohNote(stringResource(Res.string.doh_limits_encrypted_only_hint))
-                    }
-                    DohNote(stringResource(Res.string.doh_proxy_hint))
-                    DohNote(stringResource(Res.string.doh_webview_hint))
+            Column(
+                modifier = Modifier.padding(top = Spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                SettingsNote(
+                    stringResource(Res.string.doh_limits_title),
+                    modifier = Modifier.semantics { heading() },
+                )
+                SettingsNote(stringResource(Res.string.doh_limits_hint))
+                // Where there is no fallback switch, there is no fallback — the platform blocks
+                // cleartext resolution outright while this is on, and defers to an encrypted
+                // resolver the system already has. Someone about to turn it on should know both.
+                if (!state.capabilities.canFallBackToSystem) {
+                    SettingsNote(stringResource(Res.string.doh_limits_encrypted_only_hint))
                 }
+                SettingsNote(stringResource(Res.string.doh_proxy_hint))
+                SettingsNote(stringResource(Res.string.doh_webview_hint))
             }
         }
     }
@@ -343,17 +321,15 @@ fun DohSettingsScreen(
 
 /** The answer itself — the addresses, so the reader can tell a real one from what their network said. */
 @Composable
-private fun DohResolutionText(resolution: DnsResolution) {
-    Text(
+private fun DohResolutionBanner(resolution: DnsResolution) {
+    SettingsResultBanner(
         text = stringResource(
             Res.string.doh_test_result,
             resolution.host,
             resolution.addresses.joinToString("、"),
             resolution.elapsedMillis.toString(),
         ),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        error = false,
     )
 }
 
@@ -369,15 +345,6 @@ internal fun dohProviderLabel(provider: DohProvider): String =
             DohProvider.CUSTOM -> Res.string.doh_provider_custom
         },
     )
-
-@Composable
-private fun DohNote(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
