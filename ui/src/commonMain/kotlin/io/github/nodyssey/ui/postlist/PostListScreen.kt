@@ -1274,6 +1274,7 @@ private fun SortMenuItem(
 internal fun PostRow(
     post: FeedPost,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     /**
      * Off on 推荐阅读, where every row carries the badge and so it distinguishes nothing — the screen's
      * own title already says what the whole list is.
@@ -1289,7 +1290,6 @@ internal fun PostRow(
      * moment is a state the shared-element machinery has no answer for.
      */
     sharedWithThread: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     val summary = post.summary
     if (summary.isPinned) {
