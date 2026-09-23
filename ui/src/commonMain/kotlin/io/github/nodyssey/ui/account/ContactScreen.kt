@@ -305,14 +305,8 @@ private fun CurrentEmailRow(
 /** 添加手机, drawn at the site's own state: disabled, with its exact wording. */
 @Composable
 private fun DisabledPhoneCard() {
-    Surface(
-        shape = LayerCardShape,
-        color = LocalPlazaLayers.current.card,
-        border = LocalPlazaLayers.current.cardBorder?.let { androidx.compose.foundation.BorderStroke(1.dp, it) },
-        modifier = Modifier.fillMaxWidth().alpha(DISABLED_CARD_ALPHA),
-    ) {
+    LayerCard(modifier = Modifier.fillMaxWidth().alpha(DISABLED_CARD_ALPHA)) {
         Row(
-            modifier = Modifier.padding(Spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {

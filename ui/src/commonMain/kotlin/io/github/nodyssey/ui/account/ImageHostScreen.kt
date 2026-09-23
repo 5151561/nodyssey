@@ -814,30 +814,27 @@ private fun InfoCard(
     text: String,
     action: Pair<String, () -> Unit>? = null,
 ) {
-    Surface(
-        shape = LayerCardShape,
-        color = LocalPlazaLayers.current.card,
+    LayerCard(
         modifier = Modifier.fillMaxWidth(),
+        contentPadding =
+        PaddingValues(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            top = Spacing.lg,
+            bottom = if (action == null) Spacing.lg else Spacing.xs,
+        ),
+        verticalArrangement = Arrangement.Top,
     ) {
-        Column(
-            modifier = Modifier.padding(
-                start = Spacing.lg,
-                end = Spacing.lg,
-                top = Spacing.lg,
-                bottom = if (action == null) Spacing.lg else Spacing.xs,
-            ),
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            action?.let { (label, onClick) ->
-                TextButton(
-                    onClick = onClick,
-                    modifier = Modifier.align(Alignment.End),
-                ) { Text(label) }
-            }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        action?.let { (label, onClick) ->
+            TextButton(
+                onClick = onClick,
+                modifier = Modifier.align(Alignment.End),
+            ) { Text(label) }
         }
     }
 }
