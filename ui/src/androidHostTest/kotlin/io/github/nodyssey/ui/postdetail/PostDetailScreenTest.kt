@@ -396,7 +396,9 @@ class PostDetailScreenTest {
     fun `the dislike confirmation names its price`() {
         setScreen(signedInState())
 
-        composeRule.onNodeWithContentDescription("点踩").performClick()
+        // 点踩 lives in the floor's 1c panel, not on its row.
+        composeRule.onNodeWithContentDescription("楼层操作").performClick()
+        composeRule.onNodeWithText("点踩").performClick()
 
         composeRule.onNodeWithText("是否反对该楼层？这将消耗你两个鸡腿，且不能撤销。").assertIsDisplayed()
     }
@@ -415,7 +417,8 @@ class PostDetailScreenTest {
     fun `shows the tallies the page carried`() {
         setScreen(signedInState(PostReactions(likeCount = 3, upvoteCount = 1, dislikeCount = 0)))
 
-        composeRule.onNodeWithText("3").assertIsDisplayed()
+        // The opening post's 投喂 pill says its tally beside its name, as 1b draws it.
+        composeRule.onNodeWithText("投喂 3").assertIsDisplayed()
     }
 
     /** Signing in comes before the spend, not after the site has rejected it. */
@@ -788,6 +791,73 @@ class PostDetailScreenTest {
         setScreen(jumpedState())
 
         composeRule.onNodeWithText("查看正文").assertDoesNotExist()
+    }
+
+    /** A reply's 1c panel carries the rest of the site's set: 点踩 as a tile, 回复 and 引用 as rows. */
+    @Test
+    fun `a floor's panel offers reply, quote and the three marks`() {
+        val quoted = mutableListOf<Int>()
+        composeRule.setContent {
+            PlazaTheme {
+                PostDetailScreen(
+                    state =
+                    PostDetailUiState(
+                        title = "t",
+                        body = content("body", author = "op", reactions = PostReactions()),
+                        comments = listOf(content("a reply", author = "nssk", floor = "#12", reactions = PostReactions())),
+                        isSignedIn = true,
+                    ),
+                    postUrl = "https://www.nodeseek.com/post-1-1",
+                    onBack = {},
+                    onOpenBrowser = {},
+                    onImageClick = {},
+                    onRetry = {},
+                    onLoadMore = {},
+                    onVerify = {},
+                    onQuote = { quoted += it.floor },
+                )
+            }
+        }
+
+        // The second ⋯ is the reply's; the first is the opening post's.
+        composeRule.onAllNodesWithContentDescription("楼层操作")[1].performClick()
+
+        composeRule.onNodeWithText("nssk · #12").assertIsDisplayed()
+        composeRule.onNodeWithText("点踩").assertIsDisplayed()
+        composeRule.onNodeWithText("扣 2 鸡腿").assertIsDisplayed()
+        composeRule.onNodeWithText("回复 nssk").assertIsDisplayed()
+        composeRule.onNodeWithText("引用这一楼").performClick()
+
+        assertEquals(listOf(12), quoted)
+    }
+
+    /** The opening post has no 回复 or 引用 on the site, and the panel does not invent them. */
+    @Test
+    fun `the opening post's panel has neither reply nor quote`() {
+        setScreen(signedInState())
+
+        composeRule.onNodeWithContentDescription("楼层操作").performClick()
+
+        composeRule.onNodeWithText("复制正文").assertIsDisplayed()
+        composeRule.onAllNodesWithText("引用这一楼").assertCountEquals(0)
+        composeRule.onAllNodesWithText("回复 op").assertCountEquals(0)
+    }
+
+    /** A spent mark says so on its tile, and the tile no longer spends. */
+    @Test
+    fun `a spent mark's tile is marked and inert`() {
+        val sent = mutableListOf<ReactionAction>()
+        setScreen(
+            signedInState(PostReactions(dislikeCount = 1, disliked = true)),
+            onReact = { _, action -> sent += action },
+        )
+
+        composeRule.onNodeWithContentDescription("楼层操作").performClick()
+        composeRule.onNodeWithText("已表态").assertIsDisplayed()
+        composeRule.onNodeWithText("点踩").performClick()
+
+        composeRule.onAllNodesWithText("是否反对该楼层？这将消耗你两个鸡腿，且不能撤销。").assertCountEquals(0)
+        assert(sent.isEmpty()) { "sent $sent" }
     }
 
     /** One page of a long thread, loaded on its own — what a jump or a notification produces. */

@@ -1,9 +1,19 @@
 package io.github.nodyssey.render
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performSemanticsAction
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.nodyssey.data.FreeChickenLegs
+import io.github.nodyssey.data.ReadingPosition
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.ui.postdetail.PostDetailScreen
@@ -63,6 +73,56 @@ class PostDetailScreenRenderTest {
         composeRule.onRoot().captureRender("post-detail-dark")
     }
 
+    /** The reply cards, scrolled to — the first screen shows little more than the opening post. */
+    @Test
+    fun `the replies in light`() {
+        composeRule.setContent { Screen(darkTheme = false) }
+        composeRule.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+
+        composeRule.onRoot().captureRender("post-detail-replies-light")
+    }
+
+    /** 1c — the first reply's panel, opened from its ⋯ (the opening post's is the first one). */
+    @Test
+    fun `the floor panel in light`() = floorPanel(darkTheme = false)
+
+    @Test
+    fun `the floor panel in dark`() = floorPanel(darkTheme = true)
+
+    /** 9d — the page-jump sheet, opened from the rail's page key. */
+    @Test
+    fun `the page jump in light`() = pageJump(darkTheme = false)
+
+    @Test
+    fun `the page jump in dark`() = pageJump(darkTheme = true)
+
+    private fun floorPanel(darkTheme: Boolean) {
+        composeRule.setContent { Screen(darkTheme = darkTheme) }
+        // The action rather than a tap: at this height the reply FAB sits over that ⋯, and a tap
+        // would land on the FAB.
+        composeRule.onAllNodesWithContentDescription("楼层操作")[1].performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.waitForIdle()
+
+        captureWindows("post-detail-actions-${if (darkTheme) "dark" else "light"}")
+    }
+
+    private fun pageJump(darkTheme: Boolean) {
+        composeRule.setContent { Screen(darkTheme = darkTheme) }
+        composeRule.onNodeWithContentDescription("第 1 / 3 页").performClick()
+        composeRule.waitForIdle()
+
+        captureWindows("post-detail-jump-${if (darkTheme) "dark" else "light"}")
+    }
+
+    /**
+     * A bottom sheet is a window of its own, which a node capture never reaches; this draws every
+     * window the screen has open, scrim included, as the phone would show them.
+     */
+    @OptIn(ExperimentalRoborazziApi::class)
+    private fun captureWindows(name: String) {
+        captureScreenRoboImage(filePath = "build/outputs/renders/$name.png")
+    }
+
     private companion object {
         private fun paragraphs(vararg text: String): List<RichNode> =
             text.map { RichNode.Paragraph(listOf(InlineNode.Text(it))) }
@@ -103,12 +163,14 @@ class PostDetailScreenRenderTest {
                 createdAtText = "2小时前",
                 createdAtTitle = null,
                 categoryTitle = "技术",
+                // 1b's own opening: a paragraph, then a code block on the card's inset layer.
                 nodes =
                 paragraphs(
-                    "折腾了一年 NAS，从最早的一块二手硬盘挂在路由器上，到现在四盘位 + 万兆内网，中间踩的坑够写一篇了。这里挑几个印象最深的，给准备入坑的朋友避个雷。",
-                    "第一个坑是电源。别省这点钱，杂牌电源在硬盘同时启动时压不住，轻则掉盘重则数据损坏。换了额定 450W 的之后再没出过问题。",
-                    "第二个是备份策略。RAID 不是备份，RAID 不是备份，RAID 不是备份。重要的东西一定要有异地冷备，我现在是本地一份 + 云端加密一份。",
-                ),
+                    "折腾了一年 NAS，从最早的一块二手硬盘挂在路由器上，到现在四盘位 + 万兆内网。第一个坑是电源，杂牌电源在硬盘同时启动时压不住。",
+                ) + RichNode.CodeBlock(code = "smartctl -a /dev/sda | grep Power_On", language = null) +
+                    paragraphs(
+                        "第二个是备份策略。RAID 不是备份，重要的东西一定要有异地冷备，我现在是本地一份 + 云端加密一份。",
+                    ),
                 reactions = PostReactions(likeCount = 86, upvoteCount = 214, dislikeCount = 1),
             )
 
@@ -117,7 +179,7 @@ class PostDetailScreenRenderTest {
                 floor(
                     id = 1001,
                     author = "轻舟",
-                    floor = "1",
+                    floor = "#1",
                     createdAt = "1小时前",
                     text = listOf("同折腾党，电源那条深有体会。补充一点：机械硬盘尽量买不同批次，避免同时坏盘。"),
                     reactions = PostReactions(likeCount = 12, upvoteCount = 40),
@@ -125,7 +187,7 @@ class PostDetailScreenRenderTest {
                 floor(
                     id = 1002,
                     author = "homelab_er",
-                    floor = "2",
+                    floor = "#2",
                     createdAt = "1小时前",
                     text = listOf("对，这个太重要了。我第一批四块盘是同型号同批次，用了两年差点一起阵亡。"),
                     isOp = true,
@@ -134,7 +196,7 @@ class PostDetailScreenRenderTest {
                 floor(
                     id = 1003,
                     author = "过路人",
-                    floor = "3",
+                    floor = "#3",
                     createdAt = "48分钟前",
                     text = listOf("云端冷备用的哪家？想找个便宜大碗的对象存储。"),
                     reactions = PostReactions(upvoteCount = 6),
@@ -142,7 +204,7 @@ class PostDetailScreenRenderTest {
                 floor(
                     id = 1004,
                     author = "省钱达人",
-                    floor = "4",
+                    floor = "#4",
                     createdAt = "30分钟前",
                     text = listOf("Mark 一下，正好准备装第一台，收藏了慢慢看。感谢楼主的总结！"),
                 ),
@@ -161,7 +223,9 @@ class PostDetailScreenRenderTest {
                 collected = false,
                 collectionCount = 37,
                 isAwarded = true,
-                freeChickenLegs = FreeChickenLegs(max = 5, used = 2),
+                freeChickenLegs = FreeChickenLegs(max = 1, used = 0),
+                // So the jump sheet has both of 9d's destinations to draw.
+                resumePosition = ReadingPosition(page = 3, floor = "#25"),
             )
     }
 }
