@@ -6,20 +6,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +38,9 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -44,10 +49,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -57,6 +64,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.AttendanceMode
+import io.github.nodyssey.ui.assets.GrowthProgressBar
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
 import io.github.nodyssey.ui.common.AttendanceModeDialog
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
@@ -65,11 +73,15 @@ import io.github.nodyssey.ui.common.UpdateDot
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.assets_level_no_threshold
+import io.github.nodyssey.ui.resources.assets_quota_value
 import io.github.nodyssey.ui.resources.assets_signed_in
 import io.github.nodyssey.ui.resources.assets_signing_in
-import io.github.nodyssey.ui.resources.profile_attendance
+import io.github.nodyssey.ui.resources.profile_attendance_board
 import io.github.nodyssey.ui.resources.profile_attendance_checking
 import io.github.nodyssey.ui.resources.profile_attendance_done
+import io.github.nodyssey.ui.resources.profile_attendance_modes
+import io.github.nodyssey.ui.resources.profile_attendance_title
 import io.github.nodyssey.ui.resources.profile_chicken
 import io.github.nodyssey.ui.resources.profile_guest_benefit_attendance
 import io.github.nodyssey.ui.resources.profile_guest_benefit_attendance_hint
@@ -78,9 +90,8 @@ import io.github.nodyssey.ui.resources.profile_guest_benefit_messages_hint
 import io.github.nodyssey.ui.resources.profile_guest_benefit_post
 import io.github.nodyssey.ui.resources.profile_guest_benefit_post_hint
 import io.github.nodyssey.ui.resources.profile_guest_section
-import io.github.nodyssey.ui.resources.profile_guest_settings_hint
-import io.github.nodyssey.ui.resources.profile_guest_tools_hint
 import io.github.nodyssey.ui.resources.profile_level
+import io.github.nodyssey.ui.resources.profile_level_remaining
 import io.github.nodyssey.ui.resources.profile_level_unknown
 import io.github.nodyssey.ui.resources.profile_member_since
 import io.github.nodyssey.ui.resources.profile_member_uid
@@ -118,20 +129,19 @@ import io.github.nodyssey.ui.resources.profile_tile_topics
 import io.github.nodyssey.ui.resources.profile_tile_transfer
 import io.github.nodyssey.ui.resources.profile_tools
 import io.github.nodyssey.ui.resources.settings_title
-import io.github.nodyssey.ui.resources.tab_profile
-import io.github.plaza.designsys.component.GroupedColumn
-import io.github.plaza.designsys.component.GroupedRow
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
-import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
-import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
-import io.github.plaza.designsys.theme.StatusShapes
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.cardShadow
+import io.github.plaza.designsys.theme.floatShadow
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -202,17 +212,21 @@ internal fun RefreshOnReturnToForeground(onForeground: () -> Unit) {
 }
 
 /**
- * 我的 — board n1.
+ * 我的 — artboards 2b (signed in) and 9f (signed out).
  *
- * A directory, not a menu: the twenty things this account can reach are laid out as four labelled
- * grids of icons, one tap each. The six-row list this replaced sent half of them through an
- * intermediate page — 社区工具 held six links, 个人主页 held 主题帖 and 评论 behind tabs — and the
- * hop was the whole cost of finding anything.
+ * A directory, not a menu: the account sits on one card at the top — who, how much, how far to the
+ * next level — and the twenty-one things it can reach are laid out below as four cards of icons, one
+ * tap each. The six-row list this once replaced sent half of them through an intermediate page, and
+ * the hop was the whole cost of finding anything.
  *
- * Two of board n1's twenty-two tiles are not here. 草稿箱 and 离线下载 name features the app does not
+ * The four groups are no longer headed. 2b separates them by the gap between cards alone, and a
+ * heading over each would say "内容 / 资产 / 社区 / 设置" about tiles whose own labels already say it.
+ *
+ * Two tiles an older board drew are still not here. 草稿箱 and 离线下载 name features the app does not
  * have: there is one draft, restored by the composer itself, and offline copies are a switch inside
  * 收藏. Drawing a tile for either would promise a screen that does not exist.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     state: ProfileUiState,
@@ -248,37 +262,22 @@ fun ProfileScreen(
         // only honest retry is the one that asks again.
         onRetry = onAttendance,
     )
-    val appBarState = rememberOneHandAppBarState()
     Scaffold(
-        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
-        // Signed in only. Board n1 gives 我的 a bar with 设置 in it; board c7 — the signed-out
-        // screen below, unchanged by this — opens on its illustration and carries 设置 as one of
-        // its two guest rows, so a bar there would be the same destination twice and 64dp less
-        // room for the rest.
+        modifier = modifier,
+        // Both states get the same bar: a gear and nothing else. 2b and 9f open straight onto the
+        // account card with no title over it — the tab bar already says 我的 — and the signed-out
+        // screen, which used to carry 设置 as a row because it had no bar, now reaches it the same way
+        // the signed-in one does.
         topBar = {
-            if (state.isSignedIn) {
-                OneHandTopAppBar(
-                    title = stringResource(Res.string.tab_profile),
-                    state = appBarState,
-                    actions = {
-                        Box {
-                            IconButton(onClick = destinations.settings) {
-                                Icon(
-                                    Icons.Default.Settings,
-                                    contentDescription = stringResource(Res.string.settings_title),
-                                )
-                            }
-                            if (hasAppUpdate) {
-                                UpdateDot(
-                                    Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(top = 10.dp, end = 8.dp),
-                                )
-                            }
-                        }
-                    },
-                )
-            }
+            TopAppBar(
+                title = {},
+                actions = { SettingsAction(hasAppUpdate = hasAppUpdate, onClick = destinations.settings) },
+                colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background,
+                ),
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
@@ -286,7 +285,6 @@ fun ProfileScreen(
             SignedOutProfile(
                 onSignIn = onSignIn,
                 destinations = destinations,
-                hasAppUpdate = hasAppUpdate,
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -315,21 +313,18 @@ fun ProfileScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .readableWidth(),
-            contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+            contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item(key = "profile-header") {
-                ProfileHeader(state, destinations.space)
-            }
-            item(key = "resources") {
-                ResourceCards(state, destinations.assets)
+            item(key = "account") {
+                AccountCard(state, onOpenSpace = destinations.space, onAssets = destinations.assets)
             }
             item(key = "attendance") {
-                AttendanceButton(state, onAttendance, onAttendanceBoard)
+                AttendanceBanner(state, onAttendance, onAttendanceBoard)
             }
             profileSections(destinations).forEach { section ->
                 item(key = section.title.key) {
-                    ProfileGridSection(section)
+                    ProfileGridCard(section.tiles)
                 }
             }
         }
@@ -349,425 +344,78 @@ fun ProfileScreen(
             error = state.boardError,
             onRetry = onRetryAttendanceBoard,
             onDismiss = onDismissAttendanceBoard,
+            selfUid = state.uid,
         )
     }
 }
 
 @Composable
-private fun AttendanceButton(
-    state: ProfileUiState,
-    onAttendance: () -> Unit,
-    onAttendanceBoard: () -> Unit,
-) {
-    Button(
-        onClick = if (state.hasSignedInToday) onAttendanceBoard else onAttendance,
-        enabled = !state.isAttendanceUnknown && !state.isSigningIn,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors =
-        if (state.hasSignedInToday) {
-            ButtonDefaults.filledTonalButtonColors()
-        } else {
-            ButtonDefaults.buttonColors()
-        },
-    ) {
-        when {
-            state.isSigningIn -> {
-                PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
-                Text(
-                    stringResource(Res.string.assets_signing_in),
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
-            }
-
-            state.isAttendanceUnknown -> {
-                PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
-                Text(
-                    stringResource(Res.string.profile_attendance_checking),
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
-            }
-
-            state.hasSignedInToday -> {
-                Icon(Icons.Default.CheckCircle, contentDescription = null)
-                Text(
-                    text =
-                    state.attendanceGain?.let {
-                        stringResource(Res.string.assets_signed_in, it)
-                    } ?: state.attendanceMessage
-                        ?: stringResource(Res.string.profile_attendance_done),
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
-            }
-
-            else -> {
-                Icon(Icons.Default.Check, contentDescription = null)
-                Text(
-                    stringResource(Res.string.profile_attendance),
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
-            }
-        }
-    }
-}
-
-/** One labelled grid: a section heading with its tiles under it. */
-private data class ProfileSection(
-    val title: StringResource,
-    val tiles: List<ProfileTile>,
-    /** Which tonal role the tiles wear, so a group reads as one at a glance. */
-    val tone: ProfileTone,
-)
-
-private enum class ProfileTone {
-    PRIMARY,
-    TERTIARY,
-    SECONDARY,
-}
-
-private data class ProfileTile(
-    val label: StringResource,
-    val icon: ImageVector,
-    val onClick: () -> Unit,
-)
-
-/**
- * The four groups, in the order board n1 puts them.
- *
- * 社区 carries one tile the board does not draw: 友站. It was the sixth link on 社区工具, and that
- * page is now unreachable while signed in — dropping the tile would have quietly deleted the
- * destination rather than moved it.
- */
-private fun profileSections(destinations: ProfileDestinations): List<ProfileSection> =
-    listOf(
-        ProfileSection(
-            title = Res.string.profile_section_content,
-            tone = ProfileTone.PRIMARY,
-            tiles =
-            listOf(
-                ProfileTile(Res.string.profile_tile_topics, PlazaIcons.Article, destinations.topics),
-                ProfileTile(Res.string.profile_tile_comments, PlazaIcons.ChatBubble, destinations.comments),
-                ProfileTile(Res.string.profile_tile_collections, PlazaIcons.Bookmark, destinations.collections),
-                ProfileTile(Res.string.profile_tile_history, PlazaIcons.History, destinations.history),
-                ProfileTile(Res.string.profile_tile_following, Icons.Default.Person, destinations.following),
-                ProfileTile(Res.string.profile_tile_followers, PlazaIcons.Group, destinations.followers),
-            ),
-        ),
-        ProfileSection(
-            title = Res.string.profile_section_assets,
-            tone = ProfileTone.TERTIARY,
-            tiles =
-            listOf(
-                ProfileTile(Res.string.profile_tile_credit, PlazaIcons.Wallet, destinations.credit),
-                ProfileTile(Res.string.profile_tile_stardust, Icons.Default.Star, destinations.stardust),
-                ProfileTile(Res.string.profile_tile_transfer, PlazaIcons.SwapVert, destinations.transfer),
-                ProfileTile(Res.string.profile_tile_invite, PlazaIcons.ConfirmationNumber, destinations.invite),
-            ),
-        ),
-        ProfileSection(
-            title = Res.string.profile_section_community,
-            tone = ProfileTone.SECONDARY,
-            tiles =
-            listOf(
-                ProfileTile(Res.string.profile_tile_award, PlazaIcons.MenuBook, destinations.award),
-                ProfileTile(Res.string.profile_tile_lucky, PlazaIcons.Casino, destinations.lucky),
-                ProfileTile(Res.string.profile_tile_ruling, PlazaIcons.Gavel, destinations.ruling),
-                ProfileTile(Res.string.profile_tile_providers, Icons.Default.ShoppingCart, destinations.providers),
-                ProfileTile(Res.string.profile_tile_friends, PlazaIcons.Link, destinations.friends),
-                ProfileTile(Res.string.profile_tile_block, PlazaIcons.Block, destinations.blockList),
-                ProfileTile(Res.string.profile_tile_about_community, PlazaIcons.Forum, destinations.aboutCommunity),
-            ),
-        ),
-        ProfileSection(
-            title = Res.string.profile_section_settings,
-            tone = ProfileTone.SECONDARY,
-            tiles =
-            listOf(
-                ProfileTile(Res.string.profile_tile_account, PlazaIcons.Badge, destinations.accountSettings),
-                ProfileTile(
-                    Res.string.profile_tile_notifications,
-                    Icons.Default.Notifications,
-                    destinations.notificationSettings,
-                ),
-                ProfileTile(Res.string.profile_tile_theme, PlazaIcons.Palette, destinations.themeSettings),
-                ProfileTile(Res.string.profile_tile_about, Icons.Default.Info, destinations.about),
-            ),
-        ),
-    )
-
-private const val PROFILE_GRID_COLUMNS = 4
-
-/**
- * A section drawn as rows of four.
- *
- * Laid out by hand rather than with `LazyVerticalGrid`: this whole screen is one `LazyColumn`, and
- * a lazy grid nested in it scrolls on the same axis — the combination throws. The counts here are
- * fixed and small, so there is nothing to be lazy about anyway.
- */
-@Composable
-private fun ProfileGridSection(section: ProfileSection) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        SectionLabel(stringResource(section.title))
-        section.tiles.chunked(PROFILE_GRID_COLUMNS).forEach { rowTiles ->
-            Row(Modifier.fillMaxWidth()) {
-                rowTiles.forEach { tile ->
-                    ProfileGridTile(tile, section.tone, Modifier.weight(1f))
-                }
-                // Keeps the last row's tiles on the same column grid as the ones above rather than
-                // spreading three of them across four columns' worth of width.
-                repeat(PROFILE_GRID_COLUMNS - rowTiles.size) {
-                    Box(Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileGridTile(
-    tile: ProfileTile,
-    tone: ProfileTone,
-    modifier: Modifier = Modifier,
-) {
-    val label = stringResource(tile.label)
-    val container =
-        when (tone) {
-            ProfileTone.PRIMARY -> MaterialTheme.colorScheme.primaryContainer
-            ProfileTone.TERTIARY -> MaterialTheme.colorScheme.tertiaryContainer
-            ProfileTone.SECONDARY -> MaterialTheme.colorScheme.secondaryContainer
-        }
-    val content =
-        when (tone) {
-            ProfileTone.PRIMARY -> MaterialTheme.colorScheme.onPrimaryContainer
-            ProfileTone.TERTIARY -> MaterialTheme.colorScheme.onTertiaryContainer
-            ProfileTone.SECONDARY -> MaterialTheme.colorScheme.onSecondaryContainer
-        }
-    Column(
-        modifier =
-        modifier
-            .clip(RoundedCornerShape(16.dp))
-            // The whole tile, icon and caption together, is the target — 48dp of coloured square is
-            // under Material's minimum once the label is what the eye aims at.
-            .clickable(onClickLabel = label, onClick = tile.onClick)
-            .padding(vertical = Spacing.sm),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        Surface(
-            modifier = Modifier.size(Sizes.minTouchTarget),
-            shape = RoundedCornerShape(16.dp),
-            color = container,
-            contentColor = content,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(tile.icon, contentDescription = null, modifier = Modifier.size(24.dp))
-            }
-        }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/** Board c7: the useful signed-out version of 我的, including the two guest-safe destinations. */
-@Composable
-private fun SignedOutProfile(
-    onSignIn: () -> Unit,
-    destinations: ProfileDestinations,
+private fun SettingsAction(
     hasAppUpdate: Boolean,
-    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize().readableWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = Spacing.lg),
-    ) {
-        item(key = "welcome-illustration") {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                SignedOutIllustration()
-            }
+    Box {
+        IconButton(onClick = onClick) {
+            Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings_title))
         }
-        item(key = "welcome-copy") {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                Text(
-                    text = stringResource(Res.string.profile_signed_out_title, siteName),
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.semantics { heading() },
-                )
-                Text(
-                    text = stringResource(Res.string.profile_signed_out_body),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-        item(key = "benefits") {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                SignedOutBenefit(
-                    icon = Icons.Default.Create,
-                    title = stringResource(Res.string.profile_guest_benefit_post),
-                    subtitle = stringResource(Res.string.profile_guest_benefit_post_hint),
-                    shape = RoundedCornerShape(18.dp, 5.dp, 5.dp, 18.dp),
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.weight(1f),
-                )
-                SignedOutBenefit(
-                    icon = PlazaIcons.ChatBubble,
-                    title = stringResource(Res.string.profile_guest_benefit_messages),
-                    subtitle = stringResource(Res.string.profile_guest_benefit_messages_hint),
-                    shape = RoundedCornerShape(5.dp),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.weight(1f),
-                )
-                SignedOutBenefit(
-                    icon = PlazaIcons.EventAvailable,
-                    title = stringResource(Res.string.profile_guest_benefit_attendance),
-                    subtitle = stringResource(Res.string.profile_guest_benefit_attendance_hint),
-                    shape = RoundedCornerShape(5.dp, 18.dp, 18.dp, 5.dp),
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        item(key = "sign-in") {
-            Button(
-                onClick = onSignIn,
-                modifier = Modifier.fillMaxWidth().padding(top = 20.dp).height(Sizes.minTouchTarget),
-                shape = CircleShape,
-            ) {
-                Icon(PlazaIcons.Login, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text(
-                    text = stringResource(Res.string.profile_sign_in, siteName),
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
-            }
-            Text(
-                text = stringResource(Res.string.profile_sign_in_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+        if (hasAppUpdate) {
+            UpdateDot(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp, end = 8.dp),
             )
         }
-        item(key = "guest-menu") {
-            Column(modifier = Modifier.padding(top = 18.dp)) {
-                SectionLabel(stringResource(Res.string.profile_guest_section))
-                GroupedColumn {
-                    GroupedRow(
-                        title = stringResource(Res.string.settings_title),
-                        subtitle = stringResource(Res.string.profile_guest_settings_hint),
-                        first = true,
-                        icon = Icons.Default.Settings,
-                        onClick = destinations.settings,
-                        // Updating has nothing to do with being signed in, so the guest side of 我的
-                        // carries the same dot — here on the row, since it has no app bar to hang
-                        // it on.
-                        trailing = if (hasAppUpdate) {
-                            { UpdateDot() }
-                        } else {
-                            null
-                        },
-                    )
-                    GroupedRow(
-                        title = stringResource(Res.string.profile_tools),
-                        subtitle = stringResource(Res.string.profile_guest_tools_hint),
-                        last = true,
-                        icon = PlazaIcons.DashboardCustomize,
-                        onClick = destinations.tools,
-                    )
-                }
-            }
-        }
     }
 }
 
-/** The only custom node in c7: a decorative illustration with no input or navigation semantics. */
+/**
+ * The account, on one card: who, the three balances, and how far the chicken count is from the next
+ * level. The identity row opens 个人主页; the three tiles open 账户与成长, where a balance is explained.
+ */
 @Composable
-private fun SignedOutIllustration(modifier: Modifier = Modifier) {
-    Box(modifier.width(216.dp).height(148.dp)) {
-        Surface(
-            modifier = Modifier.offset(x = 50.dp, y = 12.dp).size(118.dp),
-            shape = StatusShapes.Welcome,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = PlazaIcons.WavingHand,
-                    contentDescription = null,
-                    modifier = Modifier.size(52.dp),
-                )
-            }
-        }
-        Surface(
-            modifier = Modifier.offset(x = 154.dp).size(56.dp),
-            shape = StatusShapes.NetworkError,
-            color = MaterialTheme.colorScheme.tertiaryContainer,
-        ) {}
-        Surface(
-            modifier = Modifier.offset(x = 8.dp, y = 96.dp).size(42.dp),
-            shape = StatusShapes.Empty,
-            color = MaterialTheme.colorScheme.secondaryContainer,
-        ) {}
-        Surface(
-            modifier = Modifier.offset(x = 160.dp, y = 124.dp).size(22.dp),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.tertiaryContainer,
-        ) {}
-        Surface(
-            modifier = Modifier.offset(x = 26.dp).size(14.dp),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.secondaryContainer,
-        ) {}
-    }
-}
-
-@Composable
-private fun SignedOutBenefit(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    shape: RoundedCornerShape,
-    containerColor: androidx.compose.ui.graphics.Color,
-    contentColor: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier,
+private fun AccountCard(
+    state: ProfileUiState,
+    onOpenSpace: () -> Unit,
+    onAssets: () -> Unit,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = shape,
-        color = containerColor,
-        contentColor = contentColor,
+    LayerCard(
+        shape = RoundedCornerShape(28.dp),
+        contentPadding = PaddingValues(18.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.md),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
-            Text(text = title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-            Text(text = subtitle, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        IdentityRow(state, onOpenSpace)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ResourceTile(
+                label = stringResource(Res.string.profile_chicken),
+                value = state.chickenCount?.toString() ?: UNKNOWN,
+                container = MaterialTheme.colorScheme.tertiaryContainer,
+                content = MaterialTheme.colorScheme.onTertiaryContainer,
+                onClick = onAssets,
+                modifier = Modifier.weight(1f),
+            )
+            ResourceTile(
+                label = stringResource(Res.string.profile_stars),
+                value = state.starCount?.toString() ?: UNKNOWN,
+                container = MaterialTheme.colorScheme.secondaryContainer,
+                content = MaterialTheme.colorScheme.onSecondaryContainer,
+                onClick = onAssets,
+                modifier = Modifier.weight(1f),
+            )
+            ResourceTile(
+                label = stringResource(Res.string.profile_level),
+                value = state.level ?: stringResource(Res.string.profile_level_unknown),
+                container = MaterialTheme.colorScheme.primaryContainer,
+                content = MaterialTheme.colorScheme.onPrimaryContainer,
+                onClick = onAssets,
+                modifier = Modifier.weight(1f),
+            )
         }
+        LevelProgress(state)
     }
 }
 
 @Composable
-private fun ProfileHeader(
+private fun IdentityRow(
     state: ProfileUiState,
     onOpenSpace: () -> Unit,
 ) {
@@ -776,22 +424,16 @@ private fun ProfileHeader(
         modifier =
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .clickable(onClickLabel = stringResource(Res.string.profile_space), onClick = onOpenSpace)
-            .padding(vertical = Spacing.xs),
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClickLabel = stringResource(Res.string.profile_space), onClick = onOpenSpace),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        UserAvatar(
-            url = state.avatarUrl,
-            name = state.displayName,
-            size = Sizes.avatarProfile,
-            shape = StatusShapes.Welcome,
-        )
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        UserAvatar(url = state.avatarUrl, name = state.displayName, size = 60.dp)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = state.displayName,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -811,71 +453,454 @@ private fun ProfileHeader(
 
                     else -> stringResource(Res.string.profile_member_uid, state.uid)
                 },
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun ResourceTile(
+    label: String,
+    value: String,
+    container: Color,
+    content: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        color = container,
+        contentColor = content,
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, style = MaterialTheme.typography.labelMedium)
+            Text(
+                text = value,
+                style =
+                MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontFeatureSettings = TABULAR_FIGURES,
+                ),
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+/**
+ * 距 Lv N 还差 x 鸡腿, over the same bar 账户与成长 draws.
+ *
+ * Absent rather than empty while the level is unknown: a grey track with no caption would read as a
+ * level that has not started.
+ */
+@Composable
+private fun LevelProgress(state: ProfileUiState) {
+    val progress = state.levelProgress ?: return
+    val next = state.nextLevelChicken ?: return
+    val chicken = state.chickenCount ?: return
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row {
+            Text(
+                text =
+                state.chickenToNextLevel?.let { remaining ->
+                    stringResource(Res.string.profile_level_remaining, state.nextLevelRank ?: 0, remaining)
+                } ?: stringResource(Res.string.assets_level_no_threshold),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = stringResource(Res.string.assets_quota_value, chicken, next),
+                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        GrowthProgressBar(progress = progress)
+    }
+}
+
+/**
+ * Sign-in, drawn as the one filled block on the page — the daily action, one thumb's reach below the
+ * balances it adds to — with 签到榜 at its trailing edge.
+ *
+ * Three states, as before: unknown (a spinner while today's receipt is read), not yet (opens the site's
+ * mode chooser), and done (tonal, and the whole banner then opens today's board, since there is
+ * nothing left to sign). The board button is there in all three: who signed in today is worth a look
+ * whether or not you have.
+ */
+@Composable
+private fun AttendanceBanner(
+    state: ProfileUiState,
+    onAttendance: () -> Unit,
+    onAttendanceBoard: () -> Unit,
+) {
+    val done = state.hasSignedInToday
+    val busy = state.isSigningIn || state.isAttendanceUnknown
+    val layers = LocalPlazaLayers.current
+    val shape = RoundedCornerShape(22.dp)
+    val container = if (done) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primary
+    val content = if (done) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimary
+    Surface(
+        onClick = if (done) onAttendanceBoard else onAttendance,
+        enabled = !busy,
+        shape = shape,
+        color = container,
+        contentColor = content,
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            // Only the unsigned banner floats: it is the call to action. Once done it is a receipt
+            // and sits flat on the page like any other card-level thing.
+            .then(if (done) Modifier.cardShadow(shape, layers.shadows) else Modifier.floatShadow(shape, layers.shadows)),
+    ) {
+        Row(
+            modifier = Modifier.heightIn(min = 64.dp).padding(start = 20.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                when {
+                    busy -> PlazaSpinner(Modifier.describedAsLoading(), size = 20.dp, color = content)
+                    done -> Icon(Icons.Default.CheckCircle, contentDescription = null)
+                    else -> Icon(PlazaIcons.EventAvailable, contentDescription = null)
+                }
+            }
+            Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
+                Text(
+                    text =
+                    when {
+                        state.isSigningIn -> stringResource(Res.string.assets_signing_in)
+
+                        done ->
+                            state.attendanceGain?.let { stringResource(Res.string.assets_signed_in, it) }
+                                ?: state.attendanceMessage
+                                ?: stringResource(Res.string.profile_attendance_done)
+
+                        else -> stringResource(Res.string.profile_attendance_title)
+                    },
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val subtitle =
+                    when {
+                        state.isAttendanceUnknown -> stringResource(Res.string.profile_attendance_checking)
+                        !done && !state.isSigningIn -> stringResource(Res.string.profile_attendance_modes)
+                        else -> null
+                    }
+                subtitle?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = content.copy(alpha = 0.9f),
+                    )
+                }
+            }
+            TextButton(
+                onClick = onAttendanceBoard,
+                colors = ButtonDefaults.textButtonColors(contentColor = content),
+            ) {
+                Text(
+                    stringResource(Res.string.profile_attendance_board),
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                )
+            }
+        }
+    }
+}
+
+/** One group of tiles; [title] names it for the lazy key, not on screen. */
+private data class ProfileSection(
+    val title: StringResource,
+    val tiles: List<ProfileTile>,
+)
+
+private data class ProfileTile(
+    val label: StringResource,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+)
+
+/**
+ * The four groups, in the order 2b puts them: 内容, 资产, 社区, 设置 — 6 + 4 + 7 + 4 = 21 tiles.
+ *
+ * 社区 carries 友站, which the older boards did not draw. It was the sixth link on 社区工具, and that
+ * page is not reached from here while signed in — dropping the tile would have quietly deleted the
+ * destination rather than moved it.
+ */
+private fun profileSections(destinations: ProfileDestinations): List<ProfileSection> =
+    listOf(
+        ProfileSection(
+            title = Res.string.profile_section_content,
+            tiles =
+            listOf(
+                ProfileTile(Res.string.profile_tile_topics, PlazaIcons.Article, destinations.topics),
+                ProfileTile(Res.string.profile_tile_comments, PlazaIcons.ChatBubble, destinations.comments),
+                ProfileTile(Res.string.profile_tile_collections, PlazaIcons.Bookmark, destinations.collections),
+                ProfileTile(Res.string.profile_tile_history, PlazaIcons.History, destinations.history),
+                ProfileTile(Res.string.profile_tile_following, Icons.Default.Person, destinations.following),
+                ProfileTile(Res.string.profile_tile_followers, PlazaIcons.Group, destinations.followers),
+            ),
+        ),
+        ProfileSection(
+            title = Res.string.profile_section_assets,
+            tiles =
+            listOf(
+                ProfileTile(Res.string.profile_tile_credit, PlazaIcons.Wallet, destinations.credit),
+                ProfileTile(Res.string.profile_tile_stardust, Icons.Default.Star, destinations.stardust),
+                ProfileTile(Res.string.profile_tile_transfer, PlazaIcons.SwapVert, destinations.transfer),
+                ProfileTile(Res.string.profile_tile_invite, PlazaIcons.ConfirmationNumber, destinations.invite),
+            ),
+        ),
+        ProfileSection(
+            title = Res.string.profile_section_community,
+            tiles =
+            listOf(
+                ProfileTile(Res.string.profile_tile_award, PlazaIcons.MenuBook, destinations.award),
+                ProfileTile(Res.string.profile_tile_lucky, PlazaIcons.Casino, destinations.lucky),
+                ProfileTile(Res.string.profile_tile_ruling, PlazaIcons.Gavel, destinations.ruling),
+                ProfileTile(Res.string.profile_tile_providers, Icons.Default.ShoppingCart, destinations.providers),
+                ProfileTile(Res.string.profile_tile_friends, PlazaIcons.Link, destinations.friends),
+                ProfileTile(Res.string.profile_tile_block, PlazaIcons.Block, destinations.blockList),
+                ProfileTile(Res.string.profile_tile_about_community, PlazaIcons.Forum, destinations.aboutCommunity),
+            ),
+        ),
+        ProfileSection(
+            title = Res.string.profile_section_settings,
+            tiles =
+            listOf(
+                ProfileTile(Res.string.profile_tile_account, PlazaIcons.Badge, destinations.accountSettings),
+                ProfileTile(
+                    Res.string.profile_tile_notifications,
+                    Icons.Default.Notifications,
+                    destinations.notificationSettings,
+                ),
+                ProfileTile(Res.string.profile_tile_theme, PlazaIcons.Palette, destinations.themeSettings),
+                ProfileTile(Res.string.profile_tile_about, Icons.Default.Info, destinations.about),
+            ),
+        ),
+    )
+
+private const val PROFILE_GRID_COLUMNS = 4
+
+/**
+ * One card of tiles, four to a row.
+ *
+ * Laid out by hand rather than with `LazyVerticalGrid`: this whole screen is one `LazyColumn`, and
+ * a lazy grid nested in it scrolls on the same axis — the combination throws. The counts here are
+ * fixed and small, so there is nothing to be lazy about anyway.
+ */
+@Composable
+private fun ProfileGridCard(tiles: List<ProfileTile>) {
+    LayerCard(contentPadding = PaddingValues(8.dp), verticalArrangement = Arrangement.Top) {
+        tiles.chunked(PROFILE_GRID_COLUMNS).forEach { rowTiles ->
+            Row(Modifier.fillMaxWidth()) {
+                rowTiles.forEach { tile ->
+                    ProfileGridTile(tile, Modifier.weight(1f))
+                }
+                // Keeps the last row's tiles on the same column grid as the ones above rather than
+                // spreading three of them across four columns' worth of width.
+                repeat(PROFILE_GRID_COLUMNS - rowTiles.size) {
+                    Box(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileGridTile(
+    tile: ProfileTile,
+    modifier: Modifier = Modifier,
+) {
+    val label = stringResource(tile.label)
+    Column(
+        modifier =
+        modifier
+            .heightIn(min = 68.dp)
+            .clip(RoundedCornerShape(16.dp))
+            // The whole tile, icon and caption together, is the target: a bare 24dp glyph is far
+            // under Material's minimum, and the caption is what the eye aims at.
+            .clickable(onClickLabel = label, onClick = tile.onClick)
+            .padding(vertical = 10.dp, horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+    ) {
+        Icon(tile.icon, contentDescription = null, modifier = Modifier.size(24.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * 9f: the useful signed-out version of 我的 — why to sign in, the button, and the community tools a
+ * guest can already use.
+ */
+@Composable
+private fun SignedOutProfile(
+    onSignIn: () -> Unit,
+    destinations: ProfileDestinations,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize().readableWidth(),
+        contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item(key = "welcome") {
+            LayerCard(
+                shape = RoundedCornerShape(28.dp),
+                contentPadding = PaddingValues(start = 20.dp, top = 24.dp, end = 20.dp, bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    WelcomeMark()
+                    Text(
+                        text = stringResource(Res.string.profile_signed_out_title, siteName),
+                        // Balanced rather than greedy: a heading this long otherwise leaves one character on
+                        // its second line.
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, lineBreak = LineBreak.Heading),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 16.dp).semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(Res.string.profile_signed_out_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+        }
+        item(key = "benefits") {
+            LayerCard(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SignedOutBenefit(
+                    icon = Icons.Default.Create,
+                    title = stringResource(Res.string.profile_guest_benefit_post),
+                    subtitle = stringResource(Res.string.profile_guest_benefit_post_hint),
+                )
+                SignedOutBenefit(
+                    icon = Icons.Default.Email,
+                    title = stringResource(Res.string.profile_guest_benefit_messages),
+                    subtitle = stringResource(Res.string.profile_guest_benefit_messages_hint),
+                )
+                SignedOutBenefit(
+                    icon = PlazaIcons.EventAvailable,
+                    title = stringResource(Res.string.profile_guest_benefit_attendance),
+                    subtitle = stringResource(Res.string.profile_guest_benefit_attendance_hint),
+                )
+            }
+        }
+        item(key = "sign-in") {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Button(
+                    onClick = onSignIn,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = CircleShape,
+                ) {
+                    Icon(PlazaIcons.Login, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Text(
+                        text = stringResource(Res.string.profile_sign_in, siteName),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(start = Spacing.sm),
+                    )
+                }
+                Text(
+                    text = stringResource(Res.string.profile_sign_in_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        }
+        item(key = "guest-tools") {
+            Column {
+                SectionLabel(stringResource(Res.string.profile_guest_section))
+                Spacer(Modifier.height(8.dp))
+                // The four tools 9f draws, then 社区工具 itself: that page also holds 友站, 关于社区 and
+                // 邀请好友, which a guest used to reach through it and still should.
+                ProfileGridCard(
+                    listOf(
+                        ProfileTile(Res.string.profile_tile_award, PlazaIcons.MenuBook, destinations.award),
+                        ProfileTile(Res.string.profile_tile_ruling, PlazaIcons.Gavel, destinations.ruling),
+                        ProfileTile(Res.string.profile_tile_lucky, PlazaIcons.Casino, destinations.lucky),
+                        ProfileTile(
+                            Res.string.profile_tile_providers,
+                            Icons.Default.ShoppingCart,
+                            destinations.providers,
+                        ),
+                        ProfileTile(Res.string.profile_tools, PlazaIcons.DashboardCustomize, destinations.tools),
+                    ),
+                )
+            }
+        }
+    }
+}
+
+/** 9f's mark: a person on a leaf-shaped blob. Decorative — the heading under it says everything. */
+@Composable
+private fun WelcomeMark() {
+    Surface(
+        modifier = Modifier.size(96.dp),
+        shape = RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(40.dp))
+        }
+    }
+}
+
+@Composable
+private fun SignedOutBenefit(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
+            }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
-@Composable
-private fun ResourceCards(
-    state: ProfileUiState,
-    onAssets: () -> Unit,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        ResourceCard(
-            value = state.chickenCount?.toString() ?: "—",
-            label = stringResource(Res.string.profile_chicken),
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(18.dp, 5.dp, 5.dp, 18.dp),
-            color = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-            onClick = onAssets,
-        )
-        ResourceCard(
-            value = state.starCount?.toString() ?: "—",
-            label = stringResource(Res.string.profile_stars),
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(5.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            onClick = onAssets,
-        )
-        ResourceCard(
-            value = state.level ?: stringResource(Res.string.profile_level_unknown),
-            label = stringResource(Res.string.profile_level),
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(5.dp, 18.dp, 18.dp, 5.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            onClick = onAssets,
-        )
-    }
-}
-
-@Composable
-private fun ResourceCard(
-    value: String,
-    label: String,
-    shape: RoundedCornerShape,
-    color: androidx.compose.ui.graphics.Color,
-    contentColor: androidx.compose.ui.graphics.Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = shape,
-        color = color,
-        contentColor = contentColor,
-    ) {
-        Column(Modifier.padding(horizontal = Spacing.lg, vertical = 14.dp)) {
-            Text(value, style = MaterialTheme.typography.titleLarge)
-            Text(label, style = MaterialTheme.typography.labelSmall)
-        }
-    }
-}
+private const val UNKNOWN = "—"
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "n1 我的 · 分区图标直达")
 @Composable

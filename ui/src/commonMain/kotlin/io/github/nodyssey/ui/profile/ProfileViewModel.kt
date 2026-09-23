@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nodyssey.core.LevelSpan
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AttendanceBoardEntry
 import io.github.nodyssey.data.AttendanceMode
@@ -314,6 +316,7 @@ private fun UserProfile.toUiState(): ProfileUiState {
         displayName = name,
         avatarUrl = avatarUrl,
         level = rank?.let { "Lv $it" },
+        rank = rank,
         registeredYear = if (complete) year else null,
         registeredMonth = if (complete) month else null,
         chickenCount = chickenCount,
@@ -329,6 +332,8 @@ data class ProfileUiState(
     val displayName: String = "",
     val avatarUrl: String? = null,
     val level: String? = null,
+    /** The number behind [level], which the level bar on the account card is drawn from. */
+    val rank: Int? = null,
     /** Both set or both null: a year without its month is not worth half a label. */
     val registeredYear: Int? = null,
     val registeredMonth: Int? = null,
@@ -361,6 +366,35 @@ data class ProfileUiState(
      */
     val isAttendanceUnknown: Boolean
         get() = isCheckingAttendance && !attendanceKnown
+
+    /** The current level's chicken span — the site's own formula, see [NodeSeekSite.levelChickenSpan]. */
+    private val levelSpan: LevelSpan?
+        get() = rank?.let(NodeSeekSite::levelChickenSpan)
+
+    val nextLevelChicken: Int? get() = levelSpan?.next
+
+    /** The level the bar leads to; above Lv5 the site keeps drawing the Lv5 → Lv6 span. */
+    val nextLevelRank: Int? get() = levelSpan?.barRank?.plus(1)
+
+    /** How much more the bar needs, when it has not already been reached. */
+    val chickenToNextLevel: Int?
+        get() {
+            val next = nextLevelChicken ?: return null
+            val current = chickenCount ?: return null
+            return (next - current).takeIf { it > 0 }
+        }
+
+    /**
+     * How far through the *current* level the count sits, the same span 账户与成长 draws: a Lv2
+     * account at 410 is 2% into 400 → 900, not 46% of the way from zero.
+     */
+    val levelProgress: Float?
+        get() {
+            val span = levelSpan ?: return null
+            val current = chickenCount ?: return null
+            val width = (span.next - span.floor).takeIf { it > 0 } ?: return null
+            return ((current - span.floor).toFloat() / width).coerceIn(0f, 1f)
+        }
 }
 
 private val REGISTERED_YEAR_MONTH = Regex("""^(\d{4})-(\d{2})""")
