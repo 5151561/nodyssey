@@ -63,10 +63,11 @@ internal fun EntryProviderScope<NavKey>.settingsEntries(nav: StackEntryScope) = 
         ThemeSettingsRoute(
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },
-            onOpenDynamicColor = { backStack.add(DynamicColorKey) },
         )
     }
 
+    // Nothing navigates here since 主题 took these controls inline; kept so that a back stack saved
+    // while it was on top still restores. See `DynamicColorScreen`.
     entry<DynamicColorKey> {
         val viewModel: ThemeSettingsViewModel =
             viewModel(factory = ThemeSettingsViewModel.factory(container))

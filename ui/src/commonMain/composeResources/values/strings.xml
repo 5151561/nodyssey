@@ -419,6 +419,8 @@
 
     <!-- 主题 · 自定义种子色 -->
     <string name="settings_seed_sheet_title">自定义种子色</string>
+    <!-- 配色来源选「自定义」时，卡片里打开种子色面板的按钮 -->
+    <string name="settings_seed_edit">编辑</string>
     <string name="settings_seed_hex">十六进制</string>
     <string name="settings_seed_name">名称（可选）</string>
     <string name="settings_seed_apply_once">仅本次应用</string>
@@ -433,6 +435,11 @@
     <string name="settings_wallpaper_candidate_label">候选色 %1$d</string>
     <string name="settings_wallpaper_candidates_hint">按占比排序，默认取第一个。点任意色即时预览，不用退出页面。</string>
     <string name="settings_wallpaper_palette">生成的调色板</string>
+    <!-- 生成的调色板的四行：每行是一个色族从深到浅的五档 -->
+    <string name="settings_wallpaper_ramp_primary">主色</string>
+    <string name="settings_wallpaper_ramp_secondary">次色</string>
+    <string name="settings_wallpaper_ramp_tertiary">第三色</string>
+    <string name="settings_wallpaper_ramp_neutral">中性</string>
     <string name="settings_wallpaper_system_palette">使用系统调色板</string>
     <string name="settings_wallpaper_system_palette_hint">本机 Android %1$s · 直接用系统 Monet 色板；关掉则由 App 从上面的候选色生成</string>
     <string name="settings_wallpaper_system_palette_unavailable">本机 Android %1$s 没有系统调色板，配色由 App 从候选色生成</string>

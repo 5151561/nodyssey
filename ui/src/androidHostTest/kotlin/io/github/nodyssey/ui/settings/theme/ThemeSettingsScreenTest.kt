@@ -4,9 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -53,26 +55,33 @@ class ThemeSettingsScreenTest {
     }
 
     /**
-     * The tile carries the value it would restore, which is what makes the line under it true.
+     * Each source keeps its own stored value, and the card shows the one in force.
      *
      * Under 自定义 that value is the stored seed rather than the preset's — the whole point of three
      * separate fields — so a build that collapsed them back into one would fail here.
      */
     @Test
-    fun `each source tile names the value it would put back`() {
+    fun `each source shows the value it would put back`() {
         setScreen(
             settings =
             UserSettings(
-                colorSource = ColorSource.PRESET,
+                colorSource = ColorSource.CUSTOM,
                 presetId = "tianyi",
                 seedColor = 0xFF2F6D8C.toInt(),
             ),
         )
 
-        // 预设 names the section as well as the tile, so the tile is the node that carries both it
-        // and the preset's own name.
-        composeRule.onNode(hasText("预设").and(hasText("蓝×白×粉"))).assertIsSelected()
-        composeRule.onNode(hasText("自定义").and(hasText("#2F6D8C"))).assertExists()
+        composeRule.onNodeWithText("自定义").assertIsSelected()
+        composeRule.onNodeWithText("#2F6D8C").assertExists()
+        composeRule.onNodeWithText("蓝×白×粉").assertDoesNotExist()
+    }
+
+    @Test
+    fun `预设 selects the stored preset in the grid`() {
+        setScreen(settings = UserSettings(colorSource = ColorSource.PRESET, presetId = "tianyi"))
+
+        composeRule.onNodeWithText("预设").assertIsSelected()
+        composeRule.onNode(hasText("蓝×白×粉")).assertIsSelected()
     }
 
     @Test
@@ -101,7 +110,9 @@ class ThemeSettingsScreenTest {
             onPaletteStyleChange = { style = it },
         )
 
-        composeRule.onNodeWithText("单色").performScrollTo().performClick()
+        // The row is inert, so the menu never opens and there is no 单色 to tap.
+        composeRule.onNodeWithText("色彩风格").performScrollTo().performClick()
+        composeRule.onNodeWithText("单色").assertDoesNotExist()
         assertNull(style)
     }
 
@@ -114,7 +125,8 @@ class ThemeSettingsScreenTest {
             onPaletteStyleChange = { style = it },
         )
 
-        composeRule.onNodeWithText("单色").performScrollTo().performClick()
+        composeRule.onNodeWithText("色彩风格").performScrollTo().performClick()
+        composeRule.onNodeWithText("单色").performClick()
         assertEquals(PaletteStyle.MONOCHROME, style)
     }
 
@@ -127,9 +139,8 @@ class ThemeSettingsScreenTest {
     fun `自定义 collapses the preset grid`() {
         setScreen(settings = UserSettings(colorSource = ColorSource.CUSTOM))
 
-        // 青×灰×粉 exists only in the grid; 石墨青 is also the 预设 tile's own subtitle, which stays.
         composeRule.onNodeWithText("青×灰×粉").assertDoesNotExist()
-        composeRule.onNode(hasText("预设").and(hasText("石墨青"))).assertExists()
+        composeRule.onNodeWithText("预设").assertExists()
     }
 
     @Test
@@ -137,7 +148,7 @@ class ThemeSettingsScreenTest {
         setScreen(settings = UserSettings(colorSource = ColorSource.WALLPAPER))
 
         composeRule.onNodeWithText("青×灰×粉").assertDoesNotExist()
-        composeRule.onNode(hasText("预设").and(hasText("石墨青"))).assertExists()
+        composeRule.onNodeWithText("预设").assertExists()
     }
 
     /** 我的主题 selects a saved seed; the same tap must not also save it again. */
@@ -162,10 +173,13 @@ class ThemeSettingsScreenTest {
         var style = UserSettings().paletteStyle
         setScreen(onPaletteStyleChange = { style = it })
 
-        listOf("柔和", "鲜艳", "表现力", "中性", "单色").forEach {
-            composeRule.onNodeWithText(it).performScrollTo().assertExists()
+        composeRule.onNodeWithText("色彩风格").performScrollTo().performClick()
+        // 柔和 is the row's own answer as well as a menu entry, hence the count rather than a lookup.
+        listOf("鲜艳", "表现力", "中性", "单色").forEach {
+            composeRule.onNodeWithText(it).assertExists()
         }
-        composeRule.onNodeWithText("单色").performScrollTo().performClick()
+        composeRule.onAllNodesWithText("柔和").assertCountEquals(2)
+        composeRule.onNodeWithText("单色").performClick()
         assertEquals(PaletteStyle.MONOCHROME, style)
     }
 
@@ -181,7 +195,6 @@ class ThemeSettingsScreenTest {
                 ThemeSettingsScreen(
                     settings = settings,
                     onBack = {},
-                    onOpenDynamicColor = {},
                     onColorSourceChange = {},
                     onPresetSelected = onPresetSelected,
                     onCustomSeedSelected = onCustomSeedSelected,

@@ -22,15 +22,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -73,6 +75,7 @@ import io.github.nodyssey.ui.resources.settings_seed_save
 import io.github.nodyssey.ui.resources.settings_seed_sheet_title
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.LocalPlazaDarkTheme
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaPaletteStyle
 import io.github.plaza.designsys.theme.PlazaSeedHct
 import io.github.plaza.designsys.theme.Spacing
@@ -98,10 +101,12 @@ internal fun SeedColorSheet(
     paletteStyle: PlazaPaletteStyle,
     onDismiss: () -> Unit,
     onApply: (color: Color, name: String?) -> Unit,
+    /** What the name field opens with — the saved name of the seed being edited, if it has one. */
+    initialName: String = "",
 ) {
     var hct by remember { mutableStateOf(initial.toPlazaSeedHct()) }
     var hex by remember { mutableStateOf(initial.toHexString()) }
-    var name by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initialName) }
     var sampling by remember { mutableStateOf<ImageBitmap?>(null) }
     var samplingPending by remember { mutableStateOf(false) }
     val color = remember(hct) { hct.toColor() }
@@ -124,6 +129,8 @@ internal fun SeedColorSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        // The page's grey, so the fields and buttons read as controls on it the way they do on a card.
+        containerColor = LocalPlazaLayers.current.page,
         // Straight to full height: the sheet is a picker, two text fields and two buttons, and a
         // half-open state would have put the actions off screen behind a drag.
         sheetState =
@@ -148,11 +155,14 @@ internal fun SeedColorSheet(
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.weight(1f),
                 )
-                FilledTonalIconButton(onClick = pickImageToSample) {
+                TextButton(onClick = pickImageToSample) {
                     Icon(
                         PlazaIcons.Colorize,
-                        contentDescription = stringResource(Res.string.settings_seed_pick_from_image),
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize),
                     )
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text(stringResource(Res.string.settings_seed_pick_from_image))
                 }
             }
 
@@ -181,12 +191,17 @@ internal fun SeedColorSheet(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                TextField(
+            Spacer(Modifier.height(14.dp))
+            SchemeStrip(
+                seed = color,
+                paletteStyle = paletteStyle,
+                darkTheme = darkTheme,
+                modifier = Modifier.fillMaxWidth().height(24.dp),
+            )
+
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
                     value = hex,
                     onValueChange = { typed ->
                         hex = typed
@@ -196,53 +211,43 @@ internal fun SeedColorSheet(
                     },
                     singleLine = true,
                     label = { Text(stringResource(Res.string.settings_seed_hex)) },
+                    leadingIcon = {
+                        Box(
+                            Modifier
+                                .size(20.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(color),
+                        )
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
                     isError = parseHexColor(hex) == null,
+                    shape = FieldShape,
+                    colors = sheetFieldColors(),
                     modifier = Modifier.weight(1f),
                 )
-                Box(
-                    Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(color),
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(MAX_NAME_LENGTH) },
+                    singleLine = true,
+                    label = { Text(stringResource(Res.string.settings_seed_name)) },
+                    shape = FieldShape,
+                    colors = sheetFieldColors(),
+                    modifier = Modifier.weight(1f),
                 )
             }
 
-            Spacer(Modifier.height(14.dp))
-            SchemeStrip(
-                seed = color,
-                paletteStyle = paletteStyle,
-                darkTheme = darkTheme,
-                modifier = Modifier.fillMaxWidth().height(34.dp),
-            )
-
-            Spacer(Modifier.height(12.dp))
-            TextField(
-                value = name,
-                onValueChange = { name = it.take(MAX_NAME_LENGTH) },
-                singleLine = true,
-                label = { Text(stringResource(Res.string.settings_seed_name)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FilledTonalButton(
+                OutlinedButton(
                     onClick = { onApply(color, null) },
-                    modifier = Modifier.weight(1f).height(48.dp),
+                    modifier = Modifier.weight(1f).height(ActionHeight),
                 ) {
                     Text(stringResource(Res.string.settings_seed_apply_once))
                 }
                 Button(
                     onClick = { onApply(color, name.ifBlank { color.toHexString() }) },
-                    modifier = Modifier.weight(1.25f).height(48.dp),
+                    modifier = Modifier.weight(1f).height(ActionHeight),
                 ) {
-                    Icon(
-                        PlazaIcons.BookmarkAdd,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.size(6.dp))
                     Text(stringResource(Res.string.settings_seed_save))
                 }
             }
@@ -520,3 +525,17 @@ private val HueBarHeight = 16.dp
 private val HandleWidth = 8.dp
 private val HandleHeight = 28.dp
 private val MarkerRadius = 11.dp
+
+/** White fields on the sheet's grey — the same inset-on-page reading the settings cards give a control. */
+@Composable
+private fun sheetFieldColors() =
+    OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = LocalPlazaLayers.current.card,
+        unfocusedContainerColor = LocalPlazaLayers.current.card,
+        errorContainerColor = LocalPlazaLayers.current.card,
+    )
+
+private val FieldShape = RoundedCornerShape(12.dp)
+
+/** The two actions are the sheet's whole purpose, so they get a pill taller than the 48dp minimum. */
+private val ActionHeight = 50.dp

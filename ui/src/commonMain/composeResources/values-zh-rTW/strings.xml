@@ -332,6 +332,7 @@
     <string name="settings_theme_preview_accent">強調</string>
 
     <string name="settings_seed_sheet_title">自訂種子色</string>
+    <string name="settings_seed_edit">編輯</string>
     <string name="settings_seed_hex">十六進位</string>
     <string name="settings_seed_name">名稱（選填）</string>
     <string name="settings_seed_apply_once">僅本次套用</string>
@@ -345,6 +346,10 @@
     <string name="settings_wallpaper_candidate_label">候選色 %1$d</string>
     <string name="settings_wallpaper_candidates_hint">依占比排序，預設取第一個。點任意色即時預覽，不用離開頁面。</string>
     <string name="settings_wallpaper_palette">產生的調色盤</string>
+    <string name="settings_wallpaper_ramp_primary">主色</string>
+    <string name="settings_wallpaper_ramp_secondary">次色</string>
+    <string name="settings_wallpaper_ramp_tertiary">第三色</string>
+    <string name="settings_wallpaper_ramp_neutral">中性</string>
     <string name="settings_wallpaper_system_palette">使用系統調色盤</string>
     <string name="settings_wallpaper_system_palette_hint">本機 Android %1$s · 直接用系統 Monet 色盤；關掉則由 App 從上面的候選色產生</string>
     <string name="settings_wallpaper_system_palette_unavailable">本機 Android %1$s 沒有系統調色盤，配色由 App 從候選色產生</string>

@@ -338,6 +338,7 @@
     <string name="settings_theme_preview_accent">Accent</string>
 
     <string name="settings_seed_sheet_title">Custom seed colour</string>
+    <string name="settings_seed_edit">Edit</string>
     <string name="settings_seed_hex">Hex</string>
     <string name="settings_seed_name">Name (optional)</string>
     <string name="settings_seed_apply_once">Just for now</string>
@@ -351,6 +352,10 @@
     <string name="settings_wallpaper_candidate_label">Candidate %1$d</string>
     <string name="settings_wallpaper_candidates_hint">Ordered by how much of the wallpaper they cover; the first one is used by default. Tap any of them to preview it without leaving this screen.</string>
     <string name="settings_wallpaper_palette">The generated palette</string>
+    <string name="settings_wallpaper_ramp_primary">Primary</string>
+    <string name="settings_wallpaper_ramp_secondary">Secondary</string>
+    <string name="settings_wallpaper_ramp_tertiary">Tertiary</string>
+    <string name="settings_wallpaper_ramp_neutral">Neutral</string>
     <string name="settings_wallpaper_system_palette">Use the system palette</string>
     <string name="settings_wallpaper_system_palette_hint">This device runs Android %1$s · take the system Monet palette whole; off means the app builds one from the candidates above</string>
     <string name="settings_wallpaper_system_palette_unavailable">This device runs Android %1$s, which has no system palette, so the app builds one from the candidates</string>

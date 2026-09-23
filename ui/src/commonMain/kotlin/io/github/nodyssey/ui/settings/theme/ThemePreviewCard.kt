@@ -31,7 +31,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.nodyssey.ui.common.appName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.settings_theme_preview_accent
 import io.github.nodyssey.ui.resources.settings_theme_preview_board
@@ -40,13 +39,15 @@ import io.github.nodyssey.ui.resources.settings_theme_preview_primary
 import io.github.nodyssey.ui.resources.settings_theme_preview_secondary
 import io.github.nodyssey.ui.resources.settings_theme_preview_title
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardShadow
 import org.jetbrains.compose.resources.stringResource
 
 /**
  * A miniature of the app, drawn in the scheme the settings above it produce.
  *
- * The point of it is the roles, not the pixels: a seed reaches the reader as `primary` on a top bar,
+ * The point of it is the roles, not the pixels: a seed reaches the reader as `primary` on a button,
  * `secondaryContainer` under a board tag and `tertiaryContainer` on the one accent a thread has, and
  * a row of bare swatches never showed which of those a colour was about to become.
  *
@@ -61,47 +62,17 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
+    val layers = LocalPlazaLayers.current
+    val shape = RoundedCornerShape(PreviewCorner)
+    // A card like every card in the feed, on the page like they are: the preview is a post as the
+    // home list draws it, so it takes the same white, the same shadow and, on 墨水屏, the same rule.
     Surface(
-        modifier = modifier.fillMaxWidth().clearAndSetSemantics {},
-        color = scheme.surfaceContainerLow,
-        shape = RoundedCornerShape(PreviewCorner),
-        border = BorderStroke(1.dp, scheme.outlineVariant),
+        modifier = modifier.cardShadow(shape, layers.shadows).fillMaxWidth().clearAndSetSemantics {},
+        color = layers.card,
+        shape = shape,
+        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
     ) {
         Column {
-            Row(
-                modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .background(scheme.primary)
-                    .padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Icon(
-                    PlazaIcons.Forum,
-                    contentDescription = null,
-                    tint = scheme.onPrimary,
-                    modifier = Modifier.size(20.dp),
-                )
-                Text(
-                    appName(),
-                    style =
-                    TextStyle(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.2).sp,
-                    ),
-                    color = scheme.onPrimary,
-                    modifier = Modifier.weight(1f),
-                )
-                Icon(
-                    PlazaIcons.Sort,
-                    contentDescription = null,
-                    tint = scheme.onPrimary,
-                    modifier = Modifier.size(19.dp),
-                )
-            }
             Column(
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -206,4 +177,4 @@ private fun PreviewPill(
     )
 }
 
-private val PreviewCorner = 18.dp
+private val PreviewCorner = 24.dp
