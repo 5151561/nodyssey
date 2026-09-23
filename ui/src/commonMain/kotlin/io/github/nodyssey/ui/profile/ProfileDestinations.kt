@@ -9,7 +9,7 @@ package io.github.nodyssey.ui.profile
  * test names only the tile it actually presses.
  */
 data class ProfileDestinations(
-    /** The gear in the app bar, and the row the update dot rides on. */
+    /** The gear in the app bar — signed in or out — which also carries the update dot. */
     val settings: () -> Unit = {},
     /** The avatar block: 个人主页, which is where the profile itself is read and edited. */
     val space: () -> Unit = {},
@@ -41,7 +41,7 @@ data class ProfileDestinations(
     val themeSettings: () -> Unit = {},
     val about: () -> Unit = {},
     /**
-     * 社区工具, the signed-out screen's second guest row.
+     * 社区工具, the last of the signed-out screen's guest tiles, after the four tools 9f draws.
      *
      * Signed in, the six links it holds are tiles of their own in 社区 and the page is not reached
      * from here at all — the grid exists to remove exactly that hop.
