@@ -121,7 +121,7 @@ fun PlazaTheme(
         } else {
             null
         }
-    val colorScheme =
+    val baseScheme =
         when {
             einkMode -> EInkColorScheme
 
@@ -136,6 +136,10 @@ fun PlazaTheme(
                     plazaSeedColorScheme(seedColor, darkTheme, paletteStyle)
                 }
         }
+    val layers = remember(baseScheme, darkTheme, einkMode) { plazaLayers(baseScheme, darkTheme, einkMode) }
+    // `background` is what `Scaffold` fills with by default and what nothing else in Material reads,
+    // so pointing it at the page layer is the one edit that moves every screen onto the grey page.
+    val colorScheme = remember(baseScheme, layers) { baseScheme.copy(background = layers.page) }
 
     // The amber board-tag pair has no Material role, so it rides alongside the scheme rather than
     // being read from a global — otherwise it would not follow the theme.
@@ -146,6 +150,7 @@ fun PlazaTheme(
                 darkTheme -> DarkExtraColors
                 else -> LightExtraColors
             },
+        LocalPlazaLayers provides layers,
         LocalPlazaDarkTheme provides darkTheme,
         LocalPlazaFontScale provides fontScale.coerceIn(MIN_TYPE_SCALE, MAX_TYPE_SCALE),
         LocalOneHandMode provides oneHandMode,

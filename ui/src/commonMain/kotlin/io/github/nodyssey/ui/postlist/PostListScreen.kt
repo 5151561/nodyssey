@@ -2,20 +2,25 @@ package io.github.nodyssey.ui.postlist
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -25,20 +30,25 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +59,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -58,6 +69,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,17 +82,24 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -124,20 +143,26 @@ import io.github.nodyssey.ui.resources.action_search
 import io.github.nodyssey.ui.resources.action_sort
 import io.github.nodyssey.ui.resources.action_switch_site
 import io.github.nodyssey.ui.resources.feed_page_size_note
+import io.github.nodyssey.ui.resources.home_search_hint
 import io.github.nodyssey.ui.resources.page_jump_newest
 import io.github.nodyssey.ui.resources.post_badge_awarded
 import io.github.nodyssey.ui.resources.post_badge_pinned
 import io.github.nodyssey.ui.resources.post_new_reply_count
+import io.github.nodyssey.ui.resources.post_read_marker
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.post_view_count
 import io.github.nodyssey.ui.resources.site_switch_next_launch
 import io.github.nodyssey.ui.resources.sort_by_post_time
 import io.github.nodyssey.ui.resources.sort_by_reply_time
+import io.github.nodyssey.ui.resources.tab_profile
 import io.github.nodyssey.ui.settings.rememberSiteSwitch
 import io.github.nodyssey.ui.settings.siteSwitchRestartsApp
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerCardGap
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
@@ -148,9 +173,13 @@ import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.textScaledSize
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.cardShadow
+import io.github.plaza.designsys.theme.floatShadow
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -161,6 +190,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Stateful entry point. It only wires the ViewModel to the stateless [PostListScreen] below, which is
@@ -176,6 +206,7 @@ fun PostListRoute(
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onAccountClick: () -> Unit = {},
     onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
     reselectRequests: Int = 0,
 ) {
@@ -188,6 +219,7 @@ fun PostListRoute(
         onPostClick = onPostClick,
         onCreatePost = onCreatePost,
         onSearch = onSearch,
+        onAccountClick = onAccountClick,
         onBoardClick = viewModel::selectCategory,
         onArrangementChange = viewModel::saveBoardArrangement,
         onSortChange = viewModel::selectSort,
@@ -247,6 +279,8 @@ fun PostListScreen(
     onCreatePost: () -> Unit = {},
     /** Opens 搜索 on top of this list, from the app bar's own action. */
     onSearch: () -> Unit = {},
+    /** The account avatar at the end of the bar: 我的. */
+    onAccountClick: () -> Unit = {},
     /** Keeps the host navigation bar hidden until the user deliberately scrolls toward the list start. */
     onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
     /**
@@ -562,10 +596,12 @@ fun PostListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
-                HomeTopBar(
+                HomeHeader(
                     sort = state.sort,
                     onSortChange = onSortChange,
                     onSearch = onSearch,
+                    account = state.account,
+                    onAccountClick = onAccountClick,
                     scrollBehavior = topBarScrollBehavior,
                 )
                 BoardStrip(
@@ -589,9 +625,12 @@ fun PostListScreen(
                     onClick = onCreatePost,
                     expanded = !navigationBarHidden,
                     icon = {
-                        Icon(Icons.Default.Add, contentDescription = null)
+                        Icon(Icons.Default.Edit, contentDescription = null)
                     },
                     text = { Text(stringResource(Res.string.action_create_post)) },
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.floatShadow(RoundedCornerShape(18.dp), LocalPlazaLayers.current.shadows),
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                 )
             }
         },
@@ -756,6 +795,15 @@ private fun BoardFeed(
                             .nestedScroll(navigationBarScrollConnection)
                             .nestedScroll(topBarScrollBehavior.nestedScrollConnection)
                             .readableWidth(),
+                        // Room under the last card for the FAB, so the foot of the feed can be read
+                        // without the button sitting on it.
+                        contentPadding = PaddingValues(
+                            start = LayerPageGutter,
+                            end = LayerPageGutter,
+                            top = Spacing.xs,
+                            bottom = FeedBottomClearance,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(LayerCardGap),
                     ) {
                         items(
                             count = posts.itemCount,
@@ -767,16 +815,12 @@ private fun BoardFeed(
                             when (val post = posts[index]) {
                                 null -> FeedRowPlaceholder()
 
-                                else -> {
+                                else ->
                                     PostRow(
                                         post = post,
                                         onClick = { onPostClick(post) },
                                         sharedWithThread = true,
                                     )
-                                    HorizontalDivider(
-                                        color = MaterialTheme.colorScheme.outlineVariant,
-                                    )
-                                }
                             }
                         }
                         if (appendState is LoadState.Loading) {
@@ -826,7 +870,7 @@ private fun FeedPageBar(
         )
         ExtendedFloatingActionButton(
             text = { Text(stringResource(Res.string.action_create_post)) },
-            icon = { Icon(Icons.Default.Add, contentDescription = null) },
+            icon = { Icon(Icons.Default.Edit, contentDescription = null) },
             onClick = onCreatePost,
             expanded = expanded,
             shape = RoundedCornerShape(18.dp),
@@ -835,6 +879,9 @@ private fun FeedPageBar(
         )
     }
 }
+
+/** Clears the extended FAB (56dp) and its 16dp margin, with a little of the page showing under it. */
+private val FeedBottomClearance = 88.dp
 
 /** How much of the feed a "back to the top" actually animates past; anything beyond it is a jump. */
 private const val SCROLL_TO_TOP_ANIMATED_ITEMS = 12
@@ -853,77 +900,177 @@ private const val FIRST_PAGE = 1
 private const val APPEND_WAIT_MILLIS = 15_000L
 
 /**
- * The home app bar: 排序 at the start, 站点 in the middle, 搜索 at the end.
+ * The home header: 站点 and the account on the first line, 搜索 and 排序 on the second.
  *
- * The wordmark used to fill the middle and was removed: it named a screen the reader had just
- * arrived at from the navigation bar, which is the one thing an app bar title does not need to say,
- * and it doubled as 回到顶部 — a target nothing on screen described. What sits there now is not that
- * back. A second forum runs the same software ([Site]) and the app can be pointed at either, so
- * *which* one these rows came from is the one thing about this screen a reader cannot work out by
- * looking: the boards below differ, but 综合 looks like 综合 either way. It is also the control that
- * changes it, which is what earns a slot rather than a caption. 首页 still answers a second tap with
- * the same jump back to the first row.
+ * Both lines fold away together as the feed advances and come back on any scroll toward the top —
+ * `enterAlways`, the same as the navigation bar — while the board strip under them stays pinned,
+ * since it is navigation and the one thing a reader reaches for mid-feed.
  *
- * `navigationIcon` rather than a second action: 排序 changes what the list below *is*, 搜索 leaves it
- * for another list, and putting the two in one corner would make them look like a pair of filters.
+ * Hand-laid rather than a `TopAppBar`: Material's bars take one title and a row of icon actions, and
+ * the second line here is a search field, which no bar slot holds. What *is* Material's is the scroll
+ * behaviour — the header reports its own height as the collapse limit and draws itself at whatever
+ * offset the behaviour has consumed, which is exactly the contract `TopAppBar` keeps with it.
  *
- * [scrollBehavior] folds the whole row away as the feed advances. It is measured out of the layout
- * rather than merely hidden, which is what lets the board strip below it ride up into the space.
+ * 搜索 is a field-shaped button rather than a field: tapping it opens the search screen, where the
+ * real `SearchBar` lives with its tabs and history. Typing here would have to duplicate all of that.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeTopBar(
+private fun HomeHeader(
     sort: FeedSort,
     onSortChange: (FeedSort) -> Unit,
     onSearch: () -> Unit,
-    scrollBehavior: TopAppBarScrollBehavior? = null,
+    account: HomeAccount?,
+    onAccountClick: () -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior,
+) {
+    val state = scrollBehavior.state
+    var fullHeight by remember { mutableIntStateOf(0) }
+    SideEffect {
+        if (fullHeight > 0 && state.heightOffsetLimit != -fullHeight.toFloat()) {
+            state.heightOffsetLimit = -fullHeight.toFloat()
+        }
+    }
+    Layout(
+        content = {
+            Column(Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = Spacing.md, end = Spacing.lg, top = Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SiteSwitcher(Modifier.weight(1f))
+                    AccountButton(account = account, onClick = onAccountClick)
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = Spacing.lg, end = Spacing.lg, top = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SearchPill(onClick = onSearch, modifier = Modifier.weight(1f))
+                    SortButton(sort = sort, onSortChange = onSortChange)
+                }
+            }
+        },
+        modifier = Modifier
+            .windowInsetsPadding(TopAppBarDefaults.windowInsets)
+            .clipToBounds(),
+    ) { measurables, constraints ->
+        val placeable = measurables.single().measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+        if (placeable.height != fullHeight) fullHeight = placeable.height
+        val height = (placeable.height + state.heightOffset).roundToInt().coerceIn(0, placeable.height)
+        layout(placeable.width, height) { placeable.place(0, height - placeable.height) }
+    }
+}
+
+/** The signed-in face, or an outlined person when there is none to show; either way the way into 我的. */
+@Composable
+private fun AccountButton(
+    account: HomeAccount?,
+    onClick: () -> Unit,
+) {
+    val label = stringResource(Res.string.tab_profile)
+    Box(
+        modifier = Modifier
+            .size(Sizes.minTouchTarget)
+            .clip(AccountAvatarShape)
+            .clickable(onClickLabel = label, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (account != null) {
+            UserAvatar(url = account.avatarUrl, name = account.name, size = 40.dp, shape = AccountAvatarShape)
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .cardShadow(CircleShape, LocalPlazaLayers.current.shadows)
+                    .clip(CircleShape)
+                    .background(LocalPlazaLayers.current.raised),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Person, contentDescription = null, modifier = Modifier.size(22.dp))
+            }
+        }
+    }
+}
+
+private val AccountAvatarShape = RoundedCornerShape(14.dp)
+
+/** The search field's shape, as a button into the search screen. */
+@Composable
+private fun SearchPill(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val layers = LocalPlazaLayers.current
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = layers.raised,
+        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        modifier = modifier
+            .height(Sizes.minTouchTarget)
+            .cardShadow(CircleShape, layers.shadows),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(Res.string.home_search_hint),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** 排序, as a round button beside the search pill with its menu anchored under it. */
+@Composable
+private fun SortButton(
+    sort: FeedSort,
+    onSortChange: (FeedSort) -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-
-    TopAppBar(
-        title = { SiteSwitcher() },
-        navigationIcon = {
-            Box {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(
-                        imageVector = PlazaIcons.SwapVert,
-                        contentDescription = stringResource(Res.string.action_sort),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                // Anchored to the button rather than to the bar, so the menu opens down the start
-                // edge it was summoned from.
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    SortMenuItem(Res.string.sort_by_reply_time, FeedSort.LAST_REPLY, sort) {
-                        onSortChange(it)
-                        menuOpen = false
-                    }
-                    SortMenuItem(Res.string.sort_by_post_time, FeedSort.POST_TIME, sort) {
-                        onSortChange(it)
-                        menuOpen = false
-                    }
-                }
+    val layers = LocalPlazaLayers.current
+    Box {
+        FilledIconButton(
+            onClick = { menuOpen = true },
+            modifier = Modifier
+                .size(Sizes.minTouchTarget)
+                .cardShadow(CircleShape, layers.shadows),
+            shape = CircleShape,
+            colors =
+            IconButtonDefaults.filledIconButtonColors(
+                containerColor = layers.raised,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+        ) {
+            Icon(imageVector = PlazaIcons.SwapVert, contentDescription = stringResource(Res.string.action_sort))
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            SortMenuItem(Res.string.sort_by_reply_time, FeedSort.LAST_REPLY, sort) {
+                onSortChange(it)
+                menuOpen = false
             }
-        },
-        actions = {
-            IconButton(onClick = onSearch) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = stringResource(Res.string.action_search),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            SortMenuItem(Res.string.sort_by_post_time, FeedSort.POST_TIME, sort) {
+                onSortChange(it)
+                menuOpen = false
             }
-        },
-        colors =
-        TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            // The default scrolled container tints the bar as it collapses. Here the strip below it
-            // keeps the same surface throughout, and a bar that darkened on its way out would draw a
-            // band across the top of the screen that then vanished.
-            scrolledContainerColor = MaterialTheme.colorScheme.surface,
-        ),
-        scrollBehavior = scrollBehavior,
-    )
+        }
+    }
 }
 
 /**
@@ -942,17 +1089,18 @@ private fun HomeTopBar(
  * discover that nothing happened.
  */
 @Composable
-private fun SiteSwitcher() {
+private fun SiteSwitcher(modifier: Modifier = Modifier) {
     var menuOpen by remember { mutableStateOf(false) }
     val active = ActiveSite.current
     val switchSite = rememberSiteSwitch()
 
-    Box {
-        TextButton(onClick = { menuOpen = true }) {
+    Box(modifier) {
+        TextButton(onClick = { menuOpen = true }, contentPadding = PaddingValues(horizontal = Spacing.sm)) {
             Text(
                 text = active.displayName,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp),
                 color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
             )
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
@@ -1030,11 +1178,15 @@ private fun SortMenuItem(
 }
 
 /**
- * One topic.
+ * One topic, as a card on the page.
  *
- * The title is the only thing with visual weight; everything else is a 12sp meta line under it. That
- * is the whole design of this list — nine of these fit on a 800dp screen, and the title is legible in
- * every one of them.
+ * Three lines, each with one job: who and where (avatar, author, board, when), what (the title, the
+ * only thing with real weight), and whether it is worth opening again (新回复, or the counts). A read
+ * thread keeps its card but drops its title to a lighter weight and colour, and says 已读 at the foot
+ * — the list is still the reader's history, and dimming reads faster than a badge.
+ *
+ * A pinned thread is not a card: it is a one-line strip above the feed ([PinnedRow]), because a
+ * notice everyone has read belongs to the page rather than to the stream of new posts.
  */
 @Composable
 internal fun PostRow(
@@ -1056,69 +1208,49 @@ internal fun PostRow(
      * moment is a state the shared-element machinery has no answer for.
      */
     sharedWithThread: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     val summary = post.summary
-    val avatarSize = listAvatarSize()
-    ThreadRow(
-        onClick = onClick,
-        containerColor =
-        if (summary.isPinned) {
-            MaterialTheme.colorScheme.surfaceContainerLow
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        leading = {
-            if (summary.isPinned) {
-                Box(
-                    modifier =
-                    Modifier
-                        .offset(y = AvatarCapOffset)
-                        .size(avatarSize)
-                        .clip(AvatarShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = PlazaIcons.PushPin,
-                        contentDescription = stringResource(Res.string.post_badge_pinned),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            } else {
-                UserAvatar(
-                    url = summary.avatarUrl,
-                    name = summary.authorName,
-                    size = avatarSize,
-                    // The offset goes first so that what travels is where the avatar is actually
-                    // placed, cap line and all, rather than where it would sit without it.
-                    modifier = Modifier
-                        .offset(y = AvatarCapOffset)
-                        .thenIf(sharedWithThread) { Modifier.sharedThreadAvatar(summary.postId) },
-                )
-            }
-        },
-        title = {
-            ThreadRowTitle(
-                text = highlighted(summary.title, highlight, MaterialTheme.colorScheme.primary),
-                // A read thread is dimmed rather than hidden — the list is still the user's history,
-                // and the drop in both weight and contrast is legible at a glance without adding a
-                // badge that would cost a row's worth of space.
-                color =
-                if (post.isRead) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                fontWeight = if (post.isRead) FontWeight.Medium else FontWeight.SemiBold,
-                // Not filling, so the lock beside it keeps its place instead of being pushed off.
-                // The shared bounds go inside the weight, so what travels is the title as the row
-                // actually lays it out rather than as it would be unconstrained.
-                modifier =
-                Modifier
-                    .weight(1f, fill = false)
-                    .thenIf(sharedWithThread) { Modifier.sharedThreadTitle(summary.postId) },
+    if (summary.isPinned) {
+        PinnedRow(summary.title, onClick, modifier)
+        return
+    }
+    LayerCard(onClick = onClick, modifier = modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            UserAvatar(
+                url = summary.avatarUrl,
+                name = summary.authorName,
+                size = CardAvatarSize,
+                modifier = Modifier.thenIf(sharedWithThread) { Modifier.sharedThreadAvatar(summary.postId) },
             )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = summary.authorName,
+                    // The meta role, so the reading size reaches it, set a step larger and heavier:
+                    // on a card the name heads the meta block rather than sitting in a line of it.
+                    style = MaterialTheme.typography.labelSmall.let {
+                        it.copy(fontSize = it.fontSize * AUTHOR_SCALE, fontWeight = FontWeight.SemiBold)
+                    },
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.thenIf(sharedWithThread) { Modifier.sharedThreadAuthor(summary.postId) },
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    BoardTag(
+                        title = summary.categoryTitle,
+                        slug = summary.categorySlug,
+                        modifier = Modifier.thenIf(sharedWithThread) { Modifier.sharedThreadBoard(summary.postId) },
+                    )
+                    summary.lastActiveText?.let { MetaText(it, singleLine = true) }
+                }
+            }
             if (summary.isLocked) {
                 LockBadge(
                     level = summary.lockLevel,
@@ -1130,18 +1262,122 @@ internal fun PostRow(
                     NodeSeekIcons.Award,
                     contentDescription = stringResource(Res.string.post_badge_awarded),
                     // The warm role rather than primary: 加精 is a mark the site puts on a thread, not
-                    // an action this app offers, and the site draws it orange. Same 16dp as the lock,
-                    // and after it — the order the site's own title strip uses.
+                    // an action this app offers, and the site draws it orange.
                     tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier
-                        .padding(start = Spacing.xs)
-                        .size(textScaledSize(TITLE_BADGE_SIZE)),
+                    modifier = Modifier.size(textScaledSize(TITLE_BADGE_SIZE)),
                 )
             }
-        },
-        meta = { PostMetaItems(post, sharedWithThread) },
+        }
+        Text(
+            text = highlighted(summary.title, highlight, MaterialTheme.colorScheme.primary),
+            style = cardTitleStyle(),
+            color = if (post.isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (post.isRead) FontWeight.Medium else FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.thenIf(sharedWithThread) { Modifier.sharedThreadTitle(summary.postId) },
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            if (post.newCommentCount > 0) {
+                NewReplyBadge(post.newCommentCount)
+            } else {
+                summary.commentCount?.let {
+                    MetaStat(
+                        icon = PlazaIcons.ModeComment,
+                        value = it.toString(),
+                        contentDescription = stringResource(Res.string.post_reply_count, it),
+                    )
+                }
+            }
+            summary.viewCount?.let {
+                MetaStat(
+                    icon = PlazaIcons.Visibility,
+                    value = compactCount(it),
+                    contentDescription = stringResource(Res.string.post_view_count, it),
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            if (post.isRead) MetaText(stringResource(Res.string.post_read_marker), singleLine = true)
+        }
+    }
+}
+
+/** A pinned notice: one line on a tonal strip, above the cards rather than among them. */
+@Composable
+private fun PinnedRow(
+    title: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.fillMaxWidth().heightIn(min = 44.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = PlazaIcons.PushPin,
+                contentDescription = stringResource(Res.string.post_badge_pinned),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+/** 32dp: the avatar at the head of a feed card, beside a two-line name-and-board block. */
+private val CardAvatarSize = 32.dp
+
+/**
+ * The card title: 17/25, the list's one large line. Scaled from `titleMedium` rather than fixed, so the
+ * reading-size preference — which is carried in the type scale — reaches it.
+ */
+@Composable
+private fun cardTitleStyle(): TextStyle {
+    val base = MaterialTheme.typography.titleMedium
+    return base.copy(
+        fontSize = base.fontSize * CARD_TITLE_SCALE,
+        lineHeight = base.fontSize * CARD_TITLE_SCALE * CARD_TITLE_LINE_HEIGHT,
     )
 }
+
+private const val CARD_TITLE_SCALE = 17f / 15f
+private const val AUTHOR_SCALE = 13f / 12f
+private const val CARD_TITLE_LINE_HEIGHT = 25f / 17f
+
+/** 3400 → 3.4k: the view count is a magnitude, and the card's foot has room for four characters. */
+internal fun compactCount(value: Int): String =
+    when {
+        value < 1_000 -> value.toString()
+
+        value < 10_000 -> {
+            val tenths = value / 100
+            if (tenths % 10 == 0) "${tenths / 10}k" else "${tenths / 10}.${tenths % 10}k"
+        }
+
+        else -> "${value / 1_000}k"
+    }
 
 /**
  * Applies [modifier] only when [condition] holds.
@@ -1183,71 +1419,21 @@ internal fun highlighted(
     }
 }
 
-/**
- * The meta line, in the order a scanning eye wants it: what board, who, how busy, how fresh.
- *
- * The row itself belongs to [ThreadRow] — this only says what goes in it.
- *
- * Two rules keep it on one line, which is the whole point of a meta line: the counts are icons
- * rather than words (see [MetaStat]), and the author — the one item with no upper bound on its
- * length — is the item that gives way. Everything else is a handful of characters wide, so a long
- * name ellipsizing is the only thing that has to happen for the timestamp to keep its place.
- */
-@Composable
-private fun FlowRowScope.PostMetaItems(
-    post: FeedPost,
-    sharedWithThread: Boolean = false,
-) {
-    val summary = post.summary
-    BoardTag(
-        title = summary.categoryTitle,
-        slug = summary.categorySlug,
-        modifier = Modifier.thenIf(sharedWithThread) { Modifier.sharedThreadBoard(summary.postId) },
-    )
-    MetaText(
-        summary.authorName,
-        singleLine = true,
-        modifier =
-        Modifier
-            // fill = false so a short name stays short and the counts sit next to it, rather than
-            // being pushed to the right edge with a lake of space in between.
-            .weight(1f, fill = false)
-            .thenIf(sharedWithThread) { Modifier.sharedThreadAuthor(summary.postId) },
-    )
-    if (summary.isPinned) MetaText(stringResource(Res.string.post_badge_pinned), singleLine = true)
-    if (post.newCommentCount > 0) {
-        NewReplyBadge(post.newCommentCount)
-    } else {
-        summary.commentCount?.let {
-            MetaStat(
-                icon = PlazaIcons.ModeComment,
-                value = it.toString(),
-                contentDescription = stringResource(Res.string.post_reply_count, it),
-            )
-        }
-    }
-    summary.viewCount?.let {
-        MetaStat(
-            icon = PlazaIcons.Visibility,
-            value = it.toString(),
-            contentDescription = stringResource(Res.string.post_view_count, it),
-        )
-    }
-    summary.lastActiveText?.let { MetaText(it, singleLine = true) }
-}
-
 /** Replaces the reply count once the user has read the thread: the delta is the useful number. */
 @Composable
 private fun NewReplyBadge(count: Int) {
     Text(
         text = stringResource(Res.string.post_new_reply_count, count),
-        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        style = MaterialTheme.typography.labelMedium.copy(
+            fontWeight = FontWeight.SemiBold,
+            fontFeatureSettings = TABULAR_FIGURES,
+        ),
+        color = MaterialTheme.colorScheme.onPrimary,
         modifier =
         Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(horizontal = 7.dp, vertical = 1.dp),
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
 
@@ -1259,10 +1445,15 @@ private fun NewReplyBadge(count: Int) {
  */
 @Composable
 private fun FeedSkeleton(modifier: Modifier = Modifier) {
-    val widths = listOf(0.88f, 0.68f, 0.94f, 0.75f, 0.84f, 0.62f, 0.90f, 0.71f, 0.80f)
-    val metaWidths = listOf(0.52f, 0.44f, 0.57f, 0.40f, 0.49f, 0.46f, 0.38f, 0.53f, 0.45f)
+    val widths = listOf(0.88f, 0.68f, 0.94f, 0.75f, 0.84f)
+    val metaWidths = listOf(0.52f, 0.44f, 0.57f, 0.40f, 0.49f)
 
-    Column(modifier.fillMaxSize()) {
+    Column(
+        modifier
+            .fillMaxSize()
+            .padding(horizontal = LayerPageGutter, vertical = Spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(LayerCardGap),
+    ) {
         widths.forEachIndexed { index, width ->
             FeedRowPlaceholder(titleFraction = width, metaFraction = metaWidths[index])
         }
@@ -1270,39 +1461,38 @@ private fun FeedSkeleton(modifier: Modifier = Modifier) {
 }
 
 /**
- * One row's worth of skeleton, used both by the first-load [FeedSkeleton] and for a paging
+ * One card's worth of skeleton, used both by the first-load [FeedSkeleton] and for a paging
  * placeholder — a row the database has counted but has not handed to the window yet.
  *
- * The two have to be the same shape. A placeholder that measured differently from the row replacing
- * it would move everything below it the moment the real row arrived, which is the same jump the
- * placeholders exist to prevent.
+ * The two have to be the same shape as [PostRow]'s card. A placeholder that measured differently
+ * from the card replacing it would move everything below it the moment the real row arrived, which
+ * is the same jump the placeholders exist to prevent.
  */
 @Composable
 internal fun FeedRowPlaceholder(
     titleFraction: Float = 0.82f,
     metaFraction: Float = 0.48f,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 14.dp, end = Spacing.lg, top = Spacing.md, bottom = Spacing.md),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(
-            Modifier
-                .size(listAvatarSize())
-                .clip(AvatarShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-        )
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    LayerCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            SkeletonBar(fraction = titleFraction, height = 13.dp)
-            SkeletonBar(fraction = metaFraction, height = 11.dp)
+            Box(
+                Modifier
+                    .size(CardAvatarSize)
+                    .clip(AvatarShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SkeletonBar(fraction = 0.3f, height = 11.dp)
+                SkeletonBar(fraction = metaFraction, height = 11.dp)
+            }
         }
+        SkeletonBar(fraction = 1f, height = 15.dp)
+        SkeletonBar(fraction = titleFraction, height = 15.dp)
+        SkeletonBar(fraction = 0.28f, height = 18.dp)
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 // -------------------------------------------------------------------------------------------------
