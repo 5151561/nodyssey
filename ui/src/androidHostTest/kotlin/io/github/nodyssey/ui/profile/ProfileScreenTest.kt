@@ -10,6 +10,7 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -87,7 +88,9 @@ class ProfileScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("设置").performClick()
+        // 设置 is the gear in the bar now, as it is when signed in; 社区工具 is the last guest tile.
+        composeRule.onNodeWithContentDescription("设置").performClick()
+        composeRule.onNode(hasScrollAction()).performScrollToNode(hasText("社区工具"))
         composeRule.onNodeWithText("社区工具").performClick()
 
         check(settingsOpened)
@@ -172,7 +175,8 @@ class ProfileScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("我的内容").assertIsDisplayed()
+        // The groups are cards without headings (2b); the first card's tiles are on screen.
+        composeRule.onNodeWithText("主题帖").assertIsDisplayed()
         composeRule.onNodeWithText("我的评论").performClick()
         composeRule.onNodeWithText("我的粉丝").performClick()
         // Below the fold on a 360x800 screen, and inside a `LazyColumn`, so it is not composed at
@@ -285,7 +289,7 @@ class ProfileScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("今日签到 · 领鸡腿").performClick()
+        composeRule.onNodeWithText("签到").performClick()
 
         check(attendanceOpened)
     }
@@ -314,7 +318,7 @@ class ProfileScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("固定 5 个鸡腿").performClick()
+        composeRule.onNodeWithText("固定").performClick()
 
         assertEquals(AttendanceMode.FIXED_FIVE, picked)
     }

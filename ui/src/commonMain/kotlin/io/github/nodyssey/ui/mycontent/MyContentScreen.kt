@@ -1,9 +1,9 @@
 package io.github.nodyssey.ui.mycontent
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,7 +20,6 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,12 +50,16 @@ import io.github.nodyssey.ui.resources.my_content_all_boards
 import io.github.nodyssey.ui.resources.my_content_end
 import io.github.nodyssey.ui.resources.my_content_sort_newest
 import io.github.nodyssey.ui.resources.my_content_sort_oldest
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerCardGap
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
@@ -213,7 +216,11 @@ private fun MenuChip(
         AssistChip(
             onClick = { expanded = true },
             label = { Text(label) },
-            shape = RoundedCornerShape(8.dp),
+            // A control on the page rather than in a card: the raised tone and no outline, the chip
+            // look every filter row has in the layered design.
+            shape = RoundedCornerShape(12.dp),
+            colors = AssistChipDefaults.assistChipColors(containerColor = LocalPlazaLayers.current.raised),
+            border = null,
             trailingIcon = {
                 Icon(
                     Icons.Default.ArrowDropDown,
@@ -245,10 +252,15 @@ private fun <T : Any> MyContentList(
 ) {
     val listState = rememberLazyListState()
     LoadMoreWhenNearEnd(listState, state.items.size, onLoadMore)
-    LazyColumn(state = listState) {
+    // Cards on the page, the same as the list tabs of a user's space (3a) and the home feed: each row
+    // is its own `LayerCard`, so the list is spaced rather than ruled.
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, top = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(LayerCardGap),
+    ) {
         items(state.items.size) { index ->
             row(state.items[index])
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
         item(key = "footer") {
             Box(
@@ -304,8 +316,8 @@ private fun LoadMoreWhenNearEnd(
 private const val LOAD_MORE_LOOKAHEAD = 3
 
 /**
- * One comment, the way board n3 draws it: the thread it belongs to on a tonal bar, then what was
- * said, then the floor and the time.
+ * One comment, on a card of its own: the thread it belongs to on an inset bar, then what was said,
+ * then the floor and the time.
  *
  * The quote bar carries no board tag, unlike the mock. `/api/content/list-comments` returns the
  * thread's title and nothing else about it, and colouring in a board for it would be a guess.
@@ -318,16 +330,10 @@ internal fun MyCommentRow(
     createdAtText: String?,
     onClick: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
+    LayerCard(onClick = onClick) {
         postTitle?.let {
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = LocalPlazaLayers.current.inset,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {

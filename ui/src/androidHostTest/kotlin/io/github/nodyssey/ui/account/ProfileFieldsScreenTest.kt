@@ -66,7 +66,7 @@ class ProfileFieldsScreenTest {
         var signature = ""
         setContent(onSignatureChange = { signature = it })
 
-        composeRule.onNodeWithText("签名").performScrollTo().requestFocus()
+        composeRule.onNodeWithContentDescription("签名").performScrollTo().requestFocus()
         composeRule.onNodeWithContentDescription("加粗").performClick()
 
         assertEquals("**加粗文字**", signature)
@@ -77,7 +77,7 @@ class ProfileFieldsScreenTest {
         var readme = ""
         setContent(onReadmeChange = { readme = it })
 
-        composeRule.onNodeWithText("Readme").performScrollTo().requestFocus()
+        composeRule.onNodeWithContentDescription("Readme").performScrollTo().requestFocus()
         composeRule.onNodeWithContentDescription("加粗").performClick()
 
         assertEquals("**加粗文字**", readme)
@@ -87,11 +87,11 @@ class ProfileFieldsScreenTest {
     fun `the plain bio field sends the strip away`() {
         setContent()
 
-        composeRule.onNodeWithText("签名").performScrollTo().requestFocus()
+        composeRule.onNodeWithContentDescription("签名").performScrollTo().requestFocus()
         composeRule.onNodeWithContentDescription("加粗").assertIsDisplayed()
 
         // Bio holds no Markdown, so keys standing over it would write somewhere off screen.
-        composeRule.onNodeWithText("Bio").performScrollTo().requestFocus()
+        composeRule.onNodeWithContentDescription("Bio").performScrollTo().requestFocus()
         composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
     }
 
@@ -99,10 +99,10 @@ class ProfileFieldsScreenTest {
     fun `readme offers the block keys a signature does not`() {
         setContent()
 
-        composeRule.onNodeWithText("Readme").performScrollTo().requestFocus()
+        composeRule.onNodeWithContentDescription("Readme").performScrollTo().requestFocus()
         composeRule.onNodeWithContentDescription("二级标题").assertIsDisplayed()
 
-        composeRule.onNodeWithText("签名").performScrollTo().requestFocus()
+        composeRule.onNodeWithContentDescription("签名").performScrollTo().requestFocus()
         composeRule.onNodeWithContentDescription("二级标题").assertDoesNotExist()
     }
 }

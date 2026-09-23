@@ -1,44 +1,49 @@
 package io.github.nodyssey.ui.space
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,10 +52,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.PagingData
@@ -78,7 +88,6 @@ import io.github.nodyssey.ui.resources.post_badge_private
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.post_view_count
 import io.github.nodyssey.ui.resources.profile_edit
-import io.github.nodyssey.ui.resources.space_bio
 import io.github.nodyssey.ui.resources.space_comment_in
 import io.github.nodyssey.ui.resources.space_empty_collections
 import io.github.nodyssey.ui.resources.space_empty_comments
@@ -96,25 +105,29 @@ import io.github.nodyssey.ui.resources.space_readme_expand
 import io.github.nodyssey.ui.resources.space_stat_chicken
 import io.github.nodyssey.ui.resources.space_stat_comments
 import io.github.nodyssey.ui.resources.space_stat_joined_days
-import io.github.nodyssey.ui.resources.space_stat_level
 import io.github.nodyssey.ui.resources.space_stat_topics
 import io.github.nodyssey.ui.resources.space_tab_collections
 import io.github.nodyssey.ui.resources.space_tab_comments
 import io.github.nodyssey.ui.resources.space_tab_general
 import io.github.nodyssey.ui.resources.space_tab_topics
 import io.github.nodyssey.ui.resources.space_uid
-import io.github.nodyssey.ui.resources.space_uid_bio
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.richtext.collapseMarkdown
 import io.github.plaza.core.richtext.parseMarkdown
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerCardGap
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.flowOf
 import org.jetbrains.compose.resources.StringResource
@@ -219,13 +232,17 @@ fun UserSpaceScreen(
                             Icon(
                                 Icons.Filled.Edit,
                                 contentDescription = stringResource(Res.string.profile_edit),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
                     }
                     SpaceOverflowMenu(onOpenBrowser = { onOpenBrowser(spaceUrl) })
                 },
+                colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background,
+                ),
             )
         },
     ) { padding ->
@@ -245,24 +262,24 @@ fun UserSpaceScreen(
             return@Scaffold
         }
 
-        Column(
+        // One scrolling page, header card included (3a): the header grew into a card with the bio,
+        // the stats and both actions on it, and pinned above a list it would leave the list a strip.
+        LazyColumn(
+            modifier =
             Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .readableWidth(),
+            contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(LayerCardGap),
         ) {
-            SpaceHeader(state = state, onMessage = onMessage, onToggleFollow = onToggleFollow)
-            SpaceStatsRow(state)
-            PrimaryTabRow(selectedTabIndex = state.tabs.indexOf(state.selectedTab).coerceAtLeast(0)) {
-                state.tabs.forEach { tab ->
-                    Tab(
-                        selected = tab == state.selectedTab,
-                        onClick = { onTabSelected(tab) },
-                        text = { Text(stringResource(tab.labelRes())) },
-                    )
-                }
+            item(key = "header") {
+                SpaceHeader(state = state, onMessage = onMessage, onToggleFollow = onToggleFollow)
             }
-            SpaceTabContent(
+            item(key = "tabs") {
+                SpaceTabs(state = state, onTabSelected = onTabSelected, modifier = Modifier.padding(vertical = 2.dp))
+            }
+            spaceTabContent(
                 state = state,
                 topics = topics,
                 comments = comments,
@@ -272,7 +289,6 @@ fun UserSpaceScreen(
                 onLinkClick = onLinkClick,
                 onSignIn = onSignIn,
                 onVerify = onVerify,
-                modifier = Modifier.fillMaxSize(),
             )
         }
     }
@@ -286,7 +302,6 @@ private fun SpaceOverflowMenu(onOpenBrowser: () -> Unit) {
             Icon(
                 PlazaIcons.OpenInNew,
                 contentDescription = stringResource(Res.string.action_more),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -331,22 +346,31 @@ private fun FollowFailureEffect(
     )
 }
 
+/**
+ * 3a's header card: who (avatar, name, level, UID), what they say about themselves (the bio, now here
+ * rather than a card of its own under 概况, so it is read before any tab is chosen), what the site
+ * counts for them, and — on someone else's page — the two things you can do about them.
+ *
+ * 3a also tags the account with a role (「服主」). The profile payload carries no role, so there is no
+ * tag to draw.
+ */
 @Composable
 private fun SpaceHeader(
     state: UserSpaceUiState,
     onMessage: () -> Unit,
     onToggleFollow: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+    LayerCard(
+        shape = RoundedCornerShape(28.dp),
+        contentPadding = PaddingValues(18.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            UserAvatar(url = state.avatarUrl, name = state.name, size = 60.dp)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            UserAvatar(url = state.avatarUrl, name = state.name, size = 64.dp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = state.name,
@@ -359,33 +383,31 @@ private fun SpaceHeader(
                         Surface(
                             color = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            shape = RoundedCornerShape(7.dp),
-                            modifier = Modifier.padding(start = 6.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.padding(start = 8.dp),
                         ) {
                             Text(
                                 text = stringResource(Res.string.assets_level, level),
-                                style =
-                                MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             )
                         }
                     }
                 }
                 Text(
-                    text =
-                    state.bio
-                        ?.let { stringResource(Res.string.space_uid_bio, state.uid, it) }
-                        ?: stringResource(Res.string.space_uid, state.uid),
-                    style = MaterialTheme.typography.labelMedium,
+                    text = stringResource(Res.string.space_uid, state.uid),
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
+        state.bio?.let { bio ->
+            Text(bio, style = MaterialTheme.typography.bodyMedium)
+        }
+        SpaceStatsRow(state)
         // The two actions the site offers on someone else's space, in the site's own order.
         if (!state.isSelf) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (state.canFollow) {
                     FollowButton(
                         followed = state.followed == true,
@@ -393,13 +415,14 @@ private fun SpaceHeader(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = onMessage,
+                    shape = CircleShape,
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp),
+                        .height(48.dp),
                 ) {
-                    Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(19.dp))
+                    Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(20.dp))
                     Text(
                         stringResource(Res.string.space_message),
                         modifier = Modifier.padding(start = 6.dp),
@@ -413,10 +436,10 @@ private fun SpaceHeader(
 /**
  * 关注 / 已关注, as one button that says what pressing it will do next.
  *
- * Filled while unfollowed and outlined once followed, which is the same demotion the site performs by
+ * Filled while unfollowed and tonal once followed, which is the same demotion the site performs by
  * turning its blue button grey: after the relationship exists, undoing it is not the action this screen
- * is for. The label is the *current* state rather than the pending action — "已关注" beside an outlined
- * button reads as a toggle that is on, where "取关" would read as a warning.
+ * is for. The label is the *current* state rather than the pending action — "已关注" on a quieter button
+ * reads as a toggle that is on, where "取关" would read as a warning.
  */
 @Composable
 private fun FollowButton(
@@ -427,36 +450,34 @@ private fun FollowButton(
     val icon = if (followed) Icons.Default.Check else Icons.Default.Add
     val label = stringResource(if (followed) Res.string.space_following else Res.string.space_follow)
     val content: @Composable RowScope.() -> Unit = {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(19.dp))
+        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
         Text(label, modifier = Modifier.padding(start = 6.dp))
     }
-    val buttonModifier = modifier.height(44.dp)
+    val buttonModifier = modifier.height(48.dp)
 
     if (followed) {
-        OutlinedButton(onClick = onClick, modifier = buttonModifier, content = content)
+        FilledTonalButton(onClick = onClick, modifier = buttonModifier, shape = CircleShape, content = content)
     } else {
-        Button(onClick = onClick, modifier = buttonModifier, content = content)
+        Button(onClick = onClick, modifier = buttonModifier, shape = CircleShape, content = content)
     }
 }
 
 /**
- * The five statistics the site actually publishes for an account.
+ * The statistics the site actually publishes for an account, on an inset tile.
  *
- * Not four, not seven: 加入天数 / 等级 / 鸡腿 / 主题帖 / 评论. `getInfo` does also carry `fans` and
- * `follows`, but a sixth and seventh column would squeeze all of them below the width where the labels
- * stay readable, and the two lists they count already have a screen of their own (8c 关注与粉丝).
+ * 加入天数 / 鸡腿 / 主题帖 / 评论 — the level, the fifth, rides on the tag beside the name in 3a rather
+ * than taking a column. `getInfo` does also carry `fans` and `follows`, but the two lists they count
+ * already have a screen of their own (关注与粉丝), and the site's own page does not print them.
  */
 @Composable
 private fun SpaceStatsRow(state: UserSpaceUiState) {
-    Row(Modifier.padding(horizontal = 10.dp)) {
-        SpaceStat(state.joinedDays?.toString(), stringResource(Res.string.space_stat_joined_days))
-        SpaceStat(
-            state.level?.let { stringResource(Res.string.assets_level, it) },
-            stringResource(Res.string.space_stat_level),
-        )
-        SpaceStat(state.chickenCount?.formatted(), stringResource(Res.string.space_stat_chicken))
-        SpaceStat(state.topicCount?.formatted(), stringResource(Res.string.space_stat_topics))
-        SpaceStat(state.commentCount?.formatted(), stringResource(Res.string.space_stat_comments))
+    Surface(color = LocalPlazaLayers.current.inset, shape = RoundedCornerShape(18.dp)) {
+        Row(Modifier.padding(vertical = 12.dp)) {
+            SpaceStat(state.joinedDays?.toString(), stringResource(Res.string.space_stat_joined_days))
+            SpaceStat(state.chickenCount?.formatted(), stringResource(Res.string.space_stat_chicken))
+            SpaceStat(state.topicCount?.formatted(), stringResource(Res.string.space_stat_topics))
+            SpaceStat(state.commentCount?.formatted(), stringResource(Res.string.space_stat_comments))
+        }
     }
 }
 
@@ -466,9 +487,7 @@ private fun RowScope.SpaceStat(
     label: String,
 ) {
     Column(
-        modifier = Modifier
-            .weight(1f)
-            .padding(bottom = 14.dp),
+        modifier = Modifier.weight(1f),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -476,13 +495,13 @@ private fun RowScope.SpaceStat(
             text = value ?: UNKNOWN_VALUE,
             style =
             MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.Bold,
                 fontFeatureSettings = TABULAR_FIGURES,
             ),
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -495,8 +514,64 @@ private const val UNKNOWN_VALUE = "—"
 private fun Int.formatted(): String =
     if (this >= 1_000) toString().reversed().chunked(3).joinToString(",").reversed() else toString()
 
+/**
+ * 3a's tabs: a pill segmented control on a recessed track, the selected segment raised and white.
+ *
+ * A [PrimaryTabRow] underneath rather than a row of hand-drawn pills, so selection semantics, keyboard
+ * focus and the indicator's slide are Material's. What it is given is its look: the track as its
+ * container, no divider, and an indicator that fills the selected tab as a pill. The indicator is
+ * pushed under the labels with `zIndex` — the row places it after the tabs, which would otherwise
+ * paint the white pill over the selected label.
+ */
 @Composable
-private fun SpaceTabContent(
+private fun SpaceTabs(
+    state: UserSpaceUiState,
+    onTabSelected: (SpaceTab) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selectedIndex = state.tabs.indexOf(state.selectedTab).coerceAtLeast(0)
+    val layers = LocalPlazaLayers.current
+    PrimaryTabRow(
+        selectedTabIndex = selectedIndex,
+        modifier = modifier.clip(CircleShape).height(44.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        divider = {},
+        indicator = {
+            Box(
+                Modifier
+                    .tabIndicatorOffset(selectedIndex, matchContentSize = false)
+                    .zIndex(-1f)
+                    .fillMaxHeight()
+                    .padding(4.dp)
+                    .cardShadow(CircleShape, layers.shadows)
+                    .background(layers.raised, CircleShape),
+            )
+        },
+    ) {
+        state.tabs.forEach { tab ->
+            val selected = tab == state.selectedTab
+            Tab(
+                selected = selected,
+                onClick = { onTabSelected(tab) },
+                selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.height(44.dp),
+                text = {
+                    Text(
+                        stringResource(tab.labelRes()),
+                        style =
+                        MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        ),
+                    )
+                },
+            )
+        }
+    }
+}
+
+private fun LazyListScope.spaceTabContent(
     state: UserSpaceUiState,
     topics: LazyPagingItems<SpacePost>?,
     comments: LazyPagingItems<SpaceComment>?,
@@ -506,36 +581,33 @@ private fun SpaceTabContent(
     onLinkClick: (String) -> Unit,
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     when (state.selectedTab) {
-        SpaceTab.GENERAL -> GeneralTab(state, onLinkClick, modifier)
+        SpaceTab.GENERAL -> item(key = "readme") { ReadmeCard(state, onLinkClick) }
 
         SpaceTab.TOPICS ->
-            SpaceListTab(
+            spaceListTab(
                 list = topics,
-                emptyText = stringResource(Res.string.space_empty_topics),
+                emptyText = Res.string.space_empty_topics,
                 endTextRes = Res.string.space_end_topics,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
                 onVerify = onVerify,
-                key = { _, post -> post.postId },
-                modifier = modifier,
+                key = { _, post -> "topic-${post.postId}" },
             ) { post ->
                 SpacePostRow(post = post, onClick = { onPostClick(post.postId, null) })
             }
 
         SpaceTab.COMMENTS ->
-            SpaceListTab(
+            spaceListTab(
                 list = comments,
-                emptyText = stringResource(Res.string.space_empty_comments),
+                emptyText = Res.string.space_empty_comments,
                 endTextRes = Res.string.space_end_comments,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
                 onVerify = onVerify,
                 // The payload's own id when it has one; the position only for the rare row without.
-                key = { index, comment -> comment.commentId ?: "comment-$index" },
-                modifier = modifier,
+                key = { index, comment -> "comment-${comment.commentId ?: "at-$index"}" },
             ) { comment ->
                 // The floor rides along so the thread opens at this very comment.
                 SpaceCommentRow(
@@ -545,43 +617,59 @@ private fun SpaceTabContent(
             }
 
         SpaceTab.COLLECTIONS ->
-            SpaceListTab(
+            spaceListTab(
                 list = collections,
-                emptyText = stringResource(Res.string.space_empty_collections),
+                emptyText = Res.string.space_empty_collections,
                 endTextRes = Res.string.space_end_collections,
                 onOpenBrowser = onOpenBrowser,
                 onSignIn = onSignIn,
                 onVerify = onVerify,
-                key = { _, post -> post.postId },
-                modifier = modifier,
+                key = { _, post -> "collection-${post.postId}" },
             ) { post ->
                 SpacePostRow(post = post, onClick = { onPostClick(post.postId, null) })
             }
     }
 }
 
-/** 概况: one sentence of Bio, then the Readme the user wrote in Markdown. */
+/**
+ * 概况's Readme, in a card that folds long ones away.
+ *
+ * The fold is offered twice, in 3a's two places: a chevron on the card's heading and 展开全部 under the
+ * text. Both do the same thing; the chevron is where the eye lands first, the text button where the
+ * thumb is after reading the preview.
+ */
 @Composable
-private fun GeneralTab(
+private fun ReadmeCard(
     state: UserSpaceUiState,
     onOpenBrowser: (String) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     var readmeExpanded by rememberSaveable(state.uid) { mutableStateOf(false) }
-
-    Column(
-        modifier = modifier
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.lg, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    val readme = state.readme?.takeIf { it.isNotBlank() }
+    val foldable = readme != null && readme.lines().size > README_COLLAPSED_LINES
+    val toggleLabel =
+        stringResource(if (readmeExpanded) Res.string.space_readme_collapse else Res.string.space_readme_expand)
+    LayerCard(
+        contentPadding = PaddingValues(start = 18.dp, top = 12.dp, end = 8.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        state.bio?.let { bio ->
-            SpaceCard(title = stringResource(Res.string.space_bio)) {
-                Text(bio, style = MaterialTheme.typography.bodyMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(Res.string.space_readme),
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.weight(1f).semantics { heading() },
+            )
+            if (foldable) {
+                IconButton(onClick = { readmeExpanded = !readmeExpanded }) {
+                    Icon(
+                        if (readmeExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = toggleLabel,
+                    )
+                }
+            } else {
+                Box(Modifier.height(Sizes.minTouchTarget))
             }
         }
-        SpaceCard(title = stringResource(Res.string.space_readme)) {
-            val readme = state.readme?.takeIf { it.isNotBlank() }
+        Column(Modifier.padding(end = 10.dp), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             if (readme == null) {
                 // The site's own empty state, emoji included. Writing our own would have been a
                 // worse sentence and a less familiar one.
@@ -589,6 +677,7 @@ private fun GeneralTab(
                     stringResource(Res.string.space_readme_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 10.dp),
                 )
             } else {
                 // Readmes arrive as source, the same as 私信 do, so a `:ac01:` in one reaches the
@@ -604,20 +693,12 @@ private fun GeneralTab(
                     nodes = nodes,
                     onLinkClick = onOpenBrowser,
                     onImageClick = onOpenBrowser,
-                    textStyle = MaterialTheme.typography.bodyMedium,
+                    textStyle = MaterialTheme.typography.bodyLarge,
                 )
-                if (readme.lines().size > README_COLLAPSED_LINES) {
-                    TextButton(onClick = { readmeExpanded = !readmeExpanded }) {
-                        Text(
-                            stringResource(
-                                if (readmeExpanded) {
-                                    Res.string.space_readme_collapse
-                                } else {
-                                    Res.string.space_readme_expand
-                                },
-                            ),
-                        )
-                    }
+                if (foldable) {
+                    TextButton(onClick = { readmeExpanded = !readmeExpanded }) { Text(toggleLabel) }
+                } else {
+                    Box(Modifier.height(10.dp))
                 }
             }
         }
@@ -626,137 +707,104 @@ private fun GeneralTab(
 
 private const val README_COLLAPSED_LINES = 8
 
-@Composable
-private fun SpaceCard(
-    title: String,
-    content: @Composable () -> Unit,
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(18.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            content()
-        }
-    }
-}
-
 /**
  * The list tabs, which differ only in their row and their end-of-list sentence.
  *
- * The repository remains page-numbered, while Paging 3 owns loading, retries and append state.
+ * Emitted into the page's own `LazyColumn` rather than as a list of their own, so the header card
+ * scrolls away with the rows. The repository remains page-numbered, while Paging 3 owns loading,
+ * retries and append state.
  */
-@Composable
-private fun <T : Any> SpaceListTab(
+private fun <T : Any> LazyListScope.spaceListTab(
     list: LazyPagingItems<T>?,
-    emptyText: String,
+    emptyText: StringResource,
     endTextRes: StringResource,
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
     /** Stable row identity, so a page-1 replace recomposes only the rows that actually changed. */
     key: (index: Int, item: T) -> Any,
-    modifier: Modifier = Modifier,
     row: @Composable (T) -> Unit,
 ) {
-    if (list == null) {
-        LoadingState(modifier)
-        return
-    }
-    if (list.itemCount == 0) {
-        when (val refresh = list.loadState.refresh) {
-            LoadState.Loading -> LoadingState(modifier)
+    if (list == null || list.itemCount == 0) {
+        item(key = "list-state") {
+            val stateModifier = Modifier.fillParentMaxHeight(0.55f).fillMaxWidth()
+            when (val refresh = list?.loadState?.refresh ?: LoadState.Loading) {
+                LoadState.Loading -> LoadingState(stateModifier)
 
-            is LoadState.Error ->
-                SiteErrorState(
-                    error = refresh.error.toSiteError(),
-                    onRetry = list::retry,
-                    onOpenBrowser = { onOpenBrowser(NodeSeekSite.BASE_URL) },
-                    onSignIn = onSignIn,
-                    onVerify = { onVerify(NodeSeekSite.BASE_URL) },
-                    modifier = modifier,
-                )
-
-            is LoadState.NotLoading ->
-                Box(modifier, contentAlignment = Alignment.Center) {
-                    Text(
-                        emptyText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 72.dp),
+                is LoadState.Error ->
+                    SiteErrorState(
+                        error = refresh.error.toSiteError(),
+                        onRetry = { list?.retry() },
+                        onOpenBrowser = { onOpenBrowser(NodeSeekSite.BASE_URL) },
+                        onSignIn = onSignIn,
+                        onVerify = { onVerify(NodeSeekSite.BASE_URL) },
+                        modifier = stateModifier,
                     )
-                }
-        }
-        return
-    }
 
-    LazyColumn(modifier) {
-        items(
-            count = list.itemCount,
-            key = { index -> list.peek(index)?.let { key(index, it) } ?: index },
-        ) { index ->
-            list[index]?.let { item ->
-                row(item)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                is LoadState.NotLoading ->
+                    Box(stateModifier, contentAlignment = Alignment.Center) {
+                        Text(
+                            stringResource(emptyText),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
             }
         }
-        item(key = "footer") {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 22.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                when (list.loadState.append) {
-                    LoadState.Loading -> PlazaSpinner(Modifier.describedAsLoading(), size = 22.dp)
+        return
+    }
 
-                    is LoadState.Error ->
-                        TextButton(onClick = list::retry) {
-                            Text(stringResource(Res.string.action_retry))
-                        }
+    items(
+        count = list.itemCount,
+        key = { index -> list.peek(index)?.let { key(index, it) } ?: "row-$index" },
+    ) { index ->
+        list[index]?.let { item -> row(item) }
+    }
+    item(key = "footer") {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            when (list.loadState.append) {
+                LoadState.Loading -> PlazaSpinner(Modifier.describedAsLoading(), size = 22.dp)
 
-                    is LoadState.NotLoading ->
-                        if (list.loadState.append.endOfPaginationReached) {
-                            Text(
-                                text = stringResource(endTextRes, list.itemCount),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            PlazaSpinner(Modifier.describedAsLoading(), size = 22.dp)
-                        }
-                }
+                is LoadState.Error ->
+                    TextButton(onClick = list::retry) {
+                        Text(stringResource(Res.string.action_retry))
+                    }
+
+                is LoadState.NotLoading ->
+                    if (list.loadState.append.endOfPaginationReached) {
+                        Text(
+                            text = stringResource(endTextRes, list.itemCount),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        PlazaSpinner(Modifier.describedAsLoading(), size = 22.dp)
+                    }
             }
         }
     }
 }
 
-/** Shared with 我的主题帖 (board n2), which is the same row without the tabs around it. */
+/**
+ * One post as a card, the way the home feed draws one: the 17/25 title, then its board and counts.
+ *
+ * Shared with 我的主题帖, which is the same card without the tabs around it.
+ */
 @Composable
 internal fun SpacePostRow(
     post: SpacePost,
     onClick: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.lg, vertical = 11.dp),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
+    LayerCard(onClick = onClick, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = post.title,
-                style = MaterialTheme.typography.titleMedium,
+                style = spaceCardTitleStyle(),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 // Not filling, so the lock keeps its place beside the title rather than being
@@ -798,6 +846,7 @@ internal fun SpacePostRow(
                     contentDescription = stringResource(Res.string.post_view_count, it),
                 )
             }
+            Box(Modifier.weight(1f))
             post.createdAtText?.let { RowMeta(it) }
         }
     }
@@ -808,22 +857,16 @@ private fun SpaceCommentRow(
     comment: SpaceComment,
     onClick: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.lg, vertical = 11.dp),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
+    LayerCard(onClick = onClick, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = comment.excerpt,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 3,
             overflow = TextOverflow.Ellipsis,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             comment.postTitle?.let {
-                RowMeta(stringResource(Res.string.space_comment_in, it), weighted = true)
+                RowMeta(stringResource(Res.string.space_comment_in, it), modifier = Modifier.weight(1f))
             }
             comment.createdAtText?.let { RowMeta(it) }
         }
@@ -833,17 +876,34 @@ private fun SpaceCommentRow(
 @Composable
 private fun RowMeta(
     text: String,
-    weighted: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+        style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = if (weighted) Modifier.fillMaxWidth(0.7f) else Modifier,
+        modifier = modifier,
     )
 }
+
+/**
+ * The home feed's card title, 17/25, scaled from `titleMedium` so the reading-size preference reaches
+ * it. A copy of the feed's own rather than a shared one: that one is private to the feed, and the two
+ * are meant to match, not to be one knob.
+ */
+@Composable
+internal fun spaceCardTitleStyle(): TextStyle {
+    val base = MaterialTheme.typography.titleMedium
+    return base.copy(
+        fontSize = base.fontSize * CARD_TITLE_SCALE,
+        lineHeight = base.fontSize * CARD_TITLE_SCALE * CARD_TITLE_LINE_HEIGHT,
+    )
+}
+
+private const val CARD_TITLE_SCALE = 17f / 15f
+private const val CARD_TITLE_LINE_HEIGHT = 25f / 17f
 
 private fun SpaceTab.labelRes(): StringResource =
     when (this) {

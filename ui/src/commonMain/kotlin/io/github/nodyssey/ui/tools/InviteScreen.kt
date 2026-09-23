@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,12 +19,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,6 +39,8 @@ import io.github.nodyssey.ui.resources.invite_body
 import io.github.nodyssey.ui.resources.invite_buy
 import io.github.nodyssey.ui.resources.invite_chicken_balance
 import io.github.nodyssey.ui.resources.invite_title
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -111,57 +111,48 @@ fun InviteScreen(
                 // the only screen here with nothing to scroll, so without this the reader who pulls
                 // it open can never put it back. It also earns its keep at the larger font scales.
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg),
+                .padding(horizontal = LayerPageGutter),
         ) {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(
-                    modifier = Modifier.padding(Spacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            LayerCard(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                    ) {
-                        Icon(
-                            PlazaIcons.Group,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(26.dp),
-                        )
-                        Text(
-                            text = stringResource(Res.string.invite_body, siteName),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Button(
-                        onClick = { confirming = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(24.dp),
-                    ) {
-                        Icon(
-                            PlazaIcons.ConfirmationNumber,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            stringResource(Res.string.invite_buy),
-                            modifier = Modifier.padding(start = Spacing.sm),
-                        )
-                    }
-                    chickenCount?.let {
-                        Text(
-                            text = stringResource(Res.string.invite_chicken_balance, it),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    Icon(
+                        PlazaIcons.Group,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp),
+                    )
+                    Text(
+                        text = stringResource(Res.string.invite_body, siteName),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Button(
+                    onClick = { confirming = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = CircleShape,
+                ) {
+                    Icon(
+                        PlazaIcons.ConfirmationNumber,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        stringResource(Res.string.invite_buy),
+                        modifier = Modifier.padding(start = Spacing.sm),
+                    )
+                }
+                chickenCount?.let {
+                    Text(
+                        text = stringResource(Res.string.invite_chicken_balance, it),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }

@@ -37,9 +37,20 @@ import kotlinx.coroutines.launch
 data class CreditUiState(
     val level: Int? = null,
     val chickenCount: Int? = null,
-    /** Only Lv1's threshold is published, so this is null on every other level. */
+    /** Where the current level began — the bar's zero. See `NodeSeekSite.levelChickenSpan`. */
+    val levelFloorChicken: Int? = null,
     val nextLevelChicken: Int? = null,
-)
+) {
+    /** How far through the current level's span the balance sits; the same bar 账户与成长 draws. */
+    val levelProgress: Float?
+        get() {
+            val next = nextLevelChicken ?: return null
+            val floor = levelFloorChicken ?: return null
+            val span = (next - floor).takeIf { it > 0 } ?: return null
+            val current = chickenCount ?: return null
+            return ((current - floor).toFloat() / span).coerceIn(0f, 1f)
+        }
+}
 
 /**
  * State holder for 鸡腿流水.
@@ -80,6 +91,7 @@ class CreditViewModel(
                             it.copy(
                                 level = growth.level,
                                 chickenCount = growth.chickenCount,
+                                levelFloorChicken = growth.levelFloorChicken,
                                 nextLevelChicken = growth.nextLevelChicken,
                             )
                         }

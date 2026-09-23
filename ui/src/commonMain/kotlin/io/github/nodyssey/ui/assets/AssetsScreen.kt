@@ -1,31 +1,28 @@
 package io.github.nodyssey.ui.assets
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -34,13 +31,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
@@ -59,13 +56,11 @@ import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.assets_board
 import io.github.nodyssey.ui.resources.assets_board_subtitle
 import io.github.nodyssey.ui.resources.assets_chicken
-import io.github.nodyssey.ui.resources.assets_chicken_count
+import io.github.nodyssey.ui.resources.assets_current_level
 import io.github.nodyssey.ui.resources.assets_daily_title
 import io.github.nodyssey.ui.resources.assets_ledger
 import io.github.nodyssey.ui.resources.assets_ledger_transfer
-import io.github.nodyssey.ui.resources.assets_level
 import io.github.nodyssey.ui.resources.assets_level_no_threshold
-import io.github.nodyssey.ui.resources.assets_level_progress
 import io.github.nodyssey.ui.resources.assets_level_remaining
 import io.github.nodyssey.ui.resources.assets_quota_attendance
 import io.github.nodyssey.ui.resources.assets_quota_comment
@@ -74,11 +69,11 @@ import io.github.nodyssey.ui.resources.assets_quota_hint
 import io.github.nodyssey.ui.resources.assets_quota_post
 import io.github.nodyssey.ui.resources.assets_quota_value
 import io.github.nodyssey.ui.resources.assets_quota_value_unknown
-import io.github.nodyssey.ui.resources.assets_sign_in
 import io.github.nodyssey.ui.resources.assets_signed_in
 import io.github.nodyssey.ui.resources.assets_signing_in
 import io.github.nodyssey.ui.resources.assets_stars
 import io.github.nodyssey.ui.resources.assets_title
+import io.github.nodyssey.ui.resources.credit_level
 import io.github.nodyssey.ui.resources.invite_balance_after
 import io.github.nodyssey.ui.resources.invite_caution
 import io.github.nodyssey.ui.resources.invite_confirm
@@ -86,14 +81,22 @@ import io.github.nodyssey.ui.resources.invite_confirm_title
 import io.github.nodyssey.ui.resources.invite_cost
 import io.github.nodyssey.ui.resources.invite_cost_value
 import io.github.nodyssey.ui.resources.invite_opened_web
+import io.github.nodyssey.ui.resources.invite_short_hint
+import io.github.nodyssey.ui.resources.invite_short_title
 import io.github.nodyssey.ui.resources.invite_shortfall
+import io.github.nodyssey.ui.resources.invite_shortfall_label
+import io.github.nodyssey.ui.resources.profile_attendance_title
 import io.github.nodyssey.ui.resources.spend_current_balance
-import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.GroupedRow
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerGroup
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -195,18 +198,17 @@ fun AssetsScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(start = LayerPageGutter, end = LayerPageGutter, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             LevelCard(state)
-            DailyQuotaCard(state)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BalanceCard(
                     label = stringResource(Res.string.assets_chicken),
                     value = state.chickenCount,
                     action = stringResource(Res.string.assets_ledger),
-                    container = MaterialTheme.colorScheme.primaryContainer,
-                    content = MaterialTheme.colorScheme.onPrimaryContainer,
+                    container = MaterialTheme.colorScheme.tertiaryContainer,
+                    content = MaterialTheme.colorScheme.onTertiaryContainer,
                     onClick = onChickenLedger,
                 )
                 BalanceCard(
@@ -218,20 +220,22 @@ fun AssetsScreen(
                     onClick = onStardust,
                 )
             }
-            AttendanceButton(
+            SectionLabel(stringResource(Res.string.assets_daily_title))
+            DailyQuotaCard(
                 state = state,
                 onRequestAttendance = onRequestAttendance,
-                onOpenBoard = onOpenBoard,
             )
             // 邀请购码住在社区工具里，和站点的入口位置一致；这里不再重复一份。
-            GroupedRow(
-                title = stringResource(Res.string.assets_board),
-                subtitle = stringResource(Res.string.assets_board_subtitle),
-                icon = PlazaIcons.Group,
-                first = true,
-                last = true,
-                onClick = onOpenBoard,
-            )
+            LayerGroup {
+                GroupedRow(
+                    title = stringResource(Res.string.assets_board),
+                    subtitle = stringResource(Res.string.assets_board_subtitle),
+                    icon = PlazaIcons.Group,
+                    first = true,
+                    last = true,
+                    onClick = onOpenBoard,
+                )
+            }
         }
     }
 
@@ -257,7 +261,10 @@ fun AssetsScreen(
  * Buying an invite code, confirmed the same way as every other spend.
  *
  * Shared with the invite screen deliberately: the same 1000 chicken leave the account whichever entry
- * point was tapped, so they get the same sentence and the same disabled state when the balance is short.
+ * point was tapped, so they get the same sentence and the same dead end when the balance is short.
+ * That dead end is 9e's: titled 鸡腿不够, the gap worked out on the card — balance, cost, and what is
+ * still missing in the error tone — and a line on how chicken legs are earned instead of a caution
+ * about a purchase that is not going to happen.
  */
 @Composable
 fun InviteConfirmDialog(
@@ -266,6 +273,29 @@ fun InviteConfirmDialog(
     onDismiss: () -> Unit,
 ) {
     val shortfall = chickenCount?.let { (INVITE_CODE_CHICKEN_COST - it).takeIf { gap -> gap > 0 } }
+    if (chickenCount != null && shortfall != null) {
+        SpendConfirmDialog(
+            title = stringResource(Res.string.invite_short_title),
+            details =
+            listOf(
+                SpendDetail(stringResource(Res.string.spend_current_balance), chickenCount.toString()),
+                SpendDetail(stringResource(Res.string.invite_cost), signedAmount(-INVITE_CODE_CHICKEN_COST)),
+                SpendDetail(
+                    stringResource(Res.string.invite_shortfall_label),
+                    shortfall.toString(),
+                    separated = true,
+                    isError = true,
+                ),
+            ),
+            caution = stringResource(Res.string.invite_short_hint),
+            confirmLabel = stringResource(Res.string.invite_confirm),
+            onConfirm = onConfirm,
+            onDismiss = onDismiss,
+            icon = null,
+            shortfall = stringResource(Res.string.invite_shortfall, shortfall),
+        )
+        return
+    }
     SpendConfirmDialog(
         title = stringResource(Res.string.invite_confirm_title),
         details =
@@ -273,14 +303,13 @@ fun InviteConfirmDialog(
             add(SpendDetail(stringResource(Res.string.invite_cost), stringResource(Res.string.invite_cost_value)))
             chickenCount?.let { balance ->
                 add(SpendDetail(stringResource(Res.string.spend_current_balance), balance.toString()))
-                if (shortfall == null) {
-                    add(
-                        SpendDetail(
-                            stringResource(Res.string.invite_balance_after),
-                            (balance - INVITE_CODE_CHICKEN_COST).toString(),
-                        ),
-                    )
-                }
+                add(
+                    SpendDetail(
+                        stringResource(Res.string.invite_balance_after),
+                        (balance - INVITE_CODE_CHICKEN_COST).toString(),
+                        separated = true,
+                    ),
+                )
             }
         },
         caution =
@@ -289,39 +318,68 @@ fun InviteConfirmDialog(
         onConfirm = onConfirm,
         onDismiss = onDismiss,
         icon = PlazaIcons.ConfirmationNumber,
-        shortfall = shortfall?.let { stringResource(Res.string.invite_shortfall, it) },
     )
 }
 
 /**
- * The level card, whose bar is the chicken count itself.
+ * 8a's lead: the level, large, with the chicken count that *is* its progress.
  *
  * The bar spans the current level rather than starting at zero — Lv2 runs 400 → 900 — because that
  * is the span the site's own `/progress` bar draws. See `NodeSeekSite.levelChickenSpan`.
+ *
+ * 8a also prints 「Lv5 封顶」 under the bar. It is left out: the site clamps its *bar* at Lv5, but
+ * accounts above Lv5 exist, so as a statement about levels it would be wrong.
  */
 @Composable
 private fun LevelCard(state: AssetsUiState) {
-    AssetsCard(radius = 22.dp) {
+    LayerCard(
+        shape = RoundedCornerShape(28.dp),
+        contentPadding = PaddingValues(18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                text = state.level?.let { stringResource(Res.string.assets_level, it) } ?: UNKNOWN,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.weight(1f),
-            )
-            val target = state.nextLevelChicken
-            val chicken = state.chickenCount
-            Text(
-                text =
-                if (target != null && chicken != null) {
-                    stringResource(Res.string.assets_level_progress, chicken, target)
-                } else {
-                    chicken?.let { stringResource(Res.string.assets_chicken_count, it) } ?: UNKNOWN
-                },
-                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = stringResource(Res.string.assets_current_level),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = state.level?.let { stringResource(Res.string.credit_level, it) } ?: UNKNOWN,
+                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                )
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                val chicken = state.chickenCount
+                val target = state.nextLevelChicken
+                val muted = MaterialTheme.colorScheme.onSurfaceVariant
+                Text(
+                    text =
+                    buildAnnotatedString {
+                        append(chicken?.toString() ?: UNKNOWN)
+                        if (target != null) {
+                            withStyle(
+                                MaterialTheme.typography.titleSmall
+                                    .copy(fontWeight = FontWeight.Medium, color = muted)
+                                    .toSpanStyle(),
+                            ) { append(" / $target") }
+                        }
+                    },
+                    style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFeatureSettings = TABULAR_FIGURES,
+                    ),
+                    maxLines = 1,
+                )
+                Text(
+                    text = stringResource(Res.string.assets_chicken),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = muted,
+                )
+            }
         }
-        ProgressTrack(progress = state.levelProgress, height = 8.dp)
+        GrowthProgressBar(progress = state.levelProgress)
         Text(
             text =
             state.chickenToNextLevel?.let { remaining ->
@@ -331,34 +389,38 @@ private fun LevelCard(state: AssetsUiState) {
                     (state.levelBarRank ?: state.level ?: 1) + 1,
                 )
             } ?: stringResource(Res.string.assets_level_no_threshold),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
+/**
+ * 今日额度 as one card of rows. Sign-in is its last row, and the only row that is also a control: the
+ * big button this screen used to end with is now the row's trailing edge, because today's sign-in *is*
+ * today's fourth allowance and reads best beside the other three.
+ */
 @Composable
-private fun DailyQuotaCard(state: AssetsUiState) {
-    AssetsCard(radius = 22.dp) {
-        Text(
-            text = stringResource(Res.string.assets_daily_title),
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-        )
+private fun DailyQuotaCard(
+    state: AssetsUiState,
+    onRequestAttendance: () -> Unit,
+) {
+    LayerGroup {
         QuotaRow(stringResource(Res.string.assets_quota_post), state.postQuota)
+        LayerDivider(startInset = 16.dp, endInset = 16.dp)
         QuotaRow(stringResource(Res.string.assets_quota_comment), state.commentQuota)
-        QuotaRow(
-            label = stringResource(Res.string.assets_quota_attendance),
-            quota = state.attendanceQuota,
-            badge = state.attendanceGain?.let { stringResource(Res.string.assets_signed_in, it) },
-        )
+        LayerDivider(startInset = 16.dp, endInset = 16.dp)
         QuotaRow(stringResource(Res.string.assets_quota_feeding), state.feedingQuota)
-        if (!state.postQuota.isKnown) {
-            Text(
-                text = stringResource(Res.string.assets_quota_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        LayerDivider(startInset = 16.dp, endInset = 16.dp)
+        AttendanceRow(state, onRequestAttendance)
+    }
+    if (!state.postQuota.isKnown) {
+        Text(
+            text = stringResource(Res.string.assets_quota_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = Spacing.md),
+        )
     }
 }
 
@@ -366,32 +428,95 @@ private fun DailyQuotaCard(state: AssetsUiState) {
 private fun QuotaRow(
     label: String,
     quota: DailyQuota,
-    badge: String? = null,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+    Column(
+        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            badge?.let {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.padding(end = Spacing.sm),
-                ) {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
-                    )
-                }
-            }
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                modifier = Modifier.weight(1f),
+            )
             Text(
                 text = quota.label(),
-                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
+                style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        ProgressTrack(progress = quota.progress(), height = 4.dp)
+        GrowthProgressBar(progress = quota.progress())
+    }
+}
+
+/**
+ * The sign-in row: a button until today's sign-in is done, a receipt afterwards.
+ *
+ * The receipt names the gain when the site told us one and falls back to the allowance line — the
+ * same two numbers, from two endpoints — so a sign-in made on the website still shows as done here.
+ */
+@Composable
+private fun AttendanceRow(
+    state: AssetsUiState,
+    onRequestAttendance: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = Spacing.lg, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            stringResource(Res.string.assets_quota_attendance),
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+            modifier = Modifier.weight(1f),
+        )
+        when {
+            state.isSigningIn -> {
+                PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
+                Text(
+                    stringResource(Res.string.assets_signing_in),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            state.hasSignedInToday ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.height(28.dp).padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Text(
+                            text =
+                            state.attendanceGain?.let { stringResource(Res.string.assets_signed_in, it) }
+                                ?: state.attendanceMessage
+                                ?: state.attendanceQuota.label(),
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+            else ->
+                Button(
+                    onClick = onRequestAttendance,
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    modifier = Modifier.height(36.dp),
+                ) {
+                    Icon(NodeSeekIcons.ChickenLeg, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(
+                        stringResource(Res.string.profile_attendance_title),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+        }
     }
 }
 
@@ -414,29 +539,6 @@ private fun DailyQuota.progress(): Float? {
     return (current.toFloat() / cap).coerceIn(0f, 1f)
 }
 
-/**
- * A determinate bar when the number is known, an empty track when it is not. Never a guessed fill.
- *
- * The gap and the stop indicator Material draws by default are turned off: at 4.dp these bars sit
- * directly under a quota row and read as one continuous track, and a dot at the far right would look
- * like a value the site never published.
- */
-@Composable
-private fun ProgressTrack(
-    progress: Float?,
-    height: Dp,
-) {
-    LinearProgressIndicator(
-        progress = { progress ?: 0f },
-        color = MaterialTheme.colorScheme.primary,
-        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        strokeCap = StrokeCap.Round,
-        gapSize = 0.dp,
-        drawStopIndicator = {},
-        modifier = Modifier.fillMaxWidth().height(height),
-    )
-}
-
 @Composable
 private fun RowScope.BalanceCard(
     label: String,
@@ -447,21 +549,28 @@ private fun RowScope.BalanceCard(
     onClick: () -> Unit,
 ) {
     Surface(
+        onClick = onClick,
         color = container,
         contentColor = content,
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier
-            .weight(1f)
-            .clickable(onClick = onClick),
+        modifier = Modifier.weight(1f),
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
             Text(
                 text = value?.toString() ?: UNKNOWN,
                 style =
@@ -470,91 +579,8 @@ private fun RowScope.BalanceCard(
                     fontFeatureSettings = TABULAR_FIGURES,
                 ),
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(action, style = MaterialTheme.typography.labelMedium)
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(15.dp),
-                )
-            }
+            Text(action, style = MaterialTheme.typography.bodySmall)
         }
-    }
-}
-
-/**
- * Sign-in, which is the only write this screen performs.
- *
- * Before signing in this opens the site's mode chooser. Afterwards it becomes a tonal receipt which
- * remains actionable: tapping it again opens today's board.
- */
-@Composable
-private fun AttendanceButton(
-    state: AssetsUiState,
-    onRequestAttendance: () -> Unit,
-    onOpenBoard: () -> Unit,
-) {
-    val done = state.hasSignedInToday
-    Button(
-        onClick = if (done) onOpenBoard else onRequestAttendance,
-        enabled = !state.isSigningIn,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors =
-        if (done) {
-            ButtonDefaults.filledTonalButtonColors()
-        } else {
-            ButtonDefaults.buttonColors()
-        },
-    ) {
-        when {
-            state.isSigningIn -> {
-                PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
-                Text(
-                    stringResource(Res.string.assets_signing_in),
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
-            }
-
-            done -> {
-                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text(
-                    text =
-                    state.attendanceGain?.let { stringResource(Res.string.assets_signed_in, it) }
-                        ?: state.attendanceMessage
-                        ?: stringResource(Res.string.assets_sign_in),
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
-            }
-
-            else -> {
-                Icon(NodeSeekIcons.ChickenLeg, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text(
-                    stringResource(Res.string.assets_sign_in),
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AssetsCard(
-    radius: Dp,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(radius),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            content = content,
-        )
     }
 }
 
