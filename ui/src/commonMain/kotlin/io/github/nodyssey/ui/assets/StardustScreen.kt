@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -264,7 +262,6 @@ fun StardustScreen(
                     onClick = onOpenTransfer,
                     icon = { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null) },
                     text = { Text(stringResource(Res.string.transfer_action)) },
-                    shape = shape,
                     elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     modifier = Modifier.floatShadow(shape, LocalPlazaLayers.current.shadows),
                 )
@@ -312,7 +309,7 @@ private fun BalanceHeader(balance: Int?) {
     Surface(
         color = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier
             .padding(horizontal = LayerPageGutter)
             .fillMaxWidth(),
@@ -572,7 +569,7 @@ private fun TransferDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onRequestConfirm, enabled = state.form.isComplete, shape = CircleShape) {
+            Button(onClick = onRequestConfirm, enabled = state.form.isComplete) {
                 Text(stringResource(Res.string.transfer_next))
             }
         },

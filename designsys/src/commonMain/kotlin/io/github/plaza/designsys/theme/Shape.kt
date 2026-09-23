@@ -2,6 +2,7 @@ package io.github.plaza.designsys.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
 /**
@@ -19,6 +20,12 @@ val PlazaShapes =
         large = RoundedCornerShape(16.dp),
         extraLarge = RoundedCornerShape(28.dp),
     )
+
+/**
+ * A 40–48dp control's corner: an icon tile, a text field, a keypad key. The artboards draw every one
+ * of these at 14dp, and Material's scale steps from `medium` (12) straight to `large` (16).
+ */
+val ControlShape: Shape = RoundedCornerShape(14.dp)
 
 /**
  * The status-screen shape family.

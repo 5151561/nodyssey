@@ -5,7 +5,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -462,7 +461,7 @@ private fun PublishButton(
     Button(
         onClick = onClick,
         enabled = enabled && !isPublishing,
-        contentPadding = PaddingValues(horizontal = 20.dp),
+        contentPadding = ButtonDefaults.SmallContentPadding,
         colors = if (isPublishing) {
             ButtonDefaults.buttonColors(
                 disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -471,7 +470,7 @@ private fun PublishButton(
         } else {
             ButtonDefaults.buttonColors()
         },
-        modifier = Modifier.padding(end = Spacing.sm).height(40.dp),
+        modifier = Modifier.padding(end = Spacing.sm),
     ) {
         if (isPublishing) {
             PlazaSpinner(

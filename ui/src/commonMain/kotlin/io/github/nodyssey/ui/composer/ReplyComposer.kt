@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -573,8 +574,8 @@ private fun PublishReplyButton(
     Button(
         onClick = onClick,
         enabled = enabled && !isPublishing,
-        contentPadding = PaddingValues(horizontal = 18.dp),
-        modifier = modifier.height(40.dp),
+        contentPadding = ButtonDefaults.SmallContentPadding,
+        modifier = modifier,
     ) {
         if (isPublishing) {
             PlazaSpinner(

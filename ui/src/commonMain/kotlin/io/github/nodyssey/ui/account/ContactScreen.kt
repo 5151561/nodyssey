@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -409,7 +408,7 @@ private fun TelegramCard(
                     )
                 }
             } else {
-                Button(onClick = onRequestBind, enabled = binding != null, shape = CircleShape) {
+                Button(onClick = onRequestBind, enabled = binding != null) {
                     Icon(PlazaIcons.Link, contentDescription = null, modifier = Modifier.size(17.dp))
                     Text(
                         stringResource(Res.string.account_telegram_bind),

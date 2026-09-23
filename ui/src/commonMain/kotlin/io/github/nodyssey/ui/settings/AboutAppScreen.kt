@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -111,6 +110,7 @@ import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -362,8 +362,8 @@ private fun AppIdentity(
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Surface(
-            modifier = Modifier.size(88.dp).floatShadow(AppIconShape, LocalPlazaLayers.current.shadows),
-            shape = AppIconShape,
+            modifier = Modifier.size(88.dp).floatShadow(MaterialTheme.shapes.extraLarge, LocalPlazaLayers.current.shadows),
+            shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
         ) {
@@ -469,7 +469,7 @@ private fun UpdateCard(
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = RoundedCornerShape(14.dp),
+                    shape = ControlShape,
                     modifier = Modifier.size(44.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -624,8 +624,6 @@ private fun UnofficialNotice() {
         modifier = Modifier.padding(top = Spacing.sm),
     )
 }
-
-private val AppIconShape = RoundedCornerShape(28.dp)
 
 /** Enough for the headline changes; the release page carries the rest. */
 private const val UPDATE_NOTES_MAX_LINES = 8

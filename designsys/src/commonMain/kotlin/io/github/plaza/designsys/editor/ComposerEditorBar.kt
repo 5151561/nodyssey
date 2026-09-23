@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
@@ -36,6 +35,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.resources.Res
@@ -43,6 +43,7 @@ import io.github.plaza.designsys.resources.composer_format_close
 import io.github.plaza.designsys.resources.composer_format_hint
 import io.github.plaza.designsys.resources.composer_format_open
 import io.github.plaza.designsys.resources.composer_toolbar_customize
+import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.floatShadow
 import org.jetbrains.compose.resources.stringResource
@@ -144,7 +145,7 @@ private fun QuickBar(
     // 格式 pill on it that stands up — the one thing on the bar that opens more.
     Surface(
         color = layers.inset,
-        shape = BarShape,
+        shape = LayerCardShape,
         modifier = Modifier.fillMaxWidth().padding(BarMargin),
     ) {
         Row(modifier = Modifier.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -212,7 +213,6 @@ private fun BarKey(
             checked = selected,
             onCheckedChange = { onClick() },
             modifier = modifier,
-            shape = CircleShape,
             colors = IconButtonDefaults.iconToggleButtonColors(
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -224,7 +224,6 @@ private fun BarKey(
         IconButton(
             onClick = onClick,
             modifier = modifier,
-            shape = CircleShape,
             colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
             content = content,
         )
@@ -246,9 +245,9 @@ private fun FormatCard(
     val layers = LocalPlazaLayers.current
     Surface(
         color = layers.raised,
-        shape = BarShape,
+        shape = LayerCardShape,
         border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
-        modifier = Modifier.fillMaxWidth().padding(BarMargin).floatShadow(BarShape, layers.shadows),
+        modifier = Modifier.fillMaxWidth().padding(BarMargin).floatShadow(LayerCardShape, layers.shadows),
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             // Two rows of four with weights rather than a lazy grid: eight fixed cells never scroll,
@@ -258,7 +257,7 @@ private fun FormatCard(
                     row.forEach { action ->
                         FilledTonalIconButton(
                             onClick = { onAction(action) },
-                            shape = RoundedCornerShape(14.dp),
+                            shape = ControlShape,
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = layers.inset,
                                 contentColor = MaterialTheme.colorScheme.onSurface,
@@ -286,7 +285,7 @@ private fun FormatCard(
                     modifier = Modifier.weight(1f),
                 )
                 onCustomize?.let { customize ->
-                    IconButton(onClick = customize, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = customize, modifier = Modifier.size(IconButtonDefaults.extraSmallContainerSize())) {
                         Icon(
                             PlazaIcons.Build,
                             contentDescription = stringResource(Res.string.composer_toolbar_customize),
@@ -316,7 +315,6 @@ private fun FormatCard(
     }
 }
 
-private val BarShape = RoundedCornerShape(24.dp)
 private val BarMargin = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 10.dp)
 private val KeySize = 48.dp
 private const val FORMAT_COLUMNS = 4

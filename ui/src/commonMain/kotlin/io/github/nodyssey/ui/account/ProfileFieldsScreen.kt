@@ -187,7 +187,6 @@ fun ProfileFieldsScreen(
                     Button(
                         onClick = onSave,
                         enabled = state.canSave,
-                        shape = CircleShape,
                         modifier = Modifier.padding(end = Spacing.sm),
                     ) {
                         Text(stringResource(Res.string.account_action_save))
@@ -400,7 +399,7 @@ private fun AvatarEditor(
                 }
             }
 
-            OutlinedButton(onClick = { menuOpen = true }, shape = CircleShape) {
+            OutlinedButton(onClick = { menuOpen = true }) {
                 Text(stringResource(Res.string.account_avatar_change_short))
             }
         }

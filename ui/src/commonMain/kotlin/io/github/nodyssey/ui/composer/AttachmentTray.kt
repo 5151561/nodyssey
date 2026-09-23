@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -146,7 +145,7 @@ private fun AttachmentCell(
     Box(
         modifier = Modifier
             .size(THUMBNAIL)
-            .clip(TileShape)
+            .clip(MaterialTheme.shapes.largeIncreased)
             .background(
                 if (attachment.status == UploadStatus.WAITING) {
                     MaterialTheme.colorScheme.surfaceContainer
@@ -155,7 +154,7 @@ private fun AttachmentCell(
                 },
             ).then(
                 if (failed) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.error, TileShape)
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.error, MaterialTheme.shapes.largeIncreased)
                 } else {
                     Modifier
                 },
@@ -272,7 +271,7 @@ private fun Thumbnail(
             Box(
                 Modifier
                     .size(THUMBNAIL)
-                    .border(2.dp, MaterialTheme.colorScheme.outline, TileShape),
+                    .border(2.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.largeIncreased),
             )
         } else {
             Box(Modifier.size(THUMBNAIL).background(Color.Black.copy(alpha = SCRIM_ALPHA)))
@@ -320,6 +319,5 @@ private fun ImageAttachment.statusLabel(): String = when (status) {
 }
 
 private val THUMBNAIL = 88.dp
-private val TileShape = RoundedCornerShape(18.dp)
 private const val BADGE_ALPHA = 0.5f
 private const val SCRIM_ALPHA = 0.35f

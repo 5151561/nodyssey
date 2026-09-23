@@ -165,7 +165,6 @@ internal fun ConversationList(
         val fabShape = FloatingActionButtonDefaults.extendedFabShape
         ExtendedFloatingActionButton(
             onClick = onNewConversation,
-            shape = fabShape,
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),

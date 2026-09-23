@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -295,7 +294,7 @@ internal fun BoardStrip(
                         }
                     },
                     modifier = Modifier.size(width = ToggleWidth, height = PillHeight),
-                    shape = PillShape,
+                    shape = MaterialTheme.shapes.medium,
                     colors =
                     IconButtonDefaults.filledTonalIconButtonColors(
                         containerColor = container,
@@ -717,7 +716,7 @@ private fun BoardPill(
         } else {
             null
         },
-        shape = PillShape,
+        shape = MaterialTheme.shapes.medium,
         colors =
         FilterChipDefaults.filterChipColors(
             containerColor = container,
@@ -781,9 +780,8 @@ internal const val FRONT_PAGE_KEY = "front"
 
 private val ToggleWidth = 40.dp
 
-/** A board pill: 36dp tall and 12dp round — a soft rectangle rather than a capsule, so a row of them reads as tabs. */
+/** A board pill: 36dp tall and `shapes.medium` round — a soft rectangle rather than a capsule, so a row of them reads as tabs. */
 private val PillHeight = 36.dp
-private val PillShape = RoundedCornerShape(12.dp)
 
 /** The toggle plus the end inset it is drawn against — the width the first row of pills gives up. */
 private val ToggleSlotWidth = ToggleWidth + Spacing.lg

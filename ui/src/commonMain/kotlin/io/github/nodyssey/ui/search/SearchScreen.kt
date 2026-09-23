@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -38,6 +37,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -633,7 +633,7 @@ private fun ResultScopeRow(
                 expanded = showSortMenu,
                 onDismissRequest = { showSortMenu = false },
                 modifier = Modifier.widthIn(min = 180.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 containerColor = layers.raised,
             ) {
                 SortOrder.forEachIndexed { index, sort ->
@@ -1013,7 +1013,7 @@ private fun AdvancedSearchSheet(
                         contentPadding = PaddingValues(horizontal = Spacing.xs),
                     )
                     LayerCard(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = MaterialTheme.shapes.largeIncreased,
                         contentPadding = PaddingValues(Spacing.md),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
@@ -1064,8 +1064,8 @@ private fun AdvancedSearchSheet(
             }
             Button(
                 onClick = { onApply(pickedBoard, pickedSort) },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = CircleShape,
+                modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
+                shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
             ) {
                 Text(
                     if (willSearch) {
@@ -1113,7 +1113,7 @@ private fun BoardChip(
         selected = selected,
         onClick = onSelect,
         label = { Text(title, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium) },
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         modifier = Modifier.height(36.dp),
         colors =
         FilterChipDefaults.filterChipColors(

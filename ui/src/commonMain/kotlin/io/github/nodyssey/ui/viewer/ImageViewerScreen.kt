@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
@@ -381,7 +380,7 @@ private fun ImageFailure(
     Surface(
         color = VIEWER_ACTION_CONTAINER,
         contentColor = VIEWER_CONTENT,
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier.padding(horizontal = Spacing.lg),
     ) {
         Row(
@@ -422,7 +421,7 @@ private fun ImageFailure(
                 onClick = onRetry,
                 color = VIEWER_RETRY_CONTAINER,
                 contentColor = VIEWER_CONTENT,
-                shape = RoundedCornerShape(17.dp),
+                shape = CircleShape,
             ) {
                 Text(
                     stringResource(

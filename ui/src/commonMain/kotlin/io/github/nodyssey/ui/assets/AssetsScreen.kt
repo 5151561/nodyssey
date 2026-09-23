@@ -6,19 +6,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -352,7 +350,7 @@ fun InviteConfirmDialog(
 @Composable
 private fun LevelCard(state: AssetsUiState) {
     LayerCard(
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         contentPadding = PaddingValues(18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -509,9 +507,7 @@ private fun AttendanceState(
             else ->
                 Button(
                     onClick = onRequestAttendance,
-                    shape = CircleShape,
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    modifier = Modifier.height(36.dp),
+                    contentPadding = ButtonDefaults.SmallContentPadding,
                 ) {
                     Icon(NodeSeekIcons.ChickenLeg, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text(

@@ -10,17 +10,15 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -100,7 +98,8 @@ fun StatusView(
         ) {
             LayerCard(
                 modifier = Modifier.widthIn(max = Sizes.readableContentWidth).fillMaxWidth(),
-                shape = StatusCardShape,
+                // Rounder than a list card: the status card is alone on its page, and board 2e draws it at 32.
+                shape = MaterialTheme.shapes.extraLargeIncreased,
                 contentPadding = PaddingValues(start = Spacing.xl, top = 36.dp, end = Spacing.xl, bottom = Spacing.xl),
                 verticalArrangement = Arrangement.Top,
             ) {
@@ -124,9 +123,6 @@ fun StatusView(
         }
     }
 }
-
-/** Rounder than a list card's 24dp: the status card is alone on its page, and board 2e draws it at 32. */
-private val StatusCardShape = RoundedCornerShape(32.dp)
 
 private val STATUS_LIFT = 72.dp
 
@@ -181,12 +177,12 @@ private fun StatusBody(
         // one thing a thumb cannot miss.
         Button(
             onClick = it.onClick,
-            shape = CircleShape,
             modifier =
             Modifier
                 .padding(top = Spacing.xl)
                 .fillMaxWidth()
-                .height(52.dp),
+                .heightIn(min = ButtonDefaults.MediumContainerHeight),
+            shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
         ) {
             it.icon?.let { glyph ->
                 Icon(glyph, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -198,7 +194,6 @@ private fun StatusBody(
     secondaryAction?.let {
         TextButton(
             onClick = it.onClick,
-            shape = CircleShape,
             modifier =
             Modifier
                 .padding(top = if (primaryAction == null) Spacing.xl else Spacing.sm)

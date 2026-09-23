@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -67,7 +68,8 @@ fun TonalTag(
     }
 }
 
-private val TonalTagShape = RoundedCornerShape(6.dp)
+/** A tag's corner — [TonalTag]'s and [BadgeChip]'s, and anything drawn to sit in a row of them. */
+val TonalTagShape: Shape = RoundedCornerShape(6.dp)
 
 /**
  * The tag's type, as a style rather than three arguments.
@@ -140,7 +142,7 @@ fun BadgeChip(
             BadgeTone.Critical -> scheme.error to scheme.onError
             BadgeTone.Neutral -> scheme.secondaryContainer to scheme.onSecondaryContainer
         }
-    val shape = RoundedCornerShape(6.dp)
+    val shape = TonalTagShape
     val outlined =
         if (tone == BadgeTone.Muted) {
             Modifier.border(1.dp, scheme.outlineVariant, shape)

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -49,7 +48,7 @@ fun InlineBanner(
     Surface(
         color = containerColor,
         contentColor = contentColor,
-        shape = InlineBannerShape,
+        shape = MaterialTheme.shapes.large,
         border = border,
         modifier =
         modifier
@@ -86,5 +85,3 @@ fun InlineBanner(
         }
     }
 }
-
-private val InlineBannerShape = RoundedCornerShape(16.dp)

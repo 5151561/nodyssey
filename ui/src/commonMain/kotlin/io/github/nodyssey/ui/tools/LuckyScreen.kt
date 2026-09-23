@@ -5,12 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -21,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -180,7 +179,7 @@ fun LuckyScreen(
         ) {
             Surface(
                 color = LocalPlazaLayers.current.card,
-                shape = RoundedCornerShape(14.dp),
+                shape = MaterialTheme.shapes.large,
             ) {
                 Text(
                     text = stringResource(Res.string.lucky_intro),
@@ -232,7 +231,7 @@ fun LuckyScreen(
 
             Surface(
                 color = LocalPlazaLayers.current.card,
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 Row(
                     modifier = Modifier
@@ -260,8 +259,8 @@ fun LuckyScreen(
                 enabled = state.canGenerate,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                shape = CircleShape,
+                    .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
             ) {
                 Icon(PlazaIcons.Link, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
@@ -325,7 +324,7 @@ private fun DrawTimeRow(
 ) {
     Surface(
         color = LocalPlazaLayers.current.card,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
     ) {
         Column(
             modifier = Modifier
@@ -464,7 +463,7 @@ private fun GeneratedLinkCard(
         )
         Surface(
             color = LocalPlazaLayers.current.card,
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
         ) {
             Column(
                 modifier = Modifier.padding(14.dp),
@@ -492,7 +491,8 @@ private fun GeneratedLinkCard(
                     onClick = onOpen,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp),
+                        .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                 ) {
                     Icon(
                         PlazaIcons.OpenInNew,

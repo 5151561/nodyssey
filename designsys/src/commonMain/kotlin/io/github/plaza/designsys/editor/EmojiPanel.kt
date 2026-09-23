@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -264,7 +263,7 @@ private fun EmojiCell(
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(CellShape)
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
@@ -285,12 +284,13 @@ private fun BackspaceKey(
 ) {
     val layers = LocalPlazaLayers.current
     val description = stringResource(Res.string.composer_emoji_backspace)
+    val shape = MaterialTheme.shapes.medium
     Box(
         modifier = modifier
-            .cardShadow(CellShape, layers.shadows)
-            .clip(CellShape)
+            .cardShadow(shape, layers.shadows)
+            .clip(shape)
             .background(layers.raised)
-            .then(layers.cardBorder?.let { Modifier.border(1.dp, it, CellShape) } ?: Modifier)
+            .then(layers.cardBorder?.let { Modifier.border(1.dp, it, shape) } ?: Modifier)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
@@ -310,6 +310,5 @@ private const val RECENT = -1
 /** Every sticker ever inserted is not a useful tab; three rows of the grid is. */
 private const val RECENT_LIMIT = 18
 private val CELL_GAP = 8.dp
-private val CellShape = RoundedCornerShape(12.dp)
 private val GRID_HEIGHT = 170.dp
 private val STICKER_SIZE = 36.dp

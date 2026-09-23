@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -86,6 +85,7 @@ import io.github.nodyssey.ui.resources.page_jump_unit_floor
 import io.github.nodyssey.ui.resources.page_jump_unit_page
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.TonalTile
+import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Sizes
@@ -191,9 +191,6 @@ fun PageJumpRail(
 /** What a key paints. The rest of its [Sizes.minTouchTarget] slot is the gap to the next one. */
 private val PageKeySize = 40.dp
 
-/** Between `medium` and `large` on the shape scale, and on purpose: a squarer key than the FAB below. */
-private val PageKeyShape = RoundedCornerShape(14.dp)
-
 /** Enough to lift a key off a list that scrolls under it, and no more — the FAB below owns the corner. */
 private val PageKeyElevation = 2.dp
 
@@ -233,7 +230,7 @@ private fun PageKey(
         Surface(
             onClick = onClick,
             enabled = enabled,
-            shape = PageKeyShape,
+            shape = ControlShape,
             // The raised layer, not the page's grey: the rail floats over cards and over the gaps
             // between them, and a key the colour of the gaps disappeared into them there.
             color = LocalPlazaLayers.current.raised,
@@ -433,7 +430,7 @@ private fun PageKeys(
                     containerColor = if (selected) MaterialTheme.colorScheme.primary else layers.raised,
                     contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                     selected = selected,
-                    shape = SheetKeyShape,
+                    shape = ControlShape,
                     border = layers.cardBorder?.takeIf { !selected }?.let { BorderStroke(1.dp, it) },
                     contentPadding = PaddingValues(0.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -557,7 +554,6 @@ private fun PageNumberField(
         FilledIconButton(
             onClick = go,
             enabled = number != null,
-            shape = CircleShape,
             modifier = Modifier.size(GoButtonSize),
         ) {
             Icon(
@@ -647,7 +643,6 @@ private const val KEYS_IN_VIEW = 5
 private const val MAX_DIGITS = 6
 private val SheetPadding = 16.dp
 private val SheetKeyHeight = 48.dp
-private val SheetKeyShape = RoundedCornerShape(14.dp)
 private val FieldHeight = 60.dp
 private val GoButtonSize = 44.dp
 private val JumpTileMinHeight = 56.dp

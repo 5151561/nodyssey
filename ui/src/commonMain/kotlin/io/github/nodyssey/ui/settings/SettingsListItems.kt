@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -251,7 +252,8 @@ internal fun SettingsTestSaveButtons(
         FilledTonalButton(
             onClick = onTest,
             enabled = enabled && !testing,
-            modifier = Modifier.weight(1f).heightIn(min = ActionButtonHeight),
+            modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
+            shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
         ) {
             if (testing) {
                 PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
@@ -262,11 +264,10 @@ internal fun SettingsTestSaveButtons(
         Button(
             onClick = onSave,
             enabled = enabled,
-            modifier = Modifier.weight(1f).heightIn(min = ActionButtonHeight),
+            modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
+            shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
         ) {
             Text(saveLabel, style = MaterialTheme.typography.titleMedium)
         }
     }
 }
-
-private val ActionButtonHeight = 52.dp
