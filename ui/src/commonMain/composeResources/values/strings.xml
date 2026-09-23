@@ -238,13 +238,10 @@
     <string name="post_read_marker">已读</string>
     <string name="search_hint_board">在 %1$s 版块搜帖子</string>
     <string name="search_user_hint">搜索用户名</string>
-    <string name="search_submit">搜索</string>
     <string name="search_posts_tab">帖子</string>
     <string name="search_users_tab">用户</string>
     <string name="search_all_boards">全部版块</string>
-    <string name="search_board_section">版块</string>
-    <string name="search_board_single_hint">单选 · 只能指定一个</string>
-    <string name="search_board_chip_all">全部</string>
+    <string name="search_board_section">版块 · 单选</string>
     <string name="search_history_empty">还没有搜索记录</string>
     <string name="search_history_scope">帖子 · 全部版块</string>
     <string name="search_user_history_scope">用户</string>
@@ -253,13 +250,20 @@
     <string name="search_user_topics">主题 %1$d</string>
     <string name="search_user_comments">评论 %1$d</string>
     <string name="search_user_joined">加入 %1$s</string>
-    <string name="search_board_range">版块范围</string>
-    <string name="search_board_range_hint">只能选一个版块，站点搜索接口本身只支持单版块；最近使用会置顶</string>
+    <!-- 高级搜索：搜索框里的调节按钮，打开版块与排序面板。 -->
+    <string name="search_advanced">高级搜索</string>
+    <!-- 调节按钮带圆点时读出的状态：版块或排序不是默认值。 -->
+    <string name="search_advanced_active">已限定版块或排序</string>
+    <string name="search_advanced_sort">排序</string>
+    <string name="search_advanced_reset">重置</string>
+    <!-- 高级搜索面板底部的主按钮；%1$s 是版块名或「全部版块」。 -->
+    <string name="search_in_board">在「%1$s」中搜索</string>
+    <!-- 结果页版块标签上的 ✕，读屏用。 -->
+    <string name="search_clear_board">取消版块限定：%1$s</string>
     <string name="search_recent_boards">最近使用</string>
     <string name="search_apply_board">应用</string>
-    <string name="search_board_all_boards_heading">全部</string>
     <string name="search_clear_query">清空关键词</string>
-    <string name="search_recent">搜索历史</string>
+    <string name="search_recent">最近搜索</string>
     <string name="search_clear_all">清除</string>
     <string name="search_remove_recent">删除搜索历史：%1$s</string>
 

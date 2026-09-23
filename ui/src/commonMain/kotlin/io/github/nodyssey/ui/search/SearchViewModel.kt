@@ -188,6 +188,28 @@ class SearchViewModel(
         rerunSubmittedSearch()
     }
 
+    /**
+     * What 高级搜索's button does: board and order together, then the search.
+     *
+     * One call rather than [selectBoard] followed by [selectSort], because each of those re-runs a
+     * showing search on its own — the pair would fetch page one twice and leave a history entry for
+     * the half-applied scope in between. With nothing submitted yet, the button is the submit: it says
+     * 在「…」中搜索, and a query in the box is what it would search. An empty box leaves it an apply.
+     */
+    fun applySearchOptions(
+        board: String?,
+        sort: FeedSort,
+    ) {
+        val before = _uiState.value
+        if (before.selectedBoard != board) viewModelScope.launch { settings.recordRecentBoard(board) }
+        _uiState.update { it.copy(selectedBoard = board, sort = sort) }
+        if (before.submittedQuery != null) {
+            if (before.selectedBoard != board || before.sort != sort) rerunSubmittedSearch()
+        } else {
+            submitSearch()
+        }
+    }
+
     fun retryUsers() {
         val state = _uiState.value
         startUserSearch(state.submittedQuery ?: query.text.toString())
@@ -303,11 +325,13 @@ data class SearchUiState(
     val boards: List<Board> = emptyList(),
     /** One board, or null for the whole site — the only two scopes `/search` can express. */
     val selectedBoard: String? = null,
-    /** `/search` reads the boards' own `sortBy`, and reads it as 新帖子 when it is absent. */
-    val sort: FeedSort = FeedSort.POST_TIME,
+    val sort: FeedSort = DefaultSearchSort,
     val userResults: List<UserSearchResult> = emptyList(),
     val userLoadState: SearchLoadState = SearchLoadState.Idle,
 )
+
+/** `/search` reads the boards' own `sortBy`, and reads it as 新帖子 when it is absent. */
+internal val DefaultSearchSort = FeedSort.POST_TIME
 
 /** Everything that names one search feed. Equality is what decides whether the pager is rebuilt. */
 internal data class PostSearchRequest(

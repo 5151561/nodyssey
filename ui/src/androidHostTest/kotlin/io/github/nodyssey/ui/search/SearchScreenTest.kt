@@ -157,13 +157,13 @@ class SearchScreenTest {
     fun `scrolling the results folds the entire header away`() {
         setScreen(searchedState())
 
-        composeRule.onNodeWithContentDescription("搜索").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("高级搜索").assertIsDisplayed()
         composeRule.onNodeWithText("帖子").assertIsDisplayed()
         composeRule.onNodeWithText("全部版块").assertIsDisplayed()
 
         composeRule.onNode(resultList).performTouchInput { swipeUp() }
 
-        composeRule.onNodeWithContentDescription("搜索").assertIsNotDisplayed()
+        composeRule.onNodeWithContentDescription("高级搜索").assertIsNotDisplayed()
         composeRule.onNodeWithText("帖子").assertIsNotDisplayed()
         composeRule.onNodeWithText("全部版块").assertIsNotDisplayed()
     }
@@ -179,11 +179,11 @@ class SearchScreenTest {
         val clearQuery = setScreen(searchedState())
 
         composeRule.onNode(resultList).performTouchInput { swipeUp() }
-        composeRule.onNodeWithContentDescription("搜索").assertIsNotDisplayed()
+        composeRule.onNodeWithContentDescription("高级搜索").assertIsNotDisplayed()
 
         clearQuery()
 
-        composeRule.onNodeWithContentDescription("搜索").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("高级搜索").assertIsDisplayed()
         composeRule.onNodeWithText("帖子").assertIsDisplayed()
     }
 
