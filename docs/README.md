@@ -14,6 +14,7 @@
 | [`design-requirements.md`](design-requirements.md) | 新版设计总纲、信息架构与视觉约束 | 是，设计目标 |
 | [`design-requirements-remaining.md`](design-requirements-remaining.md) | 登录态站点实测词典与批次 A–E 完成记录 | 是，真实数据样本 |
 | [`design-requirements-additions.md`](design-requirements-additions.md) | 边角功能复核与批次 F | 是，补充数据和画板要求 |
+| [`redesign-brief.md`](redesign-brief.md) | 重设计总纲：全部界面、组件与现行视觉参数的盘点，交给设计方探索新方向 | 是，2026-09-23 盘点快照 |
 | [`design-brief.md`](design-brief.md) | 第一轮设计输入 | 否，仅供历史追溯 |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | 各版本的用户可见变化，未发布的先记在「Unreleased」 | 是，发布记录 |
 | [`../README.md`](../README.md) | 项目介绍、可用能力概览、构建与 roadmap | 是，对外入口 |
