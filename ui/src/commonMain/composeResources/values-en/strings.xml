@@ -600,9 +600,11 @@
     <string name="notify_settings_entry_hint">Checks for unread in the background and posts a system notification</string>
     <string name="notify_master_hint">Checks for unread in the background and posts a system notification; the site has no push service, so it cannot be instant</string>
     <string name="notify_frequency">How often to check</string>
+    <string name="notify_check_section">Checking</string>
     <string name="notify_frequency_15">15 minutes</string>
     <string name="notify_frequency_30">30 minutes</string>
     <string name="notify_frequency_60">1 hour</string>
+    <string name="notify_frequency_every">Every %1$s</string>
     <string name="notify_frequency_hint">Battery policy can stretch the real interval (WorkManager will not go below 15 minutes)</string>
     <string name="notify_wifi_only">Check on Wi-Fi only</string>
     <string name="notify_wifi_only_hint">Polling pauses on mobile data, saving battery and data</string>

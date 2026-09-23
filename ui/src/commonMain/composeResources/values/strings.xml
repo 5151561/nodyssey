@@ -720,9 +720,13 @@
     <string name="notify_settings_entry_hint">后台定期检查未读并发系统通知</string>
     <string name="notify_master_hint">后台定期检查未读并发系统通知；站点无推送服务，无法做到即时</string>
     <string name="notify_frequency">检查频率</string>
+    <!-- 通知提醒页上半的分组标题：检查频率、仅 Wi-Fi、免打扰三行 -->
+    <string name="notify_check_section">检查</string>
     <string name="notify_frequency_15">15 分钟</string>
     <string name="notify_frequency_30">30 分钟</string>
     <string name="notify_frequency_60">1 小时</string>
+    <!-- 检查频率行的当前值与面板里的选项：每 + 上面三个间隔之一 -->
+    <string name="notify_frequency_every">每 %1$s</string>
     <string name="notify_frequency_hint">受系统省电策略影响，实际间隔可能更长（WorkManager 下限 15 分钟）</string>
     <string name="notify_wifi_only">仅 Wi-Fi 下检查</string>
     <string name="notify_wifi_only_hint">移动网络时暂停轮询，省电省流量</string>

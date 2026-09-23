@@ -594,9 +594,11 @@
     <string name="notify_settings_entry_hint">背景定期檢查未讀並發系統通知</string>
     <string name="notify_master_hint">背景定期檢查未讀並發系統通知；站台無推播服務，無法做到即時</string>
     <string name="notify_frequency">檢查頻率</string>
+    <string name="notify_check_section">檢查</string>
     <string name="notify_frequency_15">15 分鐘</string>
     <string name="notify_frequency_30">30 分鐘</string>
     <string name="notify_frequency_60">1 小時</string>
+    <string name="notify_frequency_every">每 %1$s</string>
     <string name="notify_frequency_hint">受系統省電政策影響，實際間隔可能更長（WorkManager 下限 15 分鐘）</string>
     <string name="notify_wifi_only">僅 Wi-Fi 下檢查</string>
     <string name="notify_wifi_only_hint">行動網路時暫停輪詢，省電省流量</string>
