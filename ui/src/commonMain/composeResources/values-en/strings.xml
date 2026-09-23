@@ -900,6 +900,8 @@
     <string name="follow_empty_followers_body">People who follow you turn up here</string>
 
     <string name="viewer_save">Save</string>
+
+    <string name="viewer_gesture_hint">Double-tap to zoom · Swipe down to close</string>
     <string name="viewer_saved">Saved to the gallery</string>
     <string name="viewer_save_failed">Could not save — try again later</string>
     <string name="viewer_save_unsupported">Below Android 10 the gallery cannot be written without a permission; Share it to another app instead</string>

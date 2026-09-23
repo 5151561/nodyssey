@@ -1067,6 +1067,8 @@
 
     <!-- Image viewer (8h) -->
     <string name="viewer_page">%1$d / %2$d</string>
+    <!-- 查看器底部的手势提示（8g） -->
+    <string name="viewer_gesture_hint">双击放大 · 下拉关闭</string>
     <string name="viewer_save">保存</string>
     <string name="viewer_saved">已保存到相册</string>
     <string name="viewer_save_failed">保存失败，稍后再试</string>
