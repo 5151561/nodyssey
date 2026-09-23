@@ -48,6 +48,7 @@ class MessageThreadEmptyStateTest {
                     onSend = {},
                     onRetrySend = {},
                     onQuote = {},
+                    onRemoveQuote = {},
                     onPickImages = {},
                     onRemoveAttachment = {},
                     onRetryAttachment = {},

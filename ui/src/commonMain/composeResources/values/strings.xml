@@ -282,7 +282,7 @@
     <string name="message_send">发送</string>
     <string name="message_status_sending">发送中</string>
     <string name="message_status_failed">发送失败</string>
-    <string name="message_status_sent">已送达 %1$s</string>
+    <string name="message_status_sent">%1$s · 已送达</string>
     <string name="message_bubble_actions">消息操作</string>
     <string name="message_quote_action">引用</string>
     <!-- The quote card above the message bar; %1$s is the other side's name -->

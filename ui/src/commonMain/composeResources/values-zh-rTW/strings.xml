@@ -234,7 +234,7 @@
     <string name="message_send">傳送</string>
     <string name="message_status_sending">傳送中</string>
     <string name="message_status_failed">傳送失敗</string>
-    <string name="message_status_sent">已送達 %1$s</string>
+    <string name="message_status_sent">%1$s · 已送達</string>
     <string name="message_bubble_actions">訊息操作</string>
     <string name="message_quote_action">引用</string>
     <string name="message_quote_chip">引用 %1$s</string>

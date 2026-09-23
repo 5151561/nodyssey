@@ -240,7 +240,7 @@
     <string name="message_send">Send</string>
     <string name="message_status_sending">Sending</string>
     <string name="message_status_failed">Not sent</string>
-    <string name="message_status_sent">Delivered %1$s</string>
+    <string name="message_status_sent">%1$s · Delivered</string>
     <string name="message_bubble_actions">Message actions</string>
     <string name="message_quote_action">Quote</string>
     <string name="message_quote_chip">Quoting %1$s</string>

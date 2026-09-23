@@ -8,13 +8,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.ui.assertEveryTouchTargetAtLeast48dp
@@ -33,10 +31,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The message bar's half of the shared editor (7f).
+ * The message bar's half of the shared editor (7f, redrawn as 3d/3e with the keys in a grid behind +).
  *
  * The MD toggle is the whole contract here: with it off the server takes the text verbatim, so a
- * formatting key would insert syntax that arrives as literal asterisks. The strip is therefore absent
+ * formatting key would insert syntax that arrives as literal asterisks. The keys are therefore absent
  * rather than disabled, and these tests are what keep it that way.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -90,6 +88,7 @@ class MessageComposerTest {
                         onSend = {},
                         onRetrySend = {},
                         onQuote = {},
+                        onRemoveQuote = {},
                         onPickImages = {},
                         onRemoveAttachment = {},
                         onRetryAttachment = {},
@@ -99,6 +98,10 @@ class MessageComposerTest {
                 }
             }
         }
+    }
+
+    private fun openTools() {
+        composeRule.onNodeWithContentDescription("附件与格式").performClick()
     }
 
     /**
@@ -119,21 +122,47 @@ class MessageComposerTest {
         composeRule.assertEveryTouchTargetAtLeast48dp()
     }
 
+    /** The grid's tiles are targets too, and they are only on screen once the + key is on. */
     @Test
-    fun `the formatting strip is the same one the post editor uses`() {
+    fun `every tile in the tool grid holds 48dp`() {
         setScreen()
+        openTools()
 
-        composeRule.onNodeWithContentDescription("加粗").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("行内代码").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("链接").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("表情").assertIsDisplayed()
+        composeRule.assertEveryTouchTargetAtLeast48dp()
+    }
+
+    /**
+     * 3e folds the strip behind the + key. The keys are still the arranged ones the post editor's
+     * strip draws — the grid is a different drawing of the same toolbar, not a second list of keys.
+     */
+    @Test
+    fun `the tool grid carries the same keys the post editor uses`() {
+        setScreen()
+        composeRule.onNodeWithText("加粗").assertDoesNotExist()
+
+        openTools()
+
+        composeRule.onNodeWithText("加粗").assertIsDisplayed()
+        composeRule.onNodeWithText("行内代码").assertIsDisplayed()
+        composeRule.onNodeWithText("链接").assertIsDisplayed()
+        composeRule.onNodeWithText("表情").assertIsDisplayed()
     }
 
     @Test
-    fun `four keys at the full 48dp, and no preview`() {
+    fun `the + key closes the grid again`() {
         setScreen()
+        openTools()
 
-        composeRule.onNodeWithContentDescription("加粗").assertWidthIsEqualTo(48.dp)
+        composeRule.onNodeWithContentDescription("附件与格式").performClick()
+
+        composeRule.onNodeWithText("加粗").assertDoesNotExist()
+    }
+
+    @Test
+    fun `no preview`() {
+        setScreen()
+        openTools()
+
         // A message renders into a bubble the moment it is sent; getting it wrong costs a second
         // message, not a deleted topic. The thread's top bar belongs to the conversation, not to
         // this draft, so there is nowhere for a preview to live and nothing much for it to do.
@@ -141,10 +170,11 @@ class MessageComposerTest {
     }
 
     @Test
-    fun `the strip is arrangeable here too`() {
+    fun `the keys are arrangeable here too`() {
         setScreen()
+        openTools()
 
-        composeRule.onNodeWithContentDescription("自定义工具栏").assertIsDisplayed()
+        composeRule.onNodeWithText("自定义").assertIsDisplayed()
     }
 
     @Test
@@ -177,31 +207,38 @@ class MessageComposerTest {
     private fun defaultLayout() = toolbarLayout(emptyList(), EditorActions.Message)
 
     @Test
-    fun `turning MD off takes the strip away rather than disabling it`() {
+    fun `turning MD off takes the formatting keys away rather than disabling them`() {
         setScreen()
+        openTools()
 
         composeRule.onNodeWithContentDescription("Markdown 开关").performClick()
 
-        composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
-        composeRule.onNodeWithContentDescription("表情").assertDoesNotExist()
+        composeRule.onNodeWithText("加粗").assertDoesNotExist()
+        composeRule.onNodeWithText("表情").assertDoesNotExist()
+        // The switch itself stays, or there would be no way to turn it back on.
+        composeRule.onNodeWithText("Markdown · 关").assertIsDisplayed()
     }
 
     @Test
     fun `a formatting key wraps the draft and selects what it wrapped`() {
         setScreen()
+        openTools()
 
-        composeRule.onNodeWithContentDescription("加粗").performClick()
+        composeRule.onNodeWithText("加粗").performClick()
 
         assertEquals("**加粗文字**", draftState.text.toString())
         // Selected, not merely inserted: the next keystroke has to replace the placeholder.
         assertEquals("加粗文字", draftState.text.substring(draftState.selection.min, draftState.selection.max))
+        // And the grid gives the keyboard its place back, for that keystroke.
+        composeRule.onNodeWithText("行内代码").assertDoesNotExist()
     }
 
     @Test
     fun `the emoji panel opens on the message bar too`() {
         setScreen()
+        openTools()
 
-        composeRule.onNodeWithContentDescription("表情").performClick()
+        composeRule.onNodeWithText("表情").performClick()
 
         composeRule.onNodeWithText("AC娘").assertIsDisplayed()
         composeRule.onNodeWithText("最近使用").assertIsDisplayed()
