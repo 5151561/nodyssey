@@ -51,6 +51,7 @@ import io.github.plaza.designsys.component.SpecRow
 import io.github.plaza.designsys.component.SpecTable
 import io.github.plaza.designsys.theme.CodeStyle
 import io.github.plaza.designsys.theme.LocalPlazaExtraColors
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.ReportData
 import io.github.plaza.designsys.theme.ReportLabel
 import io.github.plaza.designsys.theme.Sizes
@@ -89,7 +90,9 @@ fun ReportCard(
         modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+            // Recessed into the floor's card, the way a code block is: the inset layer, which in
+            // dark mode is darker than the card rather than a tone that vanishes into it.
+            .background(LocalPlazaLayers.current.inset),
     ) {
         ReportHeader(
             report = report,

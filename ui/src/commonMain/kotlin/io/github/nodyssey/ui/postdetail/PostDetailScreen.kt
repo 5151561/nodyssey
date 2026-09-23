@@ -1,15 +1,19 @@
 package io.github.nodyssey.ui.postdetail
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -40,11 +45,15 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.FloatingToolbarDefaults.floatingToolbarVerticalNestedScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -52,12 +61,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -74,14 +85,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -130,12 +148,16 @@ import io.github.nodyssey.ui.resources.chicken_dialog_title
 import io.github.nodyssey.ui.resources.dislike_dialog_body
 import io.github.nodyssey.ui.resources.dislike_dialog_confirm
 import io.github.nodyssey.ui.resources.dislike_dialog_title
+import io.github.nodyssey.ui.resources.page_jump_at_page
+import io.github.nodyssey.ui.resources.page_jump_at_page_floor
 import io.github.nodyssey.ui.resources.page_jump_latest
 import io.github.nodyssey.ui.resources.page_jump_latest_read
 import io.github.nodyssey.ui.resources.page_jump_latest_read_floor
+import io.github.nodyssey.ui.resources.page_jump_resume_title
 import io.github.nodyssey.ui.resources.post_auto_paging
 import io.github.nodyssey.ui.resources.post_badge_awarded
 import io.github.nodyssey.ui.resources.post_badge_original_poster
+import io.github.nodyssey.ui.resources.post_body_copied
 import io.github.nodyssey.ui.resources.post_body_empty
 import io.github.nodyssey.ui.resources.post_collect_action
 import io.github.nodyssey.ui.resources.post_collected_action
@@ -144,23 +166,37 @@ import io.github.nodyssey.ui.resources.post_comment_blocked_show
 import io.github.nodyssey.ui.resources.post_comments_empty
 import io.github.nodyssey.ui.resources.post_comments_empty_hint
 import io.github.nodyssey.ui.resources.post_comments_header
+import io.github.nodyssey.ui.resources.post_copy_body
 import io.github.nodyssey.ui.resources.post_edit_action
 import io.github.nodyssey.ui.resources.post_edited
 import io.github.nodyssey.ui.resources.post_edited_at
+import io.github.nodyssey.ui.resources.post_floor_actions
 import io.github.nodyssey.ui.resources.post_link_copied
 import io.github.nodyssey.ui.resources.post_open_original
 import io.github.nodyssey.ui.resources.post_page_progress
 import io.github.nodyssey.ui.resources.post_quote_action
+import io.github.nodyssey.ui.resources.post_quote_floor
 import io.github.nodyssey.ui.resources.post_reaction_chicken
+import io.github.nodyssey.ui.resources.post_reaction_cost
 import io.github.nodyssey.ui.resources.post_reaction_dislike
+import io.github.nodyssey.ui.resources.post_reaction_feed
+import io.github.nodyssey.ui.resources.post_reaction_free
+import io.github.nodyssey.ui.resources.post_reaction_free_today
+import io.github.nodyssey.ui.resources.post_reaction_irreversible
 import io.github.nodyssey.ui.resources.post_reaction_like
+import io.github.nodyssey.ui.resources.post_reaction_spent
 import io.github.nodyssey.ui.resources.post_reply_action
+import io.github.nodyssey.ui.resources.post_reply_to
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerCardGap
+import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
@@ -168,13 +204,16 @@ import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.component.rememberClipboardCopy
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.PostTitle
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.asSignature
+import io.github.plaza.designsys.theme.floatShadow
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -346,6 +385,9 @@ fun PostDetailScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var confirmTarget by remember { mutableStateOf<ReactionConfirm?>(null) }
+
+    /** The floor whose 1c panel is open — from its ⋯, or a long press on its card. */
+    var floorActions by remember { mutableStateOf<FloorActions?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     var showPageSheet by remember { mutableStateOf(false) }
     var pageToolbarExpanded by rememberSaveable { mutableStateOf(true) }
@@ -551,6 +593,30 @@ fun PostDetailScreen(
             state.error != null ||
             showPageSheet
 
+    /**
+     * One mark on one floor, from wherever it was asked for — the floor's own row, or a tile of its
+     * 1c panel. Both go through the same gates, so neither can spend what the other would have asked
+     * about first.
+     */
+    val reactTo: (PostContent, ReactionAction) -> Unit = { content, action ->
+        val commentId = content.commentId
+        when {
+            // Same rule as the editor: the account has to exist before the action, not after a
+            // rejection that also spent the tap.
+            !state.isSignedIn -> onSignIn()
+
+            commentId == null -> Unit
+
+            // 点赞 costs nothing and the site does not confirm it either.
+            action == ReactionAction.Upvote -> onReact(commentId, action)
+
+            else -> {
+                confirmTarget = ReactionConfirm(content, commentId, action)
+                if (action == ReactionAction.ChickenLeg) onLoadFreeChickenLegs()
+            }
+        }
+    }
+
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -635,24 +701,8 @@ fun PostDetailScreen(
                                         onJumpToFloor(floor)
                                     }
                                 },
-                                onReact = { content, action ->
-                                    val commentId = content.commentId
-                                    when {
-                                        // Same rule as the editor: the account has to exist before the
-                                        // action, not after a rejection that also spent the tap.
-                                        !state.isSignedIn -> onSignIn()
-
-                                        commentId == null -> Unit
-
-                                        // 点赞 costs nothing and the site does not confirm it either.
-                                        action == ReactionAction.Upvote -> onReact(commentId, action)
-
-                                        else -> {
-                                            confirmTarget = ReactionConfirm(content, commentId, action)
-                                            if (action == ReactionAction.ChickenLeg) onLoadFreeChickenLegs()
-                                        }
-                                    }
-                                },
+                                onReact = reactTo,
+                                onOpenFloorActions = { floorActions = it },
                                 onReplyToFloor = onReply,
                                 onQuoteFloor = onQuote,
                                 onEditFloor = { target ->
@@ -719,6 +769,30 @@ fun PostDetailScreen(
         )
     }
 
+    floorActions?.let { target ->
+        // The floor as it is now, not as it was when the panel opened: a mark landing while the
+        // panel is up has to turn its tile to 已表态 rather than leave it offering a second spend.
+        val live = state.contentWithId(target.content.commentId) ?: target.content
+        FloorActionSheet(
+            content = live,
+            actions = target,
+            pending = state.pendingReactionFor(live),
+            freeChickenLegs = state.freeChickenLegs,
+            onDismiss = { floorActions = null },
+            onReact = { action ->
+                floorActions = null
+                reactTo(live, action)
+            },
+        )
+    }
+    // The 投喂 tile says whether today's feed is free, which only the site knows. Asked for as the
+    // panel opens — the same once-per-thread request the confirmation makes — and only for an
+    // account that could spend one.
+    val actionsOpen = floorActions != null
+    LaunchedEffect(actionsOpen) {
+        if (actionsOpen && state.isSignedIn) onLoadFreeChickenLegs()
+    }
+
     // The site's own sentence is the whole value here — "鸡腿不足", "已经进行过加鸡腿操作" — so it is
     // shown verbatim, and our wording only stands in for the failures that never reached the site.
     //
@@ -773,9 +847,10 @@ fun PostDetailScreen(
                 .takeIf { it != visiblePage }
                 ?.let { target ->
                     JumpDestination(
-                        label =
-                        resume?.floor?.let { stringResource(Res.string.page_jump_latest_read_floor, it) }
-                            ?: stringResource(Res.string.page_jump_latest_read, target),
+                        label = stringResource(Res.string.page_jump_resume_title),
+                        detail =
+                        resume?.floor?.let { stringResource(Res.string.page_jump_at_page_floor, target, it) }
+                            ?: stringResource(Res.string.page_jump_at_page, target),
                         icon = PlazaIcons.Bookmark,
                         onGo = {
                             showPageSheet = false
@@ -787,6 +862,7 @@ fun PostDetailScreen(
             newest =
             JumpDestination(
                 label = stringResource(Res.string.page_jump_latest),
+                detail = stringResource(Res.string.page_jump_at_page, state.totalPages.coerceAtLeast(1)),
                 icon = PlazaIcons.VerticalAlignBottom,
                 onGo = {
                     showPageSheet = false
@@ -834,6 +910,8 @@ private fun DetailBottomActions(
         // The screen's own FAB rather than the toolbar's: 回复 is the one action here that must stay
         // where the thumb last left it, and Material's toolbar rounds its FAB up to 80dp the moment
         // the bar collapses. Shrinking to an icon is the whole of the change it makes now.
+        // Material's own elevation is switched off and the layer's float shadow drawn instead — see
+        // [floatShadow]: the FAB is one step above the cards, in the page's hue rather than black.
         ExtendedFloatingActionButton(
             text = { Text(stringResource(Res.string.post_reply_action)) },
             icon = {
@@ -844,9 +922,11 @@ private fun DetailBottomActions(
             },
             onClick = onReply,
             expanded = toolbarExpanded,
-            shape = RoundedCornerShape(18.dp),
+            shape = ReplyFabShape,
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+            modifier = Modifier.floatShadow(ReplyFabShape, LocalPlazaLayers.current.shadows),
         )
     }
 }
@@ -904,7 +984,7 @@ private fun DetailTopBar(
         actions = {
             IconButton(onClick = onOpenInBrowser) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ExitToApp,
+                    PlazaIcons.OpenInNew,
                     contentDescription = stringResource(Res.string.action_open_in_browser),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -944,15 +1024,20 @@ private fun DetailTopBar(
                 }
             }
         },
+        // Flush with the page: the bar is part of the grey the cards sit on, not a band of its own.
         colors =
         TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.background,
+            scrolledContainerColor = MaterialTheme.colorScheme.background,
         ),
     )
 }
 
 /** What Material's extended FAB stands at, collapsed or not — the rail is stacked on top of it. */
 private val ReplyFabHeight = 56.dp
+
+/** Squarer than the rail's keys are round: 16dp on a 56dp FAB, as 1b draws it. */
+private val ReplyFabShape = RoundedCornerShape(16.dp)
 
 /**
  * The room to keep below the thread until the floating controls have been measured — one frame.
@@ -970,6 +1055,10 @@ private val ThreadBottomBarRoom =
  *
  * The site paginates comments; this does not. Later pages append into the same list, so the reader
  * never meets a "page 2" boundary — which is the single biggest difference from the mobile web.
+ *
+ * Drawn as cards on the page (1b): the opening post is one card holding the title as well as the
+ * post, and every reply is a card of its own. The gaps between them do the separating the dividers
+ * used to.
  */
 @Composable
 private fun ThreadList(
@@ -983,6 +1072,8 @@ private fun ThreadList(
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
     onReact: (PostContent, ReactionAction) -> Unit,
+    /** Opens a floor's 1c panel — the marks and actions its own row has no room for. */
+    onOpenFloorActions: (FloorActions) -> Unit,
     onReplyToFloor: (FloorReference?) -> Unit,
     onQuoteFloor: (FloorReference) -> Unit,
     onEditFloor: (PostEditTarget) -> Unit,
@@ -994,36 +1085,49 @@ private fun ThreadList(
 ) {
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(bottom = bottomRoom),
+        contentPadding =
+        PaddingValues(start = LayerPageGutter, end = LayerPageGutter, top = Spacing.xs, bottom = bottomRoom),
+        verticalArrangement = Arrangement.spacedBy(LayerCardGap),
         modifier = modifier
             .fillMaxHeight()
             .readableWidth(),
     ) {
-        item(key = "title") {
-            ThreadHeader(
-                title = state.title,
-                postId = state.postId,
-                body = state.body,
-                isAwarded = state.isAwarded,
-                preview = state.preview,
-                onOpenOriginalPost = onOpenOriginalPost,
-            )
-        }
-
         /*
          * Present whether or not the thread has arrived — which is the whole reason this is one item
          * and not an `item` guarded by `state.body != null`.
          *
-         * The avatar and the author's name inside it are shared elements, still settling out of
-         * their flight from a feed row while the thread is on its way. A guard here would dispose
-         * them the instant the body landed and compose fresh ones in a new subtree; the
+         * The title, the avatar and the author's name inside it are shared elements, still settling
+         * out of their flight from a feed row while the thread is on its way. A guard here would
+         * dispose them the instant the body landed and compose fresh ones in a new subtree; the
          * shared-element machinery reads that as a *second* transition and flies them again, from
          * wherever the new node happened to be measured first. Same call site, changing arguments,
          * and nothing moves. See [ThreadOpeningPost].
+         *
+         * The title used to be an item of its own above this one. It moved inside when the opening
+         * post became a card, because a card cannot be split across two items without a seam where
+         * one item's shadow falls over the other's paint.
          */
         item(key = "body") {
             val body = state.body
+            // The opening post is always on page 1, wherever the reader currently is.
+            val onEdit = body?.commentId
+                ?.takeIf { body.isMine }
+                ?.let { id ->
+                    {
+                        onEditFloor(
+                            PostEditTarget(
+                                postId = state.postId,
+                                commentId = id,
+                                page = 1,
+                                isOpeningPost = true,
+                            ),
+                        )
+                    }
+                }
             ThreadOpeningPost(
+                title = state.title,
+                isAwarded = state.isAwarded,
+                onOpenOriginalPost = onOpenOriginalPost,
                 body = body,
                 preview = state.preview,
                 postId = state.postId,
@@ -1034,21 +1138,8 @@ private fun ThreadList(
                 pendingReaction = body?.let { state.pendingReactionFor(it) },
                 onReact = { action -> body?.let { onReact(it, action) } },
                 onAuthorClick = onAuthorClick,
-                // The opening post is always on page 1, wherever the reader currently is.
-                onEdit = body?.commentId
-                    ?.takeIf { body.isMine }
-                    ?.let { id ->
-                        {
-                            onEditFloor(
-                                PostEditTarget(
-                                    postId = state.postId,
-                                    commentId = id,
-                                    page = 1,
-                                    isOpeningPost = true,
-                                ),
-                            )
-                        }
-                    },
+                // The opening post keeps the site's own set: no 回复 or 引用 of it, 编辑 on your own.
+                onMore = body?.let { { onOpenFloorActions(FloorActions(it, onReply = null, onQuote = null, onEdit)) } },
                 collected = state.collected,
                 collectionCount = state.collectionCount,
                 collectPending = state.collectPending,
@@ -1071,6 +1162,27 @@ private fun ThreadList(
             items = state.comments,
             key = { index, comment -> comment.commentId ?: -index.toLong() - 1 },
         ) { index, comment ->
+            // The site page this floor came from, which is the only page whose `__config__` carries
+            // its Markdown. Read from the index rather than derived from the floor number: the list
+            // is one scroll over several pages, and the two disagree as soon as a floor above has
+            // been deleted.
+            val onEdit = comment.commentId
+                ?.takeIf { comment.isMine }
+                ?.let { id ->
+                    {
+                        onEditFloor(
+                            PostEditTarget(
+                                postId = state.postId,
+                                commentId = id,
+                                page = state.commentPages.getOrNull(index) ?: state.lastLoadedPage,
+                                isOpeningPost = false,
+                            ),
+                        )
+                    }
+                }
+            // 回复 gives way to 编辑 on this account's own floor, which is what the site does.
+            val onReply = { onReplyToFloor(comment.toFloorReference()) }.takeIf { onEdit == null }
+            val onQuote = { comment.toFloorReference()?.let(onQuoteFloor) ?: Unit }
             BlockAware(content = comment, revealed = state.showBlockedContent) {
                 CommentRow(
                     comment = comment,
@@ -1079,26 +1191,9 @@ private fun ThreadList(
                     onJumpToFloor = onJumpToFloor,
                     pendingReaction = state.pendingReactionFor(comment),
                     onReact = { action -> onReact(comment, action) },
-                    onReply = { onReplyToFloor(comment.toFloorReference()) },
-                    onQuote = { comment.toFloorReference()?.let(onQuoteFloor) },
-                    // The site page this floor came from, which is the only page whose `__config__`
-                    // carries its Markdown. Read from the index rather than derived from the floor
-                    // number: the list is one scroll over several pages, and the two disagree as
-                    // soon as a floor above has been deleted.
-                    onEdit = comment.commentId
-                        ?.takeIf { comment.isMine }
-                        ?.let { id ->
-                            {
-                                onEditFloor(
-                                    PostEditTarget(
-                                        postId = state.postId,
-                                        commentId = id,
-                                        page = state.commentPages.getOrNull(index) ?: state.lastLoadedPage,
-                                        isOpeningPost = false,
-                                    ),
-                                )
-                            }
-                        },
+                    onReply = onReply,
+                    onEdit = onEdit,
+                    onMore = { onOpenFloorActions(FloorActions(comment, onReply, onQuote, onEdit)) },
                     onAuthorClick = onAuthorClick,
                     voteContent = voteContent,
                     stardustContent = stardustContent,
@@ -1133,7 +1228,13 @@ private fun BlockAware(
     if (!content.isBlocked || revealed || openedHere) {
         floor()
     } else {
-        BlockedFloorRow(floor = content.floor, onShow = { openedHere = true })
+        // A card like the floor it stands in for, but a slim one: it is a line, not a post.
+        LayerCard(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.xs, top = 2.dp, bottom = 2.dp),
+        ) {
+            BlockedFloorRow(floor = content.floor, onShow = { openedHere = true })
+        }
     }
 }
 
@@ -1143,9 +1244,7 @@ private fun BlockedFloorRow(
     onShow: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
@@ -1183,6 +1282,7 @@ private fun TextStyle.hangLeadingPunctuation(text: String): TextStyle =
         this
     }
 
+/** The top of the opening post's card: its tags, then the title under them, as 1b stacks them. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ThreadHeader(
@@ -1195,21 +1295,40 @@ private fun ThreadHeader(
      * See [io.github.nodyssey.PostDetailKey.preview].
      */
     preview: ThreadPreview?,
-    /** Fetches page 1 and scrolls to the opening post; null when it is already the item below. */
+    /** Fetches page 1 and scrolls to the opening post; null when it is already on screen. */
     onOpenOriginalPost: (() -> Unit)? = null,
 ) {
     Column(
-        modifier = Modifier
-            // Clickable outside the padding, so the ripple covers the block the title reads as.
-            .then(
-                if (onOpenOriginalPost != null) Modifier.clickable(onClick = onOpenOriginalPost) else Modifier,
-            ).padding(
-                start = Spacing.lg,
-                end = Spacing.lg,
-                top = 6.dp,
-                bottom = 14.dp,
-            ),
+        modifier =
+        if (onOpenOriginalPost != null) Modifier.clickable(onClick = onOpenOriginalPost) else Modifier,
     ) {
+        val category = body?.categoryTitle ?: preview?.categoryTitle
+        if (category != null || isAwarded) {
+            FlowRow(
+                modifier = Modifier.padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                itemVerticalAlignment = Alignment.CenterVertically,
+            ) {
+                // The slug comes from the preview even once the body has arrived: the thread page's
+                // own markup carries the board's name but not its slug, and the tag colours read the
+                // slug first. Without it a tag would change colour under the reader the moment the
+                // network answered — and it is the same tag, still in flight from the row.
+                BoardTag(
+                    title = category,
+                    slug = preview?.categorySlug,
+                    modifier = Modifier.sharedThreadBoard(postId),
+                )
+                // A labelled tag rather than the list's diamond: here there is room to name the thing.
+                if (isAwarded) {
+                    TonalTag(
+                        text = stringResource(Res.string.post_badge_awarded),
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                }
+            }
+        }
         Text(
             text = title,
             style = PostTitle.hangLeadingPunctuation(title),
@@ -1219,33 +1338,6 @@ private fun ThreadHeader(
             // than appearing once the network answers.
             modifier = Modifier.sharedThreadTitle(postId),
         )
-        FlowRow(
-            modifier = Modifier.padding(top = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            itemVerticalAlignment = Alignment.CenterVertically,
-        ) {
-            // The slug comes from the preview even once the body has arrived: the thread page's
-            // own markup carries the board's name but not its slug, and the tag colours read the
-            // slug first. Without it a tag would change colour under the reader the moment the
-            // network answered — and it is the same tag, still in flight from the row.
-            BoardTag(
-                title = body?.categoryTitle ?: preview?.categoryTitle,
-                slug = preview?.categorySlug,
-                modifier = Modifier.sharedThreadBoard(postId),
-            )
-            // A labelled tag rather than the list's diamond: here there is room to name the thing, and
-            // the site marks a post page differently too — a gold corner over the opening post, which
-            // has no place in a layout whose left edge every floor shares.
-            if (isAwarded) {
-                TonalTag(
-                    text = stringResource(Res.string.post_badge_awarded),
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                )
-            }
-            body?.createdAtText?.let { MetaText(it) }
-        }
         if (onOpenOriginalPost != null) {
             // The title alone carries no affordance on a phone — no hover, no underline, nothing to
             // say it goes anywhere — and this is a screen the reader landed on knowing nothing about
@@ -1290,7 +1382,7 @@ private fun ThreadAuthorRow(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = modifier,
     ) {
         UserAvatar(
@@ -1321,22 +1413,22 @@ private fun ThreadAuthorRow(
 }
 
 /**
- * The opening post, laid out flat like every other floor — and, before it arrives, the part of it
- * the list that opened this thread already knew.
- *
- * It used to sit in a rounded container, which cost two levels of horizontal inset and boxed in the
- * long bodies this forum is full of. The larger avatar, the bodyLarge text and the comments header
- * below already mark it as the opening post, so the container was only spending width.
+ * The opening post's card (1b) — tags, title, author, body and its own action row — and, before the
+ * thread arrives, the part of it the list that opened this thread already knew.
  *
  * A null [body] is the thread still loading, and this draws it rather than handing the screen over
- * to a separate skeleton, because the avatar and the author's name here are shared elements landing
- * out of a flight from a feed row. Two composables would mean two sets of nodes, and swapping one
- * for the other the moment the body arrived would look to the shared-element machinery like a fresh
- * transition — it would fly them a second time, from wherever the replacement was first measured.
- * One call site whose arguments change is the whole fix: nothing is disposed, so nothing moves.
+ * to a separate skeleton, because the title, the avatar and the author's name here are shared
+ * elements landing out of a flight from a feed row. Two composables would mean two sets of nodes,
+ * and swapping one for the other the moment the body arrived would look to the shared-element
+ * machinery like a fresh transition — it would fly them a second time, from wherever the replacement
+ * was first measured. One call site whose arguments change is the whole fix: nothing is disposed, so
+ * nothing moves.
  */
 @Composable
 private fun ThreadOpeningPost(
+    title: String,
+    isAwarded: Boolean,
+    onOpenOriginalPost: (() -> Unit)?,
     body: PostContent?,
     preview: ThreadPreview?,
     postId: Long,
@@ -1347,8 +1439,8 @@ private fun ThreadOpeningPost(
     pendingReaction: ReactionAction?,
     onReact: (ReactionAction) -> Unit,
     onAuthorClick: (Long) -> Unit,
-    /** 编辑, null unless this account wrote the thread. */
-    onEdit: (() -> Unit)?,
+    /** Opens the post's 1c panel; null until there is a post to act on. */
+    onMore: (() -> Unit)?,
     /* Collection is whole-thread, so it belongs on the opening post and nowhere else. */
     collected: Boolean?,
     collectionCount: Int?,
@@ -1360,16 +1452,31 @@ private fun ThreadOpeningPost(
     // [BlockAware]'s job, done here rather than around this composable: a wrapper that swapped the
     // whole opening post out would take the shared elements with it, which is the thing this
     // arrangement exists to prevent. A blocked author is the one case where they *should* go — the
-    // point of blocking is that the name and the face are not shown.
+    // point of blocking is that the name and the face are not shown. The title stays: it is the
+    // thread's, not the author's.
     var revealedHere by rememberSaveable(body?.commentId) { mutableStateOf(false) }
-    if (body != null && body.isBlocked && !showBlockedContent && !revealedHere) {
-        BlockedFloorRow(floor = body.floor, onShow = { revealedHere = true })
-        return
-    }
+    val blocked = body != null && body.isBlocked && !showBlockedContent && !revealedHere
 
-    Column(
-        modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = 12.dp),
+    LayerCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .floorLongPress(onMore.takeUnless { blocked }),
+        contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, top = 18.dp, bottom = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
+        ThreadHeader(
+            title = title,
+            postId = postId,
+            body = body,
+            isAwarded = isAwarded,
+            preview = preview,
+            onOpenOriginalPost = onOpenOriginalPost,
+        )
+        if (body != null && blocked) {
+            BlockedFloorRow(floor = body.floor, onShow = { revealedHere = true })
+            return@LayerCard
+        }
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -1391,13 +1498,10 @@ private fun ThreadOpeningPost(
         }
 
         if (body == null) {
-            Column(
-                modifier = Modifier.padding(top = Spacing.md),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 listOf(0.98f, 0.94f, 0.99f, 0.62f).forEach { SkeletonBar(it, 14.dp) }
             }
-            return
+            return@LayerCard
         }
 
         if (body.nodes.isEmpty()) {
@@ -1405,7 +1509,6 @@ private fun ThreadOpeningPost(
                 text = stringResource(Res.string.post_body_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = Spacing.md),
             )
         } else {
             PostRichContent(
@@ -1416,7 +1519,6 @@ private fun ThreadOpeningPost(
                 textStyle = MaterialTheme.typography.bodyLarge,
                 voteContent = voteContent,
                 stardustContent = stardustContent,
-                modifier = Modifier.padding(top = Spacing.md),
             )
         }
         UserSignature(
@@ -1426,30 +1528,25 @@ private fun ThreadOpeningPost(
             onImageClick = onImageClick,
             onJumpToFloor = onJumpToFloor,
         )
-        ReactionRow(
+        OpeningPostActions(
             reactions = body.reactions,
             pending = pendingReaction,
             onReact = onReact,
-            onEdit = onEdit,
             collected = collected,
             collectionCount = collectionCount,
             collectPending = collectPending,
             onCollect = onCollect,
+            onMore = onMore,
         )
     }
 }
 
 @Composable
 private fun CommentsHeader(count: Int) {
-    // Without the opening post's container, this line is what separates it from the replies.
-    HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant,
-        modifier = Modifier.padding(horizontal = Spacing.lg),
-    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.md, bottom = Spacing.sm),
+            .padding(start = Spacing.sm, end = Spacing.sm, top = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -1460,9 +1557,11 @@ private fun CommentsHeader(count: Int) {
             ),
             modifier = Modifier.weight(1f),
         )
+        // Where 1b draws a 从早到晚 order control. NodeSeek has no comment order to choose — floors
+        // come oldest first and nothing else — so the slot keeps saying how the list continues.
         Text(
             text = stringResource(Res.string.post_auto_paging),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -1489,11 +1588,15 @@ private fun CommentsHeader(count: Int) {
 }
 
 /**
- * One reply.
+ * One reply, as its own card (1b).
  *
  * Real replies on this forum are anywhere between two characters and several screens, so the header
- * row is fixed, the timestamp hangs under the author name, and the body runs the full width — a
- * 36dp indent on every body line wasted a fifth of a phone's width on empty space.
+ * is one fixed line — avatar, name, badges, time, and the floor number at the far end — and the body
+ * runs the card's full width.
+ *
+ * The foot carries only what a reader does on most floors — 点赞, 投喂, 回复 — and a ⋯ for the rest
+ * of the site's set (点踩, 引用), which [FloorActionSheet] lays out with their prices. A long press
+ * anywhere on the card outside the text opens the same panel; on the text it selects, as it always has.
  */
 @Composable
 private fun CommentRow(
@@ -1503,29 +1606,27 @@ private fun CommentRow(
     onJumpToFloor: (String) -> Unit,
     pendingReaction: ReactionAction?,
     onReact: (ReactionAction) -> Unit,
-    onReply: () -> Unit,
-    onQuote: () -> Unit,
+    /** Null on this account's own floor, where [onEdit] takes its place. */
+    onReply: (() -> Unit)?,
     onEdit: (() -> Unit)?,
+    onMore: () -> Unit,
     onAuthorClick: (Long) -> Unit,
     voteContent: @Composable (Long) -> Unit,
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
 ) {
-    Column(
-        modifier = Modifier.padding(
-            start = Spacing.lg,
-            end = Spacing.lg,
-            top = Spacing.lg,
-            bottom = Spacing.lg,
-        ),
+    LayerCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .floorLongPress(onMore),
+        contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.xs, top = 14.dp, bottom = Spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Row(
+            modifier = Modifier.padding(end = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             // The identity block opens the author's space; the floor label stays outside it.
-            // Same shape as the opening post's header: the avatar centres on the name *and* the
-            // timestamp as one block — hanging the timestamp outside on its own indent left the
-            // avatar aligned to nothing.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -1539,22 +1640,17 @@ private fun CommentRow(
                     name = comment.authorName,
                     size = Sizes.avatarComment,
                 )
-                Column(Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(
-                            text = comment.authorName,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        FloorBadges(comment)
-                    }
-                    FloorTimeLine(comment)
-                }
+                Text(
+                    text = comment.authorName,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    // The name gives way first: the badges and the time are short and fixed, a
+                    // name is whatever its owner typed.
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                FloorBadges(comment)
+                FloorTimeLine(comment)
             }
             comment.floor?.let { FloorLabel(it) }
         }
@@ -1566,7 +1662,7 @@ private fun CommentRow(
             textStyle = MaterialTheme.typography.bodyMedium,
             voteContent = voteContent,
             stardustContent = stardustContent,
-            modifier = Modifier.padding(top = Spacing.sm),
+            modifier = Modifier.padding(end = Spacing.md),
         )
         UserSignature(
             nodes = comment.signatureNodes,
@@ -1574,16 +1670,15 @@ private fun CommentRow(
             onOpenBrowser = onOpenBrowser,
             onImageClick = onImageClick,
             onJumpToFloor = onJumpToFloor,
+            modifier = Modifier.padding(end = Spacing.md),
         )
-        ReactionRow(
+        CommentFoot(
             reactions = comment.reactions,
             pending = pendingReaction,
             onReact = onReact,
-            // 回复 gives way to 编辑 on this account's own floor, which is what the site does — and
-            // what keeps the row at five buttons instead of a sixth that does not fit on a phone.
-            onReply = onReply.takeIf { onEdit == null },
-            onQuote = onQuote,
+            onReply = onReply,
             onEdit = onEdit,
+            onMore = onMore,
         )
     }
 }
@@ -1602,80 +1697,97 @@ private fun UserSignature(
     onOpenBrowser: (String) -> Unit,
     onImageClick: (String) -> Unit,
     onJumpToFloor: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     if (nodes.isEmpty()) return
 
-    HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant,
-        modifier = Modifier.padding(top = Spacing.md, bottom = Spacing.sm),
-    )
-    PostRichContent(
-        nodes = nodes,
-        onLinkClick = onOpenBrowser,
-        onImageClick = onImageClick,
-        onQuoteRefClick = { onJumpToFloor(it.floor) },
-        textStyle = bodyStyle.asSignature().copy(
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        ),
-    )
+    Column(modifier) {
+        HorizontalDivider(
+            color = LocalPlazaLayers.current.divider,
+            modifier = Modifier.padding(bottom = Spacing.sm),
+        )
+        PostRichContent(
+            nodes = nodes,
+            onLinkClick = onOpenBrowser,
+            onImageClick = onImageClick,
+            onQuoteRefClick = { onJumpToFloor(it.floor) },
+            textStyle = bodyStyle.asSignature().copy(
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+        )
+    }
 }
 
 /** Tappable only when the uid was actually parsed; a dead ripple would promise a screen we cannot open. */
 private fun Modifier.authorClickable(uid: Long?, onAuthorClick: (Long) -> Unit): Modifier =
     if (uid == null) this else clickable { onAuthorClick(uid) }
 
-/** `ButtonDefaults.TextButtonContentPadding`'s horizontal inset. */
-private val TEXT_BUTTON_CONTENT_INSET = 12.dp
-
+/**
+ * A long press on a floor's card opens its 1c panel.
+ *
+ * Not [LayerCard]'s own `onLongClick`: that makes the card a `combinedClickable`, and a card whose
+ * tap does nothing would still ripple on every tap a reader makes while reading. A gesture detector
+ * that listens only for the long press leaves the tap alone. Screen readers get the same action
+ * through the semantics, beside the ⋯ that is always there.
+ */
 @Composable
-private fun ReactionRow(
+private fun Modifier.floorLongPress(onLongPress: (() -> Unit)?): Modifier {
+    if (onLongPress == null) return this
+    val haptics = LocalHapticFeedback.current
+    val current by rememberUpdatedState(onLongPress)
+    val label = stringResource(Res.string.post_floor_actions)
+    return this
+        .pointerInput(Unit) {
+            detectTapGestures(
+                onLongPress = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    current()
+                },
+            )
+        }.semantics {
+            onLongClick(label) {
+                current()
+                true
+            }
+        }
+}
+
+/**
+ * The opening post's action row (1b): 点赞 and 投喂 as tonal pills with their tallies, then 收藏 and
+ * the ⋯ that opens the rest. 点踩 and 编辑 live in the panel; the pills are the two things readers
+ * actually do to an opening post.
+ */
+@Composable
+private fun OpeningPostActions(
     reactions: PostReactions?,
     pending: ReactionAction?,
     onReact: (ReactionAction) -> Unit,
-    modifier: Modifier = Modifier,
-    onReply: (() -> Unit)? = null,
-    onQuote: (() -> Unit)? = null,
-    /** 编辑 — null on every floor this account did not write. */
-    onEdit: (() -> Unit)? = null,
     /*
-     * Collection is whole-thread on NodeSeek, so only the opening post passes these; every comment
-     * row leaves them at their defaults and the star simply is not drawn. Null [collected] is the
-     * same absence for a different reason — no fetched page has said which way it points.
+     * Null [collected] is an absence — no fetched page has said which way the bookmark points — and
+     * the bookmark is simply not drawn.
      */
-    collected: Boolean? = null,
-    collectionCount: Int? = null,
-    collectPending: Boolean = false,
-    onCollect: (() -> Unit)? = null,
+    collected: Boolean?,
+    collectionCount: Int?,
+    collectPending: Boolean,
+    onCollect: () -> Unit,
+    onMore: (() -> Unit)?,
 ) {
     Row(
-        // Every reaction is a TextButton, which keeps 12dp of content padding inside its own bounds.
-        // Laid out honestly the last icon stops 12dp short of the margin the floor label and the
-        // body text sit on; shifting the row out by exactly that much lines the ink up instead.
-        modifier = modifier
-            .fillMaxWidth()
-            .offset(x = TEXT_BUTTON_CONTENT_INSET)
-            .padding(top = Spacing.sm),
-        horizontalArrangement = Arrangement.End,
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        // First in an End-arranged row, so it draws leftmost and the three marks keep their places.
-        if (collected != null && onCollect != null) {
-            QuietReaction(
-                icon = if (collected) Icons.Default.Star else PlazaIcons.StarBorder,
-                label = if (collected) Res.string.post_collected_action else Res.string.post_collect_action,
-                count = collectionCount?.toString().orEmpty(),
-                selected = collected,
-                pending = collectPending,
-                onClick = onCollect.takeUnless { collectPending },
-            )
-        }
-        REACTION_ORDER.forEach { (action, icon) ->
-            QuietReaction(
-                icon = icon,
-                label = action.labelRes(),
-                // No count at all rather than a zero when the page did not carry the tallies: an
-                // unread number and "nobody has done this" are different claims.
-                count = reactions?.countOf(action)?.toString().orEmpty(),
+        val feedLabel = stringResource(Res.string.post_reaction_feed)
+        listOf(ReactionAction.Upvote, ReactionAction.ChickenLeg).forEach { action ->
+            val count = reactions?.countOf(action)
+            ReactionPill(
+                action = action,
+                // 点赞 is the one mark with no word beside it in 1b — its thumb is the word.
+                text =
+                when (action) {
+                    ReactionAction.ChickenLeg -> listOfNotNull(feedLabel, count?.toString()).joinToString(" ")
+                    else -> count?.toString().orEmpty()
+                },
                 spent = reactions?.hasSpent(action) == true,
                 pending = pending == action,
                 // A floor whose tallies we never read is a floor we cannot say is unspent — offering
@@ -1683,44 +1795,171 @@ private fun ReactionRow(
                 onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
             )
         }
-        // Not reactions, but they have always lived on this row: they carry the floor into the
-        // editor, which is what 6d's "回复 #12 · nssk" header is showing. Two buttons rather than
-        // one because the site has two — 回复 addresses the author, 引用 reproduces the floor — and
-        // collapsing them into a single action is what made every answer from here read as a quote.
-        onQuote?.let {
+        Spacer(Modifier.weight(1f))
+        if (collected != null) {
             QuietReaction(
-                icon = PlazaIcons.FormatQuote,
-                label = Res.string.post_quote_action,
-                count = "",
-                onClick = it,
+                icon = if (collected) PlazaIcons.Bookmark else BookmarkBorder,
+                label = if (collected) Res.string.post_collected_action else Res.string.post_collect_action,
+                count = collectionCount?.toString().orEmpty(),
+                selected = collected,
+                pending = collectPending,
+                onClick = onCollect.takeUnless { collectPending },
             )
         }
-        onReply?.let {
-            QuietReaction(
-                icon = PlazaIcons.Reply,
-                label = Res.string.post_reply_action,
-                count = "",
-                onClick = it,
-            )
+        if (onMore != null) FloorMoreButton(onMore)
+    }
+}
+
+/**
+ * 点赞 or 投喂 on the opening post: a tonal pill, filled solid once spent.
+ *
+ * Spent is drawn, not merely disabled. These marks cannot be undone, so the row has to answer "did I
+ * already do this?" at a glance — and in colour rather than by being greyed, because greyed is also
+ * what an unusable button looks like to a signed-out reader.
+ */
+@Composable
+private fun ReactionPill(
+    action: ReactionAction,
+    text: String,
+    spent: Boolean,
+    pending: Boolean,
+    onClick: (() -> Unit)?,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val layers = LocalPlazaLayers.current
+    // 点赞 wears the primary tone and 投喂 the page's inset grey, as 1b draws them; spent turns
+    // each to its own filled colour — the same tertiary 投喂 wears on the 1c panel.
+    val (container, content) =
+        when (action) {
+            ReactionAction.Upvote ->
+                if (spent) scheme.primary to scheme.onPrimary else scheme.primaryContainer to scheme.onPrimaryContainer
+
+            else ->
+                if (spent) scheme.tertiaryContainer to scheme.onTertiaryContainer else layers.inset to scheme.onSurface
         }
-        onEdit?.let {
-            QuietReaction(
-                icon = Icons.Default.Edit,
-                label = Res.string.post_edit_action,
-                count = "",
-                onClick = it,
+    FilledTonalButton(
+        onClick = onClick ?: {},
+        enabled = onClick != null && !spent && !pending,
+        shape = CircleShape,
+        colors =
+        ButtonDefaults.filledTonalButtonColors(
+            containerColor = container,
+            contentColor = content,
+            disabledContainerColor = if (spent) container else container.copy(alpha = DISABLED_PILL_ALPHA),
+            disabledContentColor = if (spent) content else content.copy(alpha = DISABLED_PILL_ALPHA),
+        ),
+        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        contentPadding = PaddingValues(horizontal = 14.dp),
+        modifier = Modifier.height(ReactionPillHeight),
+    ) {
+        if (pending) {
+            PlazaSpinner(
+                modifier = Modifier.describedAsLoading(),
+                strokeWidth = 2.dp,
+                size = 18.dp,
+            )
+        } else {
+            Icon(action.icon(), contentDescription = stringResource(action.labelRes()), modifier = Modifier.size(20.dp))
+        }
+        if (text.isNotEmpty()) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(start = 6.dp),
             )
         }
     }
 }
 
-/** Left to right as 6d draws them: 点赞, 投喂鸡腿, 点踩. */
-private val REACTION_ORDER =
-    listOf(
-        ReactionAction.Upvote to Icons.Default.ThumbUp,
-        ReactionAction.ChickenLeg to NodeSeekIcons.ChickenLeg,
-        ReactionAction.Dislike to PlazaIcons.ThumbDown,
-    )
+/**
+ * A reply's foot (1b): 点赞 and 投喂 with their tallies on the left, then a quiet 回复 — 编辑 on this
+ * account's own floor — and the ⋯ that opens the rest.
+ */
+@Composable
+private fun CommentFoot(
+    reactions: PostReactions?,
+    pending: ReactionAction?,
+    onReact: (ReactionAction) -> Unit,
+    onReply: (() -> Unit)?,
+    onEdit: (() -> Unit)?,
+    onMore: () -> Unit,
+) {
+    Row(
+        // Each mark is a TextButton, which keeps 12dp of content padding inside its own bounds. Laid
+        // out honestly the first icon starts 12dp right of the margin the name and the body sit on;
+        // shifting the row back by that much lines the ink up instead.
+        modifier = Modifier
+            .fillMaxWidth()
+            .offset(x = -TEXT_BUTTON_CONTENT_INSET),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        listOf(ReactionAction.Upvote, ReactionAction.ChickenLeg).forEach { action ->
+            QuietReaction(
+                icon = action.icon(),
+                label = action.labelRes(),
+                // No count at all rather than a zero when the page did not carry the tallies: an
+                // unread number and "nobody has done this" are different claims.
+                count = reactions?.countOf(action)?.toString().orEmpty(),
+                spent = reactions?.hasSpent(action) == true,
+                pending = pending == action,
+                onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        // The one text button on the row, in the accent: it carries the floor into the editor, which
+        // is what 2c's "回复 #12 · nssk" header is showing.
+        val (action, icon, label) =
+            when {
+                onEdit != null -> Triple(onEdit, Icons.Default.Edit, Res.string.post_edit_action)
+                onReply != null -> Triple(onReply, PlazaIcons.Reply, Res.string.post_reply_action)
+                else -> Triple(null, null, null)
+            }
+        if (action != null && icon != null && label != null) {
+            TextButton(
+                onClick = action,
+                // The ⋯ beside it brings its own touch slack, so the pair can sit close.
+                contentPadding = PaddingValues(horizontal = Spacing.md),
+                modifier = Modifier.offset(x = TEXT_BUTTON_CONTENT_INSET),
+            ) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(
+                    stringResource(label),
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(start = Spacing.xs),
+                )
+            }
+        }
+        Box(Modifier.offset(x = TEXT_BUTTON_CONTENT_INSET)) { FloorMoreButton(onMore) }
+    }
+}
+
+/** ⋯ — the way into a floor's 1c panel that does not depend on knowing about the long press. */
+@Composable
+private fun FloorMoreButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            MoreHoriz,
+            contentDescription = stringResource(Res.string.post_floor_actions),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** `ButtonDefaults.TextButtonContentPadding`'s horizontal inset. */
+private val TEXT_BUTTON_CONTENT_INSET = 12.dp
+
+private val ReactionPillHeight = 40.dp
+
+private const val DISABLED_PILL_ALPHA = 0.5f
+
+/** Each mark's glyph, wherever it is drawn — the row, the pill, the 1c tile. */
+private fun ReactionAction.icon(): ImageVector =
+    when (this) {
+        ReactionAction.Upvote -> Icons.Default.ThumbUp
+        ReactionAction.ChickenLeg -> NodeSeekIcons.ChickenLeg
+        ReactionAction.Dislike -> PlazaIcons.ThumbDown
+    }
 
 private fun ReactionAction.labelRes(): StringResource =
     when (this) {
@@ -1757,8 +1996,11 @@ private fun QuietReaction(
         colors =
         when {
             spent -> ButtonDefaults.textButtonColors(disabledContentColor = MaterialTheme.colorScheme.primary)
+
             selected -> ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-            else -> ButtonDefaults.textButtonColors()
+
+            // Quiet until used: the accent is kept for what this reader has done, and for 回复.
+            else -> ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
         },
     ) {
         if (pending) {
@@ -1850,6 +2092,261 @@ private fun ReactionConfirmDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
+    )
+}
+
+/**
+ * What a floor's 1c panel can do besides the three marks, as that floor's own row already wired it.
+ *
+ * Built where the row is, because that is where the answers are: whether this account wrote the
+ * floor (编辑 instead of 回复), which site page carries its Markdown, and whether it is the opening
+ * post — which the site offers neither 回复 nor 引用 of.
+ */
+private class FloorActions(
+    val content: PostContent,
+    val onReply: (() -> Unit)?,
+    val onQuote: (() -> Unit)?,
+    val onEdit: (() -> Unit)?,
+)
+
+/**
+ * 楼层互动 (1c): the floor quoted at the top, its three marks as tiles that say what each costs, and
+ * the floor's other actions as a list.
+ *
+ * The set is the site's and fixed — 点赞 / 投喂鸡腿 / 点踩, then 回复 (编辑 on your own floor) and 引用
+ * — with 复制正文 the one thing the app adds, because a selection drag across a long floor is the
+ * other way to get its text and it is a poor one. A tile only asks for the mark: [onReact] closes
+ * the panel and goes through the same gates the row does, so 投喂 and 点踩 still stop at their
+ * confirmations and a signed-out reader still goes to sign in.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FloorActionSheet(
+    content: PostContent,
+    actions: FloorActions,
+    pending: ReactionAction?,
+    freeChickenLegs: FreeChickenLegs?,
+    onDismiss: () -> Unit,
+    onReact: (ReactionAction) -> Unit,
+) {
+    val layers = LocalPlazaLayers.current
+    val copy = rememberClipboardCopy()
+    val copied = stringResource(Res.string.post_body_copied)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        // The page's colour, so the quote, the tiles and the list read as cards on it — the same
+        // layering as the thread under the scrim.
+        containerColor = layers.page,
+    ) {
+        Column(
+            modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+        ) {
+            FloorQuoteCard(content)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(ReactionAction.Upvote, ReactionAction.ChickenLeg, ReactionAction.Dislike).forEach { action ->
+                    val reactions = content.reactions
+                    ReactionTile(
+                        action = action,
+                        count = reactions?.countOf(action),
+                        price = action.price(freeChickenLegs),
+                        spent = reactions?.hasSpent(action) == true,
+                        pending = pending == action,
+                        // Same rule as the row: tallies never read are marks we cannot say are unspent.
+                        onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            SheetCard {
+                val rows =
+                    buildList {
+                        actions.onEdit?.let { add(Triple(Icons.Default.Edit, stringResource(Res.string.post_edit_action), it)) }
+                            ?: actions.onReply?.let {
+                                add(Triple(PlazaIcons.Reply, stringResource(Res.string.post_reply_to, content.authorName), it))
+                            }
+                        actions.onQuote?.let {
+                            add(Triple(PlazaIcons.FormatQuote, stringResource(Res.string.post_quote_floor), it))
+                        }
+                        add(
+                            Triple(PlazaIcons.ContentCopy, stringResource(Res.string.post_copy_body)) {
+                                copy("post", content.nodes.excerpt(), copied)
+                            },
+                        )
+                    }
+                rows.forEachIndexed { index, (icon, label, action) ->
+                    if (index > 0) LayerDivider(startInset = 56.dp)
+                    ListItem(
+                        headlineContent = { Text(label, style = MaterialTheme.typography.titleSmall) },
+                        leadingContent = { Icon(icon, contentDescription = null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable {
+                            onDismiss()
+                            action()
+                        },
+                    )
+                }
+            }
+            Text(
+                text = stringResource(Res.string.post_reaction_irreversible),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+/** A white card inside the panel: no shadow — the sheet is already the raised thing — but the outline on paper. */
+@Composable
+private fun SheetCard(content: @Composable ColumnScope.() -> Unit) {
+    val layers = LocalPlazaLayers.current
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = layers.card,
+        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(content = content)
+    }
+}
+
+/** The panel's head: whose floor this is, and the first line of it, so the reader knows what they are marking. */
+@Composable
+private fun FloorQuoteCard(content: PostContent) {
+    SheetCard {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            UserAvatar(url = content.avatarUrl, name = content.authorName, size = Sizes.avatarComment)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = listOfNotNull(content.authorName, content.floor).joinToString(" · "),
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                content.nodes.excerpt().takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        text = it.replace('\n', ' '),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One mark as a tile: glyph, name and tally, and under them what it costs — 免费, 今日免费 N 次, 扣 2
+ * 鸡腿 — or 已表态 once spent. The price is on the tile because the tile is where the choice is made;
+ * the confirmation still says it again before anything is spent.
+ */
+@Composable
+private fun ReactionTile(
+    action: ReactionAction,
+    count: Int?,
+    price: String,
+    spent: Boolean,
+    pending: Boolean,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val (container, ink) =
+        when (action) {
+            ReactionAction.Upvote -> scheme.primaryContainer to scheme.onPrimaryContainer
+            ReactionAction.ChickenLeg -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+            ReactionAction.Dislike -> scheme.surfaceContainerHigh to scheme.onSurface
+        }
+    Surface(
+        onClick = onClick ?: {},
+        enabled = onClick != null && !spent && !pending,
+        shape = RoundedCornerShape(20.dp),
+        color = container,
+        contentColor = ink,
+        border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.padding(start = Spacing.sm, end = Spacing.sm, top = 14.dp, bottom = Spacing.md),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            if (pending) {
+                PlazaSpinner(modifier = Modifier.describedAsLoading(), strokeWidth = 2.dp, size = 24.dp)
+            } else {
+                Icon(action.icon(), contentDescription = null)
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(action.labelRes()),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+                count?.let {
+                    Text(
+                        it.toString(),
+                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+                        maxLines = 1,
+                    )
+                }
+            }
+            Text(
+                text = if (spent) stringResource(Res.string.post_reaction_spent) else price,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (action == ReactionAction.Dislike) scheme.onSurfaceVariant else ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * What a mark costs, as the tile states it.
+ *
+ * 投喂 is only called free when the site said today's allowance covers it; an unread quota says the
+ * full price, which is what the confirmation says in the same case.
+ */
+@Composable
+private fun ReactionAction.price(freeChickenLegs: FreeChickenLegs?): String =
+    when {
+        this == ReactionAction.Upvote -> stringResource(Res.string.post_reaction_free)
+
+        this == ReactionAction.ChickenLeg && freeChickenLegs != null && freeChickenLegs.remaining > 0 ->
+            stringResource(Res.string.post_reaction_free_today, freeChickenLegs.remaining)
+
+        else -> stringResource(Res.string.post_reaction_cost, chickenLegCost)
+    }
+
+/** ⋯ — `more_horiz`, which `material-icons-core` does not ship; the row's own, so kept here. */
+private val MoreHoriz: ImageVector by lazy {
+    materialIcon(
+        name = "MoreHoriz",
+        pathData =
+        "M6,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z" +
+            "M18,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z" +
+            "M12,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z",
+    )
+}
+
+/** The outlined bookmark for a thread not yet collected; the filled one is [PlazaIcons.Bookmark]. */
+private val BookmarkBorder: ImageVector by lazy {
+    materialIcon(
+        name = "BookmarkBorder",
+        pathData = "M17,3H7c-1.1,0 -1.99,0.9 -1.99,2L5,21l7,-3 7,3V5c0,-1.1 -0.9,-2 -2,-2zM17,18l-5,-2.18L7,18V5h10v13z",
     )
 }
 
@@ -1984,9 +2481,17 @@ private fun FloorLabel(floor: String) {
  */
 private const val PAGE_WAIT_MILLIS = 15_000L
 
-/** Items in [ThreadList] before the first comment: title, comments header, and the body when present. */
+/**
+ * Items in [ThreadList] before the first comment: the comments header, and the opening post's card
+ * when there is a body. One less than before the title moved into that card, in both cases — the
+ * count for a bodyless thread is exactly as it was relative to the items the list draws.
+ */
 private val PostDetailUiState.headerItemCount: Int
-    get() = 2 + (if (body != null) 1 else 0)
+    get() = 1 + (if (body != null) 1 else 0)
+
+/** The floor with [commentId] among what is loaded, the opening post included. */
+private fun PostDetailUiState.contentWithId(commentId: Long?): PostContent? =
+    commentId?.let { id -> body?.takeIf { it.commentId == id } ?: comments.firstOrNull { it.commentId == id } }
 
 /** The mark in flight on [content], if any — only one floor at a time can have one. */
 private fun PostDetailUiState.pendingReactionFor(content: PostContent): ReactionAction? =
@@ -2053,59 +2558,59 @@ private fun UnopenedThreadSkeleton() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            .padding(horizontal = LayerPageGutter, vertical = Spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(LayerCardGap),
     ) {
-        SkeletonBar(0.92f, 22.dp)
-        SkeletonBar(0.55f, 22.dp)
-        Row(
-            modifier = Modifier.padding(top = Spacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
+        // The same card the opening post will be drawn in, so the page does not change shape when it
+        // arrives — only what is in the card does.
+        LayerCard(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, top = 18.dp, bottom = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Box(
-                Modifier
-                    .size(Sizes.avatarOriginalPost)
-                    .clip(AvatarShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SkeletonBar(0.35f, 12.dp)
-                SkeletonBar(0.22f, 10.dp)
-            }
-        }
-        listOf(0.98f, 0.94f, 0.99f, 0.62f).forEach { SkeletonBar(it, 14.dp) }
-        CommentSkeletons()
-    }
-}
-
-/** The band and the first few reply stubs under the opening post. Grey either way. */
-@Composable
-private fun CommentSkeletons() {
-    Column(
-        modifier = Modifier.padding(horizontal = Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .background(MaterialTheme.colorScheme.surfaceContainer),
-        )
-        repeat(3) {
+            SkeletonBar(0.92f, 22.dp)
+            SkeletonBar(0.55f, 22.dp)
             Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     Modifier
-                        .size(Sizes.avatarComment)
+                        .size(Sizes.avatarOriginalPost)
                         .clip(AvatarShape)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 )
-                SkeletonBar(0.5f, 12.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SkeletonBar(0.35f, 12.dp)
+                    SkeletonBar(0.22f, 10.dp)
+                }
             }
-            SkeletonBar(0.85f, 12.dp)
+            listOf(0.98f, 0.94f, 0.99f, 0.62f).forEach { SkeletonBar(it, 14.dp) }
+        }
+        CommentSkeletons()
+    }
+}
+
+/** The first few reply stubs under the opening post, each in the card its reply will have. Grey either way. */
+@Composable
+private fun CommentSkeletons() {
+    Column(verticalArrangement = Arrangement.spacedBy(LayerCardGap)) {
+        repeat(3) {
+            LayerCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(Sizes.avatarComment)
+                            .clip(AvatarShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    )
+                    SkeletonBar(0.5f, 12.dp)
+                }
+                SkeletonBar(0.85f, 12.dp)
+            }
         }
     }
 }
