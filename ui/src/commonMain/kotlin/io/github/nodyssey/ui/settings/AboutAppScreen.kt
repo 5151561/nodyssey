@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -103,16 +104,19 @@ import io.github.plaza.core.update.UpdateCheck
 import io.github.plaza.core.update.UpdateDownload
 import io.github.plaza.core.update.UpdateFailure
 import io.github.plaza.core.update.releaseNotesText
+import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.floatShadow
 import io.github.plaza.designsys.theme.readableWidth
-import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AboutAppRoute(
@@ -191,7 +195,8 @@ fun AboutAppScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg),
+                .padding(SettingsPagePadding),
+            verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
             AppIdentity(
                 appName = state.appName,
@@ -213,88 +218,133 @@ fun AboutAppScreen(
                     onOpenRelease = { onOpenUri(release.htmlUrl) },
                 )
             }
-            UnofficialNotice()
-            AboutActionRow(
-                title = stringResource(Res.string.about_project_home),
-                subtitle = "github.com/5151561/nodyssey",
-                icon = PlazaIcons.Code,
-                external = true,
-                onClick = { onOpenUri(AppLinks.PROJECT_HOME) },
-            )
-            AboutActionRow(
-                title = stringResource(Res.string.about_feedback),
-                subtitle = stringResource(Res.string.about_feedback_hint),
-                icon = PlazaIcons.Campaign,
-                external = true,
-                onClick = { onOpenUri(AppLinks.ISSUES) },
-            )
-            // Sms rather than the Campaign a broadcast channel would ordinarily take: 问题反馈 two rows
-            // up already has that icon, and two identical megaphones on one screen tell nobody apart.
-            AboutActionRow(
-                title = stringResource(Res.string.about_app_channel),
-                subtitle = stringResource(Res.string.about_app_channel_hint),
-                icon = PlazaIcons.Sms,
-                external = true,
-                onClick = { onOpenUri(AppLinks.TELEGRAM_CHANNEL) },
-            )
-            AboutActionRow(
-                title = stringResource(Res.string.about_app_group),
-                subtitle = stringResource(Res.string.about_app_group_hint),
-                icon = PlazaIcons.Group,
-                external = true,
-                onClick = { onOpenUri(AppLinks.TELEGRAM_GROUP) },
-            )
-            // Above 更新日志 on purpose: a reader on this screen looking for "how does this work"
-            // outnumbers the one looking for "what changed in 1.2.15", and the two rows read alike.
-            AboutActionRow(
-                title = stringResource(Res.string.about_help),
-                subtitle = stringResource(Res.string.about_help_hint),
-                icon = PlazaIcons.WavingHand,
-                onClick = onOpenHelp,
-            )
-            AboutActionRow(
-                title = stringResource(Res.string.about_changelog),
-                icon = PlazaIcons.History,
-                onClick = onOpenChangelog,
-            )
-            AboutActionRow(
-                title = stringResource(Res.string.settings_licenses),
-                subtitle = stringResource(Res.string.about_licenses_hint),
-                icon = PlazaIcons.Code,
-                onClick = onOpenLicenses,
-            )
-            // Present only while a crash is on record: on a healthy install the section does not
-            // exist, rather than sitting there promising logs that were never written.
-            state.crashReport?.let { report ->
-                AboutActionRow(
-                    title = stringResource(Res.string.about_crash_export),
-                    // Absolute rather than the relative "5min ago" the rest of the app favours: a
-                    // crash record can be weeks old, and a bug report needs the actual moment.
-                    subtitle =
-                    stringResource(
-                        Res.string.about_crash_export_hint,
-                        TimeFormat.absolute(report.occurredAtMillis),
-                        report.versionName,
-                    ),
-                    icon = PlazaIcons.BugReport,
-                    onClick = { onExportCrashReport(report) },
+            SettingsGroup {
+                // Above 更新日志 on purpose: a reader on this screen looking for "how does this work"
+                // outnumbers the one looking for "what changed in 1.2.15", and the two rows read alike.
+                AboutRow(
+                    title = stringResource(Res.string.about_help),
+                    subtitle = stringResource(Res.string.about_help_hint),
+                    icon = PlazaIcons.WavingHand,
+                    top = true,
+                    onClick = onOpenHelp,
                 )
-                AboutActionRow(
-                    title = stringResource(Res.string.about_crash_clear),
-                    icon = Icons.Default.Delete,
-                    onClick = onClearCrashReport,
+                AboutRow(
+                    title = stringResource(Res.string.about_changelog),
+                    icon = PlazaIcons.History,
+                    onClick = onOpenChangelog,
+                )
+                AboutRow(
+                    title = stringResource(Res.string.about_project_home),
+                    subtitle = "github.com/5151561/nodyssey",
+                    icon = PlazaIcons.Code,
+                    external = true,
+                    onClick = { onOpenUri(AppLinks.PROJECT_HOME) },
+                )
+                AboutRow(
+                    title = stringResource(Res.string.about_feedback),
+                    subtitle = stringResource(Res.string.about_feedback_hint),
+                    icon = PlazaIcons.Campaign,
+                    external = true,
+                    bottom = true,
+                    onClick = { onOpenUri(AppLinks.ISSUES) },
                 )
             }
+            SettingsGroup {
+                // Sms rather than the Campaign a broadcast channel would ordinarily take: 问题反馈 in
+                // the card above already has that icon, and two identical megaphones on one screen
+                // tell nobody apart.
+                AboutRow(
+                    title = stringResource(Res.string.about_app_channel),
+                    subtitle = stringResource(Res.string.about_app_channel_hint),
+                    icon = PlazaIcons.Sms,
+                    external = true,
+                    top = true,
+                    onClick = { onOpenUri(AppLinks.TELEGRAM_CHANNEL) },
+                )
+                AboutRow(
+                    title = stringResource(Res.string.about_app_group),
+                    subtitle = stringResource(Res.string.about_app_group_hint),
+                    icon = PlazaIcons.Group,
+                    external = true,
+                    onClick = { onOpenUri(AppLinks.TELEGRAM_GROUP) },
+                )
+                AboutRow(
+                    title = stringResource(Res.string.settings_licenses),
+                    subtitle = stringResource(Res.string.about_licenses_hint),
+                    icon = PlazaIcons.Gavel,
+                    bottom = state.crashReport == null,
+                    onClick = onOpenLicenses,
+                )
+                // Present only while a crash is on record: on a healthy install the rows do not
+                // exist, rather than sitting there promising logs that were never written.
+                state.crashReport?.let { report ->
+                    AboutRow(
+                        title = stringResource(Res.string.about_crash_export),
+                        // Absolute rather than the relative "5min ago" the rest of the app favours: a
+                        // crash record can be weeks old, and a bug report needs the actual moment.
+                        subtitle =
+                        stringResource(
+                            Res.string.about_crash_export_hint,
+                            TimeFormat.absolute(report.occurredAtMillis),
+                            report.versionName,
+                        ),
+                        icon = PlazaIcons.BugReport,
+                        onClick = { onExportCrashReport(report) },
+                    )
+                    AboutRow(
+                        title = stringResource(Res.string.about_crash_clear),
+                        icon = Icons.Default.Delete,
+                        bottom = true,
+                        onClick = onClearCrashReport,
+                    )
+                }
+            }
+            UnofficialNotice()
             Text(
                 stringResource(Res.string.about_theme_signature),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xl),
+                modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.lg),
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(Spacing.xl))
         }
     }
+}
+
+/**
+ * A row of 关于's two cards. [external] swaps the chevron for the leave-the-app arrow, because the
+ * difference between "another page of this app" and "your browser" is worth knowing before the tap.
+ */
+@Composable
+private fun AboutRow(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    subtitle: String? = null,
+    external: Boolean = false,
+    top: Boolean = false,
+    bottom: Boolean = false,
+) {
+    SettingsRow(
+        title = title,
+        subtitle = subtitle,
+        subtitleMonospace = subtitle?.contains("github.com") == true,
+        top = top,
+        bottom = bottom,
+        onClick = onClick,
+        chevron = !external,
+        leading = { Icon(icon, contentDescription = null) },
+        trailing = {
+            if (external) {
+                Icon(
+                    PlazaIcons.OpenInNew,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        },
+    )
 }
 
 @Composable
@@ -306,22 +356,22 @@ private fun AppIdentity(
     onCheckUpdates: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = Spacing.lg, bottom = Spacing.md),
+        modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm, bottom = Spacing.md),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Surface(
-            modifier = Modifier.size(76.dp),
-            shape = RoundedCornerShape(24.dp, 24.dp, 24.dp, 8.dp),
+            modifier = Modifier.size(88.dp).floatShadow(AppIconShape, LocalPlazaLayers.current.shadows),
+            shape = AppIconShape,
             color = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Text("N", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text("N", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold)
             }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(appName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(appName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text(
                 stringResource(Res.string.about_version, versionName, versionCode),
                 style = MaterialTheme.typography.labelSmall,
@@ -409,23 +459,25 @@ private fun UpdateCard(
     onGrantInstallPermission: () -> Unit,
     onOpenRelease: () -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.primaryContainer,
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.md),
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
+    LayerCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.size(44.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(PlazaIcons.Download, contentDescription = null)
+                    }
+                }
                 Text(
                     stringResource(Res.string.about_update_new_version, release.versionName),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = settingsRowTitleStyle().copy(fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.weight(1f),
                 )
                 // Only ever set when 接收 dev 版更新 is on, and said out loud there: the card otherwise
@@ -441,6 +493,7 @@ private fun UpdateCard(
                     Text(
                         rememberFileSizeLabel(release.sizeBytes),
                         style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -562,28 +615,16 @@ private fun InstallPermissionNotice(onGrant: () -> Unit) {
     }
 }
 
+/** Small print under the cards: this app is not the site's, said once and quietly. */
 @Composable
 private fun UnofficialNotice() {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.md),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                stringResource(Res.string.about_unofficial_notice, siteName),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
+    SettingsNote(
+        stringResource(Res.string.about_unofficial_notice, siteName),
+        modifier = Modifier.padding(top = Spacing.sm),
+    )
 }
+
+private val AppIconShape = RoundedCornerShape(28.dp)
 
 /** Enough for the headline changes; the release page carries the rest. */
 private const val UPDATE_NOTES_MAX_LINES = 8
