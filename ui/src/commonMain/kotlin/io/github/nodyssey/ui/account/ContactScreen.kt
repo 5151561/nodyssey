@@ -24,7 +24,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -81,8 +80,8 @@ import io.github.nodyssey.ui.resources.account_value_unknown
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
 import io.github.plaza.designsys.component.LayerCard
-import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
@@ -272,13 +271,8 @@ private fun CurrentEmailRow(
         readOnly = true,
         singleLine = true,
         label = { Text(stringResource(Res.string.account_email_current)) },
-        shape = AccountFieldShape,
-        // The card colour inside the outline, like every field on the grey page.
-        colors =
-        OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = LocalPlazaLayers.current.card,
-            unfocusedContainerColor = LocalPlazaLayers.current.card,
-        ),
+        shape = PlazaFieldDefaults.shape,
+        colors = PlazaFieldDefaults.colors(),
         trailingIcon = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (email.isNotEmpty() && verified) {
@@ -309,14 +303,8 @@ private fun CurrentEmailRow(
 /** 添加手机, drawn at the site's own state: disabled, with its exact wording. */
 @Composable
 private fun DisabledPhoneCard() {
-    Surface(
-        shape = LayerCardShape,
-        color = LocalPlazaLayers.current.card,
-        border = LocalPlazaLayers.current.cardBorder?.let { androidx.compose.foundation.BorderStroke(1.dp, it) },
-        modifier = Modifier.fillMaxWidth().alpha(DISABLED_CARD_ALPHA),
-    ) {
+    LayerCard(modifier = Modifier.fillMaxWidth().alpha(DISABLED_CARD_ALPHA)) {
         Row(
-            modifier = Modifier.padding(Spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {

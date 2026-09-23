@@ -39,9 +39,6 @@ import io.github.plaza.designsys.theme.Spacing
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
-/** The radius every field, card and sheet on these screens rounds to. */
-internal val AccountFieldShape = RoundedCornerShape(14.dp)
-
 /**
  * Something a sub-page needs to tell the user once, in a snackbar.
  */

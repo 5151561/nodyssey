@@ -30,7 +30,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -84,6 +83,7 @@ import io.github.nodyssey.ui.resources.lucky_result_hint
 import io.github.nodyssey.ui.resources.lucky_start_floor
 import io.github.nodyssey.ui.resources.lucky_title
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.digitsOnly
 import io.github.plaza.designsys.component.rememberClipboardCopy
@@ -196,7 +196,8 @@ fun LuckyScreen(
                 lineLimits = TextFieldLineLimits.SingleLine,
                 inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                colors = luckyFieldColors(),
+                shape = PlazaFieldDefaults.shape,
+                colors = PlazaFieldDefaults.colors(),
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -213,7 +214,8 @@ fun LuckyScreen(
                     lineLimits = TextFieldLineLimits.SingleLine,
                     inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    colors = luckyFieldColors(),
+                    shape = PlazaFieldDefaults.shape,
+                    colors = PlazaFieldDefaults.colors(),
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
@@ -222,7 +224,8 @@ fun LuckyScreen(
                     lineLimits = TextFieldLineLimits.SingleLine,
                     inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    colors = luckyFieldColors(),
+                    shape = PlazaFieldDefaults.shape,
+                    colors = PlazaFieldDefaults.colors(),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -313,17 +316,6 @@ fun LuckyScreen(
         )
     }
 }
-
-/**
- * The card colour inside the outline: every other block on this form is a white card on the grey
- * page, and an unfilled field between them read as a hole rather than a place to type.
- */
-@Composable
-private fun luckyFieldColors() =
-    OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = LocalPlazaLayers.current.card,
-        unfocusedContainerColor = LocalPlazaLayers.current.card,
-    )
 
 @Composable
 private fun DrawTimeRow(

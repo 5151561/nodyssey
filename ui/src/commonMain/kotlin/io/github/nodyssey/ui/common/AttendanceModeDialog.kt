@@ -2,22 +2,18 @@ package io.github.nodyssey.ui.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -30,6 +26,7 @@ import io.github.nodyssey.ui.resources.assets_sign_in_fixed_value
 import io.github.nodyssey.ui.resources.assets_sign_in_random_label
 import io.github.nodyssey.ui.resources.assets_sign_in_random_value
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TonalTile
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -58,24 +55,36 @@ fun AttendanceModeDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ModeTile(
-                        icon = PlazaIcons.Casino,
-                        label = stringResource(Res.string.assets_sign_in_random_label),
-                        value = stringResource(Res.string.assets_sign_in_random_value),
-                        container = MaterialTheme.colorScheme.primary,
-                        content = MaterialTheme.colorScheme.onPrimary,
-                        onClick = { onPick(AttendanceMode.RANDOM) },
-                        modifier = Modifier.weight(1f),
-                    )
-                    ModeTile(
-                        icon = PlazaIcons.PushPin,
-                        label = stringResource(Res.string.assets_sign_in_fixed_label),
-                        value = stringResource(Res.string.assets_sign_in_fixed_value),
-                        container = MaterialTheme.colorScheme.secondaryContainer,
-                        content = MaterialTheme.colorScheme.onSecondaryContainer,
-                        onClick = { onPick(AttendanceMode.FIXED_FIVE) },
-                        modifier = Modifier.weight(1f),
-                    )
+                    val scheme = MaterialTheme.colorScheme
+                    listOf(
+                        Triple(PlazaIcons.Casino, AttendanceMode.RANDOM, scheme.primary),
+                        Triple(PlazaIcons.PushPin, AttendanceMode.FIXED_FIVE, scheme.secondaryContainer),
+                    ).forEach { (icon, mode, container) ->
+                        val random = mode == AttendanceMode.RANDOM
+                        TonalTile(
+                            onClick = { onPick(mode) },
+                            containerColor = container,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                            modifier = Modifier.weight(1f).heightIn(min = 96.dp),
+                        ) {
+                            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+                            Text(
+                                stringResource(
+                                    if (random) Res.string.assets_sign_in_random_label else Res.string.assets_sign_in_fixed_label,
+                                ),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            )
+                            Text(
+                                stringResource(
+                                    if (random) Res.string.assets_sign_in_random_value else Res.string.assets_sign_in_fixed_value,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
                 }
                 Text(
                     text = stringResource(Res.string.assets_sign_in_choice_hint),
@@ -88,33 +97,4 @@ fun AttendanceModeDialog(
         },
         confirmButton = {},
     )
-}
-
-@Composable
-private fun ModeTile(
-    icon: ImageVector,
-    label: String,
-    value: String,
-    container: Color,
-    content: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(24.dp),
-        color = container,
-        contentColor = content,
-        modifier = modifier.heightIn(min = 96.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
-            Text(label, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-            Text(value, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
-        }
-    }
 }

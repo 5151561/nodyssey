@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -64,6 +62,7 @@ import io.github.nodyssey.ui.settings.SettingsPagePadding
 import io.github.nodyssey.ui.settings.SettingsRow
 import io.github.nodyssey.ui.settings.settingsRowTitleStyle
 import io.github.plaza.designsys.component.GroupedListItemSwitch
+import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
@@ -330,40 +329,17 @@ private fun WallpaperUnavailable(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                PlazaIcons.ErrorCircle,
-                contentDescription = null,
-                modifier = Modifier.size(19.dp).align(Alignment.Top),
-            )
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    stringResource(Res.string.settings_wallpaper_unreadable),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-                Text(
-                    stringResource(
-                        Res.string.settings_wallpaper_unreadable_hint,
-                        fallback.toHexString(),
-                    ),
-                    style = MaterialTheme.typography.labelMedium,
-                )
-            }
+    InlineBanner(
+        title = stringResource(Res.string.settings_wallpaper_unreadable),
+        text = stringResource(Res.string.settings_wallpaper_unreadable_hint, fallback.toHexString()),
+        icon = PlazaIcons.ErrorCircle,
+        modifier = modifier,
+        action = {
             TextButton(onClick = onRetry) {
                 Text(stringResource(Res.string.action_retry))
             }
-        }
-    }
+        },
+    )
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)

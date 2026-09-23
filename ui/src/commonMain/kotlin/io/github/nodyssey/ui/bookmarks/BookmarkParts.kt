@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
@@ -95,6 +94,7 @@ import io.github.nodyssey.ui.resources.offline_stop_download_progress
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AvatarCapOffset
+import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.MetaStat
@@ -441,38 +441,23 @@ internal fun BookmarkStaleBanner(
 ) {
     val recovery = siteErrorRecovery(error, onVerify = onVerify, onSignIn = onSignIn, onRetry = onRetry)
     val layers = LocalPlazaLayers.current
-    Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = LayerPageGutter).padding(bottom = Spacing.sm),
-        // A card on the page like the list under it, rather than a grey strip: on a grey page a
-        // grey strip is only an outline away from invisible.
-        color = layers.card,
-        shape = RoundedCornerShape(16.dp),
+    InlineBanner(
+        text = stringResource(Res.string.bookmarks_stale, error.shortMessage()),
+        modifier = modifier.padding(horizontal = LayerPageGutter).padding(bottom = Spacing.sm),
+        // A card on the page like the list under it, rather than a grey strip: on a grey page a grey
+        // strip is only an outline away from invisible.
+        containerColor = layers.card,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
-    ) {
-        Row(
-            modifier = Modifier.heightIn(min = 44.dp).padding(start = 14.dp, end = Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = PlazaIcons.LinkOff,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(16.dp),
-            )
-            Spacer(Modifier.width(Spacing.sm))
-            Text(
-                text = stringResource(Res.string.bookmarks_stale, error.shortMessage()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-            recovery?.let {
+        icon = PlazaIcons.LinkOff,
+        action = recovery?.let {
+            {
                 TextButton(onClick = it.onClick) {
                     Text(it.label, style = MaterialTheme.typography.labelLarge)
                 }
             }
-        }
-    }
+        },
+    )
 }
 
 /**

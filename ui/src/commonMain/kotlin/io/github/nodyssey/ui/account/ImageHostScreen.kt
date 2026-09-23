@@ -38,7 +38,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -156,8 +155,8 @@ import io.github.nodyssey.ui.settings.SettingsPagePadding
 import io.github.nodyssey.ui.settings.settingsRowTitleStyle
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.LayerCard
-import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
@@ -653,15 +652,8 @@ private fun HostField(
         label = { Text(stringResource(labelRes)) },
         placeholder = { Text(stringResource(placeholderRes)) },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        shape = AccountFieldShape,
-        // Filled with the inset tone, a well in the white card, the way every settings field is.
-        colors =
-        OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = LocalPlazaLayers.current.inset,
-            unfocusedContainerColor = LocalPlazaLayers.current.inset,
-            errorContainerColor = LocalPlazaLayers.current.inset,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-        ),
+        shape = PlazaFieldDefaults.shape,
+        colors = PlazaFieldDefaults.colors(inCard = true),
         supportingText = {
             Text(stringResource(if (isError && errorRes != null) errorRes else helperRes))
         },
@@ -808,30 +800,27 @@ private fun InfoCard(
     text: String,
     action: Pair<String, () -> Unit>? = null,
 ) {
-    Surface(
-        shape = LayerCardShape,
-        color = LocalPlazaLayers.current.card,
+    LayerCard(
         modifier = Modifier.fillMaxWidth(),
+        contentPadding =
+        PaddingValues(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            top = Spacing.lg,
+            bottom = if (action == null) Spacing.lg else Spacing.xs,
+        ),
+        verticalArrangement = Arrangement.Top,
     ) {
-        Column(
-            modifier = Modifier.padding(
-                start = Spacing.lg,
-                end = Spacing.lg,
-                top = Spacing.lg,
-                bottom = if (action == null) Spacing.lg else Spacing.xs,
-            ),
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            action?.let { (label, onClick) ->
-                TextButton(
-                    onClick = onClick,
-                    modifier = Modifier.align(Alignment.End),
-                ) { Text(label) }
-            }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        action?.let { (label, onClick) ->
+            TextButton(
+                onClick = onClick,
+                modifier = Modifier.align(Alignment.End),
+            ) { Text(label) }
         }
     }
 }

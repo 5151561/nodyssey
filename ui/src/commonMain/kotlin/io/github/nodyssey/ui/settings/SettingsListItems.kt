@@ -12,23 +12,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -37,10 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -53,11 +45,10 @@ import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedRowTrailing
 import io.github.plaza.designsys.component.LayerPageGutter
-import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.groupShape
 import io.github.plaza.designsys.component.groupedListItemColors
-import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 
 /**
@@ -210,10 +201,7 @@ internal fun SettingsRow(
  */
 internal const val DISABLED_ALPHA = 0.5f
 
-/**
- * A text field on a settings card: Material's outlined field, filled with the inset tone so it reads
- * as a well in the white card, with 6e's 14dp corners.
- */
+/** A text field on a settings card: one line, its label inside, in the kit's in-card field style. */
 @Composable
 internal fun SettingsTextField(
     value: String,
@@ -228,7 +216,6 @@ internal fun SettingsTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     textStyle: TextStyle = LocalTextStyle.current,
 ) {
-    val inset = LocalPlazaLayers.current.inset
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -242,15 +229,8 @@ internal fun SettingsTextField(
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation = visualTransformation,
         supportingText = supportingText?.let { { Text(it) } },
-        shape = RoundedCornerShape(14.dp),
-        colors =
-        OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = inset,
-            unfocusedContainerColor = inset,
-            disabledContainerColor = inset,
-            errorContainerColor = inset,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-        ),
+        shape = PlazaFieldDefaults.shape,
+        colors = PlazaFieldDefaults.colors(inCard = true),
     )
 }
 
@@ -290,36 +270,3 @@ internal fun SettingsTestSaveButtons(
 }
 
 private val ActionButtonHeight = 52.dp
-
-/**
- * The outcome of a test, as a tinted strip under the fields: [error] in the error container,
- * otherwise in the tertiary one. Announced politely, because it arrives after a wait the reader did
- * not have to watch.
- */
-@Composable
-internal fun SettingsResultBanner(
-    text: String,
-    error: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val scheme = MaterialTheme.colorScheme
-    Surface(
-        color = if (error) scheme.errorContainer else scheme.tertiaryContainer,
-        contentColor = if (error) scheme.onErrorContainer else scheme.onTertiaryContainer,
-        shape = RoundedCornerShape(18.dp),
-        modifier = modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            Icon(
-                if (error) PlazaIcons.ErrorCircle else Icons.Default.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        }
-    }
-}

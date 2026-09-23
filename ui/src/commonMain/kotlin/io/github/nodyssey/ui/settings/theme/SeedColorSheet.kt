@@ -29,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -73,6 +72,7 @@ import io.github.nodyssey.ui.resources.settings_seed_pick_hint
 import io.github.nodyssey.ui.resources.settings_seed_pick_loading
 import io.github.nodyssey.ui.resources.settings_seed_save
 import io.github.nodyssey.ui.resources.settings_seed_sheet_title
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.LocalPlazaDarkTheme
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -221,8 +221,8 @@ internal fun SeedColorSheet(
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
                     isError = parseHexColor(hex) == null,
-                    shape = FieldShape,
-                    colors = sheetFieldColors(),
+                    shape = PlazaFieldDefaults.shape,
+                    colors = PlazaFieldDefaults.colors(),
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
@@ -230,8 +230,8 @@ internal fun SeedColorSheet(
                     onValueChange = { name = it.take(MAX_NAME_LENGTH) },
                     singleLine = true,
                     label = { Text(stringResource(Res.string.settings_seed_name)) },
-                    shape = FieldShape,
-                    colors = sheetFieldColors(),
+                    shape = PlazaFieldDefaults.shape,
+                    colors = PlazaFieldDefaults.colors(),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -525,17 +525,6 @@ private val HueBarHeight = 16.dp
 private val HandleWidth = 8.dp
 private val HandleHeight = 28.dp
 private val MarkerRadius = 11.dp
-
-/** White fields on the sheet's grey — the same inset-on-page reading the settings cards give a control. */
-@Composable
-private fun sheetFieldColors() =
-    OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = LocalPlazaLayers.current.card,
-        unfocusedContainerColor = LocalPlazaLayers.current.card,
-        errorContainerColor = LocalPlazaLayers.current.card,
-    )
-
-private val FieldShape = RoundedCornerShape(12.dp)
 
 /** The two actions are the sheet's whole purpose, so they get a pill taller than the 48dp minimum. */
 private val ActionHeight = 50.dp

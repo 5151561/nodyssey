@@ -27,6 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.SnackbarHost
@@ -78,6 +79,7 @@ import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -299,7 +301,7 @@ private fun TwoFactorDialog(
                     state = passwordState,
                     label = { Text(stringResource(Res.string.account_password_current)) },
                     textObfuscationMode = TextObfuscationMode.RevealLastTyped,
-                    shape = AccountFieldShape,
+                    shape = PlazaFieldDefaults.shape,
                     modifier =
                     Modifier
                         .fillMaxWidth()
@@ -322,7 +324,7 @@ private fun TwoFactorDialog(
 /**
  * One password box.
  *
- * `SecureTextField` rather than an `OutlinedTextField` carrying a `PasswordVisualTransformation`:
+ * `OutlinedSecureTextField` rather than an `OutlinedTextField` carrying a `PasswordVisualTransformation`:
  * it brings the password keyboard, blocks the field from being copied out, and — the reason the
  * hand-rolled eye button is gone — obscures with [TextObfuscationMode.RevealLastTyped], which shows
  * the character just typed and hides it again. That is what the eye was for, without a toggle to
@@ -337,14 +339,15 @@ private fun PasswordField(
     isError: Boolean = false,
     supportingText: String? = null,
 ) {
-    SecureTextField(
+    OutlinedSecureTextField(
         state = fieldState,
         label = { Text(label) },
         placeholder = placeholder?.let { { Text(it) } },
         isError = isError,
         supportingText = supportingText?.let { { Text(it) } },
         textObfuscationMode = TextObfuscationMode.RevealLastTyped,
-        shape = AccountFieldShape,
+        shape = PlazaFieldDefaults.shape,
+        colors = PlazaFieldDefaults.colors(inCard = true),
         // Naming the field's content type is what lets a password manager recognise this as a change-
         // password form: `Password` for the credential it already holds, `NewPassword` for the two it
         // should offer to generate and then save. Without it the manager sees three anonymous boxes.

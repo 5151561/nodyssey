@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.TextObfuscationMode
@@ -36,12 +35,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -103,7 +100,9 @@ import io.github.nodyssey.ui.resources.sign_in_verify_expired
 import io.github.nodyssey.ui.resources.sign_in_verify_not_required
 import io.github.nodyssey.ui.resources.sign_in_verify_not_wired
 import io.github.plaza.core.net.UserAgent
+import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.materialIcon
@@ -356,17 +355,33 @@ fun SignInScreen(
                 OrRule(stringResource(Res.string.sign_in_or_with_account, siteName))
             }
 
-            if (state.hasCredentialRefusal) RefusalBanner(state.refusal)
+            // The site's own sentence for a refusal, or a plain one when it sent none. The endpoint
+            // answers `{"success":false,"message":…}` and that message is what the forum wants said;
+            // the fallback deliberately stops short of the board's placeholder lockout numbers, which
+            // nothing has confirmed.
+            if (state.hasCredentialRefusal) {
+                InlineBanner(
+                    text = state.refusal?.detail?.takeIf { it.isNotBlank() }
+                        ?: stringResource(Res.string.sign_in_refused_generic),
+                    icon = PlazaIcons.ErrorCircle,
+                )
+            }
 
-            if (state.sessionNotStored) SessionNotStoredBanner()
+            // The site said yes and the app came away with no session — see
+            // [SignInUiState.sessionNotStored]. Its own wording, because the app is the one making the
+            // claim; followed by 改用网页登录, the only move left, since the web view writes into the
+            // same jar by a route that does not depend on what this endpoint sets.
+            if (state.sessionNotStored) {
+                InlineBanner(text = stringResource(Res.string.sign_in_session_not_stored), icon = PlazaIcons.ErrorCircle)
+            }
 
             OutlinedTextField(
                 state = accountState,
                 enabled = state.isFormEnabled,
                 label = { Text(stringResource(Res.string.sign_in_account)) },
                 lineLimits = TextFieldLineLimits.SingleLine,
-                shape = FIELD_SHAPE,
-                colors = fieldColors(),
+                shape = PlazaFieldDefaults.shape,
+                colors = PlazaFieldDefaults.colors(),
                 // Both, because the label offers both and the endpoint takes either in `username`.
                 // A manager holding only an email would not recognise a username-only field.
                 modifier =
@@ -384,8 +399,8 @@ fun SignInScreen(
                 // 安全 (d6 2/4) made and for the same reason: it shows the character just typed and
                 // hides it again, with no switch left on and nothing in the state to remember.
                 textObfuscationMode = TextObfuscationMode.RevealLastTyped,
-                shape = FIELD_SHAPE,
-                colors = fieldColors(),
+                shape = PlazaFieldDefaults.shape,
+                colors = PlazaFieldDefaults.colors(),
                 supportingText = { PasswordSupport(state, onOpenSiteSignInPage) },
                 modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Password },
             )
@@ -476,21 +491,6 @@ fun SignInScreen(
 /** 48dp, board 8h's pill height for every full-width action on the sign-in screens. */
 internal val SIGN_IN_BUTTON_HEIGHT = 48.dp
 
-private val FIELD_SHAPE = RoundedCornerShape(12.dp)
-
-/**
- * The fields sit on the card colour inside their outline, as 8h draws them: on the grey page an
- * unfilled outlined field reads as a hole in it rather than as a place to type.
- */
-@Composable
-private fun fieldColors() =
-    OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = LocalPlazaLayers.current.card,
-        unfocusedContainerColor = LocalPlazaLayers.current.card,
-        disabledContainerColor = LocalPlazaLayers.current.card,
-        errorContainerColor = LocalPlazaLayers.current.card,
-    )
-
 /** 10c's 「或用 DeepFlood 账号」 — a hairline either side of the words. */
 @Composable
 private fun OrRule(text: String) {
@@ -552,50 +552,6 @@ private fun PasswordSupport(state: SignInUiState, onForgotPassword: () -> Unit) 
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.clickable(onClick = onForgotPassword),
         )
-    }
-}
-
-/**
- * The site's own sentence for a refusal, or a plain one when it sent none.
- *
- * The app writes as little of this as it can get away with. The endpoint answers
- * `{"success":false,"message":…}` and that message is what the forum wants said; the fallback exists
- * only for the case where there is no message at all, and deliberately stops short of the board's
- * placeholder lockout numbers, which nothing has confirmed.
- */
-@Composable
-private fun RefusalBanner(refusal: SignInOutcome.Refused?) {
-    ErrorBanner(refusal?.detail?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.sign_in_refused_generic))
-}
-
-/**
- * The site said yes and the app came away with no session — see [SignInUiState.sessionNotStored].
- *
- * Its own wording because the app is the one making the claim: there is no sentence from the forum
- * to show, the forum having answered `success`. Drawn in the same error colours as a refusal, and
- * followed by 改用网页登录, which is the only move left — the web view writes into the same jar by a
- * route that does not depend on what this endpoint sets.
- */
-@Composable
-private fun SessionNotStoredBanner() {
-    ErrorBanner(stringResource(Res.string.sign_in_session_not_stored))
-}
-
-@Composable
-private fun ErrorBanner(text: String) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.md),
-        ) {
-            Icon(PlazaIcons.ErrorCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text(text, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 19.sp))
-        }
     }
 }
 

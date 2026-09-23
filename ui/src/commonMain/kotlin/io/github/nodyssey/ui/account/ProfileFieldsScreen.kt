@@ -30,13 +30,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,7 +49,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
@@ -81,6 +79,7 @@ import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.SectionNote
@@ -235,13 +234,13 @@ fun ProfileFieldsScreen(
                     // the user can no longer see. Focus landing on any plain field is the end of the
                     // strip's business.
                     FieldBlock(label = stringResource(Res.string.account_bio), markdown = false) {
-                        TextField(
+                        OutlinedTextField(
                             value = state.bio,
                             onValueChange = onBioChange,
                             placeholder = { Text(stringResource(Res.string.account_bio_hint)) },
                             singleLine = true,
-                            shape = FieldShape,
-                            colors = wellColors(),
+                            shape = PlazaFieldDefaults.shape,
+                            colors = PlazaFieldDefaults.colors(inCard = true),
                             modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -444,24 +443,6 @@ private fun FieldBlock(
 }
 
 /**
- * A filled field with no indicator line, on the card's inset tone: 3b's "well". Material's filled
- * [TextField] with its colours and shape set, rather than a bare text field in a box, so the
- * placeholder, focus, and error handling stay Material's.
- */
-@Composable
-private fun wellColors() =
-    TextFieldDefaults.colors(
-        focusedContainerColor = LocalPlazaLayers.current.inset,
-        unfocusedContainerColor = LocalPlazaLayers.current.inset,
-        disabledContainerColor = LocalPlazaLayers.current.inset,
-        focusedIndicatorColor = Color.Transparent,
-        unfocusedIndicatorColor = Color.Transparent,
-        disabledIndicatorColor = Color.Transparent,
-    )
-
-private val FieldShape = RoundedCornerShape(18.dp)
-
-/**
  * A form field whose text is Markdown. The strip that formats it belongs to the screen, not here:
  * both of these share one, so the field's job is to report when it becomes the strip's target.
  *
@@ -476,11 +457,11 @@ private fun MarkdownField(
     focusRequester: FocusRequester,
     onFocused: () -> Unit,
 ) {
-    TextField(
+    OutlinedTextField(
         state = fieldState,
         lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = minLines),
-        shape = FieldShape,
-        colors = wellColors(),
+        shape = PlazaFieldDefaults.shape,
+        colors = PlazaFieldDefaults.colors(inCard = true),
         textStyle = MaterialTheme.typography.bodyLarge,
         modifier =
         Modifier
