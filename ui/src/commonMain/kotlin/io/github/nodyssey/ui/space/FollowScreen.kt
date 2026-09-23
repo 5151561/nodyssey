@@ -1,24 +1,23 @@
 package io.github.nodyssey.ui.space
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,17 +43,22 @@ import io.github.nodyssey.ui.resources.follow_empty_following_title
 import io.github.nodyssey.ui.resources.follow_end_followers
 import io.github.nodyssey.ui.resources.follow_end_following
 import io.github.nodyssey.ui.resources.follow_tab_followers
+import io.github.nodyssey.ui.resources.follow_tab_followers_count
 import io.github.nodyssey.ui.resources.follow_tab_following
+import io.github.nodyssey.ui.resources.follow_tab_following_count
 import io.github.nodyssey.ui.resources.follow_title
 import io.github.nodyssey.ui.resources.space_uid
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.listAvatarSize
+import io.github.plaza.designsys.component.groupShape
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
@@ -117,21 +121,20 @@ fun FollowScreen(
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            PrimaryTabRow(selectedTabIndex = tabs.indexOf(state.selectedTab)) {
+            // 9h's underline tabs, sitting flush on the page like the title above them. Each names its
+            // count once its list has loaded: the endpoint answers with the whole list, so its length
+            // is the site's own number, not a page's worth.
+            PrimaryTabRow(
+                selectedTabIndex = tabs.indexOf(state.selectedTab),
+                containerColor = MaterialTheme.colorScheme.background,
+                modifier = Modifier.padding(bottom = Spacing.md),
+            ) {
                 tabs.forEach { tab ->
                     Tab(
                         selected = tab == state.selectedTab,
                         onClick = { onTabSelected(tab) },
-                        text = {
-                            Text(
-                                stringResource(
-                                    when (tab) {
-                                        FollowTab.FOLLOWING -> Res.string.follow_tab_following
-                                        FollowTab.FOLLOWERS -> Res.string.follow_tab_followers
-                                    },
-                                ),
-                            )
-                        },
+                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = { Text(tab.label(state.listFor(tab)), style = MaterialTheme.typography.titleSmall) },
                     )
                 }
             }
@@ -167,7 +170,12 @@ fun FollowScreen(
                     LazyColumn(Modifier.fillMaxSize()) {
                         items(count = list.items.size, key = { list.items[it].uid }) { index ->
                             val user = list.items[index]
-                            FollowRow(user = user, onClick = { onUserClick(user.uid) })
+                            FollowRow(
+                                user = user,
+                                first = index == 0,
+                                last = index == list.items.lastIndex,
+                                onClick = { onUserClick(user.uid) },
+                            )
                         }
                         item(key = "footer") {
                             Text(
@@ -224,38 +232,66 @@ private fun FollowEmptyState(tab: FollowTab) {
 }
 
 @Composable
+private fun FollowTab.label(list: SpaceListState<FollowUser>): String =
+    when {
+        !list.loaded ->
+            stringResource(
+                when (this) {
+                    FollowTab.FOLLOWING -> Res.string.follow_tab_following
+                    FollowTab.FOLLOWERS -> Res.string.follow_tab_followers
+                },
+            )
+
+        this == FollowTab.FOLLOWING -> stringResource(Res.string.follow_tab_following_count, list.items.size)
+
+        else -> stringResource(Res.string.follow_tab_followers_count, list.items.size)
+    }
+
+/**
+ * One account: avatar, name, UID. The site's list carries no relationship button (9h), and neither
+ * does this — the row opens the account's space, where 关注 lives.
+ *
+ * The whole list is one white card, drawn a row at a time because the rows are lazy items.
+ */
+@Composable
 private fun FollowRow(
     user: FollowUser,
+    first: Boolean,
+    last: Boolean,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.lg, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    Surface(
+        onClick = onClick,
+        color = LocalPlazaLayers.current.card,
+        shape = groupShape(first, last),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LayerPageGutter),
     ) {
-        UserAvatar(url = user.avatarUrl, name = user.name, size = listAvatarSize())
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = user.name,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = stringResource(Res.string.space_uid, user.uid),
-                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Column {
+            if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 64.dp)
+                    .padding(horizontal = Spacing.lg, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                UserAvatar(url = user.avatarUrl, name = user.name, size = 40.dp)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = user.name,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = stringResource(Res.string.space_uid, user.uid),
+                        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp),
-        )
     }
 }
 

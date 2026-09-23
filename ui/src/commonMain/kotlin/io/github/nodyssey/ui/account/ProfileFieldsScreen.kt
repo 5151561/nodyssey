@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -20,19 +22,21 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,22 +50,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.ui.composer.EditorActions
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.account_action_save
+import io.github.nodyssey.ui.resources.account_avatar
 import io.github.nodyssey.ui.resources.account_avatar_change
+import io.github.nodyssey.ui.resources.account_avatar_change_short
 import io.github.nodyssey.ui.resources.account_avatar_pending
 import io.github.nodyssey.ui.resources.account_avatar_pick
 import io.github.nodyssey.ui.resources.account_avatar_take_photo
 import io.github.nodyssey.ui.resources.account_bio
 import io.github.nodyssey.ui.resources.account_bio_hint
+import io.github.nodyssey.ui.resources.account_markdown_tag
 import io.github.nodyssey.ui.resources.account_profile_title
 import io.github.nodyssey.ui.resources.account_readme
 import io.github.nodyssey.ui.resources.account_readme_helper
@@ -69,12 +78,15 @@ import io.github.nodyssey.ui.resources.account_signature
 import io.github.nodyssey.ui.resources.account_signature_helper
 import io.github.nodyssey.ui.resources.action_back
 import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.editor.EditorToolbar
 import io.github.plaza.designsys.editor.applyMarkdown
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
@@ -145,6 +157,7 @@ fun ProfileFieldsScreen(
     val signatureState = rememberSeededTextFieldState(state.signature, onSignatureChange)
     val readmeState = rememberSeededTextFieldState(state.readme, onReadmeChange)
     val signatureFocus = remember { FocusRequester() }
+    val bioLabel = stringResource(Res.string.account_bio)
     val readmeFocus = remember { FocusRequester() }
     // Sticky rather than plain focus: a toolbar key takes focus off the field the moment it is
     // pressed, so a strip that hid on blur would vanish under the finger that was using it.
@@ -167,7 +180,14 @@ fun ProfileFieldsScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = onSave, enabled = state.canSave) {
+                    // 3b's filled pill: saving is this page's one commit, and it waits up here while
+                    // the fields below are edited.
+                    Button(
+                        onClick = onSave,
+                        enabled = state.canSave,
+                        shape = CircleShape,
+                        modifier = Modifier.padding(end = Spacing.sm),
+                    ) {
                         Text(stringResource(Res.string.account_action_save))
                     }
                 },
@@ -191,8 +211,8 @@ fun ProfileFieldsScreen(
                     .weight(1f)
                     .readableWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                    .padding(start = LayerPageGutter, end = LayerPageGutter, bottom = Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 AvatarEditor(
                     state = state,
@@ -200,43 +220,60 @@ fun ProfileFieldsScreen(
                     onFailed = onAvatarFailed,
                 )
 
-                // Bio is one line of plain text — the site renders no Markdown in it — so it gets no
-                // formatting keys. It has to *dismiss* them, though: the strip's target is sticky, and
-                // one left standing while the caret sits here would write into a field the user can no
-                // longer see. Focus landing on any plain field is the end of the strip's business.
-                OutlinedTextField(
-                    value = state.bio,
-                    onValueChange = onBioChange,
-                    label = { Text(stringResource(Res.string.account_bio)) },
-                    placeholder = { Text(stringResource(Res.string.account_bio_hint)) },
-                    singleLine = true,
-                    shape = AccountFieldShape,
-                    modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { if (it.isFocused) target = null },
-                )
+                // The three texts on one card, each a label over a recessed field (3b): the fields are
+                // wells in the card rather than outlined boxes floating on the page.
+                LayerCard(
+                    contentPadding = PaddingValues(start = 12.dp, top = 14.dp, end = 12.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    // Bio is one line of plain text — the site renders no Markdown in it — so it gets
+                    // no formatting keys. It has to *dismiss* them, though: the strip's target is
+                    // sticky, and one left standing while the caret sits here would write into a field
+                    // the user can no longer see. Focus landing on any plain field is the end of the
+                    // strip's business.
+                    FieldBlock(label = stringResource(Res.string.account_bio), markdown = false) {
+                        TextField(
+                            value = state.bio,
+                            onValueChange = onBioChange,
+                            placeholder = { Text(stringResource(Res.string.account_bio_hint)) },
+                            singleLine = true,
+                            shape = FieldShape,
+                            colors = wellColors(),
+                            modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .semantics { contentDescription = bioLabel }
+                                .onFocusChanged { if (it.isFocused) target = null },
+                        )
+                    }
 
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    MarkdownField(
-                        fieldState = signatureState,
+                    FieldBlock(
                         label = stringResource(Res.string.account_signature),
-                        minLines = SIGNATURE_MIN_LINES,
-                        focusRequester = signatureFocus,
-                        onFocused = { target = MarkdownTarget.SIGNATURE },
-                    )
-                    AccountFieldHelper(stringResource(Res.string.account_signature_helper))
-                }
+                        markdown = true,
+                        helper = stringResource(Res.string.account_signature_helper),
+                    ) {
+                        MarkdownField(
+                            fieldState = signatureState,
+                            label = stringResource(Res.string.account_signature),
+                            minLines = SIGNATURE_MIN_LINES,
+                            focusRequester = signatureFocus,
+                            onFocused = { target = MarkdownTarget.SIGNATURE },
+                        )
+                    }
 
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    MarkdownField(
-                        fieldState = readmeState,
+                    FieldBlock(
                         label = stringResource(Res.string.account_readme),
-                        minLines = README_MIN_LINES,
-                        focusRequester = readmeFocus,
-                        onFocused = { target = MarkdownTarget.README },
-                    )
-                    AccountFieldHelper(stringResource(Res.string.account_readme_helper))
+                        markdown = true,
+                        helper = stringResource(Res.string.account_readme_helper),
+                    ) {
+                        MarkdownField(
+                            fieldState = readmeState,
+                            label = stringResource(Res.string.account_readme),
+                            minLines = README_MIN_LINES,
+                            focusRequester = readmeFocus,
+                            onFocused = { target = MarkdownTarget.README },
+                        )
+                    }
                 }
             }
 
@@ -262,11 +299,15 @@ fun ProfileFieldsScreen(
 private enum class MarkdownTarget { SIGNATURE, README }
 
 /**
- * The avatar, its camera badge, and the menu the badge opens.
+ * 3b's avatar card: the picture with its camera badge, what it is and whether it is saved yet, and
+ * 更换 — both the badge and the button open the same menu.
  *
  * A menu rather than a bottom sheet: two items, anchored to the thing they act on. A sheet would
  * cover the avatar the user is trying to change. There is no 移除 item because the site has no such
  * operation — an account that has an avatar cannot go back to not having one.
+ *
+ * 3b also says where a pending picture came from (「来自相册」). [PendingAvatar] keeps the bitmap and
+ * the upload, not the source, so the card says only that it is waiting to be saved.
  */
 @Composable
 private fun AvatarEditor(
@@ -276,84 +317,162 @@ private fun AvatarEditor(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val picker = rememberAvatarPicker(onPicked = onPicked, onFailed = onFailed)
+    val card = LocalPlazaLayers.current.card
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(contentAlignment = Alignment.BottomEnd) {
-            val pending = state.pendingAvatar
-            if (pending == null) {
-                UserAvatar(
-                    url = state.avatarUrl,
-                    name = state.displayName,
-                    size = AVATAR_SIZE,
-                )
-            } else {
-                Image(
-                    bitmap = pending.preview,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(AVATAR_SIZE).clip(AvatarShape),
-                )
-            }
-            Box(Modifier.offset(x = AVATAR_BADGE_OVERHANG, y = AVATAR_BADGE_OVERHANG)) {
-                Surface(
-                    onClick = { menuOpen = true },
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    // The ring is the page background, so the badge reads as sitting on top of the
-                    // avatar rather than being a hole punched in it.
-                    modifier =
-                    Modifier
-                        .size(AVATAR_BADGE_SIZE)
-                        .background(MaterialTheme.colorScheme.surface, CircleShape)
-                        .padding(3.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            PlazaIcons.PhotoCamera,
-                            contentDescription = stringResource(Res.string.account_avatar_change),
-                            modifier = Modifier.size(15.dp),
+    LayerCard(contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(contentAlignment = Alignment.BottomEnd) {
+                val pending = state.pendingAvatar
+                if (pending == null) {
+                    UserAvatar(
+                        url = state.avatarUrl,
+                        name = state.displayName,
+                        size = AVATAR_SIZE,
+                    )
+                } else {
+                    Image(
+                        bitmap = pending.preview,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(AVATAR_SIZE).clip(AvatarShape),
+                    )
+                }
+                Box(Modifier.offset(x = AVATAR_BADGE_OVERHANG, y = AVATAR_BADGE_OVERHANG)) {
+                    Surface(
+                        onClick = { menuOpen = true },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        // The ring is the card's own colour, so the badge reads as sitting on top of
+                        // the avatar rather than being a hole punched in it.
+                        modifier =
+                        Modifier
+                            .size(AVATAR_BADGE_SIZE)
+                            .background(card, CircleShape)
+                            .padding(3.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                PlazaIcons.PhotoCamera,
+                                contentDescription = stringResource(Res.string.account_avatar_change),
+                                modifier = Modifier.size(15.dp),
+                            )
+                        }
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.account_avatar_take_photo)) },
+                            leadingIcon = { Icon(PlazaIcons.PhotoCamera, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                picker.takePhoto()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.account_avatar_pick)) },
+                            leadingIcon = { Icon(PlazaIcons.Image, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                picker.pickImage()
+                            },
                         )
                     }
                 }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.account_avatar_take_photo)) },
-                        leadingIcon = { Icon(PlazaIcons.PhotoCamera, contentDescription = null) },
-                        onClick = {
-                            menuOpen = false
-                            picker.takePhoto()
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.account_avatar_pick)) },
-                        leadingIcon = { Icon(PlazaIcons.Image, contentDescription = null) },
-                        onClick = {
-                            menuOpen = false
-                            picker.pickImage()
-                        },
-                    )
+            }
+
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    stringResource(Res.string.account_avatar),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                )
+                if (state.pendingAvatar != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        shape = RoundedCornerShape(6.dp),
+                    ) {
+                        Text(
+                            stringResource(Res.string.account_avatar_pending),
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        )
+                    }
                 }
             }
-        }
 
-        if (state.pendingAvatar != null) {
-            Text(
-                stringResource(Res.string.account_avatar_pending),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            OutlinedButton(onClick = { menuOpen = true }, shape = CircleShape) {
+                Text(stringResource(Res.string.account_avatar_change_short))
+            }
         }
     }
 }
 
 /**
+ * One field of the card: its label (and a Markdown tag when the site renders it as Markdown) over the
+ * field, with the site's helper text under it.
+ */
+@Composable
+private fun FieldBlock(
+    label: String,
+    markdown: Boolean,
+    helper: String? = null,
+    field: @Composable () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            if (markdown) {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(6.dp)) {
+                    Text(
+                        stringResource(Res.string.account_markdown_tag),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
+                }
+            }
+        }
+        field()
+        helper?.let { AccountFieldHelper(it) }
+    }
+}
+
+/**
+ * A filled field with no indicator line, on the card's inset tone: 3b's "well". Material's filled
+ * [TextField] with its colours and shape set, rather than a bare text field in a box, so the
+ * placeholder, focus, and error handling stay Material's.
+ */
+@Composable
+private fun wellColors() =
+    TextFieldDefaults.colors(
+        focusedContainerColor = LocalPlazaLayers.current.inset,
+        unfocusedContainerColor = LocalPlazaLayers.current.inset,
+        disabledContainerColor = LocalPlazaLayers.current.inset,
+        focusedIndicatorColor = Color.Transparent,
+        unfocusedIndicatorColor = Color.Transparent,
+        disabledIndicatorColor = Color.Transparent,
+    )
+
+private val FieldShape = RoundedCornerShape(18.dp)
+
+/**
  * A form field whose text is Markdown. The strip that formats it belongs to the screen, not here:
  * both of these share one, so the field's job is to report when it becomes the strip's target.
+ *
+ * [label] is the field's accessible name: the visible label sits above it in [FieldBlock], outside
+ * the field, so the field says it again for a screen reader.
  */
 @Composable
 private fun MarkdownField(
@@ -363,15 +482,16 @@ private fun MarkdownField(
     focusRequester: FocusRequester,
     onFocused: () -> Unit,
 ) {
-    OutlinedTextField(
+    TextField(
         state = fieldState,
-        label = { Text(label) },
         lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = minLines),
-        shape = AccountFieldShape,
-        textStyle = MaterialTheme.typography.bodyMedium,
+        shape = FieldShape,
+        colors = wellColors(),
+        textStyle = MaterialTheme.typography.bodyLarge,
         modifier =
         Modifier
             .fillMaxWidth()
+            .semantics { contentDescription = label }
             .focusRequester(focusRequester)
             .onFocusChanged { if (it.isFocused) onFocused() },
     )
@@ -403,11 +523,11 @@ private fun rememberSeededTextFieldState(
     return fieldState
 }
 
-private val AVATAR_SIZE = 84.dp
-private val AVATAR_BADGE_SIZE = 30.dp
+private val AVATAR_SIZE = 64.dp
+private val AVATAR_BADGE_SIZE = 28.dp
 
 /** The badge straddles the avatar's edge rather than sitting inside it, as the design shows. */
-private val AVATAR_BADGE_OVERHANG = 4.dp
+private val AVATAR_BADGE_OVERHANG = 6.dp
 private const val SIGNATURE_MIN_LINES = 3
 private const val README_MIN_LINES = 5
 
