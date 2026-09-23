@@ -143,6 +143,14 @@
          to yourself there either. -->
     <string name="post_edit_action">编辑</string>
     <string name="post_quote_action">引用</string>
+    <!-- 楼层互动面板（点 ⋯ 或长按一层楼）：五件套里不常用的收在这里 -->
+    <string name="post_floor_actions">楼层操作</string>
+    <string name="post_reply_to">回复 %1$s</string>
+    <string name="post_quote_floor">引用这一楼</string>
+    <string name="post_copy_body">复制正文</string>
+    <string name="post_body_copied">正文已复制</string>
+    <!-- 面板底部的一行说明：三种表态都没有撤销 -->
+    <string name="post_reaction_irreversible">表态后不可撤销</string>
     <!-- Shared by the paged-and-appending lists: the comment thread and 管理记录 -->
     <string name="page_jump_previous">上一页</string>
     <string name="page_jump_next">下一页</string>
@@ -164,6 +172,16 @@
     <string name="page_jump_latest">到最新</string>
     <!-- The feed newest is page 1: its page numbers drift as posts arrive, so there is no last page to go to -->
     <string name="page_jump_newest">最新</string>
+    <!-- 跳页面板的输入条：「跳到第 [4] / 5 页」，单位可在页 / 楼之间切换 -->
+    <string name="page_jump_to">跳到第</string>
+    <string name="page_jump_unit_page">页</string>
+    <string name="page_jump_unit_floor">楼</string>
+    <string name="page_jump_switch_unit">切换页码 / 楼层</string>
+    <string name="page_jump_go">前往</string>
+    <!-- 快捷项的两行：标题在上，去处在下 -->
+    <string name="page_jump_resume_title">上次阅读</string>
+    <string name="page_jump_at_page">第 %1$d 页</string>
+    <string name="page_jump_at_page_floor">第 %1$d 页 · %2$s</string>
     <string name="feed_page_size_note">%1$d 条 / 页</string>
     <!-- The "what is loaded" line each list words in its own noun -->
     <string name="post_page_progress">已载入 %1$d 楼</string>
@@ -180,6 +198,13 @@
     <string name="post_reaction_like">点赞</string>
     <string name="post_reaction_chicken">投喂鸡腿</string>
     <string name="post_reaction_dislike">点踩</string>
+    <!-- 楼主楼操作行上的投喂按钮，后面跟着次数 -->
+    <string name="post_reaction_feed">投喂</string>
+    <!-- 楼层面板里三个表态按钮的小字：花多少 -->
+    <string name="post_reaction_free">免费</string>
+    <string name="post_reaction_free_today">今日免费 %1$d 次</string>
+    <string name="post_reaction_cost">扣 %1$d 鸡腿</string>
+    <string name="post_reaction_spent">已表态</string>
     <!-- Whole-thread, so only the opening post shows these -->
     <string name="post_collect_action">收藏</string>
     <string name="post_collected_action">已收藏</string>
