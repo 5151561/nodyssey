@@ -9,11 +9,17 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.ui.common.siteName
@@ -24,6 +30,7 @@ import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.action_sign_in
 import io.github.nodyssey.ui.resources.action_sign_out
 import io.github.nodyssey.ui.resources.action_verify
+import io.github.nodyssey.ui.resources.network_check_title
 import io.github.nodyssey.ui.resources.status_challenge_body
 import io.github.nodyssey.ui.resources.status_challenge_footnote
 import io.github.nodyssey.ui.resources.status_challenge_title
@@ -73,6 +80,7 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.component.StatusView
+import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.theme.LocalPlazaExtraColors
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.StatusShapes
@@ -134,6 +142,7 @@ fun SiteError.shortMessage(): String =
  * exist so a screen never has to branch on the error itself — a hand-written
  * `if (LoginRequired) …` at every call site is exactly the copy that goes stale.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SiteErrorState(
     error: SiteError,
@@ -168,7 +177,7 @@ fun SiteErrorState(
 ) {
     val scheme = MaterialTheme.colorScheme
     val extra = LocalPlazaExtraColors.current
-    val retry = StatusAction(stringResource(Res.string.action_retry), onRetry)
+    val retry = StatusAction(stringResource(Res.string.action_retry), Icons.Default.Refresh, onRetry)
 
     when (error) {
         is SiteError.Cloudflare ->
@@ -275,15 +284,22 @@ fun SiteErrorState(
                 modifier = modifier,
             )
 
+        // Board 2e: a nine-lobed cookie in the primary tone rather than an error-red blob — a lost
+        // connection is weather, not a fault — and 网络自检 as the second way out, because the
+        // reader's next question is whether it is their network, their proxy or the site.
         SiteError.Network ->
             StatusView(
-                icon = Icons.Default.Warning,
-                shape = StatusShapes.NetworkError,
-                containerColor = scheme.errorContainer,
-                iconColor = scheme.onErrorContainer,
+                icon = WifiOffIcon,
+                shape = MaterialShapes.Cookie9Sided.toShape(),
+                containerColor = scheme.primaryContainer,
+                iconColor = scheme.onPrimaryContainer,
                 title = stringResource(Res.string.status_network_title),
                 description = stringResource(Res.string.status_network_body, siteName),
                 primaryAction = retry,
+                secondaryAction =
+                LocalOpenNetworkCheck.current?.let {
+                    StatusAction(stringResource(Res.string.network_check_title), it)
+                },
                 modifier = modifier,
             )
 
@@ -346,6 +362,29 @@ fun SiteErrorState(
                 modifier = modifier,
             )
     }
+}
+
+/**
+ * Opens 设置 › 网络自检, for the network state's second button.
+ *
+ * A composition local rather than one more parameter on [SiteErrorState]: two dozen screens call it,
+ * none of them owns a way to reach a settings page, and the one place that does — the navigation
+ * host — provides it once. Null outside that host (a preview, a test), where the button is left off.
+ */
+val LocalOpenNetworkCheck = compositionLocalOf<(() -> Unit)?> { null }
+
+/** Material Symbols' `wifi_off`; `material-icons-core` stops at `wifi`. */
+private val WifiOffIcon: ImageVector by lazy {
+    materialIcon(
+        name = "WifiOff",
+        pathData =
+        "M22.99,9C19.15,5.16 13.8,3.76 8.84,4.78l2.52,2.52c3.47,-0.17 6.99,1.05 9.63,3.7l2,-2z" +
+            "M18.99,13c-1.29,-1.29 -2.84,-2.13 -4.49,-2.56l3.53,3.53 0.96,-0.97z" +
+            "M2,3.05L5.07,6.1C3.6,6.82 2.22,7.78 1,9l1.99,2c1.24,-1.24 2.67,-2.16 4.2,-2.77l2.24,2.24" +
+            "C7.81,10.89 6.27,11.73 5,13v0.01L6.99,15c1.36,-1.36 3.14,-2.04 4.92,-2.06L18.98,20l1.27,-1.26" +
+            "L3.29,1.79 2,3.05z" +
+            "M9,17l3,3 3,-3c-1.65,-1.66 -4.34,-1.66 -6,0z",
+    )
 }
 
 @Composable

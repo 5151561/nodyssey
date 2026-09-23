@@ -78,6 +78,7 @@ import io.github.nodyssey.ui.assets.StardustRoute
 import io.github.nodyssey.ui.assets.StardustViewModel
 import io.github.nodyssey.ui.bookmarks.BookmarksRoute
 import io.github.nodyssey.ui.bookmarks.BookmarksViewModel
+import io.github.nodyssey.ui.common.LocalOpenNetworkCheck
 import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.common.appName
 import io.github.nodyssey.ui.common.rememberTouchExplorationEnabled
@@ -657,9 +658,12 @@ fun MainNavigation(
              * transition can have on a panel and the one that ghosts worst.
              */
             val eink = LocalEinkMode.current
+            val openNetworkCheck = remember(backStack) { { backStack.add(NetworkCheckKey) } }
             CompositionLocalProvider(
                 LocalThreadTransition provides
                     this@SharedTransitionLayout.takeUnless { isListDetailExpanded || eink },
+                // 网络自检 from any screen's network-error state — see [LocalOpenNetworkCheck].
+                LocalOpenNetworkCheck provides { openNetworkCheck() },
             ) {
                 NavDisplay(
                     entries = entries,
