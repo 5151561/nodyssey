@@ -2,12 +2,14 @@ package io.github.nodyssey.ui.assets
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -15,13 +17,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -39,14 +42,19 @@ import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.assets_quota_value
 import io.github.nodyssey.ui.resources.credit_balance
+import io.github.nodyssey.ui.resources.credit_column_change
+import io.github.nodyssey.ui.resources.credit_column_total
 import io.github.nodyssey.ui.resources.credit_entry_total
-import io.github.nodyssey.ui.resources.credit_level
-import io.github.nodyssey.ui.resources.credit_level_progress
+import io.github.nodyssey.ui.resources.credit_progress_remaining
 import io.github.nodyssey.ui.resources.credit_title
+import io.github.nodyssey.ui.resources.credit_unit_level
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -83,11 +91,12 @@ fun CreditRoute(
 }
 
 /**
- * 鸡腿流水 (board d3).
+ * 鸡腿流水 (8b).
  *
- * The site's four-column table becomes a two-line row: the change and the site's own reason on top,
- * the running total and the timestamp beneath. Four columns do not survive a 360dp width, and of the
- * four the reason is the only one that needs the room.
+ * The site's four-column table becomes a three-part row on one white card: the change in a fixed
+ * column at the start, the site's own reason with its time under it, and the running total at the end.
+ * Four columns do not survive a 360dp width, and of the four the reason is the only one that needs the
+ * room — so it gets the middle and the numbers sit either side of it, where they line up down the page.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,7 +110,7 @@ fun CreditScreen(
     modifier: Modifier = Modifier,
 ) {
     val rows = entries.collectAsLazyPagingItems()
-    val appBarState = rememberOneHandAppBarState(initiallyExpanded = false)
+    val appBarState = rememberOneHandAppBarState()
     Scaffold(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
@@ -119,21 +128,18 @@ fun CreditScreen(
             )
         },
     ) { padding ->
-        Column(
+        CreditLedger(
+            state = state,
+            rows = rows,
+            onRetry = onRetry,
+            onOpenBrowser = onOpenBrowser,
+            onSignIn = onSignIn,
+            modifier =
             Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .readableWidth(),
-        ) {
-            ChickenBalanceHeader(state)
-            CreditLedger(
-                rows = rows,
-                onRetry = onRetry,
-                onOpenBrowser = onOpenBrowser,
-                onSignIn = onSignIn,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        )
     }
 }
 
@@ -141,63 +147,65 @@ fun CreditScreen(
  * The balance, with the level progress it doubles as.
  *
  * NodeSeek's levelling *is* the chicken count — 344 chickens is both the balance and the progress bar
- * — so showing the two as separate figures would invent a distinction the site does not make. The
- * progress line is therefore a caption on the same number, and it disappears entirely above Lv1
- * because no other threshold has ever been published.
+ * — so showing the two as separate figures would invent a distinction the site does not make. The bar
+ * is therefore drawn under the balance itself, over the current level's span (Lv2 is 400 → 900), in
+ * the tertiary tone the 鸡腿 tile wears on 我的 and 账户与成长.
  */
 @Composable
 private fun ChickenBalanceHeader(state: CreditUiState) {
-    Surface(
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        shape = RoundedCornerShape(22.dp),
-        modifier = Modifier
-            .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.md)
-            .fillMaxWidth(),
+    LayerCard(
+        modifier = Modifier.padding(horizontal = LayerPageGutter),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(Spacing.lg),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = stringResource(Res.string.credit_balance),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                )
-                Text(
-                    text = state.chickenCount?.toString() ?: "—",
-                    style =
-                    MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontFeatureSettings = TABULAR_FIGURES,
-                    ),
-                )
-            }
-            levelProgressText(state)?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
-                )
-            }
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = state.chickenCount?.toString() ?: "—",
+                style =
+                MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontFeatureSettings = TABULAR_FIGURES,
+                ),
+                modifier = Modifier.alignByBaseline(),
+            )
+            Text(
+                text =
+                state.level?.let { stringResource(Res.string.credit_unit_level, it) }
+                    ?: stringResource(Res.string.credit_balance),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.alignByBaseline(),
+            )
+        }
+        state.levelProgress?.let { progress ->
+            GrowthProgressBar(progress = progress, color = MaterialTheme.colorScheme.tertiary)
+        }
+        levelProgressText(state)?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
 
 @Composable
 private fun levelProgressText(state: CreditUiState): String? {
+    val chicken = state.chickenCount ?: return null
+    val next = state.nextLevelChicken ?: return null
     val level = state.level ?: return null
-    val chicken = state.chickenCount
-    val next = state.nextLevelChicken
-    return if (chicken != null && next != null) {
-        stringResource(Res.string.credit_level_progress, level, chicken, next)
+    val remaining = next - chicken
+    return if (remaining > 0) {
+        stringResource(Res.string.credit_progress_remaining, chicken, next, remaining, level + 1)
     } else {
-        stringResource(Res.string.credit_level, level)
+        stringResource(Res.string.assets_quota_value, chicken, next)
     }
 }
 
 @Composable
 private fun CreditLedger(
+    state: CreditUiState,
     rows: LazyPagingItems<CreditEntry>,
     onRetry: () -> Unit,
     onOpenBrowser: (String) -> Unit,
@@ -205,97 +213,128 @@ private fun CreditLedger(
     modifier: Modifier = Modifier,
 ) {
     val refresh = rows.loadState.refresh
-    when {
-        refresh is LoadState.Loading && rows.itemCount == 0 -> LoadingState(modifier)
+    if (rows.itemCount == 0) {
+        // Not a list yet — loading, failed, or genuinely empty. The header stays above whichever it is,
+        // since the balance is its own load and is usually already there.
+        Column(modifier) {
+            ChickenBalanceHeader(state)
+            val stateModifier = Modifier.fillMaxSize()
+            when (refresh) {
+                is LoadState.Loading -> LoadingState(stateModifier)
 
-        refresh is LoadState.Error && rows.itemCount == 0 ->
-            SiteErrorState(
-                error = refresh.error.toSiteError(),
-                onRetry = {
-                    onRetry()
-                    rows.retry()
-                },
-                // Named rather than left to [SiteErrorState]'s fallback. This screen asks for a
-                // web view in one place only, so the two are the same closure — and a challenge
-                // reaching it by fallback is exactly how other screens ended up handing one to a
-                // plain reading view without anything in the code saying so.
-                onOpenBrowser = {
-                    onOpenBrowser(
-                        refresh.error.toSiteError()
-                            .webViewUrl(NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH),
+                is LoadState.Error ->
+                    SiteErrorState(
+                        error = refresh.error.toSiteError(),
+                        onRetry = {
+                            onRetry()
+                            rows.retry()
+                        },
+                        // Named rather than left to [SiteErrorState]'s fallback. This screen asks for a
+                        // web view in one place only, so the two are the same closure — and a challenge
+                        // reaching it by fallback is exactly how other screens ended up handing one to a
+                        // plain reading view without anything in the code saying so.
+                        onOpenBrowser = {
+                            onOpenBrowser(
+                                refresh.error.toSiteError()
+                                    .webViewUrl(NodeSeekSite.BASE_URL + NodeSeekSite.CREDIT_PATH),
+                            )
+                        },
+                        onVerify = onOpenBrowser,
+                        onSignIn = onSignIn,
+                        modifier = stateModifier,
                     )
-                },
-                onVerify = onOpenBrowser,
-                onSignIn = onSignIn,
-                modifier = modifier,
-            )
 
-        refresh is LoadState.NotLoading && rows.itemCount == 0 -> NoLedgerEntriesState(modifier)
-
-        else ->
-            LazyColumn(modifier) {
-                // The row id would be the natural key and this endpoint does not publish one: its
-                // rows are positional arrays with no id column. The running total is the next best
-                // thing — it is unique per row in a ledger that only ever appends — with the index
-                // behind it for the one case that breaks it, an adjustment of exactly zero.
-                items(
-                    count = rows.itemCount,
-                    key = { index -> rows.peek(index)?.let { "${it.balanceAfter}-${it.createdAtMillis}" } ?: "index-$index" },
-                ) { index ->
-                    rows[index]?.let { entry ->
-                        CreditRow(entry)
-                        LedgerRowDivider()
-                    }
-                }
-                ledgerFooter(rows, endNote = null)
+                is LoadState.NotLoading -> NoLedgerEntriesState(stateModifier)
             }
+        }
+        return
+    }
+
+    LazyColumn(modifier) {
+        item(key = "balance") { ChickenBalanceHeader(state) }
+        item(key = "columns") {
+            Row(Modifier.padding(start = 28.dp, end = 28.dp, top = 18.dp, bottom = 8.dp)) {
+                ColumnLabel(stringResource(Res.string.credit_column_change), Modifier.weight(1f))
+                ColumnLabel(stringResource(Res.string.credit_column_total))
+            }
+        }
+        // The row id would be the natural key and this endpoint does not publish one: its
+        // rows are positional arrays with no id column. The running total is the next best
+        // thing — it is unique per row in a ledger that only ever appends — with the index
+        // behind it for the one case that breaks it, an adjustment of exactly zero.
+        items(
+            count = rows.itemCount,
+            key = { index -> rows.peek(index)?.let { "${it.balanceAfter}-${it.createdAtMillis}" } ?: "index-$index" },
+        ) { index ->
+            rows[index]?.let { entry ->
+                LedgerSlice(first = index == 0, last = index == rows.itemCount - 1) {
+                    CreditRow(entry)
+                }
+            }
+        }
+        ledgerFooter(rows, endNote = null)
     }
 }
 
 @Composable
+private fun ColumnLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier,
+    )
+}
+
+@Composable
 private fun CreditRow(entry: CreditEntry) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 64.dp)
             .padding(horizontal = Spacing.lg, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            Text(
-                text = signedAmount(entry.change),
-                style =
-                MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontFeatureSettings = TABULAR_FIGURES,
-                ),
-                // Gains are the site's primary colour, spends are muted rather than an error red:
-                // feeding someone a chicken is a thing you meant to do, not a fault.
-                color =
-                if (entry.change < 0) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
-            )
+        Text(
+            text = signedAmount(entry.change),
+            style =
+            MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold,
+                fontFeatureSettings = TABULAR_FIGURES,
+            ),
+            color = ledgerAmountColor(entry.change),
+            modifier = Modifier.width(56.dp),
+        )
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = entry.reason,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            entry.createdAtMillis?.let {
+                Text(
+                    text = TimeFormat.absolute(it),
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
-        Text(
-            text =
-            listOfNotNull(
-                entry.balanceAfter?.let { stringResource(Res.string.credit_entry_total, it) },
-                entry.createdAtMillis?.let(TimeFormat::absolute),
-            ).joinToString(" · "),
-            style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        entry.balanceAfter?.let { total ->
+            // Read aloud as 总计 N rather than a bare number trailing the reason; the column label
+            // that says so on screen is one item up and out of the row's reach.
+            val description = stringResource(Res.string.credit_entry_total, total)
+            Text(
+                text = total.toString(),
+                style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.semantics { contentDescription = description },
+            )
+        }
     }
 }
 
@@ -315,7 +354,7 @@ private val previewEntries =
 private fun CreditPreview() {
     PlazaTheme {
         CreditScreen(
-            state = CreditUiState(level = 1, chickenCount = 384, nextLevelChicken = 400),
+            state = CreditUiState(level = 1, chickenCount = 344, levelFloorChicken = 100, nextLevelChicken = 400),
             entries = flowOf(PagingData.from(previewEntries)),
             onBack = {},
             onRetry = {},

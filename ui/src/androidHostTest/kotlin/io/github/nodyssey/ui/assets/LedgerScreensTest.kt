@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.paging.PagingData
 import io.github.nodyssey.data.CreditEntry
@@ -43,7 +44,9 @@ class LedgerScreensTest {
 
         composeRule.onNodeWithText("+1").assertIsDisplayed()
         composeRule.onNodeWithText("回帖奖励").assertIsDisplayed()
-        composeRule.onNodeWithText("总计 384", substring = true).assertIsDisplayed()
+        // The total is a bare number under the 总计 column heading, and says what it is to a screen
+        // reader on its own.
+        composeRule.onNodeWithContentDescription("总计 384").assertIsDisplayed()
     }
 
     /** U+2212, not a hyphen, and not an unsigned 1 in a red pill. */
@@ -58,19 +61,19 @@ class LedgerScreensTest {
 
     /** Levelling *is* the chicken count, so the header states the progress rather than a second number. */
     @Test
-    fun `the header doubles as Lv1 progress`() {
-        setCreditContent(CreditUiState(level = 1, chickenCount = 384, nextLevelChicken = 400))
+    fun `the header doubles as level progress`() {
+        setCreditContent(CreditUiState(level = 1, chickenCount = 384, levelFloorChicken = 100, nextLevelChicken = 400))
 
-        composeRule.onNodeWithText("当前鸡腿").assertIsDisplayed()
-        composeRule.onNodeWithText("Lv1 进度 384 / 400").assertIsDisplayed()
+        composeRule.onNodeWithText("鸡腿 · Lv1").assertIsDisplayed()
+        composeRule.onNodeWithText("384 / 400 · 还差 16 升到 Lv2").assertIsDisplayed()
     }
 
-    /** Above Lv1 no threshold has ever been published, so the progress half disappears. */
+    /** Without the level's span the header keeps the level and draws no threshold of its own making. */
     @Test
-    fun `above Lv1 the header shows the level without inventing a threshold`() {
+    fun `without a threshold the header shows the level and invents none`() {
         setCreditContent(CreditUiState(level = 2, chickenCount = 1_240))
 
-        composeRule.onNodeWithText("Lv2").assertIsDisplayed()
+        composeRule.onNodeWithText("鸡腿 · Lv2").assertIsDisplayed()
         assertEquals(0, composeRule.onAllNodesWithText("/ 400", substring = true).fetchSemanticsNodes().size)
     }
 

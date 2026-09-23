@@ -5,16 +5,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
@@ -26,7 +30,11 @@ import io.github.nodyssey.ui.resources.ledger_amount_gain
 import io.github.nodyssey.ui.resources.ledger_amount_spend
 import io.github.nodyssey.ui.resources.ledger_end
 import io.github.nodyssey.ui.resources.ledger_load_more_failed
+import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.groupShape
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import org.jetbrains.compose.resources.stringResource
@@ -111,14 +119,66 @@ internal fun <T : Any> LazyListScope.ledgerFooter(
     }
 }
 
-/** The hairline between ledger rows, so the two screens cannot drift apart on inset or colour. */
+/**
+ * One row's slice of the white card a ledger's rows sit on.
+ *
+ * A Paging list cannot be wrapped in one card — the rows are separate lazy items — so each row draws
+ * its own piece: the first rounds the card's top, the last its bottom, and every row after the first
+ * draws the inset hairline above itself. It is the same trick `GroupedRow` plays for settings, with
+ * the same consequence: no card shadow, since each slice would cast one onto its neighbour.
+ */
 @Composable
-internal fun LedgerRowDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = Spacing.lg),
-        color = MaterialTheme.colorScheme.outlineVariant,
+internal fun LedgerSlice(
+    first: Boolean,
+    last: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        color = LocalPlazaLayers.current.card,
+        shape = groupShape(first, last),
+        modifier = modifier.fillMaxWidth().padding(horizontal = LayerPageGutter),
+    ) {
+        Column {
+            if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
+            content()
+        }
+    }
+}
+
+/**
+ * A determinate bar when the number is known, an empty track when it is not. Never a guessed fill.
+ *
+ * Shared by the level bar and the four allowance bars on 账户与成长, the level bar on 我的 and the
+ * balance header of 鸡腿流水, so the four places a chicken count is drawn as progress cannot disagree
+ * about what a bar looks like. The gap and the stop indicator Material draws by default are turned
+ * off: a dot at the far right would look like a value the site never published.
+ */
+@Composable
+internal fun GrowthProgressBar(
+    progress: Float?,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+) {
+    LinearProgressIndicator(
+        progress = { progress ?: 0f },
+        color = color,
+        trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        strokeCap = StrokeCap.Round,
+        gapSize = 0.dp,
+        drawStopIndicator = {},
+        modifier = modifier.fillMaxWidth().height(6.dp),
     )
 }
+
+/**
+ * What colour a ledger amount wears: the primary tone coming in, the error tone going out — the pair
+ * 8b and 8c draw. The sign is still carried by the glyph ([signedAmount]); colour is never the only
+ * thing that tells them apart.
+ */
+@Composable
+internal fun ledgerAmountColor(change: Int): Color =
+    if (change < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
 
 /**
  * A signed amount, with the sign carried by the glyph rather than by colour alone.

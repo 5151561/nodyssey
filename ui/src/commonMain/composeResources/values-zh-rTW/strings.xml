@@ -263,9 +263,13 @@
     <string name="profile_chicken">雞腿</string>
     <string name="profile_stars">星辰</string>
     <string name="profile_level">等級</string>
+    <string name="profile_level_remaining">距 Lv%1$d 還差 %2$d 雞腿</string>
     <string name="profile_attendance">今日簽到 · 領雞腿</string>
     <string name="profile_attendance_checking">正在檢查今日簽到…</string>
     <string name="profile_attendance_done">今日已簽到 · 檢視簽到榜</string>
+    <string name="profile_attendance_title">簽到</string>
+    <string name="profile_attendance_modes">隨機或固定 5 個雞腿</string>
+    <string name="profile_attendance_board">簽到榜</string>
     <string name="profile_account_settings">帳號設定</string>
 
     <string name="settings_title">設定</string>
@@ -604,6 +608,9 @@
     <string name="account_action_save">儲存</string>
     <string name="account_action_saved">已儲存</string>
     <string name="account_avatar_change">更換頭像</string>
+    <string name="account_avatar">頭像</string>
+    <string name="account_avatar_change_short">更換</string>
+    <string name="account_markdown_tag">Markdown</string>
     <string name="account_avatar_take_photo">拍照</string>
     <string name="account_avatar_pick">從相簿選擇</string>
     <string name="account_avatar_pending">新頭像待儲存</string>
@@ -809,6 +816,7 @@
     <string name="space_comment_in">回覆於 %1$s</string>
 
     <string name="assets_title">帳戶與成長</string>
+    <string name="assets_current_level">目前等級</string>
     <string name="assets_level_progress">雞腿 %1$d / %2$d</string>
     <string name="assets_level_remaining">還差 %1$d 雞腿到 Lv %2$d</string>
     <string name="assets_level_no_threshold">等級進度即雞腿總數</string>
@@ -827,10 +835,15 @@
     <string name="assets_sign_in_choice_title">今日簽到</string>
     <string name="assets_sign_in_random">隨機數量 · 拚手氣</string>
     <string name="assets_sign_in_fixed">固定 5 支雞腿</string>
+    <string name="assets_sign_in_random_label">隨機</string>
+    <string name="assets_sign_in_random_value">拼手氣</string>
+    <string name="assets_sign_in_fixed_label">固定</string>
+    <string name="assets_sign_in_fixed_value">5 個</string>
     <string name="assets_sign_in_choice_hint">與網頁端一致：隨機模式可能高於也可能低於 5 支。</string>
     <string name="assets_board">今日簽到榜</string>
     <string name="assets_board_subtitle">看看今天誰的手氣最好</string>
     <string name="assets_board_failed">簽到榜載入失敗</string>
+    <string name="assets_board_self">%1$s（我）</string>
     <string name="assets_signed_in">今日已簽 +%1$d 雞腿</string>
     <string name="assets_signing_in">簽到中…</string>
 
@@ -841,6 +854,10 @@
     <string name="credit_balance">目前雞腿</string>
     <string name="credit_level_progress">Lv%1$d 進度 %2$d / %3$d</string>
     <string name="credit_entry_total">總計 %1$d</string>
+    <string name="credit_unit_level">雞腿 · Lv%1$d</string>
+    <string name="credit_progress_remaining">%1$d / %2$d · 還差 %3$d 升到 Lv%4$d</string>
+    <string name="credit_column_change">變動 · 理由</string>
+    <string name="credit_column_total">總計</string>
 
     <string name="stardust_title">星辰</string>
     <string name="stardust_balance">目前餘額</string>
@@ -871,10 +888,13 @@
     <string name="transfer_sent">已轉出 %1$d 星辰</string>
     <string name="transfer_failed">轉帳沒有成功，請稍後再試。</string>
     <string name="spend_current_balance">目前餘額</string>
+    <string name="spend_got_it">知道了</string>
 
     <string name="follow_title">追蹤與粉絲</string>
     <string name="follow_tab_following">我的追蹤</string>
     <string name="follow_tab_followers">我的粉絲</string>
+    <string name="follow_tab_following_count">關注 %1$d</string>
+    <string name="follow_tab_followers_count">粉絲 %1$d</string>
     <string name="follow_end_following">已經到底了 · 共追蹤 %1$d 位</string>
     <string name="follow_end_followers">已經到底了 · 共 %1$d 位粉絲</string>
     <string name="follow_empty_following_title">還沒有追蹤任何人</string>
@@ -939,6 +959,9 @@
     <string name="invite_caution">邀請碼一經產生即扣除雞腿，無法退還；一個邀請碼只能註冊一個帳號。</string>
     <string name="invite_confirm">確認購買</string>
     <string name="invite_shortfall">還差 %1$d 雞腿</string>
+    <string name="invite_short_title">雞腿不夠</string>
+    <string name="invite_shortfall_label">還差</string>
+    <string name="invite_short_hint">回帖、發帖、簽到都能攢雞腿。</string>
     <string name="invite_opened_web">App 還沒有對接購碼介面，已在網頁中開啟邀請頁。</string>
     <string name="invite_chicken_balance">目前雞腿 %1$d</string>
 

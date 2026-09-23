@@ -269,9 +269,13 @@
     <string name="profile_chicken">Drumsticks</string>
     <string name="profile_stars">Stardust</string>
     <string name="profile_level">Level</string>
+    <string name="profile_level_remaining">%2$d chicken legs to Lv%1$d</string>
     <string name="profile_attendance">Check in today · claim drumsticks</string>
     <string name="profile_attendance_checking">Checking today’s check-in…</string>
     <string name="profile_attendance_done">Checked in today · see the leaderboard</string>
+    <string name="profile_attendance_title">Check in</string>
+    <string name="profile_attendance_modes">Random, or a flat 5 chicken legs</string>
+    <string name="profile_attendance_board">Board</string>
     <string name="profile_account_settings">Account settings</string>
 
     <string name="settings_title">Settings</string>
@@ -610,6 +614,9 @@
     <string name="account_action_save">Save</string>
     <string name="account_action_saved">Saved</string>
     <string name="account_avatar_change">Change avatar</string>
+    <string name="account_avatar">Avatar</string>
+    <string name="account_avatar_change_short">Change</string>
+    <string name="account_markdown_tag">Markdown</string>
     <string name="account_avatar_take_photo">Take a photo</string>
     <string name="account_avatar_pick">Choose from the gallery</string>
     <string name="account_avatar_pending">New avatar, not saved yet</string>
@@ -815,6 +822,7 @@
     <string name="space_comment_in">Replied in %1$s</string>
 
     <string name="assets_title">Account and growth</string>
+    <string name="assets_current_level">Current level</string>
     <string name="assets_level_progress">Drumsticks %1$d / %2$d</string>
     <string name="assets_level_remaining">%1$d drumsticks to Lv %2$d</string>
     <string name="assets_level_no_threshold">The level is the drumstick total</string>
@@ -833,10 +841,15 @@
     <string name="assets_sign_in_choice_title">Check in</string>
     <string name="assets_sign_in_random">Random · take your chances</string>
     <string name="assets_sign_in_fixed">A flat 5 drumsticks</string>
+    <string name="assets_sign_in_random_label">Random</string>
+    <string name="assets_sign_in_random_value">Try your luck</string>
+    <string name="assets_sign_in_fixed_label">Fixed</string>
+    <string name="assets_sign_in_fixed_value">5 legs</string>
     <string name="assets_sign_in_choice_hint">The same as on the web: random can land above or below 5.</string>
     <string name="assets_board">Today’s check-in board</string>
     <string name="assets_board_subtitle">See who got lucky today</string>
     <string name="assets_board_failed">Could not load the board</string>
+    <string name="assets_board_self">%1$s (me)</string>
     <string name="assets_signed_in">Checked in, +%1$d drumsticks</string>
     <string name="assets_signing_in">Checking in…</string>
 
@@ -847,6 +860,10 @@
     <string name="credit_balance">Drumsticks</string>
     <string name="credit_level_progress">Lv%1$d progress %2$d / %3$d</string>
     <string name="credit_entry_total">Total %1$d</string>
+    <string name="credit_unit_level">chicken legs · Lv%1$d</string>
+    <string name="credit_progress_remaining">%1$d / %2$d · %3$d more to Lv%4$d</string>
+    <string name="credit_column_change">Change · reason</string>
+    <string name="credit_column_total">Total</string>
 
     <string name="stardust_title">Stardust</string>
     <string name="stardust_balance">Balance</string>
@@ -877,10 +894,13 @@
     <string name="transfer_sent">%1$d stardust sent</string>
     <string name="transfer_failed">The transfer did not go through. Try again in a while.</string>
     <string name="spend_current_balance">Balance</string>
+    <string name="spend_got_it">Got it</string>
 
     <string name="follow_title">Following and followers</string>
     <string name="follow_tab_following">Following</string>
     <string name="follow_tab_followers">Followers</string>
+    <string name="follow_tab_following_count">Following %1$d</string>
+    <string name="follow_tab_followers_count">Followers %1$d</string>
     <string name="follow_end_following">That is all · following %1$d</string>
     <string name="follow_end_followers">That is all · %1$d followers</string>
     <string name="follow_empty_following_title">Not following anyone yet</string>
@@ -945,6 +965,9 @@
     <string name="invite_caution">The drumsticks go the moment the code is generated and cannot be refunded; one code registers one account.</string>
     <string name="invite_confirm">Buy it</string>
     <string name="invite_shortfall">%1$d drumsticks short</string>
+    <string name="invite_short_title">Not enough chicken legs</string>
+    <string name="invite_shortfall_label">Short by</string>
+    <string name="invite_short_hint">Replies, new posts and daily check-ins all earn chicken legs.</string>
     <string name="invite_opened_web">The app has no code-buying API yet, so the invite page is open on the web.</string>
     <string name="invite_chicken_balance">Drumsticks %1$d</string>
 

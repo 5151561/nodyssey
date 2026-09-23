@@ -5,16 +5,20 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -22,16 +26,26 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.spend_got_it
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import org.jetbrains.compose.resources.stringResource
 
-/** One line of the "what exactly is being spent" block. */
+/**
+ * One line of the "what exactly is being spent" block.
+ *
+ * [separated] draws a hairline above the line — the rule 8d and 9e put between what is being spent
+ * and what it leaves behind. [isError] paints the whole line in the error tone, for the one line that
+ * is the reason the spend cannot happen (9e's 还差).
+ */
 data class SpendDetail(
     val label: String,
     val value: String,
     val note: String? = null,
+    val separated: Boolean = false,
+    val isError: Boolean = false,
 )
 
 /**
@@ -40,10 +54,13 @@ data class SpendDetail(
  * One component rather than three dialogs because the thing being confirmed is always the same shape —
  * how much leaves the account, where it goes, what is left afterwards, and that none of it can be
  * undone. Reading those four facts in the same place each time is what makes a habitual tap safe.
+ * They sit on one white card on the dialog's tinted surface (8d, 9e); [header] is an optional card
+ * above them for *who* — 8d's recipient, avatar and name, which is the fact a transfer turns on.
  *
- * [shortfall] is what turns it into a dead end on purpose: when the balance cannot cover the amount,
- * the confirm button is disabled and the gap is named, because "确认" that fails server-side teaches
- * the user nothing.
+ * [shortfall] is what turns it into a dead end on purpose (9e): when the balance cannot cover the
+ * amount, there is no confirm at all — the layer names the gap and offers one button, 知道了, which
+ * closes it. A disabled 确认 beside a live 取消 said the same thing less plainly, and "确认" that fails
+ * server-side teaches the user nothing.
  *
  * [isSending] seals the layer while the request is in flight — no second tap, no cancel, no dismiss by
  * back or by tapping outside. None of those can call the spend back once it has left, and a layer that
@@ -58,80 +75,105 @@ fun SpendConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector = Icons.Default.Warning,
+    icon: ImageVector? = Icons.Default.Warning,
     shortfall: String? = null,
     isSending: Boolean = false,
+    header: (@Composable () -> Unit)? = null,
 ) {
+    val card = LocalPlazaLayers.current.card
     AlertDialog(
         onDismissRequest = { if (!isSending) onDismiss() },
         modifier = modifier,
-        icon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = { Text(title, style = MaterialTheme.typography.headlineSmall) },
+        icon = icon?.let { { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) } },
+        title = { Text(title, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    shape = RoundedCornerShape(14.dp),
-                ) {
+                header?.let {
+                    Surface(color = card, shape = SpendCardShape, modifier = Modifier.fillMaxWidth()) { it() }
+                }
+                Surface(color = card, shape = SpendCardShape) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = Spacing.md),
+                            .padding(horizontal = Spacing.lg, vertical = 14.dp),
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        details.forEach { detail ->
-                            Row(Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = detail.label,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                Text(
-                                    text = detail.value,
-                                    style =
-                                    MaterialTheme.typography.bodyMedium.copy(
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontFeatureSettings = TABULAR_FIGURES,
-                                    ),
-                                )
-                                detail.note?.let {
-                                    Text(
-                                        text = " · $it",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
+                        details.forEach { detail -> DetailLine(detail) }
                     }
                 }
                 Text(
                     text = caution,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                shortfall?.let {
+                // Said once: a caller that already worked the gap out on the card, in the error tone,
+                // does not need it repeated underneath.
+                shortfall?.takeIf { details.none(SpendDetail::isError) }?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, enabled = shortfall == null && !isSending) {
-                Text(confirmLabel)
+            if (shortfall != null) {
+                Button(onClick = onDismiss, shape = CircleShape) {
+                    Text(stringResource(Res.string.spend_got_it))
+                }
+            } else {
+                Button(onClick = onConfirm, enabled = !isSending, shape = CircleShape) {
+                    Text(confirmLabel)
+                }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isSending) {
-                Text(stringResource(Res.string.action_cancel))
+        dismissButton =
+        if (shortfall != null) {
+            null
+        } else {
+            {
+                TextButton(onClick = onDismiss, enabled = !isSending) {
+                    Text(stringResource(Res.string.action_cancel))
+                }
             }
         },
     )
 }
+
+@Composable
+private fun DetailLine(detail: SpendDetail) {
+    if (detail.separated) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
+    val tint = if (detail.isError) MaterialTheme.colorScheme.error else null
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = detail.label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = tint ?: MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = detail.value,
+            style =
+            MaterialTheme.typography.bodyLarge.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontFeatureSettings = TABULAR_FIGURES,
+            ),
+            color = tint ?: MaterialTheme.colorScheme.onSurface,
+        )
+        detail.note?.let {
+            Text(
+                text = " · $it",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private val SpendCardShape = RoundedCornerShape(16.dp)
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable

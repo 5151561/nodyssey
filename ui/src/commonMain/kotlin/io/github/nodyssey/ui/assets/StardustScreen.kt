@@ -1,12 +1,14 @@
 package io.github.nodyssey.ui.assets
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,8 +26,10 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +48,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +60,7 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.StardustEntry
 import io.github.nodyssey.data.StardustType
 import io.github.nodyssey.ui.common.NoLedgerEntriesState
@@ -69,6 +73,7 @@ import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.space_uid
 import io.github.nodyssey.ui.resources.spend_current_balance
 import io.github.nodyssey.ui.resources.stardust_balance
 import io.github.nodyssey.ui.resources.stardust_balance_hint
@@ -108,14 +113,18 @@ import io.github.nodyssey.ui.resources.transfer_shortfall
 import io.github.nodyssey.ui.resources.transfer_title
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.digitsOnly
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.floatShadow
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -225,7 +234,7 @@ fun StardustScreen(
     modifier: Modifier = Modifier,
 ) {
     val rows = entries.collectAsLazyPagingItems()
-    val appBarState = rememberOneHandAppBarState(initiallyExpanded = false)
+    val appBarState = rememberOneHandAppBarState()
     Scaffold(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {
@@ -247,31 +256,33 @@ fun StardustScreen(
             // No uid means the profile call has not answered — nobody to send from and no balance to
             // check the amount against, so the form would be a form that cannot submit.
             if (state.uid != null) {
+                // The layer system's float shadow rather than Material's elevation, which draws one
+                // hard ambient shadow in the platform's colour; see `LayerCard` for the same trade.
+                val shape = FloatingActionButtonDefaults.extendedFabShape
                 ExtendedFloatingActionButton(
                     onClick = onOpenTransfer,
                     icon = { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null) },
                     text = { Text(stringResource(Res.string.transfer_action)) },
+                    shape = shape,
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                    modifier = Modifier.floatShadow(shape, LocalPlazaLayers.current.shadows),
                 )
             }
         },
     ) { padding ->
-        Column(
+        StardustLedger(
+            state = state,
+            rows = rows,
+            onRetry = onRetry,
+            onOpenBrowser = onOpenBrowser,
+            onSignIn = onSignIn,
+            onVerify = onVerify,
+            modifier =
             Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .readableWidth(),
-        ) {
-            BalanceHeader(state.balance)
-            StardustLedger(
-                state = state,
-                rows = rows,
-                onRetry = onRetry,
-                onOpenBrowser = onOpenBrowser,
-                onSignIn = onSignIn,
-                onVerify = onVerify,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        )
     }
 
     if (state.transferOpen) {
@@ -294,40 +305,48 @@ fun StardustScreen(
     }
 }
 
+/** 8c's balance: the one tinted card on the page, since the balance is what this screen is about. */
 @Composable
 private fun BalanceHeader(balance: Int?) {
     Surface(
         color = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(28.dp),
         modifier = Modifier
-            .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.md)
+            .padding(horizontal = LayerPageGutter)
             .fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
                 text = stringResource(Res.string.stardust_balance),
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                style = MaterialTheme.typography.labelLarge,
             )
             Text(
                 text = balance?.toString() ?: "—",
                 style =
-                MaterialTheme.typography.headlineLarge.copy(
+                MaterialTheme.typography.displayMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontFeatureSettings = TABULAR_FIGURES,
                 ),
             )
             Text(
                 text = stringResource(Res.string.stardust_balance_hint),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.bodySmall,
             )
         }
     }
 }
 
+/**
+ * The balance and the movements under it, as one scrolling page.
+ *
+ * 8c also draws a row of kind filters (全部 / 点赞 / 转账 / 系统 / 管理). They are not here: the ledger
+ * endpoint has no kind parameter, and filtering pages on the client would leave a rare kind showing
+ * 「还没有流水」 while its rows sat unloaded a few pages further down.
+ */
 @Composable
 private fun StardustLedger(
     state: StardustUiState,
@@ -347,109 +366,134 @@ private fun StardustLedger(
         onRetry()
         rows.retry()
     }
-    when {
-        error != null && rows.itemCount == 0 ->
-            SiteErrorState(
-                error = error,
-                onRetry = retry,
-                onOpenBrowser = onOpenBrowser,
-                onSignIn = onSignIn,
-                onVerify = onVerify,
-                modifier = modifier,
-            )
+    if (rows.itemCount == 0) {
+        Column(modifier) {
+            BalanceHeader(state.balance)
+            val stateModifier = Modifier.fillMaxSize()
+            when {
+                error != null ->
+                    SiteErrorState(
+                        error = error,
+                        onRetry = retry,
+                        onOpenBrowser = onOpenBrowser,
+                        onSignIn = onSignIn,
+                        onVerify = onVerify,
+                        modifier = stateModifier,
+                    )
 
-        state.uid == null || (refresh is LoadState.Loading && rows.itemCount == 0) ->
-            LoadingState(modifier)
+                state.uid == null || refresh is LoadState.Loading -> LoadingState(stateModifier)
 
-        refresh is LoadState.NotLoading && rows.itemCount == 0 -> NoLedgerEntriesState(modifier)
-
-        else ->
-            LazyColumn(modifier) {
-                items(count = rows.itemCount, key = { index -> rows.peek(index)?.id ?: "index-$index" }) { index ->
-                    rows[index]?.let { entry ->
-                        StardustRow(entry)
-                        LedgerRowDivider()
-                    }
-                }
-                ledgerFooter(rows, endNote = null)
+                else -> NoLedgerEntriesState(stateModifier)
             }
+        }
+        return
+    }
+
+    LazyColumn(modifier, contentPadding = PaddingValues(bottom = 8.dp)) {
+        item(key = "balance") {
+            BalanceHeader(state.balance)
+            Spacer(Modifier.height(12.dp))
+        }
+        items(count = rows.itemCount, key = { index -> rows.peek(index)?.id ?: "index-$index" }) { index ->
+            rows[index]?.let { entry ->
+                LedgerSlice(first = index == 0, last = index == rows.itemCount - 1) {
+                    StardustRow(entry)
+                }
+            }
+        }
+        ledgerFooter(rows, endNote = null)
     }
 }
 
 /**
  * One stardust movement.
  *
- * The row is built around the movement's *kind*, which is the correction this screen needed: board 8e
- * drew every row as "点赞 +1" on the belief that liked comments were the only source and transfer the
- * only use. The site's own label map has five kinds, and `diff` is signed — an invite-code purchase and
- * an outgoing transfer both subtract. A row that hardcodes a plus would misreport the ones that matter
- * most, so the amount carries its own sign and the leading icon tells the kinds apart at a glance.
+ * The row is built around the movement's *kind*, which is the correction this screen needed: an early
+ * board drew every row as "点赞 +1" on the belief that liked comments were the only source and transfer
+ * the only use. The site's own label map has five kinds, and `diff` is signed — an invite-code purchase
+ * and an outgoing transfer both subtract. A row that hardcodes a plus would misreport the ones that
+ * matter most, so the amount carries its own sign and the kind leads the row as a tonal tag.
  */
 @Composable
 private fun StardustRow(entry: StardustEntry) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.lg, vertical = 10.dp),
+            .heightIn(min = 72.dp)
+            .padding(horizontal = Spacing.lg, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerLow),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                entry.type.icon(),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(19.dp),
-            )
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(
-                verticalAlignment = Alignment.Bottom,
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                Text(
-                    text = entry.typeLabel(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                KindTag(entry)
                 entry.createdAtMillis?.let {
                     Text(
                         text = TimeFormat.absolute(it),
-                        style =
-                        MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+                        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
                     )
                 }
             }
+            entry.detailLine()?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                text = entry.metaLine(),
-                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = signedAmount(entry.diff),
+                style =
+                MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontFeatureSettings = TABULAR_FIGURES,
+                ),
+                color = ledgerAmountColor(entry.diff),
+            )
+            entry.balanceAfter?.let {
+                Text(
+                    text = stringResource(Res.string.stardust_entry_balance, it),
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/** The movement's kind as a small tonal tag, each kind in its own family so a page scans by colour. */
+@Composable
+private fun KindTag(entry: StardustEntry) {
+    val scheme = MaterialTheme.colorScheme
+    val (container, content) =
+        when (entry.type) {
+            StardustType.UPVOTE -> scheme.primaryContainer to scheme.onPrimaryContainer
+            StardustType.TRANSFER -> scheme.errorContainer to scheme.onErrorContainer
+            StardustType.BUY_CODE -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+            StardustType.SYSTEM -> scheme.secondaryContainer to scheme.onSecondaryContainer
+            StardustType.ADMIN, StardustType.UNKNOWN -> scheme.surfaceContainerHigh to scheme.onSurfaceVariant
+        }
+    Surface(color = container, contentColor = content, shape = RoundedCornerShape(6.dp)) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(entry.type.icon(), contentDescription = null, modifier = Modifier.size(12.dp))
+            Text(
+                text = entry.typeLabel(),
+                style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
-        Text(
-            text = signedAmount(entry.diff),
-            style =
-            MaterialTheme.typography.titleSmall.copy(
-                fontWeight = FontWeight.Bold,
-                fontFeatureSettings = TABULAR_FIGURES,
-            ),
-            color =
-            if (entry.diff < 0) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.primary
-            },
-        )
     }
 }
 
@@ -481,22 +525,25 @@ private fun StardustType.icon(): ImageVector =
     }
 
 /**
- * The second line: the balance left behind, then whatever identifies this particular movement.
+ * The line under the kind: whatever identifies this particular movement, or nothing.
  *
  * Which identifier is worth showing depends on the kind. A liked comment is identified by the comment;
  * a transfer by the other party and the Ref ID the site makes both sides quote. Showing every field on
- * every row would fill the line with `Ref 10` on rows where 10 is a constant nobody needs.
+ * every row would fill the line with `Ref 10` on rows where 10 is a constant nobody needs. The balance
+ * left behind is not here any more — it sits under the amount at the row's end, where 8c puts it.
+ *
+ * 8c words a transfer as 「转给 kvm_fan · Ref 拼车续费」. The ledger carries the other party's uid and a
+ * numeric Ref, not a name or a memo, so that is what the line says.
  */
 @Composable
-private fun StardustEntry.metaLine(): String =
+private fun StardustEntry.detailLine(): String? =
     listOfNotNull(
-        balanceAfter?.let { stringResource(Res.string.stardust_entry_balance, it) },
         commentId?.takeIf { type == StardustType.UPVOTE }
             ?.let { stringResource(Res.string.stardust_entry_comment, it) },
         peerUid?.let { stringResource(Res.string.stardust_entry_peer, it) },
         refId?.takeIf { type == StardustType.TRANSFER || type == StardustType.BUY_CODE }
             ?.let { stringResource(Res.string.stardust_entry_ref, it) },
-    ).joinToString(" · ")
+    ).joinToString(" · ").takeIf { it.isNotEmpty() }
 
 /**
  * The transfer form, matching the site's three fields exactly.
@@ -537,7 +584,7 @@ private fun TransferDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onRequestConfirm, enabled = state.form.isComplete) {
+            Button(onClick = onRequestConfirm, enabled = state.form.isComplete, shape = CircleShape) {
                 Text(stringResource(Res.string.transfer_next))
             }
         },
@@ -586,15 +633,6 @@ private fun TransferConfirmDialog(
                     stringResource(Res.string.transfer_amount_value, amount),
                 ),
             )
-            state.form.recipientValue?.let {
-                add(
-                    SpendDetail(
-                        stringResource(Res.string.transfer_recipient),
-                        it.toString(),
-                        note = state.recipient?.note(),
-                    ),
-                )
-            }
             state.form.refValue?.let {
                 add(SpendDetail(stringResource(Res.string.transfer_ref), it.toString()))
             }
@@ -606,9 +644,14 @@ private fun TransferConfirmDialog(
                         SpendDetail(
                             stringResource(Res.string.transfer_balance_after),
                             stringResource(Res.string.transfer_balance_change, balance, balance - amount),
+                            separated = true,
                         )
                     } else {
-                        SpendDetail(stringResource(Res.string.spend_current_balance), balance.toString())
+                        SpendDetail(
+                            stringResource(Res.string.spend_current_balance),
+                            balance.toString(),
+                            separated = true,
+                        )
                     },
                 )
             }
@@ -625,24 +668,52 @@ private fun TransferConfirmDialog(
         stringResource(if (state.isSending) Res.string.transfer_sending else Res.string.transfer_confirm),
         onConfirm = onConfirm,
         onDismiss = onDismiss,
-        icon = PlazaIcons.Wallet,
+        icon = Icons.AutoMirrored.Filled.Send,
         shortfall = state.shortfall?.let { stringResource(Res.string.transfer_shortfall, it) },
         isSending = state.isSending,
+        header = state.form.recipientValue?.let { uid -> { RecipientCard(uid, state.recipient) } },
     )
 }
 
-/** What the recipient row says beside the uid while, and after, the site is asked who it belongs to. */
+/**
+ * 8d's recipient card: who the stardust goes to, as the site named them.
+ *
+ * The name is the one fact on this layer the user did not type, and so the one worth checking — it is
+ * the lead line, with the uid under it. Until the lookup answers, and when it answers with nothing,
+ * the uid is all there is and takes the lead line itself; the caution below says why.
+ */
 @Composable
-private fun RecipientCheck.note(): String? =
-    when (this) {
-        RecipientCheck.Checking -> stringResource(Res.string.transfer_checking_name)
-
-        is RecipientCheck.Named -> name
-
-        // The reason belongs in the caution line, not here: a refusal sentence sitting where a name
-        // goes would read as the name.
-        is RecipientCheck.Unnamed -> null
+private fun RecipientCard(
+    uid: Long,
+    check: RecipientCheck?,
+) {
+    val name = (check as? RecipientCheck.Named)?.name
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        UserAvatar(url = NodeSeekSite.avatarUrl(uid), name = name ?: uid.toString(), size = 40.dp)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = name ?: stringResource(Res.string.space_uid, uid),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text =
+                when {
+                    name != null -> stringResource(Res.string.space_uid, uid)
+                    check == RecipientCheck.Checking -> stringResource(Res.string.transfer_checking_name)
+                    else -> stringResource(Res.string.transfer_recipient)
+                },
+                style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
+}
 
 // -------------------------------------------------------------------------------------------------
 

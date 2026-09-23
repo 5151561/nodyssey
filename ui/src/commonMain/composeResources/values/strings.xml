@@ -324,9 +324,15 @@
     <string name="profile_chicken">鸡腿</string>
     <string name="profile_stars">星辰</string>
     <string name="profile_level">等级</string>
+    <!-- 我的 · 账户卡上等级条的说明 -->
+    <string name="profile_level_remaining">距 Lv%1$d 还差 %2$d 鸡腿</string>
     <string name="profile_attendance">今日签到 · 领鸡腿</string>
     <string name="profile_attendance_checking">正在检查今日签到…</string>
     <string name="profile_attendance_done">今日已签到 · 查看签到榜</string>
+    <!-- 2b 签到横幅：主标题、未签时的副标题（不写随机区间——站点没公布）、行尾的签到榜按钮 -->
+    <string name="profile_attendance_title">签到</string>
+    <string name="profile_attendance_modes">随机或固定 5 个鸡腿</string>
+    <string name="profile_attendance_board">签到榜</string>
     <string name="profile_account_settings">账号设置</string>
 
     <!-- Settings -->
@@ -727,6 +733,10 @@
     <string name="account_action_save">保存</string>
     <string name="account_action_saved">已保存</string>
     <string name="account_avatar_change">更换头像</string>
+    <!-- 3b 头像卡：标题与行尾按钮；字段标签旁的 Markdown 小标签 -->
+    <string name="account_avatar">头像</string>
+    <string name="account_avatar_change_short">更换</string>
+    <string name="account_markdown_tag">Markdown</string>
     <string name="account_avatar_take_photo">拍照</string>
     <string name="account_avatar_pick">从相册选择</string>
     <string name="account_avatar_pending">新头像待保存</string>
@@ -953,6 +963,8 @@
 
     <!-- Assets and growth (8d) -->
     <string name="assets_title">账户与成长</string>
+    <!-- 8a 等级卡左上角的小标题 -->
+    <string name="assets_current_level">当前等级</string>
     <string name="assets_level">Lv %1$d</string>
     <string name="assets_level_progress">鸡腿 %1$d / %2$d</string>
     <string name="assets_level_remaining">还差 %1$d 鸡腿到 Lv %2$d</string>
@@ -974,11 +986,18 @@
     <string name="assets_sign_in_choice_title">今日签到</string>
     <string name="assets_sign_in_random">随机数量 · 拼手气</string>
     <string name="assets_sign_in_fixed">固定 5 个鸡腿</string>
+    <!-- 9a 签到方式的两块磁贴：标题 + 一行说明。随机那块不写区间，站点没公布 -->
+    <string name="assets_sign_in_random_label">随机</string>
+    <string name="assets_sign_in_random_value">拼手气</string>
+    <string name="assets_sign_in_fixed_label">固定</string>
+    <string name="assets_sign_in_fixed_value">5 个</string>
     <string name="assets_sign_in_choice_hint">与网页端一致：随机模式可能高于也可能低于 5 个。</string>
     <string name="assets_board">今日签到榜</string>
     <string name="assets_board_subtitle">看看今天谁的手气最好</string>
     <string name="assets_board_gain">+%1$d</string>
     <string name="assets_board_failed">签到榜加载失败</string>
+    <!-- 签到榜上自己那一行的名字 -->
+    <string name="assets_board_self">%1$s（我）</string>
     <string name="assets_signed_in">今日已签 +%1$d 鸡腿</string>
     <string name="assets_signing_in">签到中…</string>
 
@@ -995,6 +1014,11 @@
     <string name="credit_level">Lv%1$d</string>
     <string name="credit_level_progress">Lv%1$d 进度 %2$d / %3$d</string>
     <string name="credit_entry_total">总计 %1$d</string>
+    <!-- 8b 余额头：大数字旁的单位与等级；进度说明；列表上方的两个列名 -->
+    <string name="credit_unit_level">鸡腿 · Lv%1$d</string>
+    <string name="credit_progress_remaining">%1$d / %2$d · 还差 %3$d 升到 Lv%4$d</string>
+    <string name="credit_column_change">变动 · 理由</string>
+    <string name="credit_column_total">总计</string>
 
     <!-- Stardust ledger and transfer (8e / 8f) -->
     <string name="stardust_title">星辰</string>
@@ -1030,11 +1054,16 @@
     <string name="transfer_sent">已转出 %1$d 星辰</string>
     <string name="transfer_failed">转账没有成功，请稍后再试。</string>
     <string name="spend_current_balance">当前余额</string>
+    <!-- 余额不够时花费确认层唯一的按钮 -->
+    <string name="spend_got_it">知道了</string>
 
     <!-- Follows and followers (8c) -->
     <string name="follow_title">关注与粉丝</string>
     <string name="follow_tab_following">我的关注</string>
     <string name="follow_tab_followers">我的粉丝</string>
+    <!-- 9h 列表加载完后的 Tab 名，数字是整份列表的长度（接口一次给全） -->
+    <string name="follow_tab_following_count">关注 %1$d</string>
+    <string name="follow_tab_followers_count">粉丝 %1$d</string>
     <string name="follow_end_following">已经到底了 · 共 %1$d 位关注</string>
     <string name="follow_end_followers">已经到底了 · 共 %1$d 位粉丝</string>
     <string name="follow_empty_following_title">还没有关注任何人</string>
@@ -1105,6 +1134,10 @@
     <string name="invite_caution">邀请码一经生成即扣除鸡腿，无法退还；一个邀请码只能注册一个账号。</string>
     <string name="invite_confirm">确认购买</string>
     <string name="invite_shortfall">还差 %1$d 鸡腿</string>
+    <!-- 9e 鸡腿不够买邀请码：标题、卡片上「还差」那一行、底下怎么攒鸡腿 -->
+    <string name="invite_short_title">鸡腿不够</string>
+    <string name="invite_shortfall_label">还差</string>
+    <string name="invite_short_hint">回帖、发帖、签到都能攒鸡腿。</string>
     <string name="invite_opened_web">App 还没有对接购码接口，已在网页中打开邀请页。</string>
     <string name="invite_chicken_balance">当前鸡腿 %1$d</string>
 
