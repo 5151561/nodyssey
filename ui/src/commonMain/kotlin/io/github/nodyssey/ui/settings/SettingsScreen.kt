@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -12,12 +13,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -26,7 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -106,7 +106,6 @@ import io.github.nodyssey.ui.resources.settings_text_preview
 import io.github.nodyssey.ui.resources.settings_theme
 import io.github.nodyssey.ui.resources.settings_theme_dark
 import io.github.nodyssey.ui.resources.settings_theme_eink_hint
-import io.github.nodyssey.ui.resources.settings_theme_entry_hint
 import io.github.nodyssey.ui.resources.settings_theme_light
 import io.github.nodyssey.ui.resources.settings_theme_mode
 import io.github.nodyssey.ui.resources.settings_theme_system
@@ -119,6 +118,8 @@ import io.github.nodyssey.ui.resources.settings_version
 import io.github.nodyssey.ui.resources.settings_wifi_images
 import io.github.nodyssey.ui.resources.settings_wifi_images_hint
 import io.github.nodyssey.ui.richtext.PostRichContent
+import io.github.nodyssey.ui.settings.theme.ThemeSummaryDot
+import io.github.nodyssey.ui.settings.theme.themeSummary
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.OneHandTopAppBar
@@ -127,7 +128,9 @@ import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.richtext.LocalStickerSizing
 import io.github.plaza.designsys.richtext.StickerSizing
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.stringResource
@@ -245,8 +248,8 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(SettingsPagePadding),
+            verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
             SettingsSectionTitle(stringResource(Res.string.settings_appearance))
             SettingsGroup {
@@ -255,7 +258,6 @@ fun SettingsScreen(
                 // reached far more often than the rest of the theme put together, and a control
                 // people use daily does not belong two screens deep behind one they set once.
                 SettingsBlock(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     title = stringResource(Res.string.settings_theme_mode),
                     top = true,
                     // 墨水屏模式 forces light; see the row below it.
@@ -267,21 +269,10 @@ fun SettingsScreen(
                         enabled = !state.settings.einkMode,
                     )
                 }
-                // Between the two rows it takes over rather than at the end of the group: it decides
-                // 明暗 above it and replaces 主题 below it, and a switch that turns its neighbours grey
-                // should be the thing standing between them.
-                SettingsRow(
-                    title = stringResource(Res.string.settings_eink),
-                    subtitle = stringResource(Res.string.settings_eink_hint),
-                    checked = state.settings.einkMode,
-                    onCheckedChange = onEinkModeChange,
-                    trailing = {
-                        Switch(checked = state.settings.einkMode, onCheckedChange = null)
-                    },
-                )
                 // 配色来源, the preset grid, 我的主题 and 色彩风格 are behind this row: four controls
                 // and a live preview card is more than a group of eight can carry, and every one of
-                // them changes the screen it is read on.
+                // them changes the screen it is read on. The row says what they add up to — the
+                // colour and the style in force — so the answer is readable without going in.
                 SettingsRow(
                     modifier = Modifier.alpha(
                         if (state.settings.einkMode) DISABLED_ALPHA else 1f,
@@ -295,31 +286,42 @@ fun SettingsScreen(
                     if (state.settings.einkMode) {
                         stringResource(Res.string.settings_theme_eink_hint)
                     } else {
-                        stringResource(Res.string.settings_theme_entry_hint)
+                        themeSummary(state.settings)
                     },
                     enabled = !state.settings.einkMode,
                     onClick = onOpenTheme,
+                    chevron = true,
+                    trailing = { ThemeSummaryDot() },
+                )
+                // Under 主题 rather than above it: it overrides 明暗 and replaces 主题, and the two
+                // it greys out read first, the way a master switch reads after what it governs.
+                SettingsRow(
+                    leading = { Icon(SettingsIcons.Contrast, contentDescription = null) },
+                    title = stringResource(Res.string.settings_eink),
+                    subtitle = stringResource(Res.string.settings_eink_hint),
+                    checked = state.settings.einkMode,
+                    onCheckedChange = onEinkModeChange,
+                    trailing = { SettingsSwitch(checked = state.settings.einkMode) },
                 )
                 // One switch for every screen that carries the bar rather than one per screen:
                 // whether the title should come down to the thumb is a fact about the hand holding
                 // the phone, and it does not change between 收藏 and 设置.
                 SettingsRow(
+                    leading = { Icon(SettingsIcons.PanTool, contentDescription = null) },
                     title = stringResource(Res.string.settings_one_hand),
                     subtitle = stringResource(Res.string.settings_one_hand_hint),
                     checked = state.settings.oneHandMode,
                     onCheckedChange = onOneHandModeChange,
-                    trailing = {
-                        Switch(checked = state.settings.oneHandMode, onCheckedChange = null)
-                    },
+                    trailing = { SettingsSwitch(checked = state.settings.oneHandMode) },
                 )
                 SettingsBlock(
                     title = stringResource(Res.string.settings_body_size),
-                    subtitle = stringResource(
+                    value = stringResource(
                         Res.string.settings_body_size_value,
                         bodyFontSize.roundToInt(),
                     ),
                 ) {
-                    Slider(
+                    SettingsSlider(
                         value = bodyFontSize,
                         onValueChange = { bodyFontSize = it },
                         onValueChangeFinished = {
@@ -331,38 +333,35 @@ fun SettingsScreen(
                         steps = BODY_FONT_SIZE_STEPS,
                         modifier = Modifier.testTag(BODY_FONT_SIZE_SLIDER_TAG),
                     )
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
-                        shape = RoundedCornerShape(12.dp),
-                    ) {
-                        Text(
-                            stringResource(Res.string.settings_text_preview),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(Spacing.md),
-                        )
-                    }
+                    // Set at the size being dragged rather than the size stored, and at the body's
+                    // own line height for that size, so the sample answers "how will a post read"
+                    // while the thumb is still moving.
+                    Text(
+                        stringResource(Res.string.settings_text_preview),
+                        style = PostBody.copy(
+                            fontSize = bodyFontSize.sp,
+                            lineHeight = (bodyFontSize * PostBody.lineHeight.value / PostBody.fontSize.value).sp,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 SettingsRow(
+                    leading = { Icon(PlazaIcons.Mood, contentDescription = null) },
                     title = stringResource(Res.string.settings_sticker_uniform),
                     subtitle = stringResource(Res.string.settings_sticker_uniform_hint),
                     checked = state.settings.stickerUniformSize,
                     onCheckedChange = onStickerUniformSizeChange,
-                    trailing = {
-                        Switch(
-                            checked = state.settings.stickerUniformSize,
-                            onCheckedChange = null,
-                        )
-                    },
+                    trailing = { SettingsSwitch(checked = state.settings.stickerUniformSize) },
                 )
                 if (state.settings.stickerUniformSize) {
                     SettingsBlock(
                         title = stringResource(Res.string.settings_sticker_size),
-                        subtitle = stringResource(
+                        value = stringResource(
                             Res.string.settings_sticker_size_value,
                             stickerSize.roundToInt(),
                         ),
                     ) {
-                        Slider(
+                        SettingsSlider(
                             value = stickerSize,
                             onValueChange = { stickerSize = it },
                             onValueChangeFinished = { onStickerSizeChange(stickerSize.roundToInt()) },
@@ -401,13 +400,13 @@ fun SettingsScreen(
                             },
                         ),
                         onClick = onOpenAppLinkSettings,
+                        chevron = true,
                     )
                 }
                 SettingsBlock(
                     // The group's first card when the platform has no App Links notion to show —
                     // 站外链接 used to hold that place and no longer exists; see `ExternalLinks`.
                     top = appLinkHandlingEnabled == null,
-                    icon = { Icon(PlazaIcons.Code, contentDescription = null) },
                     title = stringResource(Res.string.settings_report_format),
                     subtitle = stringResource(Res.string.settings_report_format_hint),
                 ) {
@@ -417,28 +416,20 @@ fun SettingsScreen(
                     )
                 }
                 SettingsRow(
+                    leading = { Icon(PlazaIcons.LastPage, contentDescription = null) },
                     title = stringResource(Res.string.settings_home_page_bar),
                     subtitle = stringResource(Res.string.settings_home_page_bar_hint),
                     checked = state.settings.homePageBar,
                     onCheckedChange = onHomePageBarChange,
-                    trailing = {
-                        Switch(
-                            checked = state.settings.homePageBar,
-                            onCheckedChange = null,
-                        )
-                    },
+                    trailing = { SettingsSwitch(checked = state.settings.homePageBar) },
                 )
                 SettingsRow(
+                    leading = { Icon(PlazaIcons.Wifi, contentDescription = null) },
                     title = stringResource(Res.string.settings_wifi_images),
                     subtitle = stringResource(Res.string.settings_wifi_images_hint),
                     checked = state.settings.imagesOnWifiOnly,
                     onCheckedChange = onImagesOnWifiOnlyChange,
-                    trailing = {
-                        Switch(
-                            checked = state.settings.imagesOnWifiOnly,
-                            onCheckedChange = null,
-                        )
-                    },
+                    trailing = { SettingsSwitch(checked = state.settings.imagesOnWifiOnly) },
                 )
                 SettingsRow(
                     title = stringResource(Res.string.imagehost_title),
@@ -452,7 +443,8 @@ fun SettingsScreen(
                         },
                     ),
                     onClick = onOpenImageHost,
-                    leading = { Icon(PlazaIcons.Image, contentDescription = null) },
+                    chevron = true,
+                    leading = { Icon(SettingsIcons.CloudUpload, contentDescription = null) },
                 )
                 SettingsRow(
                     title = stringResource(Res.string.settings_clear_cache),
@@ -483,6 +475,7 @@ fun SettingsScreen(
                     top = true,
                     bottom = true,
                     onClick = onOpenNotifications,
+                    chevron = true,
                     leading = { Icon(Icons.Default.Notifications, contentDescription = null) },
                 )
             }
@@ -495,6 +488,8 @@ fun SettingsScreen(
                     top = true,
                     bottom = state.dohEnabled == null && !state.hasNetworkCheck,
                     onClick = onOpenProxy,
+                    chevron = true,
+                    leading = { Icon(SettingsIcons.VpnLock, contentDescription = null) },
                 )
                 // Absent rather than disabled where the platform cannot apply a DoH server at all —
                 // see [SettingsUiState.dohEnabled], and 默认打开方式 above for the same treatment.
@@ -510,6 +505,8 @@ fun SettingsScreen(
                         ),
                         bottom = !state.hasNetworkCheck,
                         onClick = onOpenDoh,
+                        chevron = true,
+                        leading = { Icon(SettingsIcons.Dns, contentDescription = null) },
                     )
                 }
                 // Last in the group on purpose: the two above are settings that change how the app
@@ -521,6 +518,8 @@ fun SettingsScreen(
                         subtitle = stringResource(Res.string.settings_network_check_entry_hint),
                         bottom = true,
                         onClick = onOpenNetworkCheck,
+                        chevron = true,
+                        leading = { Icon(SettingsIcons.NetworkCheck, contentDescription = null) },
                     )
                 }
             }
@@ -534,42 +533,74 @@ fun SettingsScreen(
                         ?: stringResource(Res.string.settings_version, state.versionName),
                     top = true,
                     onClick = onOpenAbout,
+                    chevron = true,
                     leading = { Icon(Icons.Default.Info, contentDescription = null) },
                     trailing = { if (state.updateVersionName != null) UpdateDot() },
                 )
                 SettingsRow(
+                    leading = { Icon(SettingsIcons.Update, contentDescription = null) },
                     title = stringResource(Res.string.settings_update_on_launch),
                     subtitle = stringResource(Res.string.settings_update_on_launch_hint),
                     checked = state.settings.updateCheckOnLaunch,
                     onCheckedChange = onUpdateCheckOnLaunchChange,
-                    trailing = {
-                        Switch(
-                            checked = state.settings.updateCheckOnLaunch,
-                            onCheckedChange = null,
-                        )
-                    },
+                    trailing = { SettingsSwitch(checked = state.settings.updateCheckOnLaunch) },
                 )
                 SettingsRow(
+                    leading = { Icon(SettingsIcons.Science, contentDescription = null) },
                     title = stringResource(Res.string.settings_update_dev_channel),
                     subtitle = stringResource(Res.string.settings_update_dev_channel_hint),
                     checked = state.settings.updateDevChannel,
                     onCheckedChange = onUpdateDevChannelChange,
-                    trailing = {
-                        Switch(
-                            checked = state.settings.updateDevChannel,
-                            onCheckedChange = null,
-                        )
-                    },
+                    trailing = { SettingsSwitch(checked = state.settings.updateDevChannel) },
                 )
                 SettingsRow(
+                    leading = { Icon(PlazaIcons.Gavel, contentDescription = null) },
                     title = stringResource(Res.string.settings_licenses),
                     bottom = true,
                     onClick = onOpenLicenses,
+                    chevron = true,
                 )
             }
         }
     }
 }
+
+/**
+ * The expressive slider every size control on this screen uses: a 16dp track, the line thumb
+ * standing off it by a gap, and no tick dots.
+ *
+ * Material's own [Slider] with its own [SliderDefaults.Track], told to draw neither the stop
+ * indicator nor the ticks — at nine or thirteen stops the dots crowd the track into a dotted line
+ * and say nothing the number beside the title does not.
+ */
+@Composable
+private fun SettingsSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: () -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    modifier: Modifier = Modifier,
+) {
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        onValueChangeFinished = onValueChangeFinished,
+        valueRange = valueRange,
+        steps = steps,
+        modifier = modifier,
+        track = { sliderState ->
+            SliderDefaults.Track(
+                sliderState = sliderState,
+                modifier = Modifier.height(SliderTrackHeight),
+                drawStopIndicator = null,
+                drawTick = { _, _ -> },
+            )
+        },
+    )
+}
+
+private val SliderTrackHeight = 16.dp
 
 /**
  * 语言, behind a dropdown.
@@ -587,57 +618,59 @@ private fun AppLanguageRow(
 ) {
     val choices = appLanguageChoices()
     var expanded by remember { mutableStateOf(false) }
+    val current = choices.first { it.first == selected }.second
     SettingsRow(
+        leading = { Icon(SettingsIcons.Translate, contentDescription = null) },
         title = stringResource(Res.string.settings_language),
-        // Only where a change waits for the next launch. Android redraws the screen in the new
-        // language as this row is tapped, so there is nothing to warn about there.
-        subtitle = stringResource(Res.string.settings_language_restart_hint)
-            .takeIf { appLanguageAppliesOnRestart },
+        // The answer on the second line, where every other row of 外观 keeps its own. The restart
+        // note rides after it only where a change waits for the next launch: Android redraws the
+        // screen in the new language as this row is tapped, so there is nothing to warn about there.
+        subtitle =
+        if (appLanguageAppliesOnRestart) {
+            current + SUBTITLE_SEPARATOR + stringResource(Res.string.settings_language_restart_hint)
+        } else {
+            current
+        },
         bottom = true,
         onClick = { expanded = true },
         trailing = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = choices.first { it.first == selected }.second,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // The menu hangs off the chevron and nothing wider, because a `DropdownMenu` is
+            // anchored to its *parent* layout node — `Popup` reads `parentLayoutCoordinates`,
+            // not the position of its own zero-sized node. Put it a level up and the anchor
+            // becomes the whole row, so the menu opens at the row's bottom left however the
+            // enclosing box is aligned; this box is the chevron and only the chevron, so the
+            // menu ends where it does, tucked under the control that opened it.
+            Box {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                // The menu hangs off the chevron and nothing wider, because a `DropdownMenu` is
-                // anchored to its *parent* layout node — `Popup` reads `parentLayoutCoordinates`,
-                // not the position of its own zero-sized node. Put it a level up and the anchor
-                // becomes the whole row, so the menu opens at the row's bottom left however the
-                // enclosing box is aligned; this box is the chevron and only the chevron, so the
-                // menu ends where it does, tucked under the control that opened it.
-                Box {
-                    Icon(
-                        Icons.Default.ArrowDropDown,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        choices.forEach { (language, label) ->
-                            DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = {
-                                    expanded = false
-                                    onSelect(language)
-                                },
-                                // A tick rather than a radio: a menu shows one row at a time as the
-                                // finger moves down it, and a column of empty circles reads as a
-                                // form rather than as a list with one answer already in it.
-                                trailingIcon = {
-                                    if (language == selected) {
-                                        Icon(Icons.Default.Check, contentDescription = null)
-                                    }
-                                },
-                            )
-                        }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    choices.forEach { (language, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                expanded = false
+                                onSelect(language)
+                            },
+                            // A tick rather than a radio: a menu shows one row at a time as the
+                            // finger moves down it, and a column of empty circles reads as a
+                            // form rather than as a list with one answer already in it.
+                            trailingIcon = {
+                                if (language == selected) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            },
+                        )
                     }
                 }
             }
         },
     )
 }
+
+private const val SUBTITLE_SEPARATOR = " · "
 
 /**
  * The four entries of 语言, in the order the menu lists them.
@@ -710,7 +743,7 @@ private fun ConnectedReportFormatButtons(
 @Composable
 private fun StickerSizePreview(sizeSp: Int) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        color = LocalPlazaLayers.current.inset,
         shape = RoundedCornerShape(12.dp),
     ) {
         CompositionLocalProvider(

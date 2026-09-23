@@ -64,6 +64,23 @@ class SettingsScreenRenderTest {
         composeRule.onRoot().captureRender("settings-dark")
     }
 
+    /** The whole list at once, so every group can be compared with 6a / 6b without scrolling. */
+    @Test
+    @Config(qualifiers = "w360dp-h2000dp")
+    fun `the whole settings list in light`() {
+        composeRule.setContent { Screen(darkTheme = false) }
+
+        composeRule.onRoot().captureRender("settings-full-light")
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h2000dp")
+    fun `the whole settings list in dark`() {
+        composeRule.setContent { Screen(darkTheme = true) }
+
+        composeRule.onRoot().captureRender("settings-full-dark")
+    }
+
     private companion object {
         val STATE =
             SettingsUiState(
