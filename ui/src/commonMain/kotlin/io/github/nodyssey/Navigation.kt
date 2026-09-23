@@ -17,6 +17,7 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
@@ -158,6 +159,7 @@ import io.github.nodyssey.ui.vote.VoteViewModel
 import io.github.plaza.core.runCatchingExceptCancellation
 import io.github.plaza.designsys.component.rememberSilentClipboardCopy
 import io.github.plaza.designsys.theme.LocalEinkMode
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -494,6 +496,7 @@ fun MainNavigation(
                 openSpace = openSpace,
                 openContentUrl = openContentUrl,
                 openHomeTab = { currentTab = TopLevelDestination.HOME },
+                openProfileTab = { currentTab = TopLevelDestination.PROFILE },
             )
         return entryProvider {
             tabRootEntries(entryScope)
@@ -631,6 +634,14 @@ fun MainNavigation(
         modifier = modifier,
         navigationSuiteType =
         NavigationSuiteScaffoldDefaults.navigationSuiteType(windowAdaptiveInfo),
+        // The bar is a card like any other — white on the grey page — and the rail beside a wide
+        // layout sits flush with the page, since it has no content under it to lift off.
+        navigationSuiteColors =
+        NavigationSuiteDefaults.colors(
+            shortNavigationBarContainerColor = LocalPlazaLayers.current.card,
+            navigationBarContainerColor = LocalPlazaLayers.current.card,
+            navigationRailContainerColor = LocalPlazaLayers.current.page,
+        ),
         state = navigationSuiteState,
     ) {
         SharedTransitionLayout(Modifier.fillMaxSize()) {

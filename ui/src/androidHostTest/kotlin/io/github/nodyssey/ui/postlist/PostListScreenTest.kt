@@ -637,13 +637,13 @@ class PostListScreenTest {
         composeRule.onNodeWithContentDescription("排序方式").assertIsDisplayed()
     }
 
-    /** 搜索 left the navigation bar for this corner, so the feed is the only way to reach it. */
+    /** 搜索 left the navigation bar for the home header, so the feed is the only way to reach it. */
     @Test
     fun `the app bar opens search`() {
         var opened = false
         setScreen(listOf(feedPost(1, "post")), onSearch = { opened = true })
 
-        composeRule.onNodeWithContentDescription("搜索").performClick()
+        composeRule.onNodeWithText("搜索帖子或用户").performClick()
 
         assertTrue(opened)
     }
@@ -799,8 +799,8 @@ class PostListScreenTest {
     fun `a pinned row is announced rather than only tinted`() {
         setScreen(listOf(feedPost(1, "公告", isPinned = true, commentCount = null)))
 
-        // Twice by design: the pin badge replacing the avatar, and the word in the meta line.
-        composeRule.onAllNodesWithText("置顶").assertCountEquals(1)
+        // A pinned notice is a one-line strip whose only mark is the pin, so the pin carries the word.
+        composeRule.onAllNodesWithText("置顶").assertCountEquals(0)
         composeRule.onNodeWithContentDescription("置顶").assertIsDisplayed()
     }
 
