@@ -68,6 +68,7 @@ import io.github.nodyssey.ui.resources.notify_telegram_body
 import io.github.nodyssey.ui.resources.notify_telegram_title
 import io.github.nodyssey.ui.resources.notify_wifi_only
 import io.github.nodyssey.ui.resources.notify_wifi_only_hint
+import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
@@ -191,7 +192,7 @@ fun NotificationSettingsScreen(
                         checked = settings.notificationsWifiOnly,
                         onCheckedChange = onWifiOnlyChange,
                         enabled = enabled,
-                        trailing = { SettingsSwitch(checked = settings.notificationsWifiOnly, enabled = enabled) },
+                        trailing = { GroupedListItemSwitch(checked = settings.notificationsWifiOnly, enabled = enabled) },
                     )
                     SettingsRow(
                         leading = { Icon(SettingsIcons.Bedtime, contentDescription = null) },
@@ -201,7 +202,7 @@ fun NotificationSettingsScreen(
                         checked = settings.notificationQuietHours,
                         onCheckedChange = onQuietHoursChange,
                         enabled = enabled,
-                        trailing = { SettingsSwitch(checked = settings.notificationQuietHours, enabled = enabled) },
+                        trailing = { GroupedListItemSwitch(checked = settings.notificationQuietHours, enabled = enabled) },
                     )
                 }
 
@@ -216,7 +217,7 @@ fun NotificationSettingsScreen(
                         checked = settings.notifyInteractions,
                         onCheckedChange = onNotifyInteractionsChange,
                         enabled = enabled,
-                        trailing = { SettingsSwitch(checked = settings.notifyInteractions, enabled = enabled) },
+                        trailing = { GroupedListItemSwitch(checked = settings.notifyInteractions, enabled = enabled) },
                     )
                     SettingsRow(
                         title = stringResource(Res.string.notifications_messages),
@@ -225,7 +226,7 @@ fun NotificationSettingsScreen(
                         checked = settings.notifyMessages,
                         onCheckedChange = onNotifyMessagesChange,
                         enabled = enabled,
-                        trailing = { SettingsSwitch(checked = settings.notifyMessages, enabled = enabled) },
+                        trailing = { GroupedListItemSwitch(checked = settings.notifyMessages, enabled = enabled) },
                     )
                 }
             }
@@ -281,7 +282,7 @@ private fun MasterSwitchCard(
                 )
                 Text(subtitle, style = MaterialTheme.typography.labelSmall)
             }
-            SettingsSwitch(checked = checked)
+            GroupedListItemSwitch(checked = checked)
         }
     }
 }

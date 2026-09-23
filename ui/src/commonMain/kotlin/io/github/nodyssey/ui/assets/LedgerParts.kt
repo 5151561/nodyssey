@@ -34,6 +34,7 @@ import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.groupShape
+import io.github.plaza.designsys.component.groupSlice
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -120,12 +121,8 @@ internal fun <T : Any> LazyListScope.ledgerFooter(
 }
 
 /**
- * One row's slice of the white card a ledger's rows sit on.
- *
- * A Paging list cannot be wrapped in one card — the rows are separate lazy items — so each row draws
- * its own piece: the first rounds the card's top, the last its bottom, and every row after the first
- * draws the inset hairline above itself. It is the same trick `GroupedRow` plays for settings, with
- * the same consequence: no card shadow, since each slice would cast one onto its neighbour.
+ * One row's slice of the white card a ledger's rows sit on — see [groupSlice]. A Paging list cannot
+ * be wrapped in one card, so each row draws its own piece of it.
  */
 @Composable
 internal fun LedgerSlice(
@@ -134,15 +131,13 @@ internal fun LedgerSlice(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Surface(
-        color = LocalPlazaLayers.current.card,
-        shape = groupShape(first, last),
-        modifier = modifier.fillMaxWidth().padding(horizontal = LayerPageGutter),
+    Column(
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = LayerPageGutter)
+            .groupSlice(LocalPlazaLayers.current, first, last),
     ) {
-        Column {
-            if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
-            content()
-        }
+        content()
     }
 }
 

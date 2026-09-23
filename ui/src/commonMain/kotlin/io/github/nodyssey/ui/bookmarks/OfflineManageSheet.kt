@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
@@ -64,7 +65,8 @@ import io.github.nodyssey.ui.resources.offline_usage_text
 import io.github.nodyssey.ui.resources.offline_wifi_only
 import io.github.nodyssey.ui.resources.offline_wifi_only_body
 import io.github.plaza.designsys.component.ChoiceRow
-import io.github.plaza.designsys.component.GroupedColumn
+import io.github.plaza.designsys.component.GroupedListItem
+import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.PlazaIcons
@@ -193,35 +195,36 @@ private fun OfflineManagePanel(
             UsageBreakdown(usage)
         }
 
-        GroupedColumn(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.lg)) {
-            GroupedRow(
-                title = stringResource(Res.string.offline_wifi_only),
-                subtitle = stringResource(Res.string.offline_wifi_only_body),
-                icon = PlazaIcons.Wifi,
+        Column(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.lg)) {
+            GroupedListItem(
                 first = true,
-                showChevron = false,
-                onClick = { onSettingsChange(settings.copy(wifiOnly = !settings.wifiOnly)) },
-                trailing = {
-                    // No `onCheckedChange`: the row is the target, and a switch that also took taps
-                    // would give one row two hit areas with the same effect.
-                    Switch(checked = settings.wifiOnly, onCheckedChange = null)
-                },
+                last = false,
+                checked = settings.wifiOnly,
+                onCheckedChange = { onSettingsChange(settings.copy(wifiOnly = it)) },
+                leadingContent = { Icon(PlazaIcons.Wifi, contentDescription = null) },
+                headlineContent = { Text(stringResource(Res.string.offline_wifi_only)) },
+                supportingContent = { Text(stringResource(Res.string.offline_wifi_only_body)) },
+                trailingContent = { GroupedListItemSwitch(checked = settings.wifiOnly) },
             )
-            GroupedRow(
-                title = stringResource(Res.string.offline_images),
-                subtitle = stringResource(Res.string.offline_images_body),
-                icon = PlazaIcons.Image,
-                showChevron = false,
-                onClick = { onSettingsChange(settings.copy(includeImages = !settings.includeImages)) },
-                trailing = { Switch(checked = settings.includeImages, onCheckedChange = null) },
+            GroupedListItem(
+                first = false,
+                last = false,
+                checked = settings.includeImages,
+                onCheckedChange = { onSettingsChange(settings.copy(includeImages = it)) },
+                leadingContent = { Icon(PlazaIcons.Image, contentDescription = null) },
+                headlineContent = { Text(stringResource(Res.string.offline_images)) },
+                supportingContent = { Text(stringResource(Res.string.offline_images_body)) },
+                trailingContent = { GroupedListItemSwitch(checked = settings.includeImages) },
             )
-            GroupedRow(
-                title = stringResource(Res.string.offline_auto_sync),
-                subtitle = stringResource(Res.string.offline_auto_sync_body),
-                icon = PlazaIcons.Sync,
-                showChevron = false,
-                onClick = { onSettingsChange(settings.copy(autoSyncReplies = !settings.autoSyncReplies)) },
-                trailing = { Switch(checked = settings.autoSyncReplies, onCheckedChange = null) },
+            GroupedListItem(
+                first = false,
+                last = false,
+                checked = settings.autoSyncReplies,
+                onCheckedChange = { onSettingsChange(settings.copy(autoSyncReplies = it)) },
+                leadingContent = { Icon(PlazaIcons.Sync, contentDescription = null) },
+                headlineContent = { Text(stringResource(Res.string.offline_auto_sync)) },
+                supportingContent = { Text(stringResource(Res.string.offline_auto_sync_body)) },
+                trailingContent = { GroupedListItemSwitch(checked = settings.autoSyncReplies) },
             )
             GroupedRow(
                 title = stringResource(Res.string.offline_retention),

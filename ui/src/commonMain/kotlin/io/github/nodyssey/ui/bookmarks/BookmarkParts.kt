@@ -104,7 +104,7 @@ import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.layerCardSlice
+import io.github.plaza.designsys.component.groupSlice
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.component.textScaledSize
@@ -145,8 +145,7 @@ internal fun BookmarkRow(
     val inSelection = selected != null
     val layers = LocalPlazaLayers.current
     val showsOfflineColumn = offlineAvailable && !inSelection
-    Column(modifier.fillMaxWidth().layerCardSlice(layers, first, last)) {
-        if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
+    Column(modifier.fillMaxWidth().groupSlice(layers, first, last)) {
         // Material's interactive list item: it owns the ripple, the long-click TalkBack can announce
         // and perform, and the leading/trailing geometry. The card behind it is the slice's, so the
         // item itself is transparent unless it is ticked.

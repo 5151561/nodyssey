@@ -91,6 +91,8 @@ import io.github.nodyssey.ui.resources.notifications_section_earlier
 import io.github.nodyssey.ui.resources.notifications_section_today
 import io.github.nodyssey.ui.resources.tab_notifications
 import io.github.plaza.core.TimeFormat
+import io.github.plaza.designsys.component.GroupDividerInset
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
@@ -592,44 +594,32 @@ private fun NotificationRow(
     nowMillis: Long,
     onClick: () -> Unit,
 ) {
-    CardSliceRow(
+    GroupedListItem(
         first = first,
         last = last,
-        dividerInset = ROW_PADDING_H + NOTIFICATION_AVATAR + ROW_GAP,
         enabled = item.postId != null,
         onClick = onClick,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = ROW_PADDING_H, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(ROW_GAP),
-        ) {
-            UserAvatar(
-                url = item.avatarUrl,
-                name = item.actorName,
-                size = NOTIFICATION_AVATAR,
+        verticalAlignment = Alignment.Top,
+        leadingContent = {
+            UserAvatar(url = item.avatarUrl, name = item.actorName, size = NOTIFICATION_AVATAR)
+        },
+        headlineContent = {
+            Text(
+                text = notificationSentence(item),
+                color =
+                if (item.isUnread) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             )
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = notificationSentence(item),
-                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp),
-                    color =
-                    if (item.isUnread) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
-                timestampLabel(item.createdAtMillis, item.createdAtText, nowMillis)?.let { stamp ->
-                    Text(
-                        text = stamp,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            // The slot is kept on read rows too, so a sentence wraps at the same width whichever
-            // state it is in and marking the list read does not reflow it. Dropped 7dp to sit on
-            // the sentence's first line rather than above it.
+        },
+        supportingContent =
+        timestampLabel(item.createdAtMillis, item.createdAtText, nowMillis)?.let { stamp -> { Text(stamp) } },
+        // The slot is kept on read rows too, so a sentence wraps at the same width whichever state it
+        // is in and marking the list read does not reflow it. Dropped to sit on the sentence's first
+        // line rather than above it.
+        trailingContent = {
             Box(Modifier.padding(top = 7.dp).size(UNREAD_DOT)) {
                 if (item.isUnread) {
                     Box(
@@ -640,8 +630,9 @@ private fun NotificationRow(
                     )
                 }
             }
-        }
-    }
+        },
+        dividerInset = GroupDividerInset + NOTIFICATION_AVATAR + GroupDividerInset,
+    )
 }
 
 /**

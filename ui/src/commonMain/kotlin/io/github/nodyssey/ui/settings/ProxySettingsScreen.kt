@@ -71,6 +71,7 @@ import io.github.nodyssey.ui.resources.proxy_type_socks
 import io.github.nodyssey.ui.resources.proxy_type_title
 import io.github.nodyssey.ui.resources.proxy_username_label
 import io.github.nodyssey.ui.resources.proxy_webview_hint
+import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
@@ -172,7 +173,7 @@ fun ProxySettingsScreen(
                     bottom = true,
                     checked = state.enabled,
                     onCheckedChange = onEnabledChange,
-                    trailing = { SettingsSwitch(checked = state.enabled) },
+                    trailing = { GroupedListItemSwitch(checked = state.enabled) },
                 )
             }
 
@@ -251,7 +252,7 @@ fun ProxySettingsScreen(
                         checked = state.scope == ProxyScope.FORUM_ONLY,
                         onCheckedChange = onForumOnlyChange,
                         trailing = {
-                            SettingsSwitch(
+                            GroupedListItemSwitch(
                                 checked = state.scope == ProxyScope.FORUM_ONLY,
                                 enabled = state.enabled,
                             )

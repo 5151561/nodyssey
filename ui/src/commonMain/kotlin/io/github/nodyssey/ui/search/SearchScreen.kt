@@ -143,9 +143,9 @@ import io.github.nodyssey.ui.resources.search_user_history_scope
 import io.github.nodyssey.ui.resources.search_users_tab
 import io.github.nodyssey.ui.resources.sort_by_post_time
 import io.github.nodyssey.ui.resources.sort_by_reply_time
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerDivider
-import io.github.plaza.designsys.component.LayerGroup
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
@@ -916,14 +916,15 @@ private fun ColumnScope.SearchHistory(
                 modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
             )
         } else {
-            LayerGroup(Modifier.padding(start = LayerPageGutter, end = LayerPageGutter, bottom = Spacing.lg)) {
+            Column(Modifier.padding(start = LayerPageGutter, end = LayerPageGutter, bottom = Spacing.lg)) {
                 searches.forEachIndexed { index, recent ->
                     // Keyed so removing one row does not hand its neighbour's pressed state around.
                     key(recent.key) {
-                        if (index > 0) LayerDivider(startInset = HistoryDividerInset)
                         HistoryRow(
                             recent = recent,
                             boards = boards,
+                            first = index == 0,
+                            last = index == searches.lastIndex,
                             onClick = { onHistoryClick(recent) },
                             onRemove = { onRemoveHistory(recent) },
                         )
@@ -934,49 +935,33 @@ private fun ColumnScope.SearchHistory(
     }
 }
 
-/** Under the text, past the 16dp padding, the 24dp icon and the 14dp gap. */
-private val HistoryDividerInset = 54.dp
-
 @Composable
 private fun HistoryRow(
     recent: SearchHistoryEntry,
     boards: List<Board>,
+    first: Boolean,
+    last: Boolean,
     onClick: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    Row(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .heightIn(min = 64.dp)
-            .padding(start = Spacing.lg, end = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Icon(
-            if (recent.target == SearchTarget.POSTS) PlazaIcons.History else PlazaIcons.PersonSearch,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Column(Modifier.weight(1f).padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                recent.query,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            HistoryScope(recent, boards)
-        }
-        IconButton(onClick = onRemove) {
+    GroupedListItem(
+        first = first,
+        last = last,
+        onClick = onClick,
+        leadingContent = {
             Icon(
-                Icons.Default.Close,
-                contentDescription = stringResource(Res.string.search_remove_recent, recent.query),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                if (recent.target == SearchTarget.POSTS) PlazaIcons.History else PlazaIcons.PersonSearch,
+                contentDescription = null,
             )
-        }
-    }
+        },
+        headlineContent = { Text(recent.query, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = { HistoryScope(recent, boards) },
+        trailingContent = {
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.search_remove_recent, recent.query))
+            }
+        },
+    )
 }
 
 @Composable

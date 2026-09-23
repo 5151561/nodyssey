@@ -87,10 +87,10 @@ import io.github.nodyssey.ui.resources.invite_shortfall
 import io.github.nodyssey.ui.resources.invite_shortfall_label
 import io.github.nodyssey.ui.resources.profile_attendance_title
 import io.github.nodyssey.ui.resources.spend_current_balance
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerDivider
-import io.github.plaza.designsys.component.LayerGroup
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
@@ -226,16 +226,14 @@ fun AssetsScreen(
                 onRequestAttendance = onRequestAttendance,
             )
             // 邀请购码住在社区工具里，和站点的入口位置一致；这里不再重复一份。
-            LayerGroup {
-                GroupedRow(
-                    title = stringResource(Res.string.assets_board),
-                    subtitle = stringResource(Res.string.assets_board_subtitle),
-                    icon = PlazaIcons.Group,
-                    first = true,
-                    last = true,
-                    onClick = onOpenBoard,
-                )
-            }
+            GroupedRow(
+                title = stringResource(Res.string.assets_board),
+                subtitle = stringResource(Res.string.assets_board_subtitle),
+                icon = PlazaIcons.Group,
+                first = true,
+                last = true,
+                onClick = onOpenBoard,
+            )
         }
     }
 
@@ -405,13 +403,10 @@ private fun DailyQuotaCard(
     state: AssetsUiState,
     onRequestAttendance: () -> Unit,
 ) {
-    LayerGroup {
-        QuotaRow(stringResource(Res.string.assets_quota_post), state.postQuota)
-        LayerDivider(startInset = 16.dp, endInset = 16.dp)
+    Column {
+        QuotaRow(stringResource(Res.string.assets_quota_post), state.postQuota, first = true)
         QuotaRow(stringResource(Res.string.assets_quota_comment), state.commentQuota)
-        LayerDivider(startInset = 16.dp, endInset = 16.dp)
         QuotaRow(stringResource(Res.string.assets_quota_feeding), state.feedingQuota)
-        LayerDivider(startInset = 16.dp, endInset = 16.dp)
         AttendanceRow(state, onRequestAttendance)
     }
     if (!state.postQuota.isKnown) {
@@ -428,25 +423,20 @@ private fun DailyQuotaCard(
 private fun QuotaRow(
     label: String,
     quota: DailyQuota,
+    first: Boolean = false,
 ) {
-    Column(
-        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                label,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                modifier = Modifier.weight(1f),
-            )
+    GroupedListItem(
+        first = first,
+        last = false,
+        headlineContent = { Text(label) },
+        trailingContent = {
             Text(
                 text = quota.label(),
                 style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        GrowthProgressBar(progress = quota.progress())
-    }
+        },
+        supportingContent = { GrowthProgressBar(progress = quota.progress(), modifier = Modifier.padding(top = 6.dp)) },
+    )
 }
 
 /**
@@ -460,16 +450,20 @@ private fun AttendanceRow(
     state: AssetsUiState,
     onRequestAttendance: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = Spacing.lg, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            stringResource(Res.string.assets_quota_attendance),
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-            modifier = Modifier.weight(1f),
-        )
+    GroupedListItem(
+        first = false,
+        last = true,
+        headlineContent = { Text(stringResource(Res.string.assets_quota_attendance)) },
+        trailingContent = { AttendanceState(state, onRequestAttendance) },
+    )
+}
+
+@Composable
+private fun AttendanceState(
+    state: AssetsUiState,
+    onRequestAttendance: () -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         when {
             state.isSigningIn -> {
                 PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)

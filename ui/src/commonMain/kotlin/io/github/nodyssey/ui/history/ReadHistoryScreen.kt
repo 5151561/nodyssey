@@ -105,7 +105,7 @@ import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.layerCardSlice
+import io.github.plaza.designsys.component.groupSlice
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -233,7 +233,7 @@ fun ReadHistoryScreen(
 
                 else -> {
                     val sections = remember(state.entries, nowMillis) { historySections(state.entries, nowMillis) }
-                    // Board 8f: one white card per day, spread over the items — see [layerCardSlice].
+                    // Board 8f: one white card per day, spread over the items — see [groupSlice].
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = Spacing.xxl),
@@ -392,8 +392,7 @@ private fun HistoryRow(
         }
     val layers = LocalPlazaLayers.current
 
-    Column(modifier.fillMaxWidth().layerCardSlice(layers, first, last)) {
-        if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
+    Column(modifier.fillMaxWidth().groupSlice(layers, first, last)) {
         SwipeToDismissBox(
             state = dismissState,
             enableDismissFromStartToEnd = false,

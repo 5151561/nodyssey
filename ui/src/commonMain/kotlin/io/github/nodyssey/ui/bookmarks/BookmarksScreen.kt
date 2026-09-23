@@ -459,7 +459,7 @@ private fun BookmarkList(
                         )
                     }
                 }
-                // One white card, spread over the items — see [layerCardSlice].
+                // One white card, spread over the items — see [groupSlice].
                 itemsIndexed(visible, key = { _, entry -> entry.postId }) { index, entry ->
                     BookmarkRow(
                         entry = entry,

@@ -50,12 +50,13 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.ui.common.describedAsLoading
-import io.github.plaza.designsys.component.GroupRowDivider
-import io.github.plaza.designsys.component.LayerGroup
+import io.github.plaza.designsys.component.GroupedListItem
+import io.github.plaza.designsys.component.GroupedRowTrailing
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.groupShape
+import io.github.plaza.designsys.component.groupedListItemColors
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 
@@ -80,19 +81,16 @@ internal fun SettingsSectionTitle(
 }
 
 /**
- * One group: a single [LayerGroup] card around its rows.
- *
- * One card rather than a card per row, because the card's soft shadow is drawn around its outline —
- * rows that each cast their own would print a shadow onto the row above them at every seam. The
- * rows still take `top` / `bottom`, which is what decides where the inset hairlines go and lets the
- * same rows be spread over a `LazyColumn` where there is no one card to put them in.
+ * One group of rows. The rows draw the card themselves ([GroupedListItem]: outer corners, hairlines and
+ * the shadow, sliced per row), so this only stacks them flush — which is also what lets the same rows
+ * be spread over a `LazyColumn` where there is no one group to put them in.
  */
 @Composable
 internal fun SettingsGroup(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    LayerGroup(modifier = modifier.fillMaxWidth(), content = content)
+    Column(modifier = modifier.fillMaxWidth(), content = content)
 }
 
 /** What a settings page scrolls inside: the 12dp card gutter the rest of the layer system uses. */
@@ -101,9 +99,6 @@ internal val SettingsPagePadding =
 
 /** Between one card and the next, and between a section label and its card. */
 internal val SettingsItemGap = 8.dp
-
-/** Where a row's hairline starts: under its text, past the icon column when there is one. */
-private fun dividerInset(hasIcon: Boolean): Dp = if (hasIcon) 56.dp else Spacing.lg
 
 /** A row's title: 15sp medium, one step under a list title so eight rows still fit a screen. */
 @Composable
@@ -130,46 +125,36 @@ internal fun SettingsBlock(
     enabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Surface(
-        color = LocalPlazaLayers.current.card,
-        shape = groupShape(first = top, last = bottom),
-    ) {
-        Column {
-            if (!top) GroupRowDivider(startInset = dividerInset(icon != null))
-            Column(
-                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+    GroupedListItem(
+        first = top,
+        last = bottom,
+        leadingContent = icon,
+        headlineContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
-                ) {
-                    icon?.invoke()
-                    Column(
-                        modifier = Modifier.weight(1f).padding(start = if (icon == null) 0.dp else Spacing.lg),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        Text(title, style = settingsRowTitleStyle())
-                        subtitle?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    value?.let {
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
+                Text(title, style = settingsRowTitleStyle(), modifier = Modifier.weight(1f))
+                value?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
-                content()
             }
-        }
-    }
+        },
+        // The control rides in the supporting slot, under the title and at the text's indent, which is
+        // where Material puts a row's second line — here it is a slider or a segmented button.
+        supportingContent = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                subtitle?.let {
+                    Text(it, modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA))
+                }
+                Column(Modifier.padding(top = 2.dp), content = content)
+            }
+        },
+    )
 }
 
 /**
@@ -195,7 +180,7 @@ internal fun SettingsRow(
     checked: Boolean? = null,
     onCheckedChange: ((Boolean) -> Unit)? = null,
     enabled: Boolean = true,
-    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    contentColor: Color = Color.Unspecified,
     /**
      * A chevron at the trailing edge, for a row that opens a page of its own. Off by default because
      * the family also holds rows that act in place — 清除缓存, 退出登录 — and a chevron on those
@@ -207,99 +192,33 @@ internal fun SettingsRow(
     leading: (@Composable () -> Unit)? = null,
     trailing: @Composable () -> Unit = {},
 ) {
-    Surface(
-        color = LocalPlazaLayers.current.card,
-        contentColor = contentColor,
-        shape = groupShape(first = top, last = bottom),
-        modifier = modifier.then(
-            when {
-                checked != null && onCheckedChange != null ->
-                    Modifier.toggleable(
-                        value = checked,
-                        enabled = enabled,
-                        role = Role.Switch,
-                        onValueChange = onCheckedChange,
-                    )
-
-                selected != null && onClick != null ->
-                    Modifier.selectable(
-                        selected = selected,
-                        enabled = enabled,
-                        role = Role.RadioButton,
-                        onClick = onClick,
-                    )
-
-                onClick != null -> Modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-
-                else -> Modifier
-            },
-        ),
-    ) {
-        Column {
-            if (!top) GroupRowDivider(startInset = dividerInset(leading != null))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 64.dp)
-                    .padding(horizontal = Spacing.lg, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
-            ) {
-                leading?.invoke()
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(title, style = settingsRowTitleStyle())
-                    subtitle?.let {
-                        Text(
-                            it,
-                            style =
-                            MaterialTheme.typography.labelSmall.let { style ->
-                                if (subtitleMonospace) style.copy(fontFamily = FontFamily.Monospace) else style
-                            },
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                trailing()
-                if (chevron) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * The switch every settings row carries: Material's own, with the tick in its thumb while it is on.
- *
- * `onCheckedChange` is always null — the row around it is the toggle, which is what gives the whole
- * row a hit target and one semantics node rather than a row and a switch that both claim the tap.
- */
-@Composable
-internal fun SettingsSwitch(
-    checked: Boolean,
-    enabled: Boolean = true,
-) {
-    Switch(
+    GroupedListItem(
+        first = top,
+        last = bottom,
+        modifier = modifier,
+        onClick = onClick,
+        selected = selected,
         checked = checked,
-        onCheckedChange = null,
+        onCheckedChange = onCheckedChange,
         enabled = enabled,
-        thumbContent =
-        if (checked) {
+        colors = groupedListItemColors(contentColor),
+        leadingContent = leading,
+        headlineContent = { Text(title, style = settingsRowTitleStyle()) },
+        supportingContent =
+        subtitle?.let {
             {
-                Icon(
-                    Icons.Default.Check,
-                    contentDescription = null,
-                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                Text(
+                    it,
+                    style =
+                    if (subtitleMonospace) {
+                        LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace)
+                    } else {
+                        LocalTextStyle.current
+                    },
                 )
             }
-        } else {
-            null
         },
+        trailingContent = { GroupedRowTrailing(trailing = trailing, showChevron = chevron) },
     )
 }
 

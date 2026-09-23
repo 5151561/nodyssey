@@ -122,6 +122,7 @@ import io.github.nodyssey.ui.settings.theme.ThemeSummaryDot
 import io.github.nodyssey.ui.settings.theme.themeSummary
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
@@ -301,7 +302,7 @@ fun SettingsScreen(
                     subtitle = stringResource(Res.string.settings_eink_hint),
                     checked = state.settings.einkMode,
                     onCheckedChange = onEinkModeChange,
-                    trailing = { SettingsSwitch(checked = state.settings.einkMode) },
+                    trailing = { GroupedListItemSwitch(checked = state.settings.einkMode) },
                 )
                 // One switch for every screen that carries the bar rather than one per screen:
                 // whether the title should come down to the thumb is a fact about the hand holding
@@ -312,7 +313,7 @@ fun SettingsScreen(
                     subtitle = stringResource(Res.string.settings_one_hand_hint),
                     checked = state.settings.oneHandMode,
                     onCheckedChange = onOneHandModeChange,
-                    trailing = { SettingsSwitch(checked = state.settings.oneHandMode) },
+                    trailing = { GroupedListItemSwitch(checked = state.settings.oneHandMode) },
                 )
                 SettingsBlock(
                     title = stringResource(Res.string.settings_body_size),
@@ -351,7 +352,7 @@ fun SettingsScreen(
                     subtitle = stringResource(Res.string.settings_sticker_uniform_hint),
                     checked = state.settings.stickerUniformSize,
                     onCheckedChange = onStickerUniformSizeChange,
-                    trailing = { SettingsSwitch(checked = state.settings.stickerUniformSize) },
+                    trailing = { GroupedListItemSwitch(checked = state.settings.stickerUniformSize) },
                 )
                 if (state.settings.stickerUniformSize) {
                     SettingsBlock(
@@ -421,7 +422,7 @@ fun SettingsScreen(
                     subtitle = stringResource(Res.string.settings_home_page_bar_hint),
                     checked = state.settings.homePageBar,
                     onCheckedChange = onHomePageBarChange,
-                    trailing = { SettingsSwitch(checked = state.settings.homePageBar) },
+                    trailing = { GroupedListItemSwitch(checked = state.settings.homePageBar) },
                 )
                 SettingsRow(
                     leading = { Icon(PlazaIcons.Wifi, contentDescription = null) },
@@ -429,7 +430,7 @@ fun SettingsScreen(
                     subtitle = stringResource(Res.string.settings_wifi_images_hint),
                     checked = state.settings.imagesOnWifiOnly,
                     onCheckedChange = onImagesOnWifiOnlyChange,
-                    trailing = { SettingsSwitch(checked = state.settings.imagesOnWifiOnly) },
+                    trailing = { GroupedListItemSwitch(checked = state.settings.imagesOnWifiOnly) },
                 )
                 SettingsRow(
                     title = stringResource(Res.string.imagehost_title),
@@ -543,7 +544,7 @@ fun SettingsScreen(
                     subtitle = stringResource(Res.string.settings_update_on_launch_hint),
                     checked = state.settings.updateCheckOnLaunch,
                     onCheckedChange = onUpdateCheckOnLaunchChange,
-                    trailing = { SettingsSwitch(checked = state.settings.updateCheckOnLaunch) },
+                    trailing = { GroupedListItemSwitch(checked = state.settings.updateCheckOnLaunch) },
                 )
                 SettingsRow(
                     leading = { Icon(SettingsIcons.Science, contentDescription = null) },
@@ -551,7 +552,7 @@ fun SettingsScreen(
                     subtitle = stringResource(Res.string.settings_update_dev_channel_hint),
                     checked = state.settings.updateDevChannel,
                     onCheckedChange = onUpdateDevChannelChange,
-                    trailing = { SettingsSwitch(checked = state.settings.updateDevChannel) },
+                    trailing = { GroupedListItemSwitch(checked = state.settings.updateDevChannel) },
                 )
                 SettingsRow(
                     leading = { Icon(PlazaIcons.Gavel, contentDescription = null) },

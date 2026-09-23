@@ -27,6 +27,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -100,13 +101,13 @@ import io.github.nodyssey.ui.resources.ruling_title
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AppendSpinner
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.TonalTag
-import io.github.plaza.designsys.component.layerCardSlice
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -425,7 +426,7 @@ private const val APPEND_LOOKAHEAD = 4
 private val RAIL_CLEARANCE = 112.dp
 
 /**
- * One decision, as a slice of the log's card — see [layerCardSlice].
+ * One decision, as one row of the log's card.
  *
  * The icon disc that used to lead the row is gone: it sorted decisions into five kinds, and the
  * badges now say the same thing verb by verb, in colour, where the eye already is.
@@ -443,52 +444,48 @@ private fun RulingRow(
     // opens the post at the floor in question. An account-level decision names no post and falls back
     // to the member's space, which is where the site's own row links too.
     val destination = record.postId != null || record.targetUid != null
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .layerCardSlice(LocalPlazaLayers.current, first, last)
-            .clickable(enabled = destination) { onClick(record) },
-    ) {
-        if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
-        Column(
-            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            // Built as an annotated string rather than one format string so the user name can carry the
-            // weight — it is what the eye scans for in a log of other people's punishments.
-            val targetKind = record.target.label()?.let { stringResource(Res.string.ruling_target_kind, it) }
-            val reason = record.reason?.let { stringResource(Res.string.ruling_reason, it) }
+    val targetKind = record.target.label()?.let { stringResource(Res.string.ruling_target_kind, it) }
+    val reason = record.reason?.let { stringResource(Res.string.ruling_reason, it) }
+    val meta =
+        listOfNotNull(
+            record.createdAtMillis?.let(TimeFormat::absolute),
+            record.moderatorName?.let { stringResource(Res.string.ruling_moderator, it) },
+        )
+    GroupedListItem(
+        first = first,
+        last = last,
+        enabled = destination,
+        onClick = { onClick(record) },
+        // Built as an annotated string rather than one format string so the user name can carry the
+        // weight — it is what the eye scans for in a log of other people's punishments.
+        headlineContent = {
             Text(
-                text =
                 buildAnnotatedString {
                     withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(record.targetName) }
                     targetKind?.let(::append)
                     reason?.let(::append)
                 },
-                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
             )
-            if (record.actions.isNotEmpty()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    record.actions.forEach { ActionBadge(it, boardTitles) }
+        },
+        supportingContent = {
+            Column(Modifier.padding(top = Spacing.xs), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                if (record.actions.isNotEmpty()) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        record.actions.forEach { ActionBadge(it, boardTitles) }
+                    }
+                }
+                if (meta.isNotEmpty()) {
+                    Text(
+                        text = meta.joinToString(META_SEPARATOR),
+                        style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_FIGURES),
+                    )
                 }
             }
-            val meta =
-                listOfNotNull(
-                    record.createdAtMillis?.let(TimeFormat::absolute),
-                    record.moderatorName?.let { stringResource(Res.string.ruling_moderator, it) },
-                )
-            if (meta.isNotEmpty()) {
-                Text(
-                    text = meta.joinToString(META_SEPARATOR),
-                    style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
+        },
+    )
 }
 
 private const val META_SEPARATOR = " · "

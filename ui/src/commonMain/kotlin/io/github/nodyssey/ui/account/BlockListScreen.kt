@@ -64,10 +64,11 @@ import io.github.nodyssey.ui.resources.account_confirm_unblock_action
 import io.github.nodyssey.ui.resources.account_confirm_unblock_body
 import io.github.nodyssey.ui.resources.account_confirm_unblock_title
 import io.github.nodyssey.ui.resources.action_back
+import io.github.plaza.designsys.component.GroupedListItem
+import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.LayerDivider
-import io.github.plaza.designsys.component.LayerGroup
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
@@ -200,12 +201,12 @@ fun BlockListScreen(
             if (!state.isLoading && state.blocked.isEmpty()) {
                 BlockedEmptyState()
             } else {
-                LayerGroup {
+                Column {
                     state.blocked.forEachIndexed { index, user ->
-                        // Inset past the avatar, so the faces read as one column.
-                        if (index != 0) LayerDivider(startInset = Spacing.lg + listAvatarSize() + Spacing.md)
                         BlockedRow(
                             user = user,
+                            first = index == 0,
+                            last = index == state.blocked.lastIndex,
                             onOpen = { onOpenUser(user.uid) },
                             onUnblock = { onRequestUnblock(user) },
                         )
@@ -238,45 +239,20 @@ private fun ShowBlockedSwitchCard(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    Surface(
-        shape = LayerCardShape,
-        color = LocalPlazaLayers.current.card,
-        border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .cardShadow(LayerCardShape, LocalPlazaLayers.current.shadows)
-            .toggleable(
-                value = checked,
-                role = Role.Switch,
-                onValueChange = onCheckedChange,
-            ),
-    ) {
-        Row(
-            modifier = Modifier.padding(Spacing.lg),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    Text(
-                        stringResource(Res.string.account_block_show_temporarily),
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                    )
-                    StorageBadge(local = true)
-                }
-                Text(
-                    stringResource(Res.string.account_block_show_temporarily_hint),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+    GroupedListItem(
+        first = true,
+        last = true,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        headlineContent = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Text(stringResource(Res.string.account_block_show_temporarily))
+                StorageBadge(local = true)
             }
-            Switch(checked = checked, onCheckedChange = null)
-        }
-    }
+        },
+        supportingContent = { Text(stringResource(Res.string.account_block_show_temporarily_hint)) },
+        trailingContent = { GroupedListItemSwitch(checked = checked) },
+    )
 }
 
 /**
@@ -332,36 +308,24 @@ private fun AddBlockField(
 @Composable
 private fun BlockedRow(
     user: BlockedUser,
+    first: Boolean,
+    last: Boolean,
     onOpen: () -> Unit,
     onUnblock: () -> Unit,
 ) {
-    Row(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onOpen)
-            .padding(start = Spacing.lg, end = Spacing.xs, top = Spacing.sm, bottom = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        UserAvatar(url = user.avatarUrl, name = user.name, size = listAvatarSize())
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = user.name,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                stringResource(Res.string.account_block_row_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        TextButton(onClick = onUnblock) {
-            Text(stringResource(Res.string.account_block_unblock))
-        }
-    }
+    GroupedListItem(
+        first = first,
+        last = last,
+        onClick = onOpen,
+        leadingContent = { UserAvatar(url = user.avatarUrl, name = user.name, size = listAvatarSize()) },
+        headlineContent = { Text(user.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = { Text(stringResource(Res.string.account_block_row_hint)) },
+        trailingContent = {
+            TextButton(onClick = onUnblock) { Text(stringResource(Res.string.account_block_unblock)) }
+        },
+        // Inset past the avatar, so the faces read as one column.
+        dividerInset = Spacing.lg + listAvatarSize() + Spacing.lg,
+    )
 }
 
 @Composable

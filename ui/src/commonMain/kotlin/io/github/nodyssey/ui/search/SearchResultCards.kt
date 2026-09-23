@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,17 +48,21 @@ import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.TITLE_BADGE_SIZE
 import io.github.nodyssey.ui.common.lockBadgeDescription
 import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.credit_level
 import io.github.nodyssey.ui.resources.post_badge_awarded
 import io.github.nodyssey.ui.resources.post_new_reply_count
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.search_user_comments
 import io.github.nodyssey.ui.resources.search_user_joined
 import io.github.nodyssey.ui.resources.search_user_topics
+import io.github.plaza.designsys.component.GroupDividerInset
+import io.github.plaza.designsys.component.GroupedListItem
+import io.github.plaza.designsys.component.GroupedRowTrailing
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerDivider
-import io.github.plaza.designsys.component.LayerGroup
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SkeletonBar
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.component.textScaledSize
@@ -69,9 +74,6 @@ private val ResultCardPadding = PaddingValues(horizontal = 16.dp, vertical = 14.
 
 /** 44dp, the artboard's: a user result is the person, so the avatar is larger than a card header's. */
 private val UserResultAvatarSize = 44.dp
-
-/** The hairline between user rows starts under the name, past the 16dp padding, avatar and gap. */
-private val UserRowDividerInset = 72.dp
 
 /**
  * One post in the results: the title with the keyword marked, then board, author, time and replies
@@ -224,76 +226,41 @@ internal fun UserResultGroup(
     onUserClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LayerGroup(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         users.forEachIndexed { index, user ->
-            if (index > 0) LayerDivider(startInset = UserRowDividerInset)
-            UserResultRow(user = user, highlight = highlight, onClick = { onUserClick(user.uid) })
-        }
-    }
-}
-
-@Composable
-private fun UserResultRow(
-    user: UserSearchResult,
-    highlight: String?,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        UserAvatar(url = user.avatarUrl, name = user.name, size = UserResultAvatarSize)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                HighlightedText(
-                    text = user.name,
-                    query = highlight,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                user.level?.let { LevelTag(it) }
-            }
-            Text(
-                userDetail(user),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            GroupedListItem(
+                first = index == 0,
+                last = index == users.lastIndex,
+                onClick = { onUserClick(user.uid) },
+                leadingContent = { UserAvatar(url = user.avatarUrl, name = user.name, size = UserResultAvatarSize) },
+                headlineContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        HighlightedText(
+                            text = user.name,
+                            query = highlight,
+                            style = LocalTextStyle.current,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        // Lv beside the name, as a neutral tag: a level is a fact about the account.
+                        user.level?.let {
+                            TonalTag(
+                                text = stringResource(Res.string.credit_level, it),
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
+                supportingContent = { Text(userDetail(user)) },
+                trailingContent = { GroupedRowTrailing(showChevron = true) },
+                dividerInset = GroupDividerInset + UserResultAvatarSize + GroupDividerInset,
             )
         }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp),
-        )
     }
 }
-
-/** Lv beside the name, as a neutral tag: a level is a fact about the account, not a board's colour. */
-@Composable
-private fun LevelTag(level: Int) {
-    Text(
-        text = "Lv$level",
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        modifier =
-        Modifier
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh, LevelTagShape)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-    )
-}
-
-private val LevelTagShape = RoundedCornerShape(6.dp)
 
 /** UID · 主题 · 评论 · 加入 — the level moved up beside the name, so it is not repeated here. */
 @Composable

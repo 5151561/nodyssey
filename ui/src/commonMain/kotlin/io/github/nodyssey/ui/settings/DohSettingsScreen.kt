@@ -67,6 +67,7 @@ import io.github.nodyssey.ui.resources.doh_url_label
 import io.github.nodyssey.ui.resources.doh_url_placeholder
 import io.github.nodyssey.ui.resources.doh_url_required
 import io.github.nodyssey.ui.resources.doh_webview_hint
+import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -168,7 +169,7 @@ fun DohSettingsScreen(
                     bottom = true,
                     checked = state.enabled,
                     onCheckedChange = onEnabledChange,
-                    trailing = { SettingsSwitch(checked = state.enabled) },
+                    trailing = { GroupedListItemSwitch(checked = state.enabled) },
                 )
             }
 
@@ -260,7 +261,7 @@ fun DohSettingsScreen(
                                 enabled = state.enabled,
                                 checked = state.includeIPv6,
                                 onCheckedChange = onIncludeIPv6Change,
-                                trailing = { SettingsSwitch(checked = state.includeIPv6, enabled = state.enabled) },
+                                trailing = { GroupedListItemSwitch(checked = state.includeIPv6, enabled = state.enabled) },
                             )
                         }
                         if (canFallBack) {
@@ -273,7 +274,7 @@ fun DohSettingsScreen(
                                 checked = state.fallbackToSystem,
                                 onCheckedChange = onFallbackChange,
                                 trailing = {
-                                    SettingsSwitch(checked = state.fallbackToSystem, enabled = state.enabled)
+                                    GroupedListItemSwitch(checked = state.fallbackToSystem, enabled = state.enabled)
                                 },
                             )
                         }

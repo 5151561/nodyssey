@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
@@ -49,6 +50,7 @@ import io.github.nodyssey.ui.resources.follow_tab_following_count
 import io.github.nodyssey.ui.resources.follow_title
 import io.github.nodyssey.ui.resources.space_uid
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
@@ -260,39 +262,20 @@ private fun FollowRow(
     last: Boolean,
     onClick: () -> Unit,
 ) {
-    Surface(
+    GroupedListItem(
+        first = first,
+        last = last,
         onClick = onClick,
-        color = LocalPlazaLayers.current.card,
-        shape = groupShape(first, last),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = LayerPageGutter),
-    ) {
-        Column {
-            if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 64.dp)
-                    .padding(horizontal = Spacing.lg, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                UserAvatar(url = user.avatarUrl, name = user.name, size = 40.dp)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = user.name,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(Res.string.space_uid, user.uid),
-                        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
+        modifier = Modifier.padding(horizontal = LayerPageGutter),
+        leadingContent = { UserAvatar(url = user.avatarUrl, name = user.name, size = 40.dp) },
+        headlineContent = { Text(user.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = {
+            Text(
+                stringResource(Res.string.space_uid, user.uid),
+                style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_FIGURES),
+            )
+        },
+    )
 }
 
 // -------------------------------------------------------------------------------------------------

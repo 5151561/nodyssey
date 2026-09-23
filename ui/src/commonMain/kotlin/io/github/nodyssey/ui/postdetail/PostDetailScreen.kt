@@ -193,6 +193,7 @@ import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerCardGap
 import io.github.plaza.designsys.component.LayerDivider
@@ -2159,32 +2160,32 @@ private fun FloorActionSheet(
                     )
                 }
             }
-            SheetCard {
-                val rows =
-                    buildList {
-                        actions.onEdit?.let { add(Triple(Icons.Default.Edit, stringResource(Res.string.post_edit_action), it)) }
-                            ?: actions.onReply?.let {
-                                add(Triple(PlazaIcons.Reply, stringResource(Res.string.post_reply_to, content.authorName), it))
-                            }
-                        actions.onQuote?.let {
-                            add(Triple(PlazaIcons.FormatQuote, stringResource(Res.string.post_quote_floor), it))
+            val rows =
+                buildList {
+                    actions.onEdit?.let { add(Triple(Icons.Default.Edit, stringResource(Res.string.post_edit_action), it)) }
+                        ?: actions.onReply?.let {
+                            add(Triple(PlazaIcons.Reply, stringResource(Res.string.post_reply_to, content.authorName), it))
                         }
-                        add(
-                            Triple(PlazaIcons.ContentCopy, stringResource(Res.string.post_copy_body)) {
-                                copy("post", content.nodes.excerpt(), copied)
-                            },
-                        )
+                    actions.onQuote?.let {
+                        add(Triple(PlazaIcons.FormatQuote, stringResource(Res.string.post_quote_floor), it))
                     }
+                    add(
+                        Triple(PlazaIcons.ContentCopy, stringResource(Res.string.post_copy_body)) {
+                            copy("post", content.nodes.excerpt(), copied)
+                        },
+                    )
+                }
+            Column {
                 rows.forEachIndexed { index, (icon, label, action) ->
-                    if (index > 0) LayerDivider(startInset = 56.dp)
-                    ListItem(
-                        headlineContent = { Text(label, style = MaterialTheme.typography.titleSmall) },
-                        leadingContent = { Icon(icon, contentDescription = null) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable {
+                    GroupedListItem(
+                        first = index == 0,
+                        last = index == rows.lastIndex,
+                        onClick = {
                             onDismiss()
                             action()
                         },
+                        leadingContent = { Icon(icon, contentDescription = null) },
+                        headlineContent = { Text(label) },
                     )
                 }
             }

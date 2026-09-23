@@ -30,14 +30,8 @@ import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 
 /**
- * The grouped rounded list the settings and tools screens are built from.
- *
- * A group is one white card on the grey page (see [io.github.plaza.designsys.theme.PlazaLayers]):
- * the first and last row round to the card's 24dp on their outer corners, the seams between rows are
- * square and flush, and each row after the first draws an inset hairline at its top. Drawn per row
- * rather than as one card around a column so that a group can be spread over the items of a
- * `LazyColumn`. The card shadow is left off for the same reason — each row would cast its own onto the
- * row above it.
+ * One row's outline within its group card: the card's 24dp at the group's outer corners, square at
+ * the seams. See [GroupedListItem] and [groupSlice], which are the only things that should need it.
  */
 fun groupShape(first: Boolean, last: Boolean): Shape =
     RoundedCornerShape(
@@ -58,18 +52,6 @@ private val GROUP_SEAM_RADIUS = 0.dp
  */
 private val VALUE_MAX_WIDTH = 120.dp
 
-/** Zero: the rows of a group are one card, separated by [GroupRowDivider] rather than by a gap. */
-val GroupSeam = 0.dp
-
-/**
- * The hairline a row draws at its top when it is not the first of its group. [startInset] lines it
- * up with the row's text — past the icon when there is one.
- */
-@Composable
-fun GroupRowDivider(startInset: androidx.compose.ui.unit.Dp) {
-    LayerDivider(startInset = startInset)
-}
-
 /** Group heading. Primary-coloured and small: it labels the block without competing with the rows. */
 @Composable
 fun SectionLabel(
@@ -84,17 +66,9 @@ fun SectionLabel(
     )
 }
 
-/** Wraps rows so the 2dp seams are declared once rather than at every call site. */
-@Composable
-fun GroupedColumn(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(GroupSeam), content = content)
-}
-
 /**
- * One row of a grouped list: icon, title, optional second line, optional current value, chevron.
+ * The common case of [GroupedListItem] with plain strings: icon, title, optional second line,
+ * optional current value, chevron.
  *
  * [value] is the row's current state rendered at the trailing edge — "未开启", "3 人", an avatar. It is
  * deliberately separate from [subtitle]: a value that wrapped onto its own line stopped reading as
@@ -115,66 +89,71 @@ fun GroupedRow(
     showChevron: Boolean = onClick != null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
-    Surface(
-        color = LocalPlazaLayers.current.card,
-        shape = groupShape(first, last),
-        modifier = modifier.then(if (onClick == null) Modifier else Modifier.clickable(onClick = onClick)),
-    ) {
-        if (!first) GroupRowDivider(startInset = if (icon == null) Spacing.lg else 56.dp)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 64.dp)
-                .padding(horizontal = Spacing.lg, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
-            icon?.let {
+    GroupedListItem(
+        first = first,
+        last = last,
+        modifier = modifier,
+        onClick = onClick,
+        headlineContent = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                color = titleColor ?: MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        supportingContent = subtitle?.let { { Text(it) } },
+        leadingContent =
+        icon?.let {
+            {
                 Icon(
                     imageVector = it,
                     contentDescription = null,
                     tint = iconTint ?: MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
                 )
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                    color = titleColor ?: MaterialTheme.colorScheme.onSurface,
-                )
-                subtitle?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+        },
+        trailingContent =
+        if (value == null && trailing == null && !showChevron) {
+            null
+        } else {
+            {
+                GroupedRowTrailing(value = value, trailing = trailing, showChevron = showChevron)
             }
-            value?.let {
-                // Capped rather than weighted. A second `weight(1f)` here splits the leftover width
-                // down the middle no matter how short the value is, so 「30 天」 came to rest in the
-                // middle of the row while the subtitle beside it — with half a row to work in —
-                // wrapped onto a second line. Unweighted, the value takes what it needs and the
-                // title column gets the rest; the cap is what stops a long one from taking the lot.
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = VALUE_MAX_WIDTH),
-                )
-            }
-            trailing?.invoke()
-            if (showChevron) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+        },
+    )
+}
+
+/**
+ * A row's end: its current value, any control, and the chevron that says the row opens something.
+ * Shared by every grouped row so the three always sit in the same order at the same spacing.
+ */
+@Composable
+fun GroupedRowTrailing(
+    value: String? = null,
+    trailing: (@Composable () -> Unit)? = null,
+    showChevron: Boolean = false,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        value?.let {
+            // Capped rather than weighted: the value takes what it needs and the title gets the rest;
+            // the cap is what stops a long one from taking the lot.
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = VALUE_MAX_WIDTH),
+            )
+        }
+        trailing?.invoke()
+        if (showChevron) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }

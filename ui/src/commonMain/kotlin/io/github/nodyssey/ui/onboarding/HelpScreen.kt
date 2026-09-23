@@ -62,6 +62,7 @@ import io.github.nodyssey.ui.settings.SettingsRow
 import io.github.nodyssey.ui.settings.SettingsSectionTitle
 import io.github.nodyssey.ui.settings.rememberAppLinkHandlingEnabled
 import io.github.nodyssey.ui.settings.rememberAppLinkSettingsLauncher
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
@@ -250,30 +251,17 @@ private fun HelpItem(
     bottom: Boolean = false,
     action: @Composable (() -> Unit)? = null,
 ) {
-    Surface(
-        color = LocalPlazaLayers.current.card,
-        shape = groupShape(first = top, last = bottom),
-    ) {
-        // The same inset hairline a settings row draws: the entries of a group are one card.
-        if (!top) LayerDivider(startInset = Spacing.lg)
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-            )
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            action?.let {
-                Row(modifier = Modifier.padding(top = Spacing.xs)) { it() }
+    GroupedListItem(
+        first = top,
+        last = bottom,
+        headlineContent = { Text(title) },
+        supportingContent = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(text = body, style = MaterialTheme.typography.bodyMedium)
+                action?.let { Row(modifier = Modifier.padding(top = Spacing.xs)) { it() } }
             }
-        }
-    }
+        },
+    )
 }
 
 @Preview

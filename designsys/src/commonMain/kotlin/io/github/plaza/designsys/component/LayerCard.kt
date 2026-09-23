@@ -95,27 +95,7 @@ fun LayerCard(
 }
 
 /**
- * A card that holds rows rather than one block of content — a settings group, a day of
- * notifications. The rows bring their own padding and separate themselves with [LayerDivider].
- */
-@Composable
-fun LayerGroup(
-    modifier: Modifier = Modifier,
-    shape: Shape = LayerCardShape,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    LayerCard(
-        modifier = modifier,
-        shape = shape,
-        contentPadding = PaddingValues(0.dp),
-        verticalArrangement = Arrangement.Top,
-        content = content,
-    )
-}
-
-/**
- * The hairline between two rows of one [LayerGroup], inset past the rows' leading icon so the icons
- * read as one column. [startInset] is 56dp for a 24dp icon at 16dp padding; pass what the rows use.
+ * An inset hairline inside a card, for content that is not a list of rows — a report table. [startInset] is 56dp for a 24dp icon at 16dp padding; pass what the rows use.
  */
 @Composable
 fun LayerDivider(
@@ -129,50 +109,3 @@ fun LayerDivider(
         color = LocalPlazaLayers.current.divider,
     )
 }
-
-/**
- * Draws this node as one slice of a card that is spread over the items of a `LazyColumn` — the
- * outer corners from [groupShape], the card colour, 墨水屏's outline, and the card's shadow.
- *
- * A card is one item, and a long list of rows cannot be one item without giving up laziness, so
- * each row draws its own slice. What makes that work is the shadow: a shadow per slice would lay a
- * band across the rows above and below, so each slice's shadow is clipped to its own height and
- * only the first and last may cast past their outer edge. What is left is the two sides, which line
- * up from slice to slice into the shadow of one card.
- *
- * The same drawing `notifications`' `CardSliceRow` does by hand; this is that recipe as a modifier,
- * for lists whose rows carry their own gestures (a swipe, a long-press) and so cannot be handed a
- * ready-made clickable row.
- *
- * Takes [layers] rather than reading [LocalPlazaLayers] itself for the reason [cardShadow] does: a
- * modifier factory stays a plain function, and the caller reads the local once per row.
- */
-fun Modifier.layerCardSlice(
-    layers: PlazaLayers,
-    first: Boolean,
-    last: Boolean,
-): Modifier {
-    val shape = groupShape(first, last)
-    val shadowed =
-        if (!layers.shadows) {
-            this
-        } else {
-            this
-                .drawWithContent {
-                    val bleed = SLICE_SHADOW_BLEED.toPx()
-                    clipRect(
-                        left = -bleed,
-                        top = if (first) -bleed else 0f,
-                        right = size.width + bleed,
-                        bottom = if (last) size.height + bleed else size.height,
-                    ) { this@drawWithContent.drawContent() }
-                }.cardShadow(shape, enabled = true)
-        }
-    return shadowed
-        .clip(shape)
-        .background(layers.card)
-        .then(layers.cardBorder?.let { Modifier.border(1.dp, it, shape) } ?: Modifier)
-}
-
-/** Comfortably past the widest layer of `cardShadow` — 18dp of blur pushed 6dp down. */
-private val SLICE_SHADOW_BLEED = 32.dp

@@ -64,6 +64,8 @@ import io.github.nodyssey.ui.resources.messages_snippet_mine_prefix
 import io.github.nodyssey.ui.resources.unread_count_capped
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.GroupDividerInset
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
@@ -205,78 +207,16 @@ private fun ConversationRow(
     modifier: Modifier = Modifier,
 ) {
     val isUnread = conversation.unreadCount > 0
-    CardSliceRow(
+    GroupedListItem(
         first = first,
         last = last,
-        dividerInset = ROW_PADDING_H + CONVERSATION_AVATAR + ROW_GAP,
         onClick = onClick,
         modifier = modifier,
-    ) {
-        Row(
-            modifier =
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = CONVERSATION_ROW_HEIGHT)
-                .padding(horizontal = ROW_PADDING_H, vertical = Spacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(ROW_GAP),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ConversationRowContent(conversation, isUnread, nowMillis)
-        }
-    }
-}
-
-@Composable
-private fun RowScope.ConversationRowContent(
-    conversation: MessageConversation,
-    isUnread: Boolean,
-    nowMillis: Long,
-) {
-    if (conversation.isSystem) {
-        // 5b's megaphone rather than the bell this used to be: the bell is the tab's own icon,
-        // and a conversation wearing it read as a shortcut back to the tab it was already on.
-        Box(
-            Modifier
-                .size(CONVERSATION_AVATAR)
-                .clip(AvatarShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                PlazaIcons.Campaign,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        }
-    } else {
-        UserAvatar(
-            url = conversation.avatarUrl,
-            name = conversation.userName,
-            size = CONVERSATION_AVATAR,
-        )
-    }
-
-    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-                /*
-                 * The name and its pin travel together inside one weighted row, and the stamp is the
-                 * only unweighted child, so it sits against the right edge of every row alike.
-                 *
-                 * Weighting the name *and* a spacer instead made the two split the slack evenly,
-                 * which parked each row's stamp a different distance in from the edge — a column of
-                 * times that visibly failed to line up.
-                 */
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        leadingContent = { ConversationAvatar(conversation) },
+        headlineContent = {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = conversation.userName,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp, lineHeight = 21.sp),
                     fontWeight = if (isUnread) FontWeight.SemiBold else FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -291,45 +231,49 @@ private fun RowScope.ConversationRowContent(
                     )
                 }
             }
-            conversationStamp(conversation, nowMillis)?.let { stamp ->
-                Text(
-                    text = stamp,
-                    style =
-                    MaterialTheme.typography.bodySmall.copy(
-                        fontFeatureSettings = TABULAR_FIGURES,
-                    ),
-                    // The time is where 5b puts the first sign of news, ahead of the badge.
-                    color =
-                    if (isUnread) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    maxLines = 1,
-                )
-            }
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = conversationSnippet(conversation),
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 19.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            if (isUnread) {
-                // Badge's own error red, the same mark the group tabs and the tab bar carry: 5b
-                // reads a count as a count wherever it is, and a primary pill here was the one
-                // unread number on the screen that looked different from the others.
-                Badge {
-                    Text(unreadLabel(conversation.unreadCount, MAX_UNREAD))
+        },
+        supportingContent = {
+            Text(text = conversationSnippet(conversation), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        },
+        // The stamp over the count, as one column at the row's end, so every row's time lines up
+        // against the same edge whatever the name beside it.
+        trailingContent = {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                conversationStamp(conversation, nowMillis)?.let { stamp ->
+                    Text(
+                        text = stamp,
+                        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+                        // The time is where 5b puts the first sign of news, ahead of the badge.
+                        color = if (isUnread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+                if (isUnread) {
+                    // Badge's own error red, the same mark the group tabs and the tab bar carry.
+                    Badge { Text(unreadLabel(conversation.unreadCount, MAX_UNREAD)) }
                 }
             }
+        },
+        dividerInset = GroupDividerInset + CONVERSATION_AVATAR + GroupDividerInset,
+    )
+}
+
+@Composable
+private fun ConversationAvatar(conversation: MessageConversation) {
+    if (conversation.isSystem) {
+        // 5b's megaphone rather than the bell this used to be: the bell is the tab's own icon,
+        // and a conversation wearing it read as a shortcut back to the tab it was already on.
+        Box(
+            Modifier
+                .size(CONVERSATION_AVATAR)
+                .clip(AvatarShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(PlazaIcons.Campaign, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
+    } else {
+        UserAvatar(url = conversation.avatarUrl, name = conversation.userName, size = CONVERSATION_AVATAR)
     }
 }
 
@@ -458,7 +402,6 @@ private fun NewConversationSheet(
 private val FAB_CLEARANCE = 96.dp
 
 /** 5b's measurements: 72dp rows, a 44dp avatar. */
-private val CONVERSATION_ROW_HEIGHT = 72.dp
 private val CONVERSATION_AVATAR = 44.dp
 private const val MAX_UNREAD = 99
 

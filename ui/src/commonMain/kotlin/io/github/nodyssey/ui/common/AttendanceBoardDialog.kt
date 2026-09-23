@@ -35,11 +35,13 @@ import io.github.nodyssey.ui.resources.assets_board_failed
 import io.github.nodyssey.ui.resources.assets_board_gain
 import io.github.nodyssey.ui.resources.assets_board_self
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.groupShape
+import io.github.plaza.designsys.component.groupedListItemColors
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -123,20 +125,20 @@ private fun BoardRow(
     first: Boolean,
     last: Boolean,
 ) {
-    val layers = LocalPlazaLayers.current
-    Surface(
-        color = if (isSelf) MaterialTheme.colorScheme.primaryContainer else layers.card,
-        contentColor = if (isSelf) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-        shape = groupShape(first, last),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column {
-            if (!first && !isSelf) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
-            Row(
-                modifier = Modifier.heightIn(min = 56.dp).padding(horizontal = Spacing.lg, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
+    GroupedListItem(
+        first = first,
+        last = last,
+        colors =
+        if (isSelf) {
+            groupedListItemColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        } else {
+            groupedListItemColors()
+        },
+        leadingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 Text(
                     text = rank.toString(),
                     style =
@@ -148,31 +150,31 @@ private fun BoardRow(
                     color = if (rank <= PODIUM && !isSelf) MaterialTheme.colorScheme.tertiary else Color.Unspecified,
                     modifier = Modifier.width(28.dp),
                 )
-                UserAvatar(
-                    url = entry.uid?.let(NodeSeekSite::avatarUrl),
-                    name = entry.name,
-                    size = 32.dp,
-                )
-                Text(
-                    text = if (isSelf) stringResource(Res.string.assets_board_self, entry.name) else entry.name,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                entry.gain?.let {
-                    Text(
-                        text = stringResource(Res.string.assets_board_gain, it),
-                        style =
-                        MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontFeatureSettings = TABULAR_FIGURES,
-                        ),
-                    )
-                }
+                UserAvatar(url = entry.uid?.let(NodeSeekSite::avatarUrl), name = entry.name, size = 32.dp)
             }
-        }
-    }
+        },
+        headlineContent = {
+            Text(
+                text = if (isSelf) stringResource(Res.string.assets_board_self, entry.name) else entry.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        trailingContent =
+        entry.gain?.let {
+            {
+                Text(
+                    text = stringResource(Res.string.assets_board_gain, it),
+                    style =
+                    MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontFeatureSettings = TABULAR_FIGURES,
+                    ),
+                )
+            }
+        },
+        dividerInset = if (isSelf) 0.dp else Spacing.lg,
+    )
 }
 
 private const val PODIUM = 3

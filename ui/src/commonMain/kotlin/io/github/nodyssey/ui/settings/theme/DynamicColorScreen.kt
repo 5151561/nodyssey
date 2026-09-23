@@ -61,8 +61,8 @@ import io.github.nodyssey.ui.settings.SettingsGroup
 import io.github.nodyssey.ui.settings.SettingsItemGap
 import io.github.nodyssey.ui.settings.SettingsPagePadding
 import io.github.nodyssey.ui.settings.SettingsRow
-import io.github.nodyssey.ui.settings.SettingsSwitch
 import io.github.nodyssey.ui.settings.settingsRowTitleStyle
+import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -233,7 +233,7 @@ internal fun DynamicColorContent(
                 enabled = palette.systemPaletteAvailable,
                 top = true,
                 trailing = {
-                    SettingsSwitch(
+                    GroupedListItemSwitch(
                         checked = settings.wallpaperSystemPalette && palette.systemPaletteAvailable,
                         enabled = palette.systemPaletteAvailable,
                     )
@@ -246,7 +246,7 @@ internal fun DynamicColorContent(
                 onCheckedChange = onAutoUpdateChange,
                 top = true,
                 bottom = true,
-                trailing = { SettingsSwitch(checked = settings.wallpaperAutoUpdate) },
+                trailing = { GroupedListItemSwitch(checked = settings.wallpaperAutoUpdate) },
             )
         }
     }

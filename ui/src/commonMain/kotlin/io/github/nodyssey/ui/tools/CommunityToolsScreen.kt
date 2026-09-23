@@ -40,7 +40,6 @@ import io.github.nodyssey.ui.resources.tools_providers_subtitle
 import io.github.nodyssey.ui.resources.tools_ruling
 import io.github.nodyssey.ui.resources.tools_ruling_subtitle
 import io.github.nodyssey.ui.resources.tools_title
-import io.github.plaza.designsys.component.GroupedColumn
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
@@ -102,7 +101,7 @@ fun CommunityToolsScreen(
         ) {
             Column {
                 SectionLabel(stringResource(Res.string.tools_group_browse))
-                GroupedColumn {
+                Column {
                     GroupedRow(
                         title = stringResource(Res.string.tools_award),
                         subtitle = stringResource(Res.string.tools_award_subtitle),
@@ -128,7 +127,7 @@ fun CommunityToolsScreen(
 
             Column {
                 SectionLabel(stringResource(Res.string.tools_group_play))
-                GroupedColumn {
+                Column {
                     GroupedRow(
                         title = stringResource(Res.string.tools_lucky),
                         subtitle = stringResource(Res.string.tools_lucky_subtitle),

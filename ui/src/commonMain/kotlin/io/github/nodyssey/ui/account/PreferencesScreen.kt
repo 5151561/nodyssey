@@ -49,8 +49,10 @@ import io.github.nodyssey.ui.resources.account_preferences_omitted_note
 import io.github.nodyssey.ui.resources.account_preferences_title
 import io.github.nodyssey.ui.resources.account_storage_legend
 import io.github.nodyssey.ui.resources.action_back
+import io.github.plaza.designsys.component.GroupDividerInset
+import io.github.plaza.designsys.component.GroupedListItem
+import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerDivider
-import io.github.plaza.designsys.component.LayerGroup
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -138,7 +140,7 @@ fun PreferencesScreen(
         ) {
             AccountSectionLabel(stringResource(Res.string.account_group_preference))
 
-            LayerGroup {
+            Column {
                 PreferenceSwitchRow(
                     title = stringResource(Res.string.account_holiday_theme),
                     subtitle = stringResource(Res.string.account_holiday_theme_hint),
@@ -172,10 +174,11 @@ fun PreferencesScreen(
                 modifier = Modifier.padding(horizontal = Spacing.xs),
             )
 
-            LayerGroup {
+            Column {
                 OPTIONAL_HOME_BOARD_SLUGS.forEachIndexed { index, slug ->
-                    if (index != 0) LayerDivider(startInset = Spacing.lg)
                     HomeBoardSwitchRow(
+                        first = index == 0,
+                        last = index == OPTIONAL_HOME_BOARD_SLUGS.lastIndex,
                         slug = slug,
                         hidden = slug in state.hiddenBoards,
                         onHiddenChange = { hidden -> onBoardHiddenChange(slug, hidden) },
@@ -201,63 +204,41 @@ private fun PreferenceSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    Row(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = checked,
-                role = Role.Switch,
-                onValueChange = onCheckedChange,
-            ).padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
+    GroupedListItem(
+        first = true,
+        last = true,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        headlineContent = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Text(title)
                 StorageBadge(local = local)
             }
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(checked = checked, onCheckedChange = null)
-    }
+        },
+        supportingContent = { Text(subtitle) },
+        trailingContent = { GroupedListItemSwitch(checked = checked) },
+    )
 }
 
 @Composable
 private fun HomeBoardSwitchRow(
+    first: Boolean,
+    last: Boolean,
     slug: String,
     hidden: Boolean,
     onHiddenChange: (Boolean) -> Unit,
 ) {
-    Row(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = !hidden,
-                role = Role.Switch,
-                onValueChange = { shown -> onHiddenChange(!shown) },
-            ).padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        BoardTag(title = optionalBoardTitle(slug), slug = slug)
-        Text(
-            optionalBoardTitle(slug),
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-            modifier = Modifier.weight(1f),
-        )
-        // The switch reads as "shown on the home feed", so it is the inverse of the stored flag.
-        Switch(checked = !hidden, onCheckedChange = null)
-    }
+    // The switch reads as "shown on the home feed", so it is the inverse of the stored flag.
+    GroupedListItem(
+        first = first,
+        last = last,
+        checked = !hidden,
+        onCheckedChange = { shown -> onHiddenChange(!shown) },
+        leadingContent = { BoardTag(title = optionalBoardTitle(slug), slug = slug) },
+        headlineContent = { Text(optionalBoardTitle(slug)) },
+        trailingContent = { GroupedListItemSwitch(checked = !hidden) },
+        dividerInset = GroupDividerInset,
+    )
 }
 
 /**
