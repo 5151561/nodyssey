@@ -450,6 +450,9 @@
     <string name="network_check_running">檢測中…</string>
     <string name="network_check_copy">複製結果</string>
     <string name="network_check_copied">已複製</string>
+    <string name="network_check_summary_ok">論壇可以正常存取</string>
+    <string name="network_check_summary_failed">論壇無法存取</string>
+    <string name="network_check_summary_updates">更新來源：%1$s</string>
     <string name="network_check_section_environment">環境</string>
     <string name="network_check_device">機型</string>
     <string name="network_check_os">系統版本</string>

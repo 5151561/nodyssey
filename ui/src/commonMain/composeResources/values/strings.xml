@@ -556,6 +556,10 @@
     <string name="network_check_running">检测中…</string>
     <string name="network_check_copy">复制结果</string>
     <string name="network_check_copied">已复制</string>
+    <!-- 网络自检报告顶部的结论卡：只看论坛那一项，更新源失败时补一行 -->
+    <string name="network_check_summary_ok">论坛可以正常访问</string>
+    <string name="network_check_summary_failed">论坛无法访问</string>
+    <string name="network_check_summary_updates">更新源：%1$s</string>
 
     <string name="network_check_section_environment">环境</string>
     <string name="network_check_device">机型</string>

@@ -456,6 +456,9 @@
     <string name="network_check_running">Checking…</string>
     <string name="network_check_copy">Copy the report</string>
     <string name="network_check_copied">Copied</string>
+    <string name="network_check_summary_ok">The forum is reachable</string>
+    <string name="network_check_summary_failed">The forum can't be reached</string>
+    <string name="network_check_summary_updates">Update source: %1$s</string>
     <string name="network_check_section_environment">Environment</string>
     <string name="network_check_device">Device</string>
     <string name="network_check_os">OS version</string>
