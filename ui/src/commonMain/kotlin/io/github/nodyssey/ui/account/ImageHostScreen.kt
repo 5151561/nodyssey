@@ -159,6 +159,7 @@ import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -665,15 +666,8 @@ private fun HostField(
         label = { Text(stringResource(labelRes)) },
         placeholder = { Text(stringResource(placeholderRes)) },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        shape = AccountFieldShape,
-        // Filled with the inset tone, a well in the white card, the way every settings field is.
-        colors =
-        OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = LocalPlazaLayers.current.inset,
-            unfocusedContainerColor = LocalPlazaLayers.current.inset,
-            errorContainerColor = LocalPlazaLayers.current.inset,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-        ),
+        shape = PlazaFieldDefaults.shape,
+        colors = PlazaFieldDefaults.colors(inCard = true),
         supportingText = {
             Text(stringResource(if (isError && errorRes != null) errorRes else helperRes))
         },

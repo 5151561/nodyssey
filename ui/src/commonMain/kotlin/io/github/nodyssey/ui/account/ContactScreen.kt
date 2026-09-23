@@ -82,6 +82,7 @@ import io.github.nodyssey.ui.resources.action_cancel
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -272,13 +273,8 @@ private fun CurrentEmailRow(
         readOnly = true,
         singleLine = true,
         label = { Text(stringResource(Res.string.account_email_current)) },
-        shape = AccountFieldShape,
-        // The card colour inside the outline, like every field on the grey page.
-        colors =
-        OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = LocalPlazaLayers.current.card,
-            unfocusedContainerColor = LocalPlazaLayers.current.card,
-        ),
+        shape = PlazaFieldDefaults.shape,
+        colors = PlazaFieldDefaults.colors(),
         trailingIcon = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (email.isNotEmpty() && verified) {

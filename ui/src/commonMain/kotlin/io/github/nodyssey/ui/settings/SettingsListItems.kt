@@ -53,6 +53,7 @@ import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedRowTrailing
 import io.github.plaza.designsys.component.LayerPageGutter
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.groupShape
@@ -230,10 +231,7 @@ internal fun SettingsRow(
  */
 internal const val DISABLED_ALPHA = 0.5f
 
-/**
- * A text field on a settings card: Material's outlined field, filled with the inset tone so it reads
- * as a well in the white card, with 6e's 14dp corners.
- */
+/** A text field on a settings card: one line, its label inside, in the kit's in-card field style. */
 @Composable
 internal fun SettingsTextField(
     value: String,
@@ -248,7 +246,6 @@ internal fun SettingsTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     textStyle: TextStyle = LocalTextStyle.current,
 ) {
-    val inset = LocalPlazaLayers.current.inset
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -262,15 +259,8 @@ internal fun SettingsTextField(
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation = visualTransformation,
         supportingText = supportingText?.let { { Text(it) } },
-        shape = RoundedCornerShape(14.dp),
-        colors =
-        OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = inset,
-            unfocusedContainerColor = inset,
-            disabledContainerColor = inset,
-            errorContainerColor = inset,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-        ),
+        shape = PlazaFieldDefaults.shape,
+        colors = PlazaFieldDefaults.colors(inCard = true),
     )
 }
 

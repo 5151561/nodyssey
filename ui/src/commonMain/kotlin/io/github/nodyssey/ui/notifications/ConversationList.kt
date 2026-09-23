@@ -67,6 +67,7 @@ import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.GroupDividerInset
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerPageGutter
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.UserAvatar
@@ -336,6 +337,8 @@ private fun NewConversationSheet(
                 label = { Text(stringResource(Res.string.messages_new_conversation_hint)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+                shape = PlazaFieldDefaults.shape,
+                colors = PlazaFieldDefaults.colors(),
                 modifier = Modifier.fillMaxWidth(),
             )
             when {

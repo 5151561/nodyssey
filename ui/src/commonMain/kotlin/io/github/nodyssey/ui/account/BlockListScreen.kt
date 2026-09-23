@@ -70,6 +70,7 @@ import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
@@ -284,13 +285,8 @@ private fun AddBlockField(
         enabled = !isBlocking,
         label = { Text(stringResource(Res.string.account_block_add_label)) },
         placeholder = { Text(stringResource(Res.string.account_block_add_placeholder)) },
-        shape = AccountFieldShape,
-        colors =
-        OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = LocalPlazaLayers.current.card,
-            unfocusedContainerColor = LocalPlazaLayers.current.card,
-            disabledContainerColor = LocalPlazaLayers.current.card,
-        ),
+        shape = PlazaFieldDefaults.shape,
+        colors = PlazaFieldDefaults.colors(),
         keyboardOptions =
         KeyboardOptions(
             autoCorrectEnabled = false,

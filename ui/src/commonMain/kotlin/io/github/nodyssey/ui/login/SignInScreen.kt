@@ -105,6 +105,7 @@ import io.github.nodyssey.ui.resources.sign_in_verify_not_wired
 import io.github.plaza.core.net.UserAgent
 import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.materialIcon
@@ -382,8 +383,8 @@ fun SignInScreen(
                 enabled = state.isFormEnabled,
                 label = { Text(stringResource(Res.string.sign_in_account)) },
                 lineLimits = TextFieldLineLimits.SingleLine,
-                shape = FIELD_SHAPE,
-                colors = fieldColors(),
+                shape = PlazaFieldDefaults.shape,
+                colors = PlazaFieldDefaults.colors(),
                 // Both, because the label offers both and the endpoint takes either in `username`.
                 // A manager holding only an email would not recognise a username-only field.
                 modifier =
@@ -401,8 +402,8 @@ fun SignInScreen(
                 // 安全 (d6 2/4) made and for the same reason: it shows the character just typed and
                 // hides it again, with no switch left on and nothing in the state to remember.
                 textObfuscationMode = TextObfuscationMode.RevealLastTyped,
-                shape = FIELD_SHAPE,
-                colors = fieldColors(),
+                shape = PlazaFieldDefaults.shape,
+                colors = PlazaFieldDefaults.colors(),
                 supportingText = { PasswordSupport(state, onOpenSiteSignInPage) },
                 modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Password },
             )
@@ -493,20 +494,6 @@ fun SignInScreen(
 /** 48dp, board 8h's pill height for every full-width action on the sign-in screens. */
 internal val SIGN_IN_BUTTON_HEIGHT = 48.dp
 
-private val FIELD_SHAPE = RoundedCornerShape(12.dp)
-
-/**
- * The fields sit on the card colour inside their outline, as 8h draws them: on the grey page an
- * unfilled outlined field reads as a hole in it rather than as a place to type.
- */
-@Composable
-private fun fieldColors() =
-    OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = LocalPlazaLayers.current.card,
-        unfocusedContainerColor = LocalPlazaLayers.current.card,
-        disabledContainerColor = LocalPlazaLayers.current.card,
-        errorContainerColor = LocalPlazaLayers.current.card,
-    )
 
 /** 10c's 「或用 DeepFlood 账号」 — a hairline either side of the words. */
 @Composable
