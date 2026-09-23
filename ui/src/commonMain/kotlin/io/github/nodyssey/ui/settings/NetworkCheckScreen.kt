@@ -1,29 +1,41 @@
 package io.github.nodyssey.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.diagnostics.AppIdentity
 import io.github.nodyssey.data.diagnostics.DeviceIdentity
@@ -83,6 +95,9 @@ import io.github.nodyssey.ui.resources.network_check_section_updates
 import io.github.nodyssey.ui.resources.network_check_session
 import io.github.nodyssey.ui.resources.network_check_status
 import io.github.nodyssey.ui.resources.network_check_status_code
+import io.github.nodyssey.ui.resources.network_check_summary_failed
+import io.github.nodyssey.ui.resources.network_check_summary_ok
+import io.github.nodyssey.ui.resources.network_check_summary_updates
 import io.github.nodyssey.ui.resources.network_check_title
 import io.github.nodyssey.ui.resources.network_check_tls
 import io.github.nodyssey.ui.resources.network_check_transport
@@ -104,7 +119,10 @@ import io.github.nodyssey.ui.resources.proxy_test_failure_timeout
 import io.github.nodyssey.ui.resources.proxy_test_failure_tls
 import io.github.nodyssey.ui.resources.proxy_type_http
 import io.github.nodyssey.ui.resources.proxy_type_socks
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -137,8 +155,8 @@ fun NetworkCheckRoute(
  * makes legibility at screenshot size the requirement, and it is why the 复制结果 button exists
  * beside it — the same content as text, for the reader who can paste instead.
  *
- * The rows are built once, as data, by [checkSections]. Rendering and copying then read the same
- * list, so what is pasted is what was on screen and no second copy of the wording can drift from it.
+ * The rows are built once, as data, by [checkSections]. Rendering and the copy action in the top
+ * bar then read the same list, so what is pasted is what was on screen and no second copy of the wording can drift from it.
  */
 @Composable
 fun NetworkCheckScreen(
@@ -167,6 +185,16 @@ fun NetworkCheckScreen(
                         )
                     }
                 },
+                actions = {
+                    IconButton(
+                        onClick = { copy(copyLabel, sections.asShareText(), copied) },
+                        // Copying a half-finished report would put numbers next to 「…」 in a
+                        // thread and read as measurements that came back empty.
+                        enabled = !state.running,
+                    ) {
+                        Icon(PlazaIcons.ContentCopy, contentDescription = copyLabel)
+                    }
+                },
             )
         },
     ) { padding ->
@@ -176,88 +204,144 @@ fun NetworkCheckScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(SettingsPagePadding),
+            verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
+            CheckSummaryCard(state)
+
             sections.forEach { section ->
                 SettingsSectionTitle(section.title)
                 SettingsGroup {
                     section.lines.forEachIndexed { index, line ->
-                        SettingsRow(
-                            title = line.label,
-                            top = index == 0,
-                            bottom = index == section.lines.lastIndex,
-                            trailing = {
-                                Text(
-                                    text = line.value,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = if (line.alert) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    textAlign = TextAlign.End,
-                                )
-                            },
-                        )
+                        CheckLineRow(line = line, first = index == 0)
                     }
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Button(
-                    onClick = onRerun,
-                    enabled = !state.running,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    if (state.running) {
-                        PlazaSpinner(
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            size = 18.dp,
-                        )
-                        Text(
-                            text = stringResource(Res.string.network_check_running),
-                            modifier = Modifier.padding(start = Spacing.sm),
-                        )
-                    } else {
-                        Text(stringResource(Res.string.network_check_rerun))
-                    }
-                }
-                OutlinedButton(
-                    onClick = { copy(copyLabel, sections.asShareText(), copied) },
-                    // Copying a half-finished report would put numbers next to 「…」 in a thread and
-                    // read as measurements that came back empty.
-                    enabled = !state.running,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(copyLabel)
+            Button(
+                onClick = onRerun,
+                enabled = !state.running,
+                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs).heightIn(min = 52.dp),
+            ) {
+                if (state.running) {
+                    PlazaSpinner(
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        size = 18.dp,
+                    )
+                    Text(
+                        text = stringResource(Res.string.network_check_running),
+                        modifier = Modifier.padding(start = Spacing.sm),
+                    )
+                } else {
+                    Text(stringResource(Res.string.network_check_rerun), style = MaterialTheme.typography.titleMedium)
                 }
             }
 
-            SettingsGroup {
-                SettingsBlock(
-                    title = stringResource(Res.string.network_check_hint_title),
-                    top = true,
-                    bottom = true,
-                ) {
-                    CheckNote(stringResource(Res.string.network_check_hint_layers))
-                    CheckNote(stringResource(Res.string.network_check_hint_custom_tab))
-                    CheckNote(stringResource(Res.string.network_check_hint_scope))
+            Column(
+                modifier = Modifier.padding(top = Spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                SettingsNote(
+                    stringResource(Res.string.network_check_hint_title),
+                    modifier = Modifier.semantics { heading() },
+                )
+                SettingsNote(stringResource(Res.string.network_check_hint_layers))
+                SettingsNote(stringResource(Res.string.network_check_hint_custom_tab))
+                SettingsNote(stringResource(Res.string.network_check_hint_scope))
+            }
+        }
+    }
+}
+
+/**
+ * The verdict a reader looks for first — can the forum be reached — on a card of its own above the
+ * numbers. Read off the forum probe alone; the update source rides along on the second line only
+ * when it failed, because a forum that loads is the answer to the question this screen is opened
+ * with, and a slow GitHub is a footnote to it.
+ */
+@Composable
+private fun CheckSummaryCard(state: NetworkCheckUiState) {
+    val scheme = MaterialTheme.colorScheme
+    val forum = state.forum
+    val failed = forum is ProbeResult.Failed || (forum is ProbeResult.Answered && forum.statusCode !in 200..299)
+    val title =
+        when {
+            state.running || forum == null -> stringResource(Res.string.network_check_running)
+            failed -> stringResource(Res.string.network_check_summary_failed)
+            else -> stringResource(Res.string.network_check_summary_ok)
+        }
+    val updates = state.updates
+    val subtitle =
+        (updates as? ProbeResult.Failed)?.let {
+            stringResource(Res.string.network_check_summary_updates, failureText(it.failure))
+        }
+    LayerCard(modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+        ) {
+            Surface(
+                color = if (failed) scheme.errorContainer else scheme.tertiaryContainer,
+                contentColor = if (failed) scheme.onErrorContainer else scheme.onTertiaryContainer,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    when {
+                        state.running || forum == null -> PlazaSpinner(strokeWidth = 2.dp, size = 20.dp)
+                        failed -> Icon(PlazaIcons.ErrorCircle, contentDescription = null)
+                        else -> Icon(Icons.Default.CheckCircle, contentDescription = null)
+                    }
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, lineHeight = 24.sp),
+                )
+                subtitle?.let {
+                    Text(it, style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant)
                 }
             }
         }
     }
 }
 
-/** The same shape 代理设置's `ProxyNote` uses, so a note reads the same on both screens. */
+/**
+ * One label-and-value line of the report: label on the left in the muted tone, value on the right
+ * in full ink so the column of numbers is what the eye runs down. Shorter than a settings row —
+ * there is nothing to tap — so a whole section fits a screenshot.
+ */
 @Composable
-private fun CheckNote(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+private fun CheckLineRow(
+    line: CheckLine,
+    first: Boolean,
+) {
+    Column {
+        if (!first) LayerDivider(startInset = Spacing.lg)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 44.dp)
+                .padding(horizontal = Spacing.lg, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+        ) {
+            Text(
+                text = line.label,
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = line.value,
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp, fontWeight = FontWeight.Medium),
+                color = if (line.alert) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
 }
 
 /** One label-and-value line. [alert] is "look at this one", not "this is broken". */

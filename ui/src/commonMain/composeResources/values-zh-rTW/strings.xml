@@ -336,6 +336,7 @@
     <string name="settings_theme_preview_accent">強調</string>
 
     <string name="settings_seed_sheet_title">自訂種子色</string>
+    <string name="settings_seed_edit">編輯</string>
     <string name="settings_seed_hex">十六進位</string>
     <string name="settings_seed_name">名稱（選填）</string>
     <string name="settings_seed_apply_once">僅本次套用</string>
@@ -349,6 +350,10 @@
     <string name="settings_wallpaper_candidate_label">候選色 %1$d</string>
     <string name="settings_wallpaper_candidates_hint">依占比排序，預設取第一個。點任意色即時預覽，不用離開頁面。</string>
     <string name="settings_wallpaper_palette">產生的調色盤</string>
+    <string name="settings_wallpaper_ramp_primary">主色</string>
+    <string name="settings_wallpaper_ramp_secondary">次色</string>
+    <string name="settings_wallpaper_ramp_tertiary">第三色</string>
+    <string name="settings_wallpaper_ramp_neutral">中性</string>
     <string name="settings_wallpaper_system_palette">使用系統調色盤</string>
     <string name="settings_wallpaper_system_palette_hint">本機 Android %1$s · 直接用系統 Monet 色盤；關掉則由 App 從上面的候選色產生</string>
     <string name="settings_wallpaper_system_palette_unavailable">本機 Android %1$s 沒有系統調色盤，配色由 App 從候選色產生</string>
@@ -449,6 +454,9 @@
     <string name="network_check_running">檢測中…</string>
     <string name="network_check_copy">複製結果</string>
     <string name="network_check_copied">已複製</string>
+    <string name="network_check_summary_ok">論壇可以正常存取</string>
+    <string name="network_check_summary_failed">論壇無法存取</string>
+    <string name="network_check_summary_updates">更新來源：%1$s</string>
     <string name="network_check_section_environment">環境</string>
     <string name="network_check_device">機型</string>
     <string name="network_check_os">系統版本</string>
@@ -593,9 +601,11 @@
     <string name="notify_settings_entry_hint">背景定期檢查未讀並發系統通知</string>
     <string name="notify_master_hint">背景定期檢查未讀並發系統通知；站台無推播服務，無法做到即時</string>
     <string name="notify_frequency">檢查頻率</string>
+    <string name="notify_check_section">檢查</string>
     <string name="notify_frequency_15">15 分鐘</string>
     <string name="notify_frequency_30">30 分鐘</string>
     <string name="notify_frequency_60">1 小時</string>
+    <string name="notify_frequency_every">每 %1$s</string>
     <string name="notify_frequency_hint">受系統省電政策影響，實際間隔可能更長（WorkManager 下限 15 分鐘）</string>
     <string name="notify_wifi_only">僅 Wi-Fi 下檢查</string>
     <string name="notify_wifi_only_hint">行動網路時暫停輪詢，省電省流量</string>

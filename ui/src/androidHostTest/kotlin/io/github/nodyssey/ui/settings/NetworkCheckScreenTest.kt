@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import io.github.nodyssey.data.diagnostics.AppIdentity
@@ -80,7 +81,8 @@ class NetworkCheckScreenTest {
             Screen(NetworkCheckUiState(running = true, environment = ENVIRONMENT))
         }
 
-        composeRule.onNodeWithText("复制结果").performScrollTo().assertIsNotEnabled()
+        // The copy action lives in the top bar, so it is found by what it says to a screen reader.
+        composeRule.onNodeWithContentDescription("复制结果").assertIsNotEnabled()
     }
 
     private companion object {

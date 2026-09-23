@@ -342,6 +342,7 @@
     <string name="settings_theme_preview_accent">Accent</string>
 
     <string name="settings_seed_sheet_title">Custom seed colour</string>
+    <string name="settings_seed_edit">Edit</string>
     <string name="settings_seed_hex">Hex</string>
     <string name="settings_seed_name">Name (optional)</string>
     <string name="settings_seed_apply_once">Just for now</string>
@@ -355,6 +356,10 @@
     <string name="settings_wallpaper_candidate_label">Candidate %1$d</string>
     <string name="settings_wallpaper_candidates_hint">Ordered by how much of the wallpaper they cover; the first one is used by default. Tap any of them to preview it without leaving this screen.</string>
     <string name="settings_wallpaper_palette">The generated palette</string>
+    <string name="settings_wallpaper_ramp_primary">Primary</string>
+    <string name="settings_wallpaper_ramp_secondary">Secondary</string>
+    <string name="settings_wallpaper_ramp_tertiary">Tertiary</string>
+    <string name="settings_wallpaper_ramp_neutral">Neutral</string>
     <string name="settings_wallpaper_system_palette">Use the system palette</string>
     <string name="settings_wallpaper_system_palette_hint">This device runs Android %1$s · take the system Monet palette whole; off means the app builds one from the candidates above</string>
     <string name="settings_wallpaper_system_palette_unavailable">This device runs Android %1$s, which has no system palette, so the app builds one from the candidates</string>
@@ -455,6 +460,9 @@
     <string name="network_check_running">Checking…</string>
     <string name="network_check_copy">Copy the report</string>
     <string name="network_check_copied">Copied</string>
+    <string name="network_check_summary_ok">The forum is reachable</string>
+    <string name="network_check_summary_failed">The forum can't be reached</string>
+    <string name="network_check_summary_updates">Update source: %1$s</string>
     <string name="network_check_section_environment">Environment</string>
     <string name="network_check_device">Device</string>
     <string name="network_check_os">OS version</string>
@@ -599,9 +607,11 @@
     <string name="notify_settings_entry_hint">Checks for unread in the background and posts a system notification</string>
     <string name="notify_master_hint">Checks for unread in the background and posts a system notification; the site has no push service, so it cannot be instant</string>
     <string name="notify_frequency">How often to check</string>
+    <string name="notify_check_section">Checking</string>
     <string name="notify_frequency_15">15 minutes</string>
     <string name="notify_frequency_30">30 minutes</string>
     <string name="notify_frequency_60">1 hour</string>
+    <string name="notify_frequency_every">Every %1$s</string>
     <string name="notify_frequency_hint">Battery policy can stretch the real interval (WorkManager will not go below 15 minutes)</string>
     <string name="notify_wifi_only">Check on Wi-Fi only</string>
     <string name="notify_wifi_only_hint">Polling pauses on mobile data, saving battery and data</string>

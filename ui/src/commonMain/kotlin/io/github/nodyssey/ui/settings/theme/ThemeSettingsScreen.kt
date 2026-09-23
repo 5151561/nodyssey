@@ -1,6 +1,6 @@
 package io.github.nodyssey.ui.settings.theme
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -20,18 +20,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -42,10 +42,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -70,23 +70,25 @@ import io.github.nodyssey.ui.resources.settings_color_source
 import io.github.nodyssey.ui.resources.settings_color_source_custom
 import io.github.nodyssey.ui.resources.settings_color_source_preset
 import io.github.nodyssey.ui.resources.settings_color_source_wallpaper
-import io.github.nodyssey.ui.resources.settings_color_source_wallpaper_value
 import io.github.nodyssey.ui.resources.settings_my_themes
 import io.github.nodyssey.ui.resources.settings_my_themes_hint
 import io.github.nodyssey.ui.resources.settings_palette_style
-import io.github.nodyssey.ui.resources.settings_palette_style_expressive
-import io.github.nodyssey.ui.resources.settings_palette_style_monochrome
-import io.github.nodyssey.ui.resources.settings_palette_style_neutral
-import io.github.nodyssey.ui.resources.settings_palette_style_soft
-import io.github.nodyssey.ui.resources.settings_palette_style_vibrant
-import io.github.nodyssey.ui.resources.settings_presets
+import io.github.nodyssey.ui.resources.settings_seed_edit
 import io.github.nodyssey.ui.resources.settings_seed_name
 import io.github.nodyssey.ui.resources.settings_theme
 import io.github.nodyssey.ui.resources.settings_theme_preview
+import io.github.nodyssey.ui.settings.ConnectedChoiceButtons
+import io.github.nodyssey.ui.settings.DISABLED_ALPHA
+import io.github.nodyssey.ui.settings.SettingsGroup
+import io.github.nodyssey.ui.settings.SettingsIcons
+import io.github.nodyssey.ui.settings.SettingsItemGap
+import io.github.nodyssey.ui.settings.SettingsPagePadding
+import io.github.nodyssey.ui.settings.SettingsRow
 import io.github.nodyssey.ui.settings.SettingsSectionTitle
+import io.github.nodyssey.ui.settings.settingsRowTitleStyle
 import io.github.plaza.designsys.component.OneHandTopAppBar
-import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -96,43 +98,43 @@ import org.jetbrains.compose.resources.stringResource
 fun ThemeSettingsRoute(
     viewModel: ThemeSettingsViewModel,
     onBack: () -> Unit,
-    onOpenDynamicColor: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     ThemeSettingsScreen(
         settings = state.settings,
         onBack = onBack,
-        onOpenDynamicColor = onOpenDynamicColor,
         onColorSourceChange = viewModel::setColorSource,
         onPresetSelected = viewModel::selectPreset,
         onCustomSeedSelected = viewModel::selectCustomSeed,
         onPaletteStyleChange = viewModel::setPaletteStyle,
         onSaveTheme = viewModel::saveTheme,
         onDeleteTheme = viewModel::deleteTheme,
+        onWallpaperSeedSelected = viewModel::selectWallpaperSeed,
+        onWallpaperSystemPaletteChange = viewModel::setWallpaperSystemPalette,
+        onWallpaperAutoUpdateChange = viewModel::setWallpaperAutoUpdate,
         modifier = modifier,
     )
 }
 
 /**
- * 主题 — j1 卡1 with j2's 预设, minus 明暗.
+ * 主题 — two cards and a preview: where the colour comes from, then what is kept and how it is
+ * spread.
  *
- * The board opens with 跟随系统 / 浅色 / 深色 and this screen does not: that one control is reached far
- * more often than everything below it put together — it is what someone flips when the room changes,
- * not something they set once — and it stayed on 设置 where it has always been. Burying a daily
- * control two taps deep to keep a board intact is the wrong half of the design to honour.
+ * The first card is 配色来源 and whatever that source has to offer, under one segmented control: the
+ * six presets, the wallpaper's candidates and palette, or the custom seed with its 编辑. Only the
+ * source in force is drawn — two rows of faces under 自定义 would be most of the page spent on a
+ * choice that is not the answer — and each source keeps its own stored value (preset, wallpaper
+ * seed, custom seed), so switching back restores what was there rather than starting over.
  *
- * 预设 is the one section that comes and goes with the source: two rows of 56dp faces is most of
- * this page, and under 动态取色 or 自定义 none of them is the colour in force. Everything else stays
- * put — 我的主题 in particular, because 新建 is how a colour gets made in the first place and it would
- * be unreachable from the source it belongs to. The tiles carry each source's remembered value, so
- * collapsing the grid hides a control, never an answer.
+ * 明暗 is not here. That one control is reached far more often than everything below put together —
+ * it is what someone flips when the room changes, not something they set once — and it stayed on
+ * 设置 where it has always been.
  */
 @Composable
 fun ThemeSettingsScreen(
     settings: UserSettings,
     onBack: () -> Unit,
-    onOpenDynamicColor: () -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
     onPresetSelected: (String) -> Unit,
     onCustomSeedSelected: (Int) -> Unit,
@@ -140,6 +142,9 @@ fun ThemeSettingsScreen(
     onSaveTheme: (String, Int) -> Unit,
     onDeleteTheme: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onWallpaperSeedSelected: (Int) -> Unit = {},
+    onWallpaperSystemPaletteChange: (Boolean) -> Unit = {},
+    onWallpaperAutoUpdateChange: (Boolean) -> Unit = {},
 ) {
     var sheetOpen by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<SavedTheme?>(null) }
@@ -169,55 +174,53 @@ fun ThemeSettingsScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                .padding(SettingsPagePadding),
+            verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
-            SettingsSectionTitle(stringResource(Res.string.settings_color_source))
-            ColorSourceTiles(
-                settings = settings,
-                onSelect = onColorSourceChange,
-                onOpenDynamicColor = onOpenDynamicColor,
-                onOpenSeedSheet = { sheetOpen = true },
-            )
+            SettingsGroup {
+                ColorSourceHeader(settings = settings, onSelect = onColorSourceChange)
+                when (settings.colorSource) {
+                    ColorSource.PRESET ->
+                        PresetGrid(
+                            selected = settings.presetId,
+                            onSelect = onPresetSelected,
+                            modifier = Modifier.padding(start = Spacing.xs, end = Spacing.xs, bottom = Spacing.sm),
+                        )
 
-            // Two rows of swatches that cannot be the answer, sitting between the tiles and the rest
-            // of the screen, is most of this page's height spent on a section the reader has already
-            // navigated away from. The 预设 tile is what brings it back, and it still carries the
-            // preset's name while the grid is away, so nothing about the choice is hidden — only the
-            // six-way control for a choice that is not in force.
-            AnimatedVisibility(visible = settings.colorSource == ColorSource.PRESET) {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    SettingsSectionTitle(stringResource(Res.string.settings_presets))
-                    PresetGrid(selected = settings.presetId, onSelect = onPresetSelected)
+                    ColorSource.WALLPAPER ->
+                        DynamicColorContent(
+                            settings = settings,
+                            onSeedSelected = onWallpaperSeedSelected,
+                            onSystemPaletteChange = onWallpaperSystemPaletteChange,
+                            onAutoUpdateChange = onWallpaperAutoUpdateChange,
+                        )
+
+                    ColorSource.CUSTOM ->
+                        CustomSeedRow(
+                            settings = settings,
+                            onEdit = { sheetOpen = true },
+                        )
                 }
             }
 
-            SettingsSectionTitle(stringResource(Res.string.settings_my_themes))
-            SavedThemeChips(
-                themes = settings.savedThemes,
-                selected = settings.seedColor.takeIf { settings.colorSource == ColorSource.CUSTOM },
-                onSelect = onCustomSeedSelected,
-                onRename = { renaming = it },
-                onDelete = onDeleteTheme,
-                onCreate = { sheetOpen = true },
-            )
-            Text(
-                stringResource(Res.string.settings_my_themes_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = Spacing.xs),
-            )
-
-            SettingsSectionTitle(stringResource(Res.string.settings_palette_style))
-            // 色彩风格 steers the generator, and a 角色预设 never reaches it. Greyed rather than
-            // hidden: the chips are still the answer for the other five ways of getting a colour,
-            // and a section that vanished would read as one the app had lost.
-            PaletteStyleChips(
-                selected = settings.paletteStyle,
-                onSelect = onPaletteStyleChange,
-                enabled = activeCharacterPalette(settings) == null,
-            )
+            SettingsGroup {
+                MyThemesBlock(
+                    themes = settings.savedThemes,
+                    selected = settings.seedColor.takeIf { settings.colorSource == ColorSource.CUSTOM },
+                    onSelect = onCustomSeedSelected,
+                    onRename = { renaming = it },
+                    onDelete = onDeleteTheme,
+                    onCreate = { sheetOpen = true },
+                )
+                // 色彩风格 steers the generator, and a 角色预设 never reaches it. Greyed rather than
+                // hidden: it is still the answer for every other way of getting a colour, and a row
+                // that vanished would read as one the app had lost.
+                PaletteStyleRow(
+                    selected = settings.paletteStyle,
+                    onSelect = onPaletteStyleChange,
+                    enabled = activeCharacterPalette(settings) == null,
+                )
+            }
 
             SettingsSectionTitle(stringResource(Res.string.settings_theme_preview))
             ThemePreviewCard()
@@ -228,6 +231,8 @@ fun ThemeSettingsScreen(
         SeedColorSheet(
             initial = Color(settings.seedColor),
             paletteStyle = settings.paletteStyle.toPlaza(),
+            initialName =
+            settings.savedThemes.firstOrNull { it.color == settings.seedColor }?.name.orEmpty(),
             onDismiss = { sheetOpen = false },
             onApply = { color, name ->
                 onCustomSeedSelected(color.toArgb())
@@ -250,122 +255,39 @@ fun ThemeSettingsScreen(
 }
 
 /**
- * 预设 / 动态取色 / 自定义, as three tiles rather than three segments.
+ * 配色来源 and the segmented 预设 / 动态取色 / 自定义 under it.
  *
- * Each carries the value it would restore — the preset's name, "跟随壁纸", the hex a colour was left
- * on — which is what makes the info line under them true rather than a promise.
- *
- * A tile that is already selected opens what is behind it: 动态取色's own screen, 自定义's picker.
- * Selecting and opening are separate taps on purpose, because they answer different questions —
- * "put my old colour back" and "let me change it" — and j1 asks for both on the same tile.
- *
- * 动态取色 is dropped below API 31: there is no system palette to read there, and a tile that can
+ * 动态取色 is dropped below API 31: there is no system palette to read there, and a segment that can
  * never be picked is worse than one that was never offered.
  */
 @Composable
-private fun ColorSourceTiles(
+private fun ColorSourceHeader(
     settings: UserSettings,
     onSelect: (ColorSource) -> Unit,
-    onOpenDynamicColor: () -> Unit,
-    onOpenSeedSheet: () -> Unit,
 ) {
-    val presetName = stringResource(presetById(settings.presetId).label)
-
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        ColorSourceTile(
-            icon = PlazaIcons.Palette,
-            title = stringResource(Res.string.settings_color_source_preset),
-            value = presetName,
-            selected = settings.colorSource == ColorSource.PRESET,
-            onClick = { onSelect(ColorSource.PRESET) },
-            modifier = Modifier.weight(1f),
-        )
-        if (supportsWallpaperColorSource()) {
-            ColorSourceTile(
-                icon = PlazaIcons.Wallpaper,
-                title = stringResource(Res.string.settings_color_source_wallpaper),
-                value = stringResource(Res.string.settings_color_source_wallpaper_value),
-                selected = settings.colorSource == ColorSource.WALLPAPER,
-                onClick = {
-                    if (settings.colorSource == ColorSource.WALLPAPER) {
-                        onOpenDynamicColor()
-                    } else {
-                        onSelect(ColorSource.WALLPAPER)
-                    }
-                },
-                modifier = Modifier.weight(1f),
-            )
-        }
-        ColorSourceTile(
-            swatch = Color(settings.seedColor),
-            title = stringResource(Res.string.settings_color_source_custom),
-            value = Color(settings.seedColor).toHexString(),
-            selected = settings.colorSource == ColorSource.CUSTOM,
-            onClick = {
-                if (settings.colorSource == ColorSource.CUSTOM) {
-                    onOpenSeedSheet()
-                } else {
-                    onSelect(ColorSource.CUSTOM)
-                }
-            },
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun ColorSourceTile(
-    title: String,
-    value: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    swatch: Color? = null,
-) {
-    val scheme = MaterialTheme.colorScheme
-    Surface(
-        modifier = modifier.heightIn(min = TileHeight).selectable(selected, role = Role.RadioButton, onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = if (selected) scheme.primaryContainer else scheme.surfaceContainer,
-        contentColor = if (selected) scheme.onPrimaryContainer else scheme.onSurface,
-        border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, scheme.primary) else null,
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
-        ) {
-            when {
-                icon != null ->
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = if (selected) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
-                    )
-
-                swatch != null ->
-                    Box(Modifier.size(22.dp).clip(CircleShape).background(swatch))
+    val choices =
+        buildList {
+            add(ColorSource.PRESET to stringResource(Res.string.settings_color_source_preset))
+            if (supportsWallpaperColorSource()) {
+                add(ColorSource.WALLPAPER to stringResource(Res.string.settings_color_source_wallpaper))
             }
-            Text(
-                title,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (selected) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
+            add(ColorSource.CUSTOM to stringResource(Res.string.settings_color_source_custom))
         }
+    Column(
+        modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = 14.dp, bottom = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(stringResource(Res.string.settings_color_source), style = settingsRowTitleStyle())
+        ConnectedChoiceButtons(
+            labels = choices.map { it.second },
+            selectedIndex = choices.indexOfFirst { it.first == settings.colorSource },
+            onSelect = { onSelect(choices[it].first) },
+        )
     }
 }
 
 /**
- * The six presets on one plate: three columns, two rows.
+ * The six presets: three columns, two rows.
  *
  * Rows rather than a `LazyVerticalGrid`, because the grid would be the second scrolling container
  * inside the screen's own scroll — which either measures to zero height or eats the drag that was
@@ -378,25 +300,19 @@ private fun PresetGrid(
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        Column(modifier = Modifier.padding(horizontal = Spacing.xs, vertical = 6.dp)) {
-            ThemePresets.chunked(PRESET_COLUMNS).forEach { row ->
-                Row(Modifier.fillMaxWidth()) {
-                    row.forEach { preset ->
-                        PresetCell(
-                            preset = preset,
-                            selected = preset.id == selected,
-                            onSelect = onSelect,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    // Keeps a short last row's cells on the same columns as the row above it.
-                    repeat(PRESET_COLUMNS - row.size) { Box(Modifier.weight(1f)) }
+    Column(modifier = modifier.fillMaxWidth()) {
+        ThemePresets.chunked(PRESET_COLUMNS).forEach { row ->
+            Row(Modifier.fillMaxWidth()) {
+                row.forEach { preset ->
+                    PresetCell(
+                        preset = preset,
+                        selected = preset.id == selected,
+                        onSelect = onSelect,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
+                // Keeps a short last row's cells on the same columns as the row above it.
+                repeat(PRESET_COLUMNS - row.size) { Box(Modifier.weight(1f)) }
             }
         }
     }
@@ -429,26 +345,64 @@ private fun PresetCell(
         PresetDot(
             avatar = preset.avatar,
             selected = selected,
-            plate = MaterialTheme.colorScheme.surfaceContainer,
+            plate = LocalPlazaLayers.current.card,
         )
         Text(
             stringResource(preset.label),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
     }
 }
 
 /**
+ * 自定义's answer: the seed in force, named the way 我的主题 names it, and 编辑 to change it.
+ *
+ * 编辑 is its own button rather than a second tap on the segment, which is how the tile this replaced
+ * worked: selecting a source and changing it answer different questions — "put my colour back" and
+ * "let me pick another" — and a segmented control that opened a sheet on its second press would be
+ * the one segmented control in the app that did.
+ */
+@Composable
+private fun CustomSeedRow(
+    settings: UserSettings,
+    onEdit: () -> Unit,
+) {
+    val seed = Color(settings.seedColor)
+    val name = settings.savedThemes.firstOrNull { it.color == settings.seedColor }?.name?.takeIf { it.isNotBlank() }
+    Row(
+        modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.xs, bottom = Spacing.lg),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(seed))
+        Column(Modifier.weight(1f)) {
+            Text(name ?: seed.toHexString(), style = settingsRowTitleStyle())
+            if (name != null) {
+                Text(
+                    seed.toHexString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        FilledTonalButton(onClick = onEdit) {
+            Text(stringResource(Res.string.settings_seed_edit))
+        }
+    }
+}
+
+/**
  * 我的主题 — the seeds a reader named, plus the way to make another.
  *
- * Long-press opens rename and delete, which is what j1's line under the row says. There is no
+ * Long-press opens rename and delete, which is what the line beside the heading says. There is no
  * swipe and no edit mode: the row is at most a dozen chips, and both actions are rare.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SavedThemeChips(
+private fun MyThemesBlock(
     themes: List<SavedTheme>,
     selected: Int?,
     onSelect: (Int) -> Unit,
@@ -457,105 +411,131 @@ private fun SavedThemeChips(
     onCreate: () -> Unit,
 ) {
     var menuFor by remember { mutableStateOf<SavedTheme?>(null) }
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = 14.dp, bottom = Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        themes.forEach { theme ->
-            Box {
-                AssistChip(
-                    onClick = { onSelect(theme.color) },
-                    label = { Text(theme.name.ifBlank { Color(theme.color).toHexString() }) },
-                    leadingIcon = {
-                        Box(Modifier.size(18.dp).clip(CircleShape).background(Color(theme.color)))
-                    },
-                    colors =
-                    AssistChipDefaults.assistChipColors(
-                        containerColor =
-                        if (theme.color == selected) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerLow
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(Res.string.settings_my_themes),
+                style = settingsRowTitleStyle(),
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                stringResource(Res.string.settings_my_themes_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = scheme.onSurfaceVariant,
+            )
+        }
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            themes.forEach { theme ->
+                val isSelected = theme.color == selected
+                Box {
+                    AssistChip(
+                        onClick = { onSelect(theme.color) },
+                        label = { Text(theme.name.ifBlank { Color(theme.color).toHexString() }) },
+                        leadingIcon = {
+                            Box(Modifier.size(16.dp).clip(CircleShape).background(Color(theme.color)))
                         },
-                    ),
-                    border =
-                    AssistChipDefaults.assistChipBorder(
-                        enabled = true,
-                        borderColor =
-                        if (theme.color == selected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.outlineVariant
-                        },
-                    ),
-                    modifier = Modifier.longPressToEdit { menuFor = theme },
-                )
-                DropdownMenu(
-                    expanded = menuFor == theme,
-                    onDismissRequest = { menuFor = null },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.action_rename)) },
-                        onClick = {
-                            menuFor = null
-                            onRename(theme)
-                        },
+                        shape = ChipShape,
+                        colors =
+                        AssistChipDefaults.assistChipColors(
+                            containerColor =
+                            if (isSelected) scheme.secondaryContainer else LocalPlazaLayers.current.card,
+                            labelColor = if (isSelected) scheme.onSecondaryContainer else scheme.onSurface,
+                        ),
+                        border = BorderStroke(1.dp, if (isSelected) scheme.secondaryContainer else scheme.outline),
+                        modifier = Modifier.height(ChipHeight).longPressToEdit { menuFor = theme },
                     )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.action_delete)) },
-                        onClick = {
-                            menuFor = null
-                            onDelete(theme.color)
-                        },
-                    )
+                    DropdownMenu(
+                        expanded = menuFor == theme,
+                        onDismissRequest = { menuFor = null },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.action_rename)) },
+                            onClick = {
+                                menuFor = null
+                                onRename(theme)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.action_delete)) },
+                            onClick = {
+                                menuFor = null
+                                onDelete(theme.color)
+                            },
+                        )
+                    }
                 }
             }
+            AssistChip(
+                onClick = onCreate,
+                label = { Text(stringResource(Res.string.action_new)) },
+                shape = ChipShape,
+                colors =
+                AssistChipDefaults.assistChipColors(
+                    containerColor = LocalPlazaLayers.current.card,
+                    labelColor = scheme.primary,
+                ),
+                border = BorderStroke(1.dp, scheme.outline),
+                modifier = Modifier.height(ChipHeight),
+            )
         }
-        AssistChip(
-            onClick = onCreate,
-            label = { Text(stringResource(Res.string.action_new)) },
-            leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
-            colors =
-            AssistChipDefaults.assistChipColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                leadingIconContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            ),
-            border = null,
-        )
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * 色彩风格 as one row with its answer on the second line and the five choices behind a menu.
+ *
+ * Five chips took a section of their own for a setting most readers leave on 柔和; folded into a row
+ * it sits in the same card as 我的主题, which is the other thing that only matters to a seed.
+ */
 @Composable
-private fun PaletteStyleChips(
+private fun PaletteStyleRow(
     selected: PaletteStyle,
     onSelect: (PaletteStyle) -> Unit,
     enabled: Boolean,
 ) {
-    val labels =
-        listOf(
-            PaletteStyle.SOFT to Res.string.settings_palette_style_soft,
-            PaletteStyle.VIBRANT to Res.string.settings_palette_style_vibrant,
-            PaletteStyle.EXPRESSIVE to Res.string.settings_palette_style_expressive,
-            PaletteStyle.NEUTRAL to Res.string.settings_palette_style_neutral,
-            PaletteStyle.MONOCHROME to Res.string.settings_palette_style_monochrome,
-        )
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        labels.forEach { (style, label) ->
-            FilterChip(
-                selected = style == selected,
-                onClick = { onSelect(style) },
-                label = { Text(stringResource(label)) },
-                enabled = enabled,
-            )
-        }
-    }
+    var expanded by remember { mutableStateOf(false) }
+    SettingsRow(
+        modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
+        leading = { Icon(SettingsIcons.Tonality, contentDescription = null) },
+        title = stringResource(Res.string.settings_palette_style),
+        subtitle = stringResource(paletteStyleLabel(selected)),
+        bottom = true,
+        enabled = enabled,
+        onClick = { expanded = true },
+        trailing = {
+            // Anchored to the arrow for the same reason 语言's menu is on 设置: a `DropdownMenu` hangs
+            // off its parent layout node, and the parent here is only the arrow.
+            Box {
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    PaletteStyleChoices.forEach { style ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(paletteStyleLabel(style))) },
+                            onClick = {
+                                expanded = false
+                                onSelect(style)
+                            },
+                            trailingIcon = {
+                                if (style == selected) Icon(Icons.Default.Check, contentDescription = null)
+                            },
+                        )
+                    }
+                }
+            }
+        },
+    )
 }
 
 @Composable
@@ -591,7 +571,8 @@ private fun RenameThemeDialog(
 
 private const val PRESET_COLUMNS = 3
 private const val SAVED_THEME_NAME_LIMIT = 16
-private val TileHeight = 96.dp
+private val ChipShape = RoundedCornerShape(12.dp)
+private val ChipHeight = 36.dp
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 1100)
 @Composable
@@ -608,7 +589,6 @@ private fun ThemeSettingsPreview() {
                 seedColor = SettingsRepository.DEFAULT_SEED_COLOR,
             ),
             onBack = {},
-            onOpenDynamicColor = {},
             onColorSourceChange = {},
             onPresetSelected = {},
             onCustomSeedSelected = {},

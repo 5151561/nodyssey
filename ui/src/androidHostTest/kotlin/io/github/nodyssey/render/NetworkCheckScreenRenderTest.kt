@@ -31,7 +31,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "w360dp-h800dp")
+@Config(qualifiers = "w360dp-h1800dp")
 class NetworkCheckScreenRenderTest {
     @get:Rule
     val composeRule = createComposeRule()

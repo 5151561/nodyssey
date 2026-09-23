@@ -8,21 +8,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,9 +26,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -44,7 +41,6 @@ import io.github.nodyssey.data.proxy.ProxyConnectionFailure
 import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.ProxyType
 import io.github.nodyssey.ui.account.AccountMessageSnackbar
-import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.proxy_advanced_hint
@@ -75,8 +71,9 @@ import io.github.nodyssey.ui.resources.proxy_type_socks
 import io.github.nodyssey.ui.resources.proxy_type_title
 import io.github.nodyssey.ui.resources.proxy_username_label
 import io.github.nodyssey.ui.resources.proxy_webview_hint
+import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
-import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -163,45 +160,43 @@ fun ProxySettingsScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(SettingsPagePadding),
+            verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
             SettingsGroup {
                 SettingsRow(
+                    leading = { Icon(SettingsIcons.VpnLock, contentDescription = null) },
                     title = stringResource(Res.string.proxy_master_title),
                     subtitle = stringResource(Res.string.proxy_master_hint),
                     top = true,
                     bottom = true,
                     checked = state.enabled,
                     onCheckedChange = onEnabledChange,
-                    trailing = { Switch(checked = state.enabled, onCheckedChange = null) },
+                    trailing = { SettingsSwitch(checked = state.enabled) },
                 )
             }
 
             Column(
                 modifier = Modifier.alpha(if (state.enabled) 1f else DISABLED_ALPHA),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
             ) {
-                SettingsGroup {
-                    SettingsBlock(
-                        title = stringResource(Res.string.proxy_type_title),
-                        top = true,
-                        bottom = true,
-                    ) {
-                        val choices = listOf(
-                            ProxyType.HTTP to stringResource(Res.string.proxy_type_http),
-                            ProxyType.SOCKS to stringResource(Res.string.proxy_type_socks),
-                        )
-                        ConnectedChoiceButtons(
-                            labels = choices.map { it.second },
-                            selectedIndex = choices.indexOfFirst { it.first == state.type },
-                            onSelect = { onTypeChange(choices[it].first) },
-                            enabled = state.enabled,
-                        )
-                    }
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                // The type and the four fields are one card: they are one proxy, and a type split
+                // from the address it applies to read as two settings.
+                LayerCard(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                    val choices = listOf(
+                        ProxyType.HTTP to stringResource(Res.string.proxy_type_http),
+                        ProxyType.SOCKS to stringResource(Res.string.proxy_type_socks),
+                    )
+                    val typeTitle = stringResource(Res.string.proxy_type_title)
+                    ConnectedChoiceButtons(
+                        labels = choices.map { it.second },
+                        selectedIndex = choices.indexOfFirst { it.first == state.type },
+                        onSelect = { onTypeChange(choices[it].first) },
+                        enabled = state.enabled,
+                        // The card drops 代理类型's visible heading — the two segments name
+                        // themselves — so the group carries it for a screen reader instead.
+                        modifier = Modifier.semantics { contentDescription = typeTitle },
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                         ProxyField(
                             value = state.hostInput,
@@ -247,6 +242,7 @@ fun ProxySettingsScreen(
 
                 SettingsGroup {
                     SettingsRow(
+                        leading = { Icon(PlazaIcons.Forum, contentDescription = null) },
                         title = stringResource(Res.string.proxy_scope_title),
                         subtitle = stringResource(Res.string.proxy_scope_hint),
                         top = true,
@@ -255,49 +251,40 @@ fun ProxySettingsScreen(
                         checked = state.scope == ProxyScope.FORUM_ONLY,
                         onCheckedChange = onForumOnlyChange,
                         trailing = {
-                            Switch(
+                            SettingsSwitch(
                                 checked = state.scope == ProxyScope.FORUM_ONLY,
-                                onCheckedChange = null,
                                 enabled = state.enabled,
                             )
                         },
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    Button(onClick = onSave, enabled = state.enabled) {
-                        Text(stringResource(Res.string.proxy_save))
-                    }
-                    TextButton(onClick = onTest, enabled = state.enabled && !state.testing) {
-                        if (state.testing) {
-                            PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
-                        } else {
-                            Text(stringResource(Res.string.proxy_test))
-                        }
-                    }
-                }
                 state.testFailure?.let { failure ->
-                    Text(
-                        text = proxyTestFailureText(failure),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    )
+                    SettingsResultBanner(text = proxyTestFailureText(failure), error = true)
                 }
+                SettingsTestSaveButtons(
+                    testLabel = stringResource(Res.string.proxy_test),
+                    saveLabel = stringResource(Res.string.proxy_save),
+                    testing = state.testing,
+                    enabled = state.enabled,
+                    onTest = onTest,
+                    onSave = onSave,
+                )
             }
 
             // Outside the dimmed block on purpose: this is what someone reads *before* deciding what
             // to type, and it is the only place the app admits it speaks neither VLESS nor the
             // WebView's network stack.
-            SettingsGroup {
-                SettingsBlock(
-                    title = stringResource(Res.string.proxy_advanced_title),
-                    top = true,
-                    bottom = true,
-                ) {
-                    ProxyNote(stringResource(Res.string.proxy_advanced_hint))
-                    ProxyNote(stringResource(Res.string.proxy_webview_hint))
-                }
+            Column(
+                modifier = Modifier.padding(top = Spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                SettingsNote(
+                    stringResource(Res.string.proxy_advanced_title),
+                    modifier = Modifier.semantics { heading() },
+                )
+                SettingsNote(stringResource(Res.string.proxy_advanced_hint))
+                SettingsNote(stringResource(Res.string.proxy_webview_hint))
             }
         }
     }
@@ -318,15 +305,6 @@ private fun proxyTestFailureText(failure: ProxyConnectionFailure): String {
 }
 
 @Composable
-private fun ProxyNote(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
-
-@Composable
 private fun ProxyField(
     value: String,
     onValueChange: (String) -> Unit,
@@ -339,22 +317,18 @@ private fun ProxyField(
     obscure: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
 ) {
-    OutlinedTextField(
+    SettingsTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
+        label = stringResource(labelRes),
+        placeholder = stringResource(placeholderRes),
+        modifier = modifier,
         enabled = enabled,
-        singleLine = true,
         isError = isError,
-        label = { Text(stringResource(labelRes)) },
-        placeholder = { Text(stringResource(placeholderRes)) },
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        supportingText = if (isError && errorRes != null) stringResource(errorRes) else null,
+        keyboardType = keyboardType,
         visualTransformation = if (obscure) PasswordVisualTransformation() else VisualTransformation.None,
-        supportingText = if (isError && errorRes != null) {
-            { Text(stringResource(errorRes)) }
-        } else {
-            null
-        },
+        textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
     )
 }
 
