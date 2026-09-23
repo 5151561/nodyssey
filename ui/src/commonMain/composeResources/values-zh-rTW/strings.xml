@@ -172,13 +172,10 @@
     <string name="post_read_marker">已讀</string>
     <string name="search_hint_board">在 %1$s 版塊搜文章</string>
     <string name="search_user_hint">搜尋使用者名稱</string>
-    <string name="search_submit">搜尋</string>
     <string name="search_posts_tab">文章</string>
     <string name="search_users_tab">使用者</string>
     <string name="search_all_boards">全部版塊</string>
-    <string name="search_board_section">版塊</string>
-    <string name="search_board_single_hint">單選 · 只能指定一個</string>
-    <string name="search_board_chip_all">全部</string>
+    <string name="search_board_section">版塊 · 單選</string>
     <string name="search_history_empty">還沒有搜尋紀錄</string>
     <string name="search_history_scope">文章 · 全部版塊</string>
     <string name="search_user_history_scope">使用者</string>
@@ -186,13 +183,16 @@
     <string name="search_user_topics">主題 %1$d</string>
     <string name="search_user_comments">評論 %1$d</string>
     <string name="search_user_joined">加入 %1$s</string>
-    <string name="search_board_range">版塊範圍</string>
-    <string name="search_board_range_hint">只能選一個版塊，站台搜尋介面本身只支援單版塊；最近使用會置頂</string>
+    <string name="search_advanced">進階搜尋</string>
+    <string name="search_advanced_active">已限定版塊或排序</string>
+    <string name="search_advanced_sort">排序</string>
+    <string name="search_advanced_reset">重設</string>
+    <string name="search_in_board">在「%1$s」中搜尋</string>
+    <string name="search_clear_board">取消版塊限定：%1$s</string>
     <string name="search_recent_boards">最近使用</string>
     <string name="search_apply_board">套用</string>
-    <string name="search_board_all_boards_heading">全部</string>
     <string name="search_clear_query">清空關鍵字</string>
-    <string name="search_recent">搜尋紀錄</string>
+    <string name="search_recent">最近搜尋</string>
     <string name="search_clear_all">清除</string>
     <string name="search_remove_recent">刪除搜尋紀錄：%1$s</string>
 

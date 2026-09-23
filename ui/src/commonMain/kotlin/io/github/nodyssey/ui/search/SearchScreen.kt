@@ -1,51 +1,65 @@
 package io.github.nodyssey.ui.search
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SearchBarValue
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -57,19 +71,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -82,10 +102,10 @@ import androidx.paging.compose.itemKey
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
-import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.SearchHistoryEntry
 import io.github.nodyssey.model.SearchTarget
+import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.CollapsingHeader
 import io.github.nodyssey.ui.common.NavigationBarScrollConnection
 import io.github.nodyssey.ui.common.NavigationDirectionThreshold
@@ -93,50 +113,47 @@ import io.github.nodyssey.ui.common.NoSearchResultsState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.webViewUrl
-import io.github.nodyssey.ui.postlist.FeedRowPlaceholder
-import io.github.nodyssey.ui.postlist.PostRow
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.action_sort
+import io.github.nodyssey.ui.resources.search_advanced
+import io.github.nodyssey.ui.resources.search_advanced_active
+import io.github.nodyssey.ui.resources.search_advanced_reset
+import io.github.nodyssey.ui.resources.search_advanced_sort
 import io.github.nodyssey.ui.resources.search_all_boards
 import io.github.nodyssey.ui.resources.search_apply_board
-import io.github.nodyssey.ui.resources.search_board_all_boards_heading
-import io.github.nodyssey.ui.resources.search_board_chip_all
-import io.github.nodyssey.ui.resources.search_board_range
-import io.github.nodyssey.ui.resources.search_board_range_hint
 import io.github.nodyssey.ui.resources.search_board_section
-import io.github.nodyssey.ui.resources.search_board_single_hint
 import io.github.nodyssey.ui.resources.search_clear_all
+import io.github.nodyssey.ui.resources.search_clear_board
 import io.github.nodyssey.ui.resources.search_clear_query
 import io.github.nodyssey.ui.resources.search_hint
 import io.github.nodyssey.ui.resources.search_hint_board
-import io.github.nodyssey.ui.resources.search_history_board_scope
 import io.github.nodyssey.ui.resources.search_history_empty
 import io.github.nodyssey.ui.resources.search_history_scope
+import io.github.nodyssey.ui.resources.search_in_board
 import io.github.nodyssey.ui.resources.search_load_more_failed
 import io.github.nodyssey.ui.resources.search_posts_tab
 import io.github.nodyssey.ui.resources.search_recent
 import io.github.nodyssey.ui.resources.search_recent_boards
 import io.github.nodyssey.ui.resources.search_remove_recent
-import io.github.nodyssey.ui.resources.search_submit
-import io.github.nodyssey.ui.resources.search_user_comments
 import io.github.nodyssey.ui.resources.search_user_hint
 import io.github.nodyssey.ui.resources.search_user_history_scope
-import io.github.nodyssey.ui.resources.search_user_joined
-import io.github.nodyssey.ui.resources.search_user_topics
 import io.github.nodyssey.ui.resources.search_users_tab
 import io.github.nodyssey.ui.resources.sort_by_post_time
 import io.github.nodyssey.ui.resources.sort_by_reply_time
-import io.github.plaza.designsys.component.ChoiceRow
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerGroup
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
-import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.listAvatarSize
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -165,6 +182,7 @@ fun SearchRoute(
         onClearHistory = viewModel::clearHistory,
         onBoardChange = viewModel::selectBoard,
         onSortChange = viewModel::selectSort,
+        onApplyOptions = viewModel::applySearchOptions,
         onPostClick = onPostClick,
         onUserClick = onUserClick,
         onBack = onBack,
@@ -178,14 +196,18 @@ fun SearchRoute(
 }
 
 /**
- * Search, in the order the site itself asks for it: say what kind of thing, say where, then type.
+ * Search: a field, what kind of thing to look for, and either the history or the results.
  *
- * The input is pinned to the top and the rest of the screen is the search view — tabs, the board the
- * search is scoped to, and either the history or the results. It used to be a collapsing
- * [androidx.compose.material3.AppBarWithSearch] over an
+ * The field is pinned to the top with the rest of the screen as the search view. It used to be a
+ * collapsing [androidx.compose.material3.AppBarWithSearch] over an
  * [androidx.compose.material3.ExpandedFullScreenSearchBar], which meant the history existed twice
  * (once in the dialog, once behind it) and the board could only be picked from the results screen —
  * after a search had already gone out with the wrong scope.
+ *
+ * Board and order live behind the 调节 button in the field, in 高级搜索 ([AdvancedSearchSheet]),
+ * rather than as a chip group on the page. The setup screen is then the history and nothing else,
+ * the one thing a returning reader came for; the button carries a dot whenever the search is scoped,
+ * and the placeholder still finishes the sentence (在 技术 版块搜帖子) so the scope is never hidden.
  */
 @Composable
 fun SearchScreen(
@@ -205,18 +227,21 @@ fun SearchScreen(
     /**
      * Leaves 搜索 for whatever it was opened from — 首页, in every case the app can reach today.
      *
-     * The arrow is inside the input field rather than in an app bar of its own: this screen has no
-     * bar, and giving it one to hold a single arrow would push the field, the tabs and the scope row
+     * The arrow sits beside the field rather than in an app bar of its own: this screen has no bar,
+     * and giving it one to hold a single arrow would push the field, the tabs and the scope row
      * another 64dp down the screen for no other gain.
      */
     onBack: (() -> Unit)? = null,
     postResults: LazyPagingItems<FeedPost>? = null,
     onBoardChange: (String?) -> Unit = {},
     onSortChange: (FeedSort) -> Unit = {},
+    /** 高级搜索's button: board and order at once — see [SearchViewModel.applySearchOptions]. */
+    onApplyOptions: (String?, FeedSort) -> Unit = { _, _ -> },
     /** Keeps the host navigation bar hidden until the user deliberately scrolls back up. */
     onNavigationBarHiddenChanged: (Boolean) -> Unit = {},
 ) {
-    var showBoardSheet by remember { mutableStateOf(false) }
+    var showOptionsSheet by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     /*
      * The chrome above the results folds away as they scroll, which on a phone is the difference
@@ -261,7 +286,7 @@ fun SearchScreen(
             modifier = Modifier.padding(padding).fillMaxSize().readableWidth(),
         ) {
             CollapsingHeader(headerScrollBehavior) {
-                SearchInputField(
+                SearchInputRow(
                     queryState = queryState,
                     placeholder = searchPlaceholder(state),
                     onBack = onBack,
@@ -269,23 +294,24 @@ fun SearchScreen(
                     // result list does not, and a keyboard over the results would only hide them.
                     autoFocus = state.submittedQuery == null,
                     onSearch = onSearch,
+                    // The users tab has no scope to set — the site matches a name fragment and
+                    // returns the lot — so there is nothing for the button to open there.
+                    onOpenOptions =
+                    if (state.target == SearchTarget.POSTS) {
+                        {
+                            focusManager.clearFocus()
+                            showOptionsSheet = true
+                        }
+                    } else {
+                        null
+                    },
+                    optionsActive = state.hasCustomOptions,
                 )
 
-                PrimaryTabRow(selectedTabIndex = state.target.ordinal) {
-                    SearchTab(
-                        selected = state.target == SearchTarget.POSTS,
-                        title = stringResource(Res.string.search_posts_tab),
-                        // No count: `/search` never returns a total, and the number of rows loaded so
-                        // far is not one — it grows as you scroll, which reads as the site changing.
-                        count = null,
-                        onClick = { onTargetChange(SearchTarget.POSTS) },
-                    )
-                    SearchTab(
-                        selected = state.target == SearchTarget.USERS,
-                        title = stringResource(Res.string.search_users_tab),
-                        count = state.userResults.size.takeIf { state.userLoadState == SearchLoadState.Success },
-                        onClick = { onTargetChange(SearchTarget.USERS) },
-                    )
+                if (state.submittedQuery == null) {
+                    TargetSwitch(selected = state.target, onTargetChange = onTargetChange)
+                } else {
+                    ResultTabs(state = state, onTargetChange = onTargetChange)
                 }
 
                 // Part of the header rather than of the results, because it is chrome for them: the
@@ -293,7 +319,8 @@ fun SearchScreen(
                 if (state.submittedQuery != null && state.target == SearchTarget.POSTS) {
                     ResultScopeRow(
                         state = state,
-                        onOpenBoardSheet = { showBoardSheet = true },
+                        onOpenOptions = { showOptionsSheet = true },
+                        onBoardChange = onBoardChange,
                         onSortChange = onSortChange,
                     )
                 }
@@ -303,9 +330,9 @@ fun SearchScreen(
                 // No connection here on purpose. The setup screen is where a query is written, and
                 // the field it is written in must not be scrollable off the top by the history list
                 // sitting under it.
-                SearchSetup(
-                    state = state,
-                    onBoardChange = onBoardChange,
+                SearchHistory(
+                    searches = state.searchHistory.filter { it.target == state.target },
+                    boards = state.boards,
                     onHistoryClick = onHistoryClick,
                     onRemoveHistory = onRemoveHistory,
                     onClearHistory = onClearHistory,
@@ -337,22 +364,29 @@ fun SearchScreen(
         }
     }
 
-    if (showBoardSheet) {
-        BoardRangeSheet(
+    if (showOptionsSheet) {
+        AdvancedSearchSheet(
             boards = state.boards,
-            selected = state.selectedBoard,
+            selectedBoard = state.selectedBoard,
+            sort = state.sort,
             recentBoards = state.recentBoards,
-            onDismiss = { showBoardSheet = false },
-            onApply = {
-                onBoardChange(it)
-                showBoardSheet = false
+            // Whether the button runs a search or only sets the scope for the next one.
+            willSearch = state.submittedQuery != null || queryState.text.isNotBlank(),
+            onDismiss = { showOptionsSheet = false },
+            onApply = { board, sort ->
+                showOptionsSheet = false
+                onApplyOptions(board, sort)
             },
         )
     }
 }
 
+/** Whether 高级搜索 holds anything but the defaults — what the dot on the 调节 button says. */
+private val SearchUiState.hasCustomOptions: Boolean
+    get() = selectedBoard != null || sort != DefaultSearchSort
+
 /**
- * The search box, always editable and always at the top.
+ * The back arrow and the search pill.
  *
  * [SearchBarDefaults.InputField] is used on its own rather than inside a
  * [androidx.compose.material3.SearchBar]: the collapsed search bar wraps its field in
@@ -360,73 +394,104 @@ fun SearchScreen(
  * This screen has no collapsed state to speak of — it is a destination whose whole body is the
  * search view — so the field has to be the one that takes the keyboard. The [SearchBarValue.Expanded]
  * state passed to it is the same statement: what is below the field is the expanded view.
+ *
+ * The pill is the home screen's search pill, the same raised white on the grey page, so arriving
+ * here from it reads as the pill waking up rather than a new screen. There is no separate submit
+ * button: the keyboard's search key submits, and so does 高级搜索's button.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SearchInputField(
+private fun SearchInputRow(
     queryState: TextFieldState,
     placeholder: String,
     autoFocus: Boolean,
     onSearch: () -> Unit,
+    onOpenOptions: (() -> Unit)?,
+    optionsActive: Boolean,
     onBack: (() -> Unit)? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val searchBarState = rememberSearchBarState(initialValue = SearchBarValue.Expanded)
-    val submit = {
-        onSearch()
-        // The results are what was asked for; the keyboard would cover four of them.
-        focusManager.clearFocus()
-    }
+    val layers = LocalPlazaLayers.current
 
-    SearchBarDefaults.InputField(
-        textFieldState = queryState,
-        searchBarState = searchBarState,
-        onSearch = { submit() },
+    Row(
         modifier =
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-            .focusRequester(focusRequester),
-        placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        leadingIcon =
-        onBack?.let {
-            {
-                IconButton(onClick = it) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(Res.string.action_back),
-                    )
-                }
+            .padding(start = if (onBack != null) Spacing.xs else Spacing.md, end = Spacing.md, top = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        if (onBack != null) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.action_back))
             }
-        },
-        // The field's own container is transparent by default because a search bar paints it from
-        // the outside. Standing on its own, it has to paint itself — same token the bar would use.
-        colors =
-        SearchBarDefaults.inputFieldColors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-        trailingIcon = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (queryState.text.isNotEmpty()) {
-                    IconButton(onClick = { queryState.clearText() }) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.search_clear_query))
+        }
+        SearchBarDefaults.InputField(
+            textFieldState = queryState,
+            searchBarState = searchBarState,
+            onSearch = {
+                onSearch()
+                // The results are what was asked for; the keyboard would cover four of them.
+                focusManager.clearFocus()
+            },
+            modifier =
+            Modifier
+                .weight(1f)
+                .cardShadow(CircleShape, layers.shadows)
+                .then(layers.cardBorder?.let { Modifier.border(1.dp, it, CircleShape) } ?: Modifier)
+                .focusRequester(focusRequester),
+            placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            shape = CircleShape,
+            // The field's own container is transparent by default because a search bar paints it from
+            // the outside. Standing on its own, it has to paint itself — the raised layer, like the
+            // home screen's pill.
+            colors =
+            SearchBarDefaults.inputFieldColors(
+                focusedContainerColor = layers.raised,
+                unfocusedContainerColor = layers.raised,
+            ),
+            trailingIcon = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (queryState.text.isNotEmpty()) {
+                        IconButton(onClick = { queryState.clearText() }) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.search_clear_query))
+                        }
                     }
+                    onOpenOptions?.let { OptionsButton(active = optionsActive, onClick = it) }
                 }
-                FilledIconButton(onClick = submit) {
-                    Icon(Icons.Default.Search, contentDescription = stringResource(Res.string.search_submit))
-                }
-            }
-        },
-    )
+            },
+        )
+    }
 
     LaunchedEffect(Unit) {
         if (autoFocus) focusRequester.requestFocus()
     }
 }
 
-/** Placeholder as the third step of the sentence the two pickers above it have already started. */
+/** 调节: opens 高级搜索. The dot says the search is scoped, and TalkBack reads the same as a state. */
+@Composable
+private fun OptionsButton(
+    active: Boolean,
+    onClick: () -> Unit,
+) {
+    val activeDescription = stringResource(Res.string.search_advanced_active)
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.semantics { if (active) stateDescription = activeDescription },
+    ) {
+        BadgedBox(
+            badge = {
+                if (active) Badge(containerColor = MaterialTheme.colorScheme.primary)
+            },
+        ) {
+            Icon(TuneIcon, contentDescription = stringResource(Res.string.search_advanced))
+        }
+    }
+}
+
+/** Placeholder as the rest of the sentence the scope has already started. */
 @Composable
 private fun searchPlaceholder(state: SearchUiState): String {
     if (state.target == SearchTarget.USERS) return stringResource(Res.string.search_user_hint)
@@ -436,122 +501,106 @@ private fun searchPlaceholder(state: SearchUiState): String {
 
 private fun List<Board>.title(slug: String): String = firstOrNull { it.slug == slug }?.title ?: slug
 
-@Composable
-private fun SearchTab(
-    selected: Boolean,
-    title: String,
-    count: Int?,
-    onClick: () -> Unit,
-) {
-    Tab(
-        selected = selected,
-        onClick = onClick,
-        text = { Text(if (count == null) title else "$title · $count") },
-    )
-}
+private val TargetOrder = listOf(SearchTarget.POSTS, SearchTarget.USERS)
+
+private fun SearchTarget.labelRes(): StringResource =
+    if (this == SearchTarget.USERS) Res.string.search_users_tab else Res.string.search_posts_tab
 
 /**
- * Everything between opening search and submitting one: what to scope it to, and what was searched
- * before. The board picker is a permanent chip group rather than the sheet the results screen opens,
- * because here it is part of writing the query — the placeholder finishes the sentence it starts.
- */
-@Composable
-private fun ColumnScope.SearchSetup(
-    state: SearchUiState,
-    onBoardChange: (String?) -> Unit,
-    onHistoryClick: (SearchHistoryEntry) -> Unit,
-    onRemoveHistory: (SearchHistoryEntry) -> Unit,
-    onClearHistory: () -> Unit,
-) {
-    // The users tab has no scope to pick — the site matches a name fragment and returns the lot —
-    // so it goes straight to the history, with the tab row's own line as its separator.
-    if (state.target == SearchTarget.POSTS) {
-        BoardChips(
-            boards = state.boards,
-            selected = state.selectedBoard,
-            onSelect = onBoardChange,
-        )
-        HorizontalDivider(modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.lg))
-    } else {
-        Spacer(Modifier.size(Spacing.md))
-    }
-    SearchHistory(
-        searches = state.searchHistory.filter { it.target == state.target },
-        boards = state.boards,
-        onHistoryClick = onHistoryClick,
-        onRemoveHistory = onRemoveHistory,
-        onClearHistory = onClearHistory,
-    )
-}
-
-/**
- * One board, or the whole site.
+ * 帖子 / 用户 before anything is searched: a pill with a white thumb on a tonal track.
  *
- * Single choice because `/search` takes a single `category` and applies it itself — the same reason
- * [BoardRangeSheet] is a radio list. 全部 is a real option, not an empty selection: it is what the
- * site does when the parameter is absent.
+ * Hand-drawn because Material has no control of this shape: [SingleChoiceSegmentedButtonRow] is an
+ * outlined row of joined buttons, and a [PrimaryTabRow] is the underline the results use once there
+ * is something under each tab to switch between. Here nothing is under either yet — this is the
+ * first word of the query, so it looks like part of the form rather than like navigation. Each half
+ * is a Material [Surface] with `selected`, inside a `selectableGroup`, and says it is a tab.
  */
 @Composable
-private fun BoardChips(
-    boards: List<Board>,
-    selected: String?,
-    onSelect: (String?) -> Unit,
+private fun TargetSwitch(
+    selected: SearchTarget,
+    onTargetChange: (SearchTarget) -> Unit,
 ) {
+    val layers = LocalPlazaLayers.current
+    // Light draws the track a step darker than the page and the thumb white. Without shadows (dark,
+    // 墨水屏) the track is the card tone instead, so the raised thumb stays the lighter of the two;
+    // on paper the thumb's outline does the separating.
+    val track = if (layers.shadows) MaterialTheme.colorScheme.surfaceContainerHigh else layers.card
+    val thumb = layers.raised
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.lg)
+            .height(44.dp)
+            .clip(CircleShape)
+            .background(track)
+            .padding(4.dp)
+            .selectableGroup(),
     ) {
-        Text(
-            stringResource(Res.string.search_board_section),
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            stringResource(Res.string.search_board_single_hint),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-    FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        BoardChip(
-            title = stringResource(Res.string.search_board_chip_all),
-            selected = selected == null,
-            onSelect = { onSelect(null) },
-        )
-        boards.forEach { board ->
-            BoardChip(
-                title = board.title,
-                selected = board.slug != null && board.slug == selected,
-                onSelect = { onSelect(board.slug) },
-            )
+        TargetOrder.forEach { target ->
+            val isSelected = target == selected
+            Surface(
+                selected = isSelected,
+                onClick = { onTargetChange(target) },
+                shape = CircleShape,
+                color = if (isSelected) thumb else Color.Transparent,
+                border = if (isSelected) layers.cardBorder?.let { BorderStroke(1.dp, it) } else null,
+                modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .then(if (isSelected) Modifier.cardShadow(CircleShape, layers.shadows) else Modifier)
+                    .semantics { role = Role.Tab },
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        stringResource(target.labelRes()),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        color =
+                        if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }
 
-/**
- * No leading tick, deliberately.
- *
- * A tick makes the selected chip ~26dp wider, and in a wrapping group that re-flows every chip after
- * it: on a narrow phone picking a board moved the rest of the list between three and four rows,
- * under the finger that was still choosing. The filled container against the outlined ones already
- * says which one is on, TalkBack reads 已选中 from [FilterChip]'s own semantics either way, and the
- * tick is optional decoration in Material's own spec — so it is the part that goes.
- */
+/** 帖子 / 用户 once there are results: Material's underline tabs, flush with the page. */
 @Composable
-private fun BoardChip(
-    title: String,
-    selected: Boolean,
-    onSelect: () -> Unit,
+private fun ResultTabs(
+    state: SearchUiState,
+    onTargetChange: (SearchTarget) -> Unit,
 ) {
-    FilterChip(
-        selected = selected,
-        onClick = onSelect,
-        label = { Text(title) },
-    )
+    PrimaryTabRow(
+        selectedTabIndex = TargetOrder.indexOf(state.target),
+        modifier = Modifier.padding(top = Spacing.md),
+        containerColor = Color.Transparent,
+    ) {
+        TargetOrder.forEach { target ->
+            // No count on 帖子: `/search` never returns a total, and the number of rows loaded so far
+            // is not one — it grows as you scroll, which reads as the site changing.
+            val count =
+                state.userResults.size.takeIf {
+                    target == SearchTarget.USERS && state.userLoadState == SearchLoadState.Success
+                }
+            val title = stringResource(target.labelRes())
+            val isSelected = state.target == target
+            Tab(
+                selected = isSelected,
+                onClick = { onTargetChange(target) },
+                selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = {
+                    Text(
+                        if (count == null) title else "$title · $count",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    )
+                },
+            )
+        }
+    }
 }
 
 /**
@@ -560,65 +609,135 @@ private fun BoardChip(
  * Both are server parameters, not local filtering: `category` picks the one board `/search` accepts,
  * and `sortBy` is the boards' own 新评论 / 新帖子 — which is why the order reads the same here as it
  * does on the home feed.
+ *
+ * A scoped search shows its board as an input chip whose ✕ widens it back to the whole site, the
+ * common undo; the chip itself, like 全部版块 when nothing is scoped, opens 高级搜索.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ResultScopeRow(
     state: SearchUiState,
-    onOpenBoardSheet: () -> Unit,
+    onOpenOptions: () -> Unit,
+    onBoardChange: (String?) -> Unit,
     onSortChange: (FeedSort) -> Unit,
 ) {
     var showSortMenu by remember { mutableStateOf(false) }
+    val layers = LocalPlazaLayers.current
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.fillMaxWidth().padding(start = Spacing.lg, end = Spacing.sm, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Selected when the search is scoped to one board, so the row says at a glance whether the
-        // results are the whole site or a corner of it.
-        FilterChip(
-            selected = state.selectedBoard != null,
-            onClick = onOpenBoardSheet,
-            label = {
-                Text(
-                    state.selectedBoard
-                        ?.let { slug -> state.boards.title(slug) }
-                        ?: stringResource(Res.string.search_all_boards),
-                )
-            },
-            leadingIcon =
-            if (state.selectedBoard != null) {
-                {
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(FilterChipDefaults.IconSize),
-                    )
-                }
-            } else {
-                null
-            },
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-        )
+        val board = state.selectedBoard
+        if (board != null) {
+            val title = state.boards.title(board)
+            InputChip(
+                selected = true,
+                onClick = onOpenOptions,
+                label = { Text(title) },
+                trailingIcon = {
+                    Box(
+                        modifier =
+                        Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .clickable(onClickLabel = stringResource(Res.string.search_clear_board, title)) {
+                                onBoardChange(null)
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(Res.string.search_clear_board, title),
+                            modifier = Modifier.size(InputChipDefaults.IconSize),
+                        )
+                    }
+                },
+                colors =
+                InputChipDefaults.inputChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    selectedTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ),
+                border = null,
+            )
+        } else {
+            FilterChip(
+                selected = false,
+                onClick = onOpenOptions,
+                label = { Text(stringResource(Res.string.search_all_boards)) },
+                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+                colors = FilterChipDefaults.filterChipColors(containerColor = layers.raised),
+                border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+            )
+        }
+        Box(Modifier.weight(1f))
         Box {
             TextButton(onClick = { showSortMenu = true }) {
-                Icon(
-                    PlazaIcons.SwapVert,
-                    contentDescription = stringResource(Res.string.action_sort),
-                    modifier = Modifier.size(FilterChipDefaults.IconSize),
+                Text(
+                    stringResource(state.sort.labelRes()),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.size(Spacing.xs))
-                Text(stringResource(state.sort.labelRes()))
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    contentDescription = stringResource(Res.string.action_sort),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
-                SortMenuItem(FeedSort.LAST_REPLY, state.sort, onSortChange) { showSortMenu = false }
-                SortMenuItem(FeedSort.POST_TIME, state.sort, onSortChange) { showSortMenu = false }
+            DropdownMenu(
+                expanded = showSortMenu,
+                onDismissRequest = { showSortMenu = false },
+                modifier = Modifier.widthIn(min = 180.dp),
+                shape = RoundedCornerShape(16.dp),
+                containerColor = layers.raised,
+            ) {
+                SortOrder.forEachIndexed { index, sort ->
+                    SortMenuItem(sort, index, state.sort, onSortChange) { showSortMenu = false }
+                }
             }
         }
     }
 }
+
+/** The order the site's own sort menu lists them in, and the order every picker here uses. */
+private val SortOrder = listOf(FeedSort.LAST_REPLY, FeedSort.POST_TIME)
+
 private fun FeedSort.labelRes(): StringResource =
     if (this == FeedSort.POST_TIME) Res.string.sort_by_post_time else Res.string.sort_by_reply_time
+
+/** Material's selectable menu item: the current order sits on a tonal pill with a tick. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SortMenuItem(
+    sort: FeedSort,
+    index: Int,
+    selectedSort: FeedSort,
+    onSortChange: (FeedSort) -> Unit,
+    closeMenu: () -> Unit,
+) {
+    val isCurrent = sort == selectedSort
+    DropdownMenuItem(
+        selected = isCurrent,
+        onClick = {
+            closeMenu()
+            onSortChange(sort)
+        },
+        text = { Text(stringResource(sort.labelRes()), fontWeight = if (isCurrent) FontWeight.SemiBold else null) },
+        shapes = MenuDefaults.itemShape(index, SortOrder.size),
+        // Same reason as the home feed's menu: the tick is decoration, `selected` is what TalkBack
+        // reads out as 已选中.
+        modifier = Modifier.semantics { selected = isCurrent },
+        trailingIcon = {
+            if (isCurrent) Icon(Icons.Default.Check, contentDescription = null)
+        },
+        colors =
+        MenuDefaults.selectableItemColors(
+            containerColor = Color.Transparent,
+            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            selectedTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+    )
+}
 
 @Composable
 private fun SearchResults(
@@ -650,7 +769,18 @@ private fun SearchResults(
                 if (state.userResults.isEmpty()) {
                     Box(Modifier.fillMaxSize()) { NoSearchResultsState(onClearQuery = { queryState.clearText() }) }
                 } else {
-                    UserResults(users = state.userResults, onUserClick = onUserClick)
+                    // One item holding the whole group: see [UserResultGroup] for why one card.
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = LayerPageGutter, vertical = Spacing.md),
+                    ) {
+                        item("users") {
+                            UserResultGroup(
+                                users = state.userResults,
+                                highlight = state.submittedQuery,
+                                onUserClick = onUserClick,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -695,23 +825,24 @@ private fun PostResults(
         isRefreshing = posts.loadState.refresh is LoadState.Loading,
         onRefresh = posts::refresh,
     ) {
-        LazyColumn {
+        LazyColumn(
+            contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
             items(
                 count = posts.itemCount,
                 key = posts.itemKey { it.summary.postId },
             ) { index ->
                 // Same pager, same reason as the feed: a counted-but-unloaded row keeps its space.
                 when (val post = posts[index]) {
-                    null -> FeedRowPlaceholder()
+                    null -> SearchPostCardPlaceholder()
 
-                    else -> {
-                        PostRow(
+                    else ->
+                        SearchPostCard(
                             post = post,
-                            onClick = { onPostClick(post.summary.postId) },
                             highlight = highlight,
+                            onClick = { onPostClick(post.summary.postId) },
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    }
                 }
             }
             appendRow(posts)
@@ -748,170 +879,167 @@ private fun LazyListScope.appendRow(posts: LazyPagingItems<FeedPost>) {
     }
 }
 
-@Composable
-private fun SortMenuItem(
-    sort: FeedSort,
-    selectedSort: FeedSort,
-    onSortChange: (FeedSort) -> Unit,
-    closeMenu: () -> Unit,
-) {
-    val isCurrent = sort == selectedSort
-    DropdownMenuItem(
-        text = { Text(stringResource(sort.labelRes())) },
-        // Same reason as the home feed's menu: the tick is decoration, `selected` is what TalkBack
-        // reads out as 已选中.
-        modifier = Modifier.semantics { selected = isCurrent },
-        trailingIcon = {
-            if (isCurrent) Icon(Icons.Default.Check, contentDescription = null)
-        },
-        onClick = {
-            closeMenu()
-            onSortChange(sort)
-        },
-    )
-}
-
 /**
- * Past searches, each one a whole search rather than a word.
+ * Past searches, each one a whole search rather than a word, as one card of rows.
  *
  * The second line is the scope it ran with, so the same word searched in two boards is two rows and
- * tapping either re-runs exactly what it says.
+ * tapping either re-runs exactly what it says. A board scope wears the board's own tag, the same one
+ * the results carry, so 情报 reads as 情报 at a glance rather than as a word in a sentence.
  */
 @Composable
-private fun SearchHistory(
+private fun ColumnScope.SearchHistory(
     searches: List<SearchHistoryEntry>,
     boards: List<Board>,
     onHistoryClick: (SearchHistoryEntry) -> Unit,
     onRemoveHistory: (SearchHistoryEntry) -> Unit,
     onClearHistory: () -> Unit,
 ) {
-    Row(
-        Modifier.fillMaxWidth().padding(start = Spacing.lg, end = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            stringResource(Res.string.search_recent),
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onClearHistory) { Text(stringResource(Res.string.search_clear_all)) }
-    }
-    if (searches.isEmpty()) {
-        Text(
-            stringResource(Res.string.search_history_empty),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(Spacing.lg),
-        )
-    } else {
-        LazyColumn {
-            items(searches, key = SearchHistoryEntry::key) { recent ->
-                ListItem(
-                    headlineContent = { Text(recent.query, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    supportingContent = { Text(historyScope(recent, boards)) },
-                    leadingContent = {
-                        Icon(
-                            if (recent.target == SearchTarget.POSTS) {
-                                PlazaIcons.History
-                            } else {
-                                PlazaIcons.PersonSearch
-                            },
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = Spacing.xl, end = Spacing.sm, top = Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(Res.string.search_recent),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onClearHistory) {
+                Text(stringResource(Res.string.search_clear_all), fontWeight = FontWeight.SemiBold)
+            }
+        }
+        if (searches.isEmpty()) {
+            Text(
+                stringResource(Res.string.search_history_empty),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
+            )
+        } else {
+            LayerGroup(Modifier.padding(start = LayerPageGutter, end = LayerPageGutter, bottom = Spacing.lg)) {
+                searches.forEachIndexed { index, recent ->
+                    // Keyed so removing one row does not hand its neighbour's pressed state around.
+                    key(recent.key) {
+                        if (index > 0) LayerDivider(startInset = HistoryDividerInset)
+                        HistoryRow(
+                            recent = recent,
+                            boards = boards,
+                            onClick = { onHistoryClick(recent) },
+                            onRemove = { onRemoveHistory(recent) },
                         )
-                    },
-                    trailingContent = {
-                        IconButton(onClick = { onRemoveHistory(recent) }) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(Res.string.search_remove_recent, recent.query),
-                            )
-                        }
-                    },
-                    modifier = Modifier.clickable { onHistoryClick(recent) },
-                )
+                    }
+                }
             }
         }
     }
 }
 
+/** Under the text, past the 16dp padding, the 24dp icon and the 14dp gap. */
+private val HistoryDividerInset = 54.dp
+
 @Composable
-private fun historyScope(
+private fun HistoryRow(
+    recent: SearchHistoryEntry,
+    boards: List<Board>,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    Row(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .heightIn(min = 64.dp)
+            .padding(start = Spacing.lg, end = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(
+            if (recent.target == SearchTarget.POSTS) PlazaIcons.History else PlazaIcons.PersonSearch,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Column(Modifier.weight(1f).padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                recent.query,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            HistoryScope(recent, boards)
+        }
+        IconButton(onClick = onRemove) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = stringResource(Res.string.search_remove_recent, recent.query),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HistoryScope(
     entry: SearchHistoryEntry,
     boards: List<Board>,
-): String {
-    if (entry.target == SearchTarget.USERS) return stringResource(Res.string.search_user_history_scope)
-    val slug = entry.categorySlug ?: return stringResource(Res.string.search_history_scope)
-    return stringResource(Res.string.search_history_board_scope, boards.title(slug))
-}
-
-@Composable
-private fun UserResults(
-    users: List<UserSearchResult>,
-    onUserClick: (Long) -> Unit,
 ) {
-    LazyColumn {
-        items(users, key = UserSearchResult::uid) { user ->
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { onUserClick(user.uid) }
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                UserAvatar(url = user.avatarUrl, name = user.name, size = listAvatarSize())
-                Column(Modifier.weight(1f).padding(horizontal = Spacing.md)) {
-                    Text(user.name, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        userDetail(user),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+    val slug = entry.categorySlug
+    if (entry.target == SearchTarget.POSTS && slug != null) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            BoardTag(title = boards.title(slug), slug = slug)
+            HistoryScopeText(stringResource(Res.string.search_posts_tab))
         }
+        return
     }
+    HistoryScopeText(
+        stringResource(
+            if (entry.target == SearchTarget.USERS) Res.string.search_user_history_scope else Res.string.search_history_scope,
+        ),
+    )
 }
 
 @Composable
-private fun userDetail(user: UserSearchResult): String =
-    buildList {
-        add("UID ${user.uid}")
-        user.level?.let { add("Lv $it") }
-        user.topicCount?.let { add(stringResource(Res.string.search_user_topics, it)) }
-        user.commentCount?.let { add(stringResource(Res.string.search_user_comments, it)) }
-        user.bio?.let { add(it) }
-        if (user.bio == null) {
-            user.joinedText?.let { add(stringResource(Res.string.search_user_joined, it)) }
-        }
-    }.joinToString(" · ")
+private fun HistoryScopeText(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+    )
+}
 
 /**
- * Picks the one board the search is scoped to, from the results screen.
+ * 高级搜索: the one board the search is scoped to, and its order.
  *
  * Single choice because `/search` takes a single `category` and applies it itself. The checkbox
  * version of this sheet could only pretend to filter by several: it searched the whole site and
  * dropped the rows that did not match, so a board with few hits made the app walk page after page
  * looking for something to show. 全部版块 is a real option here, not an empty selection — it is what
- * the site does when the parameter is absent.
+ * the site does when the parameter is absent. It leads the 最近使用 row, since it is the choice a
+ * reader most often comes back to.
+ *
+ * Nothing applies until the button: both choices are server parameters, and re-running the search on
+ * every tap would spend a request per chip on the way to the one that was meant. The button names
+ * what it will do — 在「技术」中搜索 — and with an empty box, where there is nothing to search yet,
+ * it only sets the scope and says 应用.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BoardRangeSheet(
+private fun AdvancedSearchSheet(
     boards: List<Board>,
-    selected: String?,
+    selectedBoard: String?,
+    sort: FeedSort,
     recentBoards: List<String>,
+    willSearch: Boolean,
     onDismiss: () -> Unit,
-    onApply: (String?) -> Unit,
+    onApply: (String?, FeedSort) -> Unit,
 ) {
-    var picked by remember(selected) { mutableStateOf(selected) }
+    var pickedBoard by remember(selectedBoard) { mutableStateOf(selectedBoard) }
+    var pickedSort by remember(sort) { mutableStateOf(sort) }
     val recent = recentBoards.mapNotNull { slug -> boards.firstOrNull { it.slug == slug } }
     val remaining = boards.filterNot { board -> recent.any { it.slug == board.slug } }
+    val allBoards = stringResource(Res.string.search_all_boards)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState =
@@ -919,71 +1047,173 @@ private fun BoardRangeSheet(
             initialValue = SheetValue.Hidden,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
+        containerColor = LocalPlazaLayers.current.page,
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = Spacing.xl, vertical = Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            Modifier.fillMaxWidth().padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Text(stringResource(Res.string.search_board_range), style = MaterialTheme.typography.titleLarge)
-            Text(
-                stringResource(Res.string.search_board_range_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            // The board list scrolls on its own so the apply row below stays reachable even on a
-            // short window; the button is the whole point of opening the sheet.
-            Column(
-                Modifier
-                    .weight(1f, fill = false)
-                    .selectableGroup()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                ChoiceRow(
-                    label = stringResource(Res.string.search_all_boards),
-                    selected = picked == null,
-                    onSelect = { picked = null },
-                )
-                if (recent.isNotEmpty()) {
-                    Text(
-                        stringResource(Res.string.search_recent_boards),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    BoardRadioGrid(recent, picked) { picked = it }
-                }
+            Row(Modifier.padding(start = Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stringResource(Res.string.search_board_all_boards_heading),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    stringResource(Res.string.search_advanced),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
                 )
-                BoardRadioGrid(remaining, picked) { picked = it }
+                TextButton(
+                    onClick = {
+                        pickedBoard = null
+                        pickedSort = DefaultSearchSort
+                    },
+                ) {
+                    Text(stringResource(Res.string.search_advanced_reset), fontWeight = FontWeight.SemiBold)
+                }
             }
-            Button(onClick = { onApply(picked) }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(Res.string.search_apply_board))
+            // The choices scroll on their own so the button below stays reachable even on a short
+            // window; the button is the whole point of opening the sheet.
+            Column(
+                Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SheetLabel(stringResource(Res.string.search_board_section))
+                    LayerCard(
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = PaddingValues(Spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                    ) {
+                        if (recent.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            ) {
+                                Icon(
+                                    PlazaIcons.Schedule,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text(
+                                    stringResource(Res.string.search_recent_boards),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        BoardChipFlow {
+                            BoardChip(allBoards, selected = pickedBoard == null) { pickedBoard = null }
+                            recent.forEach { board ->
+                                BoardChip(board.title, selected = board.slug == pickedBoard) { pickedBoard = board.slug }
+                            }
+                        }
+                        if (remaining.isNotEmpty()) {
+                            LayerDivider(startInset = 0.dp)
+                            BoardChipFlow {
+                                remaining.forEach { board ->
+                                    BoardChip(board.title, selected = board.slug == pickedBoard) {
+                                        pickedBoard = board.slug
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SheetLabel(stringResource(Res.string.search_advanced_sort))
+                    SortSegments(selected = pickedSort, onSelect = { pickedSort = it })
+                }
+            }
+            Button(
+                onClick = { onApply(pickedBoard, pickedSort) },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = CircleShape,
+            ) {
+                Text(
+                    if (willSearch) {
+                        stringResource(Res.string.search_in_board, pickedBoard?.let { boards.title(it) } ?: allBoards)
+                    } else {
+                        stringResource(Res.string.search_apply_board)
+                    },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
 }
 
-/** Two columns: fourteen boards in seven rows fit a phone screen without a scroll to the button. */
 @Composable
-private fun BoardRadioGrid(
-    boards: List<Board>,
-    selected: String?,
-    onSelect: (String?) -> Unit,
+private fun SheetLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = Spacing.xs),
+    )
+}
+
+@Composable
+private fun BoardChipFlow(content: @Composable () -> Unit) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        content()
+    }
+}
+
+/**
+ * No leading tick, deliberately — the artboard draws one, and this is the one place it is left out.
+ *
+ * A tick makes the selected chip ~26dp wider, and in a wrapping group that re-flows every chip after
+ * it: on a narrow phone picking a board moved the rest of the list between rows, under the finger
+ * that was still choosing. The primary fill against the tonal ones already says which one is on,
+ * TalkBack reads 已选中 from [FilterChip]'s own semantics either way, and the tick is optional
+ * decoration in Material's own spec — so it is the part that goes.
+ */
+@Composable
+private fun BoardChip(
+    title: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
 ) {
-    boards.chunked(2).forEach { row ->
-        Row(Modifier.fillMaxWidth()) {
-            row.forEach { board ->
-                ChoiceRow(
-                    label = board.title,
-                    selected = board.slug != null && board.slug == selected,
-                    onSelect = { onSelect(board.slug) },
-                    modifier = Modifier.weight(1f),
-                )
+    FilterChip(
+        selected = selected,
+        onClick = onSelect,
+        label = { Text(title, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium) },
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.height(36.dp),
+        colors =
+        FilterChipDefaults.filterChipColors(
+            containerColor = LocalPlazaLayers.current.inset,
+            labelColor = MaterialTheme.colorScheme.onSurface,
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+        border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
+    )
+}
+
+/** 按回复时间 / 按发帖时间, as Material's segmented buttons with the artboard's 8dp corners. */
+@Composable
+private fun SortSegments(
+    selected: FeedSort,
+    onSelect: (FeedSort) -> Unit,
+) {
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        SortOrder.forEachIndexed { index, sort ->
+            SegmentedButton(
+                selected = sort == selected,
+                onClick = { onSelect(sort) },
+                shape = SegmentedButtonDefaults.itemShape(index, SortOrder.size, RoundedCornerShape(8.dp)),
+                colors = SegmentedButtonDefaults.colors(inactiveContainerColor = LocalPlazaLayers.current.raised),
+            ) {
+                Text(stringResource(sort.labelRes()), maxLines = 1)
             }
-            if (row.size == 1) Spacer(Modifier.weight(1f))
         }
     }
 }

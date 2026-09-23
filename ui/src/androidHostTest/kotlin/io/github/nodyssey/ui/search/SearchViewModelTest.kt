@@ -168,6 +168,58 @@ class SearchViewModelTest {
             assertEquals(listOf(null, "tech"), remote.searchRequests.map { it.categorySlug })
         }
 
+    /**
+     * 高级搜索 sets board and order in one go. Applied as two separate picks, a showing search ran
+     * twice — once for the half-applied scope — and spent a page-one request on a list nobody asked for.
+     */
+    @Test
+    fun `advanced search re-runs a showing search once for board and order together`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            type(vm, "android")
+            vm.submitSearch()
+            advanceUntilIdle()
+            vm.postResults.ids()
+
+            vm.applySearchOptions("tech", FeedSort.LAST_REPLY)
+            advanceUntilIdle()
+            vm.postResults.ids()
+
+            assertEquals(
+                listOf(null to FeedSort.POST_TIME, "tech" to FeedSort.LAST_REPLY),
+                remote.searchRequests.map { it.categorySlug to it.sort },
+            )
+        }
+
+    /** Before anything is submitted, the sheet's 在「…」中搜索 is the submit for what is in the box. */
+    @Test
+    fun `advanced search with a typed query and nothing submitted runs the search`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            type(vm, "android")
+
+            vm.applySearchOptions("tech", FeedSort.POST_TIME)
+            advanceUntilIdle()
+            vm.postResults.ids()
+
+            assertEquals("android", vm.uiState.value.submittedQuery)
+            assertEquals(listOf("tech"), remote.searchRequests.map { it.categorySlug })
+        }
+
+    @Test
+    fun `advanced search with an empty box only sets the scope`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+
+            vm.applySearchOptions("tech", FeedSort.LAST_REPLY)
+            advanceUntilIdle()
+
+            assertEquals(null, vm.uiState.value.submittedQuery)
+            assertEquals("tech", vm.uiState.value.selectedBoard)
+            assertEquals(FeedSort.LAST_REPLY, vm.uiState.value.sort)
+            assertEquals(0, remote.searchRequests.size)
+        }
+
     @Test
     fun `editing the box drops the results it no longer describes`() =
         runTest(dispatcher) {
