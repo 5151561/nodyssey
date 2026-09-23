@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -135,6 +136,7 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.TonalTile
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -385,30 +387,33 @@ private fun AccountCard(
     ) {
         IdentityRow(state, onOpenSpace)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ResourceTile(
-                label = stringResource(Res.string.profile_chicken),
-                value = state.chickenCount?.toString() ?: UNKNOWN,
-                container = MaterialTheme.colorScheme.tertiaryContainer,
-                content = MaterialTheme.colorScheme.onTertiaryContainer,
-                onClick = onAssets,
-                modifier = Modifier.weight(1f),
-            )
-            ResourceTile(
-                label = stringResource(Res.string.profile_stars),
-                value = state.starCount?.toString() ?: UNKNOWN,
-                container = MaterialTheme.colorScheme.secondaryContainer,
-                content = MaterialTheme.colorScheme.onSecondaryContainer,
-                onClick = onAssets,
-                modifier = Modifier.weight(1f),
-            )
-            ResourceTile(
-                label = stringResource(Res.string.profile_level),
-                value = state.level ?: stringResource(Res.string.profile_level_unknown),
-                container = MaterialTheme.colorScheme.primaryContainer,
-                content = MaterialTheme.colorScheme.onPrimaryContainer,
-                onClick = onAssets,
-                modifier = Modifier.weight(1f),
-            )
+            val scheme = MaterialTheme.colorScheme
+            listOf(
+                Triple(Res.string.profile_chicken, state.chickenCount?.toString() ?: UNKNOWN, scheme.tertiaryContainer),
+                Triple(Res.string.profile_stars, state.starCount?.toString() ?: UNKNOWN, scheme.secondaryContainer),
+                Triple(
+                    Res.string.profile_level,
+                    state.level ?: stringResource(Res.string.profile_level_unknown),
+                    scheme.primaryContainer,
+                ),
+            ).forEach { (label, value, container) ->
+                TonalTile(
+                    onClick = onAssets,
+                    containerColor = container,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(label), style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        text = value,
+                        style =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFeatureSettings = TABULAR_FIGURES,
+                        ),
+                        maxLines = 1,
+                    )
+                }
+            }
         }
         LevelProgress(state)
     }
@@ -462,37 +467,6 @@ private fun IdentityRow(
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun ResourceTile(
-    label: String,
-    value: String,
-    container: Color,
-    content: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        color = container,
-        contentColor = content,
-    ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium)
-            Text(
-                text = value,
-                style =
-                MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontFeatureSettings = TABULAR_FIGURES,
-                ),
-                maxLines = 1,
-            )
-        }
     }
 }
 
@@ -695,24 +669,16 @@ private const val PROFILE_GRID_COLUMNS = 4
 /**
  * One card of tiles, four to a row.
  *
- * Laid out by hand rather than with `LazyVerticalGrid`: this whole screen is one `LazyColumn`, and
- * a lazy grid nested in it scrolls on the same axis — the combination throws. The counts here are
- * fixed and small, so there is nothing to be lazy about anyway.
+ * A [FlowRow] rather than `LazyVerticalGrid`: this whole screen is one `LazyColumn`, and a lazy grid
+ * nested in it scrolls on the same axis — the combination throws. The counts here are fixed and small,
+ * so there is nothing to be lazy about anyway. Each tile takes a quarter of the width rather than a
+ * weight, so a short last row stays on the column grid of the rows above it.
  */
 @Composable
 private fun ProfileGridCard(tiles: List<ProfileTile>) {
     LayerCard(contentPadding = PaddingValues(8.dp), verticalArrangement = Arrangement.Top) {
-        tiles.chunked(PROFILE_GRID_COLUMNS).forEach { rowTiles ->
-            Row(Modifier.fillMaxWidth()) {
-                rowTiles.forEach { tile ->
-                    ProfileGridTile(tile, Modifier.weight(1f))
-                }
-                // Keeps the last row's tiles on the same column grid as the ones above rather than
-                // spreading three of them across four columns' worth of width.
-                repeat(PROFILE_GRID_COLUMNS - rowTiles.size) {
-                    Box(Modifier.weight(1f))
-                }
-            }
+        FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = PROFILE_GRID_COLUMNS) {
+            tiles.forEach { tile -> ProfileGridTile(tile, Modifier.fillMaxWidth(1f / PROFILE_GRID_COLUMNS)) }
         }
     }
 }

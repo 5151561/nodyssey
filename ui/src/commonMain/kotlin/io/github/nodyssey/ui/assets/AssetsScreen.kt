@@ -97,11 +97,13 @@ import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.TonalTile
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 /** What buying an invite code costs, and the reason the confirm dialog exists at all. */
@@ -203,22 +205,40 @@ fun AssetsScreen(
         ) {
             LevelCard(state)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BalanceCard(
-                    label = stringResource(Res.string.assets_chicken),
-                    value = state.chickenCount,
-                    action = stringResource(Res.string.assets_ledger),
-                    container = MaterialTheme.colorScheme.tertiaryContainer,
-                    content = MaterialTheme.colorScheme.onTertiaryContainer,
-                    onClick = onChickenLedger,
-                )
-                BalanceCard(
-                    label = stringResource(Res.string.assets_stars),
-                    value = state.starCount,
-                    action = stringResource(Res.string.assets_ledger_transfer),
-                    container = MaterialTheme.colorScheme.secondaryContainer,
-                    content = MaterialTheme.colorScheme.onSecondaryContainer,
-                    onClick = onStardust,
-                )
+                val scheme = MaterialTheme.colorScheme
+                listOf(
+                    Balance(Res.string.assets_chicken, state.chickenCount, Res.string.assets_ledger, scheme.tertiaryContainer, onChickenLedger),
+                    Balance(Res.string.assets_stars, state.starCount, Res.string.assets_ledger_transfer, scheme.secondaryContainer, onStardust),
+                ).forEach { balance ->
+                    TonalTile(
+                        onClick = balance.onClick,
+                        containerColor = balance.container,
+                        contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = 14.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = stringResource(balance.label),
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Text(
+                            text = balance.value?.toString() ?: UNKNOWN,
+                            style =
+                            MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontFeatureSettings = TABULAR_FIGURES,
+                            ),
+                        )
+                        Text(stringResource(balance.action), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
             SectionLabel(stringResource(Res.string.assets_daily_title))
             DailyQuotaCard(
@@ -533,50 +553,14 @@ private fun DailyQuota.progress(): Float? {
     return (current.toFloat() / cap).coerceIn(0f, 1f)
 }
 
-@Composable
-private fun RowScope.BalanceCard(
-    label: String,
-    value: Int?,
-    action: String,
-    container: Color,
-    content: Color,
-    onClick: () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        color = container,
-        contentColor = content,
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.weight(1f),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.weight(1f),
-                )
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            Text(
-                text = value?.toString() ?: UNKNOWN,
-                style =
-                MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontFeatureSettings = TABULAR_FIGURES,
-                ),
-            )
-            Text(action, style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
+/** One of the two balance tiles: what it counts, how much, and where tapping it goes. */
+private class Balance(
+    val label: StringResource,
+    val value: Int?,
+    val action: StringResource,
+    val container: Color,
+    val onClick: () -> Unit,
+)
 
 private const val UNKNOWN = "—"
 

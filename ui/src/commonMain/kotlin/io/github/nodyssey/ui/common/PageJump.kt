@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -84,6 +85,7 @@ import io.github.nodyssey.ui.resources.page_jump_to
 import io.github.nodyssey.ui.resources.page_jump_unit_floor
 import io.github.nodyssey.ui.resources.page_jump_unit_page
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TonalTile
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Sizes
@@ -407,6 +409,7 @@ private fun PageKeys(
     onGo: (Int) -> Unit,
 ) {
     val state = rememberLazyListState()
+    val layers = LocalPlazaLayers.current
     LaunchedEffect(current, lastPage) {
         state.scrollToItem((current - 3).coerceAtLeast(0))
     }
@@ -421,44 +424,30 @@ private fun PageKeys(
         ) {
             items(count = lastPage, key = { it }) { index ->
                 val number = index + 1
-                PageKeyButton(
-                    number = number,
-                    selected = number == current,
+                val selected = number == current
+                // On paper the raised key is the page's own white; the outline is what makes it a key
+                // there. The selected one is filled with `primary`, solid black on a panel, and needs
+                // no help.
+                TonalTile(
                     onClick = { onGo(number) },
-                    modifier = Modifier.width(keyWidth),
-                )
+                    containerColor = if (selected) MaterialTheme.colorScheme.primary else layers.raised,
+                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    selected = selected,
+                    shape = SheetKeyShape,
+                    border = layers.cardBorder?.takeIf { !selected }?.let { BorderStroke(1.dp, it) },
+                    contentPadding = PaddingValues(0.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.width(keyWidth).height(SheetKeyHeight),
+                ) {
+                    Text(
+                        text = number.toString(),
+                        style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                    )
+                }
             }
-        }
-    }
-}
-
-@Composable
-private fun PageKeyButton(
-    number: Int,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val layers = LocalPlazaLayers.current
-    Surface(
-        onClick = onClick,
-        shape = SheetKeyShape,
-        color = if (selected) MaterialTheme.colorScheme.primary else layers.raised,
-        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-        // On paper the raised key is the page's own white; the outline is what makes it a key there.
-        // The selected one is filled with `primary`, solid black on a panel, and needs no help.
-        border = layers.cardBorder?.takeIf { !selected }?.let { BorderStroke(1.dp, it) },
-        modifier = modifier
-            .height(SheetKeyHeight)
-            .semantics { this.selected = selected },
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = number.toString(),
-                style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-            )
         }
     }
 }
@@ -613,23 +602,22 @@ private fun UnitChip(
 /**
  * One destination tile: 上次阅读 / 第 3 页 · #41.
  *
- * Hand-drawn rather than a Material chip because the design's tile is neither of Material's: two lines
- * and a 24dp icon, sharing a row with its sibling half and half.
+ * Not a Material chip: the design's tile is two lines and a 24dp icon, sharing a row with its sibling
+ * half and half.
  */
 @Composable
 private fun JumpTile(
     destination: JumpDestination,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    TonalTile(
         onClick = destination.onGo,
-        shape = JumpTileShape,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        contentPadding = PaddingValues(horizontal = Spacing.md, vertical = 10.dp),
+        verticalArrangement = Arrangement.Center,
         modifier = modifier.heightIn(min = JumpTileMinHeight),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = Spacing.md, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -662,7 +650,6 @@ private val SheetKeyHeight = 48.dp
 private val SheetKeyShape = RoundedCornerShape(14.dp)
 private val FieldHeight = 60.dp
 private val GoButtonSize = 44.dp
-private val JumpTileShape = RoundedCornerShape(16.dp)
 private val JumpTileMinHeight = 56.dp
 private val DragHandleWidth = 32.dp
 private val DragHandleHeight = 4.dp

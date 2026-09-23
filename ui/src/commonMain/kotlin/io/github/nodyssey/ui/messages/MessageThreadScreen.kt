@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -132,6 +133,7 @@ import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.QuotePreview
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.editor.EditorAction
@@ -799,11 +801,31 @@ private fun MessageComposer(
             onRemove = onRemoveAttachment,
             onRetry = onRetryAttachment,
         )
+        // One quoted message waiting over the bar (3e): whose words, the first line of them, and a
+        // ✕. The excerpt goes through the conversation list's [previewText], so a quoted picture or
+        // sticker reads as [图片] or [表情] rather than as the Markdown that carries it.
         state.quotes.forEach { quoted ->
-            QuoteCard(
-                message = quoted,
-                otherName = state.userName,
+            QuotePreview(
+                title =
+                if (quoted.isMine) {
+                    stringResource(Res.string.message_quote_chip_mine)
+                } else {
+                    stringResource(Res.string.message_quote_chip, state.userName)
+                },
+                excerpt = previewText(contentPreview(quoted.content)),
+                titleColor = MaterialTheme.colorScheme.primary,
+                leading = {
+                    Box(
+                        Modifier
+                            .width(3.dp)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.primary),
+                    )
+                },
                 onRemove = { onRemoveQuote(quoted.id) },
+                removeLabel = stringResource(Res.string.message_quote_remove),
+                modifier = Modifier.padding(start = LayerPageGutter, end = LayerPageGutter, top = Spacing.xs),
             )
         }
         MessageInputBar(
@@ -975,70 +997,6 @@ private fun MessageDraftField(
 }
 
 /**
- * One quoted message waiting over the bar (3e): whose words, the first line of them, and a ✕.
- *
- * The excerpt goes through the conversation list's [previewText], so a quoted picture or sticker
- * reads as [图片] or [表情] rather than as the Markdown that carries it.
- */
-@Composable
-private fun QuoteCard(
-    message: MessageBubble,
-    otherName: String,
-    onRemove: () -> Unit,
-) {
-    val layers = LocalPlazaLayers.current
-    Row(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .padding(start = LayerPageGutter, end = LayerPageGutter, top = Spacing.xs)
-            .cardShadow(QUOTE_SHAPE, layers.shadows)
-            .clip(QUOTE_SHAPE)
-            .background(layers.card)
-            .then(layers.cardBorder?.let { Modifier.border(1.dp, it, QUOTE_SHAPE) } ?: Modifier)
-            .padding(start = 12.dp, top = 6.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        Box(
-            Modifier
-                .width(3.dp)
-                .height(36.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(MaterialTheme.colorScheme.primary),
-        )
-        Column(Modifier.weight(1f)) {
-            Text(
-                text =
-                if (message.isMine) {
-                    stringResource(Res.string.message_quote_chip_mine)
-                } else {
-                    stringResource(Res.string.message_quote_chip, otherName)
-                },
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = previewText(contentPreview(message.content)).orEmpty(),
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        IconButton(onClick = onRemove) {
-            Icon(
-                Icons.Default.Close,
-                contentDescription = stringResource(Res.string.message_quote_remove),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-/**
  * 3e's grid behind the + key, four tiles to a row.
  *
  * The keys that open something — 相册 and 表情 — lead, then the MD switch, then the formatting keys
@@ -1100,12 +1058,15 @@ private fun ToolGrid(
             modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm, bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            // Rows of four by hand rather than a lazy grid: there are never more than a dozen tiles,
+            // A flow of quarters rather than a lazy grid: there are never more than a dozen tiles,
             // and a lazy grid inside this column would need a fixed height to measure at all.
-            tiles.chunked(TOOL_COLUMNS).forEach { row ->
-                Row(Modifier.fillMaxWidth()) {
-                    row.forEach { tile -> Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) { tile() } }
-                    repeat(TOOL_COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                maxItemsInEachRow = TOOL_COLUMNS,
+                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+            ) {
+                tiles.forEach { tile ->
+                    Box(Modifier.fillMaxWidth(1f / TOOL_COLUMNS), contentAlignment = Alignment.TopCenter) { tile() }
                 }
             }
         }
@@ -1216,7 +1177,6 @@ private const val FAILED_ALPHA = 0.72f
 private val TOP_BAR_SHAPE: Shape = RoundedCornerShape(24.dp)
 private val MENU_SHAPE: Shape = RoundedCornerShape(20.dp)
 private val MENU_MIN_WIDTH = 200.dp
-private val QUOTE_SHAPE: Shape = RoundedCornerShape(20.dp)
 private const val TOOL_COLUMNS = 4
 private val TOOL_TILE_SIZE = 60.dp
 private val TOOL_TILE_RADIUS = 20.dp

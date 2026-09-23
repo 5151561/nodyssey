@@ -202,8 +202,10 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.QuotePreview
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.TonalTag
+import io.github.plaza.designsys.component.TonalTile
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.component.rememberClipboardCopy
@@ -2144,7 +2146,13 @@ private fun FloorActionSheet(
             modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            FloorQuoteCard(content)
+            // The panel's head: whose floor this is, and the first line of it, so the reader knows
+            // what they are marking.
+            QuotePreview(
+                title = listOfNotNull(content.authorName, content.floor).joinToString(" · "),
+                excerpt = content.nodes.excerpt(),
+                leading = { UserAvatar(url = content.avatarUrl, name = content.authorName, size = Sizes.avatarComment) },
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 listOf(ReactionAction.Upvote, ReactionAction.ChickenLeg, ReactionAction.Dislike).forEach { action ->
                     val reactions = content.reactions
@@ -2200,51 +2208,6 @@ private fun FloorActionSheet(
     }
 }
 
-/** A white card inside the panel: no shadow — the sheet is already the raised thing — but the outline on paper. */
-@Composable
-private fun SheetCard(content: @Composable ColumnScope.() -> Unit) {
-    val layers = LocalPlazaLayers.current
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = layers.card,
-        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(content = content)
-    }
-}
-
-/** The panel's head: whose floor this is, and the first line of it, so the reader knows what they are marking. */
-@Composable
-private fun FloorQuoteCard(content: PostContent) {
-    SheetCard {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            UserAvatar(url = content.avatarUrl, name = content.authorName, size = Sizes.avatarComment)
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = listOfNotNull(content.authorName, content.floor).joinToString(" · "),
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                content.nodes.excerpt().takeIf { it.isNotBlank() }?.let {
-                    Text(
-                        text = it.replace('\n', ' '),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-    }
-}
-
 /**
  * One mark as a tile: glyph, name and tally, and under them what it costs — 免费, 今日免费 N 次, 扣 2
  * 鸡腿 — or 已表态 once spent. The price is on the tile because the tile is where the choice is made;
@@ -2267,51 +2230,47 @@ private fun ReactionTile(
             ReactionAction.ChickenLeg -> scheme.tertiaryContainer to scheme.onTertiaryContainer
             ReactionAction.Dislike -> scheme.surfaceContainerHigh to scheme.onSurface
         }
-    Surface(
+    TonalTile(
         onClick = onClick ?: {},
-        enabled = onClick != null && !spent && !pending,
-        shape = RoundedCornerShape(20.dp),
-        color = container,
+        containerColor = container,
         contentColor = ink,
+        enabled = onClick != null && !spent && !pending,
         border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
+        contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.sm, top = 14.dp, bottom = Spacing.md),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.padding(start = Spacing.sm, end = Spacing.sm, top = 14.dp, bottom = Spacing.md),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        if (pending) {
+            PlazaSpinner(modifier = Modifier.describedAsLoading(), strokeWidth = 2.dp, size = 24.dp)
+        } else {
+            Icon(action.icon(), contentDescription = null)
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (pending) {
-                PlazaSpinner(modifier = Modifier.describedAsLoading(), strokeWidth = 2.dp, size = 24.dp)
-            } else {
-                Icon(action.icon(), contentDescription = null)
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            Text(
+                stringResource(action.labelRes()),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            count?.let {
                 Text(
-                    stringResource(action.labelRes()),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    it.toString(),
+                    style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
                     maxLines = 1,
                 )
-                count?.let {
-                    Text(
-                        it.toString(),
-                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-                        maxLines = 1,
-                    )
-                }
             }
-            Text(
-                text = if (spent) stringResource(Res.string.post_reaction_spent) else price,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (action == ReactionAction.Dislike) scheme.onSurfaceVariant else ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
+        Text(
+            text = if (spent) stringResource(Res.string.post_reaction_spent) else price,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (action == ReactionAction.Dislike) scheme.onSurfaceVariant else ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

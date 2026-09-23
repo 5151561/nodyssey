@@ -89,6 +89,7 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.QuotePreview
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.editor.ComposerEditorBar
@@ -326,10 +327,25 @@ private fun ReplyEditorSheet(
                     onClick = onPublish,
                 )
             }
+            // The dismissible 回复 target (6d), recessed into the sheet (2c): it is a reference to
+            // something outside the reply, not part of it. Only 回复 gets one, because only 回复 is a
+            // property of the comment as a whole; a 引用 is text in the body, visible and editable
+            // there, and a chip would imply it could be dismissed the same way.
             state.replyTo?.let { replyTo ->
-                ReplyTargetChip(
-                    replyTo = replyTo,
-                    onClear = onClearReplyTo,
+                QuotePreview(
+                    title = stringResource(Res.string.post_quote_reply, replyTo.author, "#${replyTo.floor}"),
+                    excerpt = replyTo.excerpt,
+                    leading = {
+                        Icon(
+                            PlazaIcons.FormatQuote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    inset = true,
+                    onRemove = onClearReplyTo,
+                    removeLabel = stringResource(Res.string.post_reply_quote_remove),
                     modifier = Modifier.padding(horizontal = Spacing.lg),
                 )
             }
@@ -469,68 +485,6 @@ private fun ReplyPreviewScreen(
                     ReplyReference(floor = replyTo.floor, author = replyTo.author)
                 }
                 MarkdownPreviewBody(markdown = state.body)
-            }
-        }
-    }
-}
-
-/**
- * The dismissible 回复 target above the reply field (6d).
- *
- * Only 回复 gets a chip, because only 回复 is a property of the comment as a whole and can only be
- * one floor. A 引用 is text in the body, visible and editable there, and giving it a chip too would
- * imply it could be dismissed the same way.
- */
-@Composable
-private fun ReplyTargetChip(
-    replyTo: FloorReference,
-    onClear: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val layers = LocalPlazaLayers.current
-    // Recessed into the sheet (2c): it is a reference to something outside the reply, not part of it.
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = layers.inset,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Row(
-            modifier = Modifier.padding(start = Spacing.md, end = Spacing.xs, top = 10.dp, bottom = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                PlazaIcons.FormatQuote,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(Res.string.post_quote_reply, replyTo.author, "#${replyTo.floor}"),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (replyTo.excerpt.isNotBlank()) {
-                    Text(
-                        text = replyTo.excerpt,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            IconButton(onClick = onClear, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = stringResource(Res.string.post_reply_quote_remove),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
             }
         }
     }
