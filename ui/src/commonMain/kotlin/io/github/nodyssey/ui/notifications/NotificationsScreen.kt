@@ -96,6 +96,7 @@ import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.TabLabel
 import io.github.plaza.designsys.component.UnderlineTabRow
@@ -269,7 +270,7 @@ fun NotificationsScreen(
                     actions = {
                         TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
                             Icon(
-                                InboxIcons.DoneAll,
+                                PlazaIcons.DoneAll,
                                 contentDescription = null,
                                 modifier = Modifier.size(ButtonDefaults.IconSize),
                             )

@@ -299,7 +299,7 @@ fun SettingsScreen(
                 // Under 主题 rather than above it: it overrides 明暗 and replaces 主题, and the two
                 // it greys out read first, the way a master switch reads after what it governs.
                 SettingsRow(
-                    leading = { Icon(SettingsIcons.Contrast, contentDescription = null) },
+                    leading = { Icon(PlazaIcons.Contrast, contentDescription = null) },
                     title = stringResource(Res.string.settings_eink),
                     subtitle = stringResource(Res.string.settings_eink_hint),
                     checked = state.settings.einkMode,
@@ -310,7 +310,7 @@ fun SettingsScreen(
                 // whether the title should come down to the thumb is a fact about the hand holding
                 // the phone, and it does not change between 收藏 and 设置.
                 SettingsRow(
-                    leading = { Icon(SettingsIcons.PanTool, contentDescription = null) },
+                    leading = { Icon(PlazaIcons.PanTool, contentDescription = null) },
                     title = stringResource(Res.string.settings_one_hand),
                     subtitle = stringResource(Res.string.settings_one_hand_hint),
                     checked = state.settings.oneHandMode,
@@ -447,7 +447,7 @@ fun SettingsScreen(
                     ),
                     onClick = onOpenImageHost,
                     chevron = true,
-                    leading = { Icon(SettingsIcons.CloudUpload, contentDescription = null) },
+                    leading = { Icon(PlazaIcons.CloudUpload, contentDescription = null) },
                 )
                 SettingsRow(
                     title = stringResource(Res.string.settings_clear_cache),
@@ -492,7 +492,7 @@ fun SettingsScreen(
                     bottom = state.dohEnabled == null && !state.hasNetworkCheck,
                     onClick = onOpenProxy,
                     chevron = true,
-                    leading = { Icon(SettingsIcons.VpnLock, contentDescription = null) },
+                    leading = { Icon(PlazaIcons.VpnLock, contentDescription = null) },
                 )
                 // Absent rather than disabled where the platform cannot apply a DoH server at all —
                 // see [SettingsUiState.dohEnabled], and 默认打开方式 above for the same treatment.
@@ -509,7 +509,7 @@ fun SettingsScreen(
                         bottom = !state.hasNetworkCheck,
                         onClick = onOpenDoh,
                         chevron = true,
-                        leading = { Icon(SettingsIcons.Dns, contentDescription = null) },
+                        leading = { Icon(PlazaIcons.Dns, contentDescription = null) },
                     )
                 }
                 // Last in the group on purpose: the two above are settings that change how the app
@@ -522,7 +522,7 @@ fun SettingsScreen(
                         bottom = true,
                         onClick = onOpenNetworkCheck,
                         chevron = true,
-                        leading = { Icon(SettingsIcons.NetworkCheck, contentDescription = null) },
+                        leading = { Icon(PlazaIcons.NetworkCheck, contentDescription = null) },
                     )
                 }
             }
@@ -541,7 +541,7 @@ fun SettingsScreen(
                     trailing = { if (state.updateVersionName != null) UpdateDot() },
                 )
                 SettingsRow(
-                    leading = { Icon(SettingsIcons.Update, contentDescription = null) },
+                    leading = { Icon(PlazaIcons.Update, contentDescription = null) },
                     title = stringResource(Res.string.settings_update_on_launch),
                     subtitle = stringResource(Res.string.settings_update_on_launch_hint),
                     checked = state.settings.updateCheckOnLaunch,
@@ -549,7 +549,7 @@ fun SettingsScreen(
                     trailing = { GroupedListItemSwitch(checked = state.settings.updateCheckOnLaunch) },
                 )
                 SettingsRow(
-                    leading = { Icon(SettingsIcons.Science, contentDescription = null) },
+                    leading = { Icon(PlazaIcons.Science, contentDescription = null) },
                     title = stringResource(Res.string.settings_update_dev_channel),
                     subtitle = stringResource(Res.string.settings_update_dev_channel_hint),
                     checked = state.settings.updateDevChannel,
@@ -623,7 +623,7 @@ private fun AppLanguageRow(
     var expanded by remember { mutableStateOf(false) }
     val current = choices.first { it.first == selected }.second
     SettingsRow(
-        leading = { Icon(SettingsIcons.Translate, contentDescription = null) },
+        leading = { Icon(PlazaIcons.Translate, contentDescription = null) },
         title = stringResource(Res.string.settings_language),
         // The answer on the second line, where every other row of 外观 keeps its own. The restart
         // note rides after it only where a change waits for the next launch: Android redraws the

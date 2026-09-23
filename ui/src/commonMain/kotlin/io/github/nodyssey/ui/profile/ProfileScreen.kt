@@ -20,7 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
@@ -755,7 +755,7 @@ private fun SignedOutProfile(
         item(key = "benefits") {
             LayerCard(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 SignedOutBenefit(
-                    icon = Icons.Default.Create,
+                    icon = Icons.Default.Edit,
                     title = stringResource(Res.string.profile_guest_benefit_post),
                     subtitle = stringResource(Res.string.profile_guest_benefit_post_hint),
                 )

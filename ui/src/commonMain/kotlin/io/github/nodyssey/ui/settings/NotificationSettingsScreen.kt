@@ -215,7 +215,7 @@ fun NotificationSettingsScreen(
                         trailing = { GroupedListItemSwitch(checked = settings.notificationsWifiOnly, enabled = enabled) },
                     )
                     SettingsRow(
-                        leading = { Icon(SettingsIcons.Bedtime, contentDescription = null) },
+                        leading = { Icon(PlazaIcons.Bedtime, contentDescription = null) },
                         title = stringResource(Res.string.notify_quiet_hours),
                         subtitle = stringResource(Res.string.notify_quiet_hours_hint),
                         bottom = true,

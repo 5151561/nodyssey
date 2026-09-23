@@ -30,7 +30,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.SpanStyle
@@ -64,7 +63,6 @@ import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.component.textScaledSize
 import org.jetbrains.compose.resources.stringResource
 
@@ -373,17 +371,4 @@ private fun DrawScope.drawMark(
             cornerRadius = CornerRadius(4.dp.toPx()),
         )
     }
-}
-
-/**
- * Material Symbols' `tune`, for 高级搜索. Local rather than in `PlazaIcons` because this screen is its
- * only user; move it there the day a second screen needs it.
- */
-internal val TuneIcon: ImageVector by lazy {
-    materialIcon(
-        name = "Tune",
-        pathData =
-        "M3,17v2h6v-2H3zM3,5v2h10V5H3zM13,21v-2h8v-2h-8v-2h-2v6h2zM7,9v2H3v2h4v2h2V9H7z" +
-            "M21,13v-2H11v2h10zM15,9h2V7h4V5h-4V3h-2v6z",
-    )
 }

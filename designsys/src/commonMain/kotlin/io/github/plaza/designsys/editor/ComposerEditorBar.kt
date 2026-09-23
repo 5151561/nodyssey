@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -288,7 +289,7 @@ private fun FormatCard(
                 onCustomize?.let { customize ->
                     IconButton(onClick = customize, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            PlazaIcons.Build,
+                            Icons.Default.Build,
                             contentDescription = stringResource(Res.string.composer_toolbar_customize),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),

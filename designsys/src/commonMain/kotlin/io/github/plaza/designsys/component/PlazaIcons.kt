@@ -14,7 +14,9 @@ import androidx.compose.ui.unit.dp
  * strict lockfile makes a separate, deliberate operation.
  *
  * The bar for adding one: the icon has to carry meaning a core icon cannot. 账号设置's `tune` became
- * `Icons.Default.Settings` and `logout` became `ExitToApp` for exactly that reason.
+ * `Icons.Default.Settings` and `logout` became `ExitToApp` for exactly that reason. This is the one
+ * place a generic symbol is declared — a screen does not keep a private copy — and anything naming
+ * one site's own concepts goes to that app instead.
  */
 object PlazaIcons {
     /** Decorative welcome glyph used by the signed-out profile illustration (board c7). */
@@ -70,23 +72,6 @@ object PlazaIcons {
     }
 
     /**
-     * The un-collected half of the detail screen's star. `Icons.Default.Star` is the filled one.
-     *
-     * Outline versus fill is the only thing separating "collect this" from "already collected" at a
-     * glance, and core ships the filled star alone — the other three marks on that row get away with
-     * a single glyph because they are one-way and only ever gain colour.
-     */
-    val StarBorder: ImageVector by lazy {
-        materialIcon(
-            name = "StarBorder",
-            pathData =
-            "M22,9.24l-7.19,-0.62L12,2 9.19,8.63 2,9.24l5.46,4.73L5.82,21 12,17.27 18.18,21" +
-                "l-1.63,-7.03L22,9.24zM12,15.4l-3.76,2.27 1,-4.28 -3.32,-2.88 4.38,-0.38L12,6.1" +
-                "l1.71,4.04 4.38,0.38 -3.32,2.88 1,4.28L12,15.4z",
-        )
-    }
-
-    /**
      * Material Symbols `poll` — the three bars that mark a vote.
      *
      * Nothing in core says "vote": `ThumbUp` is already the 点赞 mark on every floor, and a bar chart
@@ -133,15 +118,7 @@ object PlazaIcons {
         )
     }
 
-    /** 第一页, on the jump sheet: a left chevron against the wall it cannot pass. */
-    val FirstPage: ImageVector by lazy {
-        materialIcon(
-            name = "FirstPage",
-            pathData = "M18.41,16.59L13.82,12l4.59,-4.59L17,6l-6,6 6,6zM6,6h2v12H6z",
-        )
-    }
-
-    /** 最后一页, the mirror of [FirstPage]. */
+    /** 最后一页 — a right chevron against the wall it cannot pass. */
     val LastPage: ImageVector by lazy {
         materialIcon(
             name = "LastPage",
@@ -157,20 +134,19 @@ object PlazaIcons {
         )
     }
 
+    /** The outlined bookmark for a thread not yet collected; the filled one is [Bookmark]. */
+    val BookmarkBorder: ImageVector by lazy {
+        materialIcon(
+            name = "BookmarkBorder",
+            pathData = "M17,3H7c-1.1,0 -1.99,0.9 -1.99,2L5,21l7,-3 7,3V5c0,-1.1 -0.9,-2 -2,-2zM17,18l-5,-2.18L7,18V5h10v13z",
+        )
+    }
+
     /** 到最新 — the newest floor, which is the foot of the last page. */
     val VerticalAlignBottom: ImageVector by lazy {
         materialIcon(
             name = "VerticalAlignBottom",
             pathData = "M16,13h-3V3h-2v10H8l4,4 4,-4zM4,19v2h16v-2H4z",
-        )
-    }
-
-    /** 楼层 / 页码 — the chip that turns the jump sheet's scroller into a number to type. */
-    val Dialpad: ImageVector by lazy {
-        materialIcon(
-            name = "Dialpad",
-            pathData =
-            "M3,3a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM10,3a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM17,3a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM3,9a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM10,9a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM17,9a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM3,15a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM10,15a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM17,15a2,2 0 1,0 4,0a2,2 0 1,0 -4,0zM10,21a2,2 0 1,0 4,0a2,2 0 1,0 -4,0z",
         )
     }
 
@@ -331,16 +307,6 @@ object PlazaIcons {
                 "M8,13c-2.33,0 -7,1.17 -7,3.5V19h14v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5z" +
                 "M16,13c-0.29,0 -0.62,0.02 -0.97,0.05 1.16,0.84 1.97,1.97 1.97,3.45V19h6v-2.5" +
                 "c0,-2.33 -4.67,-3.5 -7,-3.5z",
-        )
-    }
-
-    /** Starts a conversation from the message list's FAB (board 7e). */
-    val AddComment: ImageVector by lazy {
-        materialIcon(
-            name = "AddComment",
-            pathData =
-            "M22,4c0,-1.1 -0.9,-2 -2,-2H4c-1.1,0 -2,0.9 -2,2v18l4,-4h14c1.1,0 2,-0.9 2,-2V4z" +
-                "M17,11h-4v4h-2v-4H7V9h4V5h2v4h4v2z",
         )
     }
 
@@ -548,23 +514,6 @@ object PlazaIcons {
         )
     }
 
-    /**
-     * The key that opens the toolbar's own settings, at the end of the strip.
-     *
-     * A wrench rather than Material's `tune` sliders: `tune` sits in a row of formatting glyphs and
-     * reads as one of them — three horizontal bars is very nearly the list key. A wrench cannot be
-     * mistaken for something that edits the text.
-     */
-    val Build: ImageVector by lazy {
-        materialIcon(
-            name = "Build",
-            pathData =
-            "M22.7,19l-9.1,-9.1c0.9,-2.3 0.4,-5 -1.5,-6.9 -2,-2 -5,-2.4 -7.4,-1.3L9,6 6,9 1.6,4.7" +
-                "C0.4,7.1 0.9,10.1 2.9,12.1c1.9,1.9 4.6,2.4 6.9,1.5l9.1,9.1c0.4,0.4 1,0.4 1.4,0" +
-                "l2.3,-2.3c0.5,-0.4 0.5,-1.1 0.1,-1.4z",
-        )
-    }
-
     /** The grab handle on a reorderable row. */
     val DragHandle: ImageVector by lazy {
         materialIcon(name = "DragHandle", pathData = "M20,9H4v2h16V9zM4,15h16v-2H4V15z")
@@ -716,17 +665,6 @@ object PlazaIcons {
         )
     }
 
-    /** 「全部下载」胶囊。与 [Download] 分开：那个是把一张图存进相册，这个是把一批帖子存下来。 */
-    val CloudDownload: ImageVector by lazy {
-        materialIcon(
-            name = "CloudDownload",
-            pathData =
-            "M19.35,10.04C18.67,6.59 15.64,4 12,4 9.11,4 6.6,5.64 5.35,8.04 2.34,8.36 0,10.91 0,14" +
-                "c0,3.31 2.69,6 6,6h13c2.76,0 5,-2.24 5,-5 0,-2.64 -2.05,-4.78 -4.65,-4.96z" +
-                "M17,13l-5,5 -5,-5h3V9h4v4h3z",
-        )
-    }
-
     /** 离线版落后于站点，等着补新回复（板 i1）。 */
     val Sync: ImageVector by lazy {
         materialIcon(
@@ -818,26 +756,6 @@ object PlazaIcons {
         )
     }
 
-    /** 落后的回复数前面那个下箭头——方向是「还要往下拉」，不是排序。 */
-    val ArrowDownward: ImageVector by lazy {
-        materialIcon(
-            name = "ArrowDownward",
-            pathData = "M20,12l-1.41,-1.41L13,16.17V4h-2v12.17l-5.58,-5.59L4,12l8,8 8,-8z",
-        )
-    }
-
-    /**
-     * 进度环中心的方块：按一下停掉这一篇的下载。
-     *
-     * 方块而不是 ✕，因为它压在一个还在转的进度环里——✕ 在那个尺寸下会和环上的缺口混在一起。
-     */
-    val Stop: ImageVector by lazy {
-        materialIcon(
-            name = "Stop",
-            pathData = "M6,6h12v12H6z",
-        )
-    }
-
     /** 预设 — 配色来源 tile. 调色板, the one glyph that says "a set of colours somebody chose". */
     val Palette: ImageVector by lazy {
         materialIcon(
@@ -852,17 +770,6 @@ object PlazaIcons {
         )
     }
 
-    /** 动态取色 — the source that reads the phone's own wallpaper. */
-    val Wallpaper: ImageVector by lazy {
-        materialIcon(
-            name = "Wallpaper",
-            pathData =
-            "M4 4h7V2H4c-1.1 0-2 .9-2 2v7h2V4zm6 9l-4 5h12l-3-4-2.03 2.71L10 13zm7-4.5c0-.83-.67-1.5-1.5-1.5" +
-                "S14 7.67 14 8.5s.67 1.5 1.5 1.5S17 9.33 17 8.5zM20 2h-7v2h7v7h2V4c0-1.1-.9-2-2-2zm0 18h-7v2h7" +
-                "c1.1 0 2-.9 2-2v-7h-2v7zM4 13H2v7c0 1.1.9 2 2 2h7v-2H4v-7z",
-        )
-    }
-
     /** 吸管 — lifting a colour out of a picture the reader already has. */
     val Colorize: ImageVector by lazy {
         materialIcon(
@@ -871,30 +778,6 @@ object PlazaIcons {
             "M20.71 5.63l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-3.12 3.12-1.93-1.91-1.41 1.41 1.42 1.42L3 16.25" +
                 "V21h4.75l8.92-8.92 1.42 1.42 1.41-1.41-1.92-1.92 3.12-3.12c.4-.4.4-1.03.01-1.42zM6.92 19L5 17.08" +
                 "l8.06-8.06 1.92 1.92L6.92 19z",
-        )
-    }
-
-    /** 保存为我的主题 — the bookmark with a plus, distinct from [Bookmark]'s "already saved". */
-    val BookmarkAdd: ImageVector by lazy {
-        materialIcon(
-            name = "BookmarkAdd",
-            pathData =
-            "M21,7h-2v2h-2V7h-2V5h2V3h2v2h2V7z M19,21l-7-3l-7,3V5c0-1.1,0.9-2,2-2l7,0c-0.63,0.84-1,1.87-1,3" +
-                "c0,2.76,2.24,5,5,5c0.34,0,0.68-0.03,1-0.1V21z",
-        )
-    }
-
-    /** 使用系统调色板 — the row that hands the decision to the OS. */
-    val Android: ImageVector by lazy {
-        materialIcon(
-            name = "Android",
-            pathData =
-            "M17.6,9.48l1.84-3.18c0.16-0.31,0.04-0.69-0.26-0.85c-0.29-0.15-0.65-0.06-0.83,0.22l-1.88,3.24" +
-                "c-2.86-1.21-6.08-1.21-8.94,0L5.65,5.67c-0.19-0.29-0.58-0.38-0.87-0.2C4.5,5.65,4.41,6.01,4.56,6.3" +
-                "L6.4,9.48C3.3,11.25,1.28,14.44,1,18h22C22.72,14.44,20.7,11.25,17.6,9.48z M7,15.25" +
-                "c-0.69,0-1.25-0.56-1.25-1.25c0-0.69,0.56-1.25,1.25-1.25S8.25,13.31,8.25,14" +
-                "C8.25,14.69,7.69,15.25,7,15.25z M17,15.25c-0.69,0-1.25-0.56-1.25-1.25c0-0.69,0.56-1.25,1.25-1.25" +
-                "s1.25,0.56,1.25,1.25C18.25,14.69,17.69,15.25,17,15.25z",
         )
     }
 
@@ -914,6 +797,201 @@ object PlazaIcons {
             name = "Sort",
             pathData =
             "M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z",
+        )
+    }
+
+    /** ⋯ — `more_horiz`, the overflow at the end of a floor's action row. */
+    val MoreHoriz: ImageVector by lazy {
+        materialIcon(
+            name = "MoreHoriz",
+            pathData =
+            "M6,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z" +
+                "M18,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z" +
+                "M12,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z",
+        )
+    }
+
+    /** `tune` — 高级搜索's sliders. */
+    val Tune: ImageVector by lazy {
+        materialIcon(
+            name = "Tune",
+            pathData =
+            "M3,17v2h6v-2H3zM3,5v2h10V5H3zM13,21v-2h8v-2h-8v-2h-2v6h2zM7,9v2H3v2h4v2h2V9H7z" +
+                "M21,13v-2H11v2h10zM15,9h2V7h4V5h-4V3h-2v6z",
+        )
+    }
+
+    // --- Inbox (boards 5a / 3e) ------------------------------------------------
+
+    /** 全部已读 — `done_all`, the double tick. */
+    val DoneAll: ImageVector by lazy {
+        materialIcon(
+            name = "DoneAll",
+            pathData =
+            "M18,7l-1.41,-1.41 -6.34,6.34 1.41,1.41L18,7z" +
+                "M22.24,5.59L11.66,16.17 7.48,12l-1.41,1.41L11.66,19l12,-12 -1.42,-1.41z" +
+                "M0.41,13.41L6,19l1.41,-1.41L1.83,12 0.41,13.41z",
+        )
+    }
+
+    /** 相册 — `photo_library`, a stack of pictures. */
+    val PhotoLibrary: ImageVector by lazy {
+        materialIcon(
+            name = "PhotoLibrary",
+            pathData =
+            "M22,16V4c0,-1.1 -0.9,-2 -2,-2H8c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2z" +
+                "M11,12l2.03,2.71L16,11l4,5H8l3,-4z" +
+                "M2,6v14c0,1.1 0.9,2 2,2h14v-2H4V6H2z",
+        )
+    }
+
+    /** The MD switch's tile — a framed `M` and a down arrow, Markdown's own mark. */
+    val Markdown: ImageVector by lazy {
+        materialIcon(
+            name = "Markdown",
+            pathData =
+            "M20,4H4C2.9,4 2,4.9 2,6v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6C22,4.9 21.1,4 20,4z" +
+                "M20,18H4V6h16V18z" +
+                "M5.5,15.5v-7H7l2,2.5 2,-2.5h1.5v7H11v-4.8l-2,2.5 -2,-2.5v4.8z" +
+                "M16,8.5h1.5v4h2l-2.75,3.25 -2.75,-3.25h2z",
+        )
+    }
+
+    // --- Settings rows ----------------------------------------------------------
+
+    /** 墨水屏模式 — half a disc, black on one side and paper on the other. */
+    val Contrast: ImageVector by lazy {
+        materialIcon(
+            name = "Contrast",
+            pathData =
+            "M12,22c5.52,0 10,-4.48 10,-10S17.52,2 12,2 2,6.48 2,12s4.48,10 10,10z" +
+                "M13,4.07c3.94,0.49 7,3.85 7,7.93s-3.05,7.44 -7,7.93V4.07z",
+        )
+    }
+
+    /** 单手模式. */
+    val PanTool: ImageVector by lazy {
+        materialIcon(
+            name = "PanTool",
+            pathData =
+            "M23,5.5V20c0,2.2 -1.8,4 -4,4h-7.3c-1.08,0 -2.1,-0.43 -2.85,-1.19L1,14.83c0,0 1.26,-1.23 " +
+                "1.3,-1.25 0.22,-0.19 0.49,-0.29 0.79,-0.29 0.22,0 0.42,0.06 0.6,0.16 0.04,0.01 " +
+                "4.31,2.46 4.31,2.46V4c0,-0.83 0.67,-1.5 1.5,-1.5S11,3.17 11,4v7h1V1.5C12,0.67 " +
+                "12.67,0 13.5,0S15,0.67 15,1.5V11h1V2.5C16,1.67 16.67,1 17.5,1S19,1.67 19,2.5V11h1V5.5" +
+                "C20,4.67 20.67,4 21.5,4S23,4.67 23,5.5z",
+        )
+    }
+
+    /** 语言. */
+    val Translate: ImageVector by lazy {
+        materialIcon(
+            name = "Translate",
+            pathData =
+            "M12.87,15.07l-2.54,-2.51 0.03,-0.03c1.74,-1.94 2.98,-4.17 3.71,-6.53L17,6L17,4h-7L10,2L8,2v2" +
+                "L1,4v1.99h11.17C11.5,7.92 10.44,9.75 9,11.35 8.07,10.32 7.3,9.19 6.69,8h-2c0.73,1.63 " +
+                "1.73,3.17 2.98,4.56l-5.09,5.02L4,19l5,-5 3.11,3.11 0.76,-2.04z" +
+                "M18.5,10h-2L12,22h2l1.12,-3h4.75L21,22h2l-4.5,-12zM15.88,17l1.62,-4.33L19.12,17h-3.24z",
+        )
+    }
+
+    /** 图床. */
+    val CloudUpload: ImageVector by lazy {
+        materialIcon(
+            name = "CloudUpload",
+            pathData =
+            "M19.35,10.04C18.67,6.59 15.64,4 12,4 9.11,4 6.6,5.64 5.35,8.04 2.34,8.36 0,10.91 0,14" +
+                "c0,3.31 2.69,6 6,6h13c2.76,0 5,-2.24 5,-5 0,-2.64 -2.05,-4.78 -4.65,-4.96z" +
+                "M14,13v4h-4v-4H7l5,-5 5,5h-3z",
+        )
+    }
+
+    /** 代理. */
+    val VpnLock: ImageVector by lazy {
+        materialIcon(
+            name = "VpnLock",
+            pathData =
+            "M22,4v-0.5C22,2.12 20.88,1 19.5,1S17,2.12 17,3.5L17,4c-0.55,0 -1,0.45 -1,1v4c0,0.55 " +
+                "0.45,1 1,1h5c0.55,0 1,-0.45 1,-1L23,5c0,-0.55 -0.45,-1 -1,-1z" +
+                "M21.2,4h-3.4v-0.5c0,-0.94 0.76,-1.7 1.7,-1.7s1.7,0.76 1.7,1.7L21.2,4z" +
+                "M18.92,12c0.04,0.33 0.08,0.66 0.08,1 0,2.08 -0.8,3.97 -2.1,5.39 -0.26,-0.81 -1,-1.39 " +
+                "-1.9,-1.39h-1v-3c0,-0.55 -0.45,-1 -1,-1L7,13v-2h2c0.55,0 1,-0.45 1,-1L10,8h2c1.1,0 " +
+                "2,-0.9 2,-2L14,3.46c-0.95,-0.3 -1.95,-0.46 -3,-0.46C5.48,3 1,7.48 1,13s4.48,10 10,10 " +
+                "10,-4.48 10,-10c0,-0.34 -0.02,-0.67 -0.05,-1h-2.03z" +
+                "M10,20.93c-3.95,-0.49 -7,-3.85 -7,-7.93 0,-0.62 0.08,-1.21 0.21,-1.79L8,16v1c0,1.1 " +
+                "0.9,2 2,2v1.93z",
+        )
+    }
+
+    /** 加密 DNS. */
+    val Dns: ImageVector by lazy {
+        materialIcon(
+            name = "Dns",
+            pathData =
+            "M20,13H4c-0.55,0 -1,0.45 -1,1v6c0,0.55 0.45,1 1,1h16c0.55,0 1,-0.45 1,-1v-6c0,-0.55 " +
+                "-0.45,-1 -1,-1zM7,19c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2 2,0.9 2,2 -0.9,2 -2,2z" +
+                "M20,3H4c-0.55,0 -1,0.45 -1,1v6c0,0.55 0.45,1 1,1h16c0.55,0 1,-0.45 1,-1V4c0,-0.55 " +
+                "-0.45,-1 -1,-1zM7,9c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2 2,0.9 2,2 -0.9,2 -2,2z",
+        )
+    }
+
+    /** 网络自检. */
+    val NetworkCheck: ImageVector by lazy {
+        materialIcon(
+            name = "NetworkCheck",
+            pathData =
+            "M15.9,5c-0.17,0 -0.32,0.09 -0.41,0.23l-0.07,0.15 -5.18,11.65c-0.16,0.29 -0.26,0.61 " +
+                "-0.26,0.96 0,1.11 0.9,2.01 2.01,2.01 0.96,0 1.77,-0.68 1.96,-1.59l0.01,-0.03L16.4,5.5" +
+                "c0,-0.28 -0.22,-0.5 -0.5,-0.5z" +
+                "M1,9l2,2c2.88,-2.88 6.79,-4.08 10.53,-3.62l1.19,-2.68C9.89,3.84 4.74,5.27 1,9z" +
+                "M21,11l2,-2c-1.64,-1.64 -3.55,-2.82 -5.59,-3.57l-0.53,2.82c1.5,0.62 2.9,1.53 4.12,2.75z" +
+                "M17,15l2,-2c-0.8,-0.8 -1.7,-1.42 -2.66,-1.89l-0.55,2.92c0.42,0.27 0.83,0.59 1.21,0.97z" +
+                "M5,13l2,2c1.13,-1.13 2.56,-1.79 4.03,-2l1.28,-2.88c-2.63,-0.08 -5.3,0.87 -7.31,2.88z",
+        )
+    }
+
+    /** 接收 dev 版. */
+    val Science: ImageVector by lazy {
+        materialIcon(
+            name = "Science",
+            pathData =
+            "M19.8,18.4L14,10.67V6.5l1.35,-1.69C15.61,4.48 15.38,4 14.96,4H9.04C8.62,4 8.39,4.48 " +
+                "8.65,4.81L10,6.5v4.17L4.2,18.4C3.71,19.06 4.18,20 5,20h14c0.82,0 1.29,-0.94 0.8,-1.6z",
+        )
+    }
+
+    /** 启动时检查更新. */
+    val Update: ImageVector by lazy {
+        materialIcon(
+            name = "Update",
+            pathData =
+            "M21,10.12h-6.78l2.74,-2.82c-2.73,-2.7 -7.15,-2.8 -9.88,-0.1c-2.73,2.71 -2.73,7.08 0,9.79" +
+                "s7.15,2.71 9.88,0C18.32,15.65 19,14.08 19,12.1h2c0,1.98 -0.88,4.55 -2.64,6.29" +
+                "c-3.51,3.48 -9.21,3.48 -12.72,0c-3.5,-3.47 -3.53,-9.11 -0.02,-12.58s9.14,-3.47 " +
+                "12.65,0L21,3V10.12zM12.5,8v4.25l3.5,2.08l-0.72,1.21L11,13V8H12.5z",
+        )
+    }
+
+    /** 色彩风格 — a disc shaded in bands. */
+    val Tonality: ImageVector by lazy {
+        materialIcon(
+            name = "Tonality",
+            pathData =
+            "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z" +
+                "M11,19.93c-3.94,-0.49 -7,-3.85 -7,-7.93s3.05,-7.44 7,-7.93v15.86z" +
+                "M13,4.07c1.03,0.13 2,0.45 2.87,0.93H13v-0.93zM13,7h5.24c0.25,0.31 0.48,0.65 0.68,1H13V7z" +
+                "M13,10h6.74c0.08,0.33 0.15,0.66 0.19,1H13v-1zM13,19.93V19h2.87c-0.87,0.48 -1.84,0.8 " +
+                "-2.87,0.93zM18.24,17H13v-1h5.92c-0.2,0.35 -0.43,0.69 -0.68,1z" +
+                "M19.74,14H13v-1h6.93c-0.04,0.34 -0.11,0.67 -0.19,1z",
+        )
+    }
+
+    /** 免打扰. */
+    val Bedtime: ImageVector by lazy {
+        materialIcon(
+            name = "Bedtime",
+            pathData =
+            "M12.34,2.02C6.59,1.82 2,6.42 2,12c0,5.52 4.48,10 10,10 3.71,0 6.93,-2.02 8.66,-5.02" +
+                "C13.15,16.73 8.57,8.55 12.34,2.02z",
         )
     }
 }

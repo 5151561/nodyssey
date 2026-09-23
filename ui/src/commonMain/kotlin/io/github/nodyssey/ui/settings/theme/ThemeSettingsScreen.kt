@@ -79,13 +79,13 @@ import io.github.nodyssey.ui.resources.settings_theme
 import io.github.nodyssey.ui.resources.settings_theme_preview
 import io.github.nodyssey.ui.settings.DISABLED_ALPHA
 import io.github.nodyssey.ui.settings.SettingsGroup
-import io.github.nodyssey.ui.settings.SettingsIcons
 import io.github.nodyssey.ui.settings.SettingsItemGap
 import io.github.nodyssey.ui.settings.SettingsPagePadding
 import io.github.nodyssey.ui.settings.SettingsRow
 import io.github.nodyssey.ui.settings.settingsRowTitleStyle
 import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -504,7 +504,7 @@ private fun PaletteStyleRow(
     var expanded by remember { mutableStateOf(false) }
     SettingsRow(
         modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
-        leading = { Icon(SettingsIcons.Tonality, contentDescription = null) },
+        leading = { Icon(PlazaIcons.Tonality, contentDescription = null) },
         title = stringResource(Res.string.settings_palette_style),
         subtitle = stringResource(paletteStyleLabel(selected)),
         bottom = true,

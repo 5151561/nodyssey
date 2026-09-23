@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -113,7 +115,9 @@ fun EditorToolbar(
                     appMenu?.invoke()
                     onCustomize?.let { customize ->
                         ToolbarKey(
-                            icon = PlazaIcons.Build,
+                            // A wrench, not `tune`: three bars in a row of formatting keys reads as
+                            // the list key; a wrench cannot be mistaken for something that edits text.
+                            icon = Icons.Default.Build,
                             contentDescription = stringResource(Res.string.composer_toolbar_customize),
                             size = keySize,
                             checkable = false,

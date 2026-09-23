@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -648,7 +650,7 @@ private fun ToolbarKey(
     )
 }
 
-/** The key the screen is about: `PlazaIcons.Build`, the same wrench the real toolbar ends with. */
+/** The key the screen is about: `Icons.Default.Build`, the same wrench the real toolbar ends with. */
 @Composable
 private fun WrenchKey(lit: Float) {
     Box(
@@ -665,7 +667,7 @@ private fun WrenchKey(lit: Float) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            PlazaIcons.Build,
+            Icons.Default.Build,
             contentDescription = null,
             modifier = Modifier.size(13.dp),
             tint = lerpColor(

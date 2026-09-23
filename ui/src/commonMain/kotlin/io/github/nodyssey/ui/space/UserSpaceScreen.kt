@@ -233,7 +233,7 @@ fun UserSpaceScreen(
                     if (state.isSelf) {
                         IconButton(onClick = onEditProfile) {
                             Icon(
-                                Icons.Filled.Edit,
+                                Icons.Default.Edit,
                                 contentDescription = stringResource(Res.string.profile_edit),
                                 modifier = Modifier.size(20.dp),
                             )

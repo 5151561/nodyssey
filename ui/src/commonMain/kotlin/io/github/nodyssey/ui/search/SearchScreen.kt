@@ -491,7 +491,7 @@ private fun OptionsButton(
                 if (active) Badge(containerColor = MaterialTheme.colorScheme.primary)
             },
         ) {
-            Icon(TuneIcon, contentDescription = stringResource(Res.string.search_advanced))
+            Icon(PlazaIcons.Tune, contentDescription = stringResource(Res.string.search_advanced))
         }
     }
 }

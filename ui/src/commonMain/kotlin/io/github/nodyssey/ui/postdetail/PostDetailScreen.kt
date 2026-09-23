@@ -205,7 +205,6 @@ import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.TonalTile
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -1799,7 +1798,7 @@ private fun OpeningPostActions(
         Spacer(Modifier.weight(1f))
         if (collected != null) {
             QuietReaction(
-                icon = if (collected) PlazaIcons.Bookmark else BookmarkBorder,
+                icon = if (collected) PlazaIcons.Bookmark else PlazaIcons.BookmarkBorder,
                 label = if (collected) Res.string.post_collected_action else Res.string.post_collect_action,
                 count = collectionCount?.toString().orEmpty(),
                 selected = collected,
@@ -1940,7 +1939,7 @@ private fun CommentFoot(
 private fun FloorMoreButton(onClick: () -> Unit) {
     IconButton(onClick = onClick) {
         Icon(
-            MoreHoriz,
+            PlazaIcons.MoreHoriz,
             contentDescription = stringResource(Res.string.post_floor_actions),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -2288,25 +2287,6 @@ private fun ReactionAction.price(freeChickenLegs: FreeChickenLegs?): String =
 
         else -> stringResource(Res.string.post_reaction_cost, chickenLegCost)
     }
-
-/** ⋯ — `more_horiz`, which `material-icons-core` does not ship; the row's own, so kept here. */
-private val MoreHoriz: ImageVector by lazy {
-    materialIcon(
-        name = "MoreHoriz",
-        pathData =
-        "M6,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z" +
-            "M18,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z" +
-            "M12,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z",
-    )
-}
-
-/** The outlined bookmark for a thread not yet collected; the filled one is [PlazaIcons.Bookmark]. */
-private val BookmarkBorder: ImageVector by lazy {
-    materialIcon(
-        name = "BookmarkBorder",
-        pathData = "M17,3H7c-1.1,0 -1.99,0.9 -1.99,2L5,21l7,-3 7,3V5c0,-1.1 -0.9,-2 -2,-2zM17,18l-5,-2.18L7,18V5h10v13z",
-    )
-}
 
 /**
  * The header's badge chips: everything the parser read, with 楼主 prepended when the page marked

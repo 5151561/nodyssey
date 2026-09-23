@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
@@ -91,7 +92,6 @@ import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.composer.AttachmentTray
 import io.github.nodyssey.ui.composer.NodeSeekEmojiPanel
 import io.github.nodyssey.ui.composer.rememberImagePicker
-import io.github.nodyssey.ui.notifications.InboxIcons
 import io.github.nodyssey.ui.notifications.previewText
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -1017,7 +1017,7 @@ private fun ToolGrid(
             state.toolbar.enabled.filter { it == EditorAction.IMAGE || it == EditorAction.EMOJI }.forEach { action ->
                 add {
                     ToolTile(
-                        icon = if (action == EditorAction.IMAGE) InboxIcons.PhotoLibrary else action.icon,
+                        icon = if (action == EditorAction.IMAGE) PlazaIcons.PhotoLibrary else action.icon,
                         label = stringResource(action.label),
                         onClick = { onAction(action) },
                     )
@@ -1026,7 +1026,7 @@ private fun ToolGrid(
         }
         add {
             ToolTile(
-                icon = InboxIcons.Markdown,
+                icon = PlazaIcons.Markdown,
                 label =
                 stringResource(
                     if (state.isMarkdown) Res.string.message_tool_markdown_on else Res.string.message_tool_markdown_off,
@@ -1044,7 +1044,7 @@ private fun ToolGrid(
             }
             add {
                 ToolTile(
-                    icon = PlazaIcons.Build,
+                    icon = Icons.Default.Build,
                     label = stringResource(Res.string.message_tool_customize),
                     onClick = onCustomize,
                 )

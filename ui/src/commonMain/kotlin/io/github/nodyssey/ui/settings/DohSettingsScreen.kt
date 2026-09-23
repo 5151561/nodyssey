@@ -167,7 +167,7 @@ fun DohSettingsScreen(
         ) {
             SettingsGroup {
                 SettingsRow(
-                    leading = { Icon(SettingsIcons.Dns, contentDescription = null) },
+                    leading = { Icon(PlazaIcons.Dns, contentDescription = null) },
                     title = stringResource(Res.string.doh_master_title),
                     subtitle = stringResource(Res.string.doh_master_hint),
                     top = true,

@@ -169,7 +169,7 @@ fun ProxySettingsScreen(
         ) {
             SettingsGroup {
                 SettingsRow(
-                    leading = { Icon(SettingsIcons.VpnLock, contentDescription = null) },
+                    leading = { Icon(PlazaIcons.VpnLock, contentDescription = null) },
                     title = stringResource(Res.string.proxy_master_title),
                     subtitle = stringResource(Res.string.proxy_master_hint),
                     top = true,
