@@ -1387,6 +1387,8 @@
     <string name="composer_upload_network">网络异常</string>
     <!-- 收藏 · 独立页与离线下载（画板 i1） -->
     <string name="bookmarks_title">收藏</string>
+    <!-- 收藏总数，副标题的第一段（8e） -->
+    <string name="bookmarks_count">%1$d 篇</string>
     <string name="bookmarks_search">搜索收藏</string>
     <string name="bookmarks_search_hint">搜标题或作者</string>
     <string name="bookmarks_search_clear">清空搜索</string>

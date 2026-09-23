@@ -1175,6 +1175,8 @@
     <string name="composer_upload_network">Network trouble</string>
 
     <string name="bookmarks_title">Bookmarks</string>
+
+    <string name="bookmarks_count">%1$d posts</string>
     <string name="bookmarks_search">Search bookmarks</string>
     <string name="bookmarks_search_hint">Search titles and authors</string>
     <string name="bookmarks_search_clear">Clear the search</string>

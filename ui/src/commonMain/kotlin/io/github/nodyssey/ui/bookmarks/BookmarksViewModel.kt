@@ -255,6 +255,12 @@ class BookmarksViewModel(
         estimateSelection()
     }
 
+    /** Multi-select with nothing ticked — the bar's ☑, for a reader who has not found the long-press. */
+    fun enterSelection() {
+        _uiState.update { it.copy(selection = it.selection ?: emptySet()) }
+        estimateSelection()
+    }
+
     fun toggleSelection(postId: Long) {
         _uiState.update { state ->
             val current = state.selection ?: return@update state

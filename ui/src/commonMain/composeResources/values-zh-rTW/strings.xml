@@ -1167,6 +1167,8 @@
     <string name="composer_upload_network">網路異常</string>
 
     <string name="bookmarks_title">收藏</string>
+
+    <string name="bookmarks_count">%1$d 篇</string>
     <string name="bookmarks_search">搜尋收藏</string>
     <string name="bookmarks_search_hint">搜標題或作者</string>
     <string name="bookmarks_search_clear">清空搜尋</string>
