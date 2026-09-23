@@ -70,6 +70,8 @@ import io.github.nodyssey.ui.resources.doh_webview_hint
 import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -177,7 +179,7 @@ fun DohSettingsScreen(
                 modifier = Modifier.alpha(if (state.enabled) 1f else DISABLED_ALPHA),
                 verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
             ) {
-                SettingsSectionTitle(stringResource(Res.string.doh_provider_title))
+                SectionLabel(stringResource(Res.string.doh_provider_title))
                 SettingsGroup {
                     DohProvider.entries.forEachIndexed { index, provider ->
                         SettingsRow(
@@ -302,19 +304,19 @@ fun DohSettingsScreen(
                 modifier = Modifier.padding(top = Spacing.xs),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                SettingsNote(
+                SectionNote(
                     stringResource(Res.string.doh_limits_title),
                     modifier = Modifier.semantics { heading() },
                 )
-                SettingsNote(stringResource(Res.string.doh_limits_hint))
+                SectionNote(stringResource(Res.string.doh_limits_hint))
                 // Where there is no fallback switch, there is no fallback — the platform blocks
                 // cleartext resolution outright while this is on, and defers to an encrypted
                 // resolver the system already has. Someone about to turn it on should know both.
                 if (!state.capabilities.canFallBackToSystem) {
-                    SettingsNote(stringResource(Res.string.doh_limits_encrypted_only_hint))
+                    SectionNote(stringResource(Res.string.doh_limits_encrypted_only_hint))
                 }
-                SettingsNote(stringResource(Res.string.doh_proxy_hint))
-                SettingsNote(stringResource(Res.string.doh_webview_hint))
+                SectionNote(stringResource(Res.string.doh_proxy_hint))
+                SectionNote(stringResource(Res.string.doh_webview_hint))
             }
         }
     }

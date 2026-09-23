@@ -27,6 +27,7 @@ import io.github.nodyssey.ui.resources.licenses_summary
 import io.github.nodyssey.ui.resources.settings_licenses
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -72,7 +73,7 @@ fun OpenSourceLicensesScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            SettingsSectionTitle(stringResource(Res.string.licenses_app_section))
+            SectionLabel(stringResource(Res.string.licenses_app_section))
             SettingsGroup {
                 SettingsRow(
                     title = appName(),
@@ -83,7 +84,7 @@ fun OpenSourceLicensesScreen(
                     trailing = { LicenseLinkIcon() },
                 )
             }
-            SettingsSectionTitle(stringResource(Res.string.licenses_dependencies_section))
+            SectionLabel(stringResource(Res.string.licenses_dependencies_section))
             SettingsGroup {
                 SHIPPED_LIBRARIES.forEachIndexed { index, library ->
                     SettingsRow(

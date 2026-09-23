@@ -108,6 +108,7 @@ import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -618,7 +619,7 @@ private fun InstallPermissionNotice(onGrant: () -> Unit) {
 /** Small print under the cards: this app is not the site's, said once and quietly. */
 @Composable
 private fun UnofficialNotice() {
-    SettingsNote(
+    SectionNote(
         stringResource(Res.string.about_unofficial_notice, siteName),
         modifier = Modifier.padding(top = Spacing.sm),
     )

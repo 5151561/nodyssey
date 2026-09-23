@@ -59,13 +59,13 @@ import io.github.nodyssey.ui.resources.onboarding_app_links_action
 import io.github.nodyssey.ui.resources.settings_app_links_hint_on
 import io.github.nodyssey.ui.settings.SettingsGroup
 import io.github.nodyssey.ui.settings.SettingsRow
-import io.github.nodyssey.ui.settings.SettingsSectionTitle
 import io.github.nodyssey.ui.settings.rememberAppLinkHandlingEnabled
 import io.github.nodyssey.ui.settings.rememberAppLinkSettingsLauncher
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.groupShape
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -142,7 +142,7 @@ fun HelpScreen(
                 .padding(horizontal = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            SettingsSectionTitle(stringResource(Res.string.help_section_confusing))
+            SectionLabel(stringResource(Res.string.help_section_confusing))
             SettingsGroup {
                 HelpItem(
                     title = stringResource(Res.string.help_one_hand_title),
@@ -177,7 +177,7 @@ fun HelpScreen(
                 )
             }
 
-            SettingsSectionTitle(stringResource(Res.string.help_section_home))
+            SectionLabel(stringResource(Res.string.help_section_home))
             SettingsGroup {
                 HelpItem(
                     title = stringResource(Res.string.help_boards_title),
@@ -199,7 +199,7 @@ fun HelpScreen(
                 )
             }
 
-            SettingsSectionTitle(stringResource(Res.string.help_section_composer))
+            SectionLabel(stringResource(Res.string.help_section_composer))
             SettingsGroup {
                 HelpItem(
                     title = stringResource(Res.string.help_toolbar_title),

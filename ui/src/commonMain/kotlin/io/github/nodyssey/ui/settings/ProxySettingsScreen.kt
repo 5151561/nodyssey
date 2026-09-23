@@ -76,6 +76,7 @@ import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -281,12 +282,12 @@ fun ProxySettingsScreen(
                 modifier = Modifier.padding(top = Spacing.xs),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                SettingsNote(
+                SectionNote(
                     stringResource(Res.string.proxy_advanced_title),
                     modifier = Modifier.semantics { heading() },
                 )
-                SettingsNote(stringResource(Res.string.proxy_advanced_hint))
-                SettingsNote(stringResource(Res.string.proxy_webview_hint))
+                SectionNote(stringResource(Res.string.proxy_advanced_hint))
+                SectionNote(stringResource(Res.string.proxy_webview_hint))
             }
         }
     }

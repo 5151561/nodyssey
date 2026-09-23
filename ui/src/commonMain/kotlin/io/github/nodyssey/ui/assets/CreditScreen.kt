@@ -36,6 +36,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.CreditEntry
+import io.github.nodyssey.ui.common.GrowthProgressBar
 import io.github.nodyssey.ui.common.NoLedgerEntriesState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.webViewUrl
@@ -57,6 +58,7 @@ import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -254,8 +256,14 @@ private fun CreditLedger(
         item(key = "balance") { ChickenBalanceHeader(state) }
         item(key = "columns") {
             Row(Modifier.padding(start = 28.dp, end = 28.dp, top = 18.dp, bottom = 8.dp)) {
-                ColumnLabel(stringResource(Res.string.credit_column_change), Modifier.weight(1f))
-                ColumnLabel(stringResource(Res.string.credit_column_total))
+                val muted = MaterialTheme.colorScheme.onSurfaceVariant
+                SectionLabel(
+                    stringResource(Res.string.credit_column_change),
+                    Modifier.weight(1f),
+                    color = muted,
+                    contentPadding = PaddingValues(),
+                )
+                SectionLabel(stringResource(Res.string.credit_column_total), color = muted, contentPadding = PaddingValues())
             }
         }
         // The row id would be the natural key and this endpoint does not publish one: its
@@ -274,19 +282,6 @@ private fun CreditLedger(
         }
         ledgerFooter(rows, endNote = null)
     }
-}
-
-@Composable
-private fun ColumnLabel(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier,
-    )
 }
 
 @Composable

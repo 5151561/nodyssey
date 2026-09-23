@@ -91,6 +91,7 @@ import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.StatusAction
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.editor.ComposerEditorBar
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.MarkdownEditorState
@@ -466,7 +467,12 @@ private fun ReplyPreviewScreen(
                 // Only the 回复 reference: any 引用 is part of the body below, and the Markdown
                 // preview already renders it as the blockquote it will become.
                 state.replyTo?.let { replyTo ->
-                    ReplyReference(floor = replyTo.floor, author = replyTo.author)
+                    // How the 回复 reads once published: the addressed floor, ahead of the body.
+                    TonalTag(
+                        text = "@${replyTo.author} ${stringResource(Res.string.post_quote_prefix, replyTo.floor)}",
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
                 }
                 MarkdownPreviewBody(markdown = state.body)
             }
@@ -533,26 +539,6 @@ private fun ReplyTargetChip(
                 )
             }
         }
-    }
-}
-
-/** How the 回复 reads once published: the addressed floor, ahead of the body it belongs to. */
-@Composable
-private fun ReplyReference(
-    floor: Int,
-    author: String,
-) {
-    Surface(
-        shape = RoundedCornerShape(11.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-    ) {
-        Text(
-            text = "@$author ${stringResource(Res.string.post_quote_prefix, floor)}",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
-        )
     }
 }
 

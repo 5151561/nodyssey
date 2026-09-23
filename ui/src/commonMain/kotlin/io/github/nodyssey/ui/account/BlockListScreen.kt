@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -71,6 +72,7 @@ import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -179,7 +181,10 @@ fun BlockListScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                AccountSectionLabel(text = stringResource(Res.string.account_block_section))
+                SectionLabel(
+                    text = stringResource(Res.string.account_block_section),
+                    contentPadding = PaddingValues(start = Spacing.md),
+                )
                 StorageBadge(local = false)
                 Spacer(Modifier.weight(1f))
                 if (state.blocked.isNotEmpty()) {

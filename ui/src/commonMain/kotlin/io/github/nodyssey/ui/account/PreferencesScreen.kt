@@ -2,6 +2,7 @@ package io.github.nodyssey.ui.account
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,6 +55,8 @@ import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -138,7 +141,7 @@ fun PreferencesScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            AccountSectionLabel(stringResource(Res.string.account_group_preference))
+            SectionLabel(stringResource(Res.string.account_group_preference))
 
             Column {
                 PreferenceSwitchRow(
@@ -150,28 +153,25 @@ fun PreferencesScreen(
                 )
             }
 
-            Text(
+            SectionNote(
                 stringResource(Res.string.account_preferences_omitted_note),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xs),
+                contentPadding = PaddingValues(Spacing.xs),
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AccountSectionLabel(
+                SectionLabel(
                     text = stringResource(Res.string.account_group_homepage),
                     modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(start = Spacing.md),
                 )
                 StorageBadge(local = false)
             }
-            Text(
+            SectionNote(
                 stringResource(Res.string.account_home_boards_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = Spacing.xs),
+                contentPadding = PaddingValues(horizontal = Spacing.xs),
             )
 
             Column {

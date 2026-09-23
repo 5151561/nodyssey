@@ -117,6 +117,7 @@ import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.digitsOnly
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -481,20 +482,7 @@ private fun KindTag(entry: StardustEntry) {
             StardustType.SYSTEM -> scheme.secondaryContainer to scheme.onSecondaryContainer
             StardustType.ADMIN, StardustType.UNKNOWN -> scheme.surfaceContainerHigh to scheme.onSurfaceVariant
         }
-    Surface(color = container, contentColor = content, shape = RoundedCornerShape(6.dp)) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Icon(entry.type.icon(), contentDescription = null, modifier = Modifier.size(12.dp))
-            Text(
-                text = entry.typeLabel(),
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-            )
-        }
-    }
+    TonalTag(text = entry.typeLabel(), containerColor = container, contentColor = content, icon = entry.type.icon())
 }
 
 @Composable

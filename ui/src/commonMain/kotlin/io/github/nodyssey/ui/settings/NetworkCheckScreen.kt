@@ -124,6 +124,8 @@ import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -210,7 +212,7 @@ fun NetworkCheckScreen(
             CheckSummaryCard(state)
 
             sections.forEach { section ->
-                SettingsSectionTitle(section.title)
+                SectionLabel(section.title)
                 SettingsGroup {
                     section.lines.forEachIndexed { index, line ->
                         CheckLineRow(line = line, first = index == 0)
@@ -242,13 +244,13 @@ fun NetworkCheckScreen(
                 modifier = Modifier.padding(top = Spacing.xs),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                SettingsNote(
+                SectionNote(
                     stringResource(Res.string.network_check_hint_title),
                     modifier = Modifier.semantics { heading() },
                 )
-                SettingsNote(stringResource(Res.string.network_check_hint_layers))
-                SettingsNote(stringResource(Res.string.network_check_hint_custom_tab))
-                SettingsNote(stringResource(Res.string.network_check_hint_scope))
+                SectionNote(stringResource(Res.string.network_check_hint_layers))
+                SectionNote(stringResource(Res.string.network_check_hint_custom_tab))
+                SectionNote(stringResource(Res.string.network_check_hint_scope))
             }
         }
     }

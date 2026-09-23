@@ -79,6 +79,7 @@ import io.github.nodyssey.ui.resources.action_cancel
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -187,7 +188,7 @@ fun SecurityScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            AccountSectionLabel(stringResource(Res.string.account_change_password))
+            SectionLabel(stringResource(Res.string.account_change_password))
 
             // One card for the whole change: the three fields and the button that sends them are one
             // act, and a card is how this app says "these go together".
@@ -234,10 +235,7 @@ fun SecurityScreen(
                 }
             }
 
-            AccountSectionLabel(
-                text = stringResource(Res.string.account_two_factor_section),
-                modifier = Modifier.padding(top = Spacing.sm),
-            )
+            SectionLabel(stringResource(Res.string.account_two_factor_section))
             TwoFactorCard(
                 enabled = state.twoFactorEnabled,
                 busy = state.isSubmitting,

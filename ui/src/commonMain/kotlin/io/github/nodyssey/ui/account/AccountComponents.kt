@@ -182,34 +182,6 @@ internal fun StorageBadge(
     }
 }
 
-/** The group heading inside a sub-page — same weight and colour as 8g's, without the list around it. */
-@Composable
-internal fun AccountSectionLabel(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-        color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = Spacing.md, top = Spacing.xs),
-    )
-}
-
-/** Helper text under a field — the site's own wording, where it has any. */
-@Composable
-internal fun AccountFieldHelper(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(horizontal = Spacing.xs),
-    )
-}
-
 /**
  * The second confirmation every high-risk action on these screens goes through.
  *

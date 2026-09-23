@@ -72,6 +72,7 @@ import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -170,7 +171,7 @@ fun NotificationSettingsScreen(
                 modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
                 verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
             ) {
-                SettingsSectionTitle(stringResource(Res.string.notify_check_section))
+                SectionLabel(stringResource(Res.string.notify_check_section))
                 SettingsGroup {
                     SettingsRow(
                         leading = { Icon(PlazaIcons.Schedule, contentDescription = null) },
@@ -206,7 +207,7 @@ fun NotificationSettingsScreen(
                     )
                 }
 
-                SettingsSectionTitle(stringResource(Res.string.notify_channels_section))
+                SectionLabel(stringResource(Res.string.notify_channels_section))
                 SettingsGroup {
                     // One row for the two site groups, because one comment is filed under both and
                     // the app posts one notification for it — see `NotificationChannels`.

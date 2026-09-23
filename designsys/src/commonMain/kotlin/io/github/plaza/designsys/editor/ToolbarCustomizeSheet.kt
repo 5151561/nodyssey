@@ -3,6 +3,7 @@ package io.github.plaza.designsys.editor
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,11 +39,11 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.resources.Res
 import io.github.plaza.designsys.resources.composer_toolbar_add
 import io.github.plaza.designsys.resources.composer_toolbar_available
@@ -96,11 +97,19 @@ fun ToolbarCustomizeSheet(
                 }
             }
 
-            SectionLabel(stringResource(Res.string.composer_toolbar_enabled), top = Spacing.sm)
+            SectionLabel(
+                stringResource(Res.string.composer_toolbar_enabled),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                contentPadding = PaddingValues(top = Spacing.sm, bottom = Spacing.sm),
+            )
             EnabledKeys(enabled = layout.enabled, onChange = onChange)
 
             if (layout.available.isNotEmpty()) {
-                SectionLabel(stringResource(Res.string.composer_toolbar_available), top = Spacing.xl)
+                SectionLabel(
+                    stringResource(Res.string.composer_toolbar_available),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    contentPadding = PaddingValues(top = Spacing.xl, bottom = Spacing.sm),
+                )
                 Column(verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
                     layout.available.forEach { action ->
                         AvailableRow(
@@ -112,19 +121,6 @@ fun ToolbarCustomizeSheet(
             }
         }
     }
-}
-
-@Composable
-private fun SectionLabel(
-    text: String,
-    top: Dp,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = top, bottom = Spacing.sm),
-    )
 }
 
 /**

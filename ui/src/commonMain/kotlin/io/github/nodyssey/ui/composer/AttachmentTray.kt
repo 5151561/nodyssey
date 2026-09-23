@@ -64,6 +64,7 @@ import io.github.nodyssey.ui.resources.composer_upload_not_configured
 import io.github.nodyssey.ui.resources.composer_upload_rejected
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
@@ -170,7 +171,13 @@ private fun AttachmentCell(
         when (attachment.status) {
             UploadStatus.UPLOADING -> {
                 Thumbnail(attachment, dimmed = true)
-                StatusPill(label)
+                // On its own tag: text straight on a photo is legible only where the photo happens
+                // to be dark, and on paper there is no scrim to lean on at all.
+                TonalTag(
+                    text = label,
+                    containerColor = LocalPlazaLayers.current.raised,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                )
                 // A bar along the tile's bottom edge rather than a ring over the photo (1d): it
                 // leaves the picture readable and the percentage has the middle to itself.
                 LinearProgressIndicator(
@@ -234,24 +241,6 @@ private fun StatusGlyph(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = Spacing.xs),
-        )
-    }
-}
-
-/**
- * The percentage over an uploading photo, on its own pill: text straight on a photo is legible only
- * where the photo happens to be dark, and on paper there is no scrim to lean on at all.
- */
-@Composable
-private fun StatusPill(label: String) {
-    Surface(shape = CircleShape, color = LocalPlazaLayers.current.raised) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 2.dp),
         )
     }
 }

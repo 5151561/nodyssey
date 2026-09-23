@@ -45,6 +45,7 @@ import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.DailyQuota
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
 import io.github.nodyssey.ui.common.AttendanceModeDialog
+import io.github.nodyssey.ui.common.GrowthProgressBar
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
@@ -97,6 +98,7 @@ import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -475,27 +477,15 @@ private fun AttendanceState(
             }
 
             state.hasSignedInToday ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.height(28.dp).padding(horizontal = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Text(
-                            text =
-                            state.attendanceGain?.let { stringResource(Res.string.assets_signed_in, it) }
-                                ?: state.attendanceMessage
-                                ?: state.attendanceQuota.label(),
-                            style = MaterialTheme.typography.labelLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+                TonalTag(
+                    text =
+                    state.attendanceGain?.let { stringResource(Res.string.assets_signed_in, it) }
+                        ?: state.attendanceMessage
+                        ?: state.attendanceQuota.label(),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    icon = Icons.Default.Check,
+                )
 
             else ->
                 Button(

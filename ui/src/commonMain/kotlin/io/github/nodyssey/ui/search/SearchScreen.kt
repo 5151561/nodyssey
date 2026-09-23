@@ -152,6 +152,7 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PillTabRow
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.TabLabel
 import io.github.plaza.designsys.component.UnderlineTabRow
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -1006,7 +1007,11 @@ private fun AdvancedSearchSheet(
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SheetLabel(stringResource(Res.string.search_board_section))
+                    SectionLabel(
+                        stringResource(Res.string.search_board_section),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        contentPadding = PaddingValues(horizontal = Spacing.xs),
+                    )
                     LayerCard(
                         shape = RoundedCornerShape(20.dp),
                         contentPadding = PaddingValues(Spacing.md),
@@ -1049,7 +1054,11 @@ private fun AdvancedSearchSheet(
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SheetLabel(stringResource(Res.string.search_advanced_sort))
+                    SectionLabel(
+                        stringResource(Res.string.search_advanced_sort),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        contentPadding = PaddingValues(horizontal = Spacing.xs),
+                    )
                     SortSegments(selected = pickedSort, onSelect = { pickedSort = it })
                 }
             }
@@ -1072,17 +1081,6 @@ private fun AdvancedSearchSheet(
             }
         }
     }
-}
-
-@Composable
-private fun SheetLabel(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = Spacing.xs),
-    )
 }
 
 @Composable

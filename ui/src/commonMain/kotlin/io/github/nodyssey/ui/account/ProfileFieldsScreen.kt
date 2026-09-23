@@ -82,6 +82,9 @@ import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.SectionNote
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.editor.EditorToolbar
@@ -390,17 +393,11 @@ private fun AvatarEditor(
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 )
                 if (state.pendingAvatar != null) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                    TonalTag(
+                        stringResource(Res.string.account_avatar_pending),
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                         contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                        shape = RoundedCornerShape(6.dp),
-                    ) {
-                        Text(
-                            stringResource(Res.string.account_avatar_pending),
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        )
-                    }
+                    )
                 }
             }
 
@@ -427,25 +424,22 @@ private fun FieldBlock(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+            SectionLabel(
+                label,
+                Modifier.weight(1f),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(),
             )
             if (markdown) {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(6.dp)) {
-                    Text(
-                        stringResource(Res.string.account_markdown_tag),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                    )
-                }
+                TonalTag(
+                    stringResource(Res.string.account_markdown_tag),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         field()
-        helper?.let { AccountFieldHelper(it) }
+        helper?.let { SectionNote(it, contentPadding = PaddingValues(horizontal = Spacing.xs)) }
     }
 }
 

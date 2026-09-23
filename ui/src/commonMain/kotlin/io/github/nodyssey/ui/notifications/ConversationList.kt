@@ -69,6 +69,7 @@ import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -136,7 +137,11 @@ internal fun ConversationList(
                     // members apart from; on its own it would be labelling the whole page.
                     if (pinned.isNotEmpty()) {
                         item(key = "all-heading") {
-                            ListGroupLabel(stringResource(Res.string.messages_section_all))
+                            SectionLabel(
+                                stringResource(Res.string.messages_section_all),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                contentPadding = ListGroupLabelPadding,
+                            )
                         }
                     }
                     itemsIndexed(others, key = { _, conversation -> conversation.uid }) { index, conversation ->

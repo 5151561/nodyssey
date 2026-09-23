@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -24,21 +25,8 @@ import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.cardShadow
 
 /**
- * The quiet heading above a group of cards — 今天, 更早, 全部私信.
- *
- * Not `SectionLabel`: that one is primary-coloured and labels a block of settings, while these only
- * say where one run of the same list ends and the next begins, and 5a draws them in the grey of the
- * time stamps under the rows.
+ * Where the quiet group labels over a list of cards sit — 今天, 更早, 全部私信. Grey rather than the
+ * settings' primary: they only say where one run of the same list ends, and 5a draws them in the grey
+ * of the time stamps under the rows.
  */
-@Composable
-internal fun ListGroupLabel(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(start = 8.dp, top = 14.dp, bottom = 6.dp),
-    )
-}
+internal val ListGroupLabelPadding = PaddingValues(start = 8.dp, top = 14.dp, bottom = 6.dp)

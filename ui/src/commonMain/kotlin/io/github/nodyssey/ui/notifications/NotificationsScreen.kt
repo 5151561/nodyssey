@@ -96,6 +96,7 @@ import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.TabLabel
 import io.github.plaza.designsys.component.UnderlineTabRow
 import io.github.plaza.designsys.component.UserAvatar
@@ -476,7 +477,11 @@ private fun BoxScope.NotificationGroup(
             ) {
                 items(rows, key = NotificationListRow::key) { row ->
                     when (row) {
-                        is NotificationListRow.Day -> ListGroupLabel(stringResource(row.bucket.label()))
+                        is NotificationListRow.Day -> SectionLabel(
+                            stringResource(row.bucket.label()),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            contentPadding = ListGroupLabelPadding,
+                        )
 
                         is NotificationListRow.Item ->
                             NotificationRow(

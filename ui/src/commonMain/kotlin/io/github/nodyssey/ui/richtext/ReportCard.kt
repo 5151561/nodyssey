@@ -49,6 +49,7 @@ import io.github.nodyssey.ui.resources.action_expand
 import io.github.nodyssey.ui.resources.report_show_source
 import io.github.plaza.designsys.component.SpecRow
 import io.github.plaza.designsys.component.SpecTable
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.theme.CodeStyle
 import io.github.plaza.designsys.theme.LocalPlazaExtraColors
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -300,29 +301,19 @@ private fun BadgeRow(badges: QualityReport.Block.Badges) {
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             badges.items.forEach { badge ->
-                Text(
-                    text = badge.text,
-                    // One step under [ReportData] with a little weight back: a chip's fill already
-                    // carries the verdict, the text only has to stay legible.
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                    color =
+                val (container, content) =
                     when (badge.tone) {
-                        QualityReport.Tone.Good -> extra.onSuccessContainer
-                        QualityReport.Tone.Warn -> extra.onWarningContainer
-                        QualityReport.Tone.Bad -> MaterialTheme.colorScheme.onErrorContainer
-                        QualityReport.Tone.Neutral -> MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(
-                            when (badge.tone) {
-                                QualityReport.Tone.Good -> extra.successContainer
-                                QualityReport.Tone.Warn -> extra.warningContainer
-                                QualityReport.Tone.Bad -> MaterialTheme.colorScheme.errorContainer
-                                QualityReport.Tone.Neutral -> MaterialTheme.colorScheme.surfaceContainerHigh
-                            },
-                        ).padding(horizontal = 6.dp, vertical = 2.dp),
-                )
+                        QualityReport.Tone.Good -> extra.successContainer to extra.onSuccessContainer
+
+                        QualityReport.Tone.Warn -> extra.warningContainer to extra.onWarningContainer
+
+                        QualityReport.Tone.Bad ->
+                            MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+
+                        QualityReport.Tone.Neutral ->
+                            MaterialTheme.colorScheme.surfaceContainerHigh to MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                TonalTag(text = badge.text, containerColor = container, contentColor = content)
             }
         }
     }

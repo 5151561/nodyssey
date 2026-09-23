@@ -1274,7 +1274,6 @@ private fun SortMenuItem(
 internal fun PostRow(
     post: FeedPost,
     onClick: () -> Unit,
-    highlight: String? = null,
     /**
      * Off on 推荐阅读, where every row carries the badge and so it distinguishes nothing — the screen's
      * own title already says what the whole list is.
@@ -1351,7 +1350,7 @@ internal fun PostRow(
             }
         }
         Text(
-            text = highlighted(summary.title, highlight, MaterialTheme.colorScheme.primary),
+            text = summary.title,
             style = cardTitleStyle(),
             color = if (post.isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (post.isRead) FontWeight.Medium else FontWeight.SemiBold,
@@ -1473,33 +1472,6 @@ private inline fun Modifier.thenIf(
     condition: Boolean,
     modifier: @Composable () -> Modifier,
 ): Modifier = if (condition) then(modifier()) else this
-
-/**
- * The searched-for words picked out of the title.
- *
- * Literal and case-insensitive, because that is what the search itself is: the site matches the raw
- * string, so a cleverer match here would paint a word the results were not chosen for. Returns the
- * plain title when nothing is being searched, which is every list but the search results.
- */
-internal fun highlighted(
-    title: String,
-    query: String?,
-    color: Color,
-): AnnotatedString {
-    val needle = query?.trim().orEmpty()
-    if (needle.isEmpty() || !title.contains(needle, ignoreCase = true)) return AnnotatedString(title)
-    return buildAnnotatedString {
-        var cursor = 0
-        while (true) {
-            val match = title.indexOf(needle, cursor, ignoreCase = true)
-            if (match < 0) break
-            append(title, cursor, match)
-            withStyle(SpanStyle(color = color)) { append(title, match, match + needle.length) }
-            cursor = match + needle.length
-        }
-        append(title, cursor, title.length)
-    }
-}
 
 /** Replaces the reply count once the user has read the thread: the delta is the useful number. */
 @Composable

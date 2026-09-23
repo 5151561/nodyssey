@@ -2,6 +2,7 @@ package io.github.nodyssey.ui.account
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -84,6 +85,8 @@ import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -208,24 +211,21 @@ fun ContactScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            AccountSectionLabel(stringResource(Res.string.account_email_section))
+            SectionLabel(stringResource(Res.string.account_email_section))
             CurrentEmailRow(
                 email = state.email,
                 verified = state.emailVerified,
                 onChange = onChangeEmail,
             )
-            AccountFieldHelper(stringResource(Res.string.account_email_change_on_site, siteName))
-
-            AccountSectionLabel(
-                stringResource(Res.string.account_phone_section),
-                modifier = Modifier.padding(top = Spacing.xs),
+            SectionNote(
+                stringResource(Res.string.account_email_change_on_site, siteName),
+                contentPadding = PaddingValues(horizontal = Spacing.xs),
             )
+
+            SectionLabel(stringResource(Res.string.account_phone_section))
             DisabledPhoneCard()
 
-            AccountSectionLabel(
-                stringResource(Res.string.account_telegram_section),
-                modifier = Modifier.padding(top = Spacing.xs),
-            )
+            SectionLabel(stringResource(Res.string.account_telegram_section))
             TelegramCard(
                 binding = state.telegram,
                 onRequestBind = onRequestBind,

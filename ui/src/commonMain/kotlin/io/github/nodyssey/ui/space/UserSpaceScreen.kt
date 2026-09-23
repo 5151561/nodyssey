@@ -123,6 +123,7 @@ import io.github.plaza.designsys.component.PillTabRow
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.TabLabel
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -382,18 +383,12 @@ private fun SpaceHeader(
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     state.level?.let { level ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer,
+                        TonalTag(
+                            text = stringResource(Res.string.assets_level, level),
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            shape = RoundedCornerShape(6.dp),
                             modifier = Modifier.padding(start = 8.dp),
-                        ) {
-                            Text(
-                                text = stringResource(Res.string.assets_level, level),
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            )
-                        }
+                        )
                     }
                 }
                 Text(

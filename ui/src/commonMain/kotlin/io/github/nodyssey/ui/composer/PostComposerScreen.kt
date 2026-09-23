@@ -842,6 +842,7 @@ private fun PreviewContent(
             )
             PreviewByline(
                 boardTitle = state.boardTitle,
+                boardSlug = state.boardSlug,
                 authorName = state.authorName,
                 modifier = Modifier.padding(top = Spacing.sm + 2.dp),
             )

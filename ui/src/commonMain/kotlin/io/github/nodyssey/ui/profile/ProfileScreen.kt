@@ -64,9 +64,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.AttendanceMode
-import io.github.nodyssey.ui.assets.GrowthProgressBar
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
 import io.github.nodyssey.ui.common.AttendanceModeDialog
+import io.github.nodyssey.ui.common.GrowthProgressBar
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot

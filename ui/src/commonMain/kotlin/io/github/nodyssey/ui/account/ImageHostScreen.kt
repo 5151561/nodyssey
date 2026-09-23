@@ -153,7 +153,6 @@ import io.github.nodyssey.ui.resources.imagehost_upload_url_placeholder
 import io.github.nodyssey.ui.resources.status_network_title
 import io.github.nodyssey.ui.settings.SettingsItemGap
 import io.github.nodyssey.ui.settings.SettingsPagePadding
-import io.github.nodyssey.ui.settings.SettingsSectionTitle
 import io.github.nodyssey.ui.settings.settingsRowTitleStyle
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.LayerCard
@@ -161,6 +160,8 @@ import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -306,7 +307,7 @@ fun ImageHostScreen(
                 )
             }
 
-            SettingsSectionTitle(
+            SectionLabel(
                 text = stringResource(Res.string.imagehost_section_images) +
                     state.images.size.takeIf { it > 0 && !state.isLoadingImages }?.let { " · $it" }.orEmpty(),
                 modifier = Modifier.padding(top = Spacing.xs),
@@ -427,27 +428,14 @@ private fun ConnectionCard(
                 style = settingsRowTitleStyle(),
                 modifier = Modifier.weight(1f),
             )
-            Surface(
-                color = if (state.connected) scheme.tertiaryContainer else scheme.surfaceContainerHigh,
+            TonalTag(
+                text = stringResource(
+                    if (state.connected) Res.string.imagehost_connected else Res.string.imagehost_not_connected,
+                ),
+                containerColor = if (state.connected) scheme.tertiaryContainer else scheme.surfaceContainerHigh,
                 contentColor = if (state.connected) scheme.onTertiaryContainer else scheme.onSurfaceVariant,
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    if (state.connected) {
-                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                    }
-                    Text(
-                        stringResource(
-                            if (state.connected) Res.string.imagehost_connected else Res.string.imagehost_not_connected,
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                }
-            }
+                icon = Icons.Default.Check.takeIf { state.connected },
+            )
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,

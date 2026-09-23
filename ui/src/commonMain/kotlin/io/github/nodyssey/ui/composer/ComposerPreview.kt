@@ -20,6 +20,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.NodeSeekStickers
+import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.composer_just_now
 import io.github.nodyssey.ui.resources.composer_preview_empty
@@ -110,6 +111,7 @@ fun MarkdownPreviewBody(
 @Composable
 fun PreviewByline(
     boardTitle: String?,
+    boardSlug: String?,
     authorName: String?,
     modifier: Modifier = Modifier,
 ) {
@@ -118,19 +120,7 @@ fun PreviewByline(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm + 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        boardTitle?.let {
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp),
-                )
-            }
-        }
+        BoardTag(title = boardTitle, slug = boardSlug)
         authorName?.let {
             Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

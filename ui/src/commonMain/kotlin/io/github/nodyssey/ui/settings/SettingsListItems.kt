@@ -61,26 +61,6 @@ import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 
 /**
- * The grouped-list vocabulary the settings screens are built from.
- *
- * Shared rather than copied because the grouping is the point: a group is one white card on the grey
- * page, split by inset hairlines. Two screens grouping their rows differently is exactly the kind of
- * drift nobody notices in review and everybody notices side by side.
- */
-@Composable
-internal fun SettingsSectionTitle(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-        color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = Spacing.md, top = 10.dp, bottom = 2.dp).semantics { heading() },
-    )
-}
-
-/**
  * One group of rows. The rows draw the card themselves ([GroupedListItem]: outer corners, hairlines and
  * the shadow, sliced per row), so this only stacks them flush — which is also what lets the same rows
  * be spread over a `LazyColumn` where there is no one group to put them in.
@@ -342,18 +322,4 @@ internal fun SettingsResultBanner(
             Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
         }
     }
-}
-
-/** Small print under a page's cards — what a setting cannot do, said before anyone types. */
-@Composable
-internal fun SettingsNote(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(horizontal = Spacing.md),
-    )
 }

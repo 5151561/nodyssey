@@ -127,6 +127,7 @@ import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.richtext.LocalStickerSizing
 import io.github.plaza.designsys.richtext.StickerSizing
@@ -253,7 +254,7 @@ fun SettingsScreen(
                 .padding(SettingsPagePadding),
             verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
-            SettingsSectionTitle(stringResource(Res.string.settings_appearance))
+            SectionLabel(stringResource(Res.string.settings_appearance))
             SettingsGroup {
                 // 明暗 stays here, one tap from 设置, while everything else about colour moved onto
                 // 主题's own screen. It is not that it fits the group better — it is that it is
@@ -386,7 +387,7 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsSectionTitle(stringResource(Res.string.settings_content))
+            SectionLabel(stringResource(Res.string.settings_content))
             SettingsGroup {
                 appLinkHandlingEnabled?.let { enabled ->
                     SettingsRow(
@@ -469,7 +470,7 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsSectionTitle(stringResource(Res.string.notify_settings_title))
+            SectionLabel(stringResource(Res.string.notify_settings_title))
             SettingsGroup {
                 SettingsRow(
                     title = stringResource(Res.string.notify_master_title),
@@ -482,7 +483,7 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsSectionTitle(stringResource(Res.string.settings_network))
+            SectionLabel(stringResource(Res.string.settings_network))
             SettingsGroup {
                 SettingsRow(
                     title = stringResource(Res.string.settings_proxy_entry),
@@ -526,7 +527,7 @@ fun SettingsScreen(
                 }
             }
 
-            SettingsSectionTitle(stringResource(Res.string.settings_about))
+            SectionLabel(stringResource(Res.string.settings_about))
             SettingsGroup {
                 SettingsRow(
                     title = stringResource(Res.string.settings_about_app),

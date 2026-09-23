@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -65,6 +66,7 @@ import io.github.nodyssey.ui.settings.settingsRowTitleStyle
 import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaPaletteStyle
@@ -187,8 +189,10 @@ internal fun DynamicColorContent(
                     onRetry = retry,
                 )
             } else {
-                ContentLabel(
+                SectionLabel(
                     stringResource(Res.string.settings_wallpaper_candidates, palette.candidates.size),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    contentPadding = PaddingValues(),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     palette.candidates.forEachIndexed { index, candidate ->
@@ -208,7 +212,11 @@ internal fun DynamicColorContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
-                ContentLabel(stringResource(Res.string.settings_wallpaper_palette))
+                SectionLabel(
+                    stringResource(Res.string.settings_wallpaper_palette),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    contentPadding = PaddingValues(),
+                )
                 SchemeRamps(
                     seed = Color(selected ?: settings.seedColor),
                     paletteStyle = settings.paletteStyle.toPlaza(),
@@ -250,12 +258,6 @@ internal fun DynamicColorContent(
             )
         }
     }
-}
-
-/** A sub-heading inside a card — lighter than a section label, which names the card itself. */
-@Composable
-internal fun ContentLabel(text: String) {
-    Text(text, style = settingsRowTitleStyle().copy(fontSize = MaterialTheme.typography.labelLarge.fontSize))
 }
 
 /**

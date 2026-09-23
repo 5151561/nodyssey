@@ -83,10 +83,10 @@ import io.github.nodyssey.ui.settings.SettingsIcons
 import io.github.nodyssey.ui.settings.SettingsItemGap
 import io.github.nodyssey.ui.settings.SettingsPagePadding
 import io.github.nodyssey.ui.settings.SettingsRow
-import io.github.nodyssey.ui.settings.SettingsSectionTitle
 import io.github.nodyssey.ui.settings.settingsRowTitleStyle
 import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -222,7 +222,7 @@ fun ThemeSettingsScreen(
                 )
             }
 
-            SettingsSectionTitle(stringResource(Res.string.settings_theme_preview))
+            SectionLabel(stringResource(Res.string.settings_theme_preview))
             ThemePreviewCard()
         }
     }

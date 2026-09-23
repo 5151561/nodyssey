@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -23,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,17 +55,43 @@ private val GROUP_SEAM_RADIUS = 0.dp
  */
 private val VALUE_MAX_WIDTH = 120.dp
 
-/** Group heading. Primary-coloured and small: it labels the block without competing with the rows. */
+/**
+ * The heading over a group — a settings block, a day of notifications, a sheet's section, a field.
+ * Material has no heading component, so this is a [Text] carrying `heading()` semantics.
+ *
+ * One size and weight everywhere; what varies is [color] — primary where the label names a block of
+ * settings, `onSurfaceVariant` where it only says where one run of the same list ends — and
+ * [contentPadding], which defaults to the gap a label keeps above a group card.
+ */
 @Composable
 fun SectionLabel(
     text: String,
     modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    contentPadding: PaddingValues = SectionLabelPadding,
 ) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-        color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = Spacing.md, top = 10.dp, bottom = 2.dp),
+        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+        color = color,
+        modifier = modifier.padding(contentPadding).semantics { heading() },
+    )
+}
+
+private val SectionLabelPadding = PaddingValues(start = Spacing.md, top = 10.dp, bottom = 2.dp)
+
+/** Small print under a group — what a setting cannot do, what a field accepts. */
+@Composable
+fun SectionNote(
+    text: String,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(horizontal = Spacing.md),
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.padding(contentPadding),
     )
 }
 
