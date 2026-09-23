@@ -30,7 +30,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -216,7 +215,7 @@ fun LuckyScreen(
                     inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = PlazaFieldDefaults.shape,
-                colors = PlazaFieldDefaults.colors(),
+                    colors = PlazaFieldDefaults.colors(),
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
@@ -226,7 +225,7 @@ fun LuckyScreen(
                     inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = PlazaFieldDefaults.shape,
-                colors = PlazaFieldDefaults.colors(),
+                    colors = PlazaFieldDefaults.colors(),
                     modifier = Modifier.weight(1f),
                 )
             }

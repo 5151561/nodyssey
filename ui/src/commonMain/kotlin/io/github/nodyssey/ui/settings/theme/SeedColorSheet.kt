@@ -29,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -526,7 +525,6 @@ private val HueBarHeight = 16.dp
 private val HandleWidth = 8.dp
 private val HandleHeight = 28.dp
 private val MarkerRadius = 11.dp
-
 
 /** The two actions are the sheet's whole purpose, so they get a pill taller than the 48dp minimum. */
 private val ActionHeight = 50.dp

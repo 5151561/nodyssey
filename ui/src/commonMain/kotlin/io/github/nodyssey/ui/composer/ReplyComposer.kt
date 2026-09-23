@@ -90,8 +90,8 @@ import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
-import io.github.plaza.designsys.component.QuotePreview
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.QuotePreview
 import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.editor.ComposerEditorBar
 import io.github.plaza.designsys.editor.EditorAction
