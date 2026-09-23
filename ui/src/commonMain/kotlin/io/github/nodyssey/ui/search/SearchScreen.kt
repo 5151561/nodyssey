@@ -148,8 +148,11 @@ import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
+import io.github.plaza.designsys.component.PillTabRow
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.TabLabel
+import io.github.plaza.designsys.component.UnderlineTabRow
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -506,64 +509,18 @@ private val TargetOrder = listOf(SearchTarget.POSTS, SearchTarget.USERS)
 private fun SearchTarget.labelRes(): StringResource =
     if (this == SearchTarget.USERS) Res.string.search_users_tab else Res.string.search_posts_tab
 
-/**
- * 帖子 / 用户 before anything is searched: a pill with a white thumb on a tonal track.
- *
- * Hand-drawn because Material has no control of this shape: [SingleChoiceSegmentedButtonRow] is an
- * outlined row of joined buttons, and a [PrimaryTabRow] is the underline the results use once there
- * is something under each tab to switch between. Here nothing is under either yet — this is the
- * first word of the query, so it looks like part of the form rather than like navigation. Each half
- * is a Material [Surface] with `selected`, inside a `selectableGroup`, and says it is a tab.
- */
+/** 帖子 / 用户 before anything is searched: the pill tabs, since this is part of the form rather than navigation. */
 @Composable
 private fun TargetSwitch(
     selected: SearchTarget,
     onTargetChange: (SearchTarget) -> Unit,
 ) {
-    val layers = LocalPlazaLayers.current
-    // Light draws the track a step darker than the page and the thumb white. Without shadows (dark,
-    // 墨水屏) the track is the card tone instead, so the raised thumb stays the lighter of the two;
-    // on paper the thumb's outline does the separating.
-    val track = if (layers.shadows) MaterialTheme.colorScheme.surfaceContainerHigh else layers.card
-    val thumb = layers.raised
-    Row(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.lg)
-            .height(44.dp)
-            .clip(CircleShape)
-            .background(track)
-            .padding(4.dp)
-            .selectableGroup(),
-    ) {
-        TargetOrder.forEach { target ->
-            val isSelected = target == selected
-            Surface(
-                selected = isSelected,
-                onClick = { onTargetChange(target) },
-                shape = CircleShape,
-                color = if (isSelected) thumb else Color.Transparent,
-                border = if (isSelected) layers.cardBorder?.let { BorderStroke(1.dp, it) } else null,
-                modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .then(if (isSelected) Modifier.cardShadow(CircleShape, layers.shadows) else Modifier)
-                    .semantics { role = Role.Tab },
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        stringResource(target.labelRes()),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                        color =
-                        if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
+    PillTabRow(
+        selectedTabIndex = TargetOrder.indexOf(selected),
+        tabs = TargetOrder.map { TabLabel(stringResource(it.labelRes())) },
+        onSelect = { onTargetChange(TargetOrder[it]) },
+        modifier = Modifier.fillMaxWidth().padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.lg),
+    )
 }
 
 /** 帖子 / 用户 once there are results: Material's underline tabs, flush with the page. */
@@ -572,35 +529,22 @@ private fun ResultTabs(
     state: SearchUiState,
     onTargetChange: (SearchTarget) -> Unit,
 ) {
-    PrimaryTabRow(
+    UnderlineTabRow(
         selectedTabIndex = TargetOrder.indexOf(state.target),
-        modifier = Modifier.padding(top = Spacing.md),
-        containerColor = Color.Transparent,
-    ) {
-        TargetOrder.forEach { target ->
-            // No count on 帖子: `/search` never returns a total, and the number of rows loaded so far
-            // is not one — it grows as you scroll, which reads as the site changing.
+        // No count on 帖子: `/search` never returns a total, and the number of rows loaded so far is
+        // not one — it grows as you scroll, which reads as the site changing.
+        tabs =
+        TargetOrder.map { target ->
             val count =
                 state.userResults.size.takeIf {
                     target == SearchTarget.USERS && state.userLoadState == SearchLoadState.Success
                 }
             val title = stringResource(target.labelRes())
-            val isSelected = state.target == target
-            Tab(
-                selected = isSelected,
-                onClick = { onTargetChange(target) },
-                selectedContentColor = MaterialTheme.colorScheme.onSurface,
-                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                text = {
-                    Text(
-                        if (count == null) title else "$title · $count",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    )
-                },
-            )
-        }
-    }
+            TabLabel(if (count == null) title else "$title · $count")
+        },
+        onSelect = { onTargetChange(TargetOrder[it]) },
+        modifier = Modifier.padding(top = Spacing.md),
+    )
 }
 
 /**

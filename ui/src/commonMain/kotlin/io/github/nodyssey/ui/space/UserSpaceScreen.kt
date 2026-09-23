@@ -119,8 +119,10 @@ import io.github.plaza.designsys.component.LayerCardGap
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaStat
+import io.github.plaza.designsys.component.PillTabRow
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.TabLabel
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -529,46 +531,12 @@ private fun SpaceTabs(
     onTabSelected: (SpaceTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val selectedIndex = state.tabs.indexOf(state.selectedTab).coerceAtLeast(0)
-    val layers = LocalPlazaLayers.current
-    PrimaryTabRow(
-        selectedTabIndex = selectedIndex,
-        modifier = modifier.clip(CircleShape).height(44.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        divider = {},
-        indicator = {
-            Box(
-                Modifier
-                    .tabIndicatorOffset(selectedIndex, matchContentSize = false)
-                    .zIndex(-1f)
-                    .fillMaxHeight()
-                    .padding(4.dp)
-                    .cardShadow(CircleShape, layers.shadows)
-                    .background(layers.raised, CircleShape),
-            )
-        },
-    ) {
-        state.tabs.forEach { tab ->
-            val selected = tab == state.selectedTab
-            Tab(
-                selected = selected,
-                onClick = { onTabSelected(tab) },
-                selectedContentColor = MaterialTheme.colorScheme.onSurface,
-                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.height(44.dp),
-                text = {
-                    Text(
-                        stringResource(tab.labelRes()),
-                        style =
-                        MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                        ),
-                    )
-                },
-            )
-        }
-    }
+    PillTabRow(
+        selectedTabIndex = state.tabs.indexOf(state.selectedTab).coerceAtLeast(0),
+        tabs = state.tabs.map { TabLabel(stringResource(it.labelRes())) },
+        onSelect = { onTabSelected(state.tabs[it]) },
+        modifier = modifier,
+    )
 }
 
 private fun LazyListScope.spaceTabContent(

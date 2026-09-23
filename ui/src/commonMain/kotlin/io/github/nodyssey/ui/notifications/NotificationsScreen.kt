@@ -96,6 +96,8 @@ import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.TabLabel
+import io.github.plaza.designsys.component.UnderlineTabRow
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -389,50 +391,17 @@ private fun GroupTabs(
     counts: NotificationCounts,
     onTabChange: (NotificationTab) -> Unit,
 ) {
-    PrimaryTabRow(
+    // The pager's own page rather than the selected group: the indicator starts moving as the swipe
+    // passes the halfway point instead of waiting for the gesture to end, which is what makes it read
+    // as the page's own label. The group itself still changes when the gesture comes to rest.
+    UnderlineTabRow(
         selectedTabIndex = currentPage,
-        containerColor = Color.Transparent,
-        indicator = {
-            TabRowDefaults.PrimaryIndicator(
-                modifier = Modifier.tabIndicatorOffset(currentPage, matchContentSize = false),
-                width = TAB_INDICATOR_WIDTH,
-            )
+        tabs =
+        tabs.map { tab ->
+            TabLabel(tab.label(), counts.forTab(tab).takeIf { it > 0 }?.let { unreadLabel(it, MAX_BADGE) })
         },
-    ) {
-        tabs.forEachIndexed { index, tab ->
-            // The pager's own page rather than the selected group: the indicator starts moving as
-            // the swipe passes the halfway point instead of waiting for the gesture to end, which is
-            // what makes it read as the page's own label. The group itself still changes when the
-            // gesture comes to rest.
-            val selected = index == currentPage
-            Tab(
-                selected = selected,
-                onClick = { onTabChange(tab) },
-                selectedContentColor = MaterialTheme.colorScheme.primary,
-                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                text = {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = tab.label(),
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                        )
-                        val count = counts.forTab(tab)
-                        if (count > 0) {
-                            Badge {
-                                Text(
-                                    text = unreadLabel(count, MAX_BADGE),
-                                    style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_FIGURES),
-                                )
-                            }
-                        }
-                    }
-                },
-            )
-        }
-    }
+        onSelect = { onTabChange(tabs[it]) },
+    )
 }
 
 /**
@@ -736,7 +705,6 @@ private val NOTIFICATION_AVATAR = 40.dp
 internal val ROW_PADDING_H = 14.dp
 internal val ROW_GAP = 12.dp
 private val UNREAD_DOT = 8.dp
-private val TAB_INDICATOR_WIDTH = 56.dp
 
 /** How far the page colour reaches down over a list that has scrolled under the header. */
 private val TOP_FADE = 20.dp

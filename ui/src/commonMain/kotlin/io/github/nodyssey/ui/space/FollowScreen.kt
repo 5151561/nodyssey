@@ -57,6 +57,8 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.StatusView
+import io.github.plaza.designsys.component.TabLabel
+import io.github.plaza.designsys.component.UnderlineTabRow
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.groupShape
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -126,20 +128,12 @@ fun FollowScreen(
             // 9h's underline tabs, sitting flush on the page like the title above them. Each names its
             // count once its list has loaded: the endpoint answers with the whole list, so its length
             // is the site's own number, not a page's worth.
-            PrimaryTabRow(
+            UnderlineTabRow(
                 selectedTabIndex = tabs.indexOf(state.selectedTab),
-                containerColor = MaterialTheme.colorScheme.background,
+                tabs = tabs.map { TabLabel(it.label(state.listFor(it))) },
+                onSelect = { onTabSelected(tabs[it]) },
                 modifier = Modifier.padding(bottom = Spacing.md),
-            ) {
-                tabs.forEach { tab ->
-                    Tab(
-                        selected = tab == state.selectedTab,
-                        onClick = { onTabSelected(tab) },
-                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        text = { Text(tab.label(state.listFor(tab)), style = MaterialTheme.typography.titleSmall) },
-                    )
-                }
-            }
+            )
 
             when {
                 list.isLoading && list.items.isEmpty() -> LoadingState()

@@ -1,0 +1,150 @@
+package io.github.plaza.designsys.component
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Badge
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import io.github.plaza.designsys.theme.LocalPlazaLayers
+import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.cardShadow
+
+/**
+ * One tab's label and, optionally, the count badge beside it — already formatted, so a caller that
+ * caps at 99+ says so itself.
+ */
+data class TabLabel(
+    val text: String,
+    val badge: String? = null,
+)
+
+/**
+ * Tabs that switch between lists — 互动 / 私信, 帖子 / 用户 results, 关注 / 粉丝.
+ *
+ * Material's [PrimaryTabRow], flush with the page (no container of its own) and with the indicator a
+ * fixed 56dp under the label rather than the label's width, which is how the artboards draw it: tabs
+ * of different label lengths still carry the same mark.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UnderlineTabRow(
+    selectedTabIndex: Int,
+    tabs: List<TabLabel>,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    PrimaryTabRow(
+        selectedTabIndex = selectedTabIndex,
+        modifier = modifier,
+        containerColor = Color.Transparent,
+        indicator = {
+            TabRowDefaults.PrimaryIndicator(
+                modifier = Modifier.tabIndicatorOffset(selectedTabIndex, matchContentSize = false),
+                width = UnderlineIndicatorWidth,
+            )
+        },
+    ) {
+        tabs.forEachIndexed { index, tab ->
+            val selected = index == selectedTabIndex
+            Tab(
+                selected = selected,
+                onClick = { onSelect(index) },
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = { TabText(tab, selected) },
+            )
+        }
+    }
+}
+
+/**
+ * Tabs as a white thumb sliding on a tonal track — the 帖子 / 用户 switch at the head of search, the
+ * 概况 / 主题帖 / 评论 switch on a member's space.
+ *
+ * Still Material's [PrimaryTabRow] — selection semantics, keyboard focus and the sliding animation
+ * are its own — with the indicator drawn as the thumb behind the labels instead of a line under them.
+ * Light draws the track a step darker than the page and the thumb white; without shadows (dark,
+ * 墨水屏) the track takes the card tone so the raised thumb stays the lighter of the two, and on
+ * paper the thumb's outline does the separating.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PillTabRow(
+    selectedTabIndex: Int,
+    tabs: List<TabLabel>,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val layers = LocalPlazaLayers.current
+    val track = if (layers.shadows) MaterialTheme.colorScheme.surfaceContainerHigh else layers.card
+    PrimaryTabRow(
+        selectedTabIndex = selectedTabIndex,
+        modifier = modifier.clip(CircleShape).height(PillTabHeight),
+        containerColor = track,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        divider = {},
+        indicator = {
+            Box(
+                Modifier
+                    .tabIndicatorOffset(selectedTabIndex, matchContentSize = false)
+                    .zIndex(-1f)
+                    .fillMaxHeight()
+                    .padding(4.dp)
+                    .cardShadow(CircleShape, layers.shadows)
+                    .background(layers.raised, CircleShape)
+                    .then(layers.cardBorder?.let { Modifier.border(1.dp, it, CircleShape) } ?: Modifier),
+            )
+        },
+    ) {
+        tabs.forEachIndexed { index, tab ->
+            val selected = index == selectedTabIndex
+            Tab(
+                selected = selected,
+                onClick = { onSelect(index) },
+                selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.height(PillTabHeight),
+                text = { TabText(tab, selected) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun TabText(
+    tab: TabLabel,
+    selected: Boolean,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = tab.text,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+        )
+        tab.badge?.let {
+            Badge { Text(it, style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_FIGURES)) }
+        }
+    }
+}
+
+private val UnderlineIndicatorWidth = 56.dp
+private val PillTabHeight = 44.dp
