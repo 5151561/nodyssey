@@ -1,34 +1,44 @@
 package io.github.nodyssey.ui.account
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -43,11 +53,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -138,17 +151,24 @@ import io.github.nodyssey.ui.resources.imagehost_token_required
 import io.github.nodyssey.ui.resources.imagehost_upload_url_label
 import io.github.nodyssey.ui.resources.imagehost_upload_url_placeholder
 import io.github.nodyssey.ui.resources.status_network_title
+import io.github.nodyssey.ui.settings.SettingsItemGap
+import io.github.nodyssey.ui.settings.SettingsPagePadding
+import io.github.nodyssey.ui.settings.SettingsSectionTitle
+import io.github.nodyssey.ui.settings.settingsRowTitleStyle
 import io.github.plaza.designsys.component.ImageFallback
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
+import kotlin.math.roundToLong
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.roundToLong
 
 @Composable
 fun ImageHostRoute(
@@ -266,44 +286,29 @@ fun ImageHostScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(SettingsPagePadding),
+            verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
-            ProviderPicker(selected = state.provider, onSelect = onSelectProvider)
+            ProviderCard(selected = state.provider, onSelect = onSelectProvider)
 
-            AccountSectionLabel(
-                text = stringResource(Res.string.imagehost_section_connection),
-                modifier = Modifier.padding(top = Spacing.xs),
-            )
-            ConnectionCard(state = state, onDisconnect = onRequestDisconnect)
-
-            CredentialFields(
+            ConnectionCard(
                 state = state,
-                onSiteUrlChange = onSiteUrlChange,
-                onTokenChange = onTokenChange,
-                onCustomChange = onCustomChange,
-                onToggleCustomFields = onToggleCustomFields,
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Button(onClick = onSave) {
-                    Text(
-                        stringResource(
-                            if (state.connected) Res.string.imagehost_key_replace else Res.string.imagehost_key_save,
-                        ),
-                    )
-                }
-                // For the two hosted services this opens their own site; for a self-hosted one it
-                // opens whatever address was typed, which is also the quickest check that it is right.
-                if (state.provider.siteUrlFor(state.siteUrlInput).isNotBlank()) {
-                    TextButton(onClick = onOpenSite) {
-                        Text(stringResource(Res.string.imagehost_open_site))
-                    }
-                }
+                onSave = onSave,
+                onDisconnect = onRequestDisconnect,
+                onOpenSite = onOpenSite,
+            ) {
+                CredentialFields(
+                    state = state,
+                    onSiteUrlChange = onSiteUrlChange,
+                    onTokenChange = onTokenChange,
+                    onCustomChange = onCustomChange,
+                    onToggleCustomFields = onToggleCustomFields,
+                )
             }
 
-            AccountSectionLabel(
-                text = stringResource(Res.string.imagehost_section_images),
+            SettingsSectionTitle(
+                text = stringResource(Res.string.imagehost_section_images) +
+                    state.images.size.takeIf { it > 0 && !state.isLoadingImages }?.let { " · $it" }.orEmpty(),
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             ImagesSection(
@@ -351,118 +356,143 @@ fun ImageHostScreen(
 }
 
 /**
- * The six, behind a dropdown.
+ * The six, as chips on a card of their own (6h).
  *
- * Six radio rows spelled out at the top of the screen cost a screenful for a decision that is made
- * once and then rarely revisited, and pushed the fields that actually need typing below the fold.
- * Collapsed it reads as one more field like the ones under it; opened it still puts all six side by
- * side, which is the one thing that helps make the choice. The line underneath is the selected
- * host's own instructions, which is where the answer to "so what do I paste here" lives.
+ * All six stay on screen rather than behind a dropdown: at chip size they take three short rows, and
+ * seeing the alternatives side by side is the one thing that helps make the choice. The line under
+ * them is the selected host's own instructions, which is where the answer to "so what do I paste
+ * here" lives.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ProviderPicker(
+private fun ProviderCard(
     selected: ImageHostProvider,
     onSelect: (ImageHostProvider) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Column {
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it },
+    LayerCard(modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(Res.string.imagehost_section_provider), style = settingsRowTitleStyle())
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            OutlinedTextField(
-                value = stringResource(selected.nameRes()),
-                onValueChange = {},
-                readOnly = true,
-                singleLine = true,
-                label = { Text(stringResource(Res.string.imagehost_section_provider)) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                shape = AccountFieldShape,
-                modifier = Modifier
-                    // The field is not typable, so the menu opens on a tap anywhere in it rather
-                    // than only on the chevron, and no keyboard comes up with it.
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth(),
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                ImageHostProvider.entries.forEach { provider ->
-                    DropdownMenuItem(
-                        text = { Text(stringResource(provider.nameRes())) },
-                        onClick = {
-                            onSelect(provider)
-                            expanded = false
-                        },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                    )
-                }
+            ImageHostProvider.entries.forEach { provider ->
+                val isSelected = provider == selected
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onSelect(provider) },
+                    label = { Text(stringResource(provider.nameRes())) },
+                    leadingIcon =
+                    if (isSelected) {
+                        { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    } else {
+                        null
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors =
+                    FilterChipDefaults.filterChipColors(
+                        containerColor = LocalPlazaLayers.current.card,
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                    modifier = Modifier.height(36.dp),
+                )
             }
         }
-        // Drawn here rather than passed as the field's `supportingText`, which is what this was: the
-        // menu opens below its anchor, the anchor is the whole text field, and a text field's
-        // supporting line is *inside* it — so the menu detached from the box and hung off the bottom
-        // of the sentence. Same two lines to look at, laid out to match `HostField`'s helper.
         Text(
             text = stringResource(selected.hintRes()),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.xs),
         )
     }
 }
 
+/**
+ * 连接 — whether the host is connected, what it holds for this account, the fields it needs, and
+ * the two actions, on one card: they are one connection, and the status next to the fields is what
+ * says whether typing into them will replace something.
+ */
 @Composable
 private fun ConnectionCard(
     state: ImageHostUiState,
+    onSave: () -> Unit,
     onDisconnect: () -> Unit,
+    onOpenSite: () -> Unit,
+    fields: @Composable () -> Unit,
 ) {
-    Surface(
-        shape = AccountFieldShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    val scheme = MaterialTheme.colorScheme
+    LayerCard(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(Res.string.imagehost_section_connection),
+                style = settingsRowTitleStyle(),
+                modifier = Modifier.weight(1f),
+            )
+            Surface(
+                color = if (state.connected) scheme.tertiaryContainer else scheme.surfaceContainerHigh,
+                contentColor = if (state.connected) scheme.onTertiaryContainer else scheme.onSurfaceVariant,
+                shape = RoundedCornerShape(12.dp),
+            ) {
                 Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
+                    if (state.connected) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                    }
                     Text(
                         stringResource(
-                            if (state.connected) {
-                                Res.string.imagehost_connected
-                            } else {
-                                Res.string.imagehost_not_connected
-                            },
+                            if (state.connected) Res.string.imagehost_connected else Res.string.imagehost_not_connected,
                         ),
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                        style = MaterialTheme.typography.labelMedium,
                     )
-                    StorageBadge(local = true)
                 }
+            }
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Text(
+                // A custom host may legitimately hold no secret at all, so a connected host with
+                // no fingerprint says where it points instead of showing an empty line.
+                text = state.credentialMask
+                    ?: state.siteUrlInput.takeIf { state.connected && it.isNotBlank() }
+                    ?: stringResource(Res.string.imagehost_not_connected_hint),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = if (state.connected) FontFamily.Monospace else FontFamily.Default,
+                ),
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            StorageBadge(local = true)
+        }
+
+        fields()
+
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            if (state.connected) {
+                FilledTonalButton(
+                    onClick = onDisconnect,
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                ) {
+                    Text(stringResource(Res.string.imagehost_clear_key), style = MaterialTheme.typography.titleMedium)
+                }
+            }
+            Button(onClick = onSave, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
                 Text(
-                    // A custom host may legitimately hold no secret at all, so a connected host with
-                    // no fingerprint says where it points instead of showing an empty line.
-                    text = state.credentialMask
-                        ?: state.siteUrlInput.takeIf { state.connected && it.isNotBlank() }
-                        ?: stringResource(Res.string.imagehost_not_connected_hint),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontFamily = if (state.connected) FontFamily.Monospace else FontFamily.Default,
+                    stringResource(
+                        if (state.connected) Res.string.imagehost_key_replace else Res.string.imagehost_key_save,
                     ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.titleMedium,
                 )
             }
-            if (state.connected) {
-                TextButton(onClick = onDisconnect) {
-                    Text(
-                        stringResource(Res.string.imagehost_clear_key),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+        }
+        // For the two hosted services this opens their own site; for a self-hosted one it opens
+        // whatever address was typed, which is also the quickest check that it is right.
+        if (state.provider.siteUrlFor(state.siteUrlInput).isNotBlank()) {
+            TextButton(onClick = onOpenSite, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text(stringResource(Res.string.imagehost_open_site))
             }
         }
     }
@@ -636,6 +666,14 @@ private fun HostField(
         placeholder = { Text(stringResource(placeholderRes)) },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         shape = AccountFieldShape,
+        // Filled with the inset tone, a well in the white card, the way every settings field is.
+        colors =
+        OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = LocalPlazaLayers.current.inset,
+            unfocusedContainerColor = LocalPlazaLayers.current.inset,
+            errorContainerColor = LocalPlazaLayers.current.inset,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+        ),
         supportingText = {
             Text(stringResource(if (isError && errorRes != null) errorRes else helperRes))
         },
@@ -682,7 +720,11 @@ private fun ImagesSection(
 
         state.images.isEmpty() -> InfoCard(stringResource(Res.string.imagehost_empty))
 
-        else -> {
+        else -> LayerCard(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
             Text(
                 stringResource(
                     Res.string.imagehost_summary,
@@ -693,80 +735,85 @@ private fun ImagesSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.xs),
             )
-            Column {
-                state.images.forEachIndexed { index, item ->
-                    ImageRow(
-                        item = item,
-                        onDelete = { onRequestDelete(item) },
-                        onOpen = { onOpenImage(item.url) },
-                    )
-                    if (index != state.images.lastIndex) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            // Rows of three rather than a lazy grid: the page already scrolls, and a second
+            // scrolling container inside it either measures to nothing or takes the page's drag.
+            state.images.chunked(GALLERY_COLUMNS).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    row.forEach { item ->
+                        ImageTile(
+                            item = item,
+                            onDelete = { onRequestDelete(item) },
+                            onOpen = { onOpenImage(item.url) },
+                            modifier = Modifier.weight(1f),
+                        )
                     }
+                    repeat(GALLERY_COLUMNS - row.size) { Box(Modifier.weight(1f)) }
                 }
             }
         }
     }
 }
 
+/**
+ * One picture on the host: the thumbnail, opened by a tap, with its delete on a white disc in the
+ * corner. The file name, upload time and size ride in the tile's description rather than under it —
+ * three to a row there is no room to print them, and the delete dialog names the file anyway.
+ */
 @Composable
-private fun ImageRow(
+private fun ImageTile(
     item: HostedImage,
     onDelete: () -> Unit,
     onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    val details =
+        listOfNotNull(
+            item.fileName,
+            item.uploadTime?.takeIf(String::isNotBlank),
+            // A host that reports no size at all should not be made to claim it holds 0 B.
+            formatBytes(item.sizeBytes).takeIf { item.sizeBytes > 0 },
+        ).joinToString(" · ")
+    Box(
+        modifier
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(16.dp))
+            .background(LocalPlazaLayers.current.inset),
     ) {
         // A host that has lost the file, or one whose links need a referer this app does not send,
-        // otherwise shows a row that is all filename and no picture — and the reader cannot tell
-        // that from a row still loading.
+        // otherwise shows a tile that is all blank and no picture — and the reader cannot tell that
+        // from a tile still loading.
         var failed by remember(item.url) { mutableStateOf(false) }
+        val open = Modifier.fillMaxSize().clickable(onClick = onOpen).semantics { contentDescription = details }
         if (failed) {
-            ImageFallback(modifier = Modifier.size(44.dp))
+            ImageFallback(modifier = open)
         } else {
             AsyncImage(
                 model = item.url,
-                contentDescription = item.fileName,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
                 onError = { failed = true },
-                modifier = Modifier.size(44.dp),
+                modifier = open,
             )
         }
-        Column(
-            Modifier
-                .weight(1f)
-                .clickable(onClick = onOpen),
+        IconButton(
+            onClick = onDelete,
+            colors =
+            IconButtonDefaults.iconButtonColors(
+                containerColor = LocalPlazaLayers.current.raised,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+            modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(36.dp),
         ) {
-            Text(
-                text = item.fileName,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = listOfNotNull(
-                    item.uploadTime?.takeIf(String::isNotBlank),
-                    // A host that reports no size at all should not be made to claim it holds 0 B.
-                    formatBytes(item.sizeBytes).takeIf { item.sizeBytes > 0 },
-                ).joinToString(" · "),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(onClick = onDelete) {
             Icon(
                 Icons.Default.Delete,
                 contentDescription = stringResource(Res.string.imagehost_delete_action),
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
     }
 }
+
+private const val GALLERY_COLUMNS = 3
 
 @Composable
 private fun InfoCard(
@@ -774,8 +821,8 @@ private fun InfoCard(
     action: Pair<String, () -> Unit>? = null,
 ) {
     Surface(
-        shape = AccountFieldShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = LayerCardShape,
+        color = LocalPlazaLayers.current.card,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(

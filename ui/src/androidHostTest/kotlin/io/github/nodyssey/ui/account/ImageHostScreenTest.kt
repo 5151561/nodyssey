@@ -7,6 +7,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -56,50 +58,38 @@ class ImageHostScreenTest {
         }
     }
 
-    /** The point of the dropdown: five of the six are not on the screen until they are asked for. */
+    /** All six are on the card at once, and the selected one is the one marked. */
     @Test
-    fun `collapsed picker shows only the selected host`() {
+    fun `every host is offered, with the selected one marked`() {
         setContent()
 
-        composeRule.onNodeWithText(NODE_IMAGE).assertIsDisplayed()
-        composeRule.onNodeWithText(SMMS).assertDoesNotExist()
-        composeRule.onNodeWithText("自定义图床 · 手动配置").assertDoesNotExist()
-    }
-
-    @Test
-    fun `opening the picker offers every host, and choosing one closes it`() {
-        setContent()
-
-        composeRule.onNodeWithText(NODE_IMAGE).performClick()
-
-        // The selected host is on screen twice while the menu is open — in the field and in the
-        // menu — and every other host exactly once.
-        composeRule.onAllNodesWithText(NODE_IMAGE).assertCountEquals(2)
         listOf(
+            NODE_IMAGE,
             "兰空图床 Lsky Pro · 自建",
             "简单图床 EasyImage · 自建",
             SMMS,
             "imgbb · 公共",
             "自定义图床 · 手动配置",
         ).forEach { name -> composeRule.onAllNodesWithText(name).assertCountEquals(1) }
+        composeRule.onNodeWithText(NODE_IMAGE).assertIsSelected()
+        composeRule.onNodeWithText(SMMS).assertIsNotSelected()
+    }
+
+    @Test
+    fun `choosing a host selects it and shows its own instructions`() {
+        setContent()
 
         composeRule.onNodeWithText(SMMS).performClick()
 
-        // Collapsed again, now onto the host that was picked — and its own instructions with it.
-        composeRule.onAllNodesWithText(SMMS).assertCountEquals(1)
-        composeRule.onNodeWithText(NODE_IMAGE).assertDoesNotExist()
+        composeRule.onNodeWithText(SMMS).assertIsSelected()
+        composeRule.onNodeWithText(NODE_IMAGE).assertIsNotSelected()
         composeRule.onNodeWithText("在 sm.ms 登录后于「Dashboard › API Token」生成").assertIsDisplayed()
+        composeRule.onNodeWithText(NODE_IMAGE_HINT).assertDoesNotExist()
     }
 
-    /**
-     * The hint must not be part of the field, or the menu hangs off the bottom of the sentence.
-     *
-     * `ExposedDropdownMenu` opens below its anchor and the anchor is the whole text field — a
-     * supporting line inside it pushes the menu down by however tall that sentence wrapped to. Two
-     * nodes here, never one merged node.
-     */
+    /** The hint is its own line, not folded into a chip, so a screen reader reads it once. */
     @Test
-    fun `the picker's hint sits outside the field the menu anchors to`() {
+    fun `the selected host's hint is a line of its own`() {
         setContent()
 
         composeRule.onNode(hasText(NODE_IMAGE) and hasText(NODE_IMAGE_HINT)).assertDoesNotExist()
