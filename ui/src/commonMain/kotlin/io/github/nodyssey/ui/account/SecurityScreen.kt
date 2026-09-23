@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.TextObfuscationMode
@@ -75,6 +76,7 @@ import io.github.nodyssey.ui.resources.account_two_factor_totp
 import io.github.nodyssey.ui.resources.account_value_unknown
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
+import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -187,45 +189,49 @@ fun SecurityScreen(
         ) {
             AccountSectionLabel(stringResource(Res.string.account_change_password))
 
-            PasswordField(
-                fieldState = currentPasswordState,
-                label = stringResource(Res.string.account_password_current),
-                contentType = ContentType.Password,
-            )
-
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            // One card for the whole change: the three fields and the button that sends them are one
+            // act, and a card is how this app says "these go together".
+            LayerCard(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 PasswordField(
-                    fieldState = newPasswordState,
-                    label = stringResource(Res.string.account_password_new),
-                    contentType = ContentType.NewPassword,
-                    isError = state.isTooShort,
-                    supportingText =
-                    if (state.isTooShort) {
-                        stringResource(Res.string.account_password_too_short, MIN_PASSWORD_LENGTH)
-                    } else {
-                        null
-                    },
+                    fieldState = currentPasswordState,
+                    label = stringResource(Res.string.account_password_current),
+                    contentType = ContentType.Password,
                 )
-                state.strength?.let { StrengthMeter(it) }
-            }
 
-            PasswordField(
-                fieldState = confirmPasswordState,
-                label = stringResource(Res.string.account_password_confirm),
-                placeholder = stringResource(Res.string.account_password_confirm_hint),
-                contentType = ContentType.NewPassword,
-                isError = state.isMismatched,
-                supportingText =
-                if (state.isMismatched) stringResource(Res.string.account_password_mismatch) else null,
-            )
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    PasswordField(
+                        fieldState = newPasswordState,
+                        label = stringResource(Res.string.account_password_new),
+                        contentType = ContentType.NewPassword,
+                        isError = state.isTooShort,
+                        supportingText =
+                        if (state.isTooShort) {
+                            stringResource(Res.string.account_password_too_short, MIN_PASSWORD_LENGTH)
+                        } else {
+                            null
+                        },
+                    )
+                    state.strength?.let { StrengthMeter(it) }
+                }
 
-            Button(
-                onClick = onRequestPasswordChange,
-                enabled = state.canSubmitPassword,
-                shape = RoundedCornerShape(23.dp),
-                modifier = Modifier.fillMaxWidth().height(46.dp),
-            ) {
-                Text(stringResource(Res.string.account_password_update))
+                PasswordField(
+                    fieldState = confirmPasswordState,
+                    label = stringResource(Res.string.account_password_confirm),
+                    placeholder = stringResource(Res.string.account_password_confirm_hint),
+                    contentType = ContentType.NewPassword,
+                    isError = state.isMismatched,
+                    supportingText =
+                    if (state.isMismatched) stringResource(Res.string.account_password_mismatch) else null,
+                )
+
+                Button(
+                    onClick = onRequestPasswordChange,
+                    enabled = state.canSubmitPassword,
+                    shape = CircleShape,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                ) {
+                    Text(stringResource(Res.string.account_password_update))
+                }
             }
 
             AccountSectionLabel(
@@ -393,15 +399,8 @@ private fun TwoFactorCard(
     busy: Boolean,
     onBind: () -> Unit,
 ) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
+    LayerCard(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -439,7 +438,7 @@ private fun TwoFactorCard(
             Button(
                 onClick = onBind,
                 enabled = !busy,
-                shape = RoundedCornerShape(20.dp),
+                shape = CircleShape,
             ) {
                 Icon(PlazaIcons.QrCode, contentDescription = null, modifier = Modifier.size(17.dp))
                 Text(

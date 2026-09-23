@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -29,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -86,6 +88,7 @@ import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.digitsOnly
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -176,7 +179,7 @@ fun LuckyScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = LocalPlazaLayers.current.card,
                 shape = RoundedCornerShape(14.dp),
             ) {
                 Text(
@@ -193,6 +196,7 @@ fun LuckyScreen(
                 lineLimits = TextFieldLineLimits.SingleLine,
                 inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = luckyFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -209,6 +213,7 @@ fun LuckyScreen(
                     lineLimits = TextFieldLineLimits.SingleLine,
                     inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = luckyFieldColors(),
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
@@ -217,12 +222,13 @@ fun LuckyScreen(
                     lineLimits = TextFieldLineLimits.SingleLine,
                     inputTransformation = digitsOnly(LuckyViewModel.MAX_FIELD_LENGTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = luckyFieldColors(),
                     modifier = Modifier.weight(1f),
                 )
             }
 
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = LocalPlazaLayers.current.card,
                 shape = RoundedCornerShape(12.dp),
             ) {
                 Row(
@@ -252,7 +258,7 @@ fun LuckyScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                shape = RoundedCornerShape(24.dp),
+                shape = CircleShape,
             ) {
                 Icon(PlazaIcons.Link, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
@@ -277,7 +283,6 @@ fun LuckyScreen(
             }
 
             state.generatedLink?.let { link ->
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 GeneratedLinkCard(
                     link = link,
                     onCopy = { copy(copyLabel, link, copiedText) },
@@ -309,6 +314,17 @@ fun LuckyScreen(
     }
 }
 
+/**
+ * The card colour inside the outline: every other block on this form is a white card on the grey
+ * page, and an unfilled field between them read as a hole rather than a place to type.
+ */
+@Composable
+private fun luckyFieldColors() =
+    OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = LocalPlazaLayers.current.card,
+        unfocusedContainerColor = LocalPlazaLayers.current.card,
+    )
+
 @Composable
 private fun DrawTimeRow(
     millis: Long,
@@ -316,7 +332,7 @@ private fun DrawTimeRow(
     onPickTime: () -> Unit,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = LocalPlazaLayers.current.card,
         shape = RoundedCornerShape(12.dp),
     ) {
         Column(
@@ -455,7 +471,7 @@ private fun GeneratedLinkCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Surface(
-            color = MaterialTheme.colorScheme.surfaceContainer,
+            color = LocalPlazaLayers.current.card,
             shape = RoundedCornerShape(16.dp),
         ) {
             Column(

@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.common.snackbarDuration
@@ -33,6 +34,7 @@ import io.github.nodyssey.ui.resources.status_sign_in_title
 import io.github.nodyssey.ui.resources.status_unknown_title
 import io.github.nodyssey.ui.resources.status_unparsable_title
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -151,7 +153,7 @@ internal fun StorageBadge(
         shape = RoundedCornerShape(6.dp),
         color =
         if (local) {
-            MaterialTheme.colorScheme.surfaceContainerLow
+            LocalPlazaLayers.current.inset
         } else {
             MaterialTheme.colorScheme.primaryContainer
         },
@@ -188,9 +190,9 @@ internal fun AccountSectionLabel(
 ) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelLarge,
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = Spacing.xs),
+        modifier = modifier.padding(start = Spacing.md, top = Spacing.xs),
     )
 }
 

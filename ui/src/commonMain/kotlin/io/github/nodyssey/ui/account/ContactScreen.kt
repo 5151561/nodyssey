@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -77,10 +79,13 @@ import io.github.nodyssey.ui.resources.account_telegram_unbound
 import io.github.nodyssey.ui.resources.account_value_unknown
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -268,6 +273,12 @@ private fun CurrentEmailRow(
         singleLine = true,
         label = { Text(stringResource(Res.string.account_email_current)) },
         shape = AccountFieldShape,
+        // The card colour inside the outline, like every field on the grey page.
+        colors =
+        OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = LocalPlazaLayers.current.card,
+            unfocusedContainerColor = LocalPlazaLayers.current.card,
+        ),
         trailingIcon = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (email.isNotEmpty() && verified) {
@@ -299,12 +310,13 @@ private fun CurrentEmailRow(
 @Composable
 private fun DisabledPhoneCard() {
     Surface(
-        shape = AccountFieldShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = LayerCardShape,
+        color = LocalPlazaLayers.current.card,
+        border = LocalPlazaLayers.current.cardBorder?.let { androidx.compose.foundation.BorderStroke(1.dp, it) },
         modifier = Modifier.fillMaxWidth().alpha(DISABLED_CARD_ALPHA),
     ) {
         Row(
-            modifier = Modifier.padding(Spacing.md),
+            modifier = Modifier.padding(Spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
@@ -327,8 +339,7 @@ private fun DisabledPhoneCard() {
             }
             Surface(
                 shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.surface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                color = LocalPlazaLayers.current.inset,
             ) {
                 Text(
                     stringResource(Res.string.account_phone_unavailable),
@@ -348,15 +359,8 @@ private fun TelegramCard(
     onRequestBind: () -> Unit,
     onRequestUnbind: () -> Unit,
 ) {
-    Surface(
-        shape = AccountFieldShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
+    LayerCard(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -417,7 +421,7 @@ private fun TelegramCard(
                     )
                 }
             } else {
-                Button(onClick = onRequestBind, enabled = binding != null) {
+                Button(onClick = onRequestBind, enabled = binding != null, shape = CircleShape) {
                     Icon(PlazaIcons.Link, contentDescription = null, modifier = Modifier.size(17.dp))
                     Text(
                         stringResource(Res.string.account_telegram_bind),
