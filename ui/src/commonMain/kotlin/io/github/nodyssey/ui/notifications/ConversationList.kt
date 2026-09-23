@@ -7,21 +7,27 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -39,6 +45,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.data.contentPreview
@@ -52,24 +59,30 @@ import io.github.nodyssey.ui.resources.messages_new_conversation_empty
 import io.github.nodyssey.ui.resources.messages_new_conversation_hint
 import io.github.nodyssey.ui.resources.messages_new_conversation_intro
 import io.github.nodyssey.ui.resources.messages_pinned
+import io.github.nodyssey.ui.resources.messages_section_all
 import io.github.nodyssey.ui.resources.messages_snippet_mine_prefix
 import io.github.nodyssey.ui.resources.unread_count_capped
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AvatarShape
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.floatShadow
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * Board 7e — the 私信 group of the notification tab.
+ * Board 7e, redrawn as 5b — the 私信 group of the notification tab.
  *
  * 系统通知 is pinned at the top by [io.github.nodyssey.data.NetworkMessageRepository]; it is an
- * ordinary conversation, drawn without an avatar because it has no member behind it.
+ * ordinary conversation, drawn without an avatar because it has no member behind it. 5b gives it a
+ * card of its own above the rest, under a 全部私信 heading: it is the site talking, not a member, and
+ * sharing one card made it read as the first of the reader's own conversations.
  */
 @Composable
 internal fun ConversationList(
@@ -98,30 +111,67 @@ internal fun ConversationList(
             // fillMaxSize, or the list is only as tall as the rows in it — and 私信 is a short list.
             // Everything below the last row would then be a dead strip that dispatches no scroll,
             // so a pull down there could neither bring 单手模式's title back nor reach the refresh.
+            val (pinned, others) = state.conversations.partition(MessageConversation::isSystem)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
-                contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
+                contentPadding =
+                PaddingValues(start = LayerPageGutter, end = LayerPageGutter, top = 12.dp, bottom = FAB_CLEARANCE),
             ) {
-                items(state.conversations, key = MessageConversation::uid) { conversation ->
+                // Each pinned conversation is a card on its own, so a second one — which the site
+                // has never sent — would still not be drawn as the first row of the member list.
+                items(pinned, key = MessageConversation::uid) { conversation ->
                     ConversationRow(
                         conversation = conversation,
+                        first = true,
+                        last = true,
                         nowMillis = state.nowMillis,
                         onClick = { onConversationClick(conversation) },
                     )
                 }
+                if (others.isNotEmpty()) {
+                    // The heading only earns its place when there is a pinned card above to set the
+                    // members apart from; on its own it would be labelling the whole page.
+                    if (pinned.isNotEmpty()) {
+                        item(key = "all-heading") {
+                            ListGroupLabel(stringResource(Res.string.messages_section_all))
+                        }
+                    }
+                    itemsIndexed(others, key = { _, conversation -> conversation.uid }) { index, conversation ->
+                        ConversationRow(
+                            conversation = conversation,
+                            first = index == 0,
+                            last = index == others.lastIndex,
+                            nowMillis = state.nowMillis,
+                            onClick = { onConversationClick(conversation) },
+                        )
+                    }
+                }
             }
         }
 
-        FloatingActionButton(
+        // The content overload rather than `icon`/`text`: that one wraps its label in an animation
+        // container that does not surface the text to semantics, and the button would announce
+        // itself unnamed. Its own elevation is off because the float shadow draws the lift in the
+        // page's hue, as every floating control in the redesign does.
+        val fabShape = FloatingActionButtonDefaults.extendedFabShape
+        ExtendedFloatingActionButton(
             onClick = onNewConversation,
+            shape = fabShape,
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.lg),
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+            modifier =
+            Modifier
+                .align(Alignment.BottomEnd)
+                .padding(Spacing.lg)
+                .floatShadow(fabShape, LocalPlazaLayers.current.shadows),
         ) {
-            Icon(
-                PlazaIcons.AddComment,
-                contentDescription = stringResource(Res.string.messages_new_conversation),
+            Icon(Icons.Default.Edit, contentDescription = null)
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = stringResource(Res.string.messages_new_conversation),
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
             )
         }
     }
@@ -139,55 +189,78 @@ internal fun ConversationList(
     }
 }
 
+/**
+ * One conversation, as one slice of its card (5b).
+ *
+ * Unread shows in the name's weight, a primary time stamp and the count badge; the row itself is no
+ * longer tinted, which on a white card read as a selection rather than as news.
+ */
 @Composable
 private fun ConversationRow(
     conversation: MessageConversation,
+    first: Boolean,
+    last: Boolean,
     nowMillis: Long,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val isUnread = conversation.unreadCount > 0
-    Row(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .background(
-                if (isUnread) {
-                    MaterialTheme.colorScheme.surfaceContainerLow
-                } else {
-                    MaterialTheme.colorScheme.surface
-                },
-            ).clickable(onClick = onClick)
-            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
+    CardSliceRow(
+        first = first,
+        last = last,
+        dividerInset = ROW_PADDING_H + CONVERSATION_AVATAR + ROW_GAP,
+        onClick = onClick,
+        modifier = modifier,
     ) {
-        if (conversation.isSystem) {
-            Box(
-                Modifier
-                    .size(listAvatarSize())
-                    .clip(AvatarShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Default.Notifications,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-        } else {
-            UserAvatar(
-                url = conversation.avatarUrl,
-                name = conversation.userName,
-                size = listAvatarSize(),
+        Row(
+            modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = CONVERSATION_ROW_HEIGHT)
+                .padding(horizontal = ROW_PADDING_H, vertical = Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(ROW_GAP),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ConversationRowContent(conversation, isUnread, nowMillis)
+        }
+    }
+}
+
+@Composable
+private fun RowScope.ConversationRowContent(
+    conversation: MessageConversation,
+    isUnread: Boolean,
+    nowMillis: Long,
+) {
+    if (conversation.isSystem) {
+        // 5b's megaphone rather than the bell this used to be: the bell is the tab's own icon,
+        // and a conversation wearing it read as a shortcut back to the tab it was already on.
+        Box(
+            Modifier
+                .size(CONVERSATION_AVATAR)
+                .clip(AvatarShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                PlazaIcons.Campaign,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
+    } else {
+        UserAvatar(
+            url = conversation.avatarUrl,
+            name = conversation.userName,
+            size = CONVERSATION_AVATAR,
+        )
+    }
 
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
                 /*
                  * The name and its pin travel together inside one weighted row, and the stamp is the
                  * only unweighted child, so it sits against the right edge of every row alike.
@@ -196,61 +269,64 @@ private fun ConversationRow(
                  * which parked each row's stamp a different distance in from the edge — a column of
                  * times that visibly failed to line up.
                  */
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = conversation.userName,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = if (isUnread) FontWeight.Bold else FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (conversation.isSystem) {
-                        Icon(
-                            PlazaIcons.PushPin,
-                            contentDescription = stringResource(Res.string.messages_pinned),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp),
-                        )
-                    }
-                }
-                conversationStamp(conversation, nowMillis)?.let { stamp ->
-                    Text(
-                        text = stamp,
-                        style =
-                        MaterialTheme.typography.labelMedium.copy(
-                            fontFeatureSettings = TABULAR_FIGURES,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
-                }
-            }
             Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = conversationSnippet(conversation),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = conversation.userName,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp, lineHeight = 21.sp),
+                    fontWeight = if (isUnread) FontWeight.SemiBold else FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f, fill = false),
                 )
-                if (isUnread) {
-                    // `primary`, not Badge's default `error`: an unread message is a thing to read,
-                    // not a thing that went wrong.
-                    Badge(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ) {
-                        Text(unreadLabel(conversation.unreadCount, MAX_UNREAD))
-                    }
+                if (conversation.isSystem) {
+                    Icon(
+                        PlazaIcons.PushPin,
+                        contentDescription = stringResource(Res.string.messages_pinned),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
+            conversationStamp(conversation, nowMillis)?.let { stamp ->
+                Text(
+                    text = stamp,
+                    style =
+                    MaterialTheme.typography.bodySmall.copy(
+                        fontFeatureSettings = TABULAR_FIGURES,
+                    ),
+                    // The time is where 5b puts the first sign of news, ahead of the badge.
+                    color =
+                    if (isUnread) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    maxLines = 1,
+                )
+            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = conversationSnippet(conversation),
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 19.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (isUnread) {
+                // Badge's own error red, the same mark the group tabs and the tab bar carry: 5b
+                // reads a count as a count wherever it is, and a primary pill here was the one
+                // unread number on the screen that looked different from the others.
+                Badge {
+                    Text(unreadLabel(conversation.unreadCount, MAX_UNREAD))
                 }
             }
         }
@@ -294,6 +370,7 @@ private fun NewConversationSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
+        containerColor = LocalPlazaLayers.current.page,
     ) {
         Column(
             modifier = Modifier.padding(horizontal = Spacing.lg).padding(bottom = Spacing.xl),
@@ -378,7 +455,11 @@ private fun NewConversationSheet(
     }
 }
 
-private val FAB_CLEARANCE = 88.dp
+private val FAB_CLEARANCE = 96.dp
+
+/** 5b's measurements: 72dp rows, a 44dp avatar. */
+private val CONVERSATION_ROW_HEIGHT = 72.dp
+private val CONVERSATION_AVATAR = 44.dp
 private const val MAX_UNREAD = 99
 
 /**
