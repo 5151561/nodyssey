@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.ui.common.rememberReducedMotionEnabled
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 
 /**
@@ -787,7 +788,7 @@ private fun PhoneFrame(
 ) {
     Surface(
         modifier = modifier.width(width).height(height),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = LocalPlazaLayers.current.card,
         shape = RoundedCornerShape(16.dp),
     ) {
         Box(

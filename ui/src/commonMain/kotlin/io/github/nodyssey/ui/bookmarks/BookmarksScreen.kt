@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -24,6 +25,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -51,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -75,6 +78,7 @@ import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_close
 import io.github.nodyssey.ui.resources.action_sort
+import io.github.nodyssey.ui.resources.bookmarks_count
 import io.github.nodyssey.ui.resources.bookmarks_download_all
 import io.github.nodyssey.ui.resources.bookmarks_empty_body
 import io.github.nodyssey.ui.resources.bookmarks_empty_filter_body
@@ -88,6 +92,7 @@ import io.github.nodyssey.ui.resources.bookmarks_removed
 import io.github.nodyssey.ui.resources.bookmarks_search
 import io.github.nodyssey.ui.resources.bookmarks_search_clear
 import io.github.nodyssey.ui.resources.bookmarks_search_hint
+import io.github.nodyssey.ui.resources.bookmarks_select_action
 import io.github.nodyssey.ui.resources.bookmarks_select_all
 import io.github.nodyssey.ui.resources.bookmarks_select_none
 import io.github.nodyssey.ui.resources.bookmarks_selected
@@ -100,18 +105,22 @@ import io.github.nodyssey.ui.resources.history_undo
 import io.github.nodyssey.ui.resources.offline_manage
 import io.github.nodyssey.ui.resources.offline_status
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandAppBarState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.StatusView
+import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.floatShadow
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -140,6 +149,7 @@ fun BookmarksRoute(
         onSearching = viewModel::setSearching,
         onQuery = viewModel::setQuery,
         onStartSelection = viewModel::startSelection,
+        onEnterSelection = viewModel::enterSelection,
         onToggleSelection = viewModel::toggleSelection,
         onToggleSelectAll = viewModel::toggleSelectAll,
         onClearSelection = viewModel::clearSelection,
@@ -187,6 +197,8 @@ fun BookmarksScreen(
     onSearching: (Boolean) -> Unit,
     onQuery: (String) -> Unit,
     onStartSelection: (Long) -> Unit,
+    /** 8e's ☑ in the bar — multi-select with nothing ticked yet, for a reader who never long-presses. */
+    onEnterSelection: () -> Unit,
     onToggleSelection: (Long) -> Unit,
     onToggleSelectAll: () -> Unit,
     onClearSelection: () -> Unit,
@@ -286,6 +298,8 @@ fun BookmarksScreen(
                     onBack = onBack,
                     onSearching = onSearching,
                     onQuery = onQuery,
+                    onSort = onSort,
+                    onEnterSelection = onEnterSelection,
                     onManage = { managing = true },
                 )
             }
@@ -295,12 +309,16 @@ fun BookmarksScreen(
                 // The content overload rather than the `icon`/`text` one: that overload wraps its
                 // label in an animation container that does not surface the text to semantics, so
                 // the pill announced itself as an unnamed button.
+                val layers = LocalPlazaLayers.current
                 ExtendedFloatingActionButton(
                     onClick = onDownloadPending,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    // The layered shadow instead of Material's own, like every other thing that floats.
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                    modifier = Modifier.floatShadow(FloatingActionButtonDefaults.extendedFabShape, layers.shadows),
                 ) {
-                    Icon(PlazaIcons.CloudDownload, contentDescription = null)
+                    Icon(PlazaIcons.DownloadForOffline, contentDescription = null)
                     Spacer(Modifier.width(9.dp))
                     Text(
                         text = stringResource(Res.string.bookmarks_download_all, state.pendingDownloadCount),
@@ -313,16 +331,14 @@ fun BookmarksScreen(
                 }
             }
         },
-        floatingActionButtonPosition = FabPosition.Center,
+        // At the end, where 8e puts it and where the thumb already is; the list's bottom padding
+        // keeps the last row's download column clear of it.
+        floatingActionButtonPosition = FabPosition.End,
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 if (!state.inSelection) {
-                    BookmarkFilterRow(
-                        state = state,
-                        onFilter = onFilter,
-                        sortMenu = { SortMenu(current = state.sort, onSort = onSort) },
-                    )
+                    BookmarkFilterRow(state = state, onFilter = onFilter)
                     // Not while a selection is up: that mode has its own toolbar and its own bar, and
                     // the strip is about a list the reader is reading rather than one they are acting on.
                     state.error?.takeIf { state.isStale }?.let { error ->
@@ -430,7 +446,7 @@ private fun BookmarkList(
                 modifier = modifier.fillMaxSize(),
                 // Room under the last row for whichever thing is floating over it. Both are about
                 // the same height, so one number covers the list in either mode.
-                contentPadding = PaddingValues(bottom = FLOATING_CLEARANCE),
+                contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = FLOATING_CLEARANCE),
             ) {
                 if (state.truncated) {
                     item(key = "truncated") {
@@ -439,15 +455,18 @@ private fun BookmarkList(
                             stringResource(Res.string.bookmarks_truncated, BookmarksViewModel.MAX_PAGES),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                            modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.sm),
                         )
                     }
                 }
-                items(visible, key = { it.postId }) { entry ->
+                // One white card, spread over the items — see [layerCardSlice].
+                itemsIndexed(visible, key = { _, entry -> entry.postId }) { index, entry ->
                     BookmarkRow(
                         entry = entry,
                         offlineAvailable = state.offlineAvailable,
                         selected = state.selection?.contains(entry.postId),
+                        first = index == 0,
+                        last = index == visible.lastIndex,
                         onClick = {
                             if (state.inSelection) onToggleSelection(entry.postId) else onPostClick(entry.postId)
                         },
@@ -473,6 +492,8 @@ private fun BookmarksTopBar(
     onBack: () -> Unit,
     onSearching: (Boolean) -> Unit,
     onQuery: (String) -> Unit,
+    onSort: (BookmarkSort) -> Unit,
+    onEnterSelection: () -> Unit,
     onManage: () -> Unit,
 ) {
     val back =
@@ -492,22 +513,27 @@ private fun BookmarksTopBar(
         TopAppBar(
             title = { BookmarkSearchField(query = state.query.orEmpty(), onQuery = onQuery) },
             navigationIcon = back,
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = LocalPlazaLayers.current.page),
         )
         return
     }
     OneHandTopAppBar(
         title = stringResource(Res.string.bookmarks_title),
         state = appBarState,
-        // 已离线 N 篇 · 占用 X. It used to be a strip of its own between the chips and the list;
-        // as a subtitle it costs no row at all, and this is a standing fact about the screen rather
-        // than a control — which is what a subtitle is for. Null until something has been
-        // downloaded: 「已离线 0 篇 · 占用 0 B」 is a line that says nothing and still takes a line.
+        // 32 篇 · 已离线 N 篇 · 占用 X (board 8e). The offline half used to be a strip of its own
+        // between the chips and the list; as a subtitle it costs no row at all, and these are
+        // standing facts about the screen rather than controls — which is what a subtitle is for.
+        // The offline half waits until something has been downloaded: 「已离线 0 篇 · 占用 0 B」 is a
+        // clause that says nothing and still takes room.
         subtitle =
-        if (state.offlineAvailable && state.usage.posts > 0) {
-            stringResource(Res.string.offline_status, state.usage.posts, formatBytes(state.usage.totalBytes))
-        } else {
-            null
-        },
+        listOfNotNull(
+            state.entries.size.takeIf { it > 0 }?.let { stringResource(Res.string.bookmarks_count, it) },
+            if (state.offlineAvailable && state.usage.posts > 0) {
+                stringResource(Res.string.offline_status, state.usage.posts, formatBytes(state.usage.totalBytes))
+            } else {
+                null
+            },
+        ).joinToString(SUBTITLE_SEPARATOR).ifEmpty { null },
         navigationIcon = back,
         actions = {
             IconButton(onClick = { onSearching(true) }) {
@@ -516,6 +542,18 @@ private fun BookmarksTopBar(
                     contentDescription = stringResource(Res.string.bookmarks_search),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            // In the bar with the other two ways of narrowing the list, as 8e has it, rather than
+            // pinned to the end of the chip row, where it cost the chips their last few dp.
+            SortMenu(current = state.sort, onSort = onSort)
+            if (state.entries.isNotEmpty()) {
+                IconButton(onClick = onEnterSelection) {
+                    Icon(
+                        imageVector = PlazaIcons.Checklist,
+                        contentDescription = stringResource(Res.string.bookmarks_select_action),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             if (state.offlineAvailable) {
                 // Straight to 离线管理 rather than a ⋮ that opens onto a menu of one. The overflow
@@ -586,7 +624,7 @@ private fun SortMenu(
     Box {
         IconButton(onClick = { expanded = true }, modifier = Modifier.size(Sizes.minTouchTarget)) {
             Icon(
-                imageVector = PlazaIcons.SwapVert,
+                imageVector = PlazaIcons.Sort,
                 contentDescription = stringResource(Res.string.action_sort),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -647,14 +685,16 @@ private fun SelectionTopBar(
                 )
             }
         },
-        // Tinted rather than the surface the plain bar sits on: the mode has to be visible from the
-        // top of the screen, not only from the checkboxes halfway down it.
+        // Tinted rather than the page the plain bar sits flush with: the mode has to be visible from
+        // the top of the screen, not only from the checkboxes halfway down it.
         colors =
         TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
         ),
     )
 }
+
+private const val SUBTITLE_SEPARATOR = " · "
 
 private val BookmarkSort.labelRes: StringResource
     get() =
@@ -787,6 +827,7 @@ private fun BookmarksPreviewHost(
             onSearching = {},
             onQuery = {},
             onStartSelection = {},
+            onEnterSelection = {},
             onToggleSelection = {},
             onToggleSelectAll = {},
             onClearSelection = {},

@@ -5,6 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -47,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.RulingAction
@@ -72,7 +77,6 @@ import io.github.nodyssey.ui.resources.ruling_action_hide
 import io.github.nodyssey.ui.resources.ruling_action_hide_all
 import io.github.nodyssey.ui.resources.ruling_action_lock
 import io.github.nodyssey.ui.resources.ruling_action_move
-import io.github.nodyssey.ui.resources.ruling_action_none
 import io.github.nodyssey.ui.resources.ruling_action_pin
 import io.github.nodyssey.ui.resources.ruling_action_rank
 import io.github.nodyssey.ui.resources.ruling_action_stardust_add
@@ -84,8 +88,7 @@ import io.github.nodyssey.ui.resources.ruling_action_unhide_all
 import io.github.nodyssey.ui.resources.ruling_action_unlock
 import io.github.nodyssey.ui.resources.ruling_action_unpin
 import io.github.nodyssey.ui.resources.ruling_action_unsuspend
-import io.github.nodyssey.ui.resources.ruling_meta
-import io.github.nodyssey.ui.resources.ruling_meta_no_moderator
+import io.github.nodyssey.ui.resources.ruling_moderator
 import io.github.nodyssey.ui.resources.ruling_page_cap
 import io.github.nodyssey.ui.resources.ruling_page_progress
 import io.github.nodyssey.ui.resources.ruling_reason
@@ -97,10 +100,15 @@ import io.github.nodyssey.ui.resources.ruling_title
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AppendSpinner
+import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TonalTag
+import io.github.plaza.designsys.component.layerCardSlice
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -158,9 +166,11 @@ fun RulingRoute(
  * 管理记录.
  *
  * The site presents this as a five-column table, which a 360dp screen cannot carry. Each decision
- * becomes a two-line row instead: who and why on the first line, what was done and by whom on the
- * second. The compound action stays joined by "+" rather than split into badges — "扣 20 鸡腿 + 移动版块
- * 至 促销 + 锁定修改" is one decision and reads as one sentence.
+ * becomes a row on one white card instead (board 9g): who and why on the first line, what was done as
+ * a run of tonal badges under it, and when and by whom last. The badges are coloured by what they
+ * cost the member — a deduction or a ban in the error tone, a reward in the primary one, everything
+ * procedural in neutral — because in a log of other people's decisions the eye is looking for the
+ * penalties, and a joined-up sentence made it read every verb to find them.
  *
  * The reason moves out of the action and onto the first line, which is the one place this screen
  * departs from the site's wording. The site says 因“灌水”被-10鸡腿 inside every verb of a compound
@@ -294,6 +304,9 @@ fun RulingScreen(
                 else ->
                     LazyColumn(
                         state = listState,
+                        // Clear of the page rail at the foot, which floats over the last card.
+                        contentPadding =
+                        PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = RAIL_CLEARANCE),
                         modifier = Modifier
                             .fillMaxSize()
                             .floatingToolbarVerticalNestedScroll(
@@ -306,9 +319,10 @@ fun RulingScreen(
                             RulingRow(
                                 record = state.records[index],
                                 boardTitles = state.boardTitles,
+                                first = index == 0,
+                                last = index == state.records.lastIndex,
                                 onClick = onRecordClick,
                             )
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                         if (state.isAppending) {
                             item("append") { AppendSpinner() }
@@ -407,38 +421,39 @@ fun RulingScreen(
  */
 private const val APPEND_LOOKAHEAD = 4
 
+/** The rail's three stacked 48dp targets are what the last card has to clear. */
+private val RAIL_CLEARANCE = 112.dp
+
+/**
+ * One decision, as a slice of the log's card — see [layerCardSlice].
+ *
+ * The icon disc that used to lead the row is gone: it sorted decisions into five kinds, and the
+ * badges now say the same thing verb by verb, in colour, where the eye already is.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RulingRow(
     record: RulingRecord,
     boardTitles: Map<String, String>,
+    first: Boolean,
+    last: Boolean,
     onClick: (RulingRecord) -> Unit,
 ) {
     // The row exists to say someone was penalised; the only useful next question is what for, so it
     // opens the post at the floor in question. An account-level decision names no post and falls back
     // to the member's space, which is where the site's own row links too.
     val destination = record.postId != null || record.targetUid != null
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = destination) { onClick(record) }
-            .padding(horizontal = Spacing.lg, vertical = 11.dp),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            .layerCardSlice(LocalPlazaLayers.current, first, last)
+            .clickable(enabled = destination) { onClick(record) },
     ) {
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerLow),
-            contentAlignment = Alignment.Center,
+        if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
+        Column(
+            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Icon(
-                imageVector = record.kind.icon(),
-                contentDescription = null,
-                tint = record.kind.tint(),
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             // Built as an annotated string rather than one format string so the user name can carry the
             // weight — it is what the eye scans for in a log of other people's punishments.
             val targetKind = record.target.label()?.let { stringResource(Res.string.ruling_target_kind, it) }
@@ -450,29 +465,61 @@ private fun RulingRow(
                     targetKind?.let(::append)
                     reason?.let(::append)
                 },
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
             )
-            Text(
-                text = record.metaLine(boardTitles),
-                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (record.actions.isNotEmpty()) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    record.actions.forEach { ActionBadge(it, boardTitles) }
+                }
+            }
+            val meta =
+                listOfNotNull(
+                    record.createdAtMillis?.let(TimeFormat::absolute),
+                    record.moderatorName?.let { stringResource(Res.string.ruling_moderator, it) },
+                )
+            if (meta.isNotEmpty()) {
+                Text(
+                    text = meta.joinToString(META_SEPARATOR),
+                    style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
 
+private const val META_SEPARATOR = " · "
+
+/** One verb of a decision, in the tone of what it cost the member. */
 @Composable
-private fun RulingRecord.metaLine(boardTitles: Map<String, String>): String {
-    val actions =
-        actions
-            .map { it.label(boardTitles) }
-            .joinToString(" + ")
-            .ifBlank { stringResource(Res.string.ruling_action_none) }
-    val time = createdAtMillis?.let(TimeFormat::absolute).orEmpty()
-    return moderatorName
-        ?.let { stringResource(Res.string.ruling_meta, actions, it, time) }
-        ?: stringResource(Res.string.ruling_meta_no_moderator, actions, time)
+private fun ActionBadge(
+    action: RulingAction,
+    boardTitles: Map<String, String>,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val (container, content) =
+        when (action.tone()) {
+            ActionTone.Penalty -> scheme.errorContainer to scheme.onErrorContainer
+            ActionTone.Reward -> scheme.primaryContainer to scheme.onPrimaryContainer
+            ActionTone.Neutral -> scheme.secondaryContainer to scheme.onSecondaryContainer
+        }
+    // The board tag's own component, so a verb here and a board on a feed row are one shape.
+    TonalTag(text = action.label(boardTitles), containerColor = container, contentColor = content)
 }
+
+private enum class ActionTone { Penalty, Reward, Neutral }
+
+private fun RulingAction.tone(): ActionTone =
+    when (this) {
+        is RulingAction.Coin -> if (diff < 0) ActionTone.Penalty else ActionTone.Reward
+        is RulingAction.Stardust -> if (diff < 0) ActionTone.Penalty else ActionTone.Reward
+        is RulingAction.Suspend -> if (days != null) ActionTone.Penalty else ActionTone.Neutral
+        is RulingAction.Award -> if (award) ActionTone.Reward else ActionTone.Neutral
+        else -> ActionTone.Neutral
+    }
 
 /** `null` for an account-level decision: the site writes the bare name, with no "的…" after it. */
 @Composable
@@ -538,23 +585,6 @@ private fun RulingAction.label(boardTitles: Map<String, String>): String =
             days
                 ?.let { stringResource(Res.string.ruling_action_suspend, it) }
                 ?: stringResource(Res.string.ruling_action_unsuspend)
-    }
-
-private fun RulingKind.icon(): ImageVector =
-    when (this) {
-        RulingKind.PENALTY -> PlazaIcons.Gavel
-        RulingKind.BAN -> PlazaIcons.Block
-        RulingKind.MOVE -> PlazaIcons.SwapVert
-        RulingKind.PERMISSION -> PlazaIcons.Visibility
-        RulingKind.REWARD -> NodeSeekIcons.ChickenLeg
-    }
-
-@Composable
-private fun RulingKind.tint() =
-    when (this) {
-        RulingKind.BAN -> MaterialTheme.colorScheme.error
-        RulingKind.REWARD -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
 // -------------------------------------------------------------------------------------------------

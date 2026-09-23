@@ -1,6 +1,8 @@
 package io.github.plaza.designsys.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,11 +16,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.plaza.designsys.theme.LocalPlazaLayers
+import io.github.plaza.designsys.theme.PlazaLayers
 import io.github.plaza.designsys.theme.cardShadow
 
 /** A content card's corners: 24dp, round enough to read as an object lifted off the page. */
@@ -123,3 +129,50 @@ fun LayerDivider(
         color = LocalPlazaLayers.current.divider,
     )
 }
+
+/**
+ * Draws this node as one slice of a card that is spread over the items of a `LazyColumn` — the
+ * outer corners from [groupShape], the card colour, 墨水屏's outline, and the card's shadow.
+ *
+ * A card is one item, and a long list of rows cannot be one item without giving up laziness, so
+ * each row draws its own slice. What makes that work is the shadow: a shadow per slice would lay a
+ * band across the rows above and below, so each slice's shadow is clipped to its own height and
+ * only the first and last may cast past their outer edge. What is left is the two sides, which line
+ * up from slice to slice into the shadow of one card.
+ *
+ * The same drawing `notifications`' `CardSliceRow` does by hand; this is that recipe as a modifier,
+ * for lists whose rows carry their own gestures (a swipe, a long-press) and so cannot be handed a
+ * ready-made clickable row.
+ *
+ * Takes [layers] rather than reading [LocalPlazaLayers] itself for the reason [cardShadow] does: a
+ * modifier factory stays a plain function, and the caller reads the local once per row.
+ */
+fun Modifier.layerCardSlice(
+    layers: PlazaLayers,
+    first: Boolean,
+    last: Boolean,
+): Modifier {
+    val shape = groupShape(first, last)
+    val shadowed =
+        if (!layers.shadows) {
+            this
+        } else {
+            this
+                .drawWithContent {
+                    val bleed = SLICE_SHADOW_BLEED.toPx()
+                    clipRect(
+                        left = -bleed,
+                        top = if (first) -bleed else 0f,
+                        right = size.width + bleed,
+                        bottom = if (last) size.height + bleed else size.height,
+                    ) { this@drawWithContent.drawContent() }
+                }.cardShadow(shape, enabled = true)
+        }
+    return shadowed
+        .clip(shape)
+        .background(layers.card)
+        .then(layers.cardBorder?.let { Modifier.border(1.dp, it, shape) } ?: Modifier)
+}
+
+/** Comfortably past the widest layer of `cardShadow` — 18dp of blur pushed 6dp down. */
+private val SLICE_SHADOW_BLEED = 32.dp

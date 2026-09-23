@@ -100,6 +100,7 @@ class BookmarksScreenTest {
                     onSearching = {},
                     onQuery = {},
                     onStartSelection = onStartSelection,
+                    onEnterSelection = {},
                     onToggleSelection = onToggleSelection,
                     onToggleSelectAll = {},
                     onClearSelection = {},
@@ -131,7 +132,7 @@ class BookmarksScreenTest {
         composeRule.onNodeWithContentDescription("重试").assertIsDisplayed()
     }
 
-    /** The two states that owe an explanation get their own line under the meta, not a bare icon. */
+    /** The two states that owe an explanation say it in words — a pill and a line — not a bare icon. */
     @Test
     fun `stale and failed rows say why`() {
         setScreen(state())
@@ -145,7 +146,7 @@ class BookmarksScreenTest {
     fun `the subtitle and the download-all pill count what is actually there`() {
         setScreen(state())
 
-        composeRule.onAllNodesWithText("已离线 2 篇 · 占用 12.4 MB").onFirst().assertIsDisplayed()
+        composeRule.onAllNodesWithText("已离线 2 篇 · 占用 12.4 MB", substring = true).onFirst().assertIsDisplayed()
         // 未下载 + 失败 = 2. Already-offline and in-flight rows are not things left to download.
         composeRule.onNodeWithText("全部下载 · 2 篇").assertIsDisplayed()
     }
@@ -155,7 +156,7 @@ class BookmarksScreenTest {
     fun `an empty library leaves the subtitle off entirely`() {
         setScreen(state(usage = OfflineUsage()))
 
-        composeRule.onNodeWithText("已离线 0 篇 · 占用 0 B").assertDoesNotExist()
+        composeRule.onNodeWithText("已离线 0 篇", substring = true).assertDoesNotExist()
     }
 
     /**
@@ -208,7 +209,7 @@ class BookmarksScreenTest {
         composeRule.onNodeWithText("已下载 0").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("已离线").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("管理").assertDoesNotExist()
-        composeRule.onAllNodesWithText("已离线 2 篇 · 占用 12.4 MB").assertCountEquals(0)
+        composeRule.onAllNodesWithText("已离线 2 篇 · 占用 12.4 MB", substring = true).assertCountEquals(0)
     }
 
     @Test
@@ -250,8 +251,8 @@ class BookmarksScreenTest {
 
         composeRule.onNodeWithText("已选 1 项").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("已离线").assertDoesNotExist()
-        composeRule.onNodeWithText("已离线 2.8 MB").assertIsDisplayed()
-        composeRule.onNodeWithText("下载中 62%").assertIsDisplayed()
+        composeRule.onNodeWithText("已离线 2.8 MB", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("下载中 62%", substring = true).assertIsDisplayed()
     }
 
     @Test

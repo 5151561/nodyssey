@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.account
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -62,13 +64,19 @@ import io.github.nodyssey.ui.resources.account_confirm_unblock_action
 import io.github.nodyssey.ui.resources.account_confirm_unblock_body
 import io.github.nodyssey.ui.resources.account_confirm_unblock_title
 import io.github.nodyssey.ui.resources.action_back
+import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerCardShape
+import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerGroup
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.stringResource
 
@@ -192,16 +200,15 @@ fun BlockListScreen(
             if (!state.isLoading && state.blocked.isEmpty()) {
                 BlockedEmptyState()
             } else {
-                Column {
+                LayerGroup {
                     state.blocked.forEachIndexed { index, user ->
+                        // Inset past the avatar, so the faces read as one column.
+                        if (index != 0) LayerDivider(startInset = Spacing.lg + listAvatarSize() + Spacing.md)
                         BlockedRow(
                             user = user,
                             onOpen = { onOpenUser(user.uid) },
                             onUnblock = { onRequestUnblock(user) },
                         )
-                        if (index != state.blocked.lastIndex) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        }
                     }
                 }
                 Text(
@@ -232,11 +239,13 @@ private fun ShowBlockedSwitchCard(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Surface(
-        shape = AccountFieldShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = LayerCardShape,
+        color = LocalPlazaLayers.current.card,
+        border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
         modifier =
         Modifier
             .fillMaxWidth()
+            .cardShadow(LayerCardShape, LocalPlazaLayers.current.shadows)
             .toggleable(
                 value = checked,
                 role = Role.Switch,
@@ -244,7 +253,7 @@ private fun ShowBlockedSwitchCard(
             ),
     ) {
         Row(
-            modifier = Modifier.padding(Spacing.md),
+            modifier = Modifier.padding(Spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
@@ -300,6 +309,12 @@ private fun AddBlockField(
         label = { Text(stringResource(Res.string.account_block_add_label)) },
         placeholder = { Text(stringResource(Res.string.account_block_add_placeholder)) },
         shape = AccountFieldShape,
+        colors =
+        OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = LocalPlazaLayers.current.card,
+            unfocusedContainerColor = LocalPlazaLayers.current.card,
+            disabledContainerColor = LocalPlazaLayers.current.card,
+        ),
         keyboardOptions =
         KeyboardOptions(
             autoCorrectEnabled = false,
@@ -321,7 +336,11 @@ private fun BlockedRow(
     onUnblock: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = Spacing.sm),
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpen)
+            .padding(start = Spacing.lg, end = Spacing.xs, top = Spacing.sm, bottom = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
@@ -347,13 +366,9 @@ private fun BlockedRow(
 
 @Composable
 private fun BlockedEmptyState() {
-    Surface(
-        shape = AccountFieldShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    LayerCard(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.padding(Spacing.lg),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {

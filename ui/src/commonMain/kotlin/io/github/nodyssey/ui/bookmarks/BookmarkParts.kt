@@ -1,11 +1,15 @@
 package io.github.nodyssey.ui.bookmarks
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,17 +20,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.AnnotatedString
@@ -84,6 +95,8 @@ import io.github.nodyssey.ui.resources.offline_stop_download_progress
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AvatarCapOffset
+import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
@@ -91,137 +104,152 @@ import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.layerCardSlice
 import io.github.plaza.designsys.component.listAvatarSize
+import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.component.textScaledSize
 import io.github.plaza.designsys.theme.LocalEinkMode
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.floatShadow
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * One collected thread, drawn as the feed draws it plus whatever this device has of it.
+ * One collected thread, as a slice of the one white card the list is drawn on (board 8e): the
+ * title, one meta line, and whatever this device has of it at the end of the row.
+ *
+ * No avatar, unlike the feed. The collection payload carries no picture for most rows (see
+ * [CollectedPostMetaStore]), and a column of initials the reader never chose to see bought nothing
+ * but width the title needed — 8e drops it, and gives that width to the download state instead.
  *
  * [selected] carries all three states the row can be in, because they are three and not two: null is
  * "not multi-selecting", which is the only one of the three where the download column is drawn and a
  * tap opens the thread.
  */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun BookmarkRow(
     entry: BookmarkEntry,
     offlineAvailable: Boolean,
     selected: Boolean?,
+    first: Boolean,
+    last: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onOfflineAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val inSelection = selected != null
-    val avatarSize = listAvatarSize()
-    ThreadRow(
-        modifier = modifier,
-        onClick = onClick,
-        onLongClick = onLongClick,
-        onLongClickLabel = stringResource(Res.string.bookmarks_select_action),
-        containerColor =
-        if (selected == true) {
-            MaterialTheme.colorScheme.surfaceContainerLow
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        leading = {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (selected != null) {
+    val layers = LocalPlazaLayers.current
+    val showsOfflineColumn = offlineAvailable && !inSelection
+    Column(modifier.fillMaxWidth().layerCardSlice(layers, first, last)) {
+        if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
+        // Material's interactive list item: it owns the ripple, the long-click TalkBack can announce
+        // and perform, and the leading/trailing geometry. The card behind it is the slice's, so the
+        // item itself is transparent unless it is ticked.
+        ListItem(
+            onClick = onClick,
+            onLongClick = onLongClick,
+            onLongClickLabel = stringResource(Res.string.bookmarks_select_action),
+            colors =
+            ListItemDefaults.colors(
+                containerColor = if (selected == true) layers.inset else Color.Transparent,
+            ),
+            leadingContent =
+            selected?.let { checked ->
+                {
                     // The row is the touch target — it is what toggles the tick — so the box itself
                     // is released from Material's 48dp minimum. Left at its default it would claim
                     // 48dp of a 360dp row and take that width out of the title.
                     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                        Checkbox(
-                            checked = selected,
-                            onCheckedChange = null,
-                            modifier = Modifier.offset(y = AvatarCapOffset),
-                        )
+                        Checkbox(checked = checked, onCheckedChange = null)
                     }
                 }
-                UserAvatar(
-                    // The collection payload carries neither a uid nor a picture, so this comes from
-                    // what the device remembers of the thread — see [CollectedPostMetaStore]. Still
-                    // null for a thread nothing here has ever opened or downloaded, and the row then
-                    // falls back to the author's initial as it always did.
-                    url = entry.avatarUrl,
-                    name = entry.authorName?.takeIf { it.isNotBlank() } ?: entry.title,
-                    size = avatarSize,
-                    modifier = Modifier.offset(y = AvatarCapOffset),
-                )
-            }
-        },
-        title = { ThreadRowTitle(text = AnnotatedString(entry.title)) },
-        supporting =
-        if (offlineAvailable && !inSelection) {
-            { OfflineSupportingLine(entry.offline) }
-        } else {
-            null
-        },
-        trailing =
-        if (offlineAvailable && !inSelection) {
-            { OfflineStateAction(state = entry.offline, onClick = onOfflineAction) }
-        } else {
-            null
-        },
-    ) {
-        BoardTag(title = entry.categoryTitle, slug = entry.categorySlug)
-        entry.authorName?.takeIf { it.isNotBlank() }?.let { MetaText(it, singleLine = true) }
-        if (inSelection && offlineAvailable) {
-            // The download column is gone in multi-select, so the state it was saying moves onto the
-            // meta line — otherwise ticking a row is also the moment you stop being able to see
-            // which of the six you already have.
-            MetaText(offlineSummary(entry.offline), singleLine = true)
-        } else {
-            entry.commentCount?.let {
-                MetaStat(
-                    icon = PlazaIcons.ModeComment,
-                    value = it.toString(),
-                    contentDescription = stringResource(Res.string.post_reply_count, it),
-                )
-            }
-            entry.createdAtText?.takeIf { it.isNotBlank() }?.let { MetaText(it, singleLine = true) }
+            },
+            supportingContent = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        itemVerticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        BoardTag(title = entry.categoryTitle, slug = entry.categorySlug)
+                        val replies = entry.commentCount?.let { stringResource(Res.string.post_reply_count, it) }
+                        val byline =
+                            if (inSelection && offlineAvailable) {
+                                // The download column is gone in multi-select, so the state it was
+                                // saying moves onto the meta line — otherwise ticking a row is also the
+                                // moment you stop being able to see which of the six you already have.
+                                listOfNotNull(entry.authorName?.takeIf { it.isNotBlank() }, offlineSummary(entry.offline))
+                            } else {
+                                listOfNotNull(entry.authorName?.takeIf { it.isNotBlank() }, replies)
+                            }
+                        if (byline.isNotEmpty()) MetaText(byline.joinToString(META_SEPARATOR), singleLine = true)
+                        if (showsOfflineColumn) (entry.offline as? OfflineState.Stale)?.let { StaleBadge(it.behindReplies) }
+                    }
+                    if (showsOfflineColumn) (entry.offline as? OfflineState.Failed)?.let { FailureLine(it.reason) }
+                }
+            },
+            trailingContent =
+            if (showsOfflineColumn) {
+                { OfflineStateAction(state = entry.offline, onClick = onOfflineAction) }
+            } else {
+                null
+            },
+        ) {
+            ThreadRowTitle(text = AnnotatedString(entry.title))
         }
     }
 }
 
-/** 「离线版落后 3 条回复」 and 「下载失败 · …」 — the two states that owe the reader a sentence. */
+private const val META_SEPARATOR = " · "
+
+/**
+ * 「离线版落后 3 条回复」, as 8e's filled badge on the meta line.
+ *
+ * A badge rather than a sentence under the row because it is the one piece of news on a row of
+ * facts — the same weight the feed gives 「N 条新回复」 — and the words stay the offline copy's own:
+ * these are replies the *stored* thread is missing, not ones the reader has not seen.
+ */
 @Composable
-private fun OfflineSupportingLine(state: OfflineState) {
-    val (text, color) =
-        when (state) {
-            is OfflineState.Stale ->
-                stringResource(Res.string.offline_behind_replies, state.behindReplies) to
-                    MaterialTheme.colorScheme.primary
-
-            is OfflineState.Failed ->
-                stringResource(state.reason.messageRes) to MaterialTheme.colorScheme.error
-
-            else -> return
-        }
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-        verticalAlignment = Alignment.CenterVertically,
+private fun StaleBadge(behindReplies: Int) {
+    Badge(
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
     ) {
-        Icon(
-            imageVector =
-            if (state is OfflineState.Failed) PlazaIcons.ErrorCircle else PlazaIcons.ArrowDownward,
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(textScaledSize(14.sp)),
-        )
         Text(
-            text = text,
+            text = stringResource(Res.string.offline_behind_replies, behindReplies),
             style =
             MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.SemiBold,
                 fontFeatureSettings = TABULAR_FIGURES,
             ),
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = Spacing.xs, vertical = 1.dp),
+        )
+    }
+}
+
+/** 「下载失败 · …」 — the one state that owes the reader a sentence rather than a glyph. */
+@Composable
+private fun FailureLine(reason: OfflineFailure) {
+    val color = MaterialTheme.colorScheme.error
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = PlazaIcons.ErrorCircle,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(textScaledSize(14.sp)),
+        )
+        Text(
+            text = stringResource(reason.messageRes),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
             color = color,
         )
     }
@@ -233,6 +261,10 @@ private fun OfflineSupportingLine(state: OfflineState) {
  * A single control rather than five, because from the reader's side it is one — "deal with this
  * row's offline copy". What that means differs (fetch it, stop fetching it, catch it up, try again)
  * but there is never a choice to make, so there is never more than one button.
+ *
+ * A glyph alone, as board 8e draws it: the word that used to sit under each one cost the row a
+ * second line at the end and said what the glyph already did. The words are still there for
+ * TalkBack — the whole column is one node carrying [offlineActionDescription].
  */
 @Composable
 private fun OfflineStateAction(
@@ -241,65 +273,32 @@ private fun OfflineStateAction(
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val iconSize = textScaledSize(22.sp)
-    val label: String
-    val labelColor: Color
     val description = offlineActionDescription(state)
-
-    when (state) {
-        is OfflineState.Downloaded -> {
-            label = stringResource(Res.string.offline_state_downloaded)
-            labelColor = scheme.onSurfaceVariant
-        }
-
-        is OfflineState.Downloading -> {
-            label =
-                state.progress
-                    ?.let { stringResource(Res.string.offline_state_percent, (it * 100).toInt()) }
-                    ?: stringResource(Res.string.offline_state_queued)
-            labelColor = scheme.onSurfaceVariant
-        }
-
-        is OfflineState.NotDownloaded -> {
-            label = stringResource(Res.string.offline_state_not_downloaded)
-            labelColor = scheme.onSurfaceVariant
-        }
-
-        is OfflineState.Stale -> {
-            label = stringResource(Res.string.offline_state_sync)
-            labelColor = scheme.onSurfaceVariant
-        }
-
-        is OfflineState.Failed -> {
-            label = stringResource(Res.string.offline_state_retry)
-            labelColor = scheme.error
-        }
-    }
-
-    Column(
-        modifier =
-        modifier
-            .width(48.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .heightIn(min = Sizes.minTouchTarget)
-            .padding(top = 2.dp)
-            // One node, one announcement: a bare glyph and a bare "62%" read as two unrelated things.
-            .clearAndSetSemantics { contentDescription = description },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        when (state) {
-            is OfflineState.Downloading -> DownloadProgressRing(state.progress, iconSize)
-
-            else ->
+    IconButton(onClick = onClick, modifier = modifier) {
+        // One announcement for the button: a bare glyph and a bare "62" read as two unrelated
+        // things, so what is inside is replaced by the sentence, which the button then merges.
+        Box(
+            modifier = Modifier.clearAndSetSemantics { contentDescription = description },
+            contentAlignment = Alignment.Center,
+        ) {
+            // A local: `progress` is a `val` in another module, so the check would not narrow it.
+            val progress = (state as? OfflineState.Downloading)?.progress
+            if (progress != null) {
+                DownloadProgressRing(progress)
+            } else {
                 Icon(
                     imageVector =
                     when (state) {
-                        is OfflineState.Downloaded -> PlazaIcons.CloudDone
+                        is OfflineState.Downloaded -> PlazaIcons.OfflinePin
+
+                        // Queued: 8e's clock — waiting its turn, not yet moving.
+                        is OfflineState.Downloading -> PlazaIcons.Schedule
+
                         is OfflineState.Stale -> PlazaIcons.Sync
+
                         is OfflineState.Failed -> Icons.Default.Refresh
-                        else -> PlazaIcons.Download
+
+                        is OfflineState.NotDownloaded -> PlazaIcons.Download
                     },
                     contentDescription = null,
                     tint =
@@ -308,99 +307,112 @@ private fun OfflineStateAction(
                         is OfflineState.Failed -> scheme.error
                         else -> scheme.onSurfaceVariant
                     },
-                    modifier = Modifier.size(iconSize),
+                    modifier = Modifier.size(textScaledSize(22.sp)),
                 )
+            }
         }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-            color = labelColor,
-            textAlign = TextAlign.Center,
-        )
     }
 }
 
 /**
- * The ring, with a stop square inside it.
+ * The ring, with the percentage inside it.
  *
  * `gapSize` zeroed and a butt cap because Material's determinate indicator draws a gap between the
- * ends of the arc by default, and at 22dp that gap is a third of what a 10%-complete download has to
- * show with. A square rather than a ✕: at this size the cross's arms and the arc's ends are the same
- * few pixels and the whole thing reads as noise.
+ * ends of the arc by default, and at this size that gap is a third of what a 10%-complete download
+ * has to show with. The number inside is 8e's: a ring at 40% and one at 60% are hard to tell apart
+ * at 26dp, and the reader deciding whether to stop it wants to know which.
  */
 @Composable
-private fun DownloadProgressRing(
-    progress: Float?,
-    size: Dp,
-) {
+private fun DownloadProgressRing(progress: Float) {
     Box(contentAlignment = Alignment.Center) {
-        if (progress == null) {
-            PlazaSpinner(
-                modifier = Modifier.describedAsLoading(),
-                strokeWidth = RING_STROKE,
-                strokeCap = StrokeCap.Butt,
-                size = size,
-            )
-        } else {
-            CircularProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.size(size).describedAsLoading(),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.outlineVariant,
-                strokeWidth = RING_STROKE,
-                strokeCap = StrokeCap.Butt,
-                gapSize = 0.dp,
-            )
-        }
-        Icon(
-            imageVector = PlazaIcons.Stop,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(size / 2),
+        CircularProgressIndicator(
+            progress = { progress },
+            modifier = Modifier.size(RING_SIZE).describedAsLoading(),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            strokeWidth = RING_STROKE,
+            strokeCap = StrokeCap.Butt,
+            gapSize = 0.dp,
+        )
+        Text(
+            text = (progress * 100).toInt().toString(),
+            style =
+            MaterialTheme.typography.labelSmall.copy(
+                fontSize = 8.sp,
+                lineHeight = 8.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFeatureSettings = TABULAR_FIGURES,
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
 
-private val RING_STROKE = 3.5.dp
+private val RING_SIZE = 26.dp
+private val RING_STROKE = 4.dp
 
-/** 全部 12 / 已下载 5 / 有新回复 3, and ⇅ pinned to the end. */
+/**
+ * 全部 12 / 已下载 5 / 有新回复 3 — Material's own filter chips, as 8e draws them: the selected one
+ * tonal with a tick, the rest outlined on the page.
+ */
 @Composable
 internal fun BookmarkFilterRow(
     state: BookmarksUiState,
     onFilter: (BookmarkFilter) -> Unit,
-    sortMenu: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(start = Spacing.lg, end = 6.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+        modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Row(
-            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
+        BookmarkChip(
+            label = stringResource(Res.string.bookmarks_filter_all, state.entries.size),
+            selected = state.filter == BookmarkFilter.ALL,
+            onClick = { onFilter(BookmarkFilter.ALL) },
+        )
+        // The other two count downloads, so without a library there is nothing for them to be
+        // about — and 「已下载 0」 next to 「全部 12」 reads as a broken feature rather than an absent one.
+        if (state.offlineAvailable) {
             BookmarkChip(
-                label = stringResource(Res.string.bookmarks_filter_all, state.entries.size),
-                selected = state.filter == BookmarkFilter.ALL,
-                onClick = { onFilter(BookmarkFilter.ALL) },
+                label = stringResource(Res.string.bookmarks_filter_downloaded, state.downloadedCount),
+                selected = state.filter == BookmarkFilter.DOWNLOADED,
+                onClick = { onFilter(BookmarkFilter.DOWNLOADED) },
             )
-            // The other two count downloads, so without a library there is nothing for them to be
-            // about — and 「已下载 0」 next to 「全部 12」 reads as a broken feature rather than an absent one.
-            if (state.offlineAvailable) {
-                BookmarkChip(
-                    label = stringResource(Res.string.bookmarks_filter_downloaded, state.downloadedCount),
-                    selected = state.filter == BookmarkFilter.DOWNLOADED,
-                    onClick = { onFilter(BookmarkFilter.DOWNLOADED) },
-                )
-                BookmarkChip(
-                    label = stringResource(Res.string.bookmarks_filter_new_replies, state.newReplyCount),
-                    selected = state.filter == BookmarkFilter.NEW_REPLIES,
-                    onClick = { onFilter(BookmarkFilter.NEW_REPLIES) },
-                )
-            }
+            BookmarkChip(
+                label = stringResource(Res.string.bookmarks_filter_new_replies, state.newReplyCount),
+                selected = state.filter == BookmarkFilter.NEW_REPLIES,
+                onClick = { onFilter(BookmarkFilter.NEW_REPLIES) },
+            )
         }
-        sortMenu()
     }
+}
+
+@Composable
+private fun BookmarkChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
+            )
+        },
+        leadingIcon =
+        if (selected) {
+            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+        } else {
+            null
+        },
+    )
 }
 
 /**
@@ -429,13 +441,17 @@ internal fun BookmarkStaleBanner(
     modifier: Modifier = Modifier,
 ) {
     val recovery = siteErrorRecovery(error, onVerify = onVerify, onSignIn = onSignIn, onRetry = onRetry)
+    val layers = LocalPlazaLayers.current
     Surface(
-        modifier = modifier.fillMaxWidth().padding(start = Spacing.lg, end = Spacing.lg, bottom = 10.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(12.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = LayerPageGutter).padding(bottom = Spacing.sm),
+        // A card on the page like the list under it, rather than a grey strip: on a grey page a
+        // grey strip is only an outline away from invisible.
+        color = layers.card,
+        shape = RoundedCornerShape(16.dp),
+        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
     ) {
         Row(
-            modifier = Modifier.heightIn(min = 40.dp).padding(start = 10.dp, end = 4.dp),
+            modifier = Modifier.heightIn(min = 44.dp).padding(start = 14.dp, end = Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -461,47 +477,11 @@ internal fun BookmarkStaleBanner(
 }
 
 /**
- * The comp's chip: `primary` when on, `surfaceContainerLow` when off, and no outline either way.
- *
- * Material's own filter chip is `secondaryContainer` when selected and outlined when not, which on
- * this palette makes the selected chip and the unselected ones nearly the same grey.
- */
-@Composable
-private fun BookmarkChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = {
-            Text(
-                text = label,
-                style =
-                MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                    fontFeatureSettings = TABULAR_FIGURES,
-                ),
-            )
-        },
-        border = null,
-        colors =
-        FilterChipDefaults.filterChipColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            selectedContainerColor = MaterialTheme.colorScheme.primary,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-        ),
-    )
-}
-
-/**
  * The floating bar multi-select works from.
  *
  * Not a `BottomAppBar`: that one is edge-to-edge and part of the frame, and this is a thing that
- * appears over the list for as long as a selection exists — which is what the inset and the corner
- * radius are saying.
+ * appears over the list for as long as a selection exists — which is what the inset, the pill and
+ * the float shadow are saying.
  */
 @Composable
 internal fun SelectionToolbar(
@@ -513,19 +493,19 @@ internal fun SelectionToolbar(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val eink = LocalEinkMode.current
+    val layers = LocalPlazaLayers.current
+    val shape = CircleShape
     Surface(
-        modifier = modifier.fillMaxWidth().padding(Spacing.lg),
-        shape = RoundedCornerShape(26.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shadowElevation = if (eink) 0.dp else 6.dp,
-        border = if (eink) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
+        modifier = modifier.fillMaxWidth().padding(Spacing.lg).floatShadow(shape, layers.shadows),
+        shape = shape,
+        color = layers.raised,
+        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
     ) {
         Row(
             modifier =
             Modifier
                 .heightIn(min = 64.dp)
-                .padding(start = Spacing.lg, end = Spacing.sm),
+                .padding(start = Spacing.xl, end = Spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -567,6 +547,7 @@ internal fun SelectionToolbar(
                 Button(
                     onClick = onDownload,
                     enabled = selectedCount > 0,
+                    shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = Spacing.lg),
                 ) {
                     Icon(

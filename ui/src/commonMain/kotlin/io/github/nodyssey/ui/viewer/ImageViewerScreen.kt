@@ -53,6 +53,7 @@ import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImagePainter
@@ -67,6 +68,7 @@ import io.github.nodyssey.ui.resources.action_open_in_browser
 import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.action_share
 import io.github.nodyssey.ui.resources.viewer_deferred_wifi_only
+import io.github.nodyssey.ui.resources.viewer_gesture_hint
 import io.github.nodyssey.ui.resources.viewer_load_failed
 import io.github.nodyssey.ui.resources.viewer_page
 import io.github.nodyssey.ui.resources.viewer_save
@@ -151,49 +153,34 @@ fun ImageViewerScreen(
                 page = pagerState.currentPage + 1,
                 total = urls.size,
                 onClose = onClose,
+                onSave = { onSave(urls[pagerState.currentPage]) },
+                // Shares the address rather than the bytes: NodeSeek attachments are hosted URLs,
+                // and a link stays a link for the person receiving it.
+                onShare = { shareText(urls[pagerState.currentPage], null) },
                 onOpenBrowser = { onOpenBrowser(urls[pagerState.currentPage]) },
             )
         }
 
+        // Board 8g: the page dots and one line on how to leave. 保存 and 分享 moved up into the bar
+        // beside 用浏览器打开 — three icons in the corner are out of the image's way, where two
+        // 48dp pills across the bottom sat on top of the lower third of every picture. A save's
+        // outcome takes the hint's place for as long as it is the news.
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .systemBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                .systemBarsPadding()
+                .padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xxl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             if (urls.size > 1) PageDots(count = urls.size, current = pagerState.currentPage)
-            notice?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = VIEWER_SECONDARY_CONTENT,
-                    modifier = Modifier.padding(horizontal = Spacing.lg),
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                ViewerAction(
-                    icon = PlazaIcons.Download,
-                    label = stringResource(Res.string.viewer_save),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    onSave(urls[pagerState.currentPage])
-                }
-                ViewerAction(
-                    icon = Icons.Default.Share,
-                    label = stringResource(Res.string.action_share),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    // Shares the address rather than the bytes: NodeSeek attachments are hosted URLs,
-                    // and a link stays a link for the person receiving it.
-                    shareText(urls[pagerState.currentPage], null)
-                }
-            }
+            Text(
+                text = notice ?: stringResource(Res.string.viewer_gesture_hint),
+                style = MaterialTheme.typography.labelMedium,
+                color = VIEWER_SECONDARY_CONTENT,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
@@ -203,6 +190,8 @@ private fun ViewerTopBar(
     page: Int,
     total: Int,
     onClose: () -> Unit,
+    onSave: () -> Unit,
+    onShare: () -> Unit,
     onOpenBrowser: () -> Unit,
 ) {
     Row(
@@ -222,19 +211,24 @@ private fun ViewerTopBar(
         Text(
             text = stringResource(Res.string.viewer_page, page, total),
             style =
-            MaterialTheme.typography.labelLarge.copy(
-                fontWeight = FontWeight.SemiBold,
+            MaterialTheme.typography.titleSmall.copy(
+                fontWeight = FontWeight.Medium,
                 fontFeatureSettings = TABULAR_FIGURES,
             ),
             color = VIEWER_CONTENT,
             modifier = Modifier.weight(1f),
         )
+        IconButton(onClick = onSave) {
+            Icon(PlazaIcons.Download, contentDescription = stringResource(Res.string.viewer_save), tint = VIEWER_CONTENT)
+        }
+        IconButton(onClick = onShare) {
+            Icon(Icons.Default.Share, contentDescription = stringResource(Res.string.action_share), tint = VIEWER_CONTENT)
+        }
         IconButton(onClick = onOpenBrowser) {
             Icon(
                 PlazaIcons.OpenInNew,
                 contentDescription = stringResource(Res.string.action_open_in_browser),
                 tint = VIEWER_CONTENT,
-                modifier = Modifier.size(20.dp),
             )
         }
     }
@@ -247,42 +241,17 @@ private fun PageDots(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
     ) {
         repeat(count) { index ->
             val active = index == current
             Box(
                 Modifier
-                    .width(if (active) 18.dp else 6.dp)
-                    .height(6.dp)
+                    .width(if (active) 20.dp else 8.dp)
+                    .height(8.dp)
                     .clip(CircleShape)
                     .background(if (active) VIEWER_CONTENT else VIEWER_INACTIVE_DOT),
             )
-        }
-    }
-}
-
-@Composable
-private fun ViewerAction(
-    icon: ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        color = VIEWER_ACTION_CONTAINER,
-        contentColor = VIEWER_CONTENT,
-        shape = RoundedCornerShape(24.dp),
-        modifier = modifier.height(48.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text(label, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

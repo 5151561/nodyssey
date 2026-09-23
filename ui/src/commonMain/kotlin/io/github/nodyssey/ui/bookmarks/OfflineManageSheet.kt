@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -65,7 +66,9 @@ import io.github.nodyssey.ui.resources.offline_wifi_only_body
 import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.GroupedColumn
 import io.github.plaza.designsys.component.GroupedRow
+import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -96,7 +99,8 @@ internal fun OfflineManageSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        // The page colour, so the usage card and the settings group sit on it as cards do everywhere.
+        containerColor = LocalPlazaLayers.current.page,
     ) {
         OfflineManagePanel(
             usage = usage,
@@ -185,7 +189,9 @@ private fun OfflineManagePanel(
             )
         }
 
-        UsageBreakdown(usage, Modifier.padding(horizontal = Spacing.xl))
+        LayerCard(Modifier.padding(horizontal = Spacing.lg)) {
+            UsageBreakdown(usage)
+        }
 
         GroupedColumn(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.lg)) {
             GroupedRow(
@@ -239,7 +245,7 @@ private fun OfflineManagePanel(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            Button(onClick = onDone) {
+            Button(onClick = onDone, shape = CircleShape) {
                 Text(
                     text = stringResource(Res.string.offline_done),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
@@ -262,7 +268,7 @@ private fun UsageBreakdown(
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    Column(modifier.padding(bottom = Spacing.lg), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(9.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -294,7 +300,7 @@ private fun UsageBreakdown(
                 .fillMaxWidth()
                 .height(12.dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(scheme.surfaceContainer),
+                .background(LocalPlazaLayers.current.inset),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             val total = usage.totalBytes.coerceAtLeast(1L)

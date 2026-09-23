@@ -1,16 +1,20 @@
 package io.github.nodyssey.ui.history
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -19,8 +23,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -58,6 +65,7 @@ import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
+import io.github.nodyssey.ui.resources.action_delete
 import io.github.nodyssey.ui.resources.action_more
 import io.github.nodyssey.ui.resources.history_clear_all
 import io.github.nodyssey.ui.resources.history_clear_body
@@ -85,6 +93,8 @@ import io.github.plaza.core.AppClock
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.ChoiceRow
+import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
@@ -95,8 +105,10 @@ import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.layerCardSlice
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
@@ -221,15 +233,21 @@ fun ReadHistoryScreen(
 
                 else -> {
                     val sections = remember(state.entries, nowMillis) { historySections(state.entries, nowMillis) }
-                    LazyColumn(Modifier.fillMaxSize()) {
+                    // Board 8f: one white card per day, spread over the items — see [layerCardSlice].
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = Spacing.xxl),
+                    ) {
                         sections.forEach { section ->
                             stickyHeader(key = section.bucket) {
                                 HistorySectionHeader(stringResource(section.bucket.labelRes))
                             }
-                            items(section.entries, key = ReadHistoryEntry::postId) { entry ->
+                            itemsIndexed(section.entries, key = { _, entry -> entry.postId }) { index, entry ->
                                 HistoryRow(
                                     entry = entry,
                                     stamp = historyStamp(entry, section.bucket, nowMillis),
+                                    first = index == 0,
+                                    last = index == section.entries.lastIndex,
                                     onClick = { onPostClick(entry.postId) },
                                     onRemove = { removeWithUndo(entry) },
                                     modifier = Modifier.animateItem(),
@@ -335,17 +353,24 @@ private fun HistoryMenu(
 }
 
 /**
- * One read thread, laid out like the feed row it came from: avatar, title, one 12sp meta line.
+ * One read thread: the title, and one meta line under it (board 8f).
  *
- * Deliberately not a `ListItem`. The history is the same objects the feed lists, and rendering them
- * in a different vocabulary — a clock icon on every row, the board as plain text — made the screen
- * read as a different app's list. The clock is gone for the same reason a "history" badge on every
- * row of the history carries no information.
+ * Lighter than the feed row it came from — no avatar, no reply count. The history is scanned for a
+ * title the reader half-remembers, and everything on the row that is not the title or a way to tell
+ * two similar titles apart (the board, who wrote it, when it was read) is something the eye has to
+ * step over to find it. The clock icon is gone for the same reason a "history" badge on every row
+ * of the history carries no information.
+ *
+ * A slice of the day's card: the hairline above it stays put while the row swipes, so the swipe
+ * reads as this row leaving the card rather than the card coming apart.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun HistoryRow(
     entry: ReadHistoryEntry,
     stamp: String,
+    first: Boolean,
+    last: Boolean,
     onClick: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
@@ -365,80 +390,95 @@ private fun HistoryRow(
         remember(positionalThreshold) {
             SwipeToDismissBoxState(SwipeToDismissBoxValue.Settled, positionalThreshold)
         }
+    val layers = LocalPlazaLayers.current
 
-    SwipeToDismissBox(
-        state = dismissState,
-        modifier = modifier,
-        enableDismissFromStartToEnd = false,
-        onDismiss = { onRemove() },
-        backgroundContent = { RemoveBackdrop() },
-    ) {
-        ThreadRow(
-            onClick = onClick,
-            // Swipe is a mouse-and-eyes gesture; TalkBack gets the same action by name. On the row
-            // rather than on the dismiss box so it lands on the node TalkBack actually focuses.
-            modifier =
-            Modifier.semantics {
-                customActions = listOf(
-                    CustomAccessibilityAction(removeLabel) {
-                        onRemove()
-                        true
-                    },
-                )
-            },
-            leading = {
-                UserAvatar(
-                    // The uid is all the snapshot kept, which is all the site needs: avatars are
-                    // served at /avatar/<uid>.png. A row with no uid falls back to the initial.
-                    url = entry.authorUid?.let(NodeSeekSite::avatarUrl),
-                    name = entry.authorName?.takeIf { it.isNotBlank() } ?: title,
-                    size = listAvatarSize(),
-                    modifier = Modifier.offset(y = AvatarCapOffset),
-                )
-            },
-            title = {
+    Column(modifier.fillMaxWidth().layerCardSlice(layers, first, last)) {
+        if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
+        SwipeToDismissBox(
+            state = dismissState,
+            enableDismissFromStartToEnd = false,
+            onDismiss = { onRemove() },
+            backgroundContent = { RemoveBackdrop() },
+        ) {
+            // Material's interactive list item, on the card colour — opaque, or the backdrop would
+            // show through the row before it has moved.
+            ListItem(
+                onClick = onClick,
+                colors = ListItemDefaults.colors(containerColor = layers.card),
+                // Swipe is a mouse-and-eyes gesture; TalkBack gets the same action by name. On the
+                // row rather than on the dismiss box so it lands on the node TalkBack actually
+                // focuses.
+                modifier =
+                Modifier.semantics {
+                    customActions = listOf(
+                        CustomAccessibilityAction(removeLabel) {
+                            onRemove()
+                            true
+                        },
+                    )
+                },
+                supportingContent = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // No slug in the snapshot; the tag falls back to matching on the board's name.
+                        BoardTag(title = entry.categoryTitle, slug = null)
+                        entry.authorName?.takeIf { it.isNotBlank() }?.let {
+                            MetaText(it, singleLine = true, modifier = Modifier.weight(1f, fill = false))
+                            MetaText(META_SEPARATOR)
+                        }
+                        MetaText(stamp, singleLine = true)
+                    }
+                },
+            ) {
                 ThreadRowTitle(
                     text = AnnotatedString(title),
                     // Every row here is read by definition, so the feed's read/unread weight split
                     // would say nothing. Full contrast: the title is what the reader is scanning for.
                     fontWeight = FontWeight.Medium,
                 )
-            },
-        ) {
-            // No slug in the snapshot; the tag falls back to matching on the board's name.
-            BoardTag(title = entry.categoryTitle, slug = null)
-            entry.authorName?.takeIf { it.isNotBlank() }?.let { MetaText(it, singleLine = true) }
-            entry.commentCount?.let {
-                MetaStat(
-                    icon = PlazaIcons.ModeComment,
-                    value = it.toString(),
-                    contentDescription = stringResource(Res.string.post_reply_count, it),
-                )
             }
-            MetaText(stamp, singleLine = true)
         }
     }
 }
 
-/** What sits under a row being swiped away. */
+private const val META_SEPARATOR = "·"
+
+/**
+ * What sits under a row being swiped away: 8f's red block with the verb spelled out, pinned to the
+ * edge the row is leaving from.
+ */
 @Composable
 private fun RemoveBackdrop() {
     Row(
         modifier =
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.errorContainer)
-            .padding(horizontal = Spacing.xl),
+            .background(MaterialTheme.colorScheme.errorContainer),
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            Icons.Default.Delete,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onErrorContainer,
-        )
+        Column(
+            modifier = Modifier.width(REMOVE_BACKDROP_WIDTH),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Text(
+                text = stringResource(Res.string.action_delete),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+        }
     }
 }
+
+private val REMOVE_BACKDROP_WIDTH = 96.dp
 
 /**
  * 今天 / 昨天 / 最近七天 / 更早.
@@ -449,9 +489,9 @@ private fun RemoveBackdrop() {
  */
 @Composable
 private fun HistorySectionHeader(label: String) {
-    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
-        // 10dp + SectionLabel's own 4dp start inset lines the label up with the row titles' gutter.
-        SectionLabel(label, Modifier.padding(start = 10.dp, top = Spacing.md))
+    // The page colour, so a pinned heading sits on the page with the cards scrolling under it.
+    Surface(color = LocalPlazaLayers.current.page, modifier = Modifier.fillMaxWidth()) {
+        SectionLabel(label, Modifier.padding(top = Spacing.sm, bottom = Spacing.xs))
     }
 }
 

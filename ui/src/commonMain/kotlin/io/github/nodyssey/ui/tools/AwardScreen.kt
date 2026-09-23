@@ -1,7 +1,9 @@
 package io.github.nodyssey.ui.tools
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,10 +38,13 @@ import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.award_empty
 import io.github.nodyssey.ui.resources.award_title
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.LayerCardGap
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -142,7 +147,14 @@ fun AwardScreen(
                     }
 
                 else ->
-                    LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
+                    // The feed's own cards, at the feed's gutter and gap: these are feed rows that
+                    // happen to have been picked out, and they should read as the same objects.
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = LayerPageGutter, vertical = Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(LayerCardGap),
+                    ) {
                         items(count = state.posts.size, key = { state.posts[it].postId }) { index ->
                             val summary = state.posts[index]
                             PostRow(
@@ -150,7 +162,6 @@ fun AwardScreen(
                                 onClick = { onPostClick(summary.postId) },
                                 showAwardBadge = false,
                             )
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
             }

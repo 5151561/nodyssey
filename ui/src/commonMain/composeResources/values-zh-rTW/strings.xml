@@ -924,6 +924,8 @@
     <string name="follow_empty_followers_body">追蹤你的使用者會出現在這裡</string>
 
     <string name="viewer_save">儲存</string>
+
+    <string name="viewer_gesture_hint">點兩下放大 · 下拉關閉</string>
     <string name="viewer_saved">已儲存到相簿</string>
     <string name="viewer_save_failed">儲存失敗，稍後再試</string>
     <string name="viewer_save_unsupported">Android 10 以下不能免權限寫相簿，可用「分享」傳到其他應用程式</string>
@@ -987,10 +989,11 @@
     <string name="invite_chicken_balance">目前雞腿 %1$d</string>
 
     <string name="ruling_title">管理紀錄</string>
+
+    <string name="ruling_moderator">管理員 %1$s</string>
     <string name="ruling_subtitle">處罰與獎勵公告</string>
     <string name="ruling_target_post">文章</string>
     <string name="ruling_target_comment">評論</string>
-    <string name="ruling_meta">%1$s · 管理員 %2$s · %3$s</string>
     <string name="ruling_action_coin_add">加 %1$d 雞腿</string>
     <string name="ruling_action_coin_deduct">扣 %1$d 雞腿</string>
     <string name="ruling_action_stardust_add">加 %1$d 星辰</string>
@@ -1200,6 +1203,8 @@
     <string name="composer_upload_network">網路異常</string>
 
     <string name="bookmarks_title">收藏</string>
+
+    <string name="bookmarks_count">%1$d 篇</string>
     <string name="bookmarks_search">搜尋收藏</string>
     <string name="bookmarks_search_hint">搜標題或作者</string>
     <string name="bookmarks_search_clear">清空搜尋</string>
@@ -1272,6 +1277,7 @@
 
     <string name="sign_in_title">登入 %1$s</string>
     <string name="sign_in_subtitle">使用論壇帳號直接登入，密碼只發往官方介面，不經過第三方。</string>
+    <string name="sign_in_one_tap_subtitle">有 %1$s 帳號的話，可以直接用它登入</string>
     <string name="sign_in_account">使用者名稱 / 信箱</string>
     <string name="sign_in_password">密碼</string>
     <string name="sign_in_password_hint">區分大小寫</string>
@@ -1286,6 +1292,7 @@
     <string name="sign_in_use_web">改用網頁登入</string>
     <string name="sign_in_one_tap">使用 %1$s 帳號登入</string>
     <string name="sign_in_one_tap_hint">在站點頁面上完成授權，回來即為登入狀態。</string>
+    <string name="sign_in_or_with_account">或用 %1$s 帳號</string>
     <string name="sign_in_session_not_stored">論壇已確認帳號密碼，但這台裝置沒能保存登入狀態。請改用網頁登入。</string>
 
     <string name="sign_in_verify_expired">驗證已過期，請重新驗證</string>

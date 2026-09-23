@@ -49,6 +49,8 @@ import io.github.nodyssey.ui.resources.account_preferences_omitted_note
 import io.github.nodyssey.ui.resources.account_preferences_title
 import io.github.nodyssey.ui.resources.account_storage_legend
 import io.github.nodyssey.ui.resources.action_back
+import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerGroup
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -136,14 +138,15 @@ fun PreferencesScreen(
         ) {
             AccountSectionLabel(stringResource(Res.string.account_group_preference))
 
-            PreferenceSwitchRow(
-                title = stringResource(Res.string.account_holiday_theme),
-                subtitle = stringResource(Res.string.account_holiday_theme_hint),
-                local = false,
-                checked = state.holidayTheme,
-                onCheckedChange = onHolidayThemeChange,
-            )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            LayerGroup {
+                PreferenceSwitchRow(
+                    title = stringResource(Res.string.account_holiday_theme),
+                    subtitle = stringResource(Res.string.account_holiday_theme_hint),
+                    local = false,
+                    checked = state.holidayTheme,
+                    onCheckedChange = onHolidayThemeChange,
+                )
+            }
 
             Text(
                 stringResource(Res.string.account_preferences_omitted_note),
@@ -169,14 +172,14 @@ fun PreferencesScreen(
                 modifier = Modifier.padding(horizontal = Spacing.xs),
             )
 
-            OPTIONAL_HOME_BOARD_SLUGS.forEachIndexed { index, slug ->
-                HomeBoardSwitchRow(
-                    slug = slug,
-                    hidden = slug in state.hiddenBoards,
-                    onHiddenChange = { hidden -> onBoardHiddenChange(slug, hidden) },
-                )
-                if (index != OPTIONAL_HOME_BOARD_SLUGS.lastIndex) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            LayerGroup {
+                OPTIONAL_HOME_BOARD_SLUGS.forEachIndexed { index, slug ->
+                    if (index != 0) LayerDivider(startInset = Spacing.lg)
+                    HomeBoardSwitchRow(
+                        slug = slug,
+                        hidden = slug in state.hiddenBoards,
+                        onHiddenChange = { hidden -> onBoardHiddenChange(slug, hidden) },
+                    )
                 }
             }
 
@@ -206,7 +209,7 @@ private fun PreferenceSwitchRow(
                 value = checked,
                 role = Role.Switch,
                 onValueChange = onCheckedChange,
-            ).padding(horizontal = Spacing.xs, vertical = Spacing.sm),
+            ).padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
@@ -242,7 +245,7 @@ private fun HomeBoardSwitchRow(
                 value = !hidden,
                 role = Role.Switch,
                 onValueChange = { shown -> onHiddenChange(!shown) },
-            ).padding(horizontal = Spacing.xs, vertical = Spacing.sm),
+            ).padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {

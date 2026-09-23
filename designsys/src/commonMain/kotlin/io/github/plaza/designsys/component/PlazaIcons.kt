@@ -759,6 +759,65 @@ object PlazaIcons {
         )
     }
 
+    /** The network-error state's blob (board 2e): the connection, crossed out. */
+    val WifiOff: ImageVector by lazy {
+        materialIcon(
+            name = "WifiOff",
+            pathData =
+            "M22.99,9C19.15,5.16 13.8,3.76 8.84,4.78l2.52,2.52c3.47,-0.17 6.99,1.05 9.63,3.7l2,-2z" +
+                "M18.99,13c-1.29,-1.29 -2.84,-2.13 -4.49,-2.56l3.53,3.53 0.96,-0.97z" +
+                "M2,3.05L5.07,6.1C3.6,6.82 2.22,7.78 1,9l1.99,2c1.24,-1.24 2.67,-2.16 4.2,-2.77l2.24,2.24" +
+                "C7.81,10.89 6.27,11.73 5,13v0.01L6.99,15c1.36,-1.36 3.14,-2.04 4.92,-2.06L18.98,20l1.27,-1.26" +
+                "L3.29,1.79 2,3.05z" +
+                "M9,17l3,3 3,-3c-1.65,-1.66 -4.34,-1.66 -6,0z",
+        )
+    }
+
+    /** 已离线 — a collected thread with a stored copy (board 8e). */
+    val OfflinePin: ImageVector by lazy {
+        materialIcon(
+            name = "OfflinePin",
+            pathData =
+            "M12,2C6.5,2 2,6.5 2,12s4.5,10 10,10 10,-4.5 10,-10S17.5,2 12,2z" +
+                "M17,18L7,18v-2h10v2z" +
+                "M10.3,14L7,10.7l1.4,-1.4 1.9,1.9 5.3,-5.3L17,7.3 10.3,14z",
+        )
+    }
+
+    /** 全部下载 — fetch every collected thread for offline reading (board 8e). */
+    val DownloadForOffline: ImageVector by lazy {
+        materialIcon(
+            name = "DownloadForOffline",
+            pathData =
+            "M12,2C6.49,2 2,6.49 2,12s4.49,10 10,10s10,-4.49 10,-10S17.51,2 12,2z" +
+                "M11,10V6h2v4h3l-4,4l-4,-4H11z" +
+                "M17,17H7v-2h10V17z",
+        )
+    }
+
+    /** Multi-select, entered from a bar rather than by long-press. */
+    val Checklist: ImageVector by lazy {
+        materialIcon(
+            name = "Checklist",
+            pathData =
+            "M22,7h-9v2h9V7z" +
+                "M22,15h-9v2h9V15z" +
+                "M5.54,11L2,7.46l1.41,-1.41l2.12,2.12l4.24,-4.24l1.41,1.41L5.54,11z" +
+                "M5.54,19L2,15.46l1.41,-1.41l2.12,2.12l4.24,-4.24l1.41,1.41L5.54,19z",
+        )
+    }
+
+    /** 一键登录 — sign in with another forum's account in one step (board 10c). */
+    val Bolt: ImageVector by lazy {
+        materialIcon(
+            name = "Bolt",
+            pathData =
+            "M11,21h-1l1,-7H7.5c-0.58,0 -0.57,-0.32 -0.38,-0.66 0.19,-0.34 0.05,-0.08 0.07,-0.12" +
+                "C8.48,10.94 10.42,7.54 13,3h1l-1,7h3.5c0.49,0 0.56,0.33 0.47,0.51l-0.07,0.15" +
+                "C12.96,17.55 11,21 11,21z",
+        )
+    }
+
     /** 落后的回复数前面那个下箭头——方向是「还要往下拉」，不是排序。 */
     val ArrowDownward: ImageVector by lazy {
         materialIcon(

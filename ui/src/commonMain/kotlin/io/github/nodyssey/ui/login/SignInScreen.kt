@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -26,10 +28,15 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedSecureTextField
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.SnackbarHost
@@ -39,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.ActiveSite
 import io.github.nodyssey.core.NodeSeekSite
@@ -74,6 +83,8 @@ import io.github.nodyssey.ui.resources.sign_in_account
 import io.github.nodyssey.ui.resources.sign_in_forgot
 import io.github.nodyssey.ui.resources.sign_in_one_tap
 import io.github.nodyssey.ui.resources.sign_in_one_tap_hint
+import io.github.nodyssey.ui.resources.sign_in_one_tap_subtitle
+import io.github.nodyssey.ui.resources.sign_in_or_with_account
 import io.github.nodyssey.ui.resources.sign_in_password
 import io.github.nodyssey.ui.resources.sign_in_password_hint
 import io.github.nodyssey.ui.resources.sign_in_password_rejected
@@ -92,8 +103,11 @@ import io.github.nodyssey.ui.resources.sign_in_verify_expired
 import io.github.nodyssey.ui.resources.sign_in_verify_not_required
 import io.github.nodyssey.ui.resources.sign_in_verify_not_wired
 import io.github.plaza.core.net.UserAgent
+import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
+import io.github.plaza.designsys.component.materialIcon
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.paddingWithKeyboard
@@ -252,12 +266,13 @@ fun SignInScreen(
     onSubmit: () -> Unit,
     onOpenSiteSignInPage: () -> Unit,
     /**
-     * 改用网页登录, drawn only when the verification block has nothing to offer.
+     * 改用网页登录 — the other way in, and today also the way out for a user this screen cannot serve.
      *
-     * Card 3 carries this on the board and card 1 does not, because on the board card 1 always has a
-     * working checkbox. It does not always: a widget that fails to start leaves 登录 disabled with
-     * no way forward, and a sign-in screen the user cannot sign in from — when the web page next
-     * door still works — is the worst thing this screen could do.
+     * Board 8h carries it under 登录 on every card. The one exception is a site with 一键登录 (10c),
+     * where that card is already the other way in and a third button would only be noise — there it
+     * comes back when the form has no move left: a widget that fails to start leaves 登录 disabled,
+     * and a sign-in screen the user cannot sign in from, when the web page next door still works, is
+     * the worst thing this screen could do.
      */
     onUseWebSignIn: () -> Unit,
     /** 一键登录: opens the site's own page for it. Never called for a site that has none. */
@@ -273,6 +288,7 @@ fun SignInScreen(
      */
     turnstile: @Composable () -> Unit = {},
 ) {
+    val oneTap = ActiveSite.current.oneTapSignIn
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -284,6 +300,7 @@ fun SignInScreen(
                         Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.action_close))
                     }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = LocalPlazaLayers.current.page),
             )
         },
     ) { padding ->
@@ -294,20 +311,62 @@ fun SignInScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(horizontal = Spacing.xl)
+                .padding(top = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            SignInHeader()
+            SignInHeader(oneTap?.providerName)
+
+            /*
+             * 一键登录, for a site that lets another forum's account in — DeepFlood's 「使用 NodeSeek
+             * 账号登录」. See [Site.oneTapSignIn].
+             *
+             * Board 10c puts it first, on a card of its own, with the site's own form under a
+             * 「或用 … 账号」 rule: for a reader who has the other forum's account it is the whole of
+             * the sign-in, and one who came to type a password steps past a single card to reach
+             * the fields. Drawn only when the site has one, so NodeSeek's own card is untouched.
+             *
+             * The board also puts the other forum's account on that card — avatar, name, UID. This
+             * screen does not know it: the provider's page decides who is signed in there, and the
+             * app holds no session for a site other than the active one to ask. So the card says
+             * what the button does and where it happens, and leaves the who to that page.
+             */
+            oneTap?.let { provider ->
+                LayerCard(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                    Button(
+                        onClick = onOneTapSignIn,
+                        shape = CircleShape,
+                        modifier = Modifier.fillMaxWidth().height(SIGN_IN_BUTTON_HEIGHT),
+                    ) {
+                        Icon(PlazaIcons.Bolt, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(Spacing.sm))
+                        Text(
+                            stringResource(Res.string.sign_in_one_tap, provider.providerName),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Text(
+                        stringResource(Res.string.sign_in_one_tap_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                OrRule(stringResource(Res.string.sign_in_or_with_account, siteName))
+            }
 
             if (state.hasCredentialRefusal) RefusalBanner(state.refusal)
 
             if (state.sessionNotStored) SessionNotStoredBanner()
 
-            TextField(
+            OutlinedTextField(
                 state = accountState,
                 enabled = state.isFormEnabled,
                 label = { Text(stringResource(Res.string.sign_in_account)) },
                 lineLimits = TextFieldLineLimits.SingleLine,
+                shape = FIELD_SHAPE,
+                colors = fieldColors(),
                 // Both, because the label offers both and the endpoint takes either in `username`.
                 // A manager holding only an email would not recognise a username-only field.
                 modifier =
@@ -316,7 +375,7 @@ fun SignInScreen(
                 },
             )
 
-            SecureTextField(
+            OutlinedSecureTextField(
                 state = passwordState,
                 enabled = state.isFormEnabled,
                 label = { Text(stringResource(Res.string.sign_in_password)) },
@@ -325,68 +384,46 @@ fun SignInScreen(
                 // 安全 (d6 2/4) made and for the same reason: it shows the character just typed and
                 // hides it again, with no switch left on and nothing in the state to remember.
                 textObfuscationMode = TextObfuscationMode.RevealLastTyped,
+                shape = FIELD_SHAPE,
+                colors = fieldColors(),
                 supportingText = { PasswordSupport(state, onOpenSiteSignInPage) },
                 modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Password },
             )
 
             VerificationBlock(state.verification, turnstile)
 
-            // Also on a sign-in the app could not hold on to: same button, same reason — the form
-            // in front of the user has no move left, and the page next door does.
-            if (state.verification is VerificationState.NotWired || state.sessionNotStored) {
-                TextButton(onClick = onUseWebSignIn, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(Res.string.sign_in_use_web), fontWeight = FontWeight.SemiBold)
-                }
-            }
-
-            Button(
-                onClick = onSubmit,
-                enabled = state.canSubmitCredentials,
-                shape = RoundedCornerShape(26.dp),
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) {
+            // Filled when it is the one way in, outlined under a one-tap card (10c), where the
+            // card's button is the primary one on the screen and two filled pills would compete.
+            val submitContent: @Composable RowScope.() -> Unit = {
                 if (state.isSubmitting) {
                     PlazaSpinner(
                         modifier = Modifier.describedAsLoading(),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = LocalContentColor.current,
                         size = 18.dp,
                     )
                     Spacer(Modifier.width(Spacing.sm))
                     Text(stringResource(Res.string.sign_in_submitting))
                 } else {
-                    Text(stringResource(Res.string.sign_in_submit), fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.sign_in_submit), fontWeight = FontWeight.SemiBold)
                 }
             }
-
-            /*
-             * 一键登录, for a site that lets another forum's account in — DeepFlood's 「使用 NodeSeek
-             * 账号登录」. See [Site.oneTapSignIn].
-             *
-             * Under 登录 rather than above the fields: it is the *other* way in, not the primary one,
-             * and a reader who came here to type a password should not have to step over it. Outlined
-             * rather than a third text button, because it does something the two text buttons below
-             * do not — it signs you in, where they open a page to read.
-             *
-             * Drawn only when the site has one, so NodeSeek's own card is untouched.
-             */
-            ActiveSite.current.oneTapSignIn?.let { oneTap ->
+            val submitModifier = Modifier.fillMaxWidth().height(SIGN_IN_BUTTON_HEIGHT)
+            if (oneTap == null) {
+                Button(
+                    onClick = onSubmit,
+                    enabled = state.canSubmitCredentials,
+                    shape = CircleShape,
+                    modifier = submitModifier,
+                    content = submitContent,
+                )
+            } else {
                 OutlinedButton(
-                    onClick = onOneTapSignIn,
-                    shape = RoundedCornerShape(26.dp),
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                ) {
-                    Text(
-                        stringResource(Res.string.sign_in_one_tap, oneTap.providerName),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                Text(
-                    stringResource(Res.string.sign_in_one_tap_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.sm),
+                    onClick = onSubmit,
+                    enabled = state.canSubmitCredentials,
+                    shape = CircleShape,
+                    modifier = submitModifier,
+                    content = submitContent,
                 )
             }
 
@@ -402,48 +439,93 @@ fun SignInScreen(
                 )
             }
 
-            Spacer(Modifier.height(Spacing.xs))
-
-            TextButton(onClick = onOpenSiteSignInPage, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(Res.string.sign_in_register_hint), fontWeight = FontWeight.SemiBold)
+            if (oneTap == null || state.verification is VerificationState.NotWired || state.sessionNotStored) {
+                OutlinedButton(
+                    onClick = onUseWebSignIn,
+                    shape = CircleShape,
+                    modifier = Modifier.fillMaxWidth().height(SIGN_IN_BUTTON_HEIGHT),
+                ) {
+                    Icon(PlazaIcons.Public, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(Spacing.sm))
+                    Text(stringResource(Res.string.sign_in_use_web), fontWeight = FontWeight.SemiBold)
+                }
             }
 
-            Text(
-                stringResource(Res.string.sign_in_terms),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+            Column(
                 modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xl),
-            )
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                TextButton(onClick = onOpenSiteSignInPage) {
+                    Text(
+                        stringResource(Res.string.sign_in_register_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    stringResource(Res.string.sign_in_terms),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
 
-/** The NS tile, the headline and the promise underneath it — the top of card 1. */
+/** 48dp, board 8h's pill height for every full-width action on the sign-in screens. */
+internal val SIGN_IN_BUTTON_HEIGHT = 48.dp
+
+private val FIELD_SHAPE = RoundedCornerShape(12.dp)
+
+/**
+ * The fields sit on the card colour inside their outline, as 8h draws them: on the grey page an
+ * unfilled outlined field reads as a hole in it rather than as a place to type.
+ */
 @Composable
-private fun SignInHeader() {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        Surface(
-            modifier = Modifier.size(56.dp),
-            shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    siteMark,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                )
-            }
-        }
+private fun fieldColors() =
+    OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = LocalPlazaLayers.current.card,
+        unfocusedContainerColor = LocalPlazaLayers.current.card,
+        disabledContainerColor = LocalPlazaLayers.current.card,
+        errorContainerColor = LocalPlazaLayers.current.card,
+    )
+
+/** 10c's 「或用 DeepFlood 账号」 — a hairline either side of the words. */
+@Composable
+private fun OrRule(text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+        Text(
+            text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+/**
+ * The headline and the promise underneath it — the top of 8h.
+ *
+ * The NS tile that used to sit above the headline is gone: at 32sp the site's name in the headline
+ * already says whose door this is, and the tile pushed the fields a row further down a screen that
+ * the keyboard is about to halve.
+ */
+@Composable
+private fun SignInHeader(oneTapProvider: String?) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             stringResource(Res.string.sign_in_title, siteName),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.ExtraBold,
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 40.sp),
+            fontWeight = FontWeight.Bold,
         )
         Text(
-            stringResource(Res.string.sign_in_subtitle),
+            oneTapProvider?.let { stringResource(Res.string.sign_in_one_tap_subtitle, it) }
+                ?: stringResource(Res.string.sign_in_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -502,17 +584,17 @@ private fun SessionNotStoredBanner() {
 @Composable
 private fun ErrorBanner(text: String) {
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.md),
         ) {
             Icon(PlazaIcons.ErrorCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text(text, style = MaterialTheme.typography.bodySmall)
+            Text(text, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 19.sp))
         }
     }
 }
