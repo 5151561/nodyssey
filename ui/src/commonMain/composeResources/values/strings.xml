@@ -278,7 +278,6 @@
     <string name="message_input_hint_markdown">发消息（Markdown 已开）</string>
     <string name="message_input_hint_plain">发消息</string>
     <string name="message_markdown_toggle">Markdown 开关</string>
-    <string name="message_markdown_label">MD</string>
     <string name="message_send">发送</string>
     <string name="message_status_sending">发送中</string>
     <string name="message_status_failed">发送失败</string>
