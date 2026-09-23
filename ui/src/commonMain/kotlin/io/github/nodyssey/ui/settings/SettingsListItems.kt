@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
@@ -27,17 +28,19 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.plaza.designsys.component.GroupRowDivider
 import io.github.plaza.designsys.component.GroupSeam
 import io.github.plaza.designsys.component.groupShape
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 
 /**
  * The grouped-list vocabulary both settings screens are built from.
  *
- * Shared rather than copied because the corner rhythm is the point: 18dp on a group's outer corners,
- * 5dp on the inner ones, 2dp of gap between rows. That is what makes a group read as one object
- * instead of a stack of cards, and two screens rounding their groups differently is exactly the kind
- * of drift nobody notices in review and everybody notices side by side.
+ * Shared rather than copied because the grouping is the point: a group is one white card on the grey
+ * page, rounded at its outer corners and split by inset hairlines (see `groupShape`). Two screens
+ * grouping their rows differently is exactly the kind of drift nobody notices in review and everybody
+ * notices side by side.
  */
 @Composable
 internal fun SettingsSectionTitle(
@@ -48,7 +51,7 @@ internal fun SettingsSectionTitle(
         text = text,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = Spacing.xs, top = Spacing.xs).semantics { heading() },
+        modifier = modifier.padding(start = Spacing.md, top = 10.dp, bottom = 2.dp).semantics { heading() },
     )
 }
 
@@ -76,11 +79,12 @@ internal fun SettingsBlock(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = LocalPlazaLayers.current.card,
         shape = groupShape(first = top, last = bottom),
     ) {
+        if (!top) GroupRowDivider(startInset = if (icon == null) Spacing.lg else 56.dp)
         Column(
-            modifier = Modifier.padding(Spacing.lg),
+            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             Row(
@@ -89,7 +93,7 @@ internal fun SettingsBlock(
             ) {
                 icon?.invoke()
                 Column(
-                    modifier = Modifier.weight(1f).padding(start = if (icon == null) 0.dp else Spacing.md),
+                    modifier = Modifier.weight(1f).padding(start = if (icon == null) 0.dp else Spacing.lg),
                 ) {
                     Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
                     subtitle?.let {
@@ -134,7 +138,7 @@ internal fun SettingsRow(
     trailing: @Composable () -> Unit = {},
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = LocalPlazaLayers.current.card,
         contentColor = contentColor,
         shape = groupShape(first = top, last = bottom),
         modifier = modifier.then(
@@ -161,10 +165,14 @@ internal fun SettingsRow(
             },
         ),
     ) {
+        if (!top) GroupRowDivider(startInset = if (leading == null) Spacing.lg else 56.dp)
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 64.dp)
+                .padding(horizontal = Spacing.lg, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             leading?.invoke()
             Column(Modifier.weight(1f)) {

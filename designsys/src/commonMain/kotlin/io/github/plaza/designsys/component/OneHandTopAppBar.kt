@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -45,7 +46,9 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.plaza.designsys.theme.LocalOneHandMode
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardShadow
 import kotlin.math.roundToInt
 
 /**
@@ -89,12 +92,17 @@ fun OneHandTopAppBar(
     val density = LocalDensity.current
     state.maxHeightPx = with(density) { expandedBlank.toPx() }
 
+    // Flush with the page, so the bar and the grey behind the cards are one surface. Once content
+    // scrolls under it the bar lifts: a shadow where the layers can draw one, a step up in tone where
+    // they cannot (dark, 墨水屏).
+    val layers = LocalPlazaLayers.current
+    val lifted = state.isContentOverlapped
     val containerColor by animateColorAsState(
         targetValue =
-        if (state.isContentOverlapped) {
-            MaterialTheme.colorScheme.surfaceContainer
+        if (lifted && !layers.shadows) {
+            MaterialTheme.colorScheme.surfaceContainerHigh
         } else {
-            MaterialTheme.colorScheme.surface
+            layers.page
         },
         label = "oneHandAppBarContainer",
     )
@@ -103,7 +111,10 @@ fun OneHandTopAppBar(
     // which cross over gradually and would leave a band where both or neither are the live one.
     val expandedTitleIsLive by remember { derivedStateOf { state.fraction >= SEMANTICS_HANDOVER } }
 
-    Surface(color = containerColor, modifier = modifier.fillMaxWidth()) {
+    Surface(
+        color = containerColor,
+        modifier = modifier.cardShadow(RectangleShape, enabled = lifted && layers.shadows).fillMaxWidth(),
+    ) {
         Column(Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets)) {
             Box(
                 modifier =

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -25,14 +26,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 
 /**
  * The grouped rounded list the settings and tools screens are built from.
  *
- * The shape is the grouping: the first and last row round to 18dp on their outer corners and every
- * seam stays at 5dp, so a group reads as one object without a card border or a divider. A single-row
- * group is both first and last and therefore fully rounded.
+ * A group is one white card on the grey page (see [io.github.plaza.designsys.theme.PlazaLayers]):
+ * the first and last row round to the card's 24dp on their outer corners, the seams between rows are
+ * square and flush, and each row after the first draws an inset hairline at its top. Drawn per row
+ * rather than as one card around a column so that a group can be spread over the items of a
+ * `LazyColumn`. The card shadow is left off for the same reason — each row would cast its own onto the
+ * row above it.
  */
 fun groupShape(first: Boolean, last: Boolean): Shape =
     RoundedCornerShape(
@@ -42,8 +47,8 @@ fun groupShape(first: Boolean, last: Boolean): Shape =
         bottomStart = if (last) GROUP_OUTER_RADIUS else GROUP_SEAM_RADIUS,
     )
 
-private val GROUP_OUTER_RADIUS = 18.dp
-private val GROUP_SEAM_RADIUS = 5.dp
+private val GROUP_OUTER_RADIUS = 24.dp
+private val GROUP_SEAM_RADIUS = 0.dp
 
 /**
  * How much of the row a value may claim before it starts ellipsizing.
@@ -53,8 +58,17 @@ private val GROUP_SEAM_RADIUS = 5.dp
  */
 private val VALUE_MAX_WIDTH = 120.dp
 
-/** 2dp: wide enough to read as a seam, narrow enough that the group stays one object. */
-val GroupSeam = 2.dp
+/** Zero: the rows of a group are one card, separated by [GroupRowDivider] rather than by a gap. */
+val GroupSeam = 0.dp
+
+/**
+ * The hairline a row draws at its top when it is not the first of its group. [startInset] lines it
+ * up with the row's text — past the icon when there is one.
+ */
+@Composable
+fun GroupRowDivider(startInset: androidx.compose.ui.unit.Dp) {
+    LayerDivider(startInset = startInset)
+}
 
 /** Group heading. Primary-coloured and small: it labels the block without competing with the rows. */
 @Composable
@@ -64,9 +78,9 @@ fun SectionLabel(
 ) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = Spacing.xs, bottom = 5.dp),
+        modifier = modifier.padding(start = Spacing.md, top = 10.dp, bottom = 2.dp),
     )
 }
 
@@ -102,29 +116,31 @@ fun GroupedRow(
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = LocalPlazaLayers.current.card,
         shape = groupShape(first, last),
         modifier = modifier.then(if (onClick == null) Modifier else Modifier.clickable(onClick = onClick)),
     ) {
+        if (!first) GroupRowDivider(startInset = if (icon == null) Spacing.lg else 56.dp)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = 11.dp),
+                .heightIn(min = 64.dp)
+                .padding(horizontal = Spacing.lg, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             icon?.let {
                 Icon(
                     imageVector = it,
                     contentDescription = null,
                     tint = iconTint ?: MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(24.dp),
                 )
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                     color = titleColor ?: MaterialTheme.colorScheme.onSurface,
                 )
                 subtitle?.let {

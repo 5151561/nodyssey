@@ -200,6 +200,10 @@
 
     <!-- Search: authenticated remote results and condition-aware local history -->
     <string name="search_hint">搜索帖子</string>
+    <!-- 首页顶部的搜索框占位：点它进搜索页，帖子和用户都能搜。 -->
+    <string name="home_search_hint">搜索帖子或用户</string>
+    <!-- 首页卡片右下角：这帖读过了（标题同时变浅）。 -->
+    <string name="post_read_marker">已读</string>
     <string name="search_hint_board">在 %1$s 版块搜帖子</string>
     <string name="search_user_hint">搜索用户名</string>
     <string name="search_submit">搜索</string>

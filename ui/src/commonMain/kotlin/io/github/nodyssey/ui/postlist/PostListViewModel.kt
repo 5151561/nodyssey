@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -54,6 +55,12 @@ class PostListViewModel(
     private val categoryRepository: CategoryRepository,
     private val settingsRepository: SettingsRepository,
     session: StateFlow<SessionState> = MutableStateFlow(SessionState()),
+    /**
+     * Who is signed in, for the avatar at the end of the home bar. Only observed: the profile is
+     * fetched by 我的, and until it has been the bar shows the signed-out placeholder rather than
+     * spending a request of its own on a 40dp picture.
+     */
+    account: Flow<HomeAccount?> = flowOf(null),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PostListUiState())
     val uiState: StateFlow<PostListUiState> = _uiState.asStateFlow()
@@ -110,6 +117,10 @@ class PostListViewModel(
         }
 
     init {
+        account
+            .distinctUntilChanged()
+            .onEach { value -> _uiState.update { it.copy(account = value) } }
+            .launchIn(viewModelScope)
         /*
          * Boards are owned by the repository; the ViewModel mirrors them into UiState but never
          * becomes their source of truth. Two independent preferences then narrow that list, in this
@@ -290,6 +301,17 @@ class PostListViewModel(
                         container.categoryRepository,
                         container.settingsRepository,
                         container.sessionRepository.state,
+                        container.sessionRepository.state
+                            .distinctUntilChangedBy { it.generation }
+                            .flatMapLatest { session ->
+                                if (session.isSignedIn) {
+                                    container.profileRepository
+                                        .observeProfile(session.fingerprint)
+                                        .map { profile -> profile?.let { HomeAccount(it.name, it.avatarUrl) } }
+                                } else {
+                                    flowOf(null)
+                                }
+                            },
                     )
                 }
             }
@@ -310,6 +332,12 @@ private data class FeedKey(
     val sessionGeneration: Int,
 )
 
+/** The signed-in account as the home bar draws it: a face, and the name its monogram falls back to. */
+data class HomeAccount(
+    val name: String,
+    val avatarUrl: String?,
+)
+
 /**
  * Everything about the list that is *not* the list.
  *
@@ -317,6 +345,8 @@ private data class FeedKey(
  * stream. Mirroring them in would recreate the second copy phase two removed.
  */
 data class PostListUiState(
+    /** Null while signed out, or until 我的 has loaded the profile once. */
+    val account: HomeAccount? = null,
     val boards: List<Board> = listOf(CategoryRepository.FRONT_PAGE),
     /**
      * Boards the user parked at the tail of the strip.
