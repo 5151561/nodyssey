@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,6 +28,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
@@ -388,7 +388,7 @@ private fun ProviderCard(
                     } else {
                         null
                     },
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     colors =
                     FilterChipDefaults.filterChipColors(
                         containerColor = LocalPlazaLayers.current.card,
@@ -461,12 +461,13 @@ private fun ConnectionCard(
             if (state.connected) {
                 FilledTonalButton(
                     onClick = onDisconnect,
-                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                    modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                 ) {
                     Text(stringResource(Res.string.imagehost_clear_key), style = MaterialTheme.typography.titleMedium)
                 }
             }
-            Button(onClick = onSave, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
+            Button(onClick = onSave, modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight), shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight)) {
                 Text(
                     stringResource(
                         if (state.connected) Res.string.imagehost_key_replace else Res.string.imagehost_key_save,
@@ -756,7 +757,7 @@ private fun ImageTile(
     Box(
         modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(LocalPlazaLayers.current.inset),
     ) {
         // A host that has lost the file, or one whose links need a referer this app does not send,
@@ -782,7 +783,7 @@ private fun ImageTile(
                 containerColor = LocalPlazaLayers.current.raised,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
-            modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(36.dp),
+            modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
         ) {
             Icon(
                 Icons.Default.Delete,

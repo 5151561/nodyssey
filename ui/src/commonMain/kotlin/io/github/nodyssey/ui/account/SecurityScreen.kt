@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.TextObfuscationMode
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -230,8 +231,8 @@ fun SecurityScreen(
                 Button(
                     onClick = onRequestPasswordChange,
                     enabled = state.canSubmitPassword,
-                    shape = CircleShape,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                 ) {
                     Text(stringResource(Res.string.account_password_update))
                 }
@@ -378,7 +379,7 @@ private fun StrengthMeter(strength: PasswordStrength) {
                     Modifier
                         .weight(1f)
                         .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
+                        .clip(CircleShape)
                         .background(color),
                 )
             }
@@ -439,7 +440,6 @@ private fun TwoFactorCard(
             Button(
                 onClick = onBind,
                 enabled = !busy,
-                shape = CircleShape,
             ) {
                 Icon(PlazaIcons.QrCode, contentDescription = null, modifier = Modifier.size(17.dp))
                 Text(

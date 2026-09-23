@@ -128,6 +128,7 @@ import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.richtext.parseMarkdown
 import io.github.plaza.designsys.component.EditorTextField
+import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaBackHandler
@@ -347,10 +348,10 @@ private fun ThreadTopBar(
             .padding(horizontal = LayerPageGutter, vertical = 4.dp),
     ) {
         Surface(
-            shape = TOP_BAR_SHAPE,
+            shape = LayerCardShape,
             color = layers.raised,
             border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
-            modifier = Modifier.fillMaxWidth().floatShadow(TOP_BAR_SHAPE, layers.shadows),
+            modifier = Modifier.fillMaxWidth().floatShadow(LayerCardShape, layers.shadows),
         ) {
             TopAppBar(
                 windowInsets = WindowInsets(0),
@@ -375,7 +376,7 @@ private fun ThreadTopBar(
                         // padding sits inside the clickable so it is target, not dead space.
                         modifier =
                         Modifier
-                            .clip(RoundedCornerShape(Spacing.md))
+                            .clip(MaterialTheme.shapes.medium)
                             .clickable(
                                 onClickLabel = stringResource(Res.string.message_thread_open_space),
                             ) { onOpenSpace() }
@@ -635,7 +636,7 @@ private fun BubbleMenu(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
-        shape = MENU_SHAPE,
+        shape = MaterialTheme.shapes.largeIncreased,
         containerColor = layers.raised,
         // Paper draws no shadow; the outline is what separates the card from the thread there.
         shadowElevation = if (layers.shadows) 8.dp else 0.dp,
@@ -818,7 +819,7 @@ private fun MessageComposer(
                         Modifier
                             .width(3.dp)
                             .height(36.dp)
-                            .clip(RoundedCornerShape(2.dp))
+                            .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary),
                     )
                 },
@@ -1104,10 +1105,10 @@ private fun ToolTile(
             modifier =
             Modifier
                 .size(TOOL_TILE_SIZE)
-                .cardShadow(TOOL_TILE_SHAPE, layers.shadows)
-                .clip(TOOL_TILE_SHAPE)
+                .cardShadow(MaterialTheme.shapes.largeIncreased, layers.shadows)
+                .clip(MaterialTheme.shapes.largeIncreased)
                 .background(if (on) MaterialTheme.colorScheme.primary else layers.raised)
-                .then(layers.cardBorder?.let { Modifier.border(1.dp, it, TOOL_TILE_SHAPE) } ?: Modifier),
+                .then(layers.cardBorder?.let { Modifier.border(1.dp, it, MaterialTheme.shapes.largeIncreased) } ?: Modifier),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -1139,7 +1140,7 @@ private fun ThreadMenu(onOpenBrowser: () -> Unit) {
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            shape = MENU_SHAPE,
+            shape = MaterialTheme.shapes.largeIncreased,
             containerColor = layers.raised,
             shadowElevation = if (layers.shadows) 8.dp else 0.dp,
             border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
@@ -1173,13 +1174,9 @@ private val MINE_SHAPE: Shape = RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp)
 /** How far a failed message fades, so the red line under it is what the eye lands on. */
 private const val FAILED_ALPHA = 0.72f
 
-private val TOP_BAR_SHAPE: Shape = RoundedCornerShape(24.dp)
-private val MENU_SHAPE: Shape = RoundedCornerShape(20.dp)
 private val MENU_MIN_WIDTH = 200.dp
 private const val TOOL_COLUMNS = 4
 private val TOOL_TILE_SIZE = 60.dp
-private val TOOL_TILE_RADIUS = 20.dp
-private val TOOL_TILE_SHAPE: Shape = RoundedCornerShape(TOOL_TILE_RADIUS)
 private const val MAX_INPUT_LINES = 5
 private const val MAX_IMAGES_PER_PICK = 9
 

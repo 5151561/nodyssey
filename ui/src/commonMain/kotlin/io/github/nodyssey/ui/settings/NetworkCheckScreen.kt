@@ -10,12 +10,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -128,6 +128,7 @@ import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -223,7 +224,8 @@ fun NetworkCheckScreen(
             Button(
                 onClick = onRerun,
                 enabled = !state.running,
-                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs).heightIn(min = 52.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs).heightIn(min = ButtonDefaults.MediumContainerHeight),
+                shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
             ) {
                 if (state.running) {
                     PlazaSpinner(
@@ -286,7 +288,7 @@ private fun CheckSummaryCard(state: NetworkCheckUiState) {
             Surface(
                 color = if (failed) scheme.errorContainer else scheme.tertiaryContainer,
                 contentColor = if (failed) scheme.onErrorContainer else scheme.onTertiaryContainer,
-                shape = RoundedCornerShape(14.dp),
+                shape = ControlShape,
                 modifier = Modifier.size(48.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {

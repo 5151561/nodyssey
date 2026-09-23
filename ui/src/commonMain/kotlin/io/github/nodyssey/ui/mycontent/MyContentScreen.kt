@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -218,7 +217,7 @@ private fun MenuChip(
             label = { Text(label) },
             // A control on the page rather than in a card: the raised tone and no outline, the chip
             // look every filter row has in the layered design.
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.medium,
             colors = AssistChipDefaults.assistChipColors(containerColor = LocalPlazaLayers.current.raised),
             border = null,
             trailingIcon = {
@@ -334,7 +333,7 @@ internal fun MyCommentRow(
         postTitle?.let {
             Surface(
                 color = LocalPlazaLayers.current.inset,
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(

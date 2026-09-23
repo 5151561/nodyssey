@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -89,9 +87,9 @@ fun SpendConfirmDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 header?.let {
-                    Surface(color = card, shape = SpendCardShape, modifier = Modifier.fillMaxWidth()) { it() }
+                    Surface(color = card, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth()) { it() }
                 }
-                Surface(color = card, shape = SpendCardShape) {
+                Surface(color = card, shape = MaterialTheme.shapes.large) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -119,11 +117,11 @@ fun SpendConfirmDialog(
         },
         confirmButton = {
             if (shortfall != null) {
-                Button(onClick = onDismiss, shape = CircleShape) {
+                Button(onClick = onDismiss) {
                     Text(stringResource(Res.string.spend_got_it))
                 }
             } else {
-                Button(onClick = onConfirm, enabled = !isSending, shape = CircleShape) {
+                Button(onClick = onConfirm, enabled = !isSending) {
                     Text(confirmLabel)
                 }
             }
@@ -172,8 +170,6 @@ private fun DetailLine(detail: SpendDetail) {
         }
     }
 }
-
-private val SpendCardShape = RoundedCornerShape(16.dp)
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable

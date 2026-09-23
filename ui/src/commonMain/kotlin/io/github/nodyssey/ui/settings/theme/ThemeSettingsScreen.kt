@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -442,7 +441,7 @@ private fun MyThemesBlock(
                         leadingIcon = {
                             Box(Modifier.size(16.dp).clip(CircleShape).background(Color(theme.color)))
                         },
-                        shape = ChipShape,
+                        shape = MaterialTheme.shapes.medium,
                         colors =
                         AssistChipDefaults.assistChipColors(
                             containerColor =
@@ -476,7 +475,7 @@ private fun MyThemesBlock(
             AssistChip(
                 onClick = onCreate,
                 label = { Text(stringResource(Res.string.action_new)) },
-                shape = ChipShape,
+                shape = MaterialTheme.shapes.medium,
                 colors =
                 AssistChipDefaults.assistChipColors(
                     containerColor = LocalPlazaLayers.current.card,
@@ -571,7 +570,6 @@ private fun RenameThemeDialog(
 
 private const val PRESET_COLUMNS = 3
 private const val SAVED_THEME_NAME_LIMIT = 16
-private val ChipShape = RoundedCornerShape(12.dp)
 private val ChipHeight = 36.dp
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 1100)

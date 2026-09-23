@@ -531,7 +531,6 @@ internal fun SelectionToolbar(
                 Button(
                     onClick = onDownload,
                     enabled = selectedCount > 0,
-                    shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = Spacing.lg),
                 ) {
                     Icon(

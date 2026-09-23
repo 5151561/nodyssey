@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -74,6 +75,7 @@ import io.github.nodyssey.ui.resources.settings_seed_save
 import io.github.nodyssey.ui.resources.settings_seed_sheet_title
 import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TonalTagShape
 import io.github.plaza.designsys.theme.LocalPlazaDarkTheme
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaPaletteStyle
@@ -240,13 +242,15 @@ internal fun SeedColorSheet(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick = { onApply(color, null) },
-                    modifier = Modifier.weight(1f).height(ActionHeight),
+                    modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                 ) {
                     Text(stringResource(Res.string.settings_seed_apply_once))
                 }
                 Button(
                     onClick = { onApply(color, name.ifBlank { color.toHexString() }) },
-                    modifier = Modifier.weight(1f).height(ActionHeight),
+                    modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                 ) {
                     Text(stringResource(Res.string.settings_seed_save))
                 }
@@ -294,7 +298,7 @@ private fun ChromaTonePanel(
     Canvas(
         modifier =
         modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             .pointerInput(Unit) {
                 detectTapGestures { size.pick(it) }
             }.pointerInput(Unit) {
@@ -401,7 +405,7 @@ private fun HueBar(
                         y = -((HandleHeight - HueBarHeight) / 2).roundToPx(),
                     )
                 }.size(width = HandleWidth, height = HandleHeight)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .background(MaterialTheme.colorScheme.surfaceContainerLowest),
         )
     }
@@ -459,7 +463,7 @@ private fun ImageSampler(
     onPick: (Color) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.clip(RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+    Box(modifier.clip(MaterialTheme.shapes.large), contentAlignment = Alignment.Center) {
         if (image == null) {
             Text(
                 stringResource(Res.string.settings_seed_pick_loading),
@@ -503,7 +507,7 @@ private fun ImageSampler(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .padding(Spacing.sm)
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(TonalTagShape)
                     .background(MaterialTheme.colorScheme.surfaceContainerLowest)
                     .padding(horizontal = Spacing.sm, vertical = 4.dp),
             )
@@ -525,6 +529,3 @@ private val HueBarHeight = 16.dp
 private val HandleWidth = 8.dp
 private val HandleHeight = 28.dp
 private val MarkerRadius = 11.dp
-
-/** The two actions are the sheet's whole purpose, so they get a pill taller than the 48dp minimum. */
-private val ActionHeight = 50.dp

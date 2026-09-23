@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -201,7 +200,7 @@ private fun TermsContent(document: TermsDocument, modifier: Modifier = Modifier)
             ) {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainer,
-                    shape = RoundedCornerShape(50),
+                    shape = CircleShape,
                     modifier = Modifier.padding(bottom = Spacing.sm),
                 ) {
                     Text(
@@ -226,7 +225,7 @@ private fun TermsMetadata(effectiveDate: String?) {
         effectiveDate?.let {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = RoundedCornerShape(50),
+                shape = CircleShape,
             ) {
                 Text(
                     stringResource(Res.string.privacy_effective_date, it),

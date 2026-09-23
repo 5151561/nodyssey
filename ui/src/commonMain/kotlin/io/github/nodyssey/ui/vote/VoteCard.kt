@@ -447,7 +447,7 @@ private fun VoteChoiceRow(
         modifier =
         Modifier
             .fillMaxWidth()
-            .clip(OptionShape)
+            .clip(MaterialTheme.shapes.small)
             .then(
                 if (multiple) {
                     Modifier.toggleable(
@@ -559,7 +559,7 @@ private fun VoteResultRow(
         modifier =
         Modifier
             .fillMaxWidth()
-            .clip(OptionShape)
+            .clip(MaterialTheme.shapes.small)
             .then(
                 if (togglable) {
                     Modifier.clickable(
@@ -771,9 +771,6 @@ private fun VoteConfirmDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) } },
     )
 }
-
-/** Only ever seen as a ripple: the option rows have no fill of their own. */
-private val OptionShape = RoundedCornerShape(8.dp)
 
 private val TICK_SIZE = 20.dp
 

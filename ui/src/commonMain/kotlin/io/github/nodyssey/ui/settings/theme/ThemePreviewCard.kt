@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.HorizontalDivider
@@ -38,7 +38,9 @@ import io.github.nodyssey.ui.resources.settings_theme_preview_meta
 import io.github.nodyssey.ui.resources.settings_theme_preview_primary
 import io.github.nodyssey.ui.resources.settings_theme_preview_secondary
 import io.github.nodyssey.ui.resources.settings_theme_preview_title
+import io.github.plaza.designsys.component.LayerCardShape
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TonalTagShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.cardShadow
@@ -63,7 +65,7 @@ import org.jetbrains.compose.resources.stringResource
 internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val layers = LocalPlazaLayers.current
-    val shape = RoundedCornerShape(PreviewCorner)
+    val shape = LayerCardShape
     // A card like every card in the feed, on the page like they are: the preview is a post as the
     // home list draws it, so it takes the same white, the same shadow and, on 墨水屏, the same rule.
     Surface(
@@ -87,7 +89,7 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
                         color = scheme.onSecondaryContainer,
                         modifier =
                         Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(TonalTagShape)
                             .background(scheme.secondaryContainer)
                             .padding(horizontal = 7.dp, vertical = 2.dp),
                     )
@@ -170,11 +172,9 @@ private fun PreviewPill(
         modifier =
         Modifier
             .height(34.dp)
-            .clip(RoundedCornerShape(17.dp))
+            .clip(CircleShape)
             .background(container)
             .padding(horizontal = horizontal)
             .wrapContentHeight(Alignment.CenterVertically),
     )
 }
-
-private val PreviewCorner = 24.dp

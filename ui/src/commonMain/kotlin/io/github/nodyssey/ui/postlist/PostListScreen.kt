@@ -176,6 +176,7 @@ import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.textScaledSize
+import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
@@ -631,8 +632,7 @@ fun PostListScreen(
                         Icon(Icons.Default.Edit, contentDescription = null)
                     },
                     text = { Text(stringResource(Res.string.action_create_post)) },
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.floatShadow(RoundedCornerShape(18.dp), LocalPlazaLayers.current.shadows),
+                    modifier = Modifier.floatShadow(FloatingActionButtonDefaults.extendedFabShape, LocalPlazaLayers.current.shadows),
                     elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                 )
             }
@@ -876,9 +876,10 @@ private fun FeedPageBar(
             icon = { Icon(Icons.Default.Edit, contentDescription = null) },
             onClick = onCreatePost,
             expanded = expanded,
-            shape = RoundedCornerShape(18.dp),
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+            modifier = Modifier.floatShadow(FloatingActionButtonDefaults.extendedFabShape, LocalPlazaLayers.current.shadows),
         )
     }
 }
@@ -1054,7 +1055,6 @@ private fun SortButton(
             modifier = Modifier
                 .size(Sizes.minTouchTarget)
                 .cardShadow(CircleShape, layers.shadows),
-            shape = CircleShape,
             colors =
             IconButtonDefaults.filledIconButtonColors(
                 containerColor = layers.raised,
@@ -1118,7 +1118,7 @@ private fun SiteSwitcher(
         DropdownMenu(
             expanded = menuOpen,
             onDismissRequest = { menuOpen = false },
-            shape = RoundedCornerShape(20.dp),
+            shape = MaterialTheme.shapes.largeIncreased,
             containerColor = LocalPlazaLayers.current.card,
             modifier = Modifier.widthIn(min = 280.dp),
         ) {
@@ -1169,7 +1169,7 @@ private fun SiteSwitcher(
                     // identically and the tick is decoration TalkBack cannot see.
                     modifier = Modifier
                         .padding(horizontal = 6.dp, vertical = 1.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(ControlShape)
                         .background(if (isCurrent) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
                         .heightIn(min = 64.dp)
                         .semantics { selected = isCurrent },
@@ -1216,7 +1216,7 @@ private fun SiteMonogram(
     Box(
         modifier = Modifier
             .size(40.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(container),
         contentAlignment = Alignment.Center,
     ) {
@@ -1395,7 +1395,7 @@ private fun PinnedRow(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier.fillMaxWidth().heightIn(min = 44.dp),

@@ -24,8 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -922,11 +920,10 @@ private fun DetailBottomActions(
             },
             onClick = onReply,
             expanded = toolbarExpanded,
-            shape = ReplyFabShape,
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-            modifier = Modifier.floatShadow(ReplyFabShape, LocalPlazaLayers.current.shadows),
+            modifier = Modifier.floatShadow(FloatingActionButtonDefaults.extendedFabShape, LocalPlazaLayers.current.shadows),
         )
     }
 }
@@ -1035,9 +1032,6 @@ private fun DetailTopBar(
 
 /** What Material's extended FAB stands at, collapsed or not — the rail is stacked on top of it. */
 private val ReplyFabHeight = 56.dp
-
-/** Squarer than the rail's keys are round: 16dp on a 56dp FAB, as 1b draws it. */
-private val ReplyFabShape = RoundedCornerShape(16.dp)
 
 /**
  * The room to keep below the thread until the floating controls have been measured — one frame.
@@ -1840,7 +1834,6 @@ private fun ReactionPill(
     FilledTonalButton(
         onClick = onClick ?: {},
         enabled = onClick != null && !spent && !pending,
-        shape = CircleShape,
         colors =
         ButtonDefaults.filledTonalButtonColors(
             containerColor = container,

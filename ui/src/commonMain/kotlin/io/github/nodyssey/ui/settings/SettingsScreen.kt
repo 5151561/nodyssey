@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -747,7 +746,7 @@ private fun ConnectedReportFormatButtons(
 private fun StickerSizePreview(sizeSp: Int) {
     Surface(
         color = LocalPlazaLayers.current.inset,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
     ) {
         CompositionLocalProvider(
             LocalStickerSizing provides StickerSizing(uniform = true, uniformSize = sizeSp.sp),

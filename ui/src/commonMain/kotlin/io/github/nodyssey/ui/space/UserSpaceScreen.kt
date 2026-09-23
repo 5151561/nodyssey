@@ -11,12 +11,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -26,6 +25,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -364,7 +364,7 @@ private fun SpaceHeader(
     onToggleFollow: () -> Unit,
 ) {
     LayerCard(
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         contentPadding = PaddingValues(18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -414,10 +414,10 @@ private fun SpaceHeader(
                 }
                 FilledTonalButton(
                     onClick = onMessage,
-                    shape = CircleShape,
                     modifier = Modifier
                         .weight(1f)
-                        .height(48.dp),
+                        .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                 ) {
                     Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(20.dp))
                     Text(
@@ -450,12 +450,13 @@ private fun FollowButton(
         Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
         Text(label, modifier = Modifier.padding(start = 6.dp))
     }
-    val buttonModifier = modifier.height(48.dp)
+    val buttonModifier = modifier.heightIn(min = ButtonDefaults.MediumContainerHeight)
+    val shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight)
 
     if (followed) {
-        FilledTonalButton(onClick = onClick, modifier = buttonModifier, shape = CircleShape, content = content)
+        FilledTonalButton(onClick = onClick, modifier = buttonModifier, shapes = shapes, content = content)
     } else {
-        Button(onClick = onClick, modifier = buttonModifier, shape = CircleShape, content = content)
+        Button(onClick = onClick, modifier = buttonModifier, shapes = shapes, content = content)
     }
 }
 
@@ -468,7 +469,7 @@ private fun FollowButton(
  */
 @Composable
 private fun SpaceStatsRow(state: UserSpaceUiState) {
-    Surface(color = LocalPlazaLayers.current.inset, shape = RoundedCornerShape(18.dp)) {
+    Surface(color = LocalPlazaLayers.current.inset, shape = MaterialTheme.shapes.large) {
         Row(Modifier.padding(vertical = 12.dp)) {
             SpaceStat(state.joinedDays?.toString(), stringResource(Res.string.space_stat_joined_days))
             SpaceStat(state.chickenCount?.formatted(), stringResource(Res.string.space_stat_chicken))

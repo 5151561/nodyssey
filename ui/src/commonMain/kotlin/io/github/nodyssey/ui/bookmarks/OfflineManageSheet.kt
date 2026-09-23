@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -248,7 +249,7 @@ private fun OfflineManagePanel(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            Button(onClick = onDone, shape = CircleShape) {
+            Button(onClick = onDone) {
                 Text(
                     text = stringResource(Res.string.offline_done),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
@@ -302,7 +303,7 @@ private fun UsageBreakdown(
             Modifier
                 .fillMaxWidth()
                 .height(12.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(CircleShape)
                 .background(LocalPlazaLayers.current.inset),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
@@ -403,12 +404,13 @@ private fun retentionLabel(days: Int): String =
  * draws the sheet's contents in the shape the sheet gives them instead. It is the panel that is
  * being reviewed here; the scrim and the drag handle are Material's and unchanged.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OfflineManagePanelPreview(darkTheme: Boolean) {
     PlazaTheme(darkTheme = darkTheme) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            shape = BottomSheetDefaults.ExpandedShape,
         ) {
             Column(Modifier.padding(top = 22.dp)) {
                 OfflineManagePanel(

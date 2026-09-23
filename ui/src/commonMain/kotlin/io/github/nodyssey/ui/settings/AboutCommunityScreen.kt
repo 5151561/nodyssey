@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -232,7 +232,7 @@ private fun CommunityStats(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(18.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs),
     ) {
         Row(
@@ -300,7 +300,7 @@ private fun FriendSiteChips(onOpenUri: (String) -> Unit) {
                 onClick = { onOpenUri(uri) },
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                shape = RoundedCornerShape(50),
+                shape = CircleShape,
                 modifier = Modifier.widthIn(min = 48.dp),
             ) {
                 Row(

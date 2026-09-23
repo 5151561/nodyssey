@@ -1,7 +1,6 @@
 package io.github.nodyssey.ui.account
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +33,7 @@ import io.github.nodyssey.ui.resources.status_sign_in_title
 import io.github.nodyssey.ui.resources.status_unknown_title
 import io.github.nodyssey.ui.resources.status_unparsable_title
 import io.github.plaza.core.net.SiteError
+import io.github.plaza.designsys.component.TonalTagShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import org.jetbrains.compose.resources.StringResource
@@ -147,7 +147,7 @@ internal fun StorageBadge(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        shape = RoundedCornerShape(6.dp),
+        shape = TonalTagShape,
         color =
         if (local) {
             LocalPlazaLayers.current.inset

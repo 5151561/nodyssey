@@ -10,11 +10,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.TextObfuscationMode
@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -334,8 +335,8 @@ fun SignInScreen(
                 LayerCard(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     Button(
                         onClick = onOneTapSignIn,
-                        shape = CircleShape,
-                        modifier = Modifier.fillMaxWidth().height(SIGN_IN_BUTTON_HEIGHT),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
+                        shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                     ) {
                         Icon(PlazaIcons.Bolt, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(Spacing.sm))
@@ -423,21 +424,21 @@ fun SignInScreen(
                     Text(stringResource(Res.string.sign_in_submit), fontWeight = FontWeight.SemiBold)
                 }
             }
-            val submitModifier = Modifier.fillMaxWidth().height(SIGN_IN_BUTTON_HEIGHT)
+            val submitModifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight)
             if (oneTap == null) {
                 Button(
                     onClick = onSubmit,
                     enabled = state.canSubmitCredentials,
-                    shape = CircleShape,
                     modifier = submitModifier,
+                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                     content = submitContent,
                 )
             } else {
                 OutlinedButton(
                     onClick = onSubmit,
                     enabled = state.canSubmitCredentials,
-                    shape = CircleShape,
                     modifier = submitModifier,
+                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                     content = submitContent,
                 )
             }
@@ -457,8 +458,8 @@ fun SignInScreen(
             if (oneTap == null || state.verification is VerificationState.NotWired || state.sessionNotStored) {
                 OutlinedButton(
                     onClick = onUseWebSignIn,
-                    shape = CircleShape,
-                    modifier = Modifier.fillMaxWidth().height(SIGN_IN_BUTTON_HEIGHT),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                 ) {
                     Icon(PlazaIcons.Public, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(Spacing.sm))
@@ -487,9 +488,6 @@ fun SignInScreen(
         }
     }
 }
-
-/** 48dp, board 8h's pill height for every full-width action on the sign-in screens. */
-internal val SIGN_IN_BUTTON_HEIGHT = 48.dp
 
 /** 10c's 「或用 DeepFlood 账号」 — a hairline either side of the words. */
 @Composable

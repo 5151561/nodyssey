@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -380,7 +379,7 @@ private fun AccountCard(
     onAssets: () -> Unit,
 ) {
     LayerCard(
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         contentPadding = PaddingValues(18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -428,7 +427,7 @@ private fun IdentityRow(
         modifier =
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(MaterialTheme.shapes.largeIncreased)
             .clickable(onClickLabel = stringResource(Res.string.profile_space), onClick = onOpenSpace),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -519,7 +518,7 @@ private fun AttendanceBanner(
     val done = state.hasSignedInToday
     val busy = state.isSigningIn || state.isAttendanceUnknown
     val layers = LocalPlazaLayers.current
-    val shape = RoundedCornerShape(22.dp)
+    val shape = MaterialTheme.shapes.largeIncreased
     val container = if (done) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primary
     val content = if (done) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimary
     Surface(
@@ -692,7 +691,7 @@ private fun ProfileGridTile(
         modifier =
         modifier
             .heightIn(min = 68.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             // The whole tile, icon and caption together, is the target: a bare 24dp glyph is far
             // under Material's minimum, and the caption is what the eye aims at.
             .clickable(onClickLabel = label, onClick = tile.onClick)
@@ -728,7 +727,7 @@ private fun SignedOutProfile(
     ) {
         item(key = "welcome") {
             LayerCard(
-                shape = RoundedCornerShape(28.dp),
+                shape = MaterialTheme.shapes.extraLarge,
                 contentPadding = PaddingValues(start = 20.dp, top = 24.dp, end = 20.dp, bottom = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -775,8 +774,8 @@ private fun SignedOutProfile(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Button(
                     onClick = onSignIn,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = CircleShape,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                 ) {
                     Icon(PlazaIcons.Login, contentDescription = null, modifier = Modifier.size(20.dp))
                     Text(
@@ -846,7 +845,7 @@ private fun SignedOutBenefit(
     ) {
         Surface(
             modifier = Modifier.size(40.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         ) {

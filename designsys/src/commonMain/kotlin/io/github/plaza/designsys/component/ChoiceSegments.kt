@@ -1,7 +1,6 @@
 package io.github.plaza.designsys.component
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -10,7 +9,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 
 /**
@@ -44,7 +42,7 @@ fun ChoiceSegments(
                 SegmentedButtonDefaults.itemShape(
                     index = index,
                     count = labels.size,
-                    baseShape = SegmentShape,
+                    baseShape = MaterialTheme.shapes.small,
                 ),
             ) {
                 Text(
@@ -56,5 +54,3 @@ fun ChoiceSegments(
         }
     }
 }
-
-private val SegmentShape = RoundedCornerShape(8.dp)

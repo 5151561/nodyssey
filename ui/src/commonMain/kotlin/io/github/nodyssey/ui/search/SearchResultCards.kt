@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
@@ -28,7 +27,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -66,8 +64,7 @@ import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.textScaledSize
 import org.jetbrains.compose.resources.stringResource
 
-/** A result card's corners: 16dp, a step tighter than the feed's 24 for a card that is a step smaller. */
-private val ResultCardShape: Shape = RoundedCornerShape(16.dp)
+/** A result card is a step smaller than the feed's, so its corners are a step tighter: `shapes.large`. */
 private val ResultCardPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
 
 /** 44dp, the artboard's: a user result is the person, so the avatar is larger than a card header's. */
@@ -92,7 +89,7 @@ internal fun SearchPostCard(
     LayerCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        shape = ResultCardShape,
+        shape = MaterialTheme.shapes.large,
         contentPadding = ResultCardPadding,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -199,7 +196,7 @@ private fun ReplyCount(count: Int) {
 internal fun SearchPostCardPlaceholder() {
     LayerCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = ResultCardShape,
+        shape = MaterialTheme.shapes.large,
         contentPadding = ResultCardPadding,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
