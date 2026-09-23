@@ -19,6 +19,7 @@ import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.resources.Res
 import io.github.plaza.designsys.resources.richtext_poll_body
 import io.github.plaza.designsys.resources.richtext_poll_title
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import org.jetbrains.compose.resources.stringResource
@@ -77,7 +78,8 @@ fun VoteCardSurface(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        // Recessed into the post it sits in — the layer every block inside a card takes.
+        color = LocalPlazaLayers.current.inset,
         tonalElevation = 0.dp,
     ) {
         Column(Modifier.padding(Spacing.md)) { content() }

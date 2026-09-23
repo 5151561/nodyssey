@@ -62,10 +62,12 @@ import io.github.nodyssey.ui.settings.SettingsRow
 import io.github.nodyssey.ui.settings.SettingsSectionTitle
 import io.github.nodyssey.ui.settings.rememberAppLinkHandlingEnabled
 import io.github.nodyssey.ui.settings.rememberAppLinkSettingsLauncher
+import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.groupShape
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -249,9 +251,11 @@ private fun HelpItem(
     action: @Composable (() -> Unit)? = null,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = LocalPlazaLayers.current.card,
         shape = groupShape(first = top, last = bottom),
     ) {
+        // The same inset hairline a settings row draws: the entries of a group are one card.
+        if (!top) LayerDivider(startInset = Spacing.lg)
         Column(
             modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),

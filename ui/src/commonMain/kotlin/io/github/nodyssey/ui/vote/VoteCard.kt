@@ -91,6 +91,7 @@ import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.richtext.VoteCardSurface
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
@@ -638,7 +639,7 @@ private fun VoteResultRow(
                 .fillMaxWidth()
                 .height(BAR_HEIGHT)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                .background(LocalPlazaLayers.current.card),
         ) {
             Box(
                 Modifier

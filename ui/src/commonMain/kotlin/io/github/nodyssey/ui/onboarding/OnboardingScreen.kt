@@ -66,6 +66,7 @@ import io.github.nodyssey.ui.resources.onboarding_skip
 import io.github.nodyssey.ui.resources.onboarding_welcome_body
 import io.github.nodyssey.ui.resources.onboarding_welcome_title
 import io.github.plaza.designsys.component.PlazaBackHandler
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -154,7 +155,8 @@ fun OnboardingScreen(
         modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false) } },
-        color = MaterialTheme.colorScheme.surface,
+        // The page colour, so the phone frames in the figures sit on it as cards do everywhere.
+        color = LocalPlazaLayers.current.page,
     ) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             HorizontalPager(
