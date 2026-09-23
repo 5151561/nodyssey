@@ -39,7 +39,9 @@ fun themeSummary(settings: UserSettings): String {
     val colour =
         when (settings.colorSource) {
             ColorSource.PRESET -> stringResource(presetById(settings.presetId).label)
+
             ColorSource.WALLPAPER -> stringResource(Res.string.settings_color_source_wallpaper)
+
             ColorSource.CUSTOM ->
                 settings.savedThemes
                     .firstOrNull { it.color == settings.seedColor }

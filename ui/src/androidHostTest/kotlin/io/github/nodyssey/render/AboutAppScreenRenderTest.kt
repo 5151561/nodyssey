@@ -2,12 +2,12 @@ package io.github.nodyssey.render
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
+import io.github.nodyssey.ui.settings.AboutAppScreen
+import io.github.nodyssey.ui.settings.AboutAppUiState
 import io.github.plaza.core.update.AppRelease
 import io.github.plaza.core.update.AppUpdateState
 import io.github.plaza.core.update.UpdateCheck
 import io.github.plaza.core.update.UpdateDownload
-import io.github.nodyssey.ui.settings.AboutAppScreen
-import io.github.nodyssey.ui.settings.AboutAppUiState
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Before
 import org.junit.Rule

@@ -115,8 +115,8 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.floatShadow
 import io.github.plaza.designsys.theme.readableWidth
-import kotlin.math.roundToInt
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 @Composable
 fun AboutAppRoute(
