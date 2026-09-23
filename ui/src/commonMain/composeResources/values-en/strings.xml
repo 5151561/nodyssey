@@ -84,6 +84,7 @@
     <string name="composer_title_hint">One line that says what this is about</string>
     <string name="composer_body_hint">Write the body — Markdown works…</string>
     <string name="composer_select_board">Choose a board</string>
+    <string name="composer_board_target">Post to %1$s</string>
     <string name="composer_permission_public">Public</string>
     <string name="composer_permission_private">Private</string>
     <string name="composer_draft_saved">Draft %1$s</string>
@@ -150,7 +151,7 @@
     <string name="feed_page_size_note">%1$d per page</string>
     <string name="post_page_progress">%1$d floors loaded</string>
     <string name="post_reply_editor_title">Reply</string>
-    <string name="post_reply_editor_title_floor">Reply to #%1$d · %2$s</string>
+    <string name="post_reply_editor_title_to_floor">Reply to #%1$d</string>
     <string name="post_reply_editor_hint">Write your reply…</string>
     <string name="post_reply_preview_title">Preview · reply</string>
     <string name="post_reply_preview_title_floor">Preview · reply to #%1$d</string>
@@ -1113,9 +1114,11 @@
     <string name="imagehost_key_replace">Save</string>
     <string name="imagehost_key_saved">Saved</string>
     <string name="imagehost_key_cleared">Disconnected</string>
+    <string name="imagehost_key_not_stored">Not saved: this device’s key store refused to keep the credential</string>
     <string name="imagehost_clear_key">Disconnect</string>
     <string name="imagehost_clear_key_title">Disconnect %1$s?</string>
     <string name="imagehost_clear_key_body">The key saved on this device is deleted, and pictures can no longer be inserted into posts or replies. Images already uploaded are untouched.</string>
+    <string name="imagehost_clear_custom_body">This custom host’s address, fields and credential are all deleted from this device, and pictures can no longer be inserted into posts or replies. Images already uploaded are untouched.</string>
     <string name="imagehost_clear_key_action">Disconnect</string>
     <string name="imagehost_open_site">Open the host’s website</string>
 

@@ -425,6 +425,39 @@ object PlazaIcons {
 
     // --- Editor toolbar (boards 6d / 7a / c5 / c6) ---------------------------
 
+    /** The 格式 pill that opens the post and reply editors' Markdown card (1d / 2c). */
+    val TextFormat: ImageVector by lazy {
+        materialIcon(
+            name = "TextFormat",
+            pathData =
+            "M5,17v2h14v-2L5,17zM9.5,12.8h5l0.9,2.2h2.1L12.75,4h-1.5L6.5,15h2.1l0.9,-2.2z" +
+                "M12,5.98L13.87,11h-3.74L12,5.98z",
+        )
+    }
+
+    /** 阅读权限 · 公开 on the post editor's option row (1d). */
+    val Public: ImageVector by lazy {
+        materialIcon(
+            name = "Public",
+            pathData =
+            "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z" +
+                "M11,19.93c-3.95,-0.49 -7,-3.85 -7,-7.93 0,-0.62 0.08,-1.21 0.21,-1.79L9,15v1" +
+                "c0,1.1 0.9,2 2,2v1.93zM17.9,17.39c-0.26,-0.81 -1,-1.39 -1.9,-1.39h-1v-3" +
+                "c0,-0.55 -0.45,-1 -1,-1L8,12v-2h2c0.55,0 1,-0.45 1,-1L11,7h2c1.1,0 2,-0.9 2,-2v-0.41" +
+                "c2.93,1.19 5,4.06 5,7.41 0,2.08 -0.8,3.97 -2.1,5.39z",
+        )
+    }
+
+    /** The post editor's 对照 view — the text and its rendering, one above the other. */
+    val VerticalSplit: ImageVector by lazy {
+        materialIcon(
+            name = "VerticalSplit",
+            pathData =
+            "M3,15h8v-2L3,13v2zM3,19h8v-2L3,17v2zM3,11h8L11,9L3,9v2zM3,5v2h8L11,5L3,5z" +
+                "M13,5h8v14h-8z",
+        )
+    }
+
     val FormatBold: ImageVector by lazy {
         materialIcon(
             name = "FormatBold",

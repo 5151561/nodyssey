@@ -79,6 +79,7 @@
     <string name="composer_title_hint">一句話說清主題</string>
     <string name="composer_body_hint">寫下內文，支援 Markdown…</string>
     <string name="composer_select_board">選擇版塊</string>
+    <string name="composer_board_target">發到 %1$s</string>
     <string name="composer_permission_public">公開</string>
     <string name="composer_permission_private">私有</string>
     <string name="composer_draft_saved">草稿 %1$s</string>
@@ -144,7 +145,7 @@
     <string name="feed_page_size_note">%1$d 則 / 頁</string>
     <string name="post_page_progress">已載入 %1$d 樓</string>
     <string name="post_reply_editor_title">回覆</string>
-    <string name="post_reply_editor_title_floor">回覆 #%1$d · %2$s</string>
+    <string name="post_reply_editor_title_to_floor">回覆 #%1$d</string>
     <string name="post_reply_editor_hint">寫下你的回覆…</string>
     <string name="post_reply_preview_title">預覽 · 回覆</string>
     <string name="post_reply_preview_title_floor">預覽 · 回覆 #%1$d</string>
@@ -1105,9 +1106,11 @@
     <string name="imagehost_key_replace">儲存</string>
     <string name="imagehost_key_saved">已儲存</string>
     <string name="imagehost_key_cleared">已中斷連線</string>
+    <string name="imagehost_key_not_stored">沒儲存成功：本機的金鑰庫拒絕寫入，金鑰沒有存下來</string>
     <string name="imagehost_clear_key">中斷</string>
     <string name="imagehost_clear_key_title">中斷%1$s？</string>
     <string name="imagehost_clear_key_body">本機儲存的金鑰會被刪除，之後發文和回覆將無法插入圖片。已上傳的圖片不受影響。</string>
+    <string name="imagehost_clear_custom_body">這家自訂圖床的位址、欄位和金鑰都會從本機刪除，之後發文和回覆將無法插入圖片。已上傳的圖片不受影響。</string>
     <string name="imagehost_clear_key_action">中斷</string>
     <string name="imagehost_open_site">開啟圖床網站</string>
 

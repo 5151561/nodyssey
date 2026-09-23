@@ -26,8 +26,12 @@
     <string name="composer_toolbar_remove">Remove from toolbar</string>
     <string name="composer_toolbar_add">Add to toolbar</string>
     <string name="composer_toolbar_reset">Reset to default</string>
+    <string name="composer_format_open">Format</string>
+    <string name="composer_format_hint">Markdown works — or just type it</string>
+    <string name="composer_format_close">Done</string>
 
     <string name="composer_emoji_recent">Recently used</string>
+    <string name="composer_emoji_recent_empty">Emoji you use will show up here</string>
     <string name="composer_emoji_backspace">Delete</string>
 
     <string name="richtext_image_loading">Loading image…</string>

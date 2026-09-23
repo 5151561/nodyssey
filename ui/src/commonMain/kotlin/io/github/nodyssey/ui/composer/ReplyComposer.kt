@@ -76,7 +76,7 @@ import io.github.nodyssey.ui.resources.post_quote_reply
 import io.github.nodyssey.ui.resources.post_reply_draft_saved
 import io.github.nodyssey.ui.resources.post_reply_editor_hint
 import io.github.nodyssey.ui.resources.post_reply_editor_title
-import io.github.nodyssey.ui.resources.post_reply_editor_title_floor
+import io.github.nodyssey.ui.resources.post_reply_editor_title_to_floor
 import io.github.nodyssey.ui.resources.post_reply_preview_title
 import io.github.nodyssey.ui.resources.post_reply_preview_title_floor
 import io.github.nodyssey.ui.resources.post_reply_publish_failed
@@ -91,19 +91,19 @@ import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.StatusAction
+import io.github.plaza.designsys.editor.ComposerEditorBar
 import io.github.plaza.designsys.editor.EditorAction
-import io.github.plaza.designsys.editor.EditorToolbarDefaults
-import io.github.plaza.designsys.editor.MarkdownEditorBar
 import io.github.plaza.designsys.editor.MarkdownEditorState
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.rememberMarkdownEditorState
 import io.github.plaza.designsys.theme.CommentBody
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * The reply editor: a modal sheet (6d) that expands to a full-screen preview (C4).
+ * The reply editor: a modal sheet (2c, 6d before it) that expands to a full-screen preview (C4).
  *
  * Hosted as a sibling of the thread rather than inside it, because both halves cover the screen —
  * the sheet in its own window, the preview over everything — and neither belongs in the thread's
@@ -147,7 +147,7 @@ fun ReplyComposerHost(
     val editorState = rememberMarkdownEditorState()
     // The panel is part of the sheet even though its state is not, so it goes down with it — the
     // recents are what outlive the dismissal, not a half-open drawer.
-    LaunchedEffect(state.visible) { if (!state.visible) editorState.closeEmoji() }
+    LaunchedEffect(state.visible) { if (!state.visible) editorState.closePanels() }
     if (!state.visible) return
     // Hosted here rather than inside the editor sheet: it is a sheet too, and a sheet opened from
     // inside another sheet's content stacks two dialog windows for no reason. As siblings the wrench
@@ -273,16 +273,30 @@ private fun ReplyEditorSheet(
             initialValue = SheetValue.Hidden,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        // A sheet of paper, like the post editor's page (2c): the editor is one card lifted over the
+        // thread, and only its bar and the emoji panel under it recede.
+        containerColor = LocalPlazaLayers.current.card,
     ) {
         Column(modifier = Modifier.fillMaxWidth().imePadding()) {
+            // The post editor's top bar in miniature: ✕ · where the reply goes · 预览 · 发布. 发布
+            // moved up here from the end of the formatting strip, which is what let the strip go —
+            // it was the reason that strip had to squeeze its keys to 42dp.
             Row(
-                modifier = Modifier.padding(start = Spacing.xl, end = Spacing.sm),
+                modifier = Modifier.fillMaxWidth().height(56.dp).padding(start = Spacing.sm, end = Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
+                IconButton(onClick = onDismiss, enabled = !state.isPublishing) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(Res.string.action_close),
+                    )
+                }
                 Text(
+                    // The author is in the target chip right under this, so the header names the
+                    // floor only — and falls back to plain 回复 the moment that chip is dismissed.
                     text = state.replyTo?.let {
-                        stringResource(Res.string.post_reply_editor_title_floor, it.floor, it.author)
+                        stringResource(Res.string.post_reply_editor_title_to_floor, it.floor)
                     } ?: stringResource(Res.string.post_reply_editor_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontSize = 16.sp,
@@ -291,15 +305,6 @@ private fun ReplyEditorSheet(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                state.savedAtMillis?.let {
-                    Text(
-                        text = stringResource(Res.string.post_reply_draft_saved, formatTime(it)),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                // The sheet's own chrome is where a view switch belongs — this row is what the post
-                // editor's top bar is, and it is the only bar the sheet has.
                 IconButton(
                     onClick = {
                         // The preview covers the sheet, so the IME has to be gone before it rises —
@@ -315,19 +320,17 @@ private fun ReplyEditorSheet(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconButton(onClick = onDismiss, enabled = !state.isPublishing) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(Res.string.action_close),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                PublishReplyButton(
+                    isPublishing = state.isPublishing,
+                    enabled = state.canPublish,
+                    onClick = onPublish,
+                )
             }
             state.replyTo?.let { replyTo ->
                 ReplyTargetChip(
                     replyTo = replyTo,
                     onClear = onClearReplyTo,
-                    modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.xs),
+                    modifier = Modifier.padding(horizontal = Spacing.lg),
                 )
             }
             // The default container fills the width it was given, which is what this field needs:
@@ -345,13 +348,23 @@ private fun ReplyEditorSheet(
                 modifier = Modifier
                     .readableWidth()
                     .heightIn(min = MIN_EDITOR_HEIGHT, max = MAX_EDITOR_HEIGHT)
-                    .padding(horizontal = Spacing.xl, vertical = Spacing.sm),
+                    .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = Spacing.sm),
             )
             AttachmentTray(
                 attachments = state.attachments,
                 onRemove = onRemoveAttachment,
                 onRetry = onRetryAttachment,
             )
+            // Under the text it describes rather than in the header (2c), where it used to crowd
+            // the title out of the one row that also carries 预览 and 发布.
+            state.savedAtMillis?.let {
+                Text(
+                    text = stringResource(Res.string.post_reply_draft_saved, formatTime(it)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = Spacing.sm),
+                )
+            }
             ComposerErrorStrip(
                 error = state.publishError,
                 detail = state.publishErrorDetail,
@@ -365,22 +378,14 @@ private fun ReplyEditorSheet(
                 onVerify = onVerify,
                 modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             )
-            MarkdownEditorBar(
+            ComposerEditorBar(
                 actions = state.toolbar.enabled,
                 bodyState = bodyState,
                 editorState = editorState,
-                showDivider = false,
-                // The one strip in the app under 48dp: it keeps 发布 pinned at its end, and six full
-                // keys plus that button want 392dp on a 360dp screen.
-                keySize = EditorToolbarDefaults.CompactKeySize,
                 onPickImages = onPickImages,
                 onCustomize = onCustomize,
                 appMenu = {
-                    ComposerAppMenu(
-                        onInsertVote = onInsertVote,
-                        onInsertStardust = onInsertStardust,
-                        keySize = EditorToolbarDefaults.CompactKeySize,
-                    )
+                    ComposerAppMenu(onInsertVote = onInsertVote, onInsertStardust = onInsertStardust)
                 },
                 emojiPanel = { panel ->
                     NodeSeekEmojiPanel(
@@ -388,13 +393,6 @@ private fun ReplyEditorSheet(
                         onBackspace = panel.onBackspace,
                         recent = panel.recent,
                         onRecentChange = panel.onRecentChange,
-                    )
-                },
-                trailing = {
-                    PublishReplyButton(
-                        isPublishing = state.isPublishing,
-                        enabled = state.canPublish,
-                        onClick = onPublish,
                     )
                 },
             )
@@ -489,18 +487,25 @@ private fun ReplyTargetChip(
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val layers = LocalPlazaLayers.current
+    // Recessed into the sheet (2c): it is a reference to something outside the reply, not part of it.
     Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = layers.inset,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Row(
-            modifier = Modifier.padding(start = Spacing.md, end = Spacing.xs, top = Spacing.sm, bottom = Spacing.sm),
+            modifier = Modifier.padding(start = Spacing.md, end = Spacing.xs, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(PlazaIcons.Reply, contentDescription = null, modifier = Modifier.size(15.dp))
+            Icon(
+                PlazaIcons.FormatQuote,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(Res.string.post_quote_reply, replyTo.author, "#${replyTo.floor}"),
@@ -512,17 +517,19 @@ private fun ReplyTargetChip(
                 if (replyTo.excerpt.isNotBlank()) {
                     Text(
                         text = replyTo.excerpt,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-            IconButton(onClick = onClear, modifier = Modifier.size(24.dp)) {
+            IconButton(onClick = onClear, modifier = Modifier.size(36.dp)) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = stringResource(Res.string.post_reply_quote_remove),
-                    modifier = Modifier.size(15.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }

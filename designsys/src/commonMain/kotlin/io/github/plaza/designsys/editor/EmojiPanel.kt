@@ -1,19 +1,26 @@
 package io.github.plaza.designsys.editor
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,14 +37,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.resources.Res
 import io.github.plaza.designsys.resources.composer_emoji_backspace
 import io.github.plaza.designsys.resources.composer_emoji_recent
+import io.github.plaza.designsys.resources.composer_emoji_recent_empty
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardShadow
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -79,11 +91,20 @@ val EmojiEntry.insertion: String
     }
 
 /**
- * The emoji panel from C6, shared by a post editor and a reply sheet.
+ * The emoji panel from 2c, shared by the post editor, the reply sheet and the message bar.
  *
- * It replaces the keyboard rather than stacking on top of it — the board is explicit about this
- * ("面板与键盘同高切换，不叠加"), and on a 360×800 screen a panel that stacks leaves two lines of
- * the reply visible. The caller is responsible for dismissing the IME before showing it.
+ * It replaces the keyboard rather than stacking on top of it — "面板与键盘同高切换，不叠加" — and on
+ * a 360×800 screen a panel that stacks leaves two lines of the reply visible. The caller is
+ * responsible for dismissing the IME before showing it.
+ *
+ * 最近使用 is the first group pill rather than a strip under the grid (as it was until 2c): the
+ * recents are what a writer reaches for most, and a tab shows as many of them as the grid holds
+ * instead of the six a strip had room for. The panel opens on it only once there is something in it;
+ * before that it opens on the first pack, so the first thing a new writer sees is stickers.
+ *
+ * The backspace key floats at the grid's bottom-end corner rather than living in a cell of it: a
+ * cell would scroll away with the stickers, and a backspace that moves is not one a thumb can find.
+ * The grid is padded by one row at its end so its last stickers scroll clear of it.
  *
  * [stickerImage] is a slot rather than an `AsyncImage` in here because how a preview is *fetched* is
  * the app's business: these are waived past a 仅 Wi-Fi 加载图片 setting this module knows nothing
@@ -105,11 +126,22 @@ fun EmojiPanel(
     stickerImage: @Composable (sticker: EmojiEntry.Sticker, contentDescription: String?, modifier: Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Opens on the first group that has anything in it, so the panel is useful the moment it shows.
-    var selectedIndex by rememberSaveable { mutableIntStateOf(groups.indexOfFirst { it.entries.isNotEmpty() }.coerceAtLeast(0)) }
-    val group = groups.getOrNull(selectedIndex) ?: groups.first()
+    // The recents when there are any to open on; otherwise the first group that has anything in it,
+    // so the panel is useful the moment it shows.
+    var selectedIndex by rememberSaveable {
+        mutableIntStateOf(
+            if (recent.isNotEmpty()) RECENT else groups.indexOfFirst { it.entries.isNotEmpty() }.coerceAtLeast(0),
+        )
+    }
     val entriesByInsertion = remember(groups) {
         groups.flatMap(EmojiGroup::entries).associateBy(EmojiEntry::insertion)
+    }
+    // A recent no group knows any more — a pack the site dropped — is still text that can be
+    // inserted, so it stays in the tab as what it inserts.
+    val entries = if (selectedIndex == RECENT) {
+        recent.map { entriesByInsertion[it] ?: EmojiEntry.Unicode(it) }
+    } else {
+        (groups.getOrNull(selectedIndex) ?: groups.first()).entries
     }
 
     fun insert(text: String) {
@@ -117,14 +149,22 @@ fun EmojiPanel(
         onRecentChange((listOf(text) + recent.filterNot { it == text }).take(RECENT_LIMIT))
     }
 
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = modifier) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = modifier) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                .padding(start = Spacing.md, end = Spacing.md, top = Spacing.md, bottom = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs + 2.dp)) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                GroupPill(
+                    title = stringResource(Res.string.composer_emoji_recent),
+                    selected = selectedIndex == RECENT,
+                    onClick = { selectedIndex = RECENT },
+                )
                 groups.forEachIndexed { index, candidate ->
                     GroupPill(
                         title = candidate.title(),
@@ -133,10 +173,15 @@ fun EmojiPanel(
                     )
                 }
             }
-            Box(Modifier.fillMaxWidth().height(GRID_HEIGHT)) {
-                if (group.entries.isEmpty()) {
+            BoxWithConstraints(Modifier.fillMaxWidth().height(GRID_HEIGHT)) {
+                val cell = (maxWidth - CELL_GAP * (COLUMNS - 1)) / COLUMNS
+                if (entries.isEmpty()) {
                     Text(
-                        text = emptyGroupText,
+                        text = if (selectedIndex == RECENT) {
+                            stringResource(Res.string.composer_emoji_recent_empty)
+                        } else {
+                            emptyGroupText
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -144,22 +189,14 @@ fun EmojiPanel(
                     )
                 } else {
                     EmojiGrid(
-                        entries = group.entries,
+                        entries = entries,
                         onSelect = { insert(it.insertion) },
                         stickerImage = stickerImage,
+                        bottomClearance = cell + CELL_GAP,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RecentRow(
-                    recent = recent,
-                    entriesByInsertion = entriesByInsertion,
-                    onSelect = ::insert,
-                    stickerImage = stickerImage,
-                    modifier = Modifier.weight(1f),
-                )
-                BackspaceKey(onClick = onBackspace)
+                BackspaceKey(onClick = onBackspace, modifier = Modifier.align(Alignment.BottomEnd).size(cell))
             }
         }
     }
@@ -171,19 +208,24 @@ private fun GroupPill(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val layers = LocalPlazaLayers.current
     // The selectable overload, so a screen reader hears which group is open.
     Surface(
         selected = selected,
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLow,
-        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = CircleShape,
+        color = if (selected) MaterialTheme.colorScheme.inverseSurface else layers.raised,
+        contentColor = if (selected) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurface,
+        border = if (selected) null else layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        modifier = Modifier.height(32.dp),
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        )
+        Box(Modifier.padding(horizontal = Spacing.md), contentAlignment = Alignment.Center) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            )
+        }
     }
 }
 
@@ -192,13 +234,15 @@ private fun EmojiGrid(
     entries: List<EmojiEntry>,
     onSelect: (EmojiEntry) -> Unit,
     stickerImage: @Composable (EmojiEntry.Sticker, String?, Modifier) -> Unit,
+    bottomClearance: Dp,
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(COLUMNS),
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        contentPadding = PaddingValues(bottom = bottomClearance),
+        horizontalArrangement = Arrangement.spacedBy(CELL_GAP),
+        verticalArrangement = Arrangement.spacedBy(CELL_GAP),
     ) {
         items(entries, key = { it.insertion }) { entry ->
             EmojiCell(entry = entry, onClick = { onSelect(entry) }, stickerImage = stickerImage)
@@ -219,8 +263,9 @@ private fun EmojiCell(
     }
     Box(
         modifier = modifier
-            .height(46.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .aspectRatio(1f)
+            .clip(CellShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
@@ -232,58 +277,20 @@ private fun EmojiCell(
     }
 }
 
+/** Raised where the cells are recessed, so it reads as a key over the grid rather than a cell of it. */
 @Composable
-private fun RecentRow(
-    recent: List<String>,
-    entriesByInsertion: Map<String, EmojiEntry>,
-    onSelect: (String) -> Unit,
-    stickerImage: @Composable (EmojiEntry.Sticker, String?, Modifier) -> Unit,
+private fun BackspaceKey(
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = PlazaIcons.History,
-            contentDescription = null,
-            modifier = Modifier.size(15.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = stringResource(Res.string.composer_emoji_recent),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = Spacing.xs, end = Spacing.sm),
-        )
-        recent.forEach { insertion ->
-            val entry = entriesByInsertion[insertion]
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { onSelect(insertion) },
-                contentAlignment = Alignment.Center,
-            ) {
-                when (entry) {
-                    is EmojiEntry.Sticker ->
-                        stickerImage(entry, entry.name, Modifier.size(RECENT_STICKER_SIZE))
-
-                    is EmojiEntry.Unicode -> Text(entry.character, fontSize = 18.sp)
-
-                    null -> Text(insertion, fontSize = 18.sp)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BackspaceKey(onClick: () -> Unit) {
+    val layers = LocalPlazaLayers.current
     val description = stringResource(Res.string.composer_emoji_backspace)
     Box(
-        modifier = Modifier
-            .width(56.dp)
-            .height(40.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+        modifier = modifier
+            .cardShadow(CellShape, layers.shadows)
+            .clip(CellShape)
+            .background(layers.raised)
+            .then(layers.cardBorder?.let { Modifier.border(1.dp, it, CellShape) } ?: Modifier)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
@@ -291,14 +298,18 @@ private fun BackspaceKey(onClick: () -> Unit) {
         Icon(
             imageVector = PlazaIcons.Backspace,
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
 
 private const val COLUMNS = 6
-private const val RECENT_LIMIT = 6
-private val GRID_HEIGHT = 162.dp
+private const val RECENT = -1
+
+/** Every sticker ever inserted is not a useful tab; three rows of the grid is. */
+private const val RECENT_LIMIT = 18
+private val CELL_GAP = 8.dp
+private val CellShape = RoundedCornerShape(12.dp)
+private val GRID_HEIGHT = 170.dp
 private val STICKER_SIZE = 36.dp
-private val RECENT_STICKER_SIZE = 26.dp

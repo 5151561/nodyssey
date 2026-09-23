@@ -74,11 +74,19 @@ class ImageHostSettingsTest {
     }
 
     /**
-     * 断开 forgets the secret and nothing else. Re-typing an address and a JSON path because a token
-     * was rotated is the part nobody wants to do twice.
+     * 断开 on a custom host takes the whole record, and it has to.
+     *
+     * The other five are disconnected by forgetting their token: [ImageHostConfig.problem] then
+     * answers MISSING_TOKEN and the host reads as 未连接, so the address left behind is a
+     * convenience and nothing more. A custom host may legitimately need no credential at all — the
+     * LAN uploader case the validator allows for — so clearing only its secret leaves a
+     * configuration that is still complete, still 已连接 on the next visit, and still the address
+     * every attachment goes to. That is the opposite of what the dialog promises, and it left no way
+     * to remove a custom host at all: an empty address cannot be saved over it either, because
+     * saving validates first.
      */
     @Test
-    fun `disconnecting a custom host clears both places a credential can live, and keeps the rest`() = runTest {
+    fun `disconnecting a custom host clears the whole record, not just the credential`() = runTest {
         settings.save(
             ImageHostConfig(
                 provider = ImageHostProvider.CUSTOM,
@@ -89,6 +97,7 @@ class ImageHostSettingsTest {
                     headerValue = "secret",
                     formFields = "token=alsosecret",
                     urlPath = "data.url",
+                    urlPrefix = "https://img.example.com",
                 ),
             ),
         )
@@ -96,12 +105,30 @@ class ImageHostSettingsTest {
         settings.disconnect(ImageHostProvider.CUSTOM)
 
         val config = settings.config(ImageHostProvider.CUSTOM).first()
+        assertEquals("", config.siteUrl)
         assertEquals("", config.custom.headerValue)
         assertEquals("", config.custom.formFields)
-        assertEquals("https://img.example.com/api/upload", config.siteUrl)
-        assertEquals("X-Token", config.custom.headerName)
-        assertEquals("data.url", config.custom.urlPath)
-        assertEquals("smfile", config.custom.fileField)
+        assertEquals("", config.custom.headerName)
+        assertEquals("", config.custom.urlPrefix)
+        // Back to the field's own default rather than to blank — an unset 取值路径 still reads `url`.
+        assertEquals(CustomHostFields().urlPath, config.custom.urlPath)
+        assertEquals(CustomHostFields().fileField, config.custom.fileField)
+        assertFalse("a disconnected custom host must not still count as configured", config.isConfigured)
+    }
+
+    /** The other five keep their address: the token is what connects them, and it is what goes. */
+    @Test
+    fun `disconnecting a self-hosted host forgets the token and keeps the address`() = runTest {
+        settings.save(
+            ImageHostConfig(ImageHostProvider.LSKY_PRO, siteUrl = "https://img.example.com", token = "1|lskytoken"),
+        )
+
+        settings.disconnect(ImageHostProvider.LSKY_PRO)
+
+        val config = settings.config(ImageHostProvider.LSKY_PRO).first()
+        assertEquals("", config.token)
+        assertEquals("https://img.example.com", config.siteUrl)
+        assertFalse(config.isConfigured)
     }
 
     @Test

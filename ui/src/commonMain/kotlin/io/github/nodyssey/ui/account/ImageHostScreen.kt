@@ -63,6 +63,7 @@ import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_refresh
 import io.github.nodyssey.ui.resources.imagehost_api_token_label
+import io.github.nodyssey.ui.resources.imagehost_clear_custom_body
 import io.github.nodyssey.ui.resources.imagehost_clear_key
 import io.github.nodyssey.ui.resources.imagehost_clear_key_action
 import io.github.nodyssey.ui.resources.imagehost_clear_key_body
@@ -318,7 +319,15 @@ fun ImageHostScreen(
         HighRiskDialog(
             icon = PlazaIcons.Shield,
             title = stringResource(Res.string.imagehost_clear_key_title, stringResource(state.provider.nameRes())),
-            body = stringResource(Res.string.imagehost_clear_key_body),
+            // A custom host loses its address and its field names along with the credential, because
+            // for that one the configuration *is* the connection — see [ImageHostSettings.disconnect].
+            // The dialog says which of the two is about to happen; the promise underneath it ("no more
+            // pictures in posts") is the same either way.
+            body = if (state.provider == ImageHostProvider.CUSTOM) {
+                stringResource(Res.string.imagehost_clear_custom_body)
+            } else {
+                stringResource(Res.string.imagehost_clear_key_body)
+            },
             confirmLabel = stringResource(Res.string.imagehost_clear_key_action),
             onConfirm = onConfirmDisconnect,
             onDismiss = onDismissDisconnect,
