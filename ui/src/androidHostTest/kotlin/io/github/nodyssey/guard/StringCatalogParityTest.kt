@@ -132,7 +132,6 @@ class StringCatalogParityTest {
             "imagehost_upload_url_placeholder",
             "ledger_amount_gain",
             "ledger_amount_spend",
-            "message_markdown_label",
             "message_thread_subtitle",
             "message_thread_subtitle_level",
             "network_check_download_value",

@@ -105,6 +105,7 @@ import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.layerCardSlice
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -505,15 +506,8 @@ private fun ActionBadge(
             ActionTone.Reward -> scheme.primaryContainer to scheme.onPrimaryContainer
             ActionTone.Neutral -> scheme.secondaryContainer to scheme.onSecondaryContainer
         }
-    Text(
-        text = action.label(boardTitles),
-        style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
-        color = content,
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(container)
-            .padding(horizontal = Spacing.sm, vertical = 3.dp),
-    )
+    // The board tag's own component, so a verb here and a board on a feed row are one shape.
+    TonalTag(text = action.label(boardTitles), containerColor = container, contentColor = content)
 }
 
 private enum class ActionTone { Penalty, Reward, Neutral }

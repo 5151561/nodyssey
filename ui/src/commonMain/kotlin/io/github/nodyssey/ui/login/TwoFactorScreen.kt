@@ -318,23 +318,12 @@ private fun CodeBox(
         color = LocalPlazaLayers.current.card,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            if (digit == null && isActive) {
-                // The caret, drawn by the box because the real field's is transparent — see
-                // [CodeBoxes]. Static rather than blinking: the thick border already says where the
-                // next digit goes, and this only says it is a place to type.
-                Box(
-                    Modifier
-                        .size(width = 2.dp, height = 24.dp)
-                        .background(MaterialTheme.colorScheme.primary),
-                )
-            } else {
-                Text(
-                    text = digit?.toString().orEmpty(),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
-            }
+            Text(
+                text = digit?.toString().orEmpty(),
+                style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

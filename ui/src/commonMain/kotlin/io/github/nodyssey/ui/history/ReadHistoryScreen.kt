@@ -23,8 +23,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -361,6 +364,7 @@ private fun HistoryMenu(
  * A slice of the day's card: the hairline above it stays put while the row swipes, so the swipe
  * reads as this row leaving the card rather than the card coming apart.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun HistoryRow(
     entry: ReadHistoryEntry,
@@ -396,25 +400,37 @@ private fun HistoryRow(
             onDismiss = { onRemove() },
             backgroundContent = { RemoveBackdrop() },
         ) {
-            Column(
+            // Material's interactive list item, on the card colour — opaque, or the backdrop would
+            // show through the row before it has moved.
+            ListItem(
+                onClick = onClick,
+                colors = ListItemDefaults.colors(containerColor = layers.card),
+                // Swipe is a mouse-and-eyes gesture; TalkBack gets the same action by name. On the
+                // row rather than on the dismiss box so it lands on the node TalkBack actually
+                // focuses.
                 modifier =
-                Modifier
-                    .fillMaxWidth()
-                    // Opaque, or the backdrop shows through the row before it has moved.
-                    .background(layers.card)
-                    .clickable(onClick = onClick)
-                    // Swipe is a mouse-and-eyes gesture; TalkBack gets the same action by name. On
-                    // the row rather than on the dismiss box so it lands on the node TalkBack
-                    // actually focuses.
-                    .semantics {
-                        customActions = listOf(
-                            CustomAccessibilityAction(removeLabel) {
-                                onRemove()
-                                true
-                            },
-                        )
-                    }.padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                Modifier.semantics {
+                    customActions = listOf(
+                        CustomAccessibilityAction(removeLabel) {
+                            onRemove()
+                            true
+                        },
+                    )
+                },
+                supportingContent = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // No slug in the snapshot; the tag falls back to matching on the board's name.
+                        BoardTag(title = entry.categoryTitle, slug = null)
+                        entry.authorName?.takeIf { it.isNotBlank() }?.let {
+                            MetaText(it, singleLine = true, modifier = Modifier.weight(1f, fill = false))
+                            MetaText(META_SEPARATOR)
+                        }
+                        MetaText(stamp, singleLine = true)
+                    }
+                },
             ) {
                 ThreadRowTitle(
                     text = AnnotatedString(title),
@@ -422,18 +438,6 @@ private fun HistoryRow(
                     // would say nothing. Full contrast: the title is what the reader is scanning for.
                     fontWeight = FontWeight.Medium,
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // No slug in the snapshot; the tag falls back to matching on the board's name.
-                    BoardTag(title = entry.categoryTitle, slug = null)
-                    entry.authorName?.takeIf { it.isNotBlank() }?.let {
-                        MetaText(it, singleLine = true, modifier = Modifier.weight(1f, fill = false))
-                        MetaText(META_SEPARATOR)
-                    }
-                    MetaText(stamp, singleLine = true)
-                }
             }
         }
     }

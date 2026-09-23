@@ -67,8 +67,7 @@ data class StatusAction(
  *
  * A card rather than loose text on the page because the page is grey now (see
  * [io.github.plaza.designsys.theme.PlazaLayers]): everything that is content sits on a card, and a
- * status is the content of the screen it replaces. [framed] = false draws the same column without
- * the card, for a host that is already a card or a sheet of its own.
+ * status is the content of the screen it replaces.
  */
 @Composable
 fun StatusView(
@@ -82,7 +81,6 @@ fun StatusView(
     footnote: String? = null,
     primaryAction: StatusAction? = null,
     secondaryAction: StatusAction? = null,
-    framed: Boolean = true,
 ) {
     // Centred when it fits, scrollable when it does not. A status screen is the last thing that
     // should break at 200% font scale — it is often the only thing on screen.
@@ -94,42 +92,34 @@ fun StatusView(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .heightIn(min = viewportHeight)
-                .padding(horizontal = Spacing.lg, vertical = Spacing.xl),
+                // More room under the card than over it, so it sits at the optical centre (2e)
+                // rather than the geometric one, which reads as having slid down.
+                .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.xl, bottom = STATUS_LIFT),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val body: @Composable ColumnScope.() -> Unit = {
-                StatusBody(
-                    icon = icon,
-                    shape = shape,
-                    containerColor = containerColor,
-                    iconColor = iconColor,
-                    title = title,
-                    description = description,
-                    footnote = footnote,
-                    primaryAction = primaryAction,
-                    secondaryAction = secondaryAction,
-                )
-            }
-            if (framed) {
-                LayerCard(
-                    modifier = Modifier.widthIn(max = Sizes.readableContentWidth).fillMaxWidth(),
-                    shape = StatusCardShape,
-                    contentPadding = PaddingValues(start = Spacing.xl, top = 36.dp, end = Spacing.xl, bottom = Spacing.xl),
-                    verticalArrangement = Arrangement.Top,
+            LayerCard(
+                modifier = Modifier.widthIn(max = Sizes.readableContentWidth).fillMaxWidth(),
+                shape = StatusCardShape,
+                contentPadding = PaddingValues(start = Spacing.xl, top = 36.dp, end = Spacing.xl, bottom = Spacing.xl),
+                verticalArrangement = Arrangement.Top,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        content = body,
+                    StatusBody(
+                        icon = icon,
+                        shape = shape,
+                        containerColor = containerColor,
+                        iconColor = iconColor,
+                        title = title,
+                        description = description,
+                        footnote = footnote,
+                        primaryAction = primaryAction,
+                        secondaryAction = secondaryAction,
                     )
                 }
-            } else {
-                Column(
-                    modifier = Modifier.widthIn(max = Sizes.readableContentWidth).fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    content = body,
-                )
             }
         }
     }
@@ -137,6 +127,8 @@ fun StatusView(
 
 /** Rounder than a list card's 24dp: the status card is alone on its page, and board 2e draws it at 32. */
 private val StatusCardShape = RoundedCornerShape(32.dp)
+
+private val STATUS_LIFT = 72.dp
 
 @Composable
 private fun StatusBody(

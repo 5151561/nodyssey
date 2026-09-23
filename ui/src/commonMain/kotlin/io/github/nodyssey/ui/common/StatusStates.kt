@@ -289,7 +289,7 @@ fun SiteErrorState(
         // reader's next question is whether it is their network, their proxy or the site.
         SiteError.Network ->
             StatusView(
-                icon = WifiOffIcon,
+                icon = PlazaIcons.WifiOff,
                 shape = MaterialShapes.Cookie9Sided.toShape(),
                 containerColor = scheme.primaryContainer,
                 iconColor = scheme.onPrimaryContainer,
@@ -372,20 +372,6 @@ fun SiteErrorState(
  * host — provides it once. Null outside that host (a preview, a test), where the button is left off.
  */
 val LocalOpenNetworkCheck = compositionLocalOf<(() -> Unit)?> { null }
-
-/** Material Symbols' `wifi_off`; `material-icons-core` stops at `wifi`. */
-private val WifiOffIcon: ImageVector by lazy {
-    materialIcon(
-        name = "WifiOff",
-        pathData =
-        "M22.99,9C19.15,5.16 13.8,3.76 8.84,4.78l2.52,2.52c3.47,-0.17 6.99,1.05 9.63,3.7l2,-2z" +
-            "M18.99,13c-1.29,-1.29 -2.84,-2.13 -4.49,-2.56l3.53,3.53 0.96,-0.97z" +
-            "M2,3.05L5.07,6.1C3.6,6.82 2.22,7.78 1,9l1.99,2c1.24,-1.24 2.67,-2.16 4.2,-2.77l2.24,2.24" +
-            "C7.81,10.89 6.27,11.73 5,13v0.01L6.99,15c1.36,-1.36 3.14,-2.04 4.92,-2.06L18.98,20l1.27,-1.26" +
-            "L3.29,1.79 2,3.05z" +
-            "M9,17l3,3 3,-3c-1.65,-1.66 -4.34,-1.66 -6,0z",
-    )
-}
 
 @Composable
 fun EmptyFeedState(

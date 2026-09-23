@@ -25,14 +25,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -125,7 +129,7 @@ import org.jetbrains.compose.resources.stringResource
  * "not multi-selecting", which is the only one of the three where the download column is drawn and a
  * tap opens the thread.
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun BookmarkRow(
     entry: BookmarkEntry,
@@ -141,66 +145,62 @@ internal fun BookmarkRow(
     val inSelection = selected != null
     val layers = LocalPlazaLayers.current
     val showsOfflineColumn = offlineAvailable && !inSelection
-    Column(
-        modifier =
-        modifier
-            .fillMaxWidth()
-            .layerCardSlice(layers, first, last)
-            .background(if (selected == true) layers.inset else Color.Transparent)
-            // Not a raw `pointerInput`: this is what gives the press a ripple and gives TalkBack a
-            // long-click action it can announce and perform.
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick,
-                onLongClickLabel = stringResource(Res.string.bookmarks_select_action),
-            ),
-    ) {
+    Column(modifier.fillMaxWidth().layerCardSlice(layers, first, last)) {
         if (!first) LayerDivider(startInset = Spacing.lg, endInset = Spacing.lg)
-        Row(
-            modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    start = if (inSelection) Spacing.sm else Spacing.lg,
-                    end = if (showsOfflineColumn) Spacing.xs else Spacing.lg,
-                    top = Spacing.md,
-                    bottom = Spacing.md,
-                ),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
+        // Material's interactive list item: it owns the ripple, the long-click TalkBack can announce
+        // and perform, and the leading/trailing geometry. The card behind it is the slice's, so the
+        // item itself is transparent unless it is ticked.
+        ListItem(
+            onClick = onClick,
+            onLongClick = onLongClick,
+            onLongClickLabel = stringResource(Res.string.bookmarks_select_action),
+            colors =
+            ListItemDefaults.colors(
+                containerColor = if (selected == true) layers.inset else Color.Transparent,
+            ),
+            leadingContent =
+            selected?.let { checked ->
+                {
+                    // The row is the touch target — it is what toggles the tick — so the box itself
+                    // is released from Material's 48dp minimum. Left at its default it would claim
+                    // 48dp of a 360dp row and take that width out of the title.
+                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                        Checkbox(checked = checked, onCheckedChange = null)
+                    }
+                }
+            },
+            supportingContent = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        itemVerticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        BoardTag(title = entry.categoryTitle, slug = entry.categorySlug)
+                        val replies = entry.commentCount?.let { stringResource(Res.string.post_reply_count, it) }
+                        val byline =
+                            if (inSelection && offlineAvailable) {
+                                // The download column is gone in multi-select, so the state it was
+                                // saying moves onto the meta line — otherwise ticking a row is also the
+                                // moment you stop being able to see which of the six you already have.
+                                listOfNotNull(entry.authorName?.takeIf { it.isNotBlank() }, offlineSummary(entry.offline))
+                            } else {
+                                listOfNotNull(entry.authorName?.takeIf { it.isNotBlank() }, replies)
+                            }
+                        if (byline.isNotEmpty()) MetaText(byline.joinToString(META_SEPARATOR), singleLine = true)
+                        if (showsOfflineColumn) (entry.offline as? OfflineState.Stale)?.let { StaleBadge(it.behindReplies) }
+                    }
+                    if (showsOfflineColumn) (entry.offline as? OfflineState.Failed)?.let { FailureLine(it.reason) }
+                }
+            },
+            trailingContent =
+            if (showsOfflineColumn) {
+                { OfflineStateAction(state = entry.offline, onClick = onOfflineAction) }
+            } else {
+                null
+            },
         ) {
-            if (selected != null) {
-                // The row is the touch target — it is what toggles the tick — so the box itself is
-                // released from Material's 48dp minimum. Left at its default it would claim 48dp of
-                // a 360dp row and take that width out of the title.
-                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                    Checkbox(checked = selected, onCheckedChange = null)
-                }
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                ThreadRowTitle(text = AnnotatedString(entry.title))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                    itemVerticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BoardTag(title = entry.categoryTitle, slug = entry.categorySlug)
-                    val replies = entry.commentCount?.let { stringResource(Res.string.post_reply_count, it) }
-                    val byline =
-                        if (inSelection && offlineAvailable) {
-                            // The download column is gone in multi-select, so the state it was saying
-                            // moves onto the meta line — otherwise ticking a row is also the moment
-                            // you stop being able to see which of the six you already have.
-                            listOfNotNull(entry.authorName?.takeIf { it.isNotBlank() }, offlineSummary(entry.offline))
-                        } else {
-                            listOfNotNull(entry.authorName?.takeIf { it.isNotBlank() }, replies)
-                        }
-                    if (byline.isNotEmpty()) MetaText(byline.joinToString(META_SEPARATOR), singleLine = true)
-                    if (showsOfflineColumn) (entry.offline as? OfflineState.Stale)?.let { StalePill(it.behindReplies) }
-                }
-                if (showsOfflineColumn) (entry.offline as? OfflineState.Failed)?.let { FailureLine(it.reason) }
-            }
-            if (showsOfflineColumn) OfflineStateAction(state = entry.offline, onClick = onOfflineAction)
+            ThreadRowTitle(text = AnnotatedString(entry.title))
         }
     }
 }
@@ -208,29 +208,29 @@ internal fun BookmarkRow(
 private const val META_SEPARATOR = " · "
 
 /**
- * 「离线版落后 3 条回复」, as 8e's filled pill on the meta line.
+ * 「离线版落后 3 条回复」, as 8e's filled badge on the meta line.
  *
- * The pill rather than a sentence under the row because it is the one piece of news on a row of
+ * A badge rather than a sentence under the row because it is the one piece of news on a row of
  * facts — the same weight the feed gives 「N 条新回复」 — and the words stay the offline copy's own:
  * these are replies the *stored* thread is missing, not ones the reader has not seen.
  */
 @Composable
-private fun StalePill(behindReplies: Int) {
-    Text(
-        text = stringResource(Res.string.offline_behind_replies, behindReplies),
-        style =
-        MaterialTheme.typography.labelSmall.copy(
-            fontWeight = FontWeight.SemiBold,
-            fontFeatureSettings = TABULAR_FIGURES,
-        ),
-        color = MaterialTheme.colorScheme.onPrimary,
-        maxLines = 1,
-        modifier =
-        Modifier
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary)
-            .padding(horizontal = Spacing.sm, vertical = 2.dp),
-    )
+private fun StaleBadge(behindReplies: Int) {
+    Badge(
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+    ) {
+        Text(
+            text = stringResource(Res.string.offline_behind_replies, behindReplies),
+            style =
+            MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontFeatureSettings = TABULAR_FIGURES,
+            ),
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = Spacing.xs, vertical = 1.dp),
+        )
+    }
 }
 
 /** 「下载失败 · …」 — the one state that owes the reader a sentence rather than a glyph. */
@@ -274,44 +274,42 @@ private fun OfflineStateAction(
 ) {
     val scheme = MaterialTheme.colorScheme
     val description = offlineActionDescription(state)
-    Box(
-        modifier =
-        modifier
-            .size(Sizes.minTouchTarget)
-            .clip(CircleShape)
-            .clickable(onClick = onClick)
-            // One node, one announcement: a bare glyph and a bare "62" read as two unrelated things.
-            .clearAndSetSemantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        // A local: `progress` is a `val` in another module, so the check would not narrow it.
-        val progress = (state as? OfflineState.Downloading)?.progress
-        if (progress != null) {
-            DownloadProgressRing(progress)
-        } else {
-            Icon(
-                imageVector =
-                when (state) {
-                    is OfflineState.Downloaded -> OfflinePinIcon
+    IconButton(onClick = onClick, modifier = modifier) {
+        // One announcement for the button: a bare glyph and a bare "62" read as two unrelated
+        // things, so what is inside is replaced by the sentence, which the button then merges.
+        Box(
+            modifier = Modifier.clearAndSetSemantics { contentDescription = description },
+            contentAlignment = Alignment.Center,
+        ) {
+            // A local: `progress` is a `val` in another module, so the check would not narrow it.
+            val progress = (state as? OfflineState.Downloading)?.progress
+            if (progress != null) {
+                DownloadProgressRing(progress)
+            } else {
+                Icon(
+                    imageVector =
+                    when (state) {
+                        is OfflineState.Downloaded -> PlazaIcons.OfflinePin
 
-                    // Queued: 8e's clock — waiting its turn, not yet moving.
-                    is OfflineState.Downloading -> PlazaIcons.Schedule
+                        // Queued: 8e's clock — waiting its turn, not yet moving.
+                        is OfflineState.Downloading -> PlazaIcons.Schedule
 
-                    is OfflineState.Stale -> PlazaIcons.Sync
+                        is OfflineState.Stale -> PlazaIcons.Sync
 
-                    is OfflineState.Failed -> Icons.Default.Refresh
+                        is OfflineState.Failed -> Icons.Default.Refresh
 
-                    is OfflineState.NotDownloaded -> PlazaIcons.Download
-                },
-                contentDescription = null,
-                tint =
-                when (state) {
-                    is OfflineState.Downloaded, is OfflineState.Stale -> scheme.primary
-                    is OfflineState.Failed -> scheme.error
-                    else -> scheme.onSurfaceVariant
-                },
-                modifier = Modifier.size(textScaledSize(22.sp)),
-            )
+                        is OfflineState.NotDownloaded -> PlazaIcons.Download
+                    },
+                    contentDescription = null,
+                    tint =
+                    when (state) {
+                        is OfflineState.Downloaded, is OfflineState.Stale -> scheme.primary
+                        is OfflineState.Failed -> scheme.error
+                        else -> scheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(textScaledSize(22.sp)),
+                )
+            }
         }
     }
 }
@@ -321,8 +319,8 @@ private fun OfflineStateAction(
  *
  * `gapSize` zeroed and a butt cap because Material's determinate indicator draws a gap between the
  * ends of the arc by default, and at this size that gap is a third of what a 10%-complete download
- * has to show with. The number rather than 8e's glyph-less ring alone: a ring at 40% and one at 60%
- * are hard to tell apart at 26dp, and the reader deciding whether to stop it wants to know which.
+ * has to show with. The number inside is 8e's: a ring at 40% and one at 60% are hard to tell apart
+ * at 26dp, and the reader deciding whether to stop it wants to know which.
  */
 @Composable
 private fun DownloadProgressRing(progress: Float) {
@@ -629,25 +627,3 @@ internal val OfflineFailure.messageRes: StringResource
             OfflineFailure.Challenge -> Res.string.offline_failed_challenge
             OfflineFailure.RateLimited -> Res.string.offline_failed_rate_limited
         }
-
-/** Material Symbols' `offline_pin` — 8e's 已离线. Not in `material-icons-core`. */
-private val OfflinePinIcon: ImageVector by lazy {
-    materialIcon(
-        name = "OfflinePin",
-        pathData =
-        "M12,2C6.5,2 2,6.5 2,12s4.5,10 10,10 10,-4.5 10,-10S17.5,2 12,2z" +
-            "M17,18L7,18v-2h10v2z" +
-            "M10.3,14L7,10.7l1.4,-1.4 1.9,1.9 5.3,-5.3L17,7.3 10.3,14z",
-    )
-}
-
-/** Material Symbols' `download_for_offline` — 8e's 全部下载. */
-internal val DownloadForOfflineIcon: ImageVector by lazy {
-    materialIcon(
-        name = "DownloadForOffline",
-        pathData =
-        "M12,2C6.49,2 2,6.49 2,12s4.49,10 10,10s10,-4.49 10,-10S17.51,2 12,2z" +
-            "M11,10V6h2v4h3l-4,4l-4,-4H11z" +
-            "M17,17H7v-2h10V17z",
-    )
-}

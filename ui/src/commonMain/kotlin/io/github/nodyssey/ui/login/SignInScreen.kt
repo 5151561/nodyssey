@@ -338,7 +338,7 @@ fun SignInScreen(
                         shape = CircleShape,
                         modifier = Modifier.fillMaxWidth().height(SIGN_IN_BUTTON_HEIGHT),
                     ) {
-                        Icon(BoltIcon, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Icon(PlazaIcons.Bolt, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(Spacing.sm))
                         Text(
                             stringResource(Res.string.sign_in_one_tap, provider.providerName),
@@ -530,17 +530,6 @@ private fun SignInHeader(oneTapProvider: String?) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-/** Material Symbols' `bolt` — 10c's 一键登录. */
-private val BoltIcon: ImageVector by lazy {
-    materialIcon(
-        name = "Bolt",
-        pathData =
-        "M11,21h-1l1,-7H7.5c-0.58,0 -0.57,-0.32 -0.38,-0.66 0.19,-0.34 0.05,-0.08 0.07,-0.12" +
-            "C8.48,10.94 10.42,7.54 13,3h1l-1,7h3.5c0.49,0 0.56,0.33 0.47,0.51l-0.07,0.15" +
-            "C12.96,17.55 11,21 11,21z",
-    )
 }
 
 /** 区分大小写 on the left, 忘记密码 on the right — or the refusal, which replaces the left half. */

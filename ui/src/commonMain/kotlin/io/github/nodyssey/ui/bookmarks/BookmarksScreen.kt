@@ -318,7 +318,7 @@ fun BookmarksScreen(
                     elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     modifier = Modifier.floatShadow(FloatingActionButtonDefaults.extendedFabShape, layers.shadows),
                 ) {
-                    Icon(DownloadForOfflineIcon, contentDescription = null)
+                    Icon(PlazaIcons.DownloadForOffline, contentDescription = null)
                     Spacer(Modifier.width(9.dp))
                     Text(
                         text = stringResource(Res.string.bookmarks_download_all, state.pendingDownloadCount),
@@ -549,7 +549,7 @@ private fun BookmarksTopBar(
             if (state.entries.isNotEmpty()) {
                 IconButton(onClick = onEnterSelection) {
                     Icon(
-                        imageVector = ChecklistIcon,
+                        imageVector = PlazaIcons.Checklist,
                         contentDescription = stringResource(Res.string.bookmarks_select_action),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -695,18 +695,6 @@ private fun SelectionTopBar(
 }
 
 private const val SUBTITLE_SEPARATOR = " · "
-
-/** Material Symbols' `checklist` — the way into multi-select that does not need a long-press. */
-private val ChecklistIcon: ImageVector by lazy {
-    materialIcon(
-        name = "Checklist",
-        pathData =
-        "M22,7h-9v2h9V7z" +
-            "M22,15h-9v2h9V15z" +
-            "M5.54,11L2,7.46l1.41,-1.41l2.12,2.12l4.24,-4.24l1.41,1.41L5.54,11z" +
-            "M5.54,19L2,15.46l1.41,-1.41l2.12,2.12l4.24,-4.24l1.41,1.41L5.54,19z",
-    )
-}
 
 private val BookmarkSort.labelRes: StringResource
     get() =
