@@ -128,6 +128,7 @@ import io.github.plaza.designsys.resources.richtext_sticker_description
 import io.github.plaza.designsys.resources.richtext_sticker_fallback
 import io.github.plaza.designsys.theme.CodeStyle
 import io.github.plaza.designsys.theme.LocalEinkMode
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Sizes
@@ -508,7 +509,7 @@ private fun TabGroup(
         Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+            .background(LocalPlazaLayers.current.inset),
     ) {
         SecondaryScrollableTabRow(
             selectedTabIndex = index,
@@ -584,7 +585,7 @@ private fun FoldBlock(
         Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+            .background(LocalPlazaLayers.current.inset),
     ) {
         Row(
             modifier =
@@ -971,7 +972,7 @@ fun CodeBlockView(node: RichNode.CodeBlock) {
     // surface. Ordinary code keeps the app's surface, where it has always been.
     val terminal = node.spans.isNotEmpty()
     val code = rememberTerminalText(node.code, node.spans)
-    val ground = if (terminal) TerminalGround else MaterialTheme.colorScheme.surfaceContainer
+    val ground = if (terminal) TerminalGround else LocalPlazaLayers.current.inset
     val ink = if (terminal) TerminalInk else MaterialTheme.colorScheme.onSurface
     val chrome = if (terminal) TerminalInk.copy(alpha = TERMINAL_CHROME_ALPHA) else MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -1084,7 +1085,7 @@ private fun DataTable(
                 textDecoration = TextDecoration.Underline,
             ),
         )
-    val codeBackground = MaterialTheme.colorScheme.surfaceContainer
+    val codeBackground = LocalPlazaLayers.current.inset
     // One remembered listener, for the reason spelled out in [InlineText]: a lambda built per cell
     // makes every `LinkAnnotation.Url` compare unequal and rebuilds the whole grid each pass.
     val linkListener =
@@ -1187,7 +1188,7 @@ private fun InlineText(
                 textDecoration = TextDecoration.Underline,
             ),
         )
-    val codeBackground = MaterialTheme.colorScheme.surfaceContainer
+    val codeBackground = LocalPlazaLayers.current.inset
     val quoteBackground = MaterialTheme.colorScheme.primaryContainer
     val quoteLinkStyles =
         TextLinkStyles(

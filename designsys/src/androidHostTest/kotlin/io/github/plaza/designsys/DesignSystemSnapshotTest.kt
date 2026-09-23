@@ -22,6 +22,7 @@ import io.github.plaza.core.richtext.InlineStyle
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.richtext.RichContent
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Rule
 import org.junit.Test
@@ -103,7 +104,7 @@ class DesignSystemSnapshotTest {
         Column(
             Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background)
+                .background(LocalPlazaLayers.current.card)
                 .padding(16.dp),
         ) {
             Text("标题的样子", style = MaterialTheme.typography.headlineSmall)

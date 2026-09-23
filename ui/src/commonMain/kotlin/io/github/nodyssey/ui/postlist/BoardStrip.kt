@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -71,6 +73,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -87,6 +90,7 @@ import io.github.nodyssey.ui.resources.board_parked
 import io.github.nodyssey.ui.resources.board_restore
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.theme.LocalEinkMode
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -268,7 +272,7 @@ internal fun BoardStrip(
                     if (editing) {
                         MaterialTheme.colorScheme.primary
                     } else {
-                        MaterialTheme.colorScheme.surfaceContainer
+                        LocalPlazaLayers.current.raised
                     },
                     animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                     label = "board-toggle-container",
@@ -278,7 +282,7 @@ internal fun BoardStrip(
                     if (editing) {
                         MaterialTheme.colorScheme.onPrimary
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        MaterialTheme.colorScheme.onSurface
                     },
                     animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                     label = "board-toggle-content",
@@ -290,8 +294,8 @@ internal fun BoardStrip(
                             else -> expanded = !expanded
                         }
                     },
-                    modifier = Modifier.size(width = ToggleWidth, height = 32.dp),
-                    shape = CircleShape,
+                    modifier = Modifier.size(width = ToggleWidth, height = PillHeight),
+                    shape = PillShape,
                     colors =
                     IconButtonDefaults.filledTonalIconButtonColors(
                         containerColor = container,
@@ -338,7 +342,6 @@ internal fun BoardStrip(
                 modifier = Modifier.padding(start = Spacing.lg, bottom = Spacing.sm),
             )
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 
@@ -659,7 +662,7 @@ private fun BoardPill(
         if (parked) {
             MaterialTheme.colorScheme.surfaceContainerHighest
         } else {
-            MaterialTheme.colorScheme.surfaceContainerLow
+            LocalPlazaLayers.current.raised
         },
         animationSpec = colorSpec,
         label = "board-pill-container",
@@ -674,7 +677,7 @@ private fun BoardPill(
                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = PARKED_ALPHA)
             }
         } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
+            MaterialTheme.colorScheme.onSurface
         },
         animationSpec = colorSpec,
         label = "board-pill-label",
@@ -685,14 +688,20 @@ private fun BoardPill(
         label = {
             Text(
                 text = board.title,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                ),
                 maxLines = 1,
             )
         },
         // A parked board is still a board — it is only out of the way — so it keeps its shape and its
         // label and loses its contrast. TalkBack gets told in words, since grey is not a word.
         modifier =
-        if (parked) Modifier.semantics { contentDescription = "${board.title}, $parkedLabel" } else Modifier,
+        Modifier
+            .height(PillHeight)
+            .then(
+                if (parked) Modifier.semantics { contentDescription = "${board.title}, $parkedLabel" } else Modifier,
+            ),
         // Boards the site refuses to anyone signed out are worth flagging before the tap, not after.
         // Described rather than decorative: the warning is the whole point of the icon, and it is
         // nowhere else in the chip, so leaving it null hides the restriction from TalkBack.
@@ -708,15 +717,17 @@ private fun BoardPill(
         } else {
             null
         },
-        shape = CircleShape,
+        shape = PillShape,
         colors =
         FilterChipDefaults.filterChipColors(
             containerColor = container,
             labelColor = label,
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            selectedContainerColor = MaterialTheme.colorScheme.primary,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-            selectedTrailingIconColor = MaterialTheme.colorScheme.onPrimary,
+            // The selected board is the darkest thing on the page — the inverse surface, not the
+            // brand colour — so it reads as "you are here" rather than as one more tinted control.
+            selectedContainerColor = MaterialTheme.colorScheme.inverseSurface,
+            selectedLabelColor = MaterialTheme.colorScheme.inverseOnSurface,
+            selectedTrailingIconColor = MaterialTheme.colorScheme.inverseOnSurface,
         ),
         border = null,
     )
@@ -769,6 +780,10 @@ internal fun List<BoardSlot>.reorderedFor(
 internal const val FRONT_PAGE_KEY = "front"
 
 private val ToggleWidth = 40.dp
+
+/** A board pill: 36dp tall and 12dp round — a soft rectangle rather than a capsule, so a row of them reads as tabs. */
+private val PillHeight = 36.dp
+private val PillShape = RoundedCornerShape(12.dp)
 
 /** The toggle plus the end inset it is drawn against — the width the first row of pills gives up. */
 private val ToggleSlotWidth = ToggleWidth + Spacing.lg

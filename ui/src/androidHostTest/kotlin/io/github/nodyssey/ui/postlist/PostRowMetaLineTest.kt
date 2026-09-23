@@ -15,16 +15,17 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The meta line under a row's title is one line, and everything on it is centred on it.
+ * A feed card's two meta lines each stay one line, and everything on them is centred on it: the board
+ * tag and the time under the author's name, the counts at the foot.
  *
- * This is the bug the icons were introduced for: spelled out as `1234 浏览` and `12 回复`, the meta
- * line ran past the width of a 360dp phone as soon as the author had a real name, and the two items
- * that overflowed dropped onto a second row. Half the row's metadata sitting a line lower is what
- * "nothing lines up" looks like from the outside.
+ * This is the bug the icons were introduced for: spelled out as `1234 浏览` and `12 回复`, the counts
+ * ran past the width of a 360dp phone as soon as the author had a real name, and the items that
+ * overflowed dropped onto a second row. Half the metadata sitting a line lower is what "nothing lines
+ * up" looks like from the outside.
  *
  * Asserted on the vertical *centre* rather than the top edge, because the items genuinely differ in
  * height — the board tag is a filled pill, the counts are icon-and-number pairs — and it is the
- * centre that [ThreadRow]'s FlowRow aligns. Positions decided by layout rather than by glyph
+ * centre that the card's rows align. Positions decided by layout rather than by glyph
  * metrics, so Robolectric's stub font (which does not honour `lineHeight`) cannot skew them; the
  * stub font is in fact wider than a real one here, which makes the wrapping check strictly harsher
  * than a device would be.
@@ -46,18 +47,13 @@ class PostRowMetaLineTest {
             }
         }
 
-        val centres =
-            listOf(
-                "board" to centreOfText("日常"),
-                "author" to centreOfText(longAuthor),
-                "reply" to centreOfLabel("12 回复"),
-                "view" to centreOfLabel("1234 浏览"),
-                "time" to centreOfText("3小时前"),
-            )
-        val line = centres.first().second
+        val header = listOf("board" to centreOfText("日常"), "time" to centreOfText("3小时前"))
+        val foot = listOf("reply" to centreOfLabel("12 回复"), "view" to centreOfLabel("1234 浏览"))
+
         // 1dp of slack: these are pixel centres of boxes with odd heights, not a design tolerance.
-        val offLine = centres.filter { (_, centre) -> kotlin.math.abs(centre - line) > 1f }
-        assertEquals(emptyList<Pair<String, Float>>(), offLine)
+        fun List<Pair<String, Float>>.offLine() = filter { (_, centre) -> kotlin.math.abs(centre - first().second) > 1f }
+        assertEquals(emptyList<Pair<String, Float>>(), header.offLine())
+        assertEquals(emptyList<Pair<String, Float>>(), foot.offLine())
     }
 
     private fun centreOfText(text: String): Float =

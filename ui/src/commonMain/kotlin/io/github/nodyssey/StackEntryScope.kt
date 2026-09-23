@@ -64,4 +64,6 @@ internal class StackEntryScope(
      * walking out of the feed into a profile.
      */
     val openHomeTab: () -> Unit,
+    /** Switches to 我的, for the account avatar at the end of 首页's bar. A tab switch for the same reason as [openHomeTab]. */
+    val openProfileTab: () -> Unit,
 )
