@@ -13,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,16 +30,16 @@ import androidx.compose.ui.unit.dp
  * its way out.
  *
  * Material 3 has no inline banner component (its `Snackbar` is transient and floats over the page), so
- * this is a [Surface] with a row in it. The colours are the caller's: an error, a success and a quiet
- * notice on the card colour are all the same object. [announce] makes it a polite live region, for a
+ * this is a [Surface] with a row in it. An error by default; a success or a quiet notice on the card
+ * colour is the same object in other colours. [announce] makes it a polite live region, for a
  * banner that arrives after a wait the reader did not watch.
  */
 @Composable
 fun InlineBanner(
     text: String,
-    containerColor: Color,
-    contentColor: Color,
     modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.errorContainer,
+    contentColor: Color = contentColorFor(containerColor),
     icon: ImageVector? = null,
     title: String? = null,
     border: BorderStroke? = null,

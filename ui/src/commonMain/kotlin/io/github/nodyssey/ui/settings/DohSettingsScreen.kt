@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,8 +69,10 @@ import io.github.nodyssey.ui.resources.doh_url_placeholder
 import io.github.nodyssey.ui.resources.doh_url_required
 import io.github.nodyssey.ui.resources.doh_webview_hint
 import io.github.plaza.designsys.component.GroupedListItemSwitch
+import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -281,11 +284,26 @@ fun DohSettingsScreen(
                     }
                 }
 
-                state.resolution?.let { resolution -> DohResolutionBanner(resolution) }
+                // The answer itself — the addresses, so the reader can tell a real one from what
+                // their network said.
+                state.resolution?.let { resolution ->
+                    InlineBanner(
+                        text = stringResource(
+                            Res.string.doh_test_result,
+                            resolution.host,
+                            resolution.addresses.joinToString("、"),
+                            resolution.elapsedMillis.toString(),
+                        ),
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        icon = Icons.Default.CheckCircle,
+                        announce = true,
+                    )
+                }
                 state.testFailure?.let { failure ->
-                    SettingsResultBanner(
+                    InlineBanner(
                         text = stringResource(Res.string.doh_test_failure, failure),
-                        error = true,
+                        icon = PlazaIcons.ErrorCircle,
+                        announce = true,
                     )
                 }
                 SettingsTestSaveButtons(
@@ -318,20 +336,6 @@ fun DohSettingsScreen(
             }
         }
     }
-}
-
-/** The answer itself — the addresses, so the reader can tell a real one from what their network said. */
-@Composable
-private fun DohResolutionBanner(resolution: DnsResolution) {
-    SettingsResultBanner(
-        text = stringResource(
-            Res.string.doh_test_result,
-            resolution.host,
-            resolution.addresses.joinToString("、"),
-            resolution.elapsedMillis.toString(),
-        ),
-        error = false,
-    )
 }
 
 /** Shared with 网络自检, which names the same provider on a row of its own. */

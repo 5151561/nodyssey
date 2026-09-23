@@ -311,39 +311,6 @@ internal fun SettingsTestSaveButtons(
 
 private val ActionButtonHeight = 52.dp
 
-/**
- * The outcome of a test, as a tinted strip under the fields: [error] in the error container,
- * otherwise in the tertiary one. Announced politely, because it arrives after a wait the reader did
- * not have to watch.
- */
-@Composable
-internal fun SettingsResultBanner(
-    text: String,
-    error: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val scheme = MaterialTheme.colorScheme
-    Surface(
-        color = if (error) scheme.errorContainer else scheme.tertiaryContainer,
-        contentColor = if (error) scheme.onErrorContainer else scheme.onTertiaryContainer,
-        shape = RoundedCornerShape(18.dp),
-        modifier = modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            Icon(
-                if (error) PlazaIcons.ErrorCircle else Icons.Default.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        }
-    }
-}
-
 /** Small print under a page's cards — what a setting cannot do, said before anyone types. */
 @Composable
 internal fun SettingsNote(

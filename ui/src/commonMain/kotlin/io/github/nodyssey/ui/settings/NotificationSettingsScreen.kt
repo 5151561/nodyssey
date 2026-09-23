@@ -68,10 +68,12 @@ import io.github.nodyssey.ui.resources.notify_telegram_body
 import io.github.nodyssey.ui.resources.notify_telegram_title
 import io.github.nodyssey.ui.resources.notify_wifi_only
 import io.github.nodyssey.ui.resources.notify_wifi_only_hint
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.groupedListItemColors
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -157,11 +159,29 @@ fun NotificationSettingsScreen(
                 .padding(SettingsPagePadding),
             verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
-            MasterSwitchCard(
-                title = stringResource(Res.string.notify_master_title),
-                subtitle = stringResource(Res.string.notify_master_hint),
+            // The master switch as 6d draws it: a group of its own in the primary container tone, larger
+            // type than the rows under it, because everything else on the page is conditional on it.
+            val scheme = MaterialTheme.colorScheme
+            GroupedListItem(
+                first = true,
+                last = true,
                 checked = enabled,
                 onCheckedChange = onEnabledChange,
+                colors = groupedListItemColors(scheme.onPrimaryContainer, scheme.primaryContainer),
+                headlineContent = {
+                    Text(
+                        stringResource(Res.string.notify_master_title),
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, lineHeight = 24.sp),
+                    )
+                },
+                supportingContent = {
+                    Text(
+                        stringResource(Res.string.notify_master_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onPrimaryContainer,
+                    )
+                },
+                trailingContent = { GroupedListItemSwitch(checked = enabled) },
             )
 
             // Everything below the master switch is one dimmed, inert block while it is off —
@@ -246,44 +266,6 @@ fun NotificationSettingsScreen(
             },
             onDismiss = { frequencySheet = false },
         )
-    }
-}
-
-/**
- * The master switch as 6d draws it: a card of its own in the primary container tone, larger type
- * than the rows under it, because everything else on the page is conditional on it.
- */
-@Composable
-private fun MasterSwitchCard(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    val scheme = MaterialTheme.colorScheme
-    Surface(
-        color = scheme.primaryContainer,
-        contentColor = scheme.onPrimaryContainer,
-        shape = RoundedCornerShape(24.dp),
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, lineHeight = 24.sp),
-                )
-                Text(subtitle, style = MaterialTheme.typography.labelSmall)
-            }
-            GroupedListItemSwitch(checked = checked)
-        }
     }
 }
 

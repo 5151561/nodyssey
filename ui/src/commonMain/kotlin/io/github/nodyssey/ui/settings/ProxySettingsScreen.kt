@@ -73,6 +73,7 @@ import io.github.nodyssey.ui.resources.proxy_username_label
 import io.github.nodyssey.ui.resources.proxy_webview_hint
 import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.GroupedListItemSwitch
+import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
@@ -262,7 +263,7 @@ fun ProxySettingsScreen(
                 }
 
                 state.testFailure?.let { failure ->
-                    SettingsResultBanner(text = proxyTestFailureText(failure), error = true)
+                    InlineBanner(text = proxyTestFailureText(failure), icon = PlazaIcons.ErrorCircle, announce = true)
                 }
                 SettingsTestSaveButtons(
                     testLabel = stringResource(Res.string.proxy_test),

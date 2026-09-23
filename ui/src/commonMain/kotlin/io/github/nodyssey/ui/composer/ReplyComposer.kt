@@ -87,6 +87,7 @@ import io.github.nodyssey.ui.vote.VoteComposeDialog
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.EditorTextField
+import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.QuotePreview
@@ -536,54 +537,44 @@ private fun ComposerErrorStrip(
         failedUploads > 0 -> uploadFailureText(failedUploads, uploadFailure, uploadErrorDetail)
         else -> return
     }
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-    ) {
-        Row(
-            modifier = Modifier.padding(start = Spacing.md, end = Spacing.xs, top = Spacing.sm, bottom = Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = message, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-            // A refused publish keeps whatever the reader typed, so the button has to be the one
-            // that makes sending possible again — 重试 on a Cloudflare wall re-sent the same reply
-            // into the same wall, with the draft still sitting there and no way forward.
-            val action =
-                if (error != null) {
-                    siteErrorRecovery(
-                        error = error,
-                        onVerify = onVerify?.let { verify ->
-                            { url: String ->
-                                onDismiss()
-                                verify(url)
-                            }
-                        },
-                        onSignIn = onSignIn?.let { signIn ->
-                            {
-                                onDismiss()
-                                signIn()
-                            }
-                        },
-                        onRetry = {
-                            onDismiss()
-                            onRetryPublish()
-                        },
-                    )
-                } else {
-                    StatusAction(stringResource(Res.string.action_retry), onRetryUploads)
-                }
-            action?.let {
-                TextButton(
-                    onClick = it.onClick,
-                    contentPadding = PaddingValues(horizontal = Spacing.md),
-                ) {
+    // A refused publish keeps whatever the reader typed, so the button has to be the one that makes
+    // sending possible again — 重试 on a Cloudflare wall re-sent the same reply into the same wall,
+    // with the draft still sitting there and no way forward.
+    val action =
+        if (error != null) {
+            siteErrorRecovery(
+                error = error,
+                onVerify = onVerify?.let { verify ->
+                    { url: String ->
+                        onDismiss()
+                        verify(url)
+                    }
+                },
+                onSignIn = onSignIn?.let { signIn ->
+                    {
+                        onDismiss()
+                        signIn()
+                    }
+                },
+                onRetry = {
+                    onDismiss()
+                    onRetryPublish()
+                },
+            )
+        } else {
+            StatusAction(stringResource(Res.string.action_retry), onRetryUploads)
+        }
+    InlineBanner(
+        text = message,
+        modifier = modifier,
+        action = action?.let {
+            {
+                TextButton(onClick = it.onClick, contentPadding = PaddingValues(horizontal = Spacing.md)) {
                     Text(it.label, color = MaterialTheme.colorScheme.onErrorContainer)
                 }
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable

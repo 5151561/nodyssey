@@ -103,6 +103,7 @@ import io.github.nodyssey.ui.resources.sign_in_verify_expired
 import io.github.nodyssey.ui.resources.sign_in_verify_not_required
 import io.github.nodyssey.ui.resources.sign_in_verify_not_wired
 import io.github.plaza.core.net.UserAgent
+import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
@@ -356,9 +357,25 @@ fun SignInScreen(
                 OrRule(stringResource(Res.string.sign_in_or_with_account, siteName))
             }
 
-            if (state.hasCredentialRefusal) RefusalBanner(state.refusal)
+            // The site's own sentence for a refusal, or a plain one when it sent none. The endpoint
+            // answers `{"success":false,"message":…}` and that message is what the forum wants said;
+            // the fallback deliberately stops short of the board's placeholder lockout numbers, which
+            // nothing has confirmed.
+            if (state.hasCredentialRefusal) {
+                InlineBanner(
+                    text = state.refusal?.detail?.takeIf { it.isNotBlank() }
+                        ?: stringResource(Res.string.sign_in_refused_generic),
+                    icon = PlazaIcons.ErrorCircle,
+                )
+            }
 
-            if (state.sessionNotStored) SessionNotStoredBanner()
+            // The site said yes and the app came away with no session — see
+            // [SignInUiState.sessionNotStored]. Its own wording, because the app is the one making the
+            // claim; followed by 改用网页登录, the only move left, since the web view writes into the
+            // same jar by a route that does not depend on what this endpoint sets.
+            if (state.sessionNotStored) {
+                InlineBanner(text = stringResource(Res.string.sign_in_session_not_stored), icon = PlazaIcons.ErrorCircle)
+            }
 
             OutlinedTextField(
                 state = accountState,
@@ -552,50 +569,6 @@ private fun PasswordSupport(state: SignInUiState, onForgotPassword: () -> Unit) 
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.clickable(onClick = onForgotPassword),
         )
-    }
-}
-
-/**
- * The site's own sentence for a refusal, or a plain one when it sent none.
- *
- * The app writes as little of this as it can get away with. The endpoint answers
- * `{"success":false,"message":…}` and that message is what the forum wants said; the fallback exists
- * only for the case where there is no message at all, and deliberately stops short of the board's
- * placeholder lockout numbers, which nothing has confirmed.
- */
-@Composable
-private fun RefusalBanner(refusal: SignInOutcome.Refused?) {
-    ErrorBanner(refusal?.detail?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.sign_in_refused_generic))
-}
-
-/**
- * The site said yes and the app came away with no session — see [SignInUiState.sessionNotStored].
- *
- * Its own wording because the app is the one making the claim: there is no sentence from the forum
- * to show, the forum having answered `success`. Drawn in the same error colours as a refusal, and
- * followed by 改用网页登录, which is the only move left — the web view writes into the same jar by a
- * route that does not depend on what this endpoint sets.
- */
-@Composable
-private fun SessionNotStoredBanner() {
-    ErrorBanner(stringResource(Res.string.sign_in_session_not_stored))
-}
-
-@Composable
-private fun ErrorBanner(text: String) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.md),
-        ) {
-            Icon(PlazaIcons.ErrorCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text(text, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 19.sp))
-        }
     }
 }
 
