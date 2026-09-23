@@ -143,61 +143,88 @@ class MessageThreadViewModelTest {
         }
 
     /**
-     * 引用. The message goes into the draft as a blockquote and the reply is typed after it — which
-     * is only Markdown if the switch is on, so quoting turns it on.
+     * 引用. The message waits over the bar as a card (3e) and goes out as a blockquote ahead of the
+     * reply — which is only Markdown if the switch is on, so quoting turns it on.
      */
     @Test
-    fun `引用 drops the message into the draft as a blockquote`() =
+    fun `引用 sends the message as a blockquote ahead of the reply`() =
         runTest(dispatcher) {
-            val viewModel = viewModel(FakeMessageRepository())
+            val repository = FakeMessageRepository()
+            val viewModel = viewModel(repository)
             advanceUntilIdle()
             viewModel.toggleMarkdown()
 
             viewModel.quote(viewModel.uiState.value.messages.single())
-
-            assertEquals("> 改名的事我问过管理\n\n", viewModel.draftState.text.toString())
+            // The draft is left alone: the quotation is the card's, not the field's.
+            assertEquals("", viewModel.draftState.text.toString())
             assertTrue(viewModel.uiState.value.isMarkdown)
+
+            viewModel.draftState.setTextAndPlaceCursorAtEnd("问到了吗")
+            viewModel.send()
+            advanceUntilIdle()
+
+            assertEquals("> 改名的事我问过管理\n\n问到了吗", repository.lastContent)
+            assertTrue(viewModel.uiState.value.quotes.isEmpty())
         }
 
     /** Every line takes a `>`, or a blank line inside the message would end the quotation early. */
     @Test
     fun `a multi-line message is quoted line by line`() =
         runTest(dispatcher) {
-            val viewModel = viewModel(FakeMessageRepository())
+            val repository = FakeMessageRepository()
+            val viewModel = viewModel(repository)
             advanceUntilIdle()
 
             viewModel.quote(bubble("第一行\n\n第三行"))
+            viewModel.draftState.setTextAndPlaceCursorAtEnd("好")
+            viewModel.send()
+            advanceUntilIdle()
 
-            assertEquals("> 第一行\n> \n> 第三行\n\n", viewModel.draftState.text.toString())
+            assertEquals("> 第一行\n> \n> 第三行\n\n好", repository.lastContent)
         }
 
     /** Cumulative, like the reply editor's: quoting a second message must not eat the first. */
     @Test
     fun `每引用一条就多一段，互不覆盖`() =
         runTest(dispatcher) {
+            val repository = FakeMessageRepository()
+            val viewModel = viewModel(repository)
+            advanceUntilIdle()
+
+            viewModel.quote(bubble("在的", id = "a"))
+            viewModel.quote(bubble("那明天见", id = "b"))
+            viewModel.draftState.setTextAndPlaceCursorAtEnd("看到了")
+            viewModel.send()
+            advanceUntilIdle()
+
+            assertEquals("> 在的\n\n> 那明天见\n\n看到了", repository.lastContent)
+        }
+
+    @Test
+    fun `the ✕ on a quote card drops only that quotation`() =
+        runTest(dispatcher) {
             val viewModel = viewModel(FakeMessageRepository())
             advanceUntilIdle()
 
-            viewModel.quote(bubble("在的"))
-            viewModel.draftState.setTextAndPlaceCursorAtEnd(viewModel.draftState.text.toString() + "看到了")
-            viewModel.quote(bubble("那明天见"))
+            viewModel.quote(bubble("在的", id = "a"))
+            viewModel.quote(bubble("那明天见", id = "b"))
+            viewModel.removeQuote("a")
 
-            assertEquals(
-                "> 在的\n\n看到了\n\n> 那明天见\n\n",
-                viewModel.draftState.text.toString(),
-            )
+            assertEquals(listOf("b"), viewModel.uiState.value.quotes.map { it.id })
         }
 
-    private fun bubble(content: String) =
-        MessageBubble(
-            id = "b",
-            isMine = false,
-            content = content,
-            isMarkdown = true,
-            sentAtMillis = NOW,
-            sentAtText = null,
-            status = SendStatus.SENT,
-        )
+    private fun bubble(
+        content: String,
+        id: String = "b",
+    ) = MessageBubble(
+        id = id,
+        isMine = false,
+        content = content,
+        isMarkdown = true,
+        sentAtMillis = NOW,
+        sentAtText = null,
+        status = SendStatus.SENT,
+    )
 
     private fun viewModel(
         repository: MessageRepository,
@@ -232,6 +259,7 @@ private class FakeMessageRepository(
 ) : MessageRepository {
     var sendCount = 0
     var lastMarkdown: Boolean? = null
+    var lastContent: String? = null
     val markedRead = mutableListOf<Long>()
 
     override suspend fun conversations() = emptyList<io.github.nodyssey.data.MessageConversation>()
@@ -269,6 +297,7 @@ private class FakeMessageRepository(
     ): DirectMessage? {
         sendCount++
         lastMarkdown = markdown
+        lastContent = content
         sendError?.let { throw it }
         return DirectMessage(
             id = "sent-$sendCount",

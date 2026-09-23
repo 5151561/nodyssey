@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -35,8 +36,9 @@ class MessageBubbleActionsTest {
     val composeRule = createComposeRule()
 
     private val quoted = mutableListOf<String>()
+    private val unquoted = mutableListOf<String>()
 
-    private fun setScreen() {
+    private fun setScreen(quotes: List<MessageBubble> = emptyList()) {
         composeRule.setContent {
             PlazaTheme {
                 MessageThreadScreen(
@@ -45,6 +47,7 @@ class MessageBubbleActionsTest {
                         uid = 4471,
                         userName = "iwil",
                         nowMillis = NOW,
+                        quotes = quotes,
                         messages =
                         listOf(
                             MessageBubble(
@@ -80,6 +83,7 @@ class MessageBubbleActionsTest {
                     onSend = {},
                     onRetrySend = {},
                     onQuote = { quoted += it.content },
+                    onRemoveQuote = { unquoted += it },
                     onPickImages = {},
                     onRemoveAttachment = {},
                     onRetryAttachment = {},
@@ -120,6 +124,27 @@ class MessageBubbleActionsTest {
         composeRule.onNodeWithText("引用").performClick()
 
         assertEquals(listOf("改名的事我问过管理"), quoted)
+    }
+
+    /** 3e: the quotation waits over the bar, says whose it is, and can be taken back. */
+    @Test
+    fun `a pending quote shows as a card over the bar with its own ✕`() {
+        val bubble =
+            MessageBubble(
+                id = "1",
+                isMine = false,
+                content = "改名的事我问过管理",
+                isMarkdown = false,
+                sentAtMillis = NOW - 60_000L,
+                sentAtText = null,
+                status = SendStatus.SENT,
+            )
+        setScreen(quotes = listOf(bubble))
+
+        composeRule.onNodeWithText("引用 iwil").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("取消引用").performClick()
+
+        assertEquals(listOf("1"), unquoted)
     }
 
     private fun clipboardText(): String? {

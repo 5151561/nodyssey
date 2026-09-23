@@ -192,7 +192,8 @@ class MessageThreadViewModel(
     }
 
     /**
-     * Drops a bubble into the draft as a blockquote.
+     * Holds a bubble over the message bar as a quote card (3e), to go out as a blockquote ahead of
+     * whatever is typed.
      *
      * The site has no quote button in a conversation — `message/send` carries one `content` string
      * and nothing that points at an earlier message — so this is the app's own, written the way the
@@ -202,21 +203,31 @@ class MessageThreadViewModel(
      * Turning MD on is part of the action, not a side effect: with the switch off the server takes
      * the text verbatim, and the quotation would arrive as a line beginning with a literal `>`.
      *
-     * Text rather than state, for the reason `ReplyComposerViewModel.quote` is: once the block is in
-     * the draft it is ordinary Markdown that can be typed between, reordered or deleted, and quoting
-     * a second message adds a second block instead of replacing the first.
+     * State rather than text in the draft, which is what this used to be: 3e draws the quotation as a
+     * card above the field, and a card is the one thing that can say whose words they are without
+     * putting a `>` block into a one-line pill. What text had going for it is kept where it mattered —
+     * quoting a second message adds a second card instead of replacing the first, and each card has
+     * its own ✕ — and what is given up is typing *between* two quotations: they now go out together,
+     * in the order they were picked, ahead of the reply.
      */
     fun quote(message: MessageBubble) {
-        draftState.editFromViewModel {
-            appendBlock(message.content.toQuoteBlock())
-            placeCursorAtEnd()
+        _uiState.update { state ->
+            state.copy(
+                quotes = state.quotes.filterNot { it.id == message.id } + message,
+                isMarkdown = true,
+            )
         }
-        _uiState.update { it.copy(isMarkdown = true) }
+    }
+
+    /** The ✕ on a quote card. */
+    fun removeQuote(id: String) {
+        _uiState.update { state -> state.copy(quotes = state.quotes.filterNot { it.id == id }) }
     }
 
     fun send() {
-        val content = draftState.text.toString().trim()
-        if (content.isEmpty()) return
+        val typed = draftState.text.toString().trim()
+        if (typed.isEmpty()) return
+        val content = _uiState.value.quotes.joinToString(separator = "") { it.content.toQuoteBlock() } + typed
         val bubble =
             MessageBubble(
                 id = "pending-${pendingSeed++}",
@@ -232,7 +243,7 @@ class MessageThreadViewModel(
         // report for getting it there, and leaving them up would attach them to the next message.
         uploads.clear()
         _uiState.update {
-            it.copy(messages = it.messages + bubble, nowMillis = clock.nowMillis())
+            it.copy(messages = it.messages + bubble, quotes = emptyList(), nowMillis = clock.nowMillis())
         }
         deliver(bubble)
     }
@@ -357,6 +368,8 @@ data class MessageThreadUiState(
     /** Mirrored out of [MessageThreadViewModel.draftState]; the text itself is not UiState. */
     val hasDraftText: Boolean = false,
     val attachments: List<ImageAttachment> = emptyList(),
+    /** Bubbles picked with 引用, oldest first; they go out as blockquotes ahead of the draft. */
+    val quotes: List<MessageBubble> = emptyList(),
     /** The site's own MD On/Off switch; off sends the text verbatim. */
     val isMarkdown: Boolean = true,
     /** The formatting strip's keys and the wrench panel's pool. Defaults until settings arrive. */

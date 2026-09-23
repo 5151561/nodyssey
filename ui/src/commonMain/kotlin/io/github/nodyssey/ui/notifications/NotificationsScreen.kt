@@ -1,17 +1,20 @@
 package io.github.nodyssey.ui.notifications
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -20,16 +23,19 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -37,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -44,15 +51,18 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
@@ -77,21 +87,28 @@ import io.github.nodyssey.ui.resources.notifications_empty
 import io.github.nodyssey.ui.resources.notifications_interactions
 import io.github.nodyssey.ui.resources.notifications_mark_all_read
 import io.github.nodyssey.ui.resources.notifications_messages
+import io.github.nodyssey.ui.resources.notifications_section_earlier
+import io.github.nodyssey.ui.resources.notifications_section_today
 import io.github.nodyssey.ui.resources.tab_notifications
 import io.github.plaza.core.TimeFormat
-import io.github.plaza.core.net.SiteError
-import io.github.plaza.designsys.component.AvatarCapOffset
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Instant
 
 @Composable
 fun NotificationsRoute(
@@ -140,7 +157,8 @@ fun NotificationsRoute(
 }
 
 /**
- * Boards 7d and 7e.
+ * Boards 7d and 7e, redrawn as 5a and 5b: a header that lifts off the page as one piece once a list
+ * scrolls under it, and the rows in white cards on the grey page.
  *
  * One screen rather than two: 私信 is a *group* of the same 通知 tab on the site, so it keeps the
  * title, the 全部已读 action and the group tabs and swaps only the list underneath.
@@ -218,70 +236,71 @@ fun NotificationsScreen(
         if (pagerState.currentPage != selectedIndex) pagerState.animateScrollToPage(selectedIndex)
     }
 
+    // The header lifts as one piece — title, 全部已读 and the tabs — once a list runs under it (5a).
+    // [OneHandTopAppBar] lifts itself; the tab row below it has to follow in step, or the shadow
+    // would fall between the two halves of one header instead of under it.
+    val layers = LocalPlazaLayers.current
+    val lifted = appBarState.isContentOverlapped
+    val headerColor by animateColorAsState(
+        targetValue =
+        if (lifted && !layers.shadows) {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        } else {
+            layers.page
+        },
+        label = "notificationsHeader",
+    )
+
     Scaffold(
         modifier = modifier,
         topBar = {
-            // `readableWidth` stays on the bar itself: the content column below is constrained the
-            // same way, and a full-bleed bar over a centred list is the one thing this screen has
-            // never done.
-            OneHandTopAppBar(
-                modifier = Modifier.readableWidth(),
-                title = stringResource(Res.string.tab_notifications),
-                state = appBarState,
-                actions = {
-                    TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
-                        Icon(Icons.Default.Check, contentDescription = null)
-                        Text(stringResource(Res.string.notifications_mark_all_read))
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier.padding(padding).fillMaxSize().readableWidth(),
-        ) {
-            /*
-             * Tabs rather than the filter chips this row used to be.
-             *
-             * The groups are pages now, and a tab row is the control that says so: the indicator is
-             * attached to the page underneath and moves with it, which a row of pills has no way to
-             * draw. Fixed rather than scrollable — there are two of them, and a scrollable row would
-             * huddle both at the start with the rest of the width left over.
-             */
-            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
-                tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        // The pager's own page rather than the selected group: the indicator starts
-                        // moving as the swipe passes the halfway point instead of waiting for the
-                        // gesture to end, which is what makes it read as the page's own label. The
-                        // group itself still changes when the gesture comes to rest.
-                        selected = index == pagerState.currentPage,
-                        onClick = { onTabChange(tab) },
-                        text = {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(tab.label())
-                                // A plain tabular numeral, not a Badge: the count belongs to the
-                                // tab's own colour, and a Badge would drop a red pill into a row
-                                // that is otherwise two words and a line.
-                                val count = state.counts.forTab(tab)
-                                if (count > 0) {
-                                    Text(
-                                        text = unreadLabel(count, MAX_BADGE),
-                                        style =
-                                        MaterialTheme.typography.labelMedium.copy(
-                                            fontFeatureSettings = TABULAR_FIGURES,
-                                        ),
-                                    )
-                                }
-                            }
-                        },
+            // `readableWidth` stays on the header itself: the content column below is constrained
+            // the same way, and a full-bleed bar over a centred list is the one thing this screen
+            // has never done.
+            Column(Modifier.readableWidth()) {
+                OneHandTopAppBar(
+                    title = stringResource(Res.string.tab_notifications),
+                    state = appBarState,
+                    actions = {
+                        TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
+                            Icon(
+                                InboxIcons.DoneAll,
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.IconSize),
+                            )
+                            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                            Text(stringResource(Res.string.notifications_mark_all_read))
+                        }
+                    },
+                )
+                /*
+                 * Tabs rather than the filter chips this row used to be.
+                 *
+                 * The groups are pages now, and a tab row is the control that says so: the indicator
+                 * is attached to the page underneath and moves with it, which a row of pills has no
+                 * way to draw. Fixed rather than scrollable — there are two of them, and a scrollable
+                 * row would huddle both at the start with the rest of the width left over.
+                 *
+                 * Drawn over an opaque strip of the header's own colour, which is also what covers the
+                 * bar's shadow where the two halves meet.
+                 */
+                Surface(
+                    color = headerColor,
+                    modifier = Modifier.cardShadow(RectangleShape, enabled = lifted && layers.shadows),
+                ) {
+                    GroupTabs(
+                        tabs = tabs,
+                        currentPage = pagerState.currentPage,
+                        counts = state.counts,
+                        onTabChange = onTabChange,
                     )
                 }
             }
-
+        },
+    ) { padding ->
+        Box(
+            modifier = Modifier.padding(padding).fillMaxSize().readableWidth(),
+        ) {
             when {
                 // Signing in is not one of the groups: with no session there is nothing to swipe
                 // between, and a pager over two empty lists would say so twice.
@@ -340,6 +359,76 @@ fun NotificationsScreen(
                         }
                     }
             }
+            // 渐隐: once the list runs under the header, its rows fade into the page rather than
+            // being cut off at the header's edge (5a). Only then — at rest there is nothing under
+            // the header, and the fade would only dim the first group's label.
+            if (lifted) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(TOP_FADE)
+                        .background(Brush.verticalGradient(listOf(layers.page, layers.page.copy(alpha = 0f)))),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The two groups' tabs, each with its unread count (5a).
+ *
+ * The count is a Material [Badge] in its own error red — the artboard's choice, and the same mark the
+ * tab bar's 通知 icon carries, so a count reads alike wherever it appears on the screen.
+ */
+@Composable
+private fun GroupTabs(
+    tabs: List<NotificationTab>,
+    currentPage: Int,
+    counts: NotificationCounts,
+    onTabChange: (NotificationTab) -> Unit,
+) {
+    PrimaryTabRow(
+        selectedTabIndex = currentPage,
+        containerColor = Color.Transparent,
+        indicator = {
+            TabRowDefaults.PrimaryIndicator(
+                modifier = Modifier.tabIndicatorOffset(currentPage, matchContentSize = false),
+                width = TAB_INDICATOR_WIDTH,
+            )
+        },
+    ) {
+        tabs.forEachIndexed { index, tab ->
+            // The pager's own page rather than the selected group: the indicator starts moving as
+            // the swipe passes the halfway point instead of waiting for the gesture to end, which is
+            // what makes it read as the page's own label. The group itself still changes when the
+            // gesture comes to rest.
+            val selected = index == currentPage
+            Tab(
+                selected = selected,
+                onClick = { onTabChange(tab) },
+                selectedContentColor = MaterialTheme.colorScheme.primary,
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = tab.label(),
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        )
+                        val count = counts.forTab(tab)
+                        if (count > 0) {
+                            Badge {
+                                Text(
+                                    text = unreadLabel(count, MAX_BADGE),
+                                    style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_FIGURES),
+                                )
+                            }
+                        }
+                    }
+                },
+            )
         }
     }
 }
@@ -403,88 +492,153 @@ private fun BoxScope.NotificationGroup(
                 onRefresh = onRetry,
             )
 
-        else ->
+        else -> {
+            val rows = remember(state.items, state.nowMillis) { notificationRows(state.items, state.nowMillis) }
             // fillMaxSize for the same reason 私信's list has it: a list shorter than the screen
             // leaves the rest of the page dispatching nothing, and the gesture that reopens the
             // one-hand title is a pull on the page.
-            LazyColumn(Modifier.fillMaxSize(), state = notificationListState) {
-                items(state.items, key = ForumNotification::id) { item ->
-                    NotificationRow(
-                        item = item,
-                        nowMillis = state.nowMillis,
-                        onClick = { onNotificationClick(item) },
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = notificationListState,
+                contentPadding =
+                PaddingValues(start = LayerPageGutter, end = LayerPageGutter, top = 2.dp, bottom = Spacing.lg),
+            ) {
+                items(rows, key = NotificationListRow::key) { row ->
+                    when (row) {
+                        is NotificationListRow.Day -> ListGroupLabel(stringResource(row.bucket.label()))
+
+                        is NotificationListRow.Item ->
+                            NotificationRow(
+                                item = row.item,
+                                first = row.first,
+                                last = row.last,
+                                nowMillis = state.nowMillis,
+                                onClick = { onNotificationClick(row.item) },
+                            )
+                    }
                 }
             }
+        }
     }
 }
 
+/** 今天 or 更早 — the two headings 5a splits the interactions into. */
+internal enum class NotificationDay { TODAY, EARLIER }
+
+private fun NotificationDay.label(): StringResource =
+    when (this) {
+        NotificationDay.TODAY -> Res.string.notifications_section_today
+        NotificationDay.EARLIER -> Res.string.notifications_section_earlier
+    }
+
+internal sealed interface NotificationListRow {
+    val key: String
+
+    data class Day(val bucket: NotificationDay) : NotificationListRow {
+        override val key get() = "day-${bucket.name}"
+    }
+
+    /** [first] and [last] say which slice of its day's card the row draws; see [CardSliceRow]. */
+    data class Item(
+        val item: ForumNotification,
+        val first: Boolean,
+        val last: Boolean,
+    ) : NotificationListRow {
+        override val key get() = item.id
+    }
+}
+
+/**
+ * The interactions under their day headings, one card per day.
+ *
+ * Calendar days, as 阅读历史 counts them: a reply at 00:30 is 今天's even though it is "22 小时前" by
+ * the clock. Two buckets rather than history's four because 5a asks for two, and because the row's own
+ * time line already says 昨天 or 3 天前 — a heading for each would only repeat it. The server's order is
+ * kept inside a bucket; a row with no parsable time has no day to be put in, so it goes to 更早 rather
+ * than claiming to be new.
+ */
+internal fun notificationRows(
+    items: List<ForumNotification>,
+    nowMillis: Long,
+    zone: TimeZone = TimeZone.currentSystemDefault(),
+): List<NotificationListRow> {
+    val today = Instant.fromEpochMilliseconds(nowMillis).toLocalDateTime(zone).date
+    return items
+        .groupBy { item ->
+            val day = item.createdAtMillis?.let { Instant.fromEpochMilliseconds(it).toLocalDateTime(zone).date }
+            if (day != null && day.daysUntil(today) <= 0) NotificationDay.TODAY else NotificationDay.EARLIER
+        }.entries
+        .sortedBy { it.key.ordinal }
+        .flatMap { (bucket, rows) ->
+            listOf(NotificationListRow.Day(bucket)) +
+                rows.mapIndexed { index, item ->
+                    NotificationListRow.Item(item, first = index == 0, last = index == rows.lastIndex)
+                }
+        }
+}
+
+/**
+ * One interaction: who, what, where, when — and a dot while it is unread (5a).
+ *
+ * Unread no longer tints the row: on a white card a tinted band reads as a selection. The dot at the
+ * end, the full-strength sentence and the thread title in primary carry it instead, and a read row
+ * falls back to grey throughout.
+ */
 @Composable
 private fun NotificationRow(
     item: ForumNotification,
+    first: Boolean,
+    last: Boolean,
     nowMillis: Long,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .background(
-                if (item.isUnread) {
-                    MaterialTheme.colorScheme.surfaceContainerLow
-                } else {
-                    MaterialTheme.colorScheme.surface
-                },
-            ).clickable(enabled = item.postId != null, onClick = onClick)
-            .padding(start = 10.dp, end = Spacing.lg, top = 14.dp, bottom = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    CardSliceRow(
+        first = first,
+        last = last,
+        dividerInset = ROW_PADDING_H + NOTIFICATION_AVATAR + ROW_GAP,
+        enabled = item.postId != null,
+        onClick = onClick,
     ) {
-        // Both markers hang off the sentence's first line, not off the top of the row — see
-        // [AvatarCapOffset]. The dot is smaller than the avatar, so it drops further to centre on
-        // the same line rather than sitting on top of it.
-        Box(Modifier.offset(y = AvatarCapOffset + 2.dp).size(6.dp)) {
-            if (item.isUnread) {
-                Box(
-                    Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                )
-            }
-        }
-        UserAvatar(
-            url = item.avatarUrl,
-            name = item.actorName,
-            size = listAvatarSize(),
-            modifier = Modifier.offset(y = AvatarCapOffset),
-        )
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(
-                text = notificationSentence(item),
-                // Trimmed at the top so the sentence starts at the row's edge instead of a few
-                // pixels below it, the same pairing the feed's title and avatar use.
-                style =
-                MaterialTheme.typography.bodyMedium.copy(
-                    lineHeightStyle =
-                    LineHeightStyle(
-                        alignment = LineHeightStyle.Alignment.Proportional,
-                        trim = LineHeightStyle.Trim.FirstLineTop,
-                    ),
-                ),
-                color =
-                if (item.isUnread) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = ROW_PADDING_H, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(ROW_GAP),
+        ) {
+            UserAvatar(
+                url = item.avatarUrl,
+                name = item.actorName,
+                size = NOTIFICATION_AVATAR,
             )
-            timestampLabel(item.createdAtMillis, item.createdAtText, nowMillis)?.let { stamp ->
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = stamp,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = notificationSentence(item),
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp),
+                    color =
+                    if (item.isUnread) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 )
+                timestampLabel(item.createdAtMillis, item.createdAtText, nowMillis)?.let { stamp ->
+                    Text(
+                        text = stamp,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            // The slot is kept on read rows too, so a sentence wraps at the same width whichever
+            // state it is in and marking the list read does not reflow it. Dropped 7dp to sit on
+            // the sentence's first line rather than above it.
+            Box(Modifier.padding(top = 7.dp).size(UNREAD_DOT)) {
+                if (item.isUnread) {
+                    Box(
+                        Modifier
+                            .size(UNREAD_DOT)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                    )
+                }
             }
         }
     }
@@ -511,8 +665,15 @@ private fun notificationSentence(item: ForumNotification): AnnotatedString {
             },
         )
     val title = item.threadTitle ?: stringResource(Res.string.notification_unknown_thread)
-    val actorStyle = SpanStyle(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
-    val titleStyle = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+    // A read row keeps the weights and drops the colours: the thread title goes back to the grey of
+    // the rest of the sentence, which is what lets the unread rows above it stand out (5a).
+    val actorStyle = SpanStyle(fontWeight = FontWeight.SemiBold)
+    val titleStyle =
+        if (item.isUnread) {
+            SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+        } else {
+            SpanStyle()
+        }
     return buildAnnotatedString {
         var cursor = 0
         PLACEHOLDER.findAll(template).forEach { match ->
@@ -579,14 +740,15 @@ private fun NotificationTab.label(): String =
 private val PLACEHOLDER = Regex("""%(\d)[$]s""")
 private const val MAX_BADGE = 99
 
-/**
- * Drops the avatar onto the sentence's cap line.
- *
- * The twin of the feed's own offset — even with the first line's leading trimmed, the line box still
- * starts at the ascent rather than at the tallest glyph, and a top-aligned avatar next to it reads
- * as floating. Measured at bodyMedium on the row as built, which is why it is not the feed's number.
- */
-private val AvatarCapOffset = 3.dp
+/** 5a's measurements: a 40dp avatar 14dp in from the card's edge, 12dp from the sentence. */
+private val NOTIFICATION_AVATAR = 40.dp
+internal val ROW_PADDING_H = 14.dp
+internal val ROW_GAP = 12.dp
+private val UNREAD_DOT = 8.dp
+private val TAB_INDICATOR_WIDTH = 56.dp
+
+/** How far the page colour reaches down over a list that has scrolled under the header. */
+private val TOP_FADE = 20.dp
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable

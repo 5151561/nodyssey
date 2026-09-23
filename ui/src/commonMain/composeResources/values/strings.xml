@@ -273,6 +273,10 @@
     <!-- The chip over the merged list: 回复 and @我 are one tab in the App -->
     <string name="notifications_interactions">互动</string>
     <string name="notifications_empty">这里暂时没有通知</string>
+    <!-- 互动 list: heading over today's card -->
+    <string name="notifications_section_today">今天</string>
+    <!-- 互动 list: heading over everything before today -->
+    <string name="notifications_section_earlier">更早</string>
     <string name="notification_sentence_mention">%1$s 在帖子 %2$s 中@了我</string>
     <string name="notification_sentence_reply">%1$s 回复了帖子 %2$s</string>
     <!-- One comment that did both, which is what the site's own 回复 button writes -->
@@ -289,6 +293,8 @@
 
     <!-- Direct messages -->
     <string name="messages_empty">还没有私信</string>
+    <!-- 私信 list: heading over the conversations below the pinned 系统通知 -->
+    <string name="messages_section_all">全部私信</string>
     <string name="messages_pinned">置顶会话</string>
     <string name="messages_snippet_mine_prefix">你：</string>
     <string name="messages_new_conversation">新建私信</string>
@@ -304,13 +310,26 @@
     <string name="message_input_hint_markdown">发消息（Markdown 已开）</string>
     <string name="message_input_hint_plain">发消息</string>
     <string name="message_markdown_toggle">Markdown 开关</string>
-    <string name="message_markdown_label">MD</string>
     <string name="message_send">发送</string>
     <string name="message_status_sending">发送中</string>
     <string name="message_status_failed">发送失败</string>
-    <string name="message_status_sent">已送达 %1$s</string>
+    <string name="message_status_sent">%1$s · 已送达</string>
     <string name="message_bubble_actions">消息操作</string>
     <string name="message_quote_action">引用</string>
+    <!-- The quote card above the message bar; %1$s is the other side's name -->
+    <string name="message_quote_chip">引用 %1$s</string>
+    <!-- The quote card, when the quoted message is one of mine -->
+    <string name="message_quote_chip_mine">引用 我的消息</string>
+    <!-- The ✕ on the quote card -->
+    <string name="message_quote_remove">取消引用</string>
+    <!-- The + key left of the message bar, which opens the tool grid -->
+    <string name="message_tools">附件与格式</string>
+    <!-- Tool grid: the MD switch tile while on -->
+    <string name="message_tool_markdown_on">Markdown · 开</string>
+    <!-- Tool grid: the MD switch tile while off -->
+    <string name="message_tool_markdown_off">Markdown · 关</string>
+    <!-- Tool grid: the tile that opens the toolbar arrangement sheet -->
+    <string name="message_tool_customize">自定义</string>
     <string name="message_copied">消息已复制</string>
 
     <!-- Profile -->
