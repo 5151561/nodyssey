@@ -151,8 +151,6 @@ class StringCatalogParityTest {
             "proxy_port_placeholder",
             "proxy_type_http",
             "proxy_type_socks",
-            "ruling_action_none",
-            "ruling_meta_no_moderator",
             "settings_body_size_value",
             "settings_language_en",
             "settings_language_zh_hans",

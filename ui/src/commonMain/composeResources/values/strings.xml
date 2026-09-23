@@ -1140,9 +1140,8 @@
     <string name="ruling_target_post">帖子</string>
     <string name="ruling_target_comment">评论</string>
     <string name="ruling_reason"> · 因「%1$s」</string>
-    <string name="ruling_meta">%1$s · 管理员 %2$s · %3$s</string>
-    <string name="ruling_meta_no_moderator">%1$s · %2$s</string>
-    <string name="ruling_action_none">—</string>
+    <!-- 记录末行的执行人（9g），前面接时间 -->
+    <string name="ruling_moderator">管理员 %1$s</string>
     <string name="ruling_action_coin_add">加 %1$d 鸡腿</string>
     <string name="ruling_action_coin_deduct">扣 %1$d 鸡腿</string>
     <string name="ruling_action_stardust_add">加 %1$d 星辰</string>

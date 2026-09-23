@@ -956,10 +956,11 @@
     <string name="invite_chicken_balance">目前雞腿 %1$d</string>
 
     <string name="ruling_title">管理紀錄</string>
+
+    <string name="ruling_moderator">管理員 %1$s</string>
     <string name="ruling_subtitle">處罰與獎勵公告</string>
     <string name="ruling_target_post">文章</string>
     <string name="ruling_target_comment">評論</string>
-    <string name="ruling_meta">%1$s · 管理員 %2$s · %3$s</string>
     <string name="ruling_action_coin_add">加 %1$d 雞腿</string>
     <string name="ruling_action_coin_deduct">扣 %1$d 雞腿</string>
     <string name="ruling_action_stardust_add">加 %1$d 星辰</string>

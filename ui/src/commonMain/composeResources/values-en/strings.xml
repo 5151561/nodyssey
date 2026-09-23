@@ -967,7 +967,7 @@
     <string name="ruling_target_post">post</string>
     <string name="ruling_target_comment">comment</string>
     <string name="ruling_reason"> · for「%1$s」</string>
-    <string name="ruling_meta">%1$s · moderator %2$s · %3$s</string>
+    <string name="ruling_moderator">moderator %1$s</string>
     <string name="ruling_action_coin_add">+%1$d drumsticks</string>
     <string name="ruling_action_coin_deduct">−%1$d drumsticks</string>
     <string name="ruling_action_stardust_add">+%1$d stardust</string>
