@@ -24,12 +24,14 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 
 /**
- * The site's own avatar shape: `border-radius: 15%` on every list and thread avatar.
+ * The avatar shape: a squircle-ish rounded square at 31% — 10dp on a 32dp list avatar, 14dp on the
+ * 40dp one in the home bar.
  *
- * A percentage rather than a Dp so the corner keeps its proportion from the 30dp avatar in a comment
- * row up to the 60dp one on a space page — which is also how the site's CSS states it.
+ * Rounder than the site's own `border-radius: 15%`, because on a white card a nearly-square avatar
+ * read as a hard-edged block beside the 24dp card corners around it. A percentage rather than a Dp
+ * so the corner keeps its proportion from a comment row's avatar up to a space page's.
  */
-val AvatarShape: Shape = RoundedCornerShape(percent = 15)
+val AvatarShape: Shape = RoundedCornerShape(percent = 31)
 
 /**
  * An account with no uploaded picture is still served an image — a cartoon the site generates from

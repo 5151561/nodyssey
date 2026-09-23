@@ -17,6 +17,7 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.theme.CommentBody
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.After
 import org.junit.Rule
@@ -67,7 +68,7 @@ class QuoteChipSnapshotTest {
         Column(
             Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background)
+                .background(LocalPlazaLayers.current.card)
                 .padding(16.dp),
         ) {
             CompositionLocalProvider(LocalStickerSizing provides StickerSizing(uniform = false)) {
