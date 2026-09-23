@@ -143,6 +143,7 @@ import io.github.nodyssey.ui.resources.search_user_history_scope
 import io.github.nodyssey.ui.resources.search_users_tab
 import io.github.nodyssey.ui.resources.sort_by_post_time
 import io.github.nodyssey.ui.resources.sort_by_reply_time
+import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerDivider
@@ -1133,18 +1134,11 @@ private fun SortSegments(
     selected: FeedSort,
     onSelect: (FeedSort) -> Unit,
 ) {
-    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-        SortOrder.forEachIndexed { index, sort ->
-            SegmentedButton(
-                selected = sort == selected,
-                onClick = { onSelect(sort) },
-                shape = SegmentedButtonDefaults.itemShape(index, SortOrder.size, RoundedCornerShape(8.dp)),
-                colors = SegmentedButtonDefaults.colors(inactiveContainerColor = LocalPlazaLayers.current.raised),
-            ) {
-                Text(stringResource(sort.labelRes()), maxLines = 1)
-            }
-        }
-    }
+    ChoiceSegments(
+        labels = SortOrder.map { stringResource(it.labelRes()) },
+        selectedIndex = SortOrder.indexOf(selected),
+        onSelect = { onSelect(SortOrder[it]) },
+    )
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)

@@ -231,52 +231,6 @@ internal fun SettingsRow(
 internal const val DISABLED_ALPHA = 0.5f
 
 /**
- * The outlined segmented control: 8dp ends, a tick on the selected segment, card-white where it is
- * not selected so it reads as a control sitting on the card rather than a hole in it. Shared by 明暗,
- * 测评报告, 配色来源 and 代理类型 so the four cannot drift.
- */
-@Composable
-internal fun ConnectedChoiceButtons(
-    labels: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    val card = LocalPlazaLayers.current.card
-    val colors =
-        SegmentedButtonDefaults.colors(
-            inactiveContainerColor = card,
-            disabledInactiveContainerColor = card,
-        )
-    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
-        labels.forEachIndexed { index, label ->
-            SegmentedButton(
-                selected = index == selectedIndex,
-                onClick = { onSelect(index) },
-                modifier = Modifier.weight(1f),
-                enabled = enabled,
-                colors = colors,
-                shape =
-                SegmentedButtonDefaults.itemShape(
-                    index = index,
-                    count = labels.size,
-                    baseShape = SegmentShape,
-                ),
-            ) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
-                    maxLines = 1,
-                )
-            }
-        }
-    }
-}
-
-private val SegmentShape = RoundedCornerShape(8.dp)
-
-/**
  * A text field on a settings card: Material's outlined field, filled with the inset tone so it reads
  * as a well in the white card, with 6e's 14dp corners.
  */

@@ -2,15 +2,21 @@ package io.github.plaza.designsys.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,20 +39,32 @@ fun TonalTag(
     containerColor: Color,
     contentColor: Color,
     modifier: Modifier = Modifier,
+    /** A glyph ahead of the text — 已连接's tick, 已签's tick. Sized to the tag's line, so it grows with it. */
+    icon: ImageVector? = null,
 ) {
     if (text.isNullOrBlank()) return
 
-    Text(
-        text = text,
-        style = LocalTextStyle.current.merge(tonalTagTextStyle()),
-        color = contentColor,
+    Row(
         modifier =
         modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(TonalTagShape)
             .background(containerColor)
             .padding(horizontal = 7.dp, vertical = TonalTagVerticalPadding),
-    )
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        icon?.let {
+            Icon(it, contentDescription = null, tint = contentColor, modifier = Modifier.size(textScaledSize(TONAL_TAG_FONT_SIZE)))
+        }
+        Text(
+            text = text,
+            style = LocalTextStyle.current.merge(tonalTagTextStyle()),
+            color = contentColor,
+        )
+    }
 }
+
+private val TonalTagShape = RoundedCornerShape(6.dp)
 
 /**
  * The tag's type, as a style rather than three arguments.

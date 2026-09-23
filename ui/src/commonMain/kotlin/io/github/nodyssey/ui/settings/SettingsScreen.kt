@@ -122,6 +122,7 @@ import io.github.nodyssey.ui.settings.theme.ThemeSummaryDot
 import io.github.nodyssey.ui.settings.theme.themeSummary
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
+import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
@@ -707,7 +708,7 @@ private fun ConnectedThemeButtons(
             ThemeMode.LIGHT to stringResource(Res.string.settings_theme_light),
             ThemeMode.DARK to stringResource(Res.string.settings_theme_dark),
         )
-    ConnectedChoiceButtons(
+    ChoiceSegments(
         labels = choices.map { it.second },
         selectedIndex = choices.indexOfFirst { it.first == selected },
         onSelect = { onSelected(choices[it].first) },
@@ -725,7 +726,7 @@ private fun ConnectedReportFormatButtons(
             ReportFormat.ADAPTED to stringResource(Res.string.settings_report_format_adapted),
             ReportFormat.SOURCE to stringResource(Res.string.settings_report_format_source),
         )
-    ConnectedChoiceButtons(
+    ChoiceSegments(
         labels = choices.map { it.second },
         selectedIndex = choices.indexOfFirst { it.first == selected },
         onSelect = { onSelected(choices[it].first) },

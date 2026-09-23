@@ -77,7 +77,6 @@ import io.github.nodyssey.ui.resources.settings_seed_edit
 import io.github.nodyssey.ui.resources.settings_seed_name
 import io.github.nodyssey.ui.resources.settings_theme
 import io.github.nodyssey.ui.resources.settings_theme_preview
-import io.github.nodyssey.ui.settings.ConnectedChoiceButtons
 import io.github.nodyssey.ui.settings.DISABLED_ALPHA
 import io.github.nodyssey.ui.settings.SettingsGroup
 import io.github.nodyssey.ui.settings.SettingsIcons
@@ -86,6 +85,7 @@ import io.github.nodyssey.ui.settings.SettingsPagePadding
 import io.github.nodyssey.ui.settings.SettingsRow
 import io.github.nodyssey.ui.settings.SettingsSectionTitle
 import io.github.nodyssey.ui.settings.settingsRowTitleStyle
+import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -278,7 +278,7 @@ private fun ColorSourceHeader(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(stringResource(Res.string.settings_color_source), style = settingsRowTitleStyle())
-        ConnectedChoiceButtons(
+        ChoiceSegments(
             labels = choices.map { it.second },
             selectedIndex = choices.indexOfFirst { it.first == settings.colorSource },
             onSelect = { onSelect(choices[it].first) },

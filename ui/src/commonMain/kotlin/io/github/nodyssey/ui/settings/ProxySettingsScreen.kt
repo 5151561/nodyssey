@@ -71,6 +71,7 @@ import io.github.nodyssey.ui.resources.proxy_type_socks
 import io.github.nodyssey.ui.resources.proxy_type_title
 import io.github.nodyssey.ui.resources.proxy_username_label
 import io.github.nodyssey.ui.resources.proxy_webview_hint
+import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
@@ -189,7 +190,7 @@ fun ProxySettingsScreen(
                         ProxyType.SOCKS to stringResource(Res.string.proxy_type_socks),
                     )
                     val typeTitle = stringResource(Res.string.proxy_type_title)
-                    ConnectedChoiceButtons(
+                    ChoiceSegments(
                         labels = choices.map { it.second },
                         selectedIndex = choices.indexOfFirst { it.first == state.type },
                         onSelect = { onTypeChange(choices[it].first) },
