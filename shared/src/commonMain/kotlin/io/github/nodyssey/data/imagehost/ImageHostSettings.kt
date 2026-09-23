@@ -123,7 +123,13 @@ interface ImageHostSettings {
 
     suspend fun save(config: ImageHostConfig)
 
-    /** Forgets one host's credentials. The selection is left alone — a disconnected host stays chosen. */
+    /**
+     * Forgets one host's credentials. The selection is left alone — a disconnected host stays chosen.
+     *
+     * For [ImageHostProvider.CUSTOM] this takes the whole record, address and field names included:
+     * that host is the one whose credential may legitimately be empty, so clearing only the secret
+     * would leave a configuration that still uploads. See the implementation for the long version.
+     */
     suspend fun disconnect(provider: ImageHostProvider)
 }
 
@@ -178,11 +184,25 @@ class DataStoreImageHostSettings(
             preferences.remove(ImageHostKeys.token(provider))
             if (provider != ImageHostProvider.CUSTOM) return@edit
             // A custom host keeps its credential in one of two places, and which one is the user's
-            // choice: a header value, or a `token=…` line among the form fields. Both go. The address
-            // and the paths stay — those are configuration, not a secret, and re-typing them is the
-            // part nobody wants to do twice.
+            // choice: a header value, or a `token=…` line among the form fields. Both go — and so
+            // does the rest of the record, which is the one place this provider cannot be treated
+            // like the other five.
+            //
+            // For them the token *is* the connection: take it away and [ImageHostConfig.problem]
+            // answers MISSING_TOKEN, the host reads as 未连接, and the address left behind is a
+            // convenience for the next token. A custom host may legitimately need no credential at
+            // all, so the same clear leaves a configuration that is still complete — still
+            // `isConfigured`, still shown as 已连接 on the next visit, still the address every
+            // attachment goes to. That is the opposite of what 断开 says it does, and it left no way
+            // to remove a custom host at all: an empty address cannot be saved over it either,
+            // because saving validates first.
+            preferences.remove(ImageHostKeys.siteUrl(provider))
+            preferences.remove(ImageHostKeys.CUSTOM_FILE_FIELD)
+            preferences.remove(ImageHostKeys.CUSTOM_HEADER_NAME)
             preferences.remove(ImageHostKeys.CUSTOM_HEADER_VALUE)
             preferences.remove(ImageHostKeys.CUSTOM_FORM_FIELDS)
+            preferences.remove(ImageHostKeys.CUSTOM_URL_PATH)
+            preferences.remove(ImageHostKeys.CUSTOM_URL_PREFIX)
         }
     }
 

@@ -17,6 +17,7 @@ import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.imagehost_deleted
 import io.github.nodyssey.ui.resources.imagehost_key_cleared
+import io.github.nodyssey.ui.resources.imagehost_key_not_stored
 import io.github.nodyssey.ui.resources.imagehost_key_saved
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
@@ -95,6 +96,26 @@ class ImageHostViewModel(
         }
         viewModelScope.launch {
             repository.save(config)
+            // Read the credential back rather than assume the write took. A secret goes to disk
+            // through the platform's key store — Keystore on Android, the Keychain on iOS — and a
+            // device that refuses to encrypt stores *nothing* rather than the credential in the
+            // clear (see `DataStoreImageHostSettings.putSecret`, and the test that pins it). That
+            // refusal has no other way of being noticed: without this check the screen answers 已保存,
+            // shows a fingerprint of a credential that never landed, and the next visit says 未连接
+            // with an empty field — which is indistinguishable, from the outside, from a save button
+            // that does nothing.
+            if (config.secret.isNotBlank() && repository.config(config.provider).first().secret.isBlank()) {
+                storedToken = ""
+                _uiState.update {
+                    it.copy(
+                        connected = false,
+                        credentialMask = null,
+                        problem = null,
+                        message = AccountMessage.Info(Res.string.imagehost_key_not_stored),
+                    )
+                }
+                return@launch
+            }
             storedToken = config.token
             _uiState.update {
                 it.copy(
@@ -119,17 +140,19 @@ class ImageHostViewModel(
             repository.disconnect(provider)
             loadJob?.cancel()
             storedToken = ""
+            val isCustom = provider == ImageHostProvider.CUSTOM
             _uiState.update {
                 it.copy(
                     confirmingDisconnect = false,
                     connected = false,
                     credentialMask = null,
                     tokenInput = "",
-                    custom = if (provider == ImageHostProvider.CUSTOM) {
-                        it.custom.copy(headerValue = "", formFields = "")
-                    } else {
-                        it.custom
-                    },
+                    // A custom host loses its whole record, so the fields on screen go with it —
+                    // see [ImageHostSettings.disconnect]. Leaving the address and the paths sitting
+                    // in the inputs of a host that no longer exists is how 断开 came to read as
+                    // "nothing was deleted": the next 保存 would write the same host straight back.
+                    siteUrlInput = if (isCustom) "" else it.siteUrlInput,
+                    custom = if (isCustom) CustomHostFields() else it.custom,
                     images = emptyList(),
                     isLoadingImages = false,
                     imagesError = ImageHostError.NotConfigured,

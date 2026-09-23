@@ -52,6 +52,28 @@ import platform.Security.kSecValueData
  * string and nothing else. They are a few dozen bytes each and they are unreachable, and the
  * alternative is a wider interface that every platform would have to answer for so that this one
  * could tidy up.
+ *
+ * **When it refuses, the credential is not stored at all** — `DataStoreImageHostSettings.putSecret`
+ * and `DataStoreProxySettings.save` both write nothing rather than the secret in the clear, which is
+ * the right trade and was, until the read-back in `ImageHostViewModel.save`, a silent one. Two ways
+ * this happens are specific to how this app reaches a phone, and neither is a bug in the code below:
+ *
+ * - **The build is not signed for the Keychain.** Every Keychain call needs the app to carry an
+ *   `application-identifier` entitlement, which is what gives it a default access group; it arrives
+ *   from a provisioning profile at signing time, and this repository ships an *unsigned* `.ipa`
+ *   (`CODE_SIGNING_ALLOWED=NO` in `release.yml`) with no entitlements file of its own. Re-signing
+ *   with Xcode, AltStore or Sideloadly supplies one; an ad-hoc signature — `ldid -S`, or a TrollStore
+ *   install of the artifact as published — does not, and then `SecItemAdd` answers
+ *   `errSecMissingEntitlement` (-34018) for every save on the device.
+ * - **The app's identity changed under it.** Items are scoped to that access group, so a re-sign
+ *   under a different team or bundle id cannot read what the previous one wrote: the handles in
+ *   DataStore survive, the items behind them are somebody else's, and every stored secret reads back
+ *   empty. With a free Apple ID that is every seventh day.
+ *
+ * Both are the user's install talking, so the app's part is to say so rather than to look broken —
+ * see `imagehost_key_not_stored`. Removing the dependency on the Keychain altogether would mean
+ * keeping the secret in the DataStore file and holding *that* out of the backup with
+ * `NSURLIsExcludedFromBackupKey`, which is a different trade and not one to make quietly.
  */
 class KeychainSecretCipher(
     private val service: String = KEYCHAIN_SERVICE,

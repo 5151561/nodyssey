@@ -1109,9 +1109,11 @@
     <string name="imagehost_key_replace">Save</string>
     <string name="imagehost_key_saved">Saved</string>
     <string name="imagehost_key_cleared">Disconnected</string>
+    <string name="imagehost_key_not_stored">Not saved: this device’s key store refused to keep the credential</string>
     <string name="imagehost_clear_key">Disconnect</string>
     <string name="imagehost_clear_key_title">Disconnect %1$s?</string>
     <string name="imagehost_clear_key_body">The key saved on this device is deleted, and pictures can no longer be inserted into posts or replies. Images already uploaded are untouched.</string>
+    <string name="imagehost_clear_custom_body">This custom host’s address, fields and credential are all deleted from this device, and pictures can no longer be inserted into posts or replies. Images already uploaded are untouched.</string>
     <string name="imagehost_clear_key_action">Disconnect</string>
     <string name="imagehost_open_site">Open the host’s website</string>
 
